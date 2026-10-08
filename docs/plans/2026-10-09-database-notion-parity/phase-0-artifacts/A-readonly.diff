@@ -1,0 +1,234 @@
+diff --git a/src/tools/database/database-tab-bar.ts b/src/tools/database/database-tab-bar.ts
+index c284092e..65c7da97 100644
+--- a/src/tools/database/database-tab-bar.ts
++++ b/src/tools/database/database-tab-bar.ts
+@@ -148,7 +148,11 @@ export class DatabaseTabBar {
+       this.activateTab(viewId, false);
+     });
+ 
++    // Read-only is read at event time: setReadOnly flips a live bar.
+     bar.addEventListener('contextmenu', (e: MouseEvent) => {
++      if (this.readOnly) {
++        return;
++      }
+       const target = e.target as HTMLElement;
+       const tab = target.closest('[data-blok-database-tab]');
+       if (!(tab instanceof HTMLElement)) {
+@@ -163,6 +167,9 @@ export class DatabaseTabBar {
+     });
+ 
+     bar.addEventListener('dblclick', (e: MouseEvent) => {
++      if (this.readOnly) {
++        return;
++      }
+       const target = e.target as HTMLElement;
+       const tab = target.closest('[data-blok-database-tab]');
+       if (!(tab instanceof HTMLElement)) {
+@@ -176,6 +183,9 @@ export class DatabaseTabBar {
+     });
+ 
+     bar.addEventListener('pointerdown', (e) => {
++      if (this.readOnly) {
++        return;
++      }
+       const target = e.target as HTMLElement;
+       const tab = target.closest<HTMLElement>('[data-blok-database-tab]');
+       if (tab === null) return;
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 85caf741..5e8511fe 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -1771,7 +1771,11 @@ export class DatabaseTool implements BlockTool {
+       newBoardArea.scrollLeft = savedScrollLeft;
+     }
+ 
+-    this.attachViewListeners(newBoardWrapper);
+-    this.initSubsystems(newBoardWrapper);
++    // Same gate as render() and switchView(): rows arriving after boot,
++    // undo/peer reprojection and setReadOnly all rerender through here.
++    if (!this.readOnly) {
++      this.attachViewListeners(newBoardWrapper);
++      this.initSubsystems(newBoardWrapper);
++    }
+   }
+ }
+diff --git a/test/unit/tools/database/database-tab-bar.test.ts b/test/unit/tools/database/database-tab-bar.test.ts
+index 1f6cb4d4..8d3203bf 100644
+--- a/test/unit/tools/database/database-tab-bar.test.ts
++++ b/test/unit/tools/database/database-tab-bar.test.ts
+@@ -909,5 +909,92 @@ describe('DatabaseTabBar', () => {
+       expect(el.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+       el.remove();
+     });
++
++    const twoViews = (): DatabaseViewConfig[] => [
++      makeView({ id: 'v1', position: 'a0' }),
++      makeView({ id: 'v2', position: 'a1' }),
++    ];
++
++    // The tool flips a live bar with setReadOnly, so both ways must hold.
++    const readOnlyBars: Array<[string, () => DatabaseTabBar]> = [
++      ['constructed read-only', () => new DatabaseTabBar({
++        views: twoViews(),
++        activeViewId: 'v1',
++        onTabClick,
++        onAddView,
++        onRename,
++        onDuplicate,
++        onDelete,
++        onReorder,
++        readOnly: true,
++      })],
++      ['switched to read-only', () => {
++        const bar = createTabBar(twoViews(), 'v1');
++
++        bar.setReadOnly(true);
++
++        return bar;
++      }],
++    ];
++
++    it.each(readOnlyBars)('%s: right-click opens no tab menu', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
++      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
++      bar.destroy();
++      el.remove();
++    });
++
++    it.each(readOnlyBars)('%s: double-click opens no tab menu', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
++      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
++      bar.destroy();
++      el.remove();
++    });
++
++    it.each(readOnlyBars)('%s: dragging a tab does not reorder', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
++      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
++      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 15 }));
++      expect(onReorder).not.toHaveBeenCalled();
++      expect(document.querySelector('[data-blok-database-tab-ghost]')).toBeNull();
++      bar.destroy();
++      el.remove();
++    });
++
++    it.each(readOnlyBars)('%s: clicking a tab still switches views', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v2"]') as HTMLElement;
++      tab.click();
++      expect(onTabClick).toHaveBeenCalledWith('v2');
++      bar.destroy();
++      el.remove();
++    });
++
++    it('leaving read-only brings the tab menu back', () => {
++      const bar = createTabBar(twoViews(), 'v1');
++      bar.setReadOnly(true);
++      bar.setReadOnly(false);
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
++      expect(document.querySelector('[data-blok-database-tab-context]')).not.toBeNull();
++      bar.destroy();
++      el.remove();
++    });
+   });
+ });
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 225944fa..218ade61 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -2987,6 +2987,78 @@ describe('DatabaseTool', () => {
+     });
+   });
+ 
++  describe('read-only after a rerender', () => {
++    const makeBoardRows = (): BlockAPI[] => [
++      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
++    ];
++
++    const getCard = (element: HTMLElement): HTMLElement => {
++      const card = queryByData(element, 'data-row-id', 'row-1');
++
++      if (card === null) {
++        throw new Error('card missing');
++      }
++
++      return card;
++    };
++
++    it('entering read-only leaves cards inert: no drag start, no drawer', () => {
++      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: makeBoardRows() }));
++      const element = tool.render();
++
++      tool.rendered();
++      tool.setReadOnly(true);
++
++      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
++
++      getCard(element).click();
++
++      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
++      expect(notPrevented).toBe(true);
++
++      tool.destroy();
++    });
++
++    it('rows that arrive after a read-only boot stay inert: no drag start, no drawer', () => {
++      const options = createDatabaseOptions({}, {}, { readOnly: true });
++
++      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>)
++        .mockReturnValueOnce([])
++        .mockReturnValue(makeBoardRows());
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
++
++      getCard(element).click();
++
++      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
++      expect(notPrevented).toBe(true);
++
++      tool.destroy();
++    });
++
++    it('leaving read-only wires cards again', () => {
++      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true, childBlocks: makeBoardRows() }));
++      const element = tool.render();
++
++      tool.rendered();
++      tool.setReadOnly(false);
++
++      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
++
++      getCard(element).click();
++
++      expect(queryByData(element, 'data-blok-database-drawer')).not.toBeNull();
++      expect(notPrevented).toBe(false);
++
++      tool.destroy();
++    });
++  });
++
+   describe('getToolbarAnchorElement', () => {
+     it('returns the database title element so the toolbar vertically centers on the title line', () => {
+       const tool = new DatabaseTool(createDatabaseOptions());

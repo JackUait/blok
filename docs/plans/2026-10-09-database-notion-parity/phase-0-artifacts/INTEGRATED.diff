@@ -1,0 +1,2985 @@
+ index.html                                         |  56 +-
+ src/components/i18n/locales/en.json                |   1 +
+ src/styles/database.css                            |  15 +
+ src/tools/database/database-board-view.ts          |  21 +-
+ src/tools/database/database-card-drag.ts           |   5 +-
+ src/tools/database/database-card-drawer.ts         |  29 +-
+ src/tools/database/database-column-drag.ts         |   2 +-
+ src/tools/database/database-model.ts               |  57 +-
+ src/tools/database/database-query.ts               | 317 +++++++++
+ src/tools/database/database-tab-bar.ts             |  10 +
+ src/tools/database/index.ts                        | 156 +++--
+ .../components/i18n/lifecycle-coverage.test.ts     |   6 +-
+ test/unit/playground/database-fixtures.test.ts     |  94 +++
+ .../styles/__snapshots__/main-css-rules.snap.txt   |   8 +
+ test/unit/styles/css-split-equivalence.test.ts     |   5 +-
+ test/unit/styles/database-reduced-motion.test.ts   |  50 ++
+ .../tools/database/database-board-view.test.ts     |  27 +
+ .../tools/database/database-card-drawer.test.ts    |  47 ++
+ .../tools/database/database-column-drag.test.ts    |  10 +
+ .../tools/database/database-model.mutants.test.ts  |  10 +-
+ test/unit/tools/database/database-model.test.ts    |  52 +-
+ test/unit/tools/database/database-query.test.ts    | 440 ++++++++++++
+ test/unit/tools/database/database-tab-bar.test.ts  |  87 +++
+ test/unit/tools/database/database.test.ts          | 737 ++++++++++++++++++---
+ test/unit/types/database-data-drift-typecheck.ts   |  18 +
+ types/message-keys.d.ts                            |   1 +
+ types/tools/database.d.ts                          |   1 +
+ 27 files changed, 2066 insertions(+), 196 deletions(-)
+
+diff --git a/index.html b/index.html
+index 77577b54..31cd1d50 100644
+--- a/index.html
++++ b/index.html
+@@ -3334,16 +3334,16 @@
+             { id: 'lnb-col-b-p', type: 'paragraph', data: { text: 'Column B' }, parent: 'lnb-col-b' },
+             { id: 'lnb-db', type: 'database', data: {
+               schema: [
+-                { id: 'title', name: 'Title', type: 'text' },
+-                { id: 'status', name: 'Status', type: 'select', options: [
+-                  { id: 'todo', name: 'Todo', color: 'gray' },
+-                  { id: 'done', name: 'Done', color: 'green' },
+-                ] },
++                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
++                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
++                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
++                  { id: 'done', label: 'Done', color: 'green', position: 'a1' },
++                ] } },
+               ],
+-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
++              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: ['status'] }],
+               activeViewId: 'v1',
+             }, content: ['lnb-db-r1'], indent: 1 },
+-            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' } }, parent: 'lnb-db' },
++            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' }, position: 'a0' }, parent: 'lnb-db' },
+           ] },
+           { label: 'Empty', blocks: [{ id: 'ul-empty', type: 'list', data: { style: 'unordered', text: '' } }] },
+         ],
+@@ -3585,40 +3585,40 @@
+           { label: 'List view', blocks: [
+             { id: 'db-list', type: 'database', data: {
+               schema: [
+-                { id: 'title', name: 'Title', type: 'text' },
+-                { id: 'status', name: 'Status', type: 'select', options: [
+-                  { id: 'todo', name: 'Todo', color: 'gray' },
+-                  { id: 'doing', name: 'Doing', color: 'yellow' },
+-                  { id: 'done', name: 'Done', color: 'green' },
+-                ] },
++                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
++                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
++                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
++                  { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
++                  { id: 'done', label: 'Done', color: 'green', position: 'a2' },
++                ] } },
+               ],
+-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
++              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: ['status'] }],
+               activeViewId: 'v1',
+             }, content: ['db-list-r1', 'db-list-r2'] },
+-            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' } }, parent: 'db-list' },
+-            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' } }, parent: 'db-list' },
++            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' }, position: 'a0' }, parent: 'db-list' },
++            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' }, position: 'a1' }, parent: 'db-list' },
+           ] },
+           { label: 'Board view', blocks: [
+             { id: 'db-board', type: 'database', data: {
+               schema: [
+-                { id: 'title', name: 'Title', type: 'text' },
+-                { id: 'status', name: 'Status', type: 'select', options: [
+-                  { id: 'todo', name: 'Todo', color: 'gray' },
+-                  { id: 'doing', name: 'Doing', color: 'yellow' },
+-                  { id: 'done', name: 'Done', color: 'green' },
+-                ] },
++                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
++                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
++                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
++                  { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
++                  { id: 'done', label: 'Done', color: 'green', position: 'a2' },
++                ] } },
+               ],
+-              views: [{ id: 'v1', type: 'board', name: 'Board', groupBy: 'status', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
++              views: [{ id: 'v1', type: 'board', name: 'Board', position: 'a0', groupBy: 'status', sorts: [], filters: [], visibleProperties: [] }],
+               activeViewId: 'v1',
+             }, content: ['db-bd-r1', 'db-bd-r2', 'db-bd-r3'] },
+-            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' } }, parent: 'db-board' },
+-            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' } }, parent: 'db-board' },
+-            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' } }, parent: 'db-board' },
++            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' }, position: 'a0' }, parent: 'db-board' },
++            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' }, position: 'a1' }, parent: 'db-board' },
++            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' }, position: 'a2' }, parent: 'db-board' },
+           ] },
+           { label: 'Empty database', blocks: [
+             { id: 'db-empty', type: 'database', data: {
+-              schema: [{ id: 'title', name: 'Title', type: 'text' }],
+-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title'] }],
++              schema: [{ id: 'title', name: 'Title', type: 'title', position: 'a0' }],
++              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+               activeViewId: 'v1',
+             } },
+           ] },
+diff --git a/src/components/i18n/locales/en.json b/src/components/i18n/locales/en.json
+index d5abffcb..e3436673 100644
+--- a/src/components/i18n/locales/en.json
++++ b/src/components/i18n/locales/en.json
+@@ -283,6 +283,7 @@
+   "tools.database.cardMenuLabel": "Card options",
+   "tools.database.cardTitlePlaceholder": "Empty page",
+   "tools.database.columnTitlePlaceholder": "Column",
++  "tools.database.noValueGroup": "No {property}",
+   "tools.database.emptyColumn": "No cards",
+   "tools.database.rowTitlePlaceholder": "Empty page",
+   "tools.database.addRow": "Add row",
+diff --git a/src/styles/database.css b/src/styles/database.css
+index 3a801002..1897101c 100644
+--- a/src/styles/database.css
++++ b/src/styles/database.css
+@@ -1197,3 +1197,18 @@
+   width: 14px;
+   height: 14px;
+ }
++
++/* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
++@media (prefers-reduced-motion: reduce) {
++  [data-blok-database-drawer],
++  [data-blok-database-dragging] [data-blok-database-card],
++  [data-blok-database-dragging] [data-blok-database-cards],
++  [data-blok-database-column-reordering] [data-blok-database-column],
++  [data-blok-database-column-reordering] [data-blok-database-board] {
++    transition: none;
++  }
++
++  [data-blok-database-property-type-popover] {
++    animation: none;
++  }
++}
+diff --git a/src/tools/database/database-board-view.ts b/src/tools/database/database-board-view.ts
+index b17a9208..3ad7116f 100644
+--- a/src/tools/database/database-board-view.ts
++++ b/src/tools/database/database-board-view.ts
+@@ -1,6 +1,7 @@
+ import type { I18n } from '../../../types';
+ import type { SelectOption, DatabaseRow } from './types';
+ import type { DatabaseViewRenderer } from './database-view-renderer';
++import { NO_VALUE_GROUP_KEY } from './database-model';
+ import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
+ import { startInlineRename } from '../../components/utils/inline-rename';
+ 
+@@ -156,6 +157,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
+ 
+     columnEl.setAttribute('data-blok-database-column', '');
+     columnEl.setAttribute('data-option-id', option.id);
++
++    if (option.id === NO_VALUE_GROUP_KEY) {
++      columnEl.setAttribute('data-blok-database-no-value-group', '');
++    }
++
+     columnEl.setAttribute('role', 'group');
+     columnEl.setAttribute('aria-label', option.label);
+     columnEl.style.display = 'flex';
+@@ -334,13 +340,20 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
+       return;
+     }
+ 
+-    const originalTitle = titleEl.textContent ?? '';
++    // An untitled card shows placeholder text; it must not seed the input or count as the old title.
++    const originalTitle = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
+ 
+     const buildTitleDiv = (title: string): HTMLElement => {
+       const div = document.createElement('div');
+ 
+       div.setAttribute('data-blok-database-card-title', '');
+-      div.textContent = title;
++
++      if (title) {
++        div.textContent = title;
++      } else {
++        div.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
++        div.setAttribute('data-placeholder', '');
++      }
+ 
+       return div;
+     };
+@@ -360,9 +373,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
+           this.onTitleEdit?.(rowId, newTitle);
+         }
+ 
+-        if (newTitle) {
+-          cardEl.removeAttribute('data-empty');
+-        }
++        cardEl.toggleAttribute('data-empty', newTitle === '');
+       },
+     });
+   }
+diff --git a/src/tools/database/database-card-drag.ts b/src/tools/database/database-card-drag.ts
+index 19c0af29..88d6f37e 100644
+--- a/src/tools/database/database-card-drag.ts
++++ b/src/tools/database/database-card-drag.ts
+@@ -51,14 +51,15 @@ export class DatabaseCardDrag {
+ 
+   /**
+    * Start tracking pointer after a pointerdown on a card.
++   * A multiSelect board draws one card per option, so pass the pressed card.
+    */
+-  public beginTracking(rowId: string, startX: number, startY: number): void {
++  public beginTracking(rowId: string, startX: number, startY: number, sourceCard?: HTMLElement): void {
+     this.cleanup();
+     this.rowId = rowId;
+     this.startX = startX;
+     this.startY = startY;
+     this.isDragging = false;
+-    this.sourceCard = this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
++    this.sourceCard = sourceCard ?? this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
+ 
+     document.addEventListener('pointermove', this.boundPointerMove);
+     document.addEventListener('pointerup', this.boundPointerUp);
+diff --git a/src/tools/database/database-card-drawer.ts b/src/tools/database/database-card-drawer.ts
+index 6f1c4637..754dd984 100644
+--- a/src/tools/database/database-card-drawer.ts
++++ b/src/tools/database/database-card-drawer.ts
+@@ -12,6 +12,27 @@ import type { FieldsResolver } from '../../shared/rich-text/block-data';
+ import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
+ import { declaredRichTextFields } from '../../components/tools/base';
+ 
++/** Must stay longer than the drawer's `transition: width` in database.css. */
++const DRAWER_TRANSITION_FALLBACK_MS = 300;
++
++/**
++ * Runs `done` once, when the drawer's width transition ends. Reduced motion
++ * turns that transition off, and then no transitionend ever comes.
++ */
++const afterWidthTransition = (drawer: HTMLElement, done: () => void): void => {
++  const state = { finished: false };
++  const finish = (): void => {
++    if (state.finished) {
++      return;
++    }
++    state.finished = true;
++    done();
++  };
++
++  drawer.addEventListener('transitionend', finish, { once: true });
++  window.setTimeout(finish, DRAWER_TRANSITION_FALLBACK_MS);
++};
++
+ interface BlokInstance {
+   save(): Promise<OutputData>;
+   destroy(): void;
+@@ -295,13 +316,13 @@ export class DatabaseCardDrawer {
+ 
+     requestAnimationFrame(() => {
+       drawer.style.width = '45%';
+-      drawer.addEventListener('transitionend', () => {
++      afterWidthTransition(drawer, () => {
+         this.autoResizeTitle(titleInput);
+ 
+         if (!title) {
+           titleInput.focus();
+         }
+-      }, { once: true });
++      });
+     });
+ 
+     this.initNestedEditor(editorHolder, row);
+@@ -419,9 +440,9 @@ export class DatabaseCardDrawer {
+ 
+       this.drawer = null;
+       drawer.style.width = '0px';
+-      drawer.addEventListener('transitionend', () => {
++      afterWidthTransition(drawer, () => {
+         drawer.remove();
+-      }, { once: true });
++      });
+     }
+ 
+     this.currentRowId = null;
+diff --git a/src/tools/database/database-column-drag.ts b/src/tools/database/database-column-drag.ts
+index b542ceb0..ec3dd97a 100644
+--- a/src/tools/database/database-column-drag.ts
++++ b/src/tools/database/database-column-drag.ts
+@@ -233,7 +233,7 @@ export class DatabaseColumnDrag {
+   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {
+     const columns = Array.from(
+       this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]')
+-    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId);
++    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId && !col.hasAttribute('data-blok-database-no-value-group'));
+     const direction = getElementDirection(this.wrapper);
+ 
+     for (const col of columns) {
+diff --git a/src/tools/database/database-model.ts b/src/tools/database/database-model.ts
+index 2c1c9aa8..1a7185e3 100644
+--- a/src/tools/database/database-model.ts
++++ b/src/tools/database/database-model.ts
+@@ -12,10 +12,18 @@ import type {
+   ViewType,
+ } from './types';
+ import { DATABASE_DEFAULT_TEXT } from './database-localization';
++import { queryGroups, queryRows } from './database-query';
++import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
+ 
+ /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
+ const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
+ 
++/**
++ * Group key for rows with no value. Not '' because card drag reads a missing
++ * data-option-id as ''. 23 chars, so a default 21-char nanoid option id never equals it.
++ */
++export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
++
+ export class DatabaseModel {
+   private schema: PropertyDefinition[];
+   private rows: DatabaseRow[] = [];
+@@ -69,7 +77,8 @@ export class DatabaseModel {
+     const prop = this.schema.find((p) => p.id === propertyId);
+     if (prop === undefined) return;
+     if (changes.name !== undefined) prop.name = changes.name;
+-    if (changes.config !== undefined) prop.config = changes.config;
++    // Merge, not replace: a newer client's key beside `options` must outlive every option edit.
++    if (changes.config !== undefined) prop.config = { ...prop.config, ...changes.config };
+   }
+ 
+   deleteProperty(propertyId: string): void {
+@@ -106,18 +115,37 @@ export class DatabaseModel {
+     const groups = new Map<string, DatabaseRow[]>();
+     const ordered = this.getOrderedRows();
+     for (const row of ordered) {
+-      const rawValue = row.properties[propertyId];
+-      const key = this.toGroupKey(rawValue);
+-      const existing = groups.get(key);
+-      if (existing !== undefined) {
+-        existing.push(row);
+-      } else {
+-        groups.set(key, [row]);
++      for (const key of this.toGroupKeys(row.properties[propertyId])) {
++        const group = groups.get(key) ?? [];
++
++        group.push(row);
++        groups.set(key, group);
+       }
+     }
+     return groups;
+   }
+ 
++  /** The groups a row belongs to under `propertyId`. The query engine groups only through this. */
++  groupKeysOf(propertyId: string): (row: DatabaseRow) => string[] {
++    return (row) => this.toGroupKeys(row.properties[propertyId]);
++  }
++
++  queryRows(request: QueryRowsRequest): QueryRowsResult {
++    return queryRows(this.querySource(request.view), request);
++  }
++
++  queryGroups(view: DatabaseViewConfig): GroupCount[] {
++    return queryGroups(this.querySource(view), view);
++  }
++
++  private querySource(view: DatabaseViewConfig): QuerySource {
++    return {
++      schema: this.schema,
++      rows: this.rows,
++      ...(view.groupBy !== undefined ? { groupKeysOf: this.groupKeysOf(view.groupBy) } : {}),
++    };
++  }
++
+   getSelectOptions(propertyId: string): SelectOption[] {
+     const prop = this.getProperty(propertyId);
+     if (prop === undefined || (prop.type !== 'select' && prop.type !== 'multiSelect')) return [];
+@@ -138,7 +166,7 @@ export class DatabaseModel {
+     const knownIds = new Set(known.map((o) => o.id));
+ 
+     return [...this.getRowsGroupedBy(propertyId).keys()]
+-      .filter((key) => key !== '' && !knownIds.has(key))
++      .filter((key) => key !== NO_VALUE_GROUP_KEY && !knownIds.has(key))
+       .map((key) => ({ id: key, label: '', position: ORPHAN_GROUP_POSITION }));
+   }
+ 
+@@ -223,11 +251,12 @@ export class DatabaseModel {
+ 
+   // ─── Static helpers ───
+ 
+-  private toGroupKey(value: PropertyValue | undefined): string {
+-    if (value === undefined || value === null) return '';
+-    if (typeof value === 'string') return value;
+-    if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+-    return '';
++  private toGroupKeys(value: PropertyValue | undefined): string[] {
++    if (Array.isArray(value)) return value.length > 0 ? value : [NO_VALUE_GROUP_KEY];
++    if (value === undefined || value === null || value === '') return [NO_VALUE_GROUP_KEY];
++    if (typeof value === 'string') return [value];
++    if (typeof value === 'boolean' || typeof value === 'number') return [String(value)];
++    return [NO_VALUE_GROUP_KEY];
+   }
+ 
+   /**
+diff --git a/src/tools/database/database-query.ts b/src/tools/database/database-query.ts
+new file mode 100644
+index 00000000..c836cdff
+--- /dev/null
++++ b/src/tools/database/database-query.ts
+@@ -0,0 +1,317 @@
++import type {
++  DatabaseRow,
++  DatabaseViewConfig,
++  FilterConfig,
++  PropertyDefinition,
++  PropertyType,
++  PropertyValue,
++  SortConfig,
++} from './types';
++
++const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
++
++/** Operator names follow the Notion API, so saved filters stay portable. */
++export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>> = {
++  title: TEXT_OPERATORS,
++  text: TEXT_OPERATORS,
++  url: TEXT_OPERATORS,
++  richText: TEXT_OPERATORS,
++  number: ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to', 'is_empty', 'is_not_empty'],
++  select: ['equals', 'does_not_equal', 'is_empty', 'is_not_empty'],
++  multiSelect: ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
++  checkbox: ['equals', 'does_not_equal'],
++  date: ['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty'],
++};
++
++export interface QuerySource {
++  schema: PropertyDefinition[];
++  rows: DatabaseRow[];
++  /** Keys of the groups a row belongs to. The model owns grouping; the engine only asks. */
++  groupKeysOf?: (row: DatabaseRow) => string[];
++}
++
++export interface QueryRowsRequest {
++  view: DatabaseViewConfig;
++  group?: string;
++  cursor?: string;
++  limit?: number;
++}
++
++export interface QueryRowsResult {
++  rows: DatabaseRow[];
++  nextCursor?: string;
++  total?: number;
++}
++
++export interface GroupCount {
++  key: string;
++  count: number;
++}
++
++const isBlank = (value: PropertyValue | undefined): boolean =>
++  value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
++
++const toNumber = (value: PropertyValue | undefined): number | undefined => {
++  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
++  if (typeof value !== 'string' || value.trim() === '') return undefined;
++  const parsed = Number(value);
++
++  return Number.isFinite(parsed) ? parsed : undefined;
++};
++
++/** The calendar day of an ISO string; time and zone are ignored. */
++const toDay = (value: PropertyValue | undefined): string | undefined =>
++  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : undefined;
++
++const toIdList = (value: PropertyValue): string[] => {
++  if (Array.isArray(value)) return value;
++
++  return typeof value === 'string' && value !== '' ? [value] : [];
++};
++
++/** `undefined` means "this filter does not apply", so the row passes. */
++const matchText = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const isDocument = typeof value === 'object' && value !== null && !Array.isArray(value);
++
++  if (operator === 'is_empty' || operator === 'is_not_empty') {
++    const empty = isDocument ? value.blocks.length === 0 : isBlank(value);
++
++    return operator === 'is_empty' ? empty : !empty;
++  }
++  if (isDocument || typeof target !== 'string' || target === '') return undefined;
++
++  const text = (typeof value === 'string' || typeof value === 'number' ? String(value) : '').toLowerCase();
++  const needle = target.toLowerCase();
++
++  switch (operator) {
++    case 'equals': return text === needle;
++    case 'does_not_equal': return text !== needle;
++    case 'contains': return text.includes(needle);
++    case 'does_not_contain': return !text.includes(needle);
++    case 'starts_with': return text.startsWith(needle);
++    case 'ends_with': return text.endsWith(needle);
++    default: return undefined;
++  }
++};
++
++const matchNumber = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const n = toNumber(value);
++
++  if (operator === 'is_empty') return n === undefined;
++  if (operator === 'is_not_empty') return n !== undefined;
++
++  const t = toNumber(target);
++
++  if (t === undefined) return undefined;
++  if (n === undefined) return operator === 'does_not_equal';
++
++  switch (operator) {
++    case 'equals': return n === t;
++    case 'does_not_equal': return n !== t;
++    case 'greater_than': return n > t;
++    case 'greater_than_or_equal_to': return n >= t;
++    case 'less_than': return n < t;
++    case 'less_than_or_equal_to': return n <= t;
++    default: return undefined;
++  }
++};
++
++const matchSelect = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const current = typeof value === 'string' ? value : '';
++
++  if (operator === 'is_empty') return current === '';
++  if (operator === 'is_not_empty') return current !== '';
++
++  const wanted = toIdList(target);
++
++  if (wanted.length === 0) return undefined;
++  if (operator === 'equals') return wanted.includes(current);
++  if (operator === 'does_not_equal') return !wanted.includes(current);
++
++  return undefined;
++};
++
++const matchMultiSelect = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const current = Array.isArray(value) ? value : [];
++
++  if (operator === 'is_empty') return current.length === 0;
++  if (operator === 'is_not_empty') return current.length > 0;
++
++  const wanted = toIdList(target);
++
++  if (wanted.length === 0) return undefined;
++
++  const hit = wanted.some((id) => current.includes(id));
++
++  if (operator === 'contains') return hit;
++  if (operator === 'does_not_contain') return !hit;
++
++  return undefined;
++};
++
++const matchCheckbox = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  if (typeof target !== 'boolean') return undefined;
++  const checked = value === true;
++
++  if (operator === 'equals') return checked === target;
++  if (operator === 'does_not_equal') return checked !== target;
++
++  return undefined;
++};
++
++const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const day = toDay(value);
++
++  if (operator === 'is_empty') return day === undefined;
++  if (operator === 'is_not_empty') return day !== undefined;
++
++  const t = toDay(target);
++
++  if (t === undefined) return undefined;
++  if (day === undefined) return false;
++
++  switch (operator) {
++    case 'equals': return day === t;
++    case 'before': return day < t;
++    case 'after': return day > t;
++    case 'on_or_before': return day <= t;
++    case 'on_or_after': return day >= t;
++    default: return undefined;
++  }
++};
++
++const MATCHERS: Record<PropertyType, (value: PropertyValue | undefined, operator: string, target: PropertyValue) => boolean | undefined> = {
++  title: matchText,
++  text: matchText,
++  url: matchText,
++  richText: matchText,
++  number: matchNumber,
++  select: matchSelect,
++  multiSelect: matchMultiSelect,
++  checkbox: matchCheckbox,
++  date: matchDate,
++};
++
++/**
++ * AND of every filter. A filter the engine cannot read (unknown operator,
++ * wrong type, deleted property, missing value) lets the row through: hiding
++ * rows on a filter written by a newer client would look like data loss.
++ */
++export const rowMatchesFilters = (row: DatabaseRow, filters: FilterConfig[], schema: PropertyDefinition[]): boolean =>
++  filters.every((filter) => {
++    const property = schema.find((p) => p.id === filter.propertyId);
++
++    if (property === undefined || !FILTER_OPERATORS[property.type].includes(filter.operator)) return true;
++
++    return MATCHERS[property.type](row.properties[filter.propertyId], filter.operator, filter.value) ?? true;
++  });
++
++/** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
++const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => a.position.localeCompare(b.position);
++
++/** Options compare with `<`, like getSelectOptions, so sort order matches column order. */
++const compareKeys = (a: string, b: string): number => {
++  if (a === b) return 0;
++
++  return a < b ? -1 : 1;
++};
++
++const compareKeyLists = (a: string[], b: string[]): number => {
++  const diff = a.map((key, i) => (i < b.length ? compareKeys(key, b[i]) : 0)).find((d) => d !== 0);
++
++  return diff ?? a.length - b.length;
++};
++
++/** Returns a comparable key, or `undefined` for an empty value. */
++const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefined): string | number | string[] | undefined => {
++  const optionPosition = (id: string): string | undefined => property.config?.options.find((o) => o.id === id)?.position;
++
++  switch (property.type) {
++    case 'number': return toNumber(value);
++    case 'checkbox': return value === true ? 1 : 0;
++    case 'date': return toDay(value);
++    case 'select': return typeof value === 'string' && value !== '' ? optionPosition(value) ?? value : undefined;
++    case 'multiSelect': {
++      const keys = toIdList(value ?? null).map((id) => optionPosition(id) ?? id).sort(compareKeys);
++
++      return keys.length > 0 ? keys : undefined;
++    }
++    case 'title':
++    case 'text':
++    case 'url':
++    case 'richText':
++      return typeof value === 'string' && value !== '' ? value : undefined;
++  }
++};
++
++const compareSortKeys = (a: string | number | string[], b: string | number | string[]): number => {
++  if (typeof a === 'number' && typeof b === 'number') return a - b;
++  if (Array.isArray(a) && Array.isArray(b)) return compareKeyLists(a, b);
++  if (typeof a === 'string' && typeof b === 'string') return a.localeCompare(b);
++
++  return 0;
++};
++
++/** Stable: rows equal on every sort keep position order. Empties go last in both directions. */
++export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: PropertyDefinition[]): DatabaseRow[] => {
++  const active = sorts.flatMap((sort) => {
++    const property = schema.find((p) => p.id === sort.propertyId);
++
++    return property === undefined ? [] : [{ property, sign: sort.direction === 'desc' ? -1 : 1 }];
++  });
++
++  const compareBy = (property: PropertyDefinition, sign: number, a: DatabaseRow, b: DatabaseRow): number => {
++    const ka = sortKeyOf(property, a.properties[property.id]);
++    const kb = sortKeyOf(property, b.properties[property.id]);
++
++    // Empty check runs before the sign, or descending would put empties first.
++    if (ka === undefined && kb === undefined) return 0;
++    if (ka === undefined) return 1;
++    if (kb === undefined) return -1;
++
++    return compareSortKeys(ka, kb) * sign;
++  };
++
++  return [...rows].sort((a, b) => {
++    const diff = active.map(({ property, sign }) => compareBy(property, sign, a, b)).find((d) => d !== 0);
++
++    return diff ?? comparePosition(a, b);
++  });
++};
++
++const filteredRows = (source: QuerySource, view: DatabaseViewConfig): DatabaseRow[] =>
++  source.rows.filter((row) => rowMatchesFilters(row, view.filters, source.schema));
++
++/**
++ * In-memory answer to the view query. Synchronous for now; a remote source
++ * will need the same fields behind a Promise.
++ */
++export const queryRows = (source: QuerySource, request: QueryRowsRequest): QueryRowsResult => {
++  const { view, group } = request;
++  const groupKeysOf = source.groupKeysOf;
++  const inGroup = group === undefined
++    ? filteredRows(source, view)
++    : filteredRows(source, view).filter((row) => groupKeysOf?.(row).includes(group) ?? false);
++  const sorted = sortRows(inGroup, view.sorts, source.schema);
++  const start = request.cursor === undefined ? 0 : Number(request.cursor);
++  const end = request.limit === undefined ? sorted.length : start + request.limit;
++
++  return {
++    rows: sorted.slice(start, end),
++    total: sorted.length,
++    ...(end < sorted.length ? { nextCursor: String(end) } : {}),
++  };
++};
++
++/** Group counts after filtering, in the order each key first shows up in position order. */
++export const queryGroups = (source: QuerySource, view: DatabaseViewConfig): GroupCount[] => {
++  const counts = new Map<string, number>();
++
++  for (const row of sortRows(filteredRows(source, view), [], source.schema)) {
++    for (const key of source.groupKeysOf?.(row) ?? []) {
++      counts.set(key, (counts.get(key) ?? 0) + 1);
++    }
++  }
++
++  return [...counts].map(([key, count]) => ({ key, count }));
++};
+diff --git a/src/tools/database/database-tab-bar.ts b/src/tools/database/database-tab-bar.ts
+index c284092e..65c7da97 100644
+--- a/src/tools/database/database-tab-bar.ts
++++ b/src/tools/database/database-tab-bar.ts
+@@ -148,7 +148,11 @@ export class DatabaseTabBar {
+       this.activateTab(viewId, false);
+     });
+ 
++    // Read-only is read at event time: setReadOnly flips a live bar.
+     bar.addEventListener('contextmenu', (e: MouseEvent) => {
++      if (this.readOnly) {
++        return;
++      }
+       const target = e.target as HTMLElement;
+       const tab = target.closest('[data-blok-database-tab]');
+       if (!(tab instanceof HTMLElement)) {
+@@ -163,6 +167,9 @@ export class DatabaseTabBar {
+     });
+ 
+     bar.addEventListener('dblclick', (e: MouseEvent) => {
++      if (this.readOnly) {
++        return;
++      }
+       const target = e.target as HTMLElement;
+       const tab = target.closest('[data-blok-database-tab]');
+       if (!(tab instanceof HTMLElement)) {
+@@ -176,6 +183,9 @@ export class DatabaseTabBar {
+     });
+ 
+     bar.addEventListener('pointerdown', (e) => {
++      if (this.readOnly) {
++        return;
++      }
+       const target = e.target as HTMLElement;
+       const tab = target.closest<HTMLElement>('[data-blok-database-tab]');
+       if (tab === null) return;
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 85caf741..7cb6919e 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -2,7 +2,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
+ import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
+ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
+ import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+-import { DatabaseModel } from './database-model';
++import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
+ import { DatabaseBoardView } from './database-board-view';
+ import { DatabaseListView } from './database-list-view';
+ import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
+@@ -46,6 +46,16 @@ const changedBlock = (payload: unknown): ChangedBlock | undefined =>
+ /** Events that can end an inline edit or a drag. */
+ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
+ 
++const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId']);
++
++/**
++ * Top-level keys this version does not know, kept as they came. A full save
++ * prunes every key it leaves out from the shared document, so dropping a
++ * newer version's key here would delete it for every client.
++ */
++const unknownKeys = (data: DatabaseData | undefined): Record<string, unknown> =>
++  Object.fromEntries(Object.entries(data ?? {}).filter(([key]) => !KNOWN_KEYS.has(key)));
++
+ /**
+  * DatabaseTool — a multi-view Kanban board block tool for Blok.
+  *
+@@ -61,6 +71,7 @@ export class DatabaseTool implements BlockTool {
+   private readonly config: DatabaseConfig;
+ 
+   private title: string;
++  private readonly unknown: Record<string, unknown>;
+   private activeViewId: string;
+   private model: DatabaseModel;
+   private view!: DatabaseViewRenderer;
+@@ -73,6 +84,8 @@ export class DatabaseTool implements BlockTool {
+   private tabBar: DatabaseTabBar | null = null;
+ 
+   private cardDrag: DatabaseCardDrag | null = null;
++  /** Group of the card the pointer pressed; a multiSelect drop replaces this option. */
++  private cardDragFromOptionId: string | null = null;
+   private columnDrag: DatabaseColumnDrag | null = null;
+   private columnControls: DatabaseColumnControls | null = null;
+   private listRowDrag: DatabaseListRowDrag | null = null;
+@@ -96,6 +109,7 @@ export class DatabaseTool implements BlockTool {
+     this.config = config ?? {};
+ 
+     this.title = (data as DatabaseData | undefined)?.title ?? '';
++    this.unknown = unknownKeys(data);
+     this.model = new DatabaseModel(data);
+     const views = this.model.getViews();
+     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
+@@ -263,6 +277,7 @@ export class DatabaseTool implements BlockTool {
+     const currentTitle = this.titleElement?.textContent ?? this.title;
+ 
+     return {
++      ...structuredClone(this.unknown),
+       ...this.model.snapshot(),
+       title: currentTitle,
+       activeViewId: this.activeViewId,
+@@ -897,14 +912,34 @@ export class DatabaseTool implements BlockTool {
+       return this.renderListView(titlePropId, groupByPropId, viewConfig);
+     }
+ 
+-    return this.renderBoardView(titlePropId, groupByPropId);
++    return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
+   }
+ 
+-  private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
+-    const options = groupByPropId !== undefined
+-      ? localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)
+-      : [];
+-    const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
++  /**
++   * The no-value option must stay first: column drag never drops before it,
++   * and handleGroupDrop reads a missing left neighbour as "first real option".
++   */
++  private groupOptions(groupByPropId: string): SelectOption[] {
++    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupByPropId);
++    const noValue: SelectOption = {
++      id: NO_VALUE_GROUP_KEY,
++      label: this.api.i18n.t('tools.database.noValueGroup', { property: property?.name ?? '' }),
++      position: '',
++    };
++
++    return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)];
++  }
++
++  /** Each group's rows, queried once per render. */
++  private queryGroupRows(viewConfig: DatabaseViewConfig, optionIds: string[]): Map<string, DatabaseRow[]> {
++    return new Map(optionIds.map((id) => [id, this.model.queryRows({ view: viewConfig, group: id }).rows]));
++  }
++
++  private renderBoardView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
++    const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId) : [];
++    const groups = viewConfig !== undefined && groupByPropId !== undefined
++      ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
++      : new Map<string, DatabaseRow[]>();
+ 
+     this.view = new DatabaseBoardView({
+       readOnly: this.readOnly,
+@@ -926,11 +961,8 @@ export class DatabaseTool implements BlockTool {
+     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+ 
+     if (groupByPropId !== undefined) {
+-      const options = localizeDatabaseSelectOptions(
+-        this.model.getSelectOptions(groupByPropId),
+-        this.api.i18n
+-      );
+-      const groups = this.model.getRowsGroupedBy(groupByPropId);
++      const options = this.groupOptions(groupByPropId);
++      const groups = this.queryGroupRows(viewConfig, options.map((o) => o.id));
+ 
+       this.view = new DatabaseListView({
+         readOnly: this.readOnly,
+@@ -946,7 +978,7 @@ export class DatabaseTool implements BlockTool {
+       this.view = new DatabaseListView({
+         readOnly: this.readOnly,
+         i18n: this.api.i18n,
+-        rows: this.model.getOrderedRows(),
++        rows: this.model.queryRows({ view: viewConfig }).rows,
+         titlePropertyId: titlePropId,
+         schema,
+         visiblePropertyIds: viewConfig.visibleProperties,
+@@ -1093,8 +1125,8 @@ export class DatabaseTool implements BlockTool {
+ 
+     const properties: Record<string, PropertyValue> = { [titlePropId]: '' };
+ 
+-    if (groupByPropId !== undefined && optionId !== null) {
+-      properties[groupByPropId] = optionId;
++    if (groupByPropId !== undefined && optionId !== null && optionId !== NO_VALUE_GROUP_KEY) {
++      properties[groupByPropId] = this.groupValueFor(groupByPropId, optionId);
+     }
+ 
+     const rowData = this.model.createRowData(properties);
+@@ -1104,7 +1136,13 @@ export class DatabaseTool implements BlockTool {
+       { parentId: this.block.id, position: 'end', id: rowData.id },
+     );
+     this.syncRowsFromBlocks();
+-    this.view.appendRow(viewEl, rowData);
++
++    // A grouped list keeps its "+ New" inside each group, so the row must go into that group's rows list.
++    const groupRows = optionId === null
++      ? null
++      : viewEl.querySelector(`[data-blok-database-list-group][data-option-id="${optionId}"] [data-blok-database-list-rows]`);
++
++    this.view.appendRow(groupRows instanceof HTMLElement ? groupRows : viewEl, rowData);
+ 
+     void this.sync.syncCreateRow({
+       id: rowData.id,
+@@ -1113,6 +1151,10 @@ export class DatabaseTool implements BlockTool {
+     });
+   }
+ 
++  private groupValueFor(groupByPropId: string, optionId: string): PropertyValue {
++    return this.model.getProperty(groupByPropId)?.type === 'multiSelect' ? [optionId] : optionId;
++  }
++
+   private handleAddRow(optionId: string, boardEl: HTMLDivElement): void {
+     const viewConfig = this.model.getView(this.activeViewId);
+     const groupByPropId = viewConfig?.groupBy;
+@@ -1123,10 +1165,9 @@ export class DatabaseTool implements BlockTool {
+ 
+     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+     const titlePropId = titleProp?.id ?? '';
+-    const rowData = this.model.createRowData({
+-      [titlePropId]: '',
+-      [groupByPropId]: optionId,
+-    });
++    const rowData = this.model.createRowData(optionId === NO_VALUE_GROUP_KEY
++      ? { [titlePropId]: '' }
++      : { [titlePropId]: '', [groupByPropId]: this.groupValueFor(groupByPropId, optionId) });
+ 
+     this.api.blocks.insertAt(
+       'database-row',
+@@ -1206,12 +1247,13 @@ export class DatabaseTool implements BlockTool {
+     const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
+     const descriptionPropId = descriptionProp?.id;
+ 
+-    if (isList) {
++    // GATED ON D7: a sorted view has no manual order to drag into.
++    if (isList && (viewConfig?.sorts.length ?? 0) === 0) {
+       this.listRowDrag = new DatabaseListRowDrag({
+         wrapper: boardEl,
+         onDrop: (result) => this.handleListRowDrop(result),
+       });
+-    } else {
++    } else if (!isList) {
+       this.cardDrag = new DatabaseCardDrag({
+         wrapper: boardEl,
+         onDrop: (result) => this.handleRowDrop(result),
+@@ -1225,7 +1267,7 @@ export class DatabaseTool implements BlockTool {
+       this.columnControls = new DatabaseColumnControls({
+         i18n: this.api.i18n,
+         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
+-        onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
++        onDelete: (optionId) => this.handleOptionDelete(optionId),
+         onRenameInput: (optionId, label) => {
+           // Instant local save — update the model immediately so save() captures latest value
+           this.handleOptionRename(optionId, label);
+@@ -1365,7 +1407,7 @@ export class DatabaseTool implements BlockTool {
+         const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
+         const optId = columnEl?.getAttribute('data-option-id') ?? null;
+ 
+-        if (optId !== null) {
++        if (optId !== null && optId !== NO_VALUE_GROUP_KEY) {
+           e.preventDefault();
+           e.stopPropagation();
+           this.columnDrag?.beginTracking(optId, e.clientX, e.clientY);
+@@ -1375,7 +1417,7 @@ export class DatabaseTool implements BlockTool {
+       }
+ 
+       // Board: card drag
+-      const cardEl = target.closest('[data-blok-database-card]');
++      const cardEl = target.closest<HTMLElement>('[data-blok-database-card]');
+ 
+       if (cardEl !== null) {
+         const rowId = cardEl.getAttribute('data-row-id');
+@@ -1383,7 +1425,8 @@ export class DatabaseTool implements BlockTool {
+         if (rowId !== null) {
+           e.preventDefault();
+           e.stopPropagation();
+-          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY);
++          this.cardDragFromOptionId = cardEl.closest('[data-blok-database-column]')?.getAttribute('data-option-id') ?? null;
++          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY, cardEl);
+         }
+ 
+         return;
+@@ -1415,7 +1458,7 @@ export class DatabaseTool implements BlockTool {
+       const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
+       const optId = columnEl?.getAttribute('data-option-id');
+ 
+-      if (optId !== null && optId !== undefined) {
++      if (optId !== null && optId !== undefined && optId !== NO_VALUE_GROUP_KEY) {
+         this.columnControls.makePillTitleEditable(header, optId);
+         this.columnControls.appendDeleteButton(header, optId);
+       }
+@@ -1444,18 +1487,49 @@ export class DatabaseTool implements BlockTool {
+       return;
+     }
+ 
++    // GATED ON D7: neighbours arrive in sort order, not key order, so
++    // positionBetween would throw. Only the group value may change.
++    if (viewConfig !== undefined && viewConfig.sorts.length > 0) {
++      if (this.model.getRow(rowId)?.properties[groupByPropId] !== toOptionId) {
++        this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
++        this.rerenderView();
++        this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
++      }
++
++      return;
++    }
++
+     const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
+     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
+     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
+ 
+-    this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
++    const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
++
++    this.updateRowBlock(rowId, { [groupByPropId]: value });
+     this.moveRowBlock(rowId, position);
+     this.rerenderView();
+ 
+-    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
++    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: value } });
+     void this.sync.syncMoveRow({ rowId, position });
+   }
+ 
++  private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {
++    const target = toOptionId === NO_VALUE_GROUP_KEY ? null : toOptionId;
++
++    if (this.model.getProperty(groupByPropId)?.type !== 'multiSelect') {
++      return target;
++    }
++
++    const current = this.model.getRow(rowId)?.properties[groupByPropId];
++    const list = Array.isArray(current) ? current : [];
++    const from = this.cardDragFromOptionId;
++    const next = list.some((id) => id === from)
++      ? list.map((id) => (id === from ? target : id))
++      : [...list, target];
++
++    return [...new Set(next.filter((id): id is string => id !== null))];
++  }
++
+   private handleGroupDrop(result: GroupDragResult): void {
+     const { optionId, beforeOptionId, afterOptionId } = result;
+     const viewConfig = this.model.getView(this.activeViewId);
+@@ -1544,7 +1618,7 @@ export class DatabaseTool implements BlockTool {
+     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options } } });
+   }
+ 
+-  private handleOptionDelete(optionId: string, boardEl: HTMLDivElement): void {
++  private handleOptionDelete(optionId: string): void {
+     const viewConfig = this.model.getView(this.activeViewId);
+     const groupByPropId = viewConfig?.groupBy;
+ 
+@@ -1562,19 +1636,19 @@ export class DatabaseTool implements BlockTool {
+       return;
+     }
+ 
+-    // Delete rows in this group
+-    const groups = this.model.getRowsGroupedBy(groupByPropId);
+-    const rowsInGroup = groups.get(optionId) ?? [];
++    const rowsInGroup = this.model.getRowsGroupedBy(groupByPropId).get(optionId) ?? [];
+ 
+     for (const row of rowsInGroup) {
+-      this.deleteRowBlock(row.id);
+-      void this.sync.syncDeleteRow({ rowId: row.id });
++      const current = row.properties[groupByPropId];
++      const value = Array.isArray(current) ? current.filter((id) => id !== optionId) : null;
++
++      this.updateRowBlock(row.id, { [groupByPropId]: value });
++      this.sync.syncUpdateRow({ rowId: row.id, properties: { [groupByPropId]: value } });
+     }
+ 
+-    // Remove the option
+     const filteredOptions = prop.config.options.filter((o) => o.id !== optionId);
+     this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
+-    this.view.removeGroup?.(boardEl, optionId);
++    this.rerenderView();
+     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
+   }
+ 
+@@ -1771,7 +1845,11 @@ export class DatabaseTool implements BlockTool {
+       newBoardArea.scrollLeft = savedScrollLeft;
+     }
+ 
+-    this.attachViewListeners(newBoardWrapper);
+-    this.initSubsystems(newBoardWrapper);
++    // Same gate as render() and switchView(): rows arriving after boot,
++    // undo/peer reprojection and setReadOnly all rerender through here.
++    if (!this.readOnly) {
++      this.attachViewListeners(newBoardWrapper);
++      this.initSubsystems(newBoardWrapper);
++    }
+   }
+ }
+diff --git a/test/unit/components/i18n/lifecycle-coverage.test.ts b/test/unit/components/i18n/lifecycle-coverage.test.ts
+index 307e5723..4e1b7edf 100644
+--- a/test/unit/components/i18n/lifecycle-coverage.test.ts
++++ b/test/unit/components/i18n/lifecycle-coverage.test.ts
+@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
+ };
+ 
+ describe('current English catalog lifecycle coverage', () => {
+-  it('rebuilds a disjoint 600 + 117 + 61 + 4 closure for all 782 keys', () => {
++  it('rebuilds a disjoint 601 + 117 + 61 + 4 closure for all 783 keys', () => {
+     const { lifecycle } = getLifecycle();
+     const counts = Object.fromEntries(
+       ([
+@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
+       ])
+     );
+ 
+-    expect(lifecycle.size).toBe(782);
++    expect(lifecycle.size).toBe(783);
+     expect(counts).toEqual({
+       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
+       // the callout emoji button stopped being named by the emoji glyph and
+@@ -321,7 +321,7 @@ describe('current English catalog lifecycle coverage', () => {
+       // +2: the find bar names why a replace button is disabled by literal.
+       // +2: the page title header calls title.placeholder and title.ariaLabel by literal.
+       // +2: the page icon calls title.addIcon and title.changeIcon by literal.
+-      'executable-literal': 600,
++      'executable-literal': 601,
+       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
+       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
+       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
+diff --git a/test/unit/playground/database-fixtures.test.ts b/test/unit/playground/database-fixtures.test.ts
+new file mode 100644
+index 00000000..9cdf1ee4
+--- /dev/null
++++ b/test/unit/playground/database-fixtures.test.ts
+@@ -0,0 +1,94 @@
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++import { runInNewContext } from 'node:vm';
++
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++
++import type { API, BlockAPI } from '../../../types';
++import { validateAgainst } from '../../../src/shared/schema/validate';
++import { DATABASE_DATA } from '../../../src/shared/tool-descriptions/database';
++import { DATABASE_ROW_DATA } from '../../../src/shared/tool-descriptions/database-row';
++import { DatabaseTool } from '../../../src/tools/database';
++import type { DatabaseData, DatabaseRowData } from '../../../src/tools/database/types';
++
++interface FixtureBlock {
++  id: string;
++  type: string;
++  data: Record<string, unknown>;
++  parent?: string;
++}
++
++interface BlockStatesEntry {
++  tool: string;
++  states: Array<{ label: string; blocks: FixtureBlock[] }>;
++}
++
++/** BLOCK_STATES_RAW is a plain literal inside index.html, evaluated the way block-states-spec.test.ts does. */
++const loadBlockStates = (): BlockStatesEntry[] => {
++  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
++  const start = html.indexOf('const BLOCK_STATES_RAW = [');
++  const end = html.indexOf('const BLOCK_STATES_SPEC');
++
++  // Round-trip into this realm: the schema validator only treats objects with THIS realm's
++  // Object.prototype as records, so vm-born objects would pass every check unexamined.
++  return JSON.parse(JSON.stringify(runInNewContext(`${html.slice(start, end)}; BLOCK_STATES_RAW`))) as BlockStatesEntry[];
++};
++
++const databaseFixtures = loadBlockStates().flatMap((entry) => entry.states.flatMap((state) =>
++  state.blocks
++    .filter((block) => block.type === 'database')
++    .map((database) => ({
++      name: `${entry.tool} / ${state.label} / ${database.id}`,
++      data: database.data as DatabaseData,
++      rows: state.blocks.filter((block) => block.parent === database.id && block.type === 'database-row'),
++    }))
++));
++
++const makeTool = (data: DatabaseData): DatabaseTool => new DatabaseTool({
++  data,
++  config: {},
++  api: { events: { on: vi.fn(), off: vi.fn() } } as unknown as API,
++  block: { id: 'fixture', dispatchChange: vi.fn() } as unknown as BlockAPI,
++  readOnly: false,
++});
++
++describe('playground database fixtures (index.html)', () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  it('finds the database fixtures', () => {
++    expect(databaseFixtures.length).toBeGreaterThan(0);
++  });
++
++  it.each(databaseFixtures)('$name: matches the saved database shape', ({ data }) => {
++    expect(validateAgainst(DATABASE_DATA, data)).toEqual([]);
++  });
++
++  it.each(databaseFixtures)('$name: passes the tool\'s own validate()', ({ data }) => {
++    expect(makeTool(data).validate(data)).toBe(true);
++  });
++
++  it.each(databaseFixtures)('$name: every row matches the saved row shape', ({ rows }) => {
++    for (const row of rows) {
++      expect(validateAgainst(DATABASE_ROW_DATA, row.data), row.id).toEqual([]);
++    }
++  });
++
++  it.each(databaseFixtures)('$name: every select value names an option, so no labelless column appears', ({ data, rows }) => {
++    const selects = data.schema.filter((p) => p.type === 'select');
++    const pairs = selects.flatMap((property) => rows.map((row) => ({
++      at: `${row.id}.${property.id}`,
++      value: (row.data as DatabaseRowData).properties[property.id],
++      optionIds: (property.config?.options ?? []).map((option) => option.id),
++    })));
++
++    for (const { at, value, optionIds } of pairs.filter((pair) => pair.value !== undefined && pair.value !== null)) {
++      expect(optionIds, at).toContain(value);
++    }
++  });
++});
+diff --git a/test/unit/styles/__snapshots__/main-css-rules.snap.txt b/test/unit/styles/__snapshots__/main-css-rules.snap.txt
+index a2fc95c9..87786d1f 100644
+--- a/test/unit/styles/__snapshots__/main-css-rules.snap.txt
++++ b/test/unit/styles/__snapshots__/main-css-rules.snap.txt
+@@ -4936,6 +4936,14 @@ span[data-blok-slash-search] {
+   height: 14px;
+ }
+ 
++[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-dragging] [data-blok-database-card], [data-blok-database-dragging] [data-blok-database-cards], [data-blok-database-column-reordering] [data-blok-database-column], [data-blok-database-column-reordering] [data-blok-database-board] {
++  transition: none;
++}
++
++[@media (prefers-reduced-motion: reduce)] [data-blok-database-property-type-popover] {
++  animation: none;
++}
++
+ .blok-media-empty {
+   display: flex;
+   flex-direction: column;
+diff --git a/test/unit/styles/css-split-equivalence.test.ts b/test/unit/styles/css-split-equivalence.test.ts
+index b8b79431..422e9d01 100644
+--- a/test/unit/styles/css-split-equivalence.test.ts
++++ b/test/unit/styles/css-split-equivalence.test.ts
+@@ -732,6 +732,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
+     const AGENT_MARKER_BYTES = 633;
+     // find.css: the field's grid-column pin and its comment (read-only find field gap).
+     const FIND_FIELD_COLUMN_BYTES = 140;
++    // database.css: the prefers-reduced-motion block and its drawer-fallback comment.
++    const DATABASE_REDUCED_MOTION_BYTES = 536;
+     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
+       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
+       + SLASH_PILL_SPAN_BYTES
+@@ -785,7 +787,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
+       + TABS_EMPTY_HINT_BYTES
+       + PAGE_TITLE_HEADER_BYTES
+       + AGENT_MARKER_BYTES
+-      + FIND_FIELD_COLUMN_BYTES;
++      + FIND_FIELD_COLUMN_BYTES
++      + DATABASE_REDUCED_MOTION_BYTES;
+     const actual = localImportedByteBudget(ENTRY);
+ 
+     expect(actual).toBeLessThanOrEqual(CEILING);
+diff --git a/test/unit/styles/database-reduced-motion.test.ts b/test/unit/styles/database-reduced-motion.test.ts
+new file mode 100644
+index 00000000..61af235d
+--- /dev/null
++++ b/test/unit/styles/database-reduced-motion.test.ts
+@@ -0,0 +1,50 @@
++/**
++ * Database motion must stand down under prefers-reduced-motion.
++ * jsdom has no CSS, so these read the authored source.
++ */
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++
++import { describe, expect, it } from 'vitest';
++
++const source = readFileSync(resolve(__dirname, '../../../src/styles/database.css'), 'utf8')
++  .replace(/\/\*[\s\S]*?\*\//g, '')
++  .replace(/\s+/g, ' ');
++
++/** The inner text of every reduced-motion block. Its rules hold no nested braces. */
++const reducedMotionBlocks = (): string[] =>
++  [ ...source.matchAll(/@media \(prefers-reduced-motion: reduce\) \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ]
++    .map((match) => match[1]);
++
++const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
++
++/** The last value of `name` across rules whose selector list contains `selector`. */
++const reducedProp = (selector: string, name: string): string | null => {
++  const values = reducedMotionBlocks()
++    .flatMap((block) => [ ...block.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g) ])
++    .filter((rule) => rule[1].split(/,(?![^(]*\))/).map((part) => part.trim()).includes(selector))
++    .map((rule) => rule[2].match(new RegExp(`(?:^|[;\\s])${escape(name)} ?: ?([^;]+);`)))
++    .filter((match) => match !== null)
++    .map((match) => match[1].trim());
++
++  return values.at(-1) ?? null;
++};
++
++describe('database.css under prefers-reduced-motion', () => {
++  it('drops the drawer width slide', () => {
++    expect(reducedProp('[data-blok-database-drawer]', 'transition')).toBe('none');
++  });
++
++  it.each([
++    '[data-blok-database-dragging] [data-blok-database-card]',
++    '[data-blok-database-dragging] [data-blok-database-cards]',
++    '[data-blok-database-column-reordering] [data-blok-database-column]',
++    '[data-blok-database-column-reordering] [data-blok-database-board]',
++  ])('drops the drag displacement glide on %s', (selector) => {
++    expect(reducedProp(selector, 'transition')).toBe('none');
++  });
++
++  it('drops the property popover entrance animation', () => {
++    expect(reducedProp('[data-blok-database-property-type-popover]', 'animation')).toBe('none');
++  });
++});
+diff --git a/test/unit/tools/database/database-board-view.test.ts b/test/unit/tools/database/database-board-view.test.ts
+index 0f1a0f44..320f7e84 100644
+--- a/test/unit/tools/database/database-board-view.test.ts
++++ b/test/unit/tools/database/database-board-view.test.ts
+@@ -426,6 +426,33 @@ describe('DatabaseBoardView', () => {
+       expect(titleDiv?.textContent).toBe('Fix bug');
+       expect(onTitleEdit).not.toHaveBeenCalled();
+     });
++
++    it('starts an untitled card rename empty and keeps the card untitled on an empty commit', () => {
++      const onTitleEdit = vi.fn();
++      const options = [makeOption({ id: 'opt-1' })];
++      const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
++      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
++      const board = view.createView();
++      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
++      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
++
++      editBtn.click();
++
++      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]');
++
++      expect(input?.value).toBe('');
++      if (input === null) return;
++
++      simulateKeydown(input, 'Enter');
++
++      expect(onTitleEdit).not.toHaveBeenCalled();
++
++      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
++
++      expect(titleDiv?.textContent).toBe('tools.database.cardTitlePlaceholder');
++      expect(titleDiv?.hasAttribute('data-placeholder')).toBe(true);
++      expect(cardEl.hasAttribute('data-empty')).toBe(true);
++    });
+   });
+ 
+   describe('accessibility', () => {
+diff --git a/test/unit/tools/database/database-card-drawer.test.ts b/test/unit/tools/database/database-card-drawer.test.ts
+index 788d8525..bac07a09 100644
+--- a/test/unit/tools/database/database-card-drawer.test.ts
++++ b/test/unit/tools/database/database-card-drawer.test.ts
+@@ -871,6 +871,36 @@ describe('DatabaseCardDrawer', () => {
+       expect(titleInput.value).toBe('');
+     });
+ 
++    it('focuses an empty title when no transitionend ever comes (reduced motion)', () => {
++      vi.useFakeTimers();
++
++      try {
++        const rafCallbacks: FrameRequestCallback[] = [];
++
++        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
++          rafCallbacks.push(cb);
++
++          return 0;
++        });
++
++        const options = createOptions();
++        const drawer = new DatabaseCardDrawer(options);
++
++        drawer.open(makeRow({ id: 'row-1', properties: { 'prop-title': '' } }));
++
++        const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
++        const focusSpy = vi.spyOn(titleInput, 'focus');
++
++        rafCallbacks.forEach((cb) => cb(0));
++        vi.advanceTimersByTime(1000);
++
++        expect(focusSpy).toHaveBeenCalledTimes(1);
++        drawer.destroy();
++      } finally {
++        vi.useRealTimers();
++      }
++    });
++
+     it('does not call focus() on title input when card has a title', () => {
+       const rafCallbacks: FrameRequestCallback[] = [];
+ 
+@@ -1593,6 +1623,23 @@ describe('DatabaseCardDrawer', () => {
+       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+     });
+ 
++    it('removes the closed drawer when no transitionend ever comes (reduced motion)', () => {
++      vi.useFakeTimers();
++
++      try {
++        const options = createOptions();
++        const drawer = new DatabaseCardDrawer(options);
++
++        drawer.open(makeRow());
++        drawer.close();
++        vi.advanceTimersByTime(1000);
++
++        expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
++      } finally {
++        vi.useRealTimers();
++      }
++    });
++
+     it('isOpen returns false immediately before animation ends', () => {
+       const options = createOptions();
+       const drawer = new DatabaseCardDrawer(options);
+diff --git a/test/unit/tools/database/database-column-drag.test.ts b/test/unit/tools/database/database-column-drag.test.ts
+index 83499476..6e4cefda 100644
+--- a/test/unit/tools/database/database-column-drag.test.ts
++++ b/test/unit/tools/database/database-column-drag.test.ts
+@@ -63,6 +63,16 @@ describe('DatabaseColumnDrag', () => {
+     vi.restoreAllMocks();
+   });
+ 
++  it('never drops a column before the no-value column', () => {
++    wrapper.querySelector('[data-option-id="opt-0"]')?.setAttribute('data-blok-database-no-value-group', '');
++
++    drag.beginTracking('opt-2', 450, 50);
++    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 50 }));
++    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 50 }));
++
++    expect(onDrop).toHaveBeenCalledWith({ optionId: 'opt-2', beforeOptionId: 'opt-1', afterOptionId: null });
++  });
++
+   it('does not start drag below 10px horizontal threshold', () => {
+     drag.beginTracking('opt-0', 50, 50);
+ 
+diff --git a/test/unit/tools/database/database-model.mutants.test.ts b/test/unit/tools/database/database-model.mutants.test.ts
+index dd8c7f55..1fdcef66 100644
+--- a/test/unit/tools/database/database-model.mutants.test.ts
++++ b/test/unit/tools/database/database-model.mutants.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect, beforeEach, vi } from 'vitest';
+-import { DatabaseModel } from '../../../../src/tools/database/database-model';
++import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
+ import type {
+   DatabaseRow,
+   DatabaseViewConfig,
+@@ -215,8 +215,8 @@ describe('DatabaseModel — mutation coverage', () => {
+ 
+     // The undefined/null guard in `toGroupKey` is a shortcut, not a decision:
+     // typeof undefined is 'undefined' and typeof null is 'object', so both fall
+-    // through the string/boolean/number checks to the same '' return.
+-    it('stringifies numbers and drops list values into the empty-key group', () => {
++    // through the string/boolean/number checks to the same NO_VALUE_GROUP_KEY return.
++    it('stringifies numbers and puts a list row in each of its values\' groups', () => {
+       const numeric = makeRow({ id: 'r1', position: 'a0', properties: { score: 5 } });
+       const list = makeRow({ id: 'r2', position: 'a1', properties: { score: ['x', 'y'] } });
+       const missing = makeRow({ id: 'r3', position: 'a2', properties: {} });
+@@ -226,7 +226,9 @@ describe('DatabaseModel — mutation coverage', () => {
+ 
+       expect(model.getRowsGroupedBy('score')).toStrictEqual(new Map([
+         ['5', [numeric]],
+-        ['', [list, missing]],
++        ['x', [list]],
++        ['y', [list]],
++        [NO_VALUE_GROUP_KEY, [missing]],
+       ]));
+     });
+   });
+diff --git a/test/unit/tools/database/database-model.test.ts b/test/unit/tools/database/database-model.test.ts
+index 77025d89..ca08c907 100644
+--- a/test/unit/tools/database/database-model.test.ts
++++ b/test/unit/tools/database/database-model.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect } from 'vitest';
+-import { DatabaseModel } from '../../../../src/tools/database/database-model';
++import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
+ import type {
+   DatabaseData,
+   DatabaseRow,
+@@ -134,6 +134,28 @@ describe('DatabaseModel', () => {
+       expect(model.getProperty('p1')?.config?.options).toHaveLength(1);
+     });
+ 
++    describe('a config key written by a newer client', () => {
++      const todo = makeSelectOption({ id: 'o1', label: 'Todo', position: 'a0' });
++      const done = makeSelectOption({ id: 'o2', label: 'Done', position: 'a1' });
++
++      it.each([
++        { action: 'option add', options: [todo, done, makeSelectOption({ id: 'o3', label: 'New', position: 'a2' })] },
++        { action: 'option rename', options: [{ ...todo, label: 'Later' }, done] },
++        { action: 'option delete', options: [done] },
++        { action: 'option reorder', options: [{ ...done, position: 'Zz' }, todo] },
++      ])('survives an $action', ({ options }) => {
++        const config = { options: [todo, done], futureConfigKey: { limit: 3 } };
++        const model = new DatabaseModel(makeData({
++          schema: [makeProperty({ id: 'p1', name: 'Status', type: 'select', config })],
++        }));
++
++        model.updateProperty('p1', { config: { options } });
++
++        expect(model.getProperty('p1')?.config).toHaveProperty('futureConfigKey', { limit: 3 });
++        expect(model.getProperty('p1')?.config?.options).toEqual(options);
++      });
++    });
++
+     it('deleteProperty removes from schema', () => {
+       const prop = makeProperty({ id: 'p1', name: 'Notes', type: 'text' });
+       const titleProp = makeProperty({ id: 'pt', name: 'Title', type: 'title', position: 'a0' });
+@@ -218,7 +240,7 @@ describe('DatabaseModel', () => {
+       expect(groups.get('optB')).toHaveLength(1);
+     });
+ 
+-    it('puts rows with no value under empty string key', () => {
++    it('puts rows with no value under the no-value group key', () => {
+       const opt = makeSelectOption({ id: 'optA', label: 'A', position: 'a0' });
+       const prop = makeProperty({ id: 'status', type: 'select', config: { options: [opt] } });
+       const model = new DatabaseModel(makeData({ schema: [prop] }));
+@@ -228,8 +250,7 @@ describe('DatabaseModel', () => {
+       ]);
+       const groups = model.getRowsGroupedBy('status');
+       expect(groups.get('optA')).toHaveLength(1);
+-      expect(groups.get('')).toHaveLength(1);
+-      expect(groups.get('')![0].id).toBe('r2');
++      expect(groups.get(NO_VALUE_GROUP_KEY)?.map((r) => r.id)).toEqual(['r2']);
+     });
+ 
+     it('sorts rows within each group by position', () => {
+@@ -256,7 +277,28 @@ describe('DatabaseModel', () => {
+       const groups = model.getRowsGroupedBy('done');
+       expect(groups.get('true')).toHaveLength(1);
+       expect(groups.get('false')).toHaveLength(1);
+-      expect(groups.get('')).toHaveLength(1);
++      expect(groups.get(NO_VALUE_GROUP_KEY)).toHaveLength(1);
++    });
++  });
++
++  describe('getRowsGroupedBy on a multiSelect property', () => {
++    it('puts a row in every option group it carries, and an empty list in the no-value group', () => {
++      const optA = makeSelectOption({ id: 'a', label: 'A', position: 'a0' });
++      const optB = makeSelectOption({ id: 'b', label: 'B', position: 'a1' });
++      const prop = makeProperty({ id: 'tags', type: 'multiSelect', config: { options: [optA, optB] } });
++      const model = new DatabaseModel(makeData({ schema: [prop] }));
++
++      model.setRows([
++        makeRow({ id: 'r1', position: 'a0', properties: { tags: ['a', 'b'] } }),
++        makeRow({ id: 'r2', position: 'a1', properties: { tags: ['b'] } }),
++        makeRow({ id: 'r3', position: 'a2', properties: { tags: [] } }),
++      ]);
++
++      const groups = model.getRowsGroupedBy('tags');
++
++      expect(groups.get('a')?.map((r) => r.id)).toEqual(['r1']);
++      expect(groups.get('b')?.map((r) => r.id)).toEqual(['r1', 'r2']);
++      expect(groups.get(NO_VALUE_GROUP_KEY)?.map((r) => r.id)).toEqual(['r3']);
+     });
+   });
+ 
+diff --git a/test/unit/tools/database/database-query.test.ts b/test/unit/tools/database/database-query.test.ts
+new file mode 100644
+index 00000000..fb3e0a5d
+--- /dev/null
++++ b/test/unit/tools/database/database-query.test.ts
+@@ -0,0 +1,440 @@
++import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
++import {
++  FILTER_OPERATORS,
++  queryGroups,
++  queryRows,
++  rowMatchesFilters,
++  sortRows,
++} from '../../../../src/tools/database/database-query';
++import type { QuerySource } from '../../../../src/tools/database/database-query';
++import { DatabaseModel } from '../../../../src/tools/database/database-model';
++import type {
++  DatabaseRow,
++  DatabaseViewConfig,
++  FilterConfig,
++  PropertyDefinition,
++  PropertyValue,
++  SortConfig,
++} from '../../../../src/tools/database/types';
++
++const schema: PropertyDefinition[] = [
++  { id: 'title', name: 'Name', type: 'title', position: 'a0' },
++  { id: 'text', name: 'Notes', type: 'text', position: 'a1' },
++  { id: 'num', name: 'Score', type: 'number', position: 'a2' },
++  {
++    id: 'status', name: 'Status', type: 'select', position: 'a3', config: {
++      options: [
++        { id: 'opt-late', label: 'Late', position: 'a2' },
++        { id: 'opt-early', label: 'Early', position: 'a0' },
++        { id: 'opt-mid', label: 'Mid', position: 'a1' },
++      ],
++    },
++  },
++  {
++    id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a4', config: {
++      options: [
++        { id: 'tag-b', label: 'B', position: 'a1' },
++        { id: 'tag-a', label: 'A', position: 'a0' },
++      ],
++    },
++  },
++  { id: 'done', name: 'Done', type: 'checkbox', position: 'a5' },
++  { id: 'due', name: 'Due', type: 'date', position: 'a6' },
++  { id: 'link', name: 'Link', type: 'url', position: 'a7' },
++  { id: 'body', name: 'Body', type: 'richText', position: 'a8' },
++];
++
++const row = (id: string, position: string, properties: Record<string, PropertyValue> = {}): DatabaseRow => ({
++  id,
++  position,
++  properties,
++});
++
++const ids = (rows: DatabaseRow[]): string[] => rows.map((r) => r.id);
++
++const view = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
++  id: 'v',
++  name: 'V',
++  type: 'list',
++  position: 'a0',
++  sorts: [],
++  filters: [],
++  visibleProperties: [],
++  ...overrides,
++});
++
++const matches = (r: DatabaseRow, filter: FilterConfig): boolean => rowMatchesFilters(r, [filter], schema);
++
++describe('database-query', () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  describe('FILTER_OPERATORS', () => {
++    it('lists the Notion API operator names per property type', () => {
++      expect(FILTER_OPERATORS.text).toEqual([
++        'equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty',
++      ]);
++      expect(FILTER_OPERATORS.title).toEqual(FILTER_OPERATORS.text);
++      expect(FILTER_OPERATORS.url).toEqual(FILTER_OPERATORS.text);
++      expect(FILTER_OPERATORS.richText).toEqual(FILTER_OPERATORS.text);
++      expect(FILTER_OPERATORS.number).toEqual([
++        'equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to', 'is_empty', 'is_not_empty',
++      ]);
++      expect(FILTER_OPERATORS.select).toEqual(['equals', 'does_not_equal', 'is_empty', 'is_not_empty']);
++      expect(FILTER_OPERATORS.multiSelect).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
++      expect(FILTER_OPERATORS.checkbox).toEqual(['equals', 'does_not_equal']);
++      expect(FILTER_OPERATORS.date).toEqual(['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty']);
++    });
++  });
++
++  describe('rowMatchesFilters — text', () => {
++    const r = row('r', 'a0', { text: 'Hello World' });
++
++    it.each([
++      ['equals', 'hello world', true],
++      ['equals', 'hello', false],
++      ['does_not_equal', 'hello', true],
++      ['does_not_equal', 'HELLO WORLD', false],
++      ['contains', 'LO wo', true],
++      ['contains', 'xyz', false],
++      ['does_not_contain', 'xyz', true],
++      ['does_not_contain', 'world', false],
++      ['starts_with', 'hel', true],
++      ['starts_with', 'world', false],
++      ['ends_with', 'WORLD', true],
++      ['ends_with', 'hello', false],
++    ])('%s %s → %s (case-insensitive)', (operator, value, expected) => {
++      expect(matches(r, { propertyId: 'text', operator, value })).toBe(expected);
++    });
++
++    it('treats a missing or blank value as empty', () => {
++      const blank = row('b', 'a0', { text: '' });
++      const missing = row('m', 'a0');
++
++      expect(matches(blank, { propertyId: 'text', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(missing, { propertyId: 'text', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'text', operator: 'is_empty', value: null })).toBe(false);
++      expect(matches(r, { propertyId: 'text', operator: 'is_not_empty', value: null })).toBe(true);
++      expect(matches(missing, { propertyId: 'text', operator: 'is_not_empty', value: null })).toBe(false);
++    });
++
++    it('applies text operators to title and url', () => {
++      const r2 = row('r2', 'a0', { title: 'Launch plan', link: 'https://example.com' });
++
++      expect(matches(r2, { propertyId: 'title', operator: 'contains', value: 'PLAN' })).toBe(true);
++      expect(matches(r2, { propertyId: 'link', operator: 'ends_with', value: '.com' })).toBe(true);
++    });
++
++    it('lets a text filter with no value through, so a half-built filter hides nothing', () => {
++      expect(matches(r, { propertyId: 'text', operator: 'contains', value: '' })).toBe(true);
++      expect(matches(r, { propertyId: 'text', operator: 'equals', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — richText', () => {
++    it('matches a string value as text', () => {
++      expect(matches(row('r', 'a0', { body: 'Some notes' }), { propertyId: 'body', operator: 'contains', value: 'notes' })).toBe(true);
++    });
++
++    it('counts a body document with no blocks as empty and one with blocks as not empty', () => {
++      const emptyDoc = row('e', 'a0', { body: { blocks: [] } });
++      const fullDoc = row('f', 'a0', { body: { blocks: [{ type: 'paragraph', data: { text: 'x' } }] } });
++
++      expect(matches(emptyDoc, { propertyId: 'body', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(fullDoc, { propertyId: 'body', operator: 'is_empty', value: null })).toBe(false);
++      expect(matches(fullDoc, { propertyId: 'body', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++
++    it('lets text operators through on a body document, which has no plain text yet', () => {
++      const fullDoc = row('f', 'a0', { body: { blocks: [{ type: 'paragraph', data: { text: 'x' } }] } });
++
++      expect(matches(fullDoc, { propertyId: 'body', operator: 'contains', value: 'zzz' })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — number', () => {
++    const r = row('r', 'a0', { num: 5 });
++
++    it.each([
++      ['equals', 5, true],
++      ['equals', '5', true],
++      ['equals', 4, false],
++      ['does_not_equal', 4, true],
++      ['greater_than', 4, true],
++      ['greater_than', 5, false],
++      ['greater_than_or_equal_to', 5, true],
++      ['less_than', 6, true],
++      ['less_than', 5, false],
++      ['less_than_or_equal_to', 5, true],
++      ['less_than_or_equal_to', 4, false],
++    ])('%s %s → %s', (operator, value, expected) => {
++      expect(matches(r, { propertyId: 'num', operator, value })).toBe(expected);
++    });
++
++    it('treats a blank string as empty, not as 0', () => {
++      const blank = row('b', 'a0', { num: '' });
++
++      expect(matches(blank, { propertyId: 'num', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(blank, { propertyId: 'num', operator: 'equals', value: 0 })).toBe(false);
++      expect(matches(row('z', 'a0', { num: 0 }), { propertyId: 'num', operator: 'is_empty', value: null })).toBe(false);
++    });
++
++    it('lets a number filter with a blank or non-numeric value through', () => {
++      expect(matches(r, { propertyId: 'num', operator: 'equals', value: '' })).toBe(true);
++      expect(matches(r, { propertyId: 'num', operator: 'greater_than', value: 'abc' })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — select', () => {
++    const r = row('r', 'a0', { status: 'opt-mid' });
++
++    it('equals and does_not_equal compare the option id', () => {
++      expect(matches(r, { propertyId: 'status', operator: 'equals', value: 'opt-mid' })).toBe(true);
++      expect(matches(r, { propertyId: 'status', operator: 'equals', value: 'opt-late' })).toBe(false);
++      expect(matches(r, { propertyId: 'status', operator: 'does_not_equal', value: 'opt-late' })).toBe(true);
++    });
++
++    it('accepts a list of option ids as any-match', () => {
++      expect(matches(r, { propertyId: 'status', operator: 'equals', value: ['opt-late', 'opt-mid'] })).toBe(true);
++      expect(matches(r, { propertyId: 'status', operator: 'does_not_equal', value: ['opt-late', 'opt-mid'] })).toBe(false);
++    });
++
++    it('is_empty matches a row with no option', () => {
++      expect(matches(row('e', 'a0'), { propertyId: 'status', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'status', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — multiSelect', () => {
++    const r = row('r', 'a0', { tags: ['tag-a'] });
++
++    it('contains and does_not_contain take one id or a list (any-match)', () => {
++      expect(matches(r, { propertyId: 'tags', operator: 'contains', value: 'tag-a' })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'contains', value: ['tag-b', 'tag-a'] })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'contains', value: 'tag-b' })).toBe(false);
++      expect(matches(r, { propertyId: 'tags', operator: 'does_not_contain', value: 'tag-b' })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'does_not_contain', value: 'tag-a' })).toBe(false);
++    });
++
++    it('is_empty matches an empty or missing list', () => {
++      expect(matches(row('e', 'a0', { tags: [] }), { propertyId: 'tags', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(row('m', 'a0'), { propertyId: 'tags', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — checkbox', () => {
++    it('reads a missing value as unchecked', () => {
++      expect(matches(row('m', 'a0'), { propertyId: 'done', operator: 'equals', value: false })).toBe(true);
++      expect(matches(row('t', 'a0', { done: true }), { propertyId: 'done', operator: 'equals', value: true })).toBe(true);
++      expect(matches(row('t', 'a0', { done: true }), { propertyId: 'done', operator: 'does_not_equal', value: true })).toBe(false);
++    });
++  });
++
++  describe('rowMatchesFilters — date', () => {
++    const r = row('r', 'a0', { due: '2026-10-09T15:00:00.000Z' });
++
++    it.each([
++      ['equals', '2026-10-09', true],
++      ['equals', '2026-10-10', false],
++      ['before', '2026-10-10', true],
++      ['before', '2026-10-09', false],
++      ['after', '2026-10-08', true],
++      ['after', '2026-10-09', false],
++      ['on_or_before', '2026-10-09', true],
++      ['on_or_after', '2026-10-09', true],
++      ['on_or_after', '2026-10-10', false],
++    ])('%s %s → %s (compares the calendar day)', (operator, value, expected) => {
++      expect(matches(r, { propertyId: 'due', operator, value })).toBe(expected);
++    });
++
++    it('is_empty matches a row with no date', () => {
++      expect(matches(row('e', 'a0'), { propertyId: 'due', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'due', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — forward compatibility', () => {
++    const r = row('r', 'a0', { text: 'abc', status: 'opt-mid' });
++
++    it('lets a row through an operator it does not know', () => {
++      expect(matches(r, { propertyId: 'text', operator: 'matches_regex', value: 'zzz' })).toBe(true);
++    });
++
++    it('lets a row through an operator that does not fit the property type', () => {
++      expect(matches(r, { propertyId: 'status', operator: 'greater_than', value: 'zzz' })).toBe(true);
++    });
++
++    it('lets a row through a filter on a deleted property', () => {
++      expect(matches(r, { propertyId: 'gone', operator: 'equals', value: 'zzz' })).toBe(true);
++    });
++
++    it('combines filters with AND', () => {
++      const filters: FilterConfig[] = [
++        { propertyId: 'text', operator: 'contains', value: 'a' },
++        { propertyId: 'status', operator: 'equals', value: 'opt-late' },
++      ];
++
++      expect(rowMatchesFilters(r, filters, schema)).toBe(false);
++      expect(rowMatchesFilters(r, [filters[0]], schema)).toBe(true);
++    });
++  });
++
++  describe('sortRows', () => {
++    const sort = (rows: DatabaseRow[], sorts: SortConfig[]): string[] => ids(sortRows(rows, sorts, schema));
++
++    it('keeps position order when there are no sorts, comparing like getOrderedRows', () => {
++      const rows = [row('b', 'a1'), row('c', 'Zz'), row('a', 'a0')];
++      const model = new DatabaseModel({ schema });
++
++      model.setRows(rows);
++
++      expect(sort(rows, [])).toEqual(ids(model.getOrderedRows()));
++    });
++
++    it('sorts numbers numerically in both directions', () => {
++      const rows = [row('ten', 'a0', { num: 10 }), row('two', 'a1', { num: 2 }), row('five', 'a2', { num: 5 })];
++
++      expect(sort(rows, [{ propertyId: 'num', direction: 'asc' }])).toEqual(['two', 'five', 'ten']);
++      expect(sort(rows, [{ propertyId: 'num', direction: 'desc' }])).toEqual(['ten', 'five', 'two']);
++    });
++
++    it('puts empty values last in both directions', () => {
++      const rows = [row('empty', 'a0', { num: '' }), row('two', 'a1', { num: 2 }), row('none', 'a2'), row('five', 'a3', { num: 5 })];
++
++      expect(sort(rows, [{ propertyId: 'num', direction: 'asc' }])).toEqual(['two', 'five', 'empty', 'none']);
++      expect(sort(rows, [{ propertyId: 'num', direction: 'desc' }])).toEqual(['five', 'two', 'empty', 'none']);
++    });
++
++    it('sorts text alphabetically', () => {
++      const rows = [row('b', 'a0', { title: 'banana' }), row('a', 'a1', { title: 'Apple' }), row('c', 'a2', { title: 'cherry' })];
++
++      expect(sort(rows, [{ propertyId: 'title', direction: 'asc' }])).toEqual(['a', 'b', 'c']);
++    });
++
++    it('sorts select by option order, not by label or id', () => {
++      const rows = [row('late', 'a0', { status: 'opt-late' }), row('early', 'a1', { status: 'opt-early' }), row('mid', 'a2', { status: 'opt-mid' })];
++
++      expect(sort(rows, [{ propertyId: 'status', direction: 'asc' }])).toEqual(['early', 'mid', 'late']);
++      expect(sort(rows, [{ propertyId: 'status', direction: 'desc' }])).toEqual(['late', 'mid', 'early']);
++    });
++
++    it('sorts multiSelect by its options in option order', () => {
++      const rows = [row('b', 'a0', { tags: ['tag-b'] }), row('ab', 'a1', { tags: ['tag-b', 'tag-a'] }), row('a', 'a2', { tags: ['tag-a'] })];
++
++      expect(sort(rows, [{ propertyId: 'tags', direction: 'asc' }])).toEqual(['a', 'ab', 'b']);
++    });
++
++    it('sorts checkbox unchecked first when ascending', () => {
++      const rows = [row('on', 'a0', { done: true }), row('off', 'a1', { done: false })];
++
++      expect(sort(rows, [{ propertyId: 'done', direction: 'asc' }])).toEqual(['off', 'on']);
++    });
++
++    it('applies sorts in list order and breaks ties on position', () => {
++      const rows = [
++        row('x', 'a3', { status: 'opt-mid', num: 1 }),
++        row('y', 'a2', { status: 'opt-early', num: 9 }),
++        row('z', 'a1', { status: 'opt-mid', num: 1 }),
++        row('w', 'a0', { status: 'opt-mid', num: 7 }),
++      ];
++
++      expect(sort(rows, [
++        { propertyId: 'status', direction: 'asc' },
++        { propertyId: 'num', direction: 'desc' },
++      ])).toEqual(['y', 'w', 'z', 'x']);
++    });
++
++    it('ignores a sort on a deleted property', () => {
++      const rows = [row('b', 'a1'), row('a', 'a0')];
++
++      expect(sort(rows, [{ propertyId: 'gone', direction: 'desc' }])).toEqual(['a', 'b']);
++    });
++
++    it('does not reorder the input array', () => {
++      const rows = [row('b', 'a1'), row('a', 'a0')];
++
++      sortRows(rows, [], schema);
++
++      expect(ids(rows)).toEqual(['b', 'a']);
++    });
++  });
++
++  describe('queryRows / queryGroups', () => {
++    const rows = [
++      row('r1', 'a0', { status: 'opt-early', num: 3 }),
++      row('r2', 'a1', { status: 'opt-late', num: 1 }),
++      row('r3', 'a2', { status: 'opt-early', num: 2 }),
++      row('r4', 'a3', { num: 9 }),
++    ];
++    const source: QuerySource = {
++      schema,
++      rows,
++      groupKeysOf: (r) => [typeof r.properties.status === 'string' ? r.properties.status : ''],
++    };
++
++    it('returns every row in position order for a plain view, with a total', () => {
++      const result = queryRows(source, { view: view() });
++
++      expect(ids(result.rows)).toEqual(['r1', 'r2', 'r3', 'r4']);
++      expect(result.total).toBe(4);
++      expect(result.nextCursor).toBeUndefined();
++    });
++
++    it('filters, then sorts', () => {
++      const result = queryRows(source, {
++        view: view({
++          filters: [{ propertyId: 'num', operator: 'less_than', value: 5 }],
++          sorts: [{ propertyId: 'num', direction: 'asc' }],
++        }),
++      });
++
++      expect(ids(result.rows)).toEqual(['r2', 'r3', 'r1']);
++      expect(result.total).toBe(3);
++    });
++
++    it('returns one group after filtering', () => {
++      const result = queryRows(source, {
++        view: view({ filters: [{ propertyId: 'num', operator: 'greater_than', value: 2 }] }),
++        group: 'opt-early',
++      });
++
++      expect(ids(result.rows)).toEqual(['r1']);
++    });
++
++    it('pages with limit and cursor', () => {
++      const first = queryRows(source, { view: view(), limit: 3 });
++
++      expect(ids(first.rows)).toEqual(['r1', 'r2', 'r3']);
++      expect(first.nextCursor).toBeDefined();
++
++      const second = queryRows(source, { view: view(), limit: 3, cursor: first.nextCursor });
++
++      expect(ids(second.rows)).toEqual(['r4']);
++      expect(second.nextCursor).toBeUndefined();
++    });
++
++    it('counts groups after filtering, without returning rows', () => {
++      const groups = queryGroups(source, view({ filters: [{ propertyId: 'num', operator: 'less_than', value: 3 }] }));
++
++      expect(groups).toEqual([
++        { key: 'opt-late', count: 1 },
++        { key: 'opt-early', count: 1 },
++      ]);
++    });
++
++    it('counts a row under every key it reports', () => {
++      const multi: QuerySource = { ...source, groupKeysOf: () => ['k1', 'k2'] };
++
++      expect(queryGroups(multi, view())).toEqual([
++        { key: 'k1', count: 4 },
++        { key: 'k2', count: 4 },
++      ]);
++    });
++  });
++});
+diff --git a/test/unit/tools/database/database-tab-bar.test.ts b/test/unit/tools/database/database-tab-bar.test.ts
+index 1f6cb4d4..8d3203bf 100644
+--- a/test/unit/tools/database/database-tab-bar.test.ts
++++ b/test/unit/tools/database/database-tab-bar.test.ts
+@@ -909,5 +909,92 @@ describe('DatabaseTabBar', () => {
+       expect(el.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+       el.remove();
+     });
++
++    const twoViews = (): DatabaseViewConfig[] => [
++      makeView({ id: 'v1', position: 'a0' }),
++      makeView({ id: 'v2', position: 'a1' }),
++    ];
++
++    // The tool flips a live bar with setReadOnly, so both ways must hold.
++    const readOnlyBars: Array<[string, () => DatabaseTabBar]> = [
++      ['constructed read-only', () => new DatabaseTabBar({
++        views: twoViews(),
++        activeViewId: 'v1',
++        onTabClick,
++        onAddView,
++        onRename,
++        onDuplicate,
++        onDelete,
++        onReorder,
++        readOnly: true,
++      })],
++      ['switched to read-only', () => {
++        const bar = createTabBar(twoViews(), 'v1');
++
++        bar.setReadOnly(true);
++
++        return bar;
++      }],
++    ];
++
++    it.each(readOnlyBars)('%s: right-click opens no tab menu', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
++      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
++      bar.destroy();
++      el.remove();
++    });
++
++    it.each(readOnlyBars)('%s: double-click opens no tab menu', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
++      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
++      bar.destroy();
++      el.remove();
++    });
++
++    it.each(readOnlyBars)('%s: dragging a tab does not reorder', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
++      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
++      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 15 }));
++      expect(onReorder).not.toHaveBeenCalled();
++      expect(document.querySelector('[data-blok-database-tab-ghost]')).toBeNull();
++      bar.destroy();
++      el.remove();
++    });
++
++    it.each(readOnlyBars)('%s: clicking a tab still switches views', (_label, makeBar) => {
++      const bar = makeBar();
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v2"]') as HTMLElement;
++      tab.click();
++      expect(onTabClick).toHaveBeenCalledWith('v2');
++      bar.destroy();
++      el.remove();
++    });
++
++    it('leaving read-only brings the tab menu back', () => {
++      const bar = createTabBar(twoViews(), 'v1');
++      bar.setReadOnly(true);
++      bar.setReadOnly(false);
++      const el = bar.render();
++      document.body.appendChild(el);
++      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
++      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
++      expect(document.querySelector('[data-blok-database-tab-context]')).not.toBeNull();
++      bar.destroy();
++      el.remove();
++    });
+   });
+ });
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 225944fa..85c31e62 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -253,12 +253,12 @@ describe('DatabaseTool', () => {
+       expect(element.getAttribute('data-blok-tool')).toBe('database');
+     });
+ 
+-    it('renders 3 columns for default data with 3 select options', () => {
++    it('renders the no-value column plus 3 columns for default data with 3 select options', () => {
+       const tool = new DatabaseTool(createDatabaseOptions());
+       const element = tool.render();
+       const columns = queryAllByData(element, 'data-blok-database-column');
+ 
+-      expect(columns).toHaveLength(3);
++      expect(columns).toHaveLength(4);
+     });
+ 
+     it('renders a title element with data-blok-database-title attribute', () => {
+@@ -391,6 +391,7 @@ describe('DatabaseTool', () => {
+       expect(titleEl?.getAttribute('data-placeholder')).toBe('Neue Datenbank');
+       expect(viewName?.textContent).toBe('Tafel');
+       expect(columnTitles.map((column) => column.textContent)).toEqual([
++        'tools.database.noValueGroup',
+         'Nicht begonnen',
+         'In Arbeit',
+         'Erledigt',
+@@ -522,6 +523,61 @@ describe('DatabaseTool', () => {
+ 
+       expect(saved.title).toBe('Updated title');
+     });
++
++    it('keeps a top-level key written by a newer client', () => {
++      const futureKey = { layout: 'timeline', nested: { since: 'v2' } };
++      const tool = new DatabaseTool(createDatabaseOptions({ futureKey }));
++
++      tool.render();
++
++      const saved = tool.save(document.createElement('div'));
++
++      expect(saved.futureKey).toEqual(futureKey);
++    });
++
++    it('lets its own known keys win over a stale value of the same name', () => {
++      const tool = new DatabaseTool(createDatabaseOptions({ title: 'Stored', futureKey: 1 }));
++      const element = tool.render();
++      const titleEl = queryByData(element, 'data-blok-database-title');
++
++      if (titleEl === null) {
++        throw new Error('title element missing');
++      }
++      titleEl.textContent = 'Typed';
++
++      const saved = tool.save(document.createElement('div'));
++
++      expect(saved.title).toBe('Typed');
++      expect(saved.futureKey).toBe(1);
++      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'futureKey', 'schema', 'title', 'views']);
++    });
++
++    it('keeps a newer client key after the backend snapshot hydrates the model', async () => {
++      const mockAdapter = {
++        loadDatabase: vi.fn().mockResolvedValue({
++          schema: [{ id: 'p-backend', name: 'Backend Title', type: 'title', position: 'a0' }],
++          views: [{ id: 'v-backend', name: 'Backend Board', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
++        }),
++        createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
++        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
++        createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn(),
++      };
++      const tool = new DatabaseTool(createDatabaseOptions({ futureKey: 'kept' }, { adapter: mockAdapter }));
++      const container = document.createElement('div');
++
++      container.appendChild(tool.render());
++      document.body.appendChild(container);
++      tool.rendered();
++
++      await vi.waitFor(() => {
++        expect(tool.save(document.createElement('div')).schema[0].id).toBe('p-backend');
++      });
++
++      expect(tool.save(document.createElement('div')).futureKey).toBe('kept');
++
++      tool.destroy();
++      container.remove();
++    });
+   });
+ 
+   describe('validate()', () => {
+@@ -645,7 +701,7 @@ describe('DatabaseTool', () => {
+ 
+       const initialColumns = queryAllByData(element, 'data-blok-database-column');
+ 
+-      expect(initialColumns).toHaveLength(3);
++      expect(initialColumns).toHaveLength(4);
+ 
+       const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
+ 
+@@ -655,7 +711,7 @@ describe('DatabaseTool', () => {
+ 
+       const columns = queryAllByData(element, 'data-blok-database-column');
+ 
+-      expect(columns).toHaveLength(4);
++      expect(columns).toHaveLength(5);
+ 
+       const saved = tool.save(document.createElement('div'));
+       const statusProp = saved.schema.find((p) => p.type === 'select');
+@@ -724,91 +780,6 @@ describe('DatabaseTool', () => {
+     });
+   });
+ 
+-  describe('column delete cascades block deletions for rows', () => {
+-    it('calls api.blocks.delete for each row then adapter.updateProperty when option is deleted', async () => {
+-      const deleteRowCalls: string[] = [];
+-      const updatePropertyCalls: Array<{ propertyId: string }> = [];
+-
+-      const mockAdapter = {
+-        loadDatabase: vi.fn(),
+-        createRow: vi.fn(),
+-        updateRow: vi.fn(),
+-        moveRow: vi.fn(),
+-        deleteRow: vi.fn(async (params: { rowId: string }) => {
+-          deleteRowCalls.push(params.rowId);
+-        }),
+-        createProperty: vi.fn(),
+-        updateProperty: vi.fn(async (params: { propertyId: string }) => {
+-          updatePropertyCalls.push(params);
+-          return {} as never;
+-        }),
+-        deleteProperty: vi.fn(),
+-        createView: vi.fn(),
+-        updateView: vi.fn(),
+-        deleteView: vi.fn(),
+-      };
+-
+-      const childBlocks = [
+-        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+-        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, position: 'a1' }),
+-      ];
+-
+-      const options = createDatabaseOptions({}, { adapter: mockAdapter }, { childBlocks });
+-
+-      // Make getBlockIndex return distinct indices for different row IDs
+-      let deleteCallCount = 0;
+-
+-      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockImplementation((blockId: string) => {
+-        if (blockId === 'row-1') return 1;
+-        if (blockId === 'row-2') return 2;
+-        return 0;
+-      });
+-
+-      // After each delete, remove the block from the children array so syncRowsFromBlocks sees the update
+-      (options.api.blocks.delete as ReturnType<typeof vi.fn>).mockImplementation(() => {
+-        deleteCallCount++;
+-        // After deletion, the subsequent getChildren calls should return fewer blocks
+-        if (deleteCallCount >= 2) {
+-          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([]);
+-        } else {
+-          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([childBlocks[1]]);
+-        }
+-      });
+-
+-      const tool = new DatabaseTool(options);
+-      const element = tool.render();
+-      tool.rendered();
+-
+-      // Find the delete-column button for opt-todo (injected by DatabaseColumnControls.makeEditable)
+-      const deleteBtn = queryAllByData(element, 'data-blok-database-delete-column')
+-        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!;
+-
+-      expect(deleteBtn).not.toBeNull();
+-
+-      deleteBtn.click();
+-
+-      // api.blocks.delete should be called for each row in the column
+-      expect(options.api.blocks.delete).toHaveBeenCalledTimes(2);
+-
+-      // Adapter deleteRow calls are async — wait for them to flush
+-      await vi.waitFor(() => {
+-        expect(deleteRowCalls).toHaveLength(2);
+-      });
+-
+-      expect(deleteRowCalls).toContain('row-1');
+-      expect(deleteRowCalls).toContain('row-2');
+-      expect(updatePropertyCalls.length).toBeGreaterThan(0);
+-      expect(updatePropertyCalls[0].propertyId).toBe('prop-status');
+-
+-      // Column should be removed from DOM
+-      const remainingColumns = queryAllByData(element, 'data-blok-database-column');
+-
+-      expect(remainingColumns).toHaveLength(2);
+-
+-      tool.destroy();
+-    });
+-  });
+-
+   describe('add column uses correct i18n key', () => {
+     it('clicking add-column button uses columnTitlePlaceholder i18n key', () => {
+       const mockI18n = vi.fn((key: string) => key);
+@@ -2318,7 +2289,59 @@ describe('DatabaseTool', () => {
+       const tool = new DatabaseTool(options);
+       const element = tool.render();
+       tool.rendered();
+-      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(2);
++      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(3);
++    });
++
++    it('adds a row to the end of the clicked group in a grouped list and syncs it', async () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
++      ];
++      const adapter: DatabaseAdapter = {
++        loadDatabase: vi.fn(),
++        createRow: vi.fn(),
++        updateRow: vi.fn(),
++        moveRow: vi.fn(),
++        deleteRow: vi.fn(),
++        createProperty: vi.fn(),
++        updateProperty: vi.fn(),
++        deleteProperty: vi.fn(),
++        createView: vi.fn(),
++        updateView: vi.fn(),
++        deleteView: vi.fn(),
++      };
++      const data = makeListData({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
++      });
++      const options = createDatabaseOptions(data, { adapter }, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      document.body.appendChild(element);
++      tool.rendered();
++
++      const todoGroup = queryByData(element, 'data-option-id', 'opt-todo');
++
++      expect(todoGroup).not.toBeNull();
++      if (todoGroup === null) return;
++
++      const addBtn = queryByData(todoGroup, 'data-blok-database-add-row');
++
++      expect(addBtn).not.toBeNull();
++      addBtn?.click();
++
++      const rows = queryAllByData(todoGroup, 'data-blok-database-list-row');
++
++      expect(rows).toHaveLength(2);
++      expect(rows[1].getAttribute('data-row-id')).not.toBe('row-1');
++      expect(rows[1].parentElement?.hasAttribute('data-blok-database-list-rows')).toBe(true);
++      await vi.waitFor(() => {
++        expect(adapter.createRow).toHaveBeenCalledTimes(1);
++      });
++      expect(adapter.createRow).toHaveBeenCalledWith(expect.objectContaining({
++        properties: expect.objectContaining({ 'prop-status': 'opt-todo' }),
++      }));
++
++      element.remove();
+     });
+   });
+ 
+@@ -2987,6 +3010,78 @@ describe('DatabaseTool', () => {
+     });
+   });
+ 
++  describe('read-only after a rerender', () => {
++    const makeBoardRows = (): BlockAPI[] => [
++      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
++    ];
++
++    const getCard = (element: HTMLElement): HTMLElement => {
++      const card = queryByData(element, 'data-row-id', 'row-1');
++
++      if (card === null) {
++        throw new Error('card missing');
++      }
++
++      return card;
++    };
++
++    it('entering read-only leaves cards inert: no drag start, no drawer', () => {
++      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: makeBoardRows() }));
++      const element = tool.render();
++
++      tool.rendered();
++      tool.setReadOnly(true);
++
++      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
++
++      getCard(element).click();
++
++      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
++      expect(notPrevented).toBe(true);
++
++      tool.destroy();
++    });
++
++    it('rows that arrive after a read-only boot stay inert: no drag start, no drawer', () => {
++      const options = createDatabaseOptions({}, {}, { readOnly: true });
++
++      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>)
++        .mockReturnValueOnce([])
++        .mockReturnValue(makeBoardRows());
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
++
++      getCard(element).click();
++
++      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
++      expect(notPrevented).toBe(true);
++
++      tool.destroy();
++    });
++
++    it('leaving read-only wires cards again', () => {
++      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true, childBlocks: makeBoardRows() }));
++      const element = tool.render();
++
++      tool.rendered();
++      tool.setReadOnly(false);
++
++      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
++
++      getCard(element).click();
++
++      expect(queryByData(element, 'data-blok-database-drawer')).not.toBeNull();
++      expect(notPrevented).toBe(false);
++
++      tool.destroy();
++    });
++  });
++
+   describe('getToolbarAnchorElement', () => {
+     it('returns the database title element so the toolbar vertically centers on the title line', () => {
+       const tool = new DatabaseTool(createDatabaseOptions());
+@@ -3147,4 +3242,466 @@ describe('DatabaseTool', () => {
+       container.remove();
+     });
+   });
++
++  describe('no-value group', () => {
++    const interpolatingT = (key: string, vars?: Record<string, string | number>): string => {
++      if (key === 'tools.database.noValueGroup') return `No ${String(vars?.property)}`;
++
++      return key === 'tools.database.defaultStatusProperty' ? 'Status' : key;
++    };
++
++    const renderBoard = (rows: Array<{ id: string; properties: Record<string, unknown> }>): {
++      tool: DatabaseTool;
++      element: HTMLElement;
++      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
++    } => {
++      const childBlocks = rows.map((r, i) => createMockRowBlock({ id: r.id, properties: r.properties, position: `a${i}` }));
++      const options = createDatabaseOptions({}, {}, { childBlocks });
++
++      options.api.i18n.t = interpolatingT;
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      return { tool, element, options };
++    };
++
++    const noValueColumn = (element: HTMLElement): HTMLElement | null =>
++      queryByData(element, 'data-blok-database-no-value-group');
++
++    it('shows a row with no group value on the board, in a first "No <property>" column', () => {
++      const { tool, element } = renderBoard([
++        { id: 'row-empty', properties: { 'prop-title': 'Loose', 'prop-status': null } },
++        { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
++      ]);
++
++      const card = queryAllByData(element, 'data-row-id', 'row-empty').find((el) => el.hasAttribute('data-blok-database-card'));
++
++      expect(card).toBeDefined();
++
++      const column = noValueColumn(element);
++
++      expect(column).not.toBeNull();
++      expect(column?.contains(card ?? null)).toBe(true);
++      expect(queryAllByData(element, 'data-blok-database-column')[0]).toBe(column);
++      expect(queryByData(column ?? element, 'data-blok-database-column-title')?.textContent).toBe('No Status');
++
++      tool.destroy();
++    });
++
++    it('keeps the no-value column on an empty board so a card can be dropped into it', () => {
++      const { tool, element } = renderBoard([]);
++
++      expect(noValueColumn(element)).not.toBeNull();
++
++      tool.destroy();
++    });
++
++    it('gives the no-value column no delete button and no rename', () => {
++      const { tool, element } = renderBoard([]);
++      const column = noValueColumn(element);
++
++      expect(column).not.toBeNull();
++      expect(queryByData(column ?? element, 'data-blok-database-delete-column')).toBeNull();
++
++      const title = queryByData(column ?? element, 'data-blok-database-column-title');
++
++      title?.click();
++
++      expect(queryByData(column ?? element, 'data-blok-database-column-title-input')).toBeNull();
++
++      tool.destroy();
++    });
++
++    it('creates a row with no group value from "+ New" in the no-value column', () => {
++      const { tool, element, options } = renderBoard([]);
++      const column = noValueColumn(element);
++      const addCard = queryByData(column ?? element, 'data-blok-database-add-card');
++
++      expect(addCard).not.toBeNull();
++      addCard?.click();
++
++      const insertAt = vi.mocked(options.api.blocks.insertAt);
++
++      expect(insertAt).toHaveBeenCalledTimes(1);
++
++      const data = insertAt.mock.calls[0][1] as DatabaseRowData;
++
++      expect(data.properties).not.toHaveProperty('prop-status');
++
++      tool.destroy();
++    });
++
++    it('clears the group value when a card is dropped into the no-value column', () => {
++      const { tool, element, options } = renderBoard([
++        { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
++      ]);
++      const column = noValueColumn(element);
++      const toOptionId = column?.getAttribute('data-option-id') ?? 'missing';
++      const cardDrag = (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag;
++      const rowBlock = vi.mocked(options.api.blocks.getChildren).mock.results[0]?.value as BlockAPI[];
++
++      cardDrag.onDrop({ rowId: 'row-todo', toOptionId, beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++
++      tool.destroy();
++    });
++
++    it('never starts a column drag from the no-value column header', () => {
++      const { tool, element } = renderBoard([]);
++      const header = queryByData(noValueColumn(element) ?? element, 'data-blok-database-column-header');
++      const columnDrag = (tool as unknown as { columnDrag: DatabaseColumnDrag }).columnDrag;
++      const begin = vi.spyOn(columnDrag, 'beginTracking');
++
++      expect(header).not.toBeNull();
++      fireEvent.pointerDown(header ?? element, { clientX: 0, clientY: 0 });
++
++      expect(begin).not.toHaveBeenCalled();
++
++      tool.destroy();
++    });
++
++    it('shows a row with no group value in a grouped list', () => {
++      const childBlocks = [createMockRowBlock({ id: 'row-empty', properties: { 'prop-title': 'Loose' }, position: 'a0' })];
++      const options = createDatabaseOptions({
++        views: [{ id: 'view-1', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
++      }, {}, { childBlocks });
++
++      options.api.i18n.t = interpolatingT;
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      const row = queryAllByData(element, 'data-row-id', 'row-empty').find((el) => el.hasAttribute('data-blok-database-list-row'));
++
++      expect(row).toBeDefined();
++
++      tool.destroy();
++    });
++  });
++
++  describe('grouping by a multiSelect property', () => {
++    const tagsData = (): Partial<DatabaseData> => ({
++      schema: [
++        { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
++        { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
++          options: [
++            { id: 'opt-a', label: 'A', position: 'a0' },
++            { id: 'opt-b', label: 'B', position: 'a1' },
++            { id: 'opt-c', label: 'C', position: 'a2' },
++          ],
++        }},
++      ],
++      views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
++    });
++
++    const renderTagsBoard = (tags: string[]): {
++      tool: DatabaseTool;
++      element: HTMLElement;
++      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
++      rowBlock: BlockAPI;
++    } => {
++      const rowBlock = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task', 'prop-tags': tags }, position: 'a0' });
++      const options = createDatabaseOptions(tagsData(), {}, { childBlocks: [rowBlock] });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      return { tool, element, options, rowBlock };
++    };
++
++    const cardsIn = (element: HTMLElement, optionId: string): HTMLElement[] => {
++      const column = queryAllByData(element, 'data-option-id', optionId).find((el) => el.hasAttribute('data-blok-database-column'));
++
++      return column === undefined ? [] : queryAllByData(column, 'data-blok-database-card');
++    };
++
++    const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
++      (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag.onDrop(result);
++    };
++
++    it('shows a row in every option group it carries', () => {
++      const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
++
++      expect(cardsIn(element, 'opt-a').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
++      expect(cardsIn(element, 'opt-b').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
++      expect(cardsIn(element, 'opt-c')).toHaveLength(0);
++
++      tool.destroy();
++    });
++
++    it('replaces only the dragged-from option when a card moves to another group', () => {
++      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
++      const cardInA = cardsIn(element, 'opt-a')[0];
++
++      fireEvent.pointerDown(cardInA, { clientX: 0, clientY: 0 });
++      dropCard(tool, { rowId: 'row-1', toOptionId: 'opt-c', beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-c', 'opt-b'] });
++
++      tool.destroy();
++    });
++
++    it('drops the dragged-from option when a card moves to a group the row already has', () => {
++      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
++
++      fireEvent.pointerDown(cardsIn(element, 'opt-a')[0], { clientX: 0, clientY: 0 });
++      dropCard(tool, { rowId: 'row-1', toOptionId: 'opt-b', beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
++
++      tool.destroy();
++    });
++
++    it('removes the dragged-from option when a card moves to the no-value group', () => {
++      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
++      const noValueId = queryByData(element, 'data-blok-database-no-value-group')?.getAttribute('data-option-id') ?? 'missing';
++
++      fireEvent.pointerDown(cardsIn(element, 'opt-b')[0], { clientX: 0, clientY: 0 });
++      dropCard(tool, { rowId: 'row-1', toOptionId: noValueId, beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-a'] });
++
++      tool.destroy();
++    });
++
++    it('fades the pressed copy of a multi-group card, not the first copy', () => {
++      const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
++      const cardInB = cardsIn(element, 'opt-b')[0];
++      const cardInA = cardsIn(element, 'opt-a')[0];
++
++      fireEvent.pointerDown(cardInB, { clientX: 0, clientY: 0 });
++      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40, clientY: 40 }));
++
++      expect(cardInB.style.opacity).toBe('0.4');
++      expect(cardInA.style.opacity).toBe('');
++
++      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
++      tool.destroy();
++    });
++
++    it('creates a row carrying the option as a list from "+ New" in a multiSelect group', () => {
++      const { tool, element, options } = renderTagsBoard([]);
++      const column = queryAllByData(element, 'data-option-id', 'opt-a').find((el) => el.hasAttribute('data-blok-database-column'));
++      const addCard = queryByData(column ?? element, 'data-blok-database-add-card');
++
++      addCard?.click();
++
++      const data = vi.mocked(options.api.blocks.insertAt).mock.calls[0][1] as DatabaseRowData;
++
++      expect(data.properties['prop-tags']).toEqual(['opt-a']);
++
++      tool.destroy();
++    });
++  });
++
++  // GATED ON USER DECISION D9: rows keep existing when their column is deleted.
++  describe('deleting a board column', () => {
++    const liveRowBlock = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
++      const block = createMockRowBlock({ id, properties, position });
++      const data = block.preservedData as DatabaseRowData;
++
++      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
++        if (method === 'updateProperties') Object.assign(data.properties, params);
++      });
++
++      return block;
++    };
++
++    const clickDelete = (element: HTMLElement, optionId: string): void => {
++      queryAllByData(element, 'data-blok-database-delete-column')
++        .find((el) => el.getAttribute('data-option-id') === optionId)
++        ?.click();
++    };
++
++    it('keeps the rows and moves them to the no-value group', () => {
++      const childBlocks = [
++        liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0'),
++        liveRowBlock('row-2', { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, 'a1'),
++      ];
++      const options = createDatabaseOptions({}, {}, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      clickDelete(element, 'opt-todo');
++
++      expect(options.api.blocks.delete).not.toHaveBeenCalled();
++      expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++
++      const noValue = queryByData(element, 'data-blok-database-no-value-group');
++      const cardIds = queryAllByData(noValue ?? element, 'data-blok-database-card').map((c) => c.getAttribute('data-row-id'));
++
++      expect(cardIds).toEqual(['row-1', 'row-2']);
++      expect(queryAllByData(element, 'data-option-id', 'opt-todo')).toHaveLength(0);
++
++      tool.destroy();
++    });
++
++    it('removes only the deleted option from a multiSelect row', () => {
++      const row = liveRowBlock('row-1', { 'prop-title': 'Task', 'prop-tags': ['opt-a', 'opt-b'] }, 'a0');
++      const options = createDatabaseOptions({
++        schema: [
++          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
++          { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
++            options: [
++              { id: 'opt-a', label: 'A', position: 'a0' },
++              { id: 'opt-b', label: 'B', position: 'a1' },
++            ],
++          }},
++        ],
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
++      }, {}, { childBlocks: [row] });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      clickDelete(element, 'opt-a');
++
++      expect(options.api.blocks.delete).not.toHaveBeenCalled();
++      expect(row.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
++
++      tool.destroy();
++    });
++  });
++
++  describe('saved filters and sorts apply to the rendered view', () => {
++    const titlesIn = (element: HTMLElement, attr: string): string[] =>
++      queryAllByData(element, attr).map((el) => el.textContent ?? '');
++
++    it('hides a card that a saved filter excludes, and keeps every column', () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-keep', properties: { 'prop-title': 'Keep me', 'prop-status': 'opt-todo' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-drop', properties: { 'prop-title': 'Drop me', 'prop-status': 'opt-todo' }, position: 'a1' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
++          filters: [{ propertyId: 'prop-title', operator: 'contains', value: 'keep' }] }],
++      });
++      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
++      const element = tool.render();
++
++      tool.rendered();
++
++      expect(queryByData(element, 'data-row-id', 'row-drop')).toBeNull();
++      expect(queryByData(element, 'data-row-id', 'row-keep')).not.toBeNull();
++      // 3 options plus the no-value column.
++      expect(queryAllByData(element, 'data-blok-database-column')).toHaveLength(4);
++    });
++
++    it('orders list rows by a saved sort instead of by position', () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-c', properties: { 'prop-title': 'Cherry' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'Apple' }, position: 'a1' }),
++        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'Banana' }, position: 'a2' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [],
++          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
++        activeViewId: 'view-list',
++      });
++      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
++      const element = tool.render();
++
++      tool.rendered();
++
++      expect(titlesIn(element, 'data-blok-database-list-row-title')).toEqual(['Apple', 'Banana', 'Cherry']);
++    });
++
++    it('still clears the group of a row a filter hides when its column is deleted', () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-shown', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-todo' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-hidden', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-todo' }, position: 'a1' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
++          filters: [{ propertyId: 'prop-title', operator: 'equals', value: 'shown' }] }],
++      });
++      const options = createDatabaseOptions(data, {}, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      queryAllByData(element, 'data-blok-database-delete-column')
++        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!
++        .click();
++
++      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++      expect(options.api.blocks.delete).not.toHaveBeenCalled();
++    });
++  });
++
++  describe('drag in a sorted view (GATED ON D7)', () => {
++    const sortedBoard = (): { tool: DatabaseTool; childBlocks: BlockAPI[] } => {
++      // Sort order (A, B) is the reverse of position order (B at a0, A at a1).
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-status': 'opt-todo' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-status': 'opt-todo' }, position: 'a1' }),
++        createMockRowBlock({ id: 'row-x', properties: { 'prop-title': 'X', 'prop-status': 'opt-todo' }, position: 'a2' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
++          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
++      });
++      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
++
++      tool.render();
++      tool.rendered();
++
++      return { tool, childBlocks };
++    };
++
++    const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
++      const cardDrag = (tool as unknown as { cardDrag: DatabaseCardDrag }).cardDrag;
++
++      (cardDrag as unknown as { onDrop: (r: CardDragResult) => void }).onDrop(result);
++    };
++
++    const callsNamed = (block: BlockAPI, name: string): unknown[][] =>
++      (block.call as ReturnType<typeof vi.fn>).mock.calls.filter((args) => args[0] === name);
++
++    it('ignores a reorder inside the same column', () => {
++      const { tool, childBlocks } = sortedBoard();
++      const rowX = childBlocks[2];
++
++      // Neighbours arrive in sort order (A then B), so their keys are out of order.
++      expect(() => dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' })).not.toThrow();
++      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
++    });
++
++    it('moves a card to another column by its group value only', () => {
++      const { tool, childBlocks } = sortedBoard();
++      const rowX = childBlocks[2];
++
++      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-doing', beforeRowId: null, afterRowId: null });
++
++      expect(callsNamed(rowX, 'updateProperties')).toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
++      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
++    });
++
++    it('turns list row drag off while the list is sorted', () => {
++      const childBlocks = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One' }, position: 'a0' })];
++      const listView = (sorts: DatabaseViewConfig['sorts']): Partial<DatabaseData> => ({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [], sorts }],
++        activeViewId: 'view-list',
++      });
++      const sorted = new DatabaseTool(createDatabaseOptions(listView([{ propertyId: 'prop-title', direction: 'asc' }]), {}, { childBlocks }));
++      const unsorted = new DatabaseTool(createDatabaseOptions(listView([]), {}, { childBlocks }));
++
++      sorted.render();
++      sorted.rendered();
++      unsorted.render();
++      unsorted.rendered();
++
++      expect((sorted as unknown as { listRowDrag: unknown }).listRowDrag).toBeNull();
++      expect((unsorted as unknown as { listRowDrag: unknown }).listRowDrag).not.toBeNull();
++    });
++  });
+ });
+diff --git a/test/unit/types/database-data-drift-typecheck.ts b/test/unit/types/database-data-drift-typecheck.ts
+new file mode 100644
+index 00000000..8320992b
+--- /dev/null
++++ b/test/unit/types/database-data-drift-typecheck.ts
+@@ -0,0 +1,18 @@
++/**
++ * The published DatabaseData must carry every key the tool saves.
++ * Run with: tsc --noEmit --strict --skipLibCheck --ignoreConfig test/unit/types/database-data-drift-typecheck.ts
++ *
++ * This file is NOT executed — it only needs to compile.
++ */
++
++import type { DatabaseData as PublishedDatabaseData } from '../../../types/tools/database';
++import type { DatabaseData as SourceDatabaseData } from '../../../src/tools/database/types';
++
++type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
++const assert = <T extends true>(): T | undefined => undefined;
++
++// Both extend Record<string, unknown>, so `keyof` is `string | number` on both sides and hides drift.
++type Known<T> = { [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K] };
++
++assert<Equal<keyof Known<PublishedDatabaseData>, keyof Known<SourceDatabaseData>>>();
++assert<Equal<PublishedDatabaseData['title'], SourceDatabaseData['title']>>();
+diff --git a/types/message-keys.d.ts b/types/message-keys.d.ts
+index 139fdc83..71a8a3ec 100644
+--- a/types/message-keys.d.ts
++++ b/types/message-keys.d.ts
+@@ -394,6 +394,7 @@ export type BlokMessageKey =
+   | 'tools.database.moreViews'
+   | 'tools.database.newPage'
+   | 'tools.database.newRow'
++  | 'tools.database.noValueGroup'
+   | 'tools.database.openRow'
+   | 'tools.database.propertyTypeCheckbox'
+   | 'tools.database.propertyTypeDate'
+diff --git a/types/tools/database.d.ts b/types/tools/database.d.ts
+index f2262c4f..445a1f69 100644
+--- a/types/tools/database.d.ts
++++ b/types/tools/database.d.ts
+@@ -88,6 +88,7 @@ export interface DatabaseViewConfig {
+  * Schema and views only — rows are child blocks (database-row type).
+  */
+ export interface DatabaseData extends BlockToolData {
++  title?: string;
+   schema: PropertyDefinition[];
+   views: DatabaseViewConfig[];
+   activeViewId: string;

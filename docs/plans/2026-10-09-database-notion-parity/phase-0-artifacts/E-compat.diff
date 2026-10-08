@@ -1,0 +1,630 @@
+diff --git a/index.html b/index.html
+index 77577b54..31cd1d50 100644
+--- a/index.html
++++ b/index.html
+@@ -3334,16 +3334,16 @@
+             { id: 'lnb-col-b-p', type: 'paragraph', data: { text: 'Column B' }, parent: 'lnb-col-b' },
+             { id: 'lnb-db', type: 'database', data: {
+               schema: [
+-                { id: 'title', name: 'Title', type: 'text' },
+-                { id: 'status', name: 'Status', type: 'select', options: [
+-                  { id: 'todo', name: 'Todo', color: 'gray' },
+-                  { id: 'done', name: 'Done', color: 'green' },
+-                ] },
++                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
++                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
++                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
++                  { id: 'done', label: 'Done', color: 'green', position: 'a1' },
++                ] } },
+               ],
+-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
++              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: ['status'] }],
+               activeViewId: 'v1',
+             }, content: ['lnb-db-r1'], indent: 1 },
+-            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' } }, parent: 'lnb-db' },
++            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' }, position: 'a0' }, parent: 'lnb-db' },
+           ] },
+           { label: 'Empty', blocks: [{ id: 'ul-empty', type: 'list', data: { style: 'unordered', text: '' } }] },
+         ],
+@@ -3585,40 +3585,40 @@
+           { label: 'List view', blocks: [
+             { id: 'db-list', type: 'database', data: {
+               schema: [
+-                { id: 'title', name: 'Title', type: 'text' },
+-                { id: 'status', name: 'Status', type: 'select', options: [
+-                  { id: 'todo', name: 'Todo', color: 'gray' },
+-                  { id: 'doing', name: 'Doing', color: 'yellow' },
+-                  { id: 'done', name: 'Done', color: 'green' },
+-                ] },
++                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
++                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
++                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
++                  { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
++                  { id: 'done', label: 'Done', color: 'green', position: 'a2' },
++                ] } },
+               ],
+-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
++              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: ['status'] }],
+               activeViewId: 'v1',
+             }, content: ['db-list-r1', 'db-list-r2'] },
+-            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' } }, parent: 'db-list' },
+-            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' } }, parent: 'db-list' },
++            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' }, position: 'a0' }, parent: 'db-list' },
++            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' }, position: 'a1' }, parent: 'db-list' },
+           ] },
+           { label: 'Board view', blocks: [
+             { id: 'db-board', type: 'database', data: {
+               schema: [
+-                { id: 'title', name: 'Title', type: 'text' },
+-                { id: 'status', name: 'Status', type: 'select', options: [
+-                  { id: 'todo', name: 'Todo', color: 'gray' },
+-                  { id: 'doing', name: 'Doing', color: 'yellow' },
+-                  { id: 'done', name: 'Done', color: 'green' },
+-                ] },
++                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
++                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
++                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
++                  { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
++                  { id: 'done', label: 'Done', color: 'green', position: 'a2' },
++                ] } },
+               ],
+-              views: [{ id: 'v1', type: 'board', name: 'Board', groupBy: 'status', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
++              views: [{ id: 'v1', type: 'board', name: 'Board', position: 'a0', groupBy: 'status', sorts: [], filters: [], visibleProperties: [] }],
+               activeViewId: 'v1',
+             }, content: ['db-bd-r1', 'db-bd-r2', 'db-bd-r3'] },
+-            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' } }, parent: 'db-board' },
+-            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' } }, parent: 'db-board' },
+-            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' } }, parent: 'db-board' },
++            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' }, position: 'a0' }, parent: 'db-board' },
++            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' }, position: 'a1' }, parent: 'db-board' },
++            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' }, position: 'a2' }, parent: 'db-board' },
+           ] },
+           { label: 'Empty database', blocks: [
+             { id: 'db-empty', type: 'database', data: {
+-              schema: [{ id: 'title', name: 'Title', type: 'text' }],
+-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title'] }],
++              schema: [{ id: 'title', name: 'Title', type: 'title', position: 'a0' }],
++              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+               activeViewId: 'v1',
+             } },
+           ] },
+diff --git a/src/styles/database.css b/src/styles/database.css
+index 3a801002..1897101c 100644
+--- a/src/styles/database.css
++++ b/src/styles/database.css
+@@ -1197,3 +1197,18 @@
+   width: 14px;
+   height: 14px;
+ }
++
++/* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
++@media (prefers-reduced-motion: reduce) {
++  [data-blok-database-drawer],
++  [data-blok-database-dragging] [data-blok-database-card],
++  [data-blok-database-dragging] [data-blok-database-cards],
++  [data-blok-database-column-reordering] [data-blok-database-column],
++  [data-blok-database-column-reordering] [data-blok-database-board] {
++    transition: none;
++  }
++
++  [data-blok-database-property-type-popover] {
++    animation: none;
++  }
++}
+diff --git a/src/tools/database/database-card-drawer.ts b/src/tools/database/database-card-drawer.ts
+index 6f1c4637..754dd984 100644
+--- a/src/tools/database/database-card-drawer.ts
++++ b/src/tools/database/database-card-drawer.ts
+@@ -12,6 +12,27 @@ import type { FieldsResolver } from '../../shared/rich-text/block-data';
+ import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
+ import { declaredRichTextFields } from '../../components/tools/base';
+ 
++/** Must stay longer than the drawer's `transition: width` in database.css. */
++const DRAWER_TRANSITION_FALLBACK_MS = 300;
++
++/**
++ * Runs `done` once, when the drawer's width transition ends. Reduced motion
++ * turns that transition off, and then no transitionend ever comes.
++ */
++const afterWidthTransition = (drawer: HTMLElement, done: () => void): void => {
++  const state = { finished: false };
++  const finish = (): void => {
++    if (state.finished) {
++      return;
++    }
++    state.finished = true;
++    done();
++  };
++
++  drawer.addEventListener('transitionend', finish, { once: true });
++  window.setTimeout(finish, DRAWER_TRANSITION_FALLBACK_MS);
++};
++
+ interface BlokInstance {
+   save(): Promise<OutputData>;
+   destroy(): void;
+@@ -295,13 +316,13 @@ export class DatabaseCardDrawer {
+ 
+     requestAnimationFrame(() => {
+       drawer.style.width = '45%';
+-      drawer.addEventListener('transitionend', () => {
++      afterWidthTransition(drawer, () => {
+         this.autoResizeTitle(titleInput);
+ 
+         if (!title) {
+           titleInput.focus();
+         }
+-      }, { once: true });
++      });
+     });
+ 
+     this.initNestedEditor(editorHolder, row);
+@@ -419,9 +440,9 @@ export class DatabaseCardDrawer {
+ 
+       this.drawer = null;
+       drawer.style.width = '0px';
+-      drawer.addEventListener('transitionend', () => {
++      afterWidthTransition(drawer, () => {
+         drawer.remove();
+-      }, { once: true });
++      });
+     }
+ 
+     this.currentRowId = null;
+diff --git a/src/tools/database/database-model.ts b/src/tools/database/database-model.ts
+index 2c1c9aa8..ff2486bb 100644
+--- a/src/tools/database/database-model.ts
++++ b/src/tools/database/database-model.ts
+@@ -69,7 +69,8 @@ export class DatabaseModel {
+     const prop = this.schema.find((p) => p.id === propertyId);
+     if (prop === undefined) return;
+     if (changes.name !== undefined) prop.name = changes.name;
+-    if (changes.config !== undefined) prop.config = changes.config;
++    // Merge, not replace: a newer client's key beside `options` must outlive every option edit.
++    if (changes.config !== undefined) prop.config = { ...prop.config, ...changes.config };
+   }
+ 
+   deleteProperty(propertyId: string): void {
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 85caf741..ad9be16a 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -46,6 +46,16 @@ const changedBlock = (payload: unknown): ChangedBlock | undefined =>
+ /** Events that can end an inline edit or a drag. */
+ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
+ 
++const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId']);
++
++/**
++ * Top-level keys this version does not know, kept as they came. A full save
++ * prunes every key it leaves out from the shared document, so dropping a
++ * newer version's key here would delete it for every client.
++ */
++const unknownKeys = (data: DatabaseData | undefined): Record<string, unknown> =>
++  Object.fromEntries(Object.entries(data ?? {}).filter(([key]) => !KNOWN_KEYS.has(key)));
++
+ /**
+  * DatabaseTool — a multi-view Kanban board block tool for Blok.
+  *
+@@ -61,6 +71,7 @@ export class DatabaseTool implements BlockTool {
+   private readonly config: DatabaseConfig;
+ 
+   private title: string;
++  private readonly unknown: Record<string, unknown>;
+   private activeViewId: string;
+   private model: DatabaseModel;
+   private view!: DatabaseViewRenderer;
+@@ -96,6 +107,7 @@ export class DatabaseTool implements BlockTool {
+     this.config = config ?? {};
+ 
+     this.title = (data as DatabaseData | undefined)?.title ?? '';
++    this.unknown = unknownKeys(data);
+     this.model = new DatabaseModel(data);
+     const views = this.model.getViews();
+     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
+@@ -263,6 +275,7 @@ export class DatabaseTool implements BlockTool {
+     const currentTitle = this.titleElement?.textContent ?? this.title;
+ 
+     return {
++      ...structuredClone(this.unknown),
+       ...this.model.snapshot(),
+       title: currentTitle,
+       activeViewId: this.activeViewId,
+diff --git a/test/unit/playground/database-fixtures.test.ts b/test/unit/playground/database-fixtures.test.ts
+new file mode 100644
+index 00000000..9cdf1ee4
+--- /dev/null
++++ b/test/unit/playground/database-fixtures.test.ts
+@@ -0,0 +1,94 @@
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++import { runInNewContext } from 'node:vm';
++
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++
++import type { API, BlockAPI } from '../../../types';
++import { validateAgainst } from '../../../src/shared/schema/validate';
++import { DATABASE_DATA } from '../../../src/shared/tool-descriptions/database';
++import { DATABASE_ROW_DATA } from '../../../src/shared/tool-descriptions/database-row';
++import { DatabaseTool } from '../../../src/tools/database';
++import type { DatabaseData, DatabaseRowData } from '../../../src/tools/database/types';
++
++interface FixtureBlock {
++  id: string;
++  type: string;
++  data: Record<string, unknown>;
++  parent?: string;
++}
++
++interface BlockStatesEntry {
++  tool: string;
++  states: Array<{ label: string; blocks: FixtureBlock[] }>;
++}
++
++/** BLOCK_STATES_RAW is a plain literal inside index.html, evaluated the way block-states-spec.test.ts does. */
++const loadBlockStates = (): BlockStatesEntry[] => {
++  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
++  const start = html.indexOf('const BLOCK_STATES_RAW = [');
++  const end = html.indexOf('const BLOCK_STATES_SPEC');
++
++  // Round-trip into this realm: the schema validator only treats objects with THIS realm's
++  // Object.prototype as records, so vm-born objects would pass every check unexamined.
++  return JSON.parse(JSON.stringify(runInNewContext(`${html.slice(start, end)}; BLOCK_STATES_RAW`))) as BlockStatesEntry[];
++};
++
++const databaseFixtures = loadBlockStates().flatMap((entry) => entry.states.flatMap((state) =>
++  state.blocks
++    .filter((block) => block.type === 'database')
++    .map((database) => ({
++      name: `${entry.tool} / ${state.label} / ${database.id}`,
++      data: database.data as DatabaseData,
++      rows: state.blocks.filter((block) => block.parent === database.id && block.type === 'database-row'),
++    }))
++));
++
++const makeTool = (data: DatabaseData): DatabaseTool => new DatabaseTool({
++  data,
++  config: {},
++  api: { events: { on: vi.fn(), off: vi.fn() } } as unknown as API,
++  block: { id: 'fixture', dispatchChange: vi.fn() } as unknown as BlockAPI,
++  readOnly: false,
++});
++
++describe('playground database fixtures (index.html)', () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  it('finds the database fixtures', () => {
++    expect(databaseFixtures.length).toBeGreaterThan(0);
++  });
++
++  it.each(databaseFixtures)('$name: matches the saved database shape', ({ data }) => {
++    expect(validateAgainst(DATABASE_DATA, data)).toEqual([]);
++  });
++
++  it.each(databaseFixtures)('$name: passes the tool\'s own validate()', ({ data }) => {
++    expect(makeTool(data).validate(data)).toBe(true);
++  });
++
++  it.each(databaseFixtures)('$name: every row matches the saved row shape', ({ rows }) => {
++    for (const row of rows) {
++      expect(validateAgainst(DATABASE_ROW_DATA, row.data), row.id).toEqual([]);
++    }
++  });
++
++  it.each(databaseFixtures)('$name: every select value names an option, so no labelless column appears', ({ data, rows }) => {
++    const selects = data.schema.filter((p) => p.type === 'select');
++    const pairs = selects.flatMap((property) => rows.map((row) => ({
++      at: `${row.id}.${property.id}`,
++      value: (row.data as DatabaseRowData).properties[property.id],
++      optionIds: (property.config?.options ?? []).map((option) => option.id),
++    })));
++
++    for (const { at, value, optionIds } of pairs.filter((pair) => pair.value !== undefined && pair.value !== null)) {
++      expect(optionIds, at).toContain(value);
++    }
++  });
++});
+diff --git a/test/unit/styles/__snapshots__/main-css-rules.snap.txt b/test/unit/styles/__snapshots__/main-css-rules.snap.txt
+index a2fc95c9..87786d1f 100644
+--- a/test/unit/styles/__snapshots__/main-css-rules.snap.txt
++++ b/test/unit/styles/__snapshots__/main-css-rules.snap.txt
+@@ -4936,6 +4936,14 @@ span[data-blok-slash-search] {
+   height: 14px;
+ }
+ 
++[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-dragging] [data-blok-database-card], [data-blok-database-dragging] [data-blok-database-cards], [data-blok-database-column-reordering] [data-blok-database-column], [data-blok-database-column-reordering] [data-blok-database-board] {
++  transition: none;
++}
++
++[@media (prefers-reduced-motion: reduce)] [data-blok-database-property-type-popover] {
++  animation: none;
++}
++
+ .blok-media-empty {
+   display: flex;
+   flex-direction: column;
+diff --git a/test/unit/styles/css-split-equivalence.test.ts b/test/unit/styles/css-split-equivalence.test.ts
+index b8b79431..422e9d01 100644
+--- a/test/unit/styles/css-split-equivalence.test.ts
++++ b/test/unit/styles/css-split-equivalence.test.ts
+@@ -732,6 +732,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
+     const AGENT_MARKER_BYTES = 633;
+     // find.css: the field's grid-column pin and its comment (read-only find field gap).
+     const FIND_FIELD_COLUMN_BYTES = 140;
++    // database.css: the prefers-reduced-motion block and its drawer-fallback comment.
++    const DATABASE_REDUCED_MOTION_BYTES = 536;
+     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
+       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
+       + SLASH_PILL_SPAN_BYTES
+@@ -785,7 +787,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
+       + TABS_EMPTY_HINT_BYTES
+       + PAGE_TITLE_HEADER_BYTES
+       + AGENT_MARKER_BYTES
+-      + FIND_FIELD_COLUMN_BYTES;
++      + FIND_FIELD_COLUMN_BYTES
++      + DATABASE_REDUCED_MOTION_BYTES;
+     const actual = localImportedByteBudget(ENTRY);
+ 
+     expect(actual).toBeLessThanOrEqual(CEILING);
+diff --git a/test/unit/styles/database-reduced-motion.test.ts b/test/unit/styles/database-reduced-motion.test.ts
+new file mode 100644
+index 00000000..61af235d
+--- /dev/null
++++ b/test/unit/styles/database-reduced-motion.test.ts
+@@ -0,0 +1,50 @@
++/**
++ * Database motion must stand down under prefers-reduced-motion.
++ * jsdom has no CSS, so these read the authored source.
++ */
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++
++import { describe, expect, it } from 'vitest';
++
++const source = readFileSync(resolve(__dirname, '../../../src/styles/database.css'), 'utf8')
++  .replace(/\/\*[\s\S]*?\*\//g, '')
++  .replace(/\s+/g, ' ');
++
++/** The inner text of every reduced-motion block. Its rules hold no nested braces. */
++const reducedMotionBlocks = (): string[] =>
++  [ ...source.matchAll(/@media \(prefers-reduced-motion: reduce\) \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ]
++    .map((match) => match[1]);
++
++const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
++
++/** The last value of `name` across rules whose selector list contains `selector`. */
++const reducedProp = (selector: string, name: string): string | null => {
++  const values = reducedMotionBlocks()
++    .flatMap((block) => [ ...block.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g) ])
++    .filter((rule) => rule[1].split(/,(?![^(]*\))/).map((part) => part.trim()).includes(selector))
++    .map((rule) => rule[2].match(new RegExp(`(?:^|[;\\s])${escape(name)} ?: ?([^;]+);`)))
++    .filter((match) => match !== null)
++    .map((match) => match[1].trim());
++
++  return values.at(-1) ?? null;
++};
++
++describe('database.css under prefers-reduced-motion', () => {
++  it('drops the drawer width slide', () => {
++    expect(reducedProp('[data-blok-database-drawer]', 'transition')).toBe('none');
++  });
++
++  it.each([
++    '[data-blok-database-dragging] [data-blok-database-card]',
++    '[data-blok-database-dragging] [data-blok-database-cards]',
++    '[data-blok-database-column-reordering] [data-blok-database-column]',
++    '[data-blok-database-column-reordering] [data-blok-database-board]',
++  ])('drops the drag displacement glide on %s', (selector) => {
++    expect(reducedProp(selector, 'transition')).toBe('none');
++  });
++
++  it('drops the property popover entrance animation', () => {
++    expect(reducedProp('[data-blok-database-property-type-popover]', 'animation')).toBe('none');
++  });
++});
+diff --git a/test/unit/tools/database/database-card-drawer.test.ts b/test/unit/tools/database/database-card-drawer.test.ts
+index 788d8525..bac07a09 100644
+--- a/test/unit/tools/database/database-card-drawer.test.ts
++++ b/test/unit/tools/database/database-card-drawer.test.ts
+@@ -871,6 +871,36 @@ describe('DatabaseCardDrawer', () => {
+       expect(titleInput.value).toBe('');
+     });
+ 
++    it('focuses an empty title when no transitionend ever comes (reduced motion)', () => {
++      vi.useFakeTimers();
++
++      try {
++        const rafCallbacks: FrameRequestCallback[] = [];
++
++        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
++          rafCallbacks.push(cb);
++
++          return 0;
++        });
++
++        const options = createOptions();
++        const drawer = new DatabaseCardDrawer(options);
++
++        drawer.open(makeRow({ id: 'row-1', properties: { 'prop-title': '' } }));
++
++        const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
++        const focusSpy = vi.spyOn(titleInput, 'focus');
++
++        rafCallbacks.forEach((cb) => cb(0));
++        vi.advanceTimersByTime(1000);
++
++        expect(focusSpy).toHaveBeenCalledTimes(1);
++        drawer.destroy();
++      } finally {
++        vi.useRealTimers();
++      }
++    });
++
+     it('does not call focus() on title input when card has a title', () => {
+       const rafCallbacks: FrameRequestCallback[] = [];
+ 
+@@ -1593,6 +1623,23 @@ describe('DatabaseCardDrawer', () => {
+       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+     });
+ 
++    it('removes the closed drawer when no transitionend ever comes (reduced motion)', () => {
++      vi.useFakeTimers();
++
++      try {
++        const options = createOptions();
++        const drawer = new DatabaseCardDrawer(options);
++
++        drawer.open(makeRow());
++        drawer.close();
++        vi.advanceTimersByTime(1000);
++
++        expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
++      } finally {
++        vi.useRealTimers();
++      }
++    });
++
+     it('isOpen returns false immediately before animation ends', () => {
+       const options = createOptions();
+       const drawer = new DatabaseCardDrawer(options);
+diff --git a/test/unit/tools/database/database-model.test.ts b/test/unit/tools/database/database-model.test.ts
+index 77025d89..9a1c6f4d 100644
+--- a/test/unit/tools/database/database-model.test.ts
++++ b/test/unit/tools/database/database-model.test.ts
+@@ -134,6 +134,28 @@ describe('DatabaseModel', () => {
+       expect(model.getProperty('p1')?.config?.options).toHaveLength(1);
+     });
+ 
++    describe('a config key written by a newer client', () => {
++      const todo = makeSelectOption({ id: 'o1', label: 'Todo', position: 'a0' });
++      const done = makeSelectOption({ id: 'o2', label: 'Done', position: 'a1' });
++
++      it.each([
++        { action: 'option add', options: [todo, done, makeSelectOption({ id: 'o3', label: 'New', position: 'a2' })] },
++        { action: 'option rename', options: [{ ...todo, label: 'Later' }, done] },
++        { action: 'option delete', options: [done] },
++        { action: 'option reorder', options: [{ ...done, position: 'Zz' }, todo] },
++      ])('survives an $action', ({ options }) => {
++        const config = { options: [todo, done], futureConfigKey: { limit: 3 } };
++        const model = new DatabaseModel(makeData({
++          schema: [makeProperty({ id: 'p1', name: 'Status', type: 'select', config })],
++        }));
++
++        model.updateProperty('p1', { config: { options } });
++
++        expect(model.getProperty('p1')?.config).toHaveProperty('futureConfigKey', { limit: 3 });
++        expect(model.getProperty('p1')?.config?.options).toEqual(options);
++      });
++    });
++
+     it('deleteProperty removes from schema', () => {
+       const prop = makeProperty({ id: 'p1', name: 'Notes', type: 'text' });
+       const titleProp = makeProperty({ id: 'pt', name: 'Title', type: 'title', position: 'a0' });
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 225944fa..d08c450a 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -522,6 +522,61 @@ describe('DatabaseTool', () => {
+ 
+       expect(saved.title).toBe('Updated title');
+     });
++
++    it('keeps a top-level key written by a newer client', () => {
++      const futureKey = { layout: 'timeline', nested: { since: 'v2' } };
++      const tool = new DatabaseTool(createDatabaseOptions({ futureKey }));
++
++      tool.render();
++
++      const saved = tool.save(document.createElement('div'));
++
++      expect(saved.futureKey).toEqual(futureKey);
++    });
++
++    it('lets its own known keys win over a stale value of the same name', () => {
++      const tool = new DatabaseTool(createDatabaseOptions({ title: 'Stored', futureKey: 1 }));
++      const element = tool.render();
++      const titleEl = queryByData(element, 'data-blok-database-title');
++
++      if (titleEl === null) {
++        throw new Error('title element missing');
++      }
++      titleEl.textContent = 'Typed';
++
++      const saved = tool.save(document.createElement('div'));
++
++      expect(saved.title).toBe('Typed');
++      expect(saved.futureKey).toBe(1);
++      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'futureKey', 'schema', 'title', 'views']);
++    });
++
++    it('keeps a newer client key after the backend snapshot hydrates the model', async () => {
++      const mockAdapter = {
++        loadDatabase: vi.fn().mockResolvedValue({
++          schema: [{ id: 'p-backend', name: 'Backend Title', type: 'title', position: 'a0' }],
++          views: [{ id: 'v-backend', name: 'Backend Board', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
++        }),
++        createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
++        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
++        createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn(),
++      };
++      const tool = new DatabaseTool(createDatabaseOptions({ futureKey: 'kept' }, { adapter: mockAdapter }));
++      const container = document.createElement('div');
++
++      container.appendChild(tool.render());
++      document.body.appendChild(container);
++      tool.rendered();
++
++      await vi.waitFor(() => {
++        expect(tool.save(document.createElement('div')).schema[0].id).toBe('p-backend');
++      });
++
++      expect(tool.save(document.createElement('div')).futureKey).toBe('kept');
++
++      tool.destroy();
++      container.remove();
++    });
+   });
+ 
+   describe('validate()', () => {
+diff --git a/test/unit/types/database-data-drift-typecheck.ts b/test/unit/types/database-data-drift-typecheck.ts
+new file mode 100644
+index 00000000..8320992b
+--- /dev/null
++++ b/test/unit/types/database-data-drift-typecheck.ts
+@@ -0,0 +1,18 @@
++/**
++ * The published DatabaseData must carry every key the tool saves.
++ * Run with: tsc --noEmit --strict --skipLibCheck --ignoreConfig test/unit/types/database-data-drift-typecheck.ts
++ *
++ * This file is NOT executed — it only needs to compile.
++ */
++
++import type { DatabaseData as PublishedDatabaseData } from '../../../types/tools/database';
++import type { DatabaseData as SourceDatabaseData } from '../../../src/tools/database/types';
++
++type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
++const assert = <T extends true>(): T | undefined => undefined;
++
++// Both extend Record<string, unknown>, so `keyof` is `string | number` on both sides and hides drift.
++type Known<T> = { [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K] };
++
++assert<Equal<keyof Known<PublishedDatabaseData>, keyof Known<SourceDatabaseData>>>();
++assert<Equal<PublishedDatabaseData['title'], SourceDatabaseData['title']>>();
+diff --git a/types/tools/database.d.ts b/types/tools/database.d.ts
+index f2262c4f..445a1f69 100644
+--- a/types/tools/database.d.ts
++++ b/types/tools/database.d.ts
+@@ -88,6 +88,7 @@ export interface DatabaseViewConfig {
+  * Schema and views only — rows are child blocks (database-row type).
+  */
+ export interface DatabaseData extends BlockToolData {
++  title?: string;
+   schema: PropertyDefinition[];
+   views: DatabaseViewConfig[];
+   activeViewId: string;

@@ -1,0 +1,1035 @@
+diff --git a/src/tools/database/database-model.ts b/src/tools/database/database-model.ts
+index 2c1c9aa8..8967cc4f 100644
+--- a/src/tools/database/database-model.ts
++++ b/src/tools/database/database-model.ts
+@@ -12,6 +12,8 @@ import type {
+   ViewType,
+ } from './types';
+ import { DATABASE_DEFAULT_TEXT } from './database-localization';
++import { queryGroups, queryRows } from './database-query';
++import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
+ 
+ /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
+ const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
+@@ -118,6 +120,27 @@ export class DatabaseModel {
+     return groups;
+   }
+ 
++  /** The groups a row belongs to under `propertyId`. The query engine groups only through this. */
++  groupKeysOf(propertyId: string): (row: DatabaseRow) => string[] {
++    return (row) => [this.toGroupKey(row.properties[propertyId])];
++  }
++
++  queryRows(request: QueryRowsRequest): QueryRowsResult {
++    return queryRows(this.querySource(request.view), request);
++  }
++
++  queryGroups(view: DatabaseViewConfig): GroupCount[] {
++    return queryGroups(this.querySource(view), view);
++  }
++
++  private querySource(view: DatabaseViewConfig): QuerySource {
++    return {
++      schema: this.schema,
++      rows: this.rows,
++      ...(view.groupBy !== undefined ? { groupKeysOf: this.groupKeysOf(view.groupBy) } : {}),
++    };
++  }
++
+   getSelectOptions(propertyId: string): SelectOption[] {
+     const prop = this.getProperty(propertyId);
+     if (prop === undefined || (prop.type !== 'select' && prop.type !== 'multiSelect')) return [];
+diff --git a/src/tools/database/database-query.ts b/src/tools/database/database-query.ts
+new file mode 100644
+index 00000000..c836cdff
+--- /dev/null
++++ b/src/tools/database/database-query.ts
+@@ -0,0 +1,317 @@
++import type {
++  DatabaseRow,
++  DatabaseViewConfig,
++  FilterConfig,
++  PropertyDefinition,
++  PropertyType,
++  PropertyValue,
++  SortConfig,
++} from './types';
++
++const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
++
++/** Operator names follow the Notion API, so saved filters stay portable. */
++export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>> = {
++  title: TEXT_OPERATORS,
++  text: TEXT_OPERATORS,
++  url: TEXT_OPERATORS,
++  richText: TEXT_OPERATORS,
++  number: ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to', 'is_empty', 'is_not_empty'],
++  select: ['equals', 'does_not_equal', 'is_empty', 'is_not_empty'],
++  multiSelect: ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
++  checkbox: ['equals', 'does_not_equal'],
++  date: ['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty'],
++};
++
++export interface QuerySource {
++  schema: PropertyDefinition[];
++  rows: DatabaseRow[];
++  /** Keys of the groups a row belongs to. The model owns grouping; the engine only asks. */
++  groupKeysOf?: (row: DatabaseRow) => string[];
++}
++
++export interface QueryRowsRequest {
++  view: DatabaseViewConfig;
++  group?: string;
++  cursor?: string;
++  limit?: number;
++}
++
++export interface QueryRowsResult {
++  rows: DatabaseRow[];
++  nextCursor?: string;
++  total?: number;
++}
++
++export interface GroupCount {
++  key: string;
++  count: number;
++}
++
++const isBlank = (value: PropertyValue | undefined): boolean =>
++  value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
++
++const toNumber = (value: PropertyValue | undefined): number | undefined => {
++  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
++  if (typeof value !== 'string' || value.trim() === '') return undefined;
++  const parsed = Number(value);
++
++  return Number.isFinite(parsed) ? parsed : undefined;
++};
++
++/** The calendar day of an ISO string; time and zone are ignored. */
++const toDay = (value: PropertyValue | undefined): string | undefined =>
++  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : undefined;
++
++const toIdList = (value: PropertyValue): string[] => {
++  if (Array.isArray(value)) return value;
++
++  return typeof value === 'string' && value !== '' ? [value] : [];
++};
++
++/** `undefined` means "this filter does not apply", so the row passes. */
++const matchText = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const isDocument = typeof value === 'object' && value !== null && !Array.isArray(value);
++
++  if (operator === 'is_empty' || operator === 'is_not_empty') {
++    const empty = isDocument ? value.blocks.length === 0 : isBlank(value);
++
++    return operator === 'is_empty' ? empty : !empty;
++  }
++  if (isDocument || typeof target !== 'string' || target === '') return undefined;
++
++  const text = (typeof value === 'string' || typeof value === 'number' ? String(value) : '').toLowerCase();
++  const needle = target.toLowerCase();
++
++  switch (operator) {
++    case 'equals': return text === needle;
++    case 'does_not_equal': return text !== needle;
++    case 'contains': return text.includes(needle);
++    case 'does_not_contain': return !text.includes(needle);
++    case 'starts_with': return text.startsWith(needle);
++    case 'ends_with': return text.endsWith(needle);
++    default: return undefined;
++  }
++};
++
++const matchNumber = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const n = toNumber(value);
++
++  if (operator === 'is_empty') return n === undefined;
++  if (operator === 'is_not_empty') return n !== undefined;
++
++  const t = toNumber(target);
++
++  if (t === undefined) return undefined;
++  if (n === undefined) return operator === 'does_not_equal';
++
++  switch (operator) {
++    case 'equals': return n === t;
++    case 'does_not_equal': return n !== t;
++    case 'greater_than': return n > t;
++    case 'greater_than_or_equal_to': return n >= t;
++    case 'less_than': return n < t;
++    case 'less_than_or_equal_to': return n <= t;
++    default: return undefined;
++  }
++};
++
++const matchSelect = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const current = typeof value === 'string' ? value : '';
++
++  if (operator === 'is_empty') return current === '';
++  if (operator === 'is_not_empty') return current !== '';
++
++  const wanted = toIdList(target);
++
++  if (wanted.length === 0) return undefined;
++  if (operator === 'equals') return wanted.includes(current);
++  if (operator === 'does_not_equal') return !wanted.includes(current);
++
++  return undefined;
++};
++
++const matchMultiSelect = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const current = Array.isArray(value) ? value : [];
++
++  if (operator === 'is_empty') return current.length === 0;
++  if (operator === 'is_not_empty') return current.length > 0;
++
++  const wanted = toIdList(target);
++
++  if (wanted.length === 0) return undefined;
++
++  const hit = wanted.some((id) => current.includes(id));
++
++  if (operator === 'contains') return hit;
++  if (operator === 'does_not_contain') return !hit;
++
++  return undefined;
++};
++
++const matchCheckbox = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  if (typeof target !== 'boolean') return undefined;
++  const checked = value === true;
++
++  if (operator === 'equals') return checked === target;
++  if (operator === 'does_not_equal') return checked !== target;
++
++  return undefined;
++};
++
++const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
++  const day = toDay(value);
++
++  if (operator === 'is_empty') return day === undefined;
++  if (operator === 'is_not_empty') return day !== undefined;
++
++  const t = toDay(target);
++
++  if (t === undefined) return undefined;
++  if (day === undefined) return false;
++
++  switch (operator) {
++    case 'equals': return day === t;
++    case 'before': return day < t;
++    case 'after': return day > t;
++    case 'on_or_before': return day <= t;
++    case 'on_or_after': return day >= t;
++    default: return undefined;
++  }
++};
++
++const MATCHERS: Record<PropertyType, (value: PropertyValue | undefined, operator: string, target: PropertyValue) => boolean | undefined> = {
++  title: matchText,
++  text: matchText,
++  url: matchText,
++  richText: matchText,
++  number: matchNumber,
++  select: matchSelect,
++  multiSelect: matchMultiSelect,
++  checkbox: matchCheckbox,
++  date: matchDate,
++};
++
++/**
++ * AND of every filter. A filter the engine cannot read (unknown operator,
++ * wrong type, deleted property, missing value) lets the row through: hiding
++ * rows on a filter written by a newer client would look like data loss.
++ */
++export const rowMatchesFilters = (row: DatabaseRow, filters: FilterConfig[], schema: PropertyDefinition[]): boolean =>
++  filters.every((filter) => {
++    const property = schema.find((p) => p.id === filter.propertyId);
++
++    if (property === undefined || !FILTER_OPERATORS[property.type].includes(filter.operator)) return true;
++
++    return MATCHERS[property.type](row.properties[filter.propertyId], filter.operator, filter.value) ?? true;
++  });
++
++/** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
++const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => a.position.localeCompare(b.position);
++
++/** Options compare with `<`, like getSelectOptions, so sort order matches column order. */
++const compareKeys = (a: string, b: string): number => {
++  if (a === b) return 0;
++
++  return a < b ? -1 : 1;
++};
++
++const compareKeyLists = (a: string[], b: string[]): number => {
++  const diff = a.map((key, i) => (i < b.length ? compareKeys(key, b[i]) : 0)).find((d) => d !== 0);
++
++  return diff ?? a.length - b.length;
++};
++
++/** Returns a comparable key, or `undefined` for an empty value. */
++const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefined): string | number | string[] | undefined => {
++  const optionPosition = (id: string): string | undefined => property.config?.options.find((o) => o.id === id)?.position;
++
++  switch (property.type) {
++    case 'number': return toNumber(value);
++    case 'checkbox': return value === true ? 1 : 0;
++    case 'date': return toDay(value);
++    case 'select': return typeof value === 'string' && value !== '' ? optionPosition(value) ?? value : undefined;
++    case 'multiSelect': {
++      const keys = toIdList(value ?? null).map((id) => optionPosition(id) ?? id).sort(compareKeys);
++
++      return keys.length > 0 ? keys : undefined;
++    }
++    case 'title':
++    case 'text':
++    case 'url':
++    case 'richText':
++      return typeof value === 'string' && value !== '' ? value : undefined;
++  }
++};
++
++const compareSortKeys = (a: string | number | string[], b: string | number | string[]): number => {
++  if (typeof a === 'number' && typeof b === 'number') return a - b;
++  if (Array.isArray(a) && Array.isArray(b)) return compareKeyLists(a, b);
++  if (typeof a === 'string' && typeof b === 'string') return a.localeCompare(b);
++
++  return 0;
++};
++
++/** Stable: rows equal on every sort keep position order. Empties go last in both directions. */
++export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: PropertyDefinition[]): DatabaseRow[] => {
++  const active = sorts.flatMap((sort) => {
++    const property = schema.find((p) => p.id === sort.propertyId);
++
++    return property === undefined ? [] : [{ property, sign: sort.direction === 'desc' ? -1 : 1 }];
++  });
++
++  const compareBy = (property: PropertyDefinition, sign: number, a: DatabaseRow, b: DatabaseRow): number => {
++    const ka = sortKeyOf(property, a.properties[property.id]);
++    const kb = sortKeyOf(property, b.properties[property.id]);
++
++    // Empty check runs before the sign, or descending would put empties first.
++    if (ka === undefined && kb === undefined) return 0;
++    if (ka === undefined) return 1;
++    if (kb === undefined) return -1;
++
++    return compareSortKeys(ka, kb) * sign;
++  };
++
++  return [...rows].sort((a, b) => {
++    const diff = active.map(({ property, sign }) => compareBy(property, sign, a, b)).find((d) => d !== 0);
++
++    return diff ?? comparePosition(a, b);
++  });
++};
++
++const filteredRows = (source: QuerySource, view: DatabaseViewConfig): DatabaseRow[] =>
++  source.rows.filter((row) => rowMatchesFilters(row, view.filters, source.schema));
++
++/**
++ * In-memory answer to the view query. Synchronous for now; a remote source
++ * will need the same fields behind a Promise.
++ */
++export const queryRows = (source: QuerySource, request: QueryRowsRequest): QueryRowsResult => {
++  const { view, group } = request;
++  const groupKeysOf = source.groupKeysOf;
++  const inGroup = group === undefined
++    ? filteredRows(source, view)
++    : filteredRows(source, view).filter((row) => groupKeysOf?.(row).includes(group) ?? false);
++  const sorted = sortRows(inGroup, view.sorts, source.schema);
++  const start = request.cursor === undefined ? 0 : Number(request.cursor);
++  const end = request.limit === undefined ? sorted.length : start + request.limit;
++
++  return {
++    rows: sorted.slice(start, end),
++    total: sorted.length,
++    ...(end < sorted.length ? { nextCursor: String(end) } : {}),
++  };
++};
++
++/** Group counts after filtering, in the order each key first shows up in position order. */
++export const queryGroups = (source: QuerySource, view: DatabaseViewConfig): GroupCount[] => {
++  const counts = new Map<string, number>();
++
++  for (const row of sortRows(filteredRows(source, view), [], source.schema)) {
++    for (const key of source.groupKeysOf?.(row) ?? []) {
++      counts.set(key, (counts.get(key) ?? 0) + 1);
++    }
++  }
++
++  return [...counts].map(([key, count]) => ({ key, count }));
++};
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 85caf741..40ddf071 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -897,14 +897,21 @@ export class DatabaseTool implements BlockTool {
+       return this.renderListView(titlePropId, groupByPropId, viewConfig);
+     }
+ 
+-    return this.renderBoardView(titlePropId, groupByPropId);
++    return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
+   }
+ 
+-  private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
++  /** Each group's rows, queried once per render. */
++  private queryGroupRows(viewConfig: DatabaseViewConfig, optionIds: string[]): Map<string, DatabaseRow[]> {
++    return new Map(optionIds.map((id) => [id, this.model.queryRows({ view: viewConfig, group: id }).rows]));
++  }
++
++  private renderBoardView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
+     const options = groupByPropId !== undefined
+       ? localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)
+       : [];
+-    const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
++    const groups = viewConfig !== undefined && groupByPropId !== undefined
++      ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
++      : new Map<string, DatabaseRow[]>();
+ 
+     this.view = new DatabaseBoardView({
+       readOnly: this.readOnly,
+@@ -930,7 +937,7 @@ export class DatabaseTool implements BlockTool {
+         this.model.getSelectOptions(groupByPropId),
+         this.api.i18n
+       );
+-      const groups = this.model.getRowsGroupedBy(groupByPropId);
++      const groups = this.queryGroupRows(viewConfig, options.map((o) => o.id));
+ 
+       this.view = new DatabaseListView({
+         readOnly: this.readOnly,
+@@ -946,7 +953,7 @@ export class DatabaseTool implements BlockTool {
+       this.view = new DatabaseListView({
+         readOnly: this.readOnly,
+         i18n: this.api.i18n,
+-        rows: this.model.getOrderedRows(),
++        rows: this.model.queryRows({ view: viewConfig }).rows,
+         titlePropertyId: titlePropId,
+         schema,
+         visiblePropertyIds: viewConfig.visibleProperties,
+@@ -1206,12 +1213,13 @@ export class DatabaseTool implements BlockTool {
+     const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
+     const descriptionPropId = descriptionProp?.id;
+ 
+-    if (isList) {
++    // GATED ON D7: a sorted view has no manual order to drag into.
++    if (isList && (viewConfig?.sorts.length ?? 0) === 0) {
+       this.listRowDrag = new DatabaseListRowDrag({
+         wrapper: boardEl,
+         onDrop: (result) => this.handleListRowDrop(result),
+       });
+-    } else {
++    } else if (!isList) {
+       this.cardDrag = new DatabaseCardDrag({
+         wrapper: boardEl,
+         onDrop: (result) => this.handleRowDrop(result),
+@@ -1444,6 +1452,18 @@ export class DatabaseTool implements BlockTool {
+       return;
+     }
+ 
++    // GATED ON D7: neighbours arrive in sort order, not key order, so
++    // positionBetween would throw. Only the group value may change.
++    if (viewConfig !== undefined && viewConfig.sorts.length > 0) {
++      if (this.model.getRow(rowId)?.properties[groupByPropId] !== toOptionId) {
++        this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
++        this.rerenderView();
++        this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
++      }
++
++      return;
++    }
++
+     const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
+     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
+     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
+diff --git a/test/unit/tools/database/database-query.test.ts b/test/unit/tools/database/database-query.test.ts
+new file mode 100644
+index 00000000..fb3e0a5d
+--- /dev/null
++++ b/test/unit/tools/database/database-query.test.ts
+@@ -0,0 +1,440 @@
++import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
++import {
++  FILTER_OPERATORS,
++  queryGroups,
++  queryRows,
++  rowMatchesFilters,
++  sortRows,
++} from '../../../../src/tools/database/database-query';
++import type { QuerySource } from '../../../../src/tools/database/database-query';
++import { DatabaseModel } from '../../../../src/tools/database/database-model';
++import type {
++  DatabaseRow,
++  DatabaseViewConfig,
++  FilterConfig,
++  PropertyDefinition,
++  PropertyValue,
++  SortConfig,
++} from '../../../../src/tools/database/types';
++
++const schema: PropertyDefinition[] = [
++  { id: 'title', name: 'Name', type: 'title', position: 'a0' },
++  { id: 'text', name: 'Notes', type: 'text', position: 'a1' },
++  { id: 'num', name: 'Score', type: 'number', position: 'a2' },
++  {
++    id: 'status', name: 'Status', type: 'select', position: 'a3', config: {
++      options: [
++        { id: 'opt-late', label: 'Late', position: 'a2' },
++        { id: 'opt-early', label: 'Early', position: 'a0' },
++        { id: 'opt-mid', label: 'Mid', position: 'a1' },
++      ],
++    },
++  },
++  {
++    id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a4', config: {
++      options: [
++        { id: 'tag-b', label: 'B', position: 'a1' },
++        { id: 'tag-a', label: 'A', position: 'a0' },
++      ],
++    },
++  },
++  { id: 'done', name: 'Done', type: 'checkbox', position: 'a5' },
++  { id: 'due', name: 'Due', type: 'date', position: 'a6' },
++  { id: 'link', name: 'Link', type: 'url', position: 'a7' },
++  { id: 'body', name: 'Body', type: 'richText', position: 'a8' },
++];
++
++const row = (id: string, position: string, properties: Record<string, PropertyValue> = {}): DatabaseRow => ({
++  id,
++  position,
++  properties,
++});
++
++const ids = (rows: DatabaseRow[]): string[] => rows.map((r) => r.id);
++
++const view = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
++  id: 'v',
++  name: 'V',
++  type: 'list',
++  position: 'a0',
++  sorts: [],
++  filters: [],
++  visibleProperties: [],
++  ...overrides,
++});
++
++const matches = (r: DatabaseRow, filter: FilterConfig): boolean => rowMatchesFilters(r, [filter], schema);
++
++describe('database-query', () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  describe('FILTER_OPERATORS', () => {
++    it('lists the Notion API operator names per property type', () => {
++      expect(FILTER_OPERATORS.text).toEqual([
++        'equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty',
++      ]);
++      expect(FILTER_OPERATORS.title).toEqual(FILTER_OPERATORS.text);
++      expect(FILTER_OPERATORS.url).toEqual(FILTER_OPERATORS.text);
++      expect(FILTER_OPERATORS.richText).toEqual(FILTER_OPERATORS.text);
++      expect(FILTER_OPERATORS.number).toEqual([
++        'equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to', 'is_empty', 'is_not_empty',
++      ]);
++      expect(FILTER_OPERATORS.select).toEqual(['equals', 'does_not_equal', 'is_empty', 'is_not_empty']);
++      expect(FILTER_OPERATORS.multiSelect).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
++      expect(FILTER_OPERATORS.checkbox).toEqual(['equals', 'does_not_equal']);
++      expect(FILTER_OPERATORS.date).toEqual(['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty']);
++    });
++  });
++
++  describe('rowMatchesFilters — text', () => {
++    const r = row('r', 'a0', { text: 'Hello World' });
++
++    it.each([
++      ['equals', 'hello world', true],
++      ['equals', 'hello', false],
++      ['does_not_equal', 'hello', true],
++      ['does_not_equal', 'HELLO WORLD', false],
++      ['contains', 'LO wo', true],
++      ['contains', 'xyz', false],
++      ['does_not_contain', 'xyz', true],
++      ['does_not_contain', 'world', false],
++      ['starts_with', 'hel', true],
++      ['starts_with', 'world', false],
++      ['ends_with', 'WORLD', true],
++      ['ends_with', 'hello', false],
++    ])('%s %s → %s (case-insensitive)', (operator, value, expected) => {
++      expect(matches(r, { propertyId: 'text', operator, value })).toBe(expected);
++    });
++
++    it('treats a missing or blank value as empty', () => {
++      const blank = row('b', 'a0', { text: '' });
++      const missing = row('m', 'a0');
++
++      expect(matches(blank, { propertyId: 'text', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(missing, { propertyId: 'text', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'text', operator: 'is_empty', value: null })).toBe(false);
++      expect(matches(r, { propertyId: 'text', operator: 'is_not_empty', value: null })).toBe(true);
++      expect(matches(missing, { propertyId: 'text', operator: 'is_not_empty', value: null })).toBe(false);
++    });
++
++    it('applies text operators to title and url', () => {
++      const r2 = row('r2', 'a0', { title: 'Launch plan', link: 'https://example.com' });
++
++      expect(matches(r2, { propertyId: 'title', operator: 'contains', value: 'PLAN' })).toBe(true);
++      expect(matches(r2, { propertyId: 'link', operator: 'ends_with', value: '.com' })).toBe(true);
++    });
++
++    it('lets a text filter with no value through, so a half-built filter hides nothing', () => {
++      expect(matches(r, { propertyId: 'text', operator: 'contains', value: '' })).toBe(true);
++      expect(matches(r, { propertyId: 'text', operator: 'equals', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — richText', () => {
++    it('matches a string value as text', () => {
++      expect(matches(row('r', 'a0', { body: 'Some notes' }), { propertyId: 'body', operator: 'contains', value: 'notes' })).toBe(true);
++    });
++
++    it('counts a body document with no blocks as empty and one with blocks as not empty', () => {
++      const emptyDoc = row('e', 'a0', { body: { blocks: [] } });
++      const fullDoc = row('f', 'a0', { body: { blocks: [{ type: 'paragraph', data: { text: 'x' } }] } });
++
++      expect(matches(emptyDoc, { propertyId: 'body', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(fullDoc, { propertyId: 'body', operator: 'is_empty', value: null })).toBe(false);
++      expect(matches(fullDoc, { propertyId: 'body', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++
++    it('lets text operators through on a body document, which has no plain text yet', () => {
++      const fullDoc = row('f', 'a0', { body: { blocks: [{ type: 'paragraph', data: { text: 'x' } }] } });
++
++      expect(matches(fullDoc, { propertyId: 'body', operator: 'contains', value: 'zzz' })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — number', () => {
++    const r = row('r', 'a0', { num: 5 });
++
++    it.each([
++      ['equals', 5, true],
++      ['equals', '5', true],
++      ['equals', 4, false],
++      ['does_not_equal', 4, true],
++      ['greater_than', 4, true],
++      ['greater_than', 5, false],
++      ['greater_than_or_equal_to', 5, true],
++      ['less_than', 6, true],
++      ['less_than', 5, false],
++      ['less_than_or_equal_to', 5, true],
++      ['less_than_or_equal_to', 4, false],
++    ])('%s %s → %s', (operator, value, expected) => {
++      expect(matches(r, { propertyId: 'num', operator, value })).toBe(expected);
++    });
++
++    it('treats a blank string as empty, not as 0', () => {
++      const blank = row('b', 'a0', { num: '' });
++
++      expect(matches(blank, { propertyId: 'num', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(blank, { propertyId: 'num', operator: 'equals', value: 0 })).toBe(false);
++      expect(matches(row('z', 'a0', { num: 0 }), { propertyId: 'num', operator: 'is_empty', value: null })).toBe(false);
++    });
++
++    it('lets a number filter with a blank or non-numeric value through', () => {
++      expect(matches(r, { propertyId: 'num', operator: 'equals', value: '' })).toBe(true);
++      expect(matches(r, { propertyId: 'num', operator: 'greater_than', value: 'abc' })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — select', () => {
++    const r = row('r', 'a0', { status: 'opt-mid' });
++
++    it('equals and does_not_equal compare the option id', () => {
++      expect(matches(r, { propertyId: 'status', operator: 'equals', value: 'opt-mid' })).toBe(true);
++      expect(matches(r, { propertyId: 'status', operator: 'equals', value: 'opt-late' })).toBe(false);
++      expect(matches(r, { propertyId: 'status', operator: 'does_not_equal', value: 'opt-late' })).toBe(true);
++    });
++
++    it('accepts a list of option ids as any-match', () => {
++      expect(matches(r, { propertyId: 'status', operator: 'equals', value: ['opt-late', 'opt-mid'] })).toBe(true);
++      expect(matches(r, { propertyId: 'status', operator: 'does_not_equal', value: ['opt-late', 'opt-mid'] })).toBe(false);
++    });
++
++    it('is_empty matches a row with no option', () => {
++      expect(matches(row('e', 'a0'), { propertyId: 'status', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'status', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — multiSelect', () => {
++    const r = row('r', 'a0', { tags: ['tag-a'] });
++
++    it('contains and does_not_contain take one id or a list (any-match)', () => {
++      expect(matches(r, { propertyId: 'tags', operator: 'contains', value: 'tag-a' })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'contains', value: ['tag-b', 'tag-a'] })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'contains', value: 'tag-b' })).toBe(false);
++      expect(matches(r, { propertyId: 'tags', operator: 'does_not_contain', value: 'tag-b' })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'does_not_contain', value: 'tag-a' })).toBe(false);
++    });
++
++    it('is_empty matches an empty or missing list', () => {
++      expect(matches(row('e', 'a0', { tags: [] }), { propertyId: 'tags', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(row('m', 'a0'), { propertyId: 'tags', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'tags', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — checkbox', () => {
++    it('reads a missing value as unchecked', () => {
++      expect(matches(row('m', 'a0'), { propertyId: 'done', operator: 'equals', value: false })).toBe(true);
++      expect(matches(row('t', 'a0', { done: true }), { propertyId: 'done', operator: 'equals', value: true })).toBe(true);
++      expect(matches(row('t', 'a0', { done: true }), { propertyId: 'done', operator: 'does_not_equal', value: true })).toBe(false);
++    });
++  });
++
++  describe('rowMatchesFilters — date', () => {
++    const r = row('r', 'a0', { due: '2026-10-09T15:00:00.000Z' });
++
++    it.each([
++      ['equals', '2026-10-09', true],
++      ['equals', '2026-10-10', false],
++      ['before', '2026-10-10', true],
++      ['before', '2026-10-09', false],
++      ['after', '2026-10-08', true],
++      ['after', '2026-10-09', false],
++      ['on_or_before', '2026-10-09', true],
++      ['on_or_after', '2026-10-09', true],
++      ['on_or_after', '2026-10-10', false],
++    ])('%s %s → %s (compares the calendar day)', (operator, value, expected) => {
++      expect(matches(r, { propertyId: 'due', operator, value })).toBe(expected);
++    });
++
++    it('is_empty matches a row with no date', () => {
++      expect(matches(row('e', 'a0'), { propertyId: 'due', operator: 'is_empty', value: null })).toBe(true);
++      expect(matches(r, { propertyId: 'due', operator: 'is_not_empty', value: null })).toBe(true);
++    });
++  });
++
++  describe('rowMatchesFilters — forward compatibility', () => {
++    const r = row('r', 'a0', { text: 'abc', status: 'opt-mid' });
++
++    it('lets a row through an operator it does not know', () => {
++      expect(matches(r, { propertyId: 'text', operator: 'matches_regex', value: 'zzz' })).toBe(true);
++    });
++
++    it('lets a row through an operator that does not fit the property type', () => {
++      expect(matches(r, { propertyId: 'status', operator: 'greater_than', value: 'zzz' })).toBe(true);
++    });
++
++    it('lets a row through a filter on a deleted property', () => {
++      expect(matches(r, { propertyId: 'gone', operator: 'equals', value: 'zzz' })).toBe(true);
++    });
++
++    it('combines filters with AND', () => {
++      const filters: FilterConfig[] = [
++        { propertyId: 'text', operator: 'contains', value: 'a' },
++        { propertyId: 'status', operator: 'equals', value: 'opt-late' },
++      ];
++
++      expect(rowMatchesFilters(r, filters, schema)).toBe(false);
++      expect(rowMatchesFilters(r, [filters[0]], schema)).toBe(true);
++    });
++  });
++
++  describe('sortRows', () => {
++    const sort = (rows: DatabaseRow[], sorts: SortConfig[]): string[] => ids(sortRows(rows, sorts, schema));
++
++    it('keeps position order when there are no sorts, comparing like getOrderedRows', () => {
++      const rows = [row('b', 'a1'), row('c', 'Zz'), row('a', 'a0')];
++      const model = new DatabaseModel({ schema });
++
++      model.setRows(rows);
++
++      expect(sort(rows, [])).toEqual(ids(model.getOrderedRows()));
++    });
++
++    it('sorts numbers numerically in both directions', () => {
++      const rows = [row('ten', 'a0', { num: 10 }), row('two', 'a1', { num: 2 }), row('five', 'a2', { num: 5 })];
++
++      expect(sort(rows, [{ propertyId: 'num', direction: 'asc' }])).toEqual(['two', 'five', 'ten']);
++      expect(sort(rows, [{ propertyId: 'num', direction: 'desc' }])).toEqual(['ten', 'five', 'two']);
++    });
++
++    it('puts empty values last in both directions', () => {
++      const rows = [row('empty', 'a0', { num: '' }), row('two', 'a1', { num: 2 }), row('none', 'a2'), row('five', 'a3', { num: 5 })];
++
++      expect(sort(rows, [{ propertyId: 'num', direction: 'asc' }])).toEqual(['two', 'five', 'empty', 'none']);
++      expect(sort(rows, [{ propertyId: 'num', direction: 'desc' }])).toEqual(['five', 'two', 'empty', 'none']);
++    });
++
++    it('sorts text alphabetically', () => {
++      const rows = [row('b', 'a0', { title: 'banana' }), row('a', 'a1', { title: 'Apple' }), row('c', 'a2', { title: 'cherry' })];
++
++      expect(sort(rows, [{ propertyId: 'title', direction: 'asc' }])).toEqual(['a', 'b', 'c']);
++    });
++
++    it('sorts select by option order, not by label or id', () => {
++      const rows = [row('late', 'a0', { status: 'opt-late' }), row('early', 'a1', { status: 'opt-early' }), row('mid', 'a2', { status: 'opt-mid' })];
++
++      expect(sort(rows, [{ propertyId: 'status', direction: 'asc' }])).toEqual(['early', 'mid', 'late']);
++      expect(sort(rows, [{ propertyId: 'status', direction: 'desc' }])).toEqual(['late', 'mid', 'early']);
++    });
++
++    it('sorts multiSelect by its options in option order', () => {
++      const rows = [row('b', 'a0', { tags: ['tag-b'] }), row('ab', 'a1', { tags: ['tag-b', 'tag-a'] }), row('a', 'a2', { tags: ['tag-a'] })];
++
++      expect(sort(rows, [{ propertyId: 'tags', direction: 'asc' }])).toEqual(['a', 'ab', 'b']);
++    });
++
++    it('sorts checkbox unchecked first when ascending', () => {
++      const rows = [row('on', 'a0', { done: true }), row('off', 'a1', { done: false })];
++
++      expect(sort(rows, [{ propertyId: 'done', direction: 'asc' }])).toEqual(['off', 'on']);
++    });
++
++    it('applies sorts in list order and breaks ties on position', () => {
++      const rows = [
++        row('x', 'a3', { status: 'opt-mid', num: 1 }),
++        row('y', 'a2', { status: 'opt-early', num: 9 }),
++        row('z', 'a1', { status: 'opt-mid', num: 1 }),
++        row('w', 'a0', { status: 'opt-mid', num: 7 }),
++      ];
++
++      expect(sort(rows, [
++        { propertyId: 'status', direction: 'asc' },
++        { propertyId: 'num', direction: 'desc' },
++      ])).toEqual(['y', 'w', 'z', 'x']);
++    });
++
++    it('ignores a sort on a deleted property', () => {
++      const rows = [row('b', 'a1'), row('a', 'a0')];
++
++      expect(sort(rows, [{ propertyId: 'gone', direction: 'desc' }])).toEqual(['a', 'b']);
++    });
++
++    it('does not reorder the input array', () => {
++      const rows = [row('b', 'a1'), row('a', 'a0')];
++
++      sortRows(rows, [], schema);
++
++      expect(ids(rows)).toEqual(['b', 'a']);
++    });
++  });
++
++  describe('queryRows / queryGroups', () => {
++    const rows = [
++      row('r1', 'a0', { status: 'opt-early', num: 3 }),
++      row('r2', 'a1', { status: 'opt-late', num: 1 }),
++      row('r3', 'a2', { status: 'opt-early', num: 2 }),
++      row('r4', 'a3', { num: 9 }),
++    ];
++    const source: QuerySource = {
++      schema,
++      rows,
++      groupKeysOf: (r) => [typeof r.properties.status === 'string' ? r.properties.status : ''],
++    };
++
++    it('returns every row in position order for a plain view, with a total', () => {
++      const result = queryRows(source, { view: view() });
++
++      expect(ids(result.rows)).toEqual(['r1', 'r2', 'r3', 'r4']);
++      expect(result.total).toBe(4);
++      expect(result.nextCursor).toBeUndefined();
++    });
++
++    it('filters, then sorts', () => {
++      const result = queryRows(source, {
++        view: view({
++          filters: [{ propertyId: 'num', operator: 'less_than', value: 5 }],
++          sorts: [{ propertyId: 'num', direction: 'asc' }],
++        }),
++      });
++
++      expect(ids(result.rows)).toEqual(['r2', 'r3', 'r1']);
++      expect(result.total).toBe(3);
++    });
++
++    it('returns one group after filtering', () => {
++      const result = queryRows(source, {
++        view: view({ filters: [{ propertyId: 'num', operator: 'greater_than', value: 2 }] }),
++        group: 'opt-early',
++      });
++
++      expect(ids(result.rows)).toEqual(['r1']);
++    });
++
++    it('pages with limit and cursor', () => {
++      const first = queryRows(source, { view: view(), limit: 3 });
++
++      expect(ids(first.rows)).toEqual(['r1', 'r2', 'r3']);
++      expect(first.nextCursor).toBeDefined();
++
++      const second = queryRows(source, { view: view(), limit: 3, cursor: first.nextCursor });
++
++      expect(ids(second.rows)).toEqual(['r4']);
++      expect(second.nextCursor).toBeUndefined();
++    });
++
++    it('counts groups after filtering, without returning rows', () => {
++      const groups = queryGroups(source, view({ filters: [{ propertyId: 'num', operator: 'less_than', value: 3 }] }));
++
++      expect(groups).toEqual([
++        { key: 'opt-late', count: 1 },
++        { key: 'opt-early', count: 1 },
++      ]);
++    });
++
++    it('counts a row under every key it reports', () => {
++      const multi: QuerySource = { ...source, groupKeysOf: () => ['k1', 'k2'] };
++
++      expect(queryGroups(multi, view())).toEqual([
++        { key: 'k1', count: 4 },
++        { key: 'k2', count: 4 },
++      ]);
++    });
++  });
++});
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 225944fa..aada6735 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -3147,4 +3147,138 @@ describe('DatabaseTool', () => {
+       container.remove();
+     });
+   });
++
++  describe('saved filters and sorts apply to the rendered view', () => {
++    const titlesIn = (element: HTMLElement, attr: string): string[] =>
++      queryAllByData(element, attr).map((el) => el.textContent ?? '');
++
++    it('hides a card that a saved filter excludes, and keeps every column', () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-keep', properties: { 'prop-title': 'Keep me', 'prop-status': 'opt-todo' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-drop', properties: { 'prop-title': 'Drop me', 'prop-status': 'opt-todo' }, position: 'a1' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
++          filters: [{ propertyId: 'prop-title', operator: 'contains', value: 'keep' }] }],
++      });
++      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
++      const element = tool.render();
++
++      tool.rendered();
++
++      expect(queryByData(element, 'data-row-id', 'row-drop')).toBeNull();
++      expect(queryByData(element, 'data-row-id', 'row-keep')).not.toBeNull();
++      expect(queryAllByData(element, 'data-blok-database-column')).toHaveLength(3);
++    });
++
++    it('orders list rows by a saved sort instead of by position', () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-c', properties: { 'prop-title': 'Cherry' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'Apple' }, position: 'a1' }),
++        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'Banana' }, position: 'a2' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [],
++          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
++        activeViewId: 'view-list',
++      });
++      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
++      const element = tool.render();
++
++      tool.rendered();
++
++      expect(titlesIn(element, 'data-blok-database-list-row-title')).toEqual(['Apple', 'Banana', 'Cherry']);
++    });
++
++    it('still deletes a row a filter hides when its column is deleted', () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-shown', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-todo' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-hidden', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-todo' }, position: 'a1' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
++          filters: [{ propertyId: 'prop-title', operator: 'equals', value: 'shown' }] }],
++      });
++      const options = createDatabaseOptions(data, {}, { childBlocks });
++
++      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockImplementation((blockId: string) => (blockId === 'row-hidden' ? 2 : 1));
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      queryAllByData(element, 'data-blok-database-delete-column')
++        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!
++        .click();
++
++      expect(options.api.blocks.delete).toHaveBeenCalledWith(2);
++    });
++  });
++
++  describe('drag in a sorted view (GATED ON D7)', () => {
++    const sortedBoard = (): { tool: DatabaseTool; childBlocks: BlockAPI[] } => {
++      // Sort order (A, B) is the reverse of position order (B at a0, A at a1).
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-status': 'opt-todo' }, position: 'a0' }),
++        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-status': 'opt-todo' }, position: 'a1' }),
++        createMockRowBlock({ id: 'row-x', properties: { 'prop-title': 'X', 'prop-status': 'opt-todo' }, position: 'a2' }),
++      ];
++      const data = makeDefaultData({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
++          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
++      });
++      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
++
++      tool.render();
++      tool.rendered();
++
++      return { tool, childBlocks };
++    };
++
++    const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
++      const cardDrag = (tool as unknown as { cardDrag: DatabaseCardDrag }).cardDrag;
++
++      (cardDrag as unknown as { onDrop: (r: CardDragResult) => void }).onDrop(result);
++    };
++
++    const callsNamed = (block: BlockAPI, name: string): unknown[][] =>
++      (block.call as ReturnType<typeof vi.fn>).mock.calls.filter((args) => args[0] === name);
++
++    it('ignores a reorder inside the same column', () => {
++      const { tool, childBlocks } = sortedBoard();
++      const rowX = childBlocks[2];
++
++      // Neighbours arrive in sort order (A then B), so their keys are out of order.
++      expect(() => dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' })).not.toThrow();
++      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
++    });
++
++    it('moves a card to another column by its group value only', () => {
++      const { tool, childBlocks } = sortedBoard();
++      const rowX = childBlocks[2];
++
++      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-doing', beforeRowId: null, afterRowId: null });
++
++      expect(callsNamed(rowX, 'updateProperties')).toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
++      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
++    });
++
++    it('turns list row drag off while the list is sorted', () => {
++      const childBlocks = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One' }, position: 'a0' })];
++      const listView = (sorts: DatabaseViewConfig['sorts']): Partial<DatabaseData> => ({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [], sorts }],
++        activeViewId: 'view-list',
++      });
++      const sorted = new DatabaseTool(createDatabaseOptions(listView([{ propertyId: 'prop-title', direction: 'asc' }]), {}, { childBlocks }));
++      const unsorted = new DatabaseTool(createDatabaseOptions(listView([]), {}, { childBlocks }));
++
++      sorted.render();
++      sorted.rendered();
++      unsorted.render();
++      unsorted.rendered();
++
++      expect((sorted as unknown as { listRowDrag: unknown }).listRowDrag).toBeNull();
++      expect((unsorted as unknown as { listRowDrag: unknown }).listRowDrag).not.toBeNull();
++    });
++  });
+ });

@@ -1,0 +1,986 @@
+diff --git a/src/components/i18n/locales/en.json b/src/components/i18n/locales/en.json
+index d5abffcb..e3436673 100644
+--- a/src/components/i18n/locales/en.json
++++ b/src/components/i18n/locales/en.json
+@@ -283,6 +283,7 @@
+   "tools.database.cardMenuLabel": "Card options",
+   "tools.database.cardTitlePlaceholder": "Empty page",
+   "tools.database.columnTitlePlaceholder": "Column",
++  "tools.database.noValueGroup": "No {property}",
+   "tools.database.emptyColumn": "No cards",
+   "tools.database.rowTitlePlaceholder": "Empty page",
+   "tools.database.addRow": "Add row",
+diff --git a/src/tools/database/database-board-view.ts b/src/tools/database/database-board-view.ts
+index b17a9208..2cad2eee 100644
+--- a/src/tools/database/database-board-view.ts
++++ b/src/tools/database/database-board-view.ts
+@@ -1,6 +1,7 @@
+ import type { I18n } from '../../../types';
+ import type { SelectOption, DatabaseRow } from './types';
+ import type { DatabaseViewRenderer } from './database-view-renderer';
++import { NO_VALUE_GROUP_KEY } from './database-model';
+ import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
+ import { startInlineRename } from '../../components/utils/inline-rename';
+ 
+@@ -156,6 +157,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
+ 
+     columnEl.setAttribute('data-blok-database-column', '');
+     columnEl.setAttribute('data-option-id', option.id);
++
++    if (option.id === NO_VALUE_GROUP_KEY) {
++      columnEl.setAttribute('data-blok-database-no-value-group', '');
++    }
++
+     columnEl.setAttribute('role', 'group');
+     columnEl.setAttribute('aria-label', option.label);
+     columnEl.style.display = 'flex';
+diff --git a/src/tools/database/database-card-drag.ts b/src/tools/database/database-card-drag.ts
+index 19c0af29..88d6f37e 100644
+--- a/src/tools/database/database-card-drag.ts
++++ b/src/tools/database/database-card-drag.ts
+@@ -51,14 +51,15 @@ export class DatabaseCardDrag {
+ 
+   /**
+    * Start tracking pointer after a pointerdown on a card.
++   * A multiSelect board draws one card per option, so pass the pressed card.
+    */
+-  public beginTracking(rowId: string, startX: number, startY: number): void {
++  public beginTracking(rowId: string, startX: number, startY: number, sourceCard?: HTMLElement): void {
+     this.cleanup();
+     this.rowId = rowId;
+     this.startX = startX;
+     this.startY = startY;
+     this.isDragging = false;
+-    this.sourceCard = this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
++    this.sourceCard = sourceCard ?? this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
+ 
+     document.addEventListener('pointermove', this.boundPointerMove);
+     document.addEventListener('pointerup', this.boundPointerUp);
+diff --git a/src/tools/database/database-column-drag.ts b/src/tools/database/database-column-drag.ts
+index b542ceb0..ec3dd97a 100644
+--- a/src/tools/database/database-column-drag.ts
++++ b/src/tools/database/database-column-drag.ts
+@@ -233,7 +233,7 @@ export class DatabaseColumnDrag {
+   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {
+     const columns = Array.from(
+       this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]')
+-    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId);
++    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId && !col.hasAttribute('data-blok-database-no-value-group'));
+     const direction = getElementDirection(this.wrapper);
+ 
+     for (const col of columns) {
+diff --git a/src/tools/database/database-model.ts b/src/tools/database/database-model.ts
+index 2c1c9aa8..ff4ce853 100644
+--- a/src/tools/database/database-model.ts
++++ b/src/tools/database/database-model.ts
+@@ -16,6 +16,12 @@ import { DATABASE_DEFAULT_TEXT } from './database-localization';
+ /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
+ const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
+ 
++/**
++ * Group key for rows with no value. Not '' because card drag reads a missing
++ * data-option-id as ''. 23 chars, so a default 21-char nanoid option id never equals it.
++ */
++export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
++
+ export class DatabaseModel {
+   private schema: PropertyDefinition[];
+   private rows: DatabaseRow[] = [];
+@@ -106,13 +112,11 @@ export class DatabaseModel {
+     const groups = new Map<string, DatabaseRow[]>();
+     const ordered = this.getOrderedRows();
+     for (const row of ordered) {
+-      const rawValue = row.properties[propertyId];
+-      const key = this.toGroupKey(rawValue);
+-      const existing = groups.get(key);
+-      if (existing !== undefined) {
+-        existing.push(row);
+-      } else {
+-        groups.set(key, [row]);
++      for (const key of this.toGroupKeys(row.properties[propertyId])) {
++        const group = groups.get(key) ?? [];
++
++        group.push(row);
++        groups.set(key, group);
+       }
+     }
+     return groups;
+@@ -138,7 +142,7 @@ export class DatabaseModel {
+     const knownIds = new Set(known.map((o) => o.id));
+ 
+     return [...this.getRowsGroupedBy(propertyId).keys()]
+-      .filter((key) => key !== '' && !knownIds.has(key))
++      .filter((key) => key !== NO_VALUE_GROUP_KEY && !knownIds.has(key))
+       .map((key) => ({ id: key, label: '', position: ORPHAN_GROUP_POSITION }));
+   }
+ 
+@@ -223,11 +227,12 @@ export class DatabaseModel {
+ 
+   // ─── Static helpers ───
+ 
+-  private toGroupKey(value: PropertyValue | undefined): string {
+-    if (value === undefined || value === null) return '';
+-    if (typeof value === 'string') return value;
+-    if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+-    return '';
++  private toGroupKeys(value: PropertyValue | undefined): string[] {
++    if (Array.isArray(value)) return value.length > 0 ? value : [NO_VALUE_GROUP_KEY];
++    if (value === undefined || value === null || value === '') return [NO_VALUE_GROUP_KEY];
++    if (typeof value === 'string') return [value];
++    if (typeof value === 'boolean' || typeof value === 'number') return [String(value)];
++    return [NO_VALUE_GROUP_KEY];
+   }
+ 
+   /**
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 85caf741..34fba31f 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -2,7 +2,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
+ import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
+ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
+ import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+-import { DatabaseModel } from './database-model';
++import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
+ import { DatabaseBoardView } from './database-board-view';
+ import { DatabaseListView } from './database-list-view';
+ import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
+@@ -73,6 +73,8 @@ export class DatabaseTool implements BlockTool {
+   private tabBar: DatabaseTabBar | null = null;
+ 
+   private cardDrag: DatabaseCardDrag | null = null;
++  /** Group of the card the pointer pressed; a multiSelect drop replaces this option. */
++  private cardDragFromOptionId: string | null = null;
+   private columnDrag: DatabaseColumnDrag | null = null;
+   private columnControls: DatabaseColumnControls | null = null;
+   private listRowDrag: DatabaseListRowDrag | null = null;
+@@ -900,10 +902,23 @@ export class DatabaseTool implements BlockTool {
+     return this.renderBoardView(titlePropId, groupByPropId);
+   }
+ 
++  /**
++   * The no-value option must stay first: column drag never drops before it,
++   * and handleGroupDrop reads a missing left neighbour as "first real option".
++   */
++  private groupOptions(groupByPropId: string): SelectOption[] {
++    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupByPropId);
++    const noValue: SelectOption = {
++      id: NO_VALUE_GROUP_KEY,
++      label: this.api.i18n.t('tools.database.noValueGroup', { property: property?.name ?? '' }),
++      position: '',
++    };
++
++    return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)];
++  }
++
+   private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
+-    const options = groupByPropId !== undefined
+-      ? localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)
+-      : [];
++    const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId) : [];
+     const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
+ 
+     this.view = new DatabaseBoardView({
+@@ -926,10 +941,7 @@ export class DatabaseTool implements BlockTool {
+     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+ 
+     if (groupByPropId !== undefined) {
+-      const options = localizeDatabaseSelectOptions(
+-        this.model.getSelectOptions(groupByPropId),
+-        this.api.i18n
+-      );
++      const options = this.groupOptions(groupByPropId);
+       const groups = this.model.getRowsGroupedBy(groupByPropId);
+ 
+       this.view = new DatabaseListView({
+@@ -1093,8 +1105,8 @@ export class DatabaseTool implements BlockTool {
+ 
+     const properties: Record<string, PropertyValue> = { [titlePropId]: '' };
+ 
+-    if (groupByPropId !== undefined && optionId !== null) {
+-      properties[groupByPropId] = optionId;
++    if (groupByPropId !== undefined && optionId !== null && optionId !== NO_VALUE_GROUP_KEY) {
++      properties[groupByPropId] = this.groupValueFor(groupByPropId, optionId);
+     }
+ 
+     const rowData = this.model.createRowData(properties);
+@@ -1113,6 +1125,10 @@ export class DatabaseTool implements BlockTool {
+     });
+   }
+ 
++  private groupValueFor(groupByPropId: string, optionId: string): PropertyValue {
++    return this.model.getProperty(groupByPropId)?.type === 'multiSelect' ? [optionId] : optionId;
++  }
++
+   private handleAddRow(optionId: string, boardEl: HTMLDivElement): void {
+     const viewConfig = this.model.getView(this.activeViewId);
+     const groupByPropId = viewConfig?.groupBy;
+@@ -1123,10 +1139,9 @@ export class DatabaseTool implements BlockTool {
+ 
+     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+     const titlePropId = titleProp?.id ?? '';
+-    const rowData = this.model.createRowData({
+-      [titlePropId]: '',
+-      [groupByPropId]: optionId,
+-    });
++    const rowData = this.model.createRowData(optionId === NO_VALUE_GROUP_KEY
++      ? { [titlePropId]: '' }
++      : { [titlePropId]: '', [groupByPropId]: this.groupValueFor(groupByPropId, optionId) });
+ 
+     this.api.blocks.insertAt(
+       'database-row',
+@@ -1225,7 +1240,7 @@ export class DatabaseTool implements BlockTool {
+       this.columnControls = new DatabaseColumnControls({
+         i18n: this.api.i18n,
+         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
+-        onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
++        onDelete: (optionId) => this.handleOptionDelete(optionId),
+         onRenameInput: (optionId, label) => {
+           // Instant local save — update the model immediately so save() captures latest value
+           this.handleOptionRename(optionId, label);
+@@ -1365,7 +1380,7 @@ export class DatabaseTool implements BlockTool {
+         const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
+         const optId = columnEl?.getAttribute('data-option-id') ?? null;
+ 
+-        if (optId !== null) {
++        if (optId !== null && optId !== NO_VALUE_GROUP_KEY) {
+           e.preventDefault();
+           e.stopPropagation();
+           this.columnDrag?.beginTracking(optId, e.clientX, e.clientY);
+@@ -1375,7 +1390,7 @@ export class DatabaseTool implements BlockTool {
+       }
+ 
+       // Board: card drag
+-      const cardEl = target.closest('[data-blok-database-card]');
++      const cardEl = target.closest<HTMLElement>('[data-blok-database-card]');
+ 
+       if (cardEl !== null) {
+         const rowId = cardEl.getAttribute('data-row-id');
+@@ -1383,7 +1398,8 @@ export class DatabaseTool implements BlockTool {
+         if (rowId !== null) {
+           e.preventDefault();
+           e.stopPropagation();
+-          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY);
++          this.cardDragFromOptionId = cardEl.closest('[data-blok-database-column]')?.getAttribute('data-option-id') ?? null;
++          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY, cardEl);
+         }
+ 
+         return;
+@@ -1415,7 +1431,7 @@ export class DatabaseTool implements BlockTool {
+       const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
+       const optId = columnEl?.getAttribute('data-option-id');
+ 
+-      if (optId !== null && optId !== undefined) {
++      if (optId !== null && optId !== undefined && optId !== NO_VALUE_GROUP_KEY) {
+         this.columnControls.makePillTitleEditable(header, optId);
+         this.columnControls.appendDeleteButton(header, optId);
+       }
+@@ -1448,14 +1464,33 @@ export class DatabaseTool implements BlockTool {
+     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
+     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
+ 
+-    this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
++    const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
++
++    this.updateRowBlock(rowId, { [groupByPropId]: value });
+     this.moveRowBlock(rowId, position);
+     this.rerenderView();
+ 
+-    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
++    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: value } });
+     void this.sync.syncMoveRow({ rowId, position });
+   }
+ 
++  private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {
++    const target = toOptionId === NO_VALUE_GROUP_KEY ? null : toOptionId;
++
++    if (this.model.getProperty(groupByPropId)?.type !== 'multiSelect') {
++      return target;
++    }
++
++    const current = this.model.getRow(rowId)?.properties[groupByPropId];
++    const list = Array.isArray(current) ? current : [];
++    const from = this.cardDragFromOptionId;
++    const next = list.some((id) => id === from)
++      ? list.map((id) => (id === from ? target : id))
++      : [...list, target];
++
++    return [...new Set(next.filter((id): id is string => id !== null))];
++  }
++
+   private handleGroupDrop(result: GroupDragResult): void {
+     const { optionId, beforeOptionId, afterOptionId } = result;
+     const viewConfig = this.model.getView(this.activeViewId);
+@@ -1544,7 +1579,7 @@ export class DatabaseTool implements BlockTool {
+     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options } } });
+   }
+ 
+-  private handleOptionDelete(optionId: string, boardEl: HTMLDivElement): void {
++  private handleOptionDelete(optionId: string): void {
+     const viewConfig = this.model.getView(this.activeViewId);
+     const groupByPropId = viewConfig?.groupBy;
+ 
+@@ -1562,19 +1597,19 @@ export class DatabaseTool implements BlockTool {
+       return;
+     }
+ 
+-    // Delete rows in this group
+-    const groups = this.model.getRowsGroupedBy(groupByPropId);
+-    const rowsInGroup = groups.get(optionId) ?? [];
++    const rowsInGroup = this.model.getRowsGroupedBy(groupByPropId).get(optionId) ?? [];
+ 
+     for (const row of rowsInGroup) {
+-      this.deleteRowBlock(row.id);
+-      void this.sync.syncDeleteRow({ rowId: row.id });
++      const current = row.properties[groupByPropId];
++      const value = Array.isArray(current) ? current.filter((id) => id !== optionId) : null;
++
++      this.updateRowBlock(row.id, { [groupByPropId]: value });
++      this.sync.syncUpdateRow({ rowId: row.id, properties: { [groupByPropId]: value } });
+     }
+ 
+-    // Remove the option
+     const filteredOptions = prop.config.options.filter((o) => o.id !== optionId);
+     this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
+-    this.view.removeGroup?.(boardEl, optionId);
++    this.rerenderView();
+     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
+   }
+ 
+diff --git a/test/unit/components/i18n/lifecycle-coverage.test.ts b/test/unit/components/i18n/lifecycle-coverage.test.ts
+index 307e5723..4e1b7edf 100644
+--- a/test/unit/components/i18n/lifecycle-coverage.test.ts
++++ b/test/unit/components/i18n/lifecycle-coverage.test.ts
+@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
+ };
+ 
+ describe('current English catalog lifecycle coverage', () => {
+-  it('rebuilds a disjoint 600 + 117 + 61 + 4 closure for all 782 keys', () => {
++  it('rebuilds a disjoint 601 + 117 + 61 + 4 closure for all 783 keys', () => {
+     const { lifecycle } = getLifecycle();
+     const counts = Object.fromEntries(
+       ([
+@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
+       ])
+     );
+ 
+-    expect(lifecycle.size).toBe(782);
++    expect(lifecycle.size).toBe(783);
+     expect(counts).toEqual({
+       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
+       // the callout emoji button stopped being named by the emoji glyph and
+@@ -321,7 +321,7 @@ describe('current English catalog lifecycle coverage', () => {
+       // +2: the find bar names why a replace button is disabled by literal.
+       // +2: the page title header calls title.placeholder and title.ariaLabel by literal.
+       // +2: the page icon calls title.addIcon and title.changeIcon by literal.
+-      'executable-literal': 600,
++      'executable-literal': 601,
+       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
+       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
+       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
+diff --git a/test/unit/tools/database/database-column-drag.test.ts b/test/unit/tools/database/database-column-drag.test.ts
+index 83499476..6e4cefda 100644
+--- a/test/unit/tools/database/database-column-drag.test.ts
++++ b/test/unit/tools/database/database-column-drag.test.ts
+@@ -63,6 +63,16 @@ describe('DatabaseColumnDrag', () => {
+     vi.restoreAllMocks();
+   });
+ 
++  it('never drops a column before the no-value column', () => {
++    wrapper.querySelector('[data-option-id="opt-0"]')?.setAttribute('data-blok-database-no-value-group', '');
++
++    drag.beginTracking('opt-2', 450, 50);
++    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 50 }));
++    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 50 }));
++
++    expect(onDrop).toHaveBeenCalledWith({ optionId: 'opt-2', beforeOptionId: 'opt-1', afterOptionId: null });
++  });
++
+   it('does not start drag below 10px horizontal threshold', () => {
+     drag.beginTracking('opt-0', 50, 50);
+ 
+diff --git a/test/unit/tools/database/database-model.mutants.test.ts b/test/unit/tools/database/database-model.mutants.test.ts
+index dd8c7f55..1fdcef66 100644
+--- a/test/unit/tools/database/database-model.mutants.test.ts
++++ b/test/unit/tools/database/database-model.mutants.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect, beforeEach, vi } from 'vitest';
+-import { DatabaseModel } from '../../../../src/tools/database/database-model';
++import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
+ import type {
+   DatabaseRow,
+   DatabaseViewConfig,
+@@ -215,8 +215,8 @@ describe('DatabaseModel — mutation coverage', () => {
+ 
+     // The undefined/null guard in `toGroupKey` is a shortcut, not a decision:
+     // typeof undefined is 'undefined' and typeof null is 'object', so both fall
+-    // through the string/boolean/number checks to the same '' return.
+-    it('stringifies numbers and drops list values into the empty-key group', () => {
++    // through the string/boolean/number checks to the same NO_VALUE_GROUP_KEY return.
++    it('stringifies numbers and puts a list row in each of its values\' groups', () => {
+       const numeric = makeRow({ id: 'r1', position: 'a0', properties: { score: 5 } });
+       const list = makeRow({ id: 'r2', position: 'a1', properties: { score: ['x', 'y'] } });
+       const missing = makeRow({ id: 'r3', position: 'a2', properties: {} });
+@@ -226,7 +226,9 @@ describe('DatabaseModel — mutation coverage', () => {
+ 
+       expect(model.getRowsGroupedBy('score')).toStrictEqual(new Map([
+         ['5', [numeric]],
+-        ['', [list, missing]],
++        ['x', [list]],
++        ['y', [list]],
++        [NO_VALUE_GROUP_KEY, [missing]],
+       ]));
+     });
+   });
+diff --git a/test/unit/tools/database/database-model.test.ts b/test/unit/tools/database/database-model.test.ts
+index 77025d89..e3498312 100644
+--- a/test/unit/tools/database/database-model.test.ts
++++ b/test/unit/tools/database/database-model.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect } from 'vitest';
+-import { DatabaseModel } from '../../../../src/tools/database/database-model';
++import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
+ import type {
+   DatabaseData,
+   DatabaseRow,
+@@ -218,7 +218,7 @@ describe('DatabaseModel', () => {
+       expect(groups.get('optB')).toHaveLength(1);
+     });
+ 
+-    it('puts rows with no value under empty string key', () => {
++    it('puts rows with no value under the no-value group key', () => {
+       const opt = makeSelectOption({ id: 'optA', label: 'A', position: 'a0' });
+       const prop = makeProperty({ id: 'status', type: 'select', config: { options: [opt] } });
+       const model = new DatabaseModel(makeData({ schema: [prop] }));
+@@ -228,8 +228,7 @@ describe('DatabaseModel', () => {
+       ]);
+       const groups = model.getRowsGroupedBy('status');
+       expect(groups.get('optA')).toHaveLength(1);
+-      expect(groups.get('')).toHaveLength(1);
+-      expect(groups.get('')![0].id).toBe('r2');
++      expect(groups.get(NO_VALUE_GROUP_KEY)?.map((r) => r.id)).toEqual(['r2']);
+     });
+ 
+     it('sorts rows within each group by position', () => {
+@@ -256,7 +255,28 @@ describe('DatabaseModel', () => {
+       const groups = model.getRowsGroupedBy('done');
+       expect(groups.get('true')).toHaveLength(1);
+       expect(groups.get('false')).toHaveLength(1);
+-      expect(groups.get('')).toHaveLength(1);
++      expect(groups.get(NO_VALUE_GROUP_KEY)).toHaveLength(1);
++    });
++  });
++
++  describe('getRowsGroupedBy on a multiSelect property', () => {
++    it('puts a row in every option group it carries, and an empty list in the no-value group', () => {
++      const optA = makeSelectOption({ id: 'a', label: 'A', position: 'a0' });
++      const optB = makeSelectOption({ id: 'b', label: 'B', position: 'a1' });
++      const prop = makeProperty({ id: 'tags', type: 'multiSelect', config: { options: [optA, optB] } });
++      const model = new DatabaseModel(makeData({ schema: [prop] }));
++
++      model.setRows([
++        makeRow({ id: 'r1', position: 'a0', properties: { tags: ['a', 'b'] } }),
++        makeRow({ id: 'r2', position: 'a1', properties: { tags: ['b'] } }),
++        makeRow({ id: 'r3', position: 'a2', properties: { tags: [] } }),
++      ]);
++
++      const groups = model.getRowsGroupedBy('tags');
++
++      expect(groups.get('a')?.map((r) => r.id)).toEqual(['r1']);
++      expect(groups.get('b')?.map((r) => r.id)).toEqual(['r1', 'r2']);
++      expect(groups.get(NO_VALUE_GROUP_KEY)?.map((r) => r.id)).toEqual(['r3']);
+     });
+   });
+ 
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 225944fa..f67e8151 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -253,12 +253,12 @@ describe('DatabaseTool', () => {
+       expect(element.getAttribute('data-blok-tool')).toBe('database');
+     });
+ 
+-    it('renders 3 columns for default data with 3 select options', () => {
++    it('renders the no-value column plus 3 columns for default data with 3 select options', () => {
+       const tool = new DatabaseTool(createDatabaseOptions());
+       const element = tool.render();
+       const columns = queryAllByData(element, 'data-blok-database-column');
+ 
+-      expect(columns).toHaveLength(3);
++      expect(columns).toHaveLength(4);
+     });
+ 
+     it('renders a title element with data-blok-database-title attribute', () => {
+@@ -391,6 +391,7 @@ describe('DatabaseTool', () => {
+       expect(titleEl?.getAttribute('data-placeholder')).toBe('Neue Datenbank');
+       expect(viewName?.textContent).toBe('Tafel');
+       expect(columnTitles.map((column) => column.textContent)).toEqual([
++        'tools.database.noValueGroup',
+         'Nicht begonnen',
+         'In Arbeit',
+         'Erledigt',
+@@ -645,7 +646,7 @@ describe('DatabaseTool', () => {
+ 
+       const initialColumns = queryAllByData(element, 'data-blok-database-column');
+ 
+-      expect(initialColumns).toHaveLength(3);
++      expect(initialColumns).toHaveLength(4);
+ 
+       const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
+ 
+@@ -655,7 +656,7 @@ describe('DatabaseTool', () => {
+ 
+       const columns = queryAllByData(element, 'data-blok-database-column');
+ 
+-      expect(columns).toHaveLength(4);
++      expect(columns).toHaveLength(5);
+ 
+       const saved = tool.save(document.createElement('div'));
+       const statusProp = saved.schema.find((p) => p.type === 'select');
+@@ -724,91 +725,6 @@ describe('DatabaseTool', () => {
+     });
+   });
+ 
+-  describe('column delete cascades block deletions for rows', () => {
+-    it('calls api.blocks.delete for each row then adapter.updateProperty when option is deleted', async () => {
+-      const deleteRowCalls: string[] = [];
+-      const updatePropertyCalls: Array<{ propertyId: string }> = [];
+-
+-      const mockAdapter = {
+-        loadDatabase: vi.fn(),
+-        createRow: vi.fn(),
+-        updateRow: vi.fn(),
+-        moveRow: vi.fn(),
+-        deleteRow: vi.fn(async (params: { rowId: string }) => {
+-          deleteRowCalls.push(params.rowId);
+-        }),
+-        createProperty: vi.fn(),
+-        updateProperty: vi.fn(async (params: { propertyId: string }) => {
+-          updatePropertyCalls.push(params);
+-          return {} as never;
+-        }),
+-        deleteProperty: vi.fn(),
+-        createView: vi.fn(),
+-        updateView: vi.fn(),
+-        deleteView: vi.fn(),
+-      };
+-
+-      const childBlocks = [
+-        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+-        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, position: 'a1' }),
+-      ];
+-
+-      const options = createDatabaseOptions({}, { adapter: mockAdapter }, { childBlocks });
+-
+-      // Make getBlockIndex return distinct indices for different row IDs
+-      let deleteCallCount = 0;
+-
+-      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockImplementation((blockId: string) => {
+-        if (blockId === 'row-1') return 1;
+-        if (blockId === 'row-2') return 2;
+-        return 0;
+-      });
+-
+-      // After each delete, remove the block from the children array so syncRowsFromBlocks sees the update
+-      (options.api.blocks.delete as ReturnType<typeof vi.fn>).mockImplementation(() => {
+-        deleteCallCount++;
+-        // After deletion, the subsequent getChildren calls should return fewer blocks
+-        if (deleteCallCount >= 2) {
+-          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([]);
+-        } else {
+-          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([childBlocks[1]]);
+-        }
+-      });
+-
+-      const tool = new DatabaseTool(options);
+-      const element = tool.render();
+-      tool.rendered();
+-
+-      // Find the delete-column button for opt-todo (injected by DatabaseColumnControls.makeEditable)
+-      const deleteBtn = queryAllByData(element, 'data-blok-database-delete-column')
+-        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!;
+-
+-      expect(deleteBtn).not.toBeNull();
+-
+-      deleteBtn.click();
+-
+-      // api.blocks.delete should be called for each row in the column
+-      expect(options.api.blocks.delete).toHaveBeenCalledTimes(2);
+-
+-      // Adapter deleteRow calls are async — wait for them to flush
+-      await vi.waitFor(() => {
+-        expect(deleteRowCalls).toHaveLength(2);
+-      });
+-
+-      expect(deleteRowCalls).toContain('row-1');
+-      expect(deleteRowCalls).toContain('row-2');
+-      expect(updatePropertyCalls.length).toBeGreaterThan(0);
+-      expect(updatePropertyCalls[0].propertyId).toBe('prop-status');
+-
+-      // Column should be removed from DOM
+-      const remainingColumns = queryAllByData(element, 'data-blok-database-column');
+-
+-      expect(remainingColumns).toHaveLength(2);
+-
+-      tool.destroy();
+-    });
+-  });
+-
+   describe('add column uses correct i18n key', () => {
+     it('clicking add-column button uses columnTitlePlaceholder i18n key', () => {
+       const mockI18n = vi.fn((key: string) => key);
+@@ -2318,7 +2234,7 @@ describe('DatabaseTool', () => {
+       const tool = new DatabaseTool(options);
+       const element = tool.render();
+       tool.rendered();
+-      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(2);
++      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(3);
+     });
+   });
+ 
+@@ -3147,4 +3063,333 @@ describe('DatabaseTool', () => {
+       container.remove();
+     });
+   });
++
++  describe('no-value group', () => {
++    const interpolatingT = (key: string, vars?: Record<string, string | number>): string => {
++      if (key === 'tools.database.noValueGroup') return `No ${String(vars?.property)}`;
++
++      return key === 'tools.database.defaultStatusProperty' ? 'Status' : key;
++    };
++
++    const renderBoard = (rows: Array<{ id: string; properties: Record<string, unknown> }>): {
++      tool: DatabaseTool;
++      element: HTMLElement;
++      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
++    } => {
++      const childBlocks = rows.map((r, i) => createMockRowBlock({ id: r.id, properties: r.properties, position: `a${i}` }));
++      const options = createDatabaseOptions({}, {}, { childBlocks });
++
++      options.api.i18n.t = interpolatingT;
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      return { tool, element, options };
++    };
++
++    const noValueColumn = (element: HTMLElement): HTMLElement | null =>
++      queryByData(element, 'data-blok-database-no-value-group');
++
++    it('shows a row with no group value on the board, in a first "No <property>" column', () => {
++      const { tool, element } = renderBoard([
++        { id: 'row-empty', properties: { 'prop-title': 'Loose', 'prop-status': null } },
++        { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
++      ]);
++
++      const card = queryAllByData(element, 'data-row-id', 'row-empty').find((el) => el.hasAttribute('data-blok-database-card'));
++
++      expect(card).toBeDefined();
++
++      const column = noValueColumn(element);
++
++      expect(column).not.toBeNull();
++      expect(column?.contains(card ?? null)).toBe(true);
++      expect(queryAllByData(element, 'data-blok-database-column')[0]).toBe(column);
++      expect(queryByData(column ?? element, 'data-blok-database-column-title')?.textContent).toBe('No Status');
++
++      tool.destroy();
++    });
++
++    it('keeps the no-value column on an empty board so a card can be dropped into it', () => {
++      const { tool, element } = renderBoard([]);
++
++      expect(noValueColumn(element)).not.toBeNull();
++
++      tool.destroy();
++    });
++
++    it('gives the no-value column no delete button and no rename', () => {
++      const { tool, element } = renderBoard([]);
++      const column = noValueColumn(element);
++
++      expect(column).not.toBeNull();
++      expect(queryByData(column ?? element, 'data-blok-database-delete-column')).toBeNull();
++
++      const title = queryByData(column ?? element, 'data-blok-database-column-title');
++
++      title?.click();
++
++      expect(queryByData(column ?? element, 'data-blok-database-column-title-input')).toBeNull();
++
++      tool.destroy();
++    });
++
++    it('creates a row with no group value from "+ New" in the no-value column', () => {
++      const { tool, element, options } = renderBoard([]);
++      const column = noValueColumn(element);
++      const addCard = queryByData(column ?? element, 'data-blok-database-add-card');
++
++      expect(addCard).not.toBeNull();
++      addCard?.click();
++
++      const insertAt = vi.mocked(options.api.blocks.insertAt);
++
++      expect(insertAt).toHaveBeenCalledTimes(1);
++
++      const data = insertAt.mock.calls[0][1] as DatabaseRowData;
++
++      expect(data.properties).not.toHaveProperty('prop-status');
++
++      tool.destroy();
++    });
++
++    it('clears the group value when a card is dropped into the no-value column', () => {
++      const { tool, element, options } = renderBoard([
++        { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
++      ]);
++      const column = noValueColumn(element);
++      const toOptionId = column?.getAttribute('data-option-id') ?? 'missing';
++      const cardDrag = (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag;
++      const rowBlock = vi.mocked(options.api.blocks.getChildren).mock.results[0]?.value as BlockAPI[];
++
++      cardDrag.onDrop({ rowId: 'row-todo', toOptionId, beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++
++      tool.destroy();
++    });
++
++    it('never starts a column drag from the no-value column header', () => {
++      const { tool, element } = renderBoard([]);
++      const header = queryByData(noValueColumn(element) ?? element, 'data-blok-database-column-header');
++      const columnDrag = (tool as unknown as { columnDrag: DatabaseColumnDrag }).columnDrag;
++      const begin = vi.spyOn(columnDrag, 'beginTracking');
++
++      expect(header).not.toBeNull();
++      fireEvent.pointerDown(header ?? element, { clientX: 0, clientY: 0 });
++
++      expect(begin).not.toHaveBeenCalled();
++
++      tool.destroy();
++    });
++
++    it('shows a row with no group value in a grouped list', () => {
++      const childBlocks = [createMockRowBlock({ id: 'row-empty', properties: { 'prop-title': 'Loose' }, position: 'a0' })];
++      const options = createDatabaseOptions({
++        views: [{ id: 'view-1', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
++      }, {}, { childBlocks });
++
++      options.api.i18n.t = interpolatingT;
++
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      const row = queryAllByData(element, 'data-row-id', 'row-empty').find((el) => el.hasAttribute('data-blok-database-list-row'));
++
++      expect(row).toBeDefined();
++
++      tool.destroy();
++    });
++  });
++
++  describe('grouping by a multiSelect property', () => {
++    const tagsData = (): Partial<DatabaseData> => ({
++      schema: [
++        { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
++        { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
++          options: [
++            { id: 'opt-a', label: 'A', position: 'a0' },
++            { id: 'opt-b', label: 'B', position: 'a1' },
++            { id: 'opt-c', label: 'C', position: 'a2' },
++          ],
++        }},
++      ],
++      views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
++    });
++
++    const renderTagsBoard = (tags: string[]): {
++      tool: DatabaseTool;
++      element: HTMLElement;
++      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
++      rowBlock: BlockAPI;
++    } => {
++      const rowBlock = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task', 'prop-tags': tags }, position: 'a0' });
++      const options = createDatabaseOptions(tagsData(), {}, { childBlocks: [rowBlock] });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++
++      return { tool, element, options, rowBlock };
++    };
++
++    const cardsIn = (element: HTMLElement, optionId: string): HTMLElement[] => {
++      const column = queryAllByData(element, 'data-option-id', optionId).find((el) => el.hasAttribute('data-blok-database-column'));
++
++      return column === undefined ? [] : queryAllByData(column, 'data-blok-database-card');
++    };
++
++    const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
++      (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag.onDrop(result);
++    };
++
++    it('shows a row in every option group it carries', () => {
++      const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
++
++      expect(cardsIn(element, 'opt-a').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
++      expect(cardsIn(element, 'opt-b').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
++      expect(cardsIn(element, 'opt-c')).toHaveLength(0);
++
++      tool.destroy();
++    });
++
++    it('replaces only the dragged-from option when a card moves to another group', () => {
++      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
++      const cardInA = cardsIn(element, 'opt-a')[0];
++
++      fireEvent.pointerDown(cardInA, { clientX: 0, clientY: 0 });
++      dropCard(tool, { rowId: 'row-1', toOptionId: 'opt-c', beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-c', 'opt-b'] });
++
++      tool.destroy();
++    });
++
++    it('drops the dragged-from option when a card moves to a group the row already has', () => {
++      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
++
++      fireEvent.pointerDown(cardsIn(element, 'opt-a')[0], { clientX: 0, clientY: 0 });
++      dropCard(tool, { rowId: 'row-1', toOptionId: 'opt-b', beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
++
++      tool.destroy();
++    });
++
++    it('removes the dragged-from option when a card moves to the no-value group', () => {
++      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
++      const noValueId = queryByData(element, 'data-blok-database-no-value-group')?.getAttribute('data-option-id') ?? 'missing';
++
++      fireEvent.pointerDown(cardsIn(element, 'opt-b')[0], { clientX: 0, clientY: 0 });
++      dropCard(tool, { rowId: 'row-1', toOptionId: noValueId, beforeRowId: null, afterRowId: null });
++
++      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-a'] });
++
++      tool.destroy();
++    });
++
++    it('fades the pressed copy of a multi-group card, not the first copy', () => {
++      const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
++      const cardInB = cardsIn(element, 'opt-b')[0];
++      const cardInA = cardsIn(element, 'opt-a')[0];
++
++      fireEvent.pointerDown(cardInB, { clientX: 0, clientY: 0 });
++      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40, clientY: 40 }));
++
++      expect(cardInB.style.opacity).toBe('0.4');
++      expect(cardInA.style.opacity).toBe('');
++
++      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
++      tool.destroy();
++    });
++
++    it('creates a row carrying the option as a list from "+ New" in a multiSelect group', () => {
++      const { tool, element, options } = renderTagsBoard([]);
++      const column = queryAllByData(element, 'data-option-id', 'opt-a').find((el) => el.hasAttribute('data-blok-database-column'));
++      const addCard = queryByData(column ?? element, 'data-blok-database-add-card');
++
++      addCard?.click();
++
++      const data = vi.mocked(options.api.blocks.insertAt).mock.calls[0][1] as DatabaseRowData;
++
++      expect(data.properties['prop-tags']).toEqual(['opt-a']);
++
++      tool.destroy();
++    });
++  });
++
++  // GATED ON USER DECISION D9: rows keep existing when their column is deleted.
++  describe('deleting a board column', () => {
++    const liveRowBlock = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
++      const block = createMockRowBlock({ id, properties, position });
++      const data = block.preservedData as DatabaseRowData;
++
++      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
++        if (method === 'updateProperties') Object.assign(data.properties, params);
++      });
++
++      return block;
++    };
++
++    const clickDelete = (element: HTMLElement, optionId: string): void => {
++      queryAllByData(element, 'data-blok-database-delete-column')
++        .find((el) => el.getAttribute('data-option-id') === optionId)
++        ?.click();
++    };
++
++    it('keeps the rows and moves them to the no-value group', () => {
++      const childBlocks = [
++        liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0'),
++        liveRowBlock('row-2', { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, 'a1'),
++      ];
++      const options = createDatabaseOptions({}, {}, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      clickDelete(element, 'opt-todo');
++
++      expect(options.api.blocks.delete).not.toHaveBeenCalled();
++      expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
++
++      const noValue = queryByData(element, 'data-blok-database-no-value-group');
++      const cardIds = queryAllByData(noValue ?? element, 'data-blok-database-card').map((c) => c.getAttribute('data-row-id'));
++
++      expect(cardIds).toEqual(['row-1', 'row-2']);
++      expect(queryAllByData(element, 'data-option-id', 'opt-todo')).toHaveLength(0);
++
++      tool.destroy();
++    });
++
++    it('removes only the deleted option from a multiSelect row', () => {
++      const row = liveRowBlock('row-1', { 'prop-title': 'Task', 'prop-tags': ['opt-a', 'opt-b'] }, 'a0');
++      const options = createDatabaseOptions({
++        schema: [
++          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
++          { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
++            options: [
++              { id: 'opt-a', label: 'A', position: 'a0' },
++              { id: 'opt-b', label: 'B', position: 'a1' },
++            ],
++          }},
++        ],
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
++      }, {}, { childBlocks: [row] });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      clickDelete(element, 'opt-a');
++
++      expect(options.api.blocks.delete).not.toHaveBeenCalled();
++      expect(row.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
++
++      tool.destroy();
++    });
++  });
+ });
+diff --git a/types/message-keys.d.ts b/types/message-keys.d.ts
+index 139fdc83..71a8a3ec 100644
+--- a/types/message-keys.d.ts
++++ b/types/message-keys.d.ts
+@@ -394,6 +394,7 @@ export type BlokMessageKey =
+   | 'tools.database.moreViews'
+   | 'tools.database.newPage'
+   | 'tools.database.newRow'
++  | 'tools.database.noValueGroup'
+   | 'tools.database.openRow'
+   | 'tools.database.propertyTypeCheckbox'
+   | 'tools.database.propertyTypeDate'

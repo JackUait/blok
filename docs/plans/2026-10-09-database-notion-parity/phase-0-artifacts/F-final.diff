@@ -1,0 +1,395 @@
+diff --git a/src/tools/database/database-query.ts b/src/tools/database/database-query.ts
+index c836cdff..23bf079a 100644
+--- a/src/tools/database/database-query.ts
++++ b/src/tools/database/database-query.ts
+@@ -279,6 +279,36 @@ export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: Prope
+   });
+ };
+ 
++/** The value an `equals` filter asks for, or `undefined` when a new row cannot take it. */
++const filterTargetValue = (type: PropertyType | undefined, target: PropertyValue): PropertyValue | undefined => {
++  switch (type) {
++    case 'select': return toIdList(target)[0];
++    case 'checkbox': return typeof target === 'boolean' ? target : undefined;
++    case 'text': return typeof target === 'string' && target !== '' ? target : undefined;
++    case 'number': return toNumber(target);
++    case 'title':
++    case 'url':
++    case 'richText':
++    case 'multiSelect':
++    case 'date':
++    case undefined:
++      return undefined;
++  }
++};
++
++/**
++ * Values a new row takes from the view's `equals` filters, as Notion does,
++ * so the filter does not hide the row on the next redraw.
++ */
++export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[]): Record<string, PropertyValue> =>
++  Object.fromEntries(filters.flatMap((filter) => {
++    const value = filter.operator === 'equals'
++      ? filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.value)
++      : undefined;
++
++    return value === undefined ? [] : [[filter.propertyId, value]];
++  }));
++
+ const filteredRows = (source: QuerySource, view: DatabaseViewConfig): DatabaseRow[] =>
+   source.rows.filter((row) => rowMatchesFilters(row, view.filters, source.schema));
+ 
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 7cb6919e..5be4afd0 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -3,6 +3,7 @@ import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks
+ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
+ import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+ import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
++import { newRowValues } from './database-query';
+ import { DatabaseBoardView } from './database-board-view';
+ import { DatabaseListView } from './database-list-view';
+ import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
+@@ -1123,13 +1124,8 @@ export class DatabaseTool implements BlockTool {
+     const viewConfig = this.model.getView(this.activeViewId);
+     const groupByPropId = viewConfig?.groupBy;
+ 
+-    const properties: Record<string, PropertyValue> = { [titlePropId]: '' };
+-
+-    if (groupByPropId !== undefined && optionId !== null && optionId !== NO_VALUE_GROUP_KEY) {
+-      properties[groupByPropId] = this.groupValueFor(groupByPropId, optionId);
+-    }
+-
+-    const rowData = this.model.createRowData(properties);
++    const groupProp = optionId === null ? undefined : groupByPropId;
++    const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupProp, optionId ?? NO_VALUE_GROUP_KEY));
+     this.api.blocks.insertAt(
+       'database-row',
+       { properties: rowData.properties, position: rowData.position, title: '' },
+@@ -1151,6 +1147,16 @@ export class DatabaseTool implements BlockTool {
+     });
+   }
+ 
++  /** The clicked group's value wins over a filter on the same property. */
++  private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string): Record<string, PropertyValue> {
++    const filters = (this.model.getView(this.activeViewId)?.filters ?? []).filter((f) => f.propertyId !== groupByPropId);
++    const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema()), [titlePropId]: '' };
++
++    return groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY
++      ? properties
++      : { ...properties, [groupByPropId]: this.groupValueFor(groupByPropId, optionId) };
++  }
++
+   private groupValueFor(groupByPropId: string, optionId: string): PropertyValue {
+     return this.model.getProperty(groupByPropId)?.type === 'multiSelect' ? [optionId] : optionId;
+   }
+@@ -1165,9 +1171,7 @@ export class DatabaseTool implements BlockTool {
+ 
+     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+     const titlePropId = titleProp?.id ?? '';
+-    const rowData = this.model.createRowData(optionId === NO_VALUE_GROUP_KEY
+-      ? { [titlePropId]: '' }
+-      : { [titlePropId]: '', [groupByPropId]: this.groupValueFor(groupByPropId, optionId) });
++    const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupByPropId, optionId));
+ 
+     this.api.blocks.insertAt(
+       'database-row',
+diff --git a/test/playwright/tests/undo-audit/containers.spec.ts b/test/playwright/tests/undo-audit/containers.spec.ts
+index 03a587b6..48eb3478 100644
+--- a/test/playwright/tests/undo-audit/containers.spec.ts
++++ b/test/playwright/tests/undo-audit/containers.spec.ts
+@@ -252,11 +252,16 @@ const DB_DOC: OutputData = {
+   ],
+ };
+ 
+-/** Card ids and titles the board shows, per column, in DOM order. */
+-const boardCards = async (page: Page): Promise<string[][]> => page.evaluate(() =>
+-  Array.from(document.querySelectorAll('[data-blok-database-column]')).map(col =>
++/**
++ * Card ids and titles per column, keyed by the column's option id, in DOM order.
++ * Keyed, not positional: the no-value column renders first, even when empty.
++ */
++const boardCards = async (page: Page): Promise<Record<string, string[]>> => page.evaluate(() =>
++  Object.fromEntries(Array.from(document.querySelectorAll('[data-blok-database-column]')).map(col => [
++    col.getAttribute('data-option-id') ?? '',
+     Array.from(col.querySelectorAll('[data-blok-database-card]')).map(c =>
+-      `${c.getAttribute('data-row-id') ?? ''}:${(c.querySelector('[data-blok-database-card-title]')?.textContent ?? '').trim()}`)));
++      `${c.getAttribute('data-row-id') ?? ''}:${(c.querySelector('[data-blok-database-card-title]')?.textContent ?? '').trim()}`),
++  ])));
+ 
+ test.describe.configure({ retries: 0 });
+ 
+@@ -504,7 +509,7 @@ test.describe('CON database', () => {
+ 
+     await undo(page);
+ 
+-    await expect.poll(async () => (await boardCards(page))[0], { message: 'Todo column after undo', timeout: 2000 }).toEqual(['row-1:Card one']);
++    await expect.poll(async () => (await boardCards(page))['opt-todo'], { message: 'Todo column after undo', timeout: 2000 }).toEqual(['row-1:Card one']);
+     expect((await save(page)).find(b => b.id === 'row-1')?.data.properties).toEqual({ 'prop-title': 'Card one', 'prop-status': 'opt-todo' });
+   });
+ 
+@@ -516,7 +521,7 @@ test.describe('CON database', () => {
+     await gap(page);
+     const afterAdd = await boardCards(page);
+ 
+-    expect(afterAdd[0]).toHaveLength(2);
++    expect(afterAdd['opt-todo']).toHaveLength(2);
+ 
+     await undo(page);
+     await redo(page);
+@@ -540,6 +545,6 @@ test.describe('CON database', () => {
+     await redo(page);
+ 
+     expect((await save(page)).some(b => b.id === 'row-1')).toBe(false);
+-    await expect.poll(async () => (await boardCards(page))[0], { message: 'Todo column after redo', timeout: 2000 }).toEqual([]);
++    await expect.poll(async () => (await boardCards(page))['opt-todo'], { message: 'Todo column after redo', timeout: 2000 }).toEqual([]);
+   });
+ });
+diff --git a/test/playwright/tests/undo-audit/gestures.spec.ts b/test/playwright/tests/undo-audit/gestures.spec.ts
+index 18619d15..e0a46682 100644
+--- a/test/playwright/tests/undo-audit/gestures.spec.ts
++++ b/test/playwright/tests/undo-audit/gestures.spec.ts
+@@ -442,7 +442,7 @@ test.describe('GES database board', () => {
+     await createBlok(page, DB_BOARD);
+     await gap(page);
+     const s = await page.locator('[data-blok-database-card][data-row-id="row-1"]').boundingBox();
+-    const t = await page.locator('[data-blok-database-column]').nth(1).boundingBox();
++    const t = await page.locator('[data-blok-database-column][data-option-id="opt-done"]').boundingBox();
+ 
+     if (s === null || t === null) {
+       throw new Error('no box');
+@@ -454,12 +454,12 @@ test.describe('GES database board', () => {
+     await gap(page);
+     const cardsAfter = await boardCards(page);
+ 
+-    // Dropped below row-2, so row-1 gets a position after row-2's.
+-    expect(cardsAfter).toEqual([[], ['row-2:Card two', 'row-1:Card one']]);
++    // Columns: no-value (always first), Todo, Done. Dropped below row-2, so row-1 sorts after it.
++    expect(cardsAfter).toEqual([[], [], ['row-2:Card two', 'row-1:Card one']]);
+ 
+     await park(page);
+     await undo(page);
+-    await expect.poll(async () => boardCards(page)).toEqual([['row-1:Card one'], ['row-2:Card two']]);
++    await expect.poll(async () => boardCards(page)).toEqual([[], ['row-1:Card one'], ['row-2:Card two']]);
+     await redo(page);
+ 
+     await expect.poll(async () => boardCards(page), { message: 'board after redo', timeout: 2000 }).toEqual(cardsAfter);
+diff --git a/test/unit/tools/database/database-card-drawer-tab-sync.test.ts b/test/unit/tools/database/database-card-drawer-tab-sync.test.ts
+index 42cfa9cc..d316d048 100644
+--- a/test/unit/tools/database/database-card-drawer-tab-sync.test.ts
++++ b/test/unit/tools/database/database-card-drawer-tab-sync.test.ts
+@@ -16,6 +16,8 @@ describe('DatabaseCardDrawer — nested editor and tab sync', () => {
+   });
+ 
+   // The card body is part of the host's document, not a document of its own.
++  // The timeout covers the drawer's cold import of the whole editor (~1.7s alone,
++  // 3.0-3.9s in a full folder run); the default 5s cut it off under load.
+   it('the nested card editor opens no tab-sync channel', async () => {
+     const rawChannel = vi.spyOn(browserTabPlatform, 'rawChannel');
+     const lock = vi.spyOn(browserTabPlatform, 'lock');
+@@ -44,5 +46,5 @@ describe('DatabaseCardDrawer — nested editor and tab sync', () => {
+     expect(rawChannel).not.toHaveBeenCalledWith(SETTINGS_CHANNEL);
+     expect(lock).not.toHaveBeenCalled();
+     drawer.destroy();
+-  });
++  }, 20000);
+ });
+diff --git a/test/unit/tools/database/database-query.test.ts b/test/unit/tools/database/database-query.test.ts
+index fb3e0a5d..5719811b 100644
+--- a/test/unit/tools/database/database-query.test.ts
++++ b/test/unit/tools/database/database-query.test.ts
+@@ -1,6 +1,7 @@
+ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+ import {
+   FILTER_OPERATORS,
++  newRowValues,
+   queryGroups,
+   queryRows,
+   rowMatchesFilters,
+@@ -437,4 +438,29 @@ describe('database-query', () => {
+       ]);
+     });
+   });
++
++  describe('newRowValues', () => {
++    it('gives a new row the value of each equals filter it can hold, and the row then passes', () => {
++      const filters: FilterConfig[] = [
++        { propertyId: 'status', operator: 'equals', value: ['opt-mid', 'opt-late'] },
++        { propertyId: 'done', operator: 'equals', value: true },
++        { propertyId: 'text', operator: 'equals', value: 'Draft' },
++        { propertyId: 'num', operator: 'equals', value: '3' },
++      ];
++      const values = newRowValues(filters, schema);
++
++      expect(values).toEqual({ status: 'opt-mid', done: true, text: 'Draft', num: 3 });
++      expect(rowMatchesFilters(row('new', 'a0', values), filters, schema)).toBe(true);
++    });
++
++    it('takes nothing from other operators, the title, or a filter with no usable value', () => {
++      expect(newRowValues([
++        { propertyId: 'status', operator: 'does_not_equal', value: 'opt-mid' },
++        { propertyId: 'title', operator: 'equals', value: 'Name' },
++        { propertyId: 'num', operator: 'equals', value: 'abc' },
++        { propertyId: 'text', operator: 'equals', value: '' },
++        { propertyId: 'gone', operator: 'equals', value: 'x' },
++      ], schema)).toEqual({});
++    });
++  });
+ });
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 85c31e62..673d0325 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -3704,4 +3704,151 @@ describe('DatabaseTool', () => {
+       expect((unsorted as unknown as { listRowDrag: unknown }).listRowDrag).not.toBeNull();
+     });
+   });
++
++  describe('a row added in a filtered view', () => {
++    /** Makes insertAt add the child the way the editor does, so later reads see it. */
++    const insertingChildren = (options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>, childBlocks: BlockAPI[]): void => {
++      vi.mocked(options.api.blocks.insertAt).mockImplementation((_type, data, placement) => {
++        const row = data as DatabaseRowData;
++        const id = (placement as { id: string }).id;
++
++        childBlocks.push(createMockRowBlock({ id, properties: row.properties, position: row.position }));
++
++        return { id } as BlockAPI;
++      });
++    };
++
++    /** Redraws the view the way a peer edit to another row does. */
++    const redrawForPeerMove = async (tool: DatabaseTool, block: BlockAPI): Promise<void> => {
++      const api = (tool as unknown as { api: API }).api;
++      const call = vi.mocked(api.events.on).mock.calls.find(([name]) => name === 'block changed');
++
++      Object.assign(block.preservedData as DatabaseRowData, { position: 'a9' });
++      (call?.[1] as (payload: unknown) => void)({ event: { type: 'block-changed', detail: { target: block } } });
++      await Promise.resolve();
++    };
++
++    it('keeps the new list row visible after a redraw by taking the filter value', async () => {
++      const childBlocks = [createMockRowBlock({ id: 'row-done', properties: { 'prop-title': 'Done one', 'prop-status': 'opt-done' }, position: 'a0' })];
++      const options = createDatabaseOptions({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], visibleProperties: [],
++          filters: [{ propertyId: 'prop-status', operator: 'equals', value: 'opt-done' }] }],
++        activeViewId: 'view-list',
++      }, {}, { childBlocks });
++
++      insertingChildren(options, childBlocks);
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      queryByData(element, 'data-blok-database-add-row')?.click();
++      const newId = (vi.mocked(options.api.blocks.insertAt).mock.calls[0][2] as { id: string }).id;
++
++      await redrawForPeerMove(tool, childBlocks[0]);
++
++      expect(queryAllByData(element, 'data-row-id', newId)).not.toHaveLength(0);
++      expect(vi.mocked(options.api.blocks.insertAt).mock.calls[0][1]).toMatchObject({ properties: { 'prop-status': 'opt-done' } });
++
++      tool.destroy();
++    });
++
++    it('lets the column a card is added to win over a filter on another value', () => {
++      const childBlocks: BlockAPI[] = [];
++      const options = createDatabaseOptions({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
++          filters: [{ propertyId: 'prop-status', operator: 'equals', value: 'opt-done' }] }],
++      }, {}, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      tool.rendered();
++      queryAllByData(element, 'data-blok-database-add-card')
++        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')
++        ?.click();
++
++      expect(vi.mocked(options.api.blocks.insertAt).mock.calls[0][1]).toMatchObject({ properties: { 'prop-status': 'opt-todo' } });
++
++      tool.destroy();
++    });
++  });
++
++  describe('a peer change during a drag on a sorted board', () => {
++    /** A row whose saved data follows its updateProperties/updatePosition calls. */
++    const writableRow = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
++      const block = createMockRowBlock({ id, properties, position });
++      const data = block.preservedData as DatabaseRowData;
++
++      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
++        if (method === 'updateProperties') Object.assign(data.properties, params);
++      });
++
++      return block;
++    };
++
++    /** jsdom has no layout: give column i the x range [i*100, i*100+99]. */
++    const layOutColumns = (element: HTMLElement): void => {
++      queryAllByData(element, 'data-blok-database-column').forEach((column, i) => {
++        vi.spyOn(column, 'getBoundingClientRect').mockReturnValue(new DOMRect(i * 100, 0, 99, 500));
++      });
++    };
++
++    const columnCards = (element: HTMLElement, optionId: string): string[] => {
++      const column = queryAllByData(element, 'data-option-id', optionId).find((el) => el.hasAttribute('data-blok-database-column'));
++
++      return column === undefined ? [] : queryAllByData(column, 'data-blok-database-card').map((el) => el.getAttribute('data-row-id') ?? '');
++    };
++
++    afterEach(() => {
++      document.body.innerHTML = '';
++    });
++
++    it('keeps the dragged card in place until the drop, then writes the drop column', async () => {
++      const childBlocks = [
++        writableRow('row-a', { 'prop-title': 'A', 'prop-status': 'opt-todo' }, 'a0'),
++        writableRow('row-b', { 'prop-title': 'B', 'prop-status': 'opt-todo' }, 'a1'),
++        writableRow('row-x', { 'prop-title': 'X', 'prop-status': 'opt-todo' }, 'a2'),
++      ];
++      const options = createDatabaseOptions({
++        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
++          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
++      }, {}, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      document.body.appendChild(element);
++      tool.rendered();
++      layOutColumns(element);
++
++      const cardDrag = (tool as unknown as { cardDrag: DatabaseCardDrag }).cardDrag;
++      const sourceCard = queryAllByData(element, 'data-row-id', 'row-x').find((el) => el.hasAttribute('data-blok-database-card'));
++
++      cardDrag.beginTracking('row-x', 0, 0);
++      document.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, clientY: 50 }));
++
++      // A peer renames A to Z and moves it: the sort now puts it after X.
++      const rowA = childBlocks[0].preservedData as DatabaseRowData;
++
++      rowA.properties['prop-title'] = 'Z';
++      rowA.position = 'a3';
++      const api = (tool as unknown as { api: API }).api;
++      const listener = vi.mocked(api.events.on).mock.calls.find(([name]) => name === 'block changed')?.[1] as (payload: unknown) => void;
++
++      listener({ event: { type: 'block-changed', detail: { target: childBlocks[0] } } });
++      await Promise.resolve();
++
++      expect(sourceCard?.isConnected).toBe(true);
++      expect(columnCards(element, 'opt-todo')).toEqual(['row-a', 'row-b', 'row-x']);
++
++      // Doing is the third column: no-value, Todo, Doing.
++      document.dispatchEvent(new MouseEvent('pointerup', { clientX: 250, clientY: 50 }));
++      await new Promise((resolve) => setTimeout(resolve, 0));
++
++      expect(vi.mocked(childBlocks[2].call).mock.calls.filter(([method]) => method === 'updateProperties'))
++        .toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
++      expect(columnCards(element, 'opt-doing')).toEqual(['row-x']);
++      expect(columnCards(element, 'opt-todo')).toEqual(['row-b', 'row-a']);
++
++      tool.destroy();
++    });
++  });
+ });

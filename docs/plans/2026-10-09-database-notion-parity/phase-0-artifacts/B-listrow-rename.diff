@@ -1,0 +1,158 @@
+diff --git a/src/tools/database/database-board-view.ts b/src/tools/database/database-board-view.ts
+index b17a9208..c71affc8 100644
+--- a/src/tools/database/database-board-view.ts
++++ b/src/tools/database/database-board-view.ts
+@@ -334,13 +334,20 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
+       return;
+     }
+ 
+-    const originalTitle = titleEl.textContent ?? '';
++    // An untitled card shows placeholder text; it must not seed the input or count as the old title.
++    const originalTitle = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
+ 
+     const buildTitleDiv = (title: string): HTMLElement => {
+       const div = document.createElement('div');
+ 
+       div.setAttribute('data-blok-database-card-title', '');
+-      div.textContent = title;
++
++      if (title) {
++        div.textContent = title;
++      } else {
++        div.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
++        div.setAttribute('data-placeholder', '');
++      }
+ 
+       return div;
+     };
+@@ -360,9 +367,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
+           this.onTitleEdit?.(rowId, newTitle);
+         }
+ 
+-        if (newTitle) {
+-          cardEl.removeAttribute('data-empty');
+-        }
++        cardEl.toggleAttribute('data-empty', newTitle === '');
+       },
+     });
+   }
+diff --git a/src/tools/database/index.ts b/src/tools/database/index.ts
+index 85caf741..2a22c637 100644
+--- a/src/tools/database/index.ts
++++ b/src/tools/database/index.ts
+@@ -1104,7 +1104,13 @@ export class DatabaseTool implements BlockTool {
+       { parentId: this.block.id, position: 'end', id: rowData.id },
+     );
+     this.syncRowsFromBlocks();
+-    this.view.appendRow(viewEl, rowData);
++
++    // A grouped list keeps its "+ New" inside each group, so the row must go into that group's rows list.
++    const groupRows = optionId === null
++      ? null
++      : viewEl.querySelector(`[data-blok-database-list-group][data-option-id="${optionId}"] [data-blok-database-list-rows]`);
++
++    this.view.appendRow(groupRows instanceof HTMLElement ? groupRows : viewEl, rowData);
+ 
+     void this.sync.syncCreateRow({
+       id: rowData.id,
+diff --git a/test/unit/tools/database/database-board-view.test.ts b/test/unit/tools/database/database-board-view.test.ts
+index 0f1a0f44..320f7e84 100644
+--- a/test/unit/tools/database/database-board-view.test.ts
++++ b/test/unit/tools/database/database-board-view.test.ts
+@@ -426,6 +426,33 @@ describe('DatabaseBoardView', () => {
+       expect(titleDiv?.textContent).toBe('Fix bug');
+       expect(onTitleEdit).not.toHaveBeenCalled();
+     });
++
++    it('starts an untitled card rename empty and keeps the card untitled on an empty commit', () => {
++      const onTitleEdit = vi.fn();
++      const options = [makeOption({ id: 'opt-1' })];
++      const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
++      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
++      const board = view.createView();
++      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
++      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
++
++      editBtn.click();
++
++      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]');
++
++      expect(input?.value).toBe('');
++      if (input === null) return;
++
++      simulateKeydown(input, 'Enter');
++
++      expect(onTitleEdit).not.toHaveBeenCalled();
++
++      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
++
++      expect(titleDiv?.textContent).toBe('tools.database.cardTitlePlaceholder');
++      expect(titleDiv?.hasAttribute('data-placeholder')).toBe(true);
++      expect(cardEl.hasAttribute('data-empty')).toBe(true);
++    });
+   });
+ 
+   describe('accessibility', () => {
+diff --git a/test/unit/tools/database/database.test.ts b/test/unit/tools/database/database.test.ts
+index 225944fa..6ac5d7f0 100644
+--- a/test/unit/tools/database/database.test.ts
++++ b/test/unit/tools/database/database.test.ts
+@@ -2320,6 +2320,58 @@ describe('DatabaseTool', () => {
+       tool.rendered();
+       expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(2);
+     });
++
++    it('adds a row to the end of the clicked group in a grouped list and syncs it', async () => {
++      const childBlocks = [
++        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
++      ];
++      const adapter: DatabaseAdapter = {
++        loadDatabase: vi.fn(),
++        createRow: vi.fn(),
++        updateRow: vi.fn(),
++        moveRow: vi.fn(),
++        deleteRow: vi.fn(),
++        createProperty: vi.fn(),
++        updateProperty: vi.fn(),
++        deleteProperty: vi.fn(),
++        createView: vi.fn(),
++        updateView: vi.fn(),
++        deleteView: vi.fn(),
++      };
++      const data = makeListData({
++        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
++      });
++      const options = createDatabaseOptions(data, { adapter }, { childBlocks });
++      const tool = new DatabaseTool(options);
++      const element = tool.render();
++
++      document.body.appendChild(element);
++      tool.rendered();
++
++      const todoGroup = queryByData(element, 'data-option-id', 'opt-todo');
++
++      expect(todoGroup).not.toBeNull();
++      if (todoGroup === null) return;
++
++      const addBtn = queryByData(todoGroup, 'data-blok-database-add-row');
++
++      expect(addBtn).not.toBeNull();
++      addBtn?.click();
++
++      const rows = queryAllByData(todoGroup, 'data-blok-database-list-row');
++
++      expect(rows).toHaveLength(2);
++      expect(rows[1].getAttribute('data-row-id')).not.toBe('row-1');
++      expect(rows[1].parentElement?.hasAttribute('data-blok-database-list-rows')).toBe(true);
++      await vi.waitFor(() => {
++        expect(adapter.createRow).toHaveBeenCalledTimes(1);
++      });
++      expect(adapter.createRow).toHaveBeenCalledWith(expect.objectContaining({
++        properties: expect.objectContaining({ 'prop-status': 'opt-todo' }),
++      }));
++
++      element.remove();
++    });
+   });
+ 
+   describe('multi-view orchestration', () => {

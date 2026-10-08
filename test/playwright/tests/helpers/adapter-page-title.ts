@@ -54,5 +54,17 @@ export const definePageTitleTests = (url: string, editorTestId: string): void =>
       page.getByTestId(editorTestId).locator('[data-blok-editor] > [data-blok-page-header] + [data-blok-redactor]')
     ).toHaveCount(1);
     await expect(page.getByTestId(editorTestId).getByTestId('page-header-title')).toBeVisible();
+
+    // The title is connected again, so Backspace at the start of the first block joins into it.
+    const firstBlock = page.getByTestId(editorTestId).locator('[data-blok-id] [contenteditable="true"]').first();
+    const text = (await firstBlock.textContent()) ?? '';
+
+    await firstBlock.evaluate((element) => {
+      (element as HTMLElement).focus();
+      element.ownerDocument.getSelection()?.collapse(element, 0);
+    });
+    await page.keyboard.press('Backspace');
+
+    await expect(page.getByTestId('page-header-title')).toHaveText(text);
   });
 };

@@ -79,6 +79,12 @@ export {
   ToolboxPreviewConfig,
   ToolSettings,
   ToolConfig,
+  BlockToolDescription,
+  InlineToolDescription,
+  BlockTuneDescription,
+  ToolActionDeclaration,
+  BlokSchema,
+  HostService,
   PasteEvent,
   PasteEventDetail,
   PatternPasteEvent,
@@ -136,6 +142,7 @@ export {
 
 export * from './utils/popover';
 export * from './rich-text';
+export * from './tool-manifest';
 export * from './agent';
 
 export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData, BlokData} from './data-formats/output-data';

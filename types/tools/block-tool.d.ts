@@ -2,6 +2,7 @@ import { ConversionConfig, PasteConfig, ToolSanitizerConfig } from '../configs';
 import { BlockToolData } from './block-tool-data';
 import { BaseTool, BaseToolConstructable, BaseToolConstructorOptions } from './tool';
 import { ToolConfig } from './tool-config';
+import type { BlockToolDescription } from './tool-description';
 import { API, BlockAPI, ToolboxConfig } from '../index';
 import { PasteEvent } from './paste-events';
 import { MoveEvent } from './hook-events';
@@ -448,6 +449,9 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * @returns the data in the Tool's current shape
    */
   upgradeData?(data: BlockToolData): BlockToolData;
+
+  /** Pure and synchronous; config may only narrow the schema. */
+  describe?(config: ToolConfig): BlockToolDescription;
 
   /**
    * @constructor

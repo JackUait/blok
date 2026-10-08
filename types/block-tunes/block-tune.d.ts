@@ -1,6 +1,7 @@
 import {API, BlockAPI, ToolConfig} from '../index';
 import { BlockTuneData } from './block-tune-data';
 import { BaseToolConstructable, MenuConfig } from '../tools';
+import type { BlockTuneDescription } from '../tools/tool-description';
 
 /**
  * Context passed to a Block Tune's `render()` method, giving the tune a handle
@@ -59,6 +60,9 @@ export interface BlockTuneConstructable extends BaseToolConstructable {
    * Flag show Tool is Block Tune
    */
   isTune: boolean;
+
+  /** Pure and synchronous; config may only narrow the schema. */
+  describe?(config: ToolConfig): BlockTuneDescription;
 
   /**
    * @constructor

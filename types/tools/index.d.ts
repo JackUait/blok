@@ -7,6 +7,7 @@ export * from './block-tool-data';
 export * from './inline-tool';
 export * from './tool';
 export * from './tool-config';
+export * from './tool-description';
 export * from './tool-settings';
 export * from './define-tool';
 export * from './paste-events';

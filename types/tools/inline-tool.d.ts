@@ -1,6 +1,7 @@
 import {BaseTool, BaseToolConstructable} from './tool';
 import {API, ToolConfig} from '../index';
 import { MenuConfig } from './menu-config';
+import type { InlineToolDescription } from './tool-description';
 /**
  * Base structure for the Inline Toolbar Tool
  */
@@ -33,6 +34,9 @@ export interface InlineToolConstructorOptions {
 }
 
 export interface InlineToolConstructable extends BaseToolConstructable {
+  /** Pure and synchronous; config may only narrow the schema. */
+  describe?(config: ToolConfig): InlineToolDescription;
+
   /**
    * Constructor
    *

@@ -49,7 +49,6 @@ export class PageTitle extends Module {
   private readOnly = false;
   private iconControl: { redraw(): void; destroy(): void } | null = null;
 
-  // Off once the app removes an outside holder: a detached title must take no keyboard joins.
   public get isEnabled(): boolean {
     return this.dom !== null && this.dom.header.isConnected;
   }

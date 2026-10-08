@@ -13,6 +13,7 @@ describe('blok.title API', () => {
   let holder: HTMLDivElement;
   let blok: PublicBlok | null = null;
   let target: HTMLDivElement | null = null;
+  let configured: HTMLDivElement | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,6 +25,8 @@ describe('blok.title API', () => {
     blok?.destroy();
     blok = null;
     target?.remove();
+    configured?.remove();
+    configured = null;
     target = null;
     holder.remove();
     vi.restoreAllMocks();
@@ -179,8 +182,7 @@ describe('blok.title API', () => {
     target = document.createElement('div');
     target.id = 'x';
     document.body.appendChild(target);
-    const configured = document.createElement('div');
-
+    configured = document.createElement('div');
     document.body.appendChild(configured);
     // An outside config holder: with the default spot, a lost null would still look right.
     blok = create({ holder, pageTitle: { holder: configured } });
@@ -188,11 +190,8 @@ describe('blok.title API', () => {
     blok.title.mount('#x');
     blok.title.mount(null);
     await blok.isReady;
-    const inConfigured = configured.querySelector(`[${DATA_ATTR.pageHeader}]`);
 
-    configured.remove();
-
-    expect(inConfigured).toBeNull();
+    expect(configured.querySelector(`[${DATA_ATTR.pageHeader}]`)).toBeNull();
     expect(target.querySelector(`[${DATA_ATTR.pageHeader}]`)).toBeNull();
     expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
   });

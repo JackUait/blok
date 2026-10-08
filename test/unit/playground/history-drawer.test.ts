@@ -2017,6 +2017,63 @@ describe('mountHistoryDrawer', () => {
     expect(panel().hidden).toBe(true);
     expect(calls.some((call) => call.url === `${SERVER}/sync/playground/history`)).toBe(false);
   });
+
+  it('never writes to the live document while History opens, previews, lists edits and closes', async () => {
+    const { button, editor } = setup();
+    const holder = document.createElement('div');
+    const onChange = vi.fn();
+    const quiet = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 600));
+
+    editor.append(holder);
+
+    const { Blok } = await import('../../../src/blok');
+    const { List, Embed } = await import('../../../src/tools');
+    // The blocks the browser check saw rewritten: a checklist item with no `checked`, and an embed.
+    const blok = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, list: List, embed: Embed },
+      data: { blocks: [
+        { id: 'checklist-2', type: 'list', data: { style: 'checklist', text: 'Build something awesome' } },
+        { id: 'embed-1', type: 'embed', data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=L229QDxDakU', embed: 'https://www.youtube.com/embed/L229QDxDakU', width: 580, height: 320 } },
+        { id: 'p-1', type: 'paragraph', data: { text: 'live text' } },
+      ] },
+      onChange,
+    });
+
+    try {
+      await blok.isReady;
+      await quiet();
+
+      const before = await blok.save();
+
+      onChange.mockClear();
+      button.click();
+      await settle();
+      rowButtons()[2].click();
+      await settle();
+      changesButton('l2:5').click();
+      await settle();
+      entries()[0].click();
+      await settle();
+      tab('Updates').click();
+      await settle();
+      tab('History').click();
+      await settle();
+      button.click();
+      await quiet();
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect((await blok.save()).blocks).toEqual(before.blocks);
+
+      // The spy does see a real edit.
+      await blok.blocks.update('p-1', { text: 'edited' });
+      await quiet();
+
+      expect(onChange).toHaveBeenCalled();
+    } finally {
+      blok.destroy();
+    }
+  }, 120_000);
 });
 
 describe('history drawer selected row', () => {

@@ -49,9 +49,21 @@ onSave(data: OutputData) {
 
 The component also implements `ControlValueAccessor`, so it works with `[(ngModel)]` and reactive forms.
 
+## Page title
+
+`<blok-title>` puts the page title in a place you choose, such as above your own page metadata. The editor needs `pageTitle` set: `<blok-title>` only moves the title. When `<blok-title>` is destroyed, the title goes back above the first block.
+
+```html
+<!-- imports: [BlokEditorComponent, BlokTitleComponent] -->
+<blok-title [editor]="ed.instance()"></blok-title>
+<app-page-metadata></app-page-metadata>
+<blok-editor #ed="blok" [config]="{ pageTitle: true }"></blok-editor>
+```
+
 ## Also exported
 
 - `BlokContentDirective` (`[blokContent]`) — the mount point, if you drive the editor yourself.
+- `BlokTitleComponent` (`<blok-title>`) — places the page title in your own layout.
 - `injectBlocks()` — a reactive snapshot of the block tree plus a manipulation API.
 - `createAngularBlock` — author block tools as Angular components.
 - `provideBlok` / `BLOK_DEFAULT_CONFIG` — share default editor config through DI.

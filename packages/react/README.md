@@ -52,11 +52,34 @@ export function Editor() {
 }
 ```
 
+## Page title
+
+`BlokTitle` puts the page title in a place you choose, such as above your own page metadata. The editor needs `pageTitle` set: `BlokTitle` only moves the title. When `BlokTitle` unmounts, the title goes back above the first block.
+
+```tsx
+import { useState } from 'react';
+import { BlokEditor, BlokTitle } from '@bloklabs/react';
+import type { Blok } from '@bloklabs/core';
+
+export function Page() {
+  const [editor, setEditor] = useState<Blok | null>(null);
+
+  return (
+    <>
+      <BlokTitle editor={editor} />
+      <PageMetadata />
+      <BlokEditor ref={setEditor} pageTitle={{ onChange: (title) => console.log(title) }} />
+    </>
+  );
+}
+```
+
 ## Also exported
 
 - `useBlok(config, deps?)` — the hook behind the component. Returns `Blok | null`.
 - `useBlokHandle()` — a stable, null-safe imperative handle (`focus`/`clear`/`save`/`render`/`setReadOnly`). Attach it via `<BlokEditor ref={handle.ref} />` instead of guarding a raw `Blok | null` ref.
 - `BlokContent` — the mount-point `<div>`, if you want to wire the hook yourself.
+- `BlokTitle` — places the page title in your own layout.
 - `useBlocks(editor)` — a reactive snapshot of the block tree plus a manipulation API.
 - `createReactBlock` / `createReactInlineTool` — author block and inline tools as React components.
 - `BlokProvider` / `useBlokDefaults` — share default editor config through context.

@@ -50,10 +50,30 @@ const data = ref<OutputData>();
 </template>
 ```
 
+## Page title
+
+`BlokTitle` puts the page title in a place you choose, such as above your own page metadata. The editor needs `pageTitle` set: `BlokTitle` only moves the title. When `BlokTitle` unmounts, the title goes back above the first block.
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { BlokEditor, BlokTitle } from '@bloklabs/vue';
+
+const editorRef = ref<InstanceType<typeof BlokEditor> | null>(null);
+</script>
+
+<template>
+  <BlokTitle :editor="editorRef?.instance ?? null" />
+  <PageMetadata />
+  <BlokEditor ref="editorRef" :page-title="true" />
+</template>
+```
+
 ## Also exported
 
 - `useBlok(config, recreateKey?)` — the composable behind the component. Returns a `Ref<Blok | null>`.
 - `BlokContent` — the mount-point element, if you want to wire the composable yourself.
+- `BlokTitle` — places the page title in your own layout.
 - `useBlocks(editor)` — a reactive snapshot of the block tree plus a manipulation API.
 - `createVueBlock` — author block tools as Vue components.
 - `provideBlok` / `useBlokDefaults` — share default editor config through provide/inject.

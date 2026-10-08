@@ -4065,6 +4065,27 @@ const editor = useBlok({ tools });
 <BlokContent editor={editor} className="prose" />`,
       },
       {
+        name: "BlokTitle",
+        returnType: "React/Vue component",
+        description:
+          "Places the page title in an element of your own. It renders an empty `<div>` and calls `editor.title.mount()` on it once the editor is ready.\n\nIts only own prop is `editor: Blok | null` (`BlokTitleProps`). Pass null before the instance exists. Other attributes such as `className` and `id` go to the div. It renders no children, because the div belongs to Blok.\n\nIt does not switch the title on. Set `pageTitle` on the editor, or the div stays empty.\n\nOn unmount it calls `editor.title.mount(null)`, so the title goes back above the first block.\n\nEach adapter hands you the instance for `editor` in its own way.\n\n- React: pass a state setter as the `<BlokEditor>` ref, `ref={setEditor}`.\n- Vue: read `instance` from a template ref on `<BlokEditor>`.\n- Angular: write `<blok-title [editor]=\"ed.instance()\">` with `#ed=\"blok\"` on `<blok-editor>`.",
+        example: `import { useState } from 'react';
+import { BlokEditor, BlokTitle } from '@bloklabs/react';
+import type { Blok } from '@bloklabs/core';
+
+export function Page() {
+  const [editor, setEditor] = useState<Blok | null>(null);
+
+  return (
+    <>
+      <BlokTitle editor={editor} className="page-title" />
+      <PageMetadata />
+      <BlokEditor ref={setEditor} pageTitle />
+    </>
+  );
+}`,
+      },
+      {
         name: "provideBlok(defaults)",
         returnType: "void | EnvironmentProviders",
         description:
@@ -4175,6 +4196,13 @@ bootstrapApplication(AppComponent, {
         default: "—",
         description:
           "React only. A library-neutral BCP-47 shorthand for `i18n.locale`. It is folded into the i18n config and applied in place via editor.i18n.update({ locale }), so a language switch keeps caret, focus and undo history.\n\nWhen both are given, it WINS over `i18n.locale`. Pair it with `getDirection` / `normalizeLocale`, re-exported from @bloklabs/react, to compute `dir` and validate tags yourself.\n\nVue and Angular have no such prop. There you pass the locale inside the `i18n` prop/input.",
+      },
+      {
+        option: "pageTitle",
+        type: "boolean | TitleConfig",
+        default: "—",
+        description:
+          "Turns on the page title above the first block. It is read once, when the editor is created. Later changes go through `editor.title`, and `BlokTitle` places the title elsewhere.\n\nThe `onChange` and `onIconChange` callbacks stay live. The adapters wrap them, so a new closure from a later render is the one that gets called.\n\n- React and Angular read the latest props or `[config]`.\n- Vue reads the latest value of the config getter. A plain object passed to `useBlok` stays a snapshot.\n\nAngular has no `pageTitle` input. Pass it through `[config]`.",
       },
       {
         option: "autofocus",

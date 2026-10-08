@@ -1165,6 +1165,9 @@
         },
         "i18n": {
           "description": "Internationalization config (reactive). A changed `locale`, `messages` or `direction` syncs in place after mount via editor.i18n.update(), deduped by deep equality. So a language switcher relabels the editor without remounting it, and caret, focus, selection and undo history survive.\n\n`defaultLocale` is the exception: it is read only at construction. Angular exposes this as the [i18n] input."
+        },
+        "pageTitle": {
+          "description": "Turns on the page title above the first block. It is read once, when the editor is created. Later changes go through `editor.title`, and `BlokTitle` places the title elsewhere.\n\nThe `onChange` and `onIconChange` callbacks stay live. The adapters wrap them, so a new closure from a later render is the one that gets called.\n\n- React and Angular read the latest props or `[config]`.\n- Vue reads the latest value of the config getter. A plain object passed to `useBlok` stays a snapshot.\n\nAngular has no `pageTitle` input. Pass it through `[config]`."
         }
       },
       "methods": {
@@ -1176,6 +1179,9 @@
         },
         "BlokContent": {
           "description": "The mount point for an instance created by `useBlok`. It renders a `<div>` and adopts the editor's detached holder into it.\n\nIts only own prop is `editor: Blok | null` (`BlokContentProps`). Pass null before the instance exists and it renders the empty container.\n\nIn React it also extends `React.HTMLAttributes<HTMLDivElement>`, so `className`, `id` and the rest are forwarded to that div, and it forwards a ref to it. The Angular counterpart is the `[blokContent]` directive, which creates the instance itself instead of receiving one."
+        },
+        "BlokTitle": {
+          "description": "Places the page title in an element of your own. It renders an empty `<div>` and calls `editor.title.mount()` on it once the editor is ready.\n\nIts only own prop is `editor: Blok | null` (`BlokTitleProps`). Pass null before the instance exists. Other attributes such as `className` and `id` go to the div. It renders no children, because the div belongs to Blok.\n\nIt does not switch the title on. Set `pageTitle` on the editor, or the div stays empty.\n\nOn unmount it calls `editor.title.mount(null)`, so the title goes back above the first block.\n\nEach adapter hands you the instance for `editor` in its own way.\n\n- React: pass a state setter as the `<BlokEditor>` ref, `ref={setEditor}`.\n- Vue: read `instance` from a template ref on `<BlokEditor>`.\n- Angular: write `<blok-title [editor]=\"ed.instance()\">` with `#ed=\"blok\"` on `<blok-editor>`."
         }
       }
     },

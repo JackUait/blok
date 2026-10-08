@@ -27,7 +27,7 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { rollup } from 'rollup';
 import dtsPlugin from 'rollup-plugin-dts';
@@ -341,19 +341,26 @@ for (const tsFile of gatherTsSourceFiles(stagingDir)) {
   // Match any 'from' clause with a relative specifier that goes UP at least one
   // directory level (starts with ../), or one using the repo's '@/' alias.
   // Specifiers that only descend (./foo) are intra-staging and are fine (e.g.
-  // './types' → angular/types.ts is staged). No staging directory is named
-  // 'types', so any such path containing '/types' is a leaked reference that
-  // should have been rewritten to '@bloklabs/core'. The '@/' arm matters because
+  // './types' → angular/types.ts is staged). A '/types' path that resolves to a
+  // staged file (shared/table/types.ts) is intra-staging too; any other is a
+  // leaked reference that should have been rewritten to '@bloklabs/core'. The '@/' arm matters because
   // the staging tsconfig has no '@/*' mapping: an unrewritten '@/types' import
   // is a straight TS2307, which is how blok-instance.ts broke the build.
   const re = /from\s+['"]((?:\.\.\/)+[^'"]+|@\/[^'"]+)['"]/g;
   let m;
   while ((m = re.exec(src)) !== null) {
     const spec = m[1];
+    const resolved = path.resolve(path.dirname(tsFile), spec);
+    // Inside stagingDir only: a path that climbs out could reach the repo-root types/ tree.
+    const staged =
+      !spec.startsWith('@/') &&
+      !path.relative(stagingDir, resolved).startsWith('..') &&
+      (existsSync(`${resolved}.ts`) || existsSync(path.join(resolved, 'index.ts')));
     if (
-      spec.includes('/types/') ||
+      !staged &&
+      (spec.includes('/types/') ||
       spec.endsWith('/types') ||
-      /\/markdown\/types/.test(spec)
+      /\/markdown\/types/.test(spec))
     ) {
       const rel = path.relative(stagingDir, tsFile);
       throw new Error(

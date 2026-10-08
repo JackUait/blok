@@ -29,6 +29,12 @@ describe('build-angular staging', () => {
     expect(script).not.toMatch(/rewriteTypeImports\(path\.resolve\(stagingDir, 'angular\//);
   });
 
+  it('lets the leftover-import guard pass a staged sibling module named types', () => {
+    // src/shared/table/types.ts is staged with shared/, so shared/tool-actions/table.ts
+    // importing '../table/types' is intra-staging, not a leaked core type import.
+    expect(script).toMatch(/existsSync\(`\$\{resolved\}\.ts`\)/);
+  });
+
   it('derives the staged adapters contract from src/adapters.ts', () => {
     // A hand-copied duplicate of src/adapters.ts's re-export list drifts the
     // moment core adds one (this is how `BlockChildrenMounted` went missing).

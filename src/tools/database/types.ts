@@ -66,6 +66,40 @@ export interface FilterConfig {
   value: PropertyValue;
 }
 
+/** Notion API aggregator names. */
+export type CalculationFn =
+  | 'count' | 'count_values' | 'unique' | 'empty' | 'not_empty' | 'percent_empty' | 'percent_not_empty'
+  | 'sum' | 'average' | 'median' | 'min' | 'max' | 'range'
+  | 'earliest_date' | 'latest_date' | 'date_range'
+  | 'checked' | 'unchecked' | 'percent_checked' | 'percent_unchecked';
+
+export type LoadLimit = 10 | 25 | 50 | 100;
+
+export type OpenPagesIn = 'side' | 'center' | 'full';
+
+/**
+ * One property's settings in one view. The array order is the column order.
+ * `id` is the property id: the CRDT pairs entries by it, so a peer's width
+ * change on another column merges instead of overwriting.
+ */
+export interface ViewPropertySetting {
+  id: string;
+  visible?: boolean;
+  /** Pixels. */
+  width?: number;
+  wrap?: boolean;
+}
+
+/** A footer calculation. `id` is the property id. */
+export interface ViewCalculation {
+  id: string;
+  fn: CalculationFn;
+}
+
+/**
+ * Every field after `visibleProperties` is optional. Read them through
+ * `view-settings.ts`, which holds the defaults and the legacy migration.
+ */
 export interface DatabaseViewConfig {
   id: string;
   name: string;
@@ -74,8 +108,24 @@ export interface DatabaseViewConfig {
   groupBy?: string;
   sorts: SortConfig[];
   filters: FilterConfig[];
+  /**
+   * Visible non-title property ids, in order. Still written beside
+   * `properties` because v1.16.1 clients read only this.
+   */
   visibleProperties: string[];
+  properties?: ViewPropertySetting[];
+  wrapCells?: boolean;
+  /** How many columns, from the start, stay put on horizontal scroll. */
+  frozenColumnCount?: number;
+  showVerticalLines?: boolean;
+  loadLimit?: LoadLimit;
+  calculations?: ViewCalculation[];
+  openPagesIn?: OpenPagesIn;
 }
+
+/** View fields a caller may set when creating or changing a view. */
+export type DatabaseViewSettingKey =
+  | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn';
 
 // ─── Top-level saved data ───
 
@@ -160,12 +210,12 @@ export interface DatabaseAdapter {
     sorts?: SortConfig[];
     filters?: FilterConfig[];
     visibleProperties?: string[];
-  }): Promise<DatabaseViewConfig>;
+  } & Partial<Pick<DatabaseViewConfig, DatabaseViewSettingKey>>): Promise<DatabaseViewConfig>;
 
   updateView(params: {
     viewId: string;
     changes: Partial<Pick<DatabaseViewConfig,
-      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'
+      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey
     >>;
   }): Promise<DatabaseViewConfig>;
 

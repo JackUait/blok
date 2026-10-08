@@ -2351,7 +2351,7 @@
     async function swapEditor(overrides = {}) {
       clearTimeout(persistTimer);
       persistPending = false;
-      historyDrawer?.close();
+      historyDrawer?.close({ refresh: false });
       blok.destroy();
       titleHistory = null;
       const editor = new Blok({ ...buildConfig(), ...overrides });
@@ -2528,8 +2528,9 @@
     /**
      * Page routing
      */
-    const tabs = document.querySelectorAll('[role="tab"]');
     const playgroundNav = document.querySelector('.playground-nav');
+    // Only the nav: the history drawer has tabs of its own.
+    const tabs = playgroundNav.querySelectorAll('[role="tab"]');
     playgroundNav.querySelectorAll('[data-icon]').forEach((slot) => {
       slot.innerHTML = Icons[slot.dataset.icon];
     });

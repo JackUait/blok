@@ -2106,3 +2106,54 @@ describe('history drawer selected row', () => {
     expect(rules.find(({ selector }) => selector === '.pg-history-note__toggle')?.body).toMatch(/accent-color:\s*var\(--pgh-ink\)/);
   });
 });
+
+describe('index.html history wiring', () => {
+  const INDEX_HTML = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+
+  /** One top-level function of the playground script, by brace counting. */
+  const functionSource = (name: string): string => {
+    const start = INDEX_HTML.indexOf(`function ${name}(`);
+    // The body brace, not one in a default parameter.
+    const open = INDEX_HTML.indexOf(') {', start) + 2;
+    let depth = 0;
+    let end = open;
+
+    for (; end < INDEX_HTML.length; end++) {
+      if (INDEX_HTML[end] === '{') {
+        depth++;
+      } else if (INDEX_HTML[end] === '}') {
+        depth--;
+      }
+
+      if (depth === 0) {
+        break;
+      }
+    }
+
+    if (start < 0) {
+      throw new Error(`index.html has no function ${name}`);
+    }
+
+    return INDEX_HTML.slice(start, end + 1);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The router runs at module load with the whole page around it, so this reads its source.
+  it('binds the page router to the playground nav only, never the drawer\'s tabs', () => {
+    expect(INDEX_HTML).not.toMatch(/document\.querySelectorAll\(\s*'\[role="tab"\]'\s*\)/);
+    expect(INDEX_HTML).toMatch(/const tabs = playgroundNav\.querySelectorAll\('\[role="tab"\]'\)/);
+    expect(INDEX_HTML.indexOf("const playgroundNav = document.querySelector('.playground-nav')"))
+      .toBeLessThan(INDEX_HTML.indexOf('const tabs = playgroundNav'));
+  });
+
+  it('closes the drawer on a page switch without refreshing for the old page', () => {
+    expect(functionSource('swapEditor')).toContain('historyDrawer?.close({ refresh: false })');
+  });
+});

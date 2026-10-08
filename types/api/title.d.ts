@@ -3,6 +3,17 @@ import type { PageIcon } from '../tools/page';
 /** What changed the title or icon. `user`: typing, paste, the icon picker. `api`: `blok.title.set`. */
 export interface TitleChange {
   source: 'user' | 'undo' | 'redo' | 'remote' | 'api';
+  /** Present only for `blok.title.set(..., { record: false })` and `icon.set(..., { record: false })`. */
+  record?: false;
+}
+
+export interface TitleSetOptions {
+  /**
+   * False: no undo step. Peers still get the write.
+   * A recorded title step made before it no longer changes the title on undo.
+   * A typing run that goes on after it stays one step, and undo goes back to this value, not to the one before the run.
+   */
+  record?: boolean;
 }
 
 export interface TitleConfig {
@@ -21,14 +32,14 @@ export interface TitleConfig {
 /** The page title and icon. The value lives in the document and is saved with it. */
 export interface Title {
   get(): string;
-  /** One undo step. Fires `onChange` with source `api`. */
-  set(text: string): void;
+  /** One undo step, unless `record` is false. Fires `onChange` with source `api`. */
+  set(text: string, options?: TitleSetOptions): void;
   focus(position?: 'start' | 'end'): void;
   /** Moves the title into `holder`. Focus and caret are kept. */
   mount(holder: HTMLElement | string): void;
   readonly icon: {
     get(): PageIcon | null;
-    /** One undo step. Fires `onIconChange` with source `api`. */
-    set(icon: PageIcon | null): void;
+    /** One undo step, unless `record` is false. Fires `onIconChange` with source `api`. */
+    set(icon: PageIcon | null, options?: TitleSetOptions): void;
   };
 }

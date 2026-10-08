@@ -208,6 +208,7 @@ export {
   Title,
   TitleChange,
   TitleConfig,
+  TitleSetOptions,
   Placeholder,
   Tokens,
   Handlers,

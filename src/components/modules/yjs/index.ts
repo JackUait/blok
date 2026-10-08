@@ -960,10 +960,15 @@ export class YjsManager extends Module {
     this.documentStore.pageFromJSON(fields);
   }
 
-  public setPageField(key: PageFieldKey, value: string | PageIcon | null, options: { typing?: boolean } = {}): void {
+  public setPageField(key: PageFieldKey, value: string | PageIcon | null, options: { typing?: boolean; record?: boolean } = {}): void {
     const current = this.documentStore.page.get(key);
 
     if (JSON.stringify(current ?? null) === JSON.stringify(value === '' ? null : value)) {
+      return;
+    }
+    if (options.record === false) {
+      this.transactWithoutCapture(() => writePageField(this.documentStore.page, key, value));
+
       return;
     }
     if (!this.Blok.BlockManager.isApplyingRemoteChange && !this.documentStore.isTransactingWithoutCapture) {

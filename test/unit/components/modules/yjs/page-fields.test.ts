@@ -98,6 +98,20 @@ describe('YjsManager page fields', () => {
     expect(listener).toHaveBeenCalledWith('title', 'remote');
   });
 
+  it('a write with record: false still reaches a peer', async () => {
+    const yjs = await boot();
+    const peer = new Y.Doc();
+
+    Y.applyUpdate(peer, yjs.encodeStateAsUpdate());
+    const stop = yjs.onDocUpdate(update => Y.applyUpdate(peer, update));
+
+    yjs.setPageField('title', 'Quiet', { record: false });
+    stop();
+
+    expect(peer.getMap('page').get('title')).toBe('Quiet');
+    expect(yjs.canUndo()).toBe(false);
+  });
+
   it('a host track() key named title does not touch the page title', async () => {
     const yjs = await boot();
 

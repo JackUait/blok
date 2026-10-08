@@ -3,7 +3,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { I18nChanged } from '../../events';
 import { logLabeled } from '../../utils';
 import type { EditorWidth } from '../../../../types/api/width';
-import type { TitleChange } from '../../../../types/api/title';
+import type { TitleChange, TitleSetOptions } from '../../../../types/api/title';
 import type { PageIcon } from '../../../../types/tools/page';
 import { normalizeTitleConfig, type ResolvedTitleConfig } from '../../utils/title-config';
 import { setCaretAtXPosition } from '../../utils/caret';
@@ -20,6 +20,10 @@ const WRAPPER_LAYOUT_ATTRIBUTES = [
   DATA_ATTR.controlsHidden,
   DATA_ATTR.rtl,
 ];
+
+// A plain change carries no `record` key, so hosts can compare it as-is.
+const changeOf = (source: 'user' | 'api', options: TitleSetOptions): TitleChange =>
+  options.record === false ? { source, record: false } : { source };
 
 /** The caret's character offset in the title, or null when the caret is elsewhere. */
 const caretOffsetIn = (title: HTMLElement): number | null => {
@@ -113,24 +117,24 @@ export class PageTitle extends Module {
     return this.Blok.YjsManager.getPageFields().title ?? '';
   }
 
-  public setText(text: string, source: 'api'): void {
-    if (!this.writeField('title', text)) {
+  public setText(text: string, source: 'api', options: TitleSetOptions = {}): void {
+    if (!this.writeField('title', text, { record: options.record })) {
       return;
     }
     this.renderText();
-    this.notifyTitle({ source });
+    this.notifyTitle(changeOf(source, options));
   }
 
   public getIcon(): PageIcon | null {
     return this.Blok.YjsManager.getPageFields().icon ?? null;
   }
 
-  public setIcon(icon: PageIcon | null, source: 'user' | 'api'): void {
-    if (!this.writeField('icon', icon)) {
+  public setIcon(icon: PageIcon | null, source: 'user' | 'api', options: TitleSetOptions = {}): void {
+    if (!this.writeField('icon', icon, { record: options.record })) {
       return;
     }
     this.iconControl?.redraw();
-    this.resolved?.onIconChange?.(this.getIcon(), { source });
+    this.resolved?.onIconChange?.(this.getIcon(), changeOf(source, options));
   }
 
   /** Redraw from the document after a load. Fires no callbacks. */
@@ -293,7 +297,7 @@ export class PageTitle extends Module {
    * Writes one page field and marks the document unsaved.
    * @returns false when the value was already there: setPageField then writes nothing
    */
-  private writeField(key: 'title' | 'icon', value: string | PageIcon | null, options?: { typing: boolean }): boolean {
+  private writeField(key: 'title' | 'icon', value: string | PageIcon | null, options?: { typing?: boolean; record?: boolean }): boolean {
     const { YjsManager, ModificationsObserver } = this.Blok;
     const before = JSON.stringify(YjsManager.getPageFields()[key] ?? null);
 

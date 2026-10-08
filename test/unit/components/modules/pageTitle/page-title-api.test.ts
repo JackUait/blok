@@ -225,6 +225,135 @@ describe('blok.title API', () => {
     });
   });
 
+  describe('record: false', () => {
+    const titleIn = (): HTMLElement => {
+      const title = holder.querySelector<HTMLElement>(`[${DATA_ATTR.pageTitle}]`);
+
+      if (title === null) {
+        throw new Error('no title');
+      }
+
+      return title;
+    };
+
+    const nextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
+    const type = (text: string): void => {
+      const title = titleIn();
+
+      title.textContent = text;
+      title.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text.slice(-1) }));
+    };
+
+    it('title.set adds no undo step', async () => {
+      blok = create({ holder, pageTitle: true });
+      await blok.isReady;
+
+      blok.title.set('Seed', { record: false });
+      blok.history.undo();
+
+      expect(blok.title.get()).toBe('Seed');
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('title.set after a recorded set wins, and the recorded step is gone', async () => {
+      blok = create({ holder, pageTitle: true });
+      await blok.isReady;
+
+      blok.title.set('A');
+      blok.title.set('B', { record: false });
+
+      expect(blok.title.get()).toBe('B');
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('a typing run that goes on after it stays one step, and undo keeps the host value', async () => {
+      blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+
+      // Each write in its own task: writes in one task join one step anyway.
+      type('DocR');
+      await nextTask();
+      type('DocRe');
+      await nextTask();
+      blok.title.set('Host', { record: false });
+      await nextTask();
+      type('Host!');
+      await nextTask();
+      blok.history.undo();
+
+      expect(blok.title.get()).toBe('Host');
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('title.icon.set adds no undo step', async () => {
+      blok = create({ holder, pageTitle: true });
+      await blok.isReady;
+
+      blok.title.icon.set({ type: 'emoji', value: '🚀' }, { record: false });
+      blok.history.undo();
+
+      expect(blok.title.icon.get()).toEqual({ type: 'emoji', value: '🚀' });
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('title.icon.set after a recorded set wins, and the recorded step is gone', async () => {
+      blok = create({ holder, pageTitle: true });
+      await blok.isReady;
+
+      blok.title.icon.set({ type: 'emoji', value: '🌿' });
+      blok.title.icon.set({ type: 'emoji', value: '🚀' }, { record: false });
+
+      expect(blok.title.icon.get()).toEqual({ type: 'emoji', value: '🚀' });
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('onChange and onIconChange carry record: false, and a plain set carries no record key', async () => {
+      const onChange = vi.fn();
+      const onIconChange = vi.fn();
+
+      blok = create({ holder, pageTitle: { onChange, onIconChange } });
+      await blok.isReady;
+
+      blok.title.set('Seed', { record: false });
+      blok.title.set('Plain');
+      blok.title.icon.set({ type: 'emoji', value: '🚀' }, { record: false });
+
+      expect(onChange).toHaveBeenNthCalledWith(1, 'Seed', { source: 'api', record: false });
+      expect(onChange.mock.calls[1]?.[1]).toStrictEqual({ source: 'api' });
+      expect(onIconChange).toHaveBeenCalledWith({ type: 'emoji', value: '🚀' }, { source: 'api', record: false });
+    });
+
+    it('a plain set before ready records a step', async () => {
+      blok = create({ holder, pageTitle: true });
+
+      blok.title.set('Seed');
+      await blok.isReady;
+
+      expect(blok.history.canUndo()).toBe(true);
+    });
+
+    it('title.set with record: false before ready adds no undo step', async () => {
+      blok = create({ holder, pageTitle: true });
+
+      blok.title.set('Seed', { record: false });
+      await blok.isReady;
+
+      expect(blok.title.get()).toBe('Seed');
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('title.icon.set with record: false before ready adds no undo step', async () => {
+      blok = create({ holder, pageTitle: true });
+
+      blok.title.icon.set({ type: 'emoji', value: '🚀' }, { record: false });
+      await blok.isReady;
+
+      expect(blok.title.icon.get()).toEqual({ type: 'emoji', value: '🚀' });
+      expect(blok.history.canUndo()).toBe(false);
+    });
+  });
+
   it('a set before ready wins over the config data title', async () => {
     blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
 

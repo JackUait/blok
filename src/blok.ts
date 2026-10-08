@@ -26,6 +26,7 @@ import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
 import type { BlokModules } from './types-internal/blok-modules';
 import type { PageIcon } from '../types/tools/page';
+import type { TitleSetOptions } from '../types/api/title';
 
 /**
  * Export version as a named export
@@ -433,7 +434,9 @@ class Blok {
     const titleBuffer = {
       ready: false,
       text: null as string | null,
+      textOptions: {} as TitleSetOptions,
       icon: undefined as PageIcon | null | undefined,
+      iconOptions: {} as TitleSetOptions,
       holder: null as HTMLElement | string | null,
     };
     const getPageTitle = (): BlokModules['PageTitle'] | undefined =>
@@ -453,15 +456,16 @@ class Blok {
 
     (this as Record<string, unknown>).title = {
       get: (): string => getPageTitle()?.getText() ?? titleBuffer.text ?? '',
-      set: (text: string): void => {
+      set: (text: string, options: TitleSetOptions = {}): void => {
         const pageTitle = getPageTitle();
 
         if (pageTitle === undefined) {
           titleBuffer.text = text;
+          titleBuffer.textOptions = options;
 
           return;
         }
-        pageTitle.setText(text, 'api');
+        pageTitle.setText(text, 'api', options);
       },
       focus: (position?: 'start' | 'end'): void => getPageTitle()?.focus(position),
       mount: (holder: HTMLElement | string): void => {
@@ -476,15 +480,16 @@ class Blok {
       },
       icon: {
         get: (): PageIcon | null => getPageTitle()?.getIcon() ?? titleBuffer.icon ?? null,
-        set: (icon: PageIcon | null): void => {
+        set: (icon: PageIcon | null, options: TitleSetOptions = {}): void => {
           const pageTitle = getPageTitle();
 
           if (pageTitle === undefined) {
             titleBuffer.icon = icon;
+            titleBuffer.iconOptions = options;
 
             return;
           }
-          pageTitle.setIcon(icon, 'api');
+          pageTitle.setIcon(icon, 'api', options);
         },
       },
     };
@@ -624,15 +629,17 @@ class Blok {
           replayTitleMount(pageTitle, bufferedHolder);
         }
         if (titleBuffer.text !== null) {
-          pageTitle.setText(titleBuffer.text, 'api');
+          pageTitle.setText(titleBuffer.text, 'api', titleBuffer.textOptions);
         }
         if (titleBuffer.icon !== undefined) {
-          pageTitle.setIcon(titleBuffer.icon, 'api');
+          pageTitle.setIcon(titleBuffer.icon, 'api', titleBuffer.iconOptions);
         }
       }
       titleBuffer.holder = null;
       titleBuffer.text = null;
+      titleBuffer.textOptions = {};
       titleBuffer.icon = undefined;
+      titleBuffer.iconOptions = {};
 
       // Scroll to the block referenced by the URL hash, if present.
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),

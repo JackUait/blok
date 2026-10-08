@@ -226,6 +226,21 @@ describe('changePreview', () => {
   });
 });
 
+describe('changePreview against the shared kind fixture', () => {
+  interface KindCase { name: string; before: LooseOutputBlockData[]; after: LooseOutputBlockData[]; kinds: Record<string, string> }
+
+  // CollabVersionChangesTests runs the same file, so the server's edits list and the preview mark the same blocks.
+  const fixture = JSON.parse(readFileSync(resolve(__dirname, '../../fixtures/version-history/kind-cases.json'), 'utf-8')) as { cases: KindCase[] };
+
+  it('has the cases', () => {
+    expect(fixture.cases.length).toBeGreaterThan(10);
+  });
+
+  it.each(fixture.cases.map((testCase) => [testCase.name, testCase] as const))('%s', (_name, testCase) => {
+    expect(changePreview({ blocks: testCase.before }, { blocks: testCase.after }, diffOutputData).marks).toEqual(testCase.kinds);
+  });
+});
+
 describe('changePreview moves', () => {
   it('marks a block that moved', () => {
     const preview = changePreview(

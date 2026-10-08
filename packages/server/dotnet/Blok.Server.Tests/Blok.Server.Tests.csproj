@@ -32,5 +32,8 @@
     <None Include="../../../../test/fixtures/version-history/lis-cases.json"
           Link="Fixtures/lis-cases.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../test/fixtures/version-history/kind-cases.json"
+          Link="Fixtures/kind-cases.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

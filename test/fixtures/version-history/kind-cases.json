@@ -1,0 +1,711 @@
+{
+  "_note": "Before and after are server exports (parent on each child, content in the same order as the array). kinds maps each block id to its mark; an id left out is unmarked. Moved = a different parent, or outside the longest kept order of its siblings (lis-cases.json pins the tie-break). Changed wins over moved. CollabVersionChangesTests and the drawer's changePreview both run this file.",
+  "cases": [
+    {
+      "name": "nothing changed",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        }
+      ],
+      "kinds": {}
+    },
+    {
+      "name": "a block added at the end",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        }
+      ],
+      "kinds": {
+        "b": "added"
+      }
+    },
+    {
+      "name": "an insertion moves nothing else",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "x",
+          "type": "paragraph",
+          "data": {
+            "text": "x"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "kinds": {
+        "x": "added"
+      }
+    },
+    {
+      "name": "a block removed",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "kinds": {
+        "b": "removed"
+      }
+    },
+    {
+      "name": "text changed",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          }
+        }
+      ],
+      "kinds": {
+        "a": "changed"
+      }
+    },
+    {
+      "name": "type changed",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "header",
+          "data": {
+            "text": "a",
+            "level": 2
+          }
+        }
+      ],
+      "kinds": {
+        "a": "changed"
+      }
+    },
+    {
+      "name": "two siblings swap: the later one keeps its place",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "kinds": {
+        "b": "moved"
+      }
+    },
+    {
+      "name": "first block to the end",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        },
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "kinds": {
+        "a": "moved"
+      }
+    },
+    {
+      "name": "last block to the front",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        },
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        }
+      ],
+      "kinds": {
+        "c": "moved"
+      }
+    },
+    {
+      "name": "moved and changed reads changed",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        },
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a!"
+          }
+        }
+      ],
+      "kinds": {
+        "a": "changed"
+      }
+    },
+    {
+      "name": "moved past a removed block",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": "b"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        },
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "kinds": {
+        "b": "removed",
+        "c": "moved"
+      }
+    },
+    {
+      "name": "into a parent",
+      "before": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c"
+          ]
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          },
+          "parent": "t"
+        }
+      ],
+      "kinds": {
+        "c": "moved"
+      }
+    },
+    {
+      "name": "out of a parent",
+      "before": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c"
+          ]
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          },
+          "parent": "t"
+        }
+      ],
+      "after": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          }
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": "c"
+          }
+        }
+      ],
+      "kinds": {
+        "c": "moved"
+      }
+    },
+    {
+      "name": "reorder inside a parent",
+      "before": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c1",
+            "c2"
+          ]
+        },
+        {
+          "id": "c1",
+          "type": "paragraph",
+          "data": {
+            "text": "1"
+          },
+          "parent": "t"
+        },
+        {
+          "id": "c2",
+          "type": "paragraph",
+          "data": {
+            "text": "2"
+          },
+          "parent": "t"
+        }
+      ],
+      "after": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c2",
+            "c1"
+          ]
+        },
+        {
+          "id": "c2",
+          "type": "paragraph",
+          "data": {
+            "text": "2"
+          },
+          "parent": "t"
+        },
+        {
+          "id": "c1",
+          "type": "paragraph",
+          "data": {
+            "text": "1"
+          },
+          "parent": "t"
+        }
+      ],
+      "kinds": {
+        "c2": "moved"
+      }
+    },
+    {
+      "name": "a child added to a parent",
+      "before": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c1"
+          ]
+        },
+        {
+          "id": "c1",
+          "type": "paragraph",
+          "data": {
+            "text": "1"
+          },
+          "parent": "t"
+        }
+      ],
+      "after": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c1",
+            "c2"
+          ]
+        },
+        {
+          "id": "c1",
+          "type": "paragraph",
+          "data": {
+            "text": "1"
+          },
+          "parent": "t"
+        },
+        {
+          "id": "c2",
+          "type": "paragraph",
+          "data": {
+            "text": "2"
+          },
+          "parent": "t"
+        }
+      ],
+      "kinds": {
+        "c2": "added"
+      }
+    },
+    {
+      "name": "a parent removed with its child",
+      "before": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {
+            "text": "T"
+          },
+          "content": [
+            "c1"
+          ]
+        },
+        {
+          "id": "c1",
+          "type": "paragraph",
+          "data": {
+            "text": "1"
+          },
+          "parent": "t"
+        }
+      ],
+      "after": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "kinds": {
+        "t": "removed",
+        "c1": "removed"
+      }
+    }
+  ]
+}

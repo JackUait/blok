@@ -280,6 +280,11 @@ internal static class CollabVersionChanges
     }
   }
 
+  /// <summary>
+  /// A format-1 rich field is still raw HTML here, so two HTMLs that say the
+  /// same thing (<c>&lt;b&gt;</c> and <c>&lt;strong&gt;</c>) read as changed.
+  /// The client's diffOutputData compares segments and would not mark it.
+  /// </summary>
   private static bool IsChanged(JsonObject before, JsonObject after)
   {
     return TypeOf(before) != TypeOf(after) ||

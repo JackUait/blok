@@ -10,6 +10,30 @@ namespace Blok.Server.Tests.Collab;
 /// <summary>What one journal record changed: blocks by id, and page fields by key.</summary>
 public sealed class CollabVersionChangesTests
 {
+  /// <summary>The drawer's changePreview runs the same file, so the edits list and the preview mark the same blocks.</summary>
+  [Fact]
+  public void EveryKindFixtureCaseMarksTheExpectedBlocks()
+  {
+    var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "kind-cases.json");
+    var cases = JsonNode.Parse(File.ReadAllText(path))!["cases"]!.AsArray();
+
+    Assert.True(cases.Count > 10);
+
+    foreach (var testCase in cases.Select(node => node!.AsObject()))
+    {
+      var expected = testCase["kinds"]!.AsObject()
+          .ToDictionary(entry => entry.Key, entry => entry.Value!.GetValue<string>());
+      var actual = CollabVersionChanges.Blocks(
+              testCase["before"]!.DeepClone().AsArray(),
+              testCase["after"]!.DeepClone().AsArray())
+          .ToDictionary(change => change.Id, change => change.Kind.ToString().ToLowerInvariant());
+
+      Assert.True(
+          expected.Count == actual.Count && !expected.Except(actual).Any(),
+          $"{testCase["name"]}: expected {string.Join(", ", expected)}, got {string.Join(", ", actual)}");
+    }
+  }
+
   [Fact]
   public void TheSameBlocksAreNoChange()
   {

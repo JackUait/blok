@@ -31,6 +31,7 @@ const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'theme-api': 'api.links.theme',
   'width-api': 'api.links.width',
   'placeholder-api': 'api.links.placeholder',
+  'title-api': 'api.links.title',
   'readonly-api': 'api.links.readOnly',
   'i18n-api': 'api.links.i18n',
   'ui-api': 'api.links.ui',

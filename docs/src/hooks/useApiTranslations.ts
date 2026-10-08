@@ -33,6 +33,7 @@ export const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'theme-api': 'api.themeApi',
   'width-api': 'api.widthApi',
   'placeholder-api': 'api.placeholderApi',
+  'title-api': 'api.titleApi',
   'readonly-api': 'api.readOnlyApi',
   'i18n-api': 'api.i18nApi',
   'ui-api': 'api.uiApi',

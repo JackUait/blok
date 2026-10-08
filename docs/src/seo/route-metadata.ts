@@ -251,6 +251,12 @@ const MODULE_COPY: Record<string, Copy> = {
       'Change the empty-block placeholder at runtime; it updates existing blocks in place and applies to blocks created afterward.',
     h1: 'Placeholder API: change the placeholder at runtime',
   },
+  'title-api': {
+    title: 'Blok Title API — page title and icon',
+    description:
+      'Read and set the page title and its icon, move them into your own element, and write them without an undo step.',
+    h1: 'Title API: the page title and icon',
+  },
   'tools-api': {
     title: 'Blok Tools API — register and update tools',
     description:

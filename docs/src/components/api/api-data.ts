@@ -124,7 +124,7 @@ export const API_SECTIONS: ApiSection[] = [
     badge: "Core",
     title: "Blok Class",
     description:
-      "The main editor class. It creates the Blok editor instance and manages it. Every namespace a tool reaches through `api.*` is also on the instance as `editor.*`. The properties below are that same surface, plus the `width`, `placeholder`, `tokens` and `i18n` namespaces the class declares itself.",
+      "The main editor class. It creates the Blok editor instance and manages it. Every namespace a tool reaches through `api.*` is also on the instance as `editor.*`. The properties below are that same surface, plus the `width`, `placeholder`, `tokens`, `i18n` and `title` namespaces the class declares itself.",
     methods: [
       {
         name: "save()",
@@ -354,6 +354,7 @@ class Callout {
       { name: "ui", type: "Ui", description: "UI API module" },
       { name: "theme", type: "Theme", description: "Theme API module" },
       { name: "width", type: "Width", description: "Width API module" },
+      { name: "title", type: "Title", description: "Page title API module" },
       {
         name: "placeholder",
         type: "Placeholder",
@@ -440,6 +441,13 @@ const editor = new Blok(config);`,
         default: "false",
         description:
           "Placeholder text handed to every block of the default tool. It reaches every block, not only the first, and not only while the document is empty. With the built-in paragraph it is visible whenever a block is empty and focused.\n\nNote that `false` (also the default) does not remove the placeholder. The paragraph tool then falls back to its own built-in localized text (\"Write something or press / to select a tool\").\n\nTo blank it, give the default tool an empty placeholder of its own: `tools: { paragraph: { class: Paragraph, placeholder: '' } }`.",
+      },
+      {
+        option: "pageTitle",
+        type: "boolean | TitleConfig",
+        default: "false",
+        description:
+          "Turns on the page title and its icon above the first block. `true` uses the defaults. An object is a `TitleConfig`, described in the Title API section.\n\nIt is read once, when the editor is created. Later changes go through `editor.title`.\n\nWhen it is off, nothing is drawn. A saved `title` and `icon` still load and save unchanged.",
       },
       {
         option: "minHeight",
@@ -769,7 +777,7 @@ await editor.blocks.renderFromHTML(html);
         name: "blocks.importMarkdown(md, options?)",
         returnType: "Promise<OutputData>",
         description:
-          "Converts a Markdown string to blocks and renders them. This REPLACES the current document, because it calls `blocks.render()` internally.\n\nThe converter is lazy-loaded on the first call. The resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions).\n\nTo add blocks instead of replacing them, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.",
+          "Converts a Markdown string to blocks and renders them. This REPLACES the current document, because it calls `blocks.render()` internally.\n\nThe converter is lazy-loaded on the first call. The resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions).\n\nTo add blocks instead of replacing them, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.\n\nWith `title: true` in `options`, a leading `#` heading becomes the page title, and a leading emoji in it becomes the icon. If the Markdown has no such heading, the title and icon are cleared. Without the option, they stay as they are.",
         example: `const data = await editor.blocks.importMarkdown('# Title\\n\\n- one\\n- two');
 // The whole document is replaced; data is the rendered OutputData`,
         params: [
@@ -784,7 +792,7 @@ await editor.blocks.renderFromHTML(html);
             type: "MarkdownImportConfig",
             required: false,
             default: "undefined",
-            description: "Tool mapping, GFM toggle, and micromark/mdast extensions.",
+            description: "Tool mapping, GFM toggle, micromark/mdast extensions, and `title`.",
           },
         ],
       },
@@ -792,7 +800,7 @@ await editor.blocks.renderFromHTML(html);
         name: "blocks.exportMarkdown()",
         returnType: "Promise<string>",
         description:
-          "Serializes the current document to Markdown. It is the outbound twin of `importMarkdown`. Blocks are read through the Saver, so the output reflects the saved (validated) document, not the raw DOM.\n\nThe promise resolves to '' when there is nothing to save. Blocks owned by a table cell are serialized inside the pipe table, not repeated as loose lines.\n\nWhat Markdown cannot express is degraded.\n\n- Table `colspan`/`rowspan` and heading columns are dropped.\n- A table with no heading row gets an empty header row, because GFM requires one.",
+          "Serializes the current document to Markdown. It is the outbound twin of `importMarkdown`. Blocks are read through the Saver, so the output reflects the saved (validated) document, not the raw DOM.\n\nThe promise resolves to '' when there is nothing to save. Blocks owned by a table cell are serialized inside the pipe table, not repeated as loose lines.\n\nWhat Markdown cannot express is degraded.\n\n- Table `colspan`/`rowspan` and heading columns are dropped.\n- A table with no heading row gets an empty header row, because GFM requires one.\n\nPass `{ title: true }` to write the page title first, as a `#` heading led by an emoji icon. An image icon is left out.",
         example: `const md = await editor.blocks.exportMarkdown();
 // → '# Title\\n\\n- one\\n- two'`,
       },
@@ -2877,6 +2885,143 @@ editor.placeholder.set(false);`,
     ],
   },
   {
+    id: "title-api",
+    badge: "Title",
+    title: "Title API",
+    description:
+      "Read and change the page title and its icon. They sit above the first block, or in an element of your own. The title is one line of plain text. Both are stored in the document and saved as `title` and `icon` in OutputData.\n\nTurn it on with the `pageTitle` option. `editor.title` exists right after `new Blok()`, and calls made before `isReady` are replayed once the editor is ready. `title.focus()` is the exception: before `isReady` it does nothing.\n\nThe opt-in `title: true` option carries the title through conversions. Without it, every conversion works as it did before.\n\n- `blocksToHtml` writes it first as an `<h1>`, led by the icon.\n- `blocksToMarkdown`, `blocksToMarkdownWithReport` and `blocks.exportMarkdown` write it as a `#` heading. An image icon is left out.\n- `blocksToPlainText` writes it as the first line.\n- `markdownToBlocksWithReport` and `htmlToBlocksWithReport` lift a leading `#` heading or `<h1>` out of the blocks. They return it as `title` and `icon`.\n  - The title is plain text, so formatting in that heading is dropped. The Markdown report adds a `heading` warning for it. The HTML report does not.\n- `blocks.importMarkdown` sets the editor's title and icon from that heading, and clears both when there is none.\n- `extractTexts` puts the title first in the list, and `injectTexts` writes it back from there. Every other index moves by one.\n\nThese limits are known.\n\n- Restoring a version saved before the server kept page titles clears the current title.\n- A collaborative editor that opens offline shows its last-known blocks, but no title.\n- A host cannot set the title through the server's `/edit` endpoint.\n- When two people type in the title at once, the last write wins.",
+    example: `import { Blok } from '@bloklabs/core';
+
+const editor = new Blok({
+  holder: 'editor',
+  pageTitle: {
+    placeholder: 'Untitled',
+    onChange: (title, change) => {
+      if (change.source !== 'remote') {
+        saveTitle(title);
+      }
+    },
+  },
+  data: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺️' }, blocks: [] },
+});
+
+editor.title.get(); // 'Roadmap'
+
+const saved = await editor.save();
+// saved.title === 'Roadmap'`,
+    methods: [
+      {
+        name: "title.get()",
+        returnType: "string",
+        description:
+          "The current title. It is `''` when there is none.",
+        example: `console.log(editor.title.get()); // 'Roadmap'`,
+      },
+      {
+        name: "title.set(text, options?)",
+        returnType: "void",
+        description:
+          "Replaces the title. It makes one undo step and calls `onChange` with source `api`. Setting the text the title already has does nothing.\n\nPass `{ record: false }` for a value undo should not touch, such as a rename that came from your own backend. Peers still get the write, and `onChange` gets `{ source: 'api', record: false }`.\n\n- A recorded title step made before it no longer changes the title on undo.\n- A typing run that goes on after it stays one undo step. Undo goes back to the value you wrote, not to the value before the run.",
+        example: `editor.title.set('Roadmap 2027');
+
+// A rename from your backend: no undo step
+editor.title.set(serverTitle, { record: false });`,
+        params: [
+          {
+            name: "text",
+            type: "string",
+            required: true,
+            description: "The new title. `''` clears it.",
+          },
+          {
+            name: "options.record",
+            type: "boolean",
+            required: false,
+            default: "true",
+            description: "`false`: no undo step. Peers still get the write.",
+          },
+        ],
+      },
+      {
+        name: "title.focus(position?)",
+        returnType: "void",
+        description:
+          "Puts the caret in the title, at the end by default. Pass `'start'` for the start. It does nothing when the title is off, and before `isReady`.",
+        example: `editor.title.focus('start');`,
+      },
+      {
+        name: "title.mount(holder)",
+        returnType: "void",
+        description:
+          "Moves the title and icon into `holder`, an element or a selector. Focus and the caret are kept. `null` puts the title back above the first block.\n\nAfter `isReady`, a selector that matches nothing throws. Before `isReady` the call waits for the editor. A bad selector is then logged, and the title stays where it is.\n\nTo line up a section of your own between the title and the editor, copy the title's layout. Its `--blok-content-column` variable is set on the title's own element, so a section beside it cannot read it.\n\n- Pad the section's start by the editor gutter, `56px` by default.\n  - It is `0` with `hideToolbar: true` or `readOnly: { hideControls: true }`.\n  - `toolbarPosition: 'right'` moves it to the end.\n  - A host value for `--blok-editor-gutter-start` replaces it.\n- Inside it, give the content `box-sizing: border-box`, `max-width: var(--blok-content-max-width, 720px)` and `padding-inline: 2px`.\n- In `full` width, use `none` instead of `720px`.\n- With `style.contentAlign: 'center'`, add `margin-inline: auto`. The default `'left'` needs no margin.",
+        example: `editor.title.mount('#page-title');
+
+// A section of your own between the title and the editor
+// .page-meta { box-sizing: border-box; padding-inline-start: 56px; }
+// .page-meta > div {
+//   box-sizing: border-box;
+//   max-width: var(--blok-content-max-width, 720px);
+//   padding-inline: 2px;
+// }
+
+// Back above the first block
+editor.title.mount(null);`,
+      },
+      {
+        name: "title.icon.get()",
+        returnType: "PageIcon | null",
+        description:
+          "The current icon: `{ type: 'emoji', value }` or `{ type: 'image', url }`. It is `null` when there is none.",
+        example: `const icon = editor.title.icon.get(); // { type: 'emoji', value: '🗺️' }`,
+      },
+      {
+        name: "title.icon.set(icon, options?)",
+        returnType: "void",
+        description:
+          "Sets the icon, or removes it with `null`. It makes one undo step and calls `onIconChange` with source `api`. `{ record: false }` works as it does for `title.set`.",
+        example: `editor.title.icon.set({ type: 'emoji', value: '🚀' });
+editor.title.icon.set(null);`,
+      },
+    ],
+    table: [
+      {
+        option: "holder",
+        type: "HTMLElement | string",
+        default: "—",
+        description:
+          "Element or selector to draw the title in. Without it, the title sits above the first block.",
+      },
+      {
+        option: "placeholder",
+        type: "string",
+        default: "—",
+        description:
+          "Shown while the title is empty. The default is the localized `title.placeholder` message.",
+      },
+      {
+        option: "icon",
+        type: "boolean",
+        default: "true",
+        description:
+          "`false` hides the icon and the Add icon button.",
+      },
+      {
+        option: "onChange",
+        type: "(title: string, change: TitleChange) => void",
+        default: "—",
+        description:
+          "Called on every title change, from any source. `change.source` is `user`, `undo`, `redo`, `remote` or `api`. Save on `user`, `undo`, `redo` and `api`.\n\n`change.record` is `false` only for a write made with `{ record: false }`. Otherwise the key is absent.",
+      },
+      {
+        option: "onIconChange",
+        type: "(icon: PageIcon | null, change: TitleChange) => void",
+        default: "—",
+        description:
+          "Called on every icon change, from any source. `null` means the icon was removed. `change` is the same as for `onChange`.",
+      },
+    ],
+  },
+  {
     id: "readonly-api",
     badge: "ReadOnly",
     title: "ReadOnly API",
@@ -3561,6 +3706,8 @@ interface OutputData {
   id?: string;         // Document id, used by tab sync
   version?: string;    // Editor version
   time?: number;       // Save timestamp
+  title?: string;      // Page title, absent when empty
+  icon?: PageIcon;     // Page icon, absent when none
   blocks: OutputBlockData[]; // Array of block data
 }
 
@@ -3602,6 +3749,20 @@ interface OutputData {
         description: "Timestamp of save",
       },
       {
+        option: "title",
+        type: "string (optional)",
+        default: "—",
+        description:
+          "The page title, as plain text. It is absent when the title is empty.\n\nBlok saves it even when the `pageTitle` option is off. In the loose input shape, `null` and `''` mean no title. A Blok version older than the page title drops `title` and `icon` when it saves.",
+      },
+      {
+        option: "icon",
+        type: "PageIcon (optional)",
+        default: "—",
+        description:
+          "The page icon: `{ type: 'emoji', value }` or `{ type: 'image', url }`. It is absent when there is none. In the loose input shape, `null` means no icon.",
+      },
+      {
         option: "blocks",
         type: "OutputBlockData[]",
         default: "—",
@@ -3613,7 +3774,7 @@ interface OutputData {
         name: "equalsOutputData(a, b, options?)",
         returnType: "boolean",
         description:
-          "Structural equality for saved documents, exported from the main entry. It compares the `blocks` arrays deeply.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
+          "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
         example: `import { equalsOutputData } from '@bloklabs/core';
 
 const saved = await editor.save();
@@ -3625,7 +3786,7 @@ if (!equalsOutputData(saved, previousData)) {
         name: "isEmptyOutputData(data)",
         returnType: "boolean",
         description:
-          "True when the document carries no user content. Exported from the main entry.\n\nThat means the document is nullish, has no blocks, or every block's data holds only empty values: blank or whitespace-only strings, empty arrays and objects. Numbers and booleans (`level`, `checked`, styles) are presentation metadata. On their own they never count as content.",
+          "True when the document carries no user content. Exported from the main entry.\n\nThat means the document is nullish, has no blocks, or every block's data holds only empty values: blank or whitespace-only strings, empty arrays and objects. Numbers and booleans (`level`, `checked`, styles) are presentation metadata. On their own they never count as content.\n\nThe page `title` and `icon` are not counted. A document that holds only a title is empty.",
         example: `import { isEmptyOutputData } from '@bloklabs/core';
 
 const data = await editor.save();
@@ -4704,6 +4865,14 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
             description:
               "Render blocks with the editor's presentational classes and the per-block holder → content scaffolding, so the result matches a read-only editor render. To actually paint, it needs @bloklabs/core/view.css plus root: true (or a [data-blok-interface] ancestor). A few tools also gain a wrapper element under this flag. <BlokView> enables it by default, the useBlokView hook does not.",
           },
+          {
+            name: "options.title",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description:
+              "Write the document's `title` first. It is off by default, and a document with no title gets no extra line.\n\n- HTML: an `<h1>` before the body, inside the `root` wrapper. An emoji icon leads it as `<span aria-hidden=\"true\">`, an image icon as `<img alt=\"\">`.\n  - The image URL goes through `transformUrl` (with no `blockType`) and the unsafe-scheme strip.\n- Markdown: a `#` heading, led by an emoji icon. An image icon is left out.\n- Plain text: the title alone, as the first line.",
+          },
         ],
         example: `import { blocksToHtml } from '@bloklabs/core/view';
 
@@ -4721,7 +4890,7 @@ const html = blocksToHtml(savedData, {
         name: "blocksToPlainText(data, options?)",
         returnType: "string",
         description:
-          "Extract the plain text of a saved document. Blocks are separated by \\n\\n, list items by \\n, and table cells by \\t. It is synchronous and DOM-free, with the same options as blocksToHtml plus includeHiddenText. Use it for previews, search indexing, and character counts.",
+          "Extract the plain text of a saved document. Blocks are separated by \\n\\n, list items by \\n, and table cells by \\t. It is synchronous and DOM-free, with the same options as blocksToHtml plus includeHiddenText. Use it for previews, search indexing, and character counts.\n\nWith `title: true`, the page title comes first, on a line of its own.",
         params: [
           {
             name: "data",
@@ -4755,7 +4924,7 @@ if (transportBytes > 500 * 1024) {
         name: "blocksToMarkdown(data)",
         returnType: "string",
         description:
-          "Serialize a saved document to Markdown. It is synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], and tables GFM pipe grids.\n\nMarkdown has no callout, toggle, column or spacer. So a callout becomes a blockquote carrying its emoji, a toggle becomes a bold summary followed by its body, columns flatten into reading order, and a spacer is dropped.\n\nReturns '' for empty or malformed documents.",
+          "Serialize a saved document to Markdown. It is synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], and tables GFM pipe grids.\n\nMarkdown has no callout, toggle, column or spacer. So a callout becomes a blockquote carrying its emoji, a toggle becomes a bold summary followed by its body, columns flatten into reading order, and a spacer is dropped.\n\nReturns '' for empty or malformed documents.\n\nThe second argument takes `pageInfo`, `pageHref` and `title` from the blocksToHtml options. `title: true` writes the page title first, as a `#` heading led by an emoji icon.",
         example: `import { blocksToMarkdown } from '@bloklabs/core/view';
 
 // Feed an article to an LLM, or write it to a .md file
@@ -4765,7 +4934,7 @@ const markdown = blocksToMarkdown(savedData);`,
         name: "blocksToMarkdownWithReport(data)",
         returnType: "{ markdown: string; warnings: MarkdownDegradation[] }",
         description:
-          "The same Markdown, plus a list of what could not be carried across. Each entry names the construct, says whether it was 'dropped' (nothing emitted) or 'degraded' (emitted lossily), and why.\n\nUse it when the result goes somewhere that cannot ask a follow-up question, such as an AI client or an export, and needs to be told what it is missing. A block that leaves no output and carries no inline text is reported too, so a custom tool with no Markdown form is named rather than vanishing.",
+          "The same Markdown, plus a list of what could not be carried across. Each entry names the construct, says whether it was 'dropped' (nothing emitted) or 'degraded' (emitted lossily), and why.\n\nUse it when the result goes somewhere that cannot ask a follow-up question, such as an AI client or an export, and needs to be told what it is missing. A block that leaves no output and carries no inline text is reported too, so a custom tool with no Markdown form is named rather than vanishing.\n\nIt takes the same options as blocksToMarkdown, `title` included.",
         example: `import { blocksToMarkdownWithReport } from '@bloklabs/core/view';
 
 const { markdown, warnings } = blocksToMarkdownWithReport(savedData);

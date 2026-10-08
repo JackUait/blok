@@ -96,6 +96,7 @@ describe("API_SECTIONS", () => {
       "theme-api",
       "width-api",
       "placeholder-api",
+      "title-api",
       "readonly-api",
       "i18n-api",
       "ui-api",
@@ -956,6 +957,20 @@ describe("API_SECTIONS", () => {
       const documented = table.map((row) => row.option);
       for (const field of sourceFields) {
         expect(documented, `OutputBlockData.${field} is not documented in block-data table`).toContain(field);
+      }
+    });
+
+    it("every OutputData field appears in the output-data table", () => {
+      const dts = readSource("types/data-formats/output-data.d.ts");
+      const body = dts.match(/export interface OutputData\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+      const sourceFields = [...body.matchAll(/^ {2}(\w+)\??:/gm)].map((m) => m[1]);
+      expect(sourceFields).toContain("title");
+      expect(sourceFields).toContain("icon");
+
+      const table = API_SECTIONS.find((s) => s.id === "output-data")?.table ?? [];
+      const documented = table.map((row) => row.option);
+      for (const field of sourceFields) {
+        expect(documented, `OutputData.${field} is not documented in output-data table`).toContain(field);
       }
     });
 

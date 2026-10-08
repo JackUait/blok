@@ -594,6 +594,12 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    if (this.isDestroyed) {
+      this.loading.destroy();
+
+      return;
+    }
+
     // Never rejects: collaboration and a pre-ready destroy() call this without awaiting it.
     const targets = ((): HTMLElement[] => {
       try {

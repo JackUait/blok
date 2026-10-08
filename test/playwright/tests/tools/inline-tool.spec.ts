@@ -2,9 +2,9 @@
 import { expect, test } from '@playwright/test';
 import { InlineToolAdapter } from '../../../../src/components/tools/inline';
 import { ToolType } from '../../../../types/tools/adapters/tool-type';
-import type { API, InlineToolConstructable, ToolConfig, ToolSettings } from '../../../../types';
+import type { API, InlineToolConstructable, MenuConfig, ToolConfig, ToolSettings } from '../../../../types';
 import type { SanitizerConfig } from '../../../../types/configs';
-import type { ToolConstructable, ToolSettings as ImportedToolSettings } from '../../../../types/tools';
+import type { ToolSettings as ImportedToolSettings } from '../../../../types/tools';
 
 interface TestInlineToolInstance {
   api: Record<string, unknown>;
@@ -15,7 +15,7 @@ type ToolOptions = Omit<ImportedToolSettings, 'class'>;
 
 interface ConstructorOptions {
   name: string;
-  constructable: ToolConstructable;
+  constructable: InlineToolConstructable;
   config: ToolOptions;
   api: API;
   isDefault: boolean;
@@ -45,14 +45,14 @@ const createInlineToolOptions = (): ConstructorOptions => {
       this.config = config as ToolSettings;
     }
 
-    public render(): Record<string, unknown> {
-      return {};
+    public render(): MenuConfig {
+      return [];
     }
   }
 
   return {
     name: 'inlineTool',
-    constructable: Constructable as unknown as ToolConstructable,
+    constructable: Constructable,
     config: {
       config: {
         option1: 'option1',
@@ -139,7 +139,7 @@ test.describe('inlineToolAdapter', () => {
       const options = createInlineToolOptions();
       const calls: Array<{ toolName: string; config: ToolConfig }> = [];
 
-      const constructable = options.constructable as InlineToolConstructable;
+      const constructable = options.constructable;
       constructable.prepare = (data: { toolName: string; config: ToolConfig }) => {
         calls.push(data);
       };
@@ -158,10 +158,7 @@ test.describe('inlineToolAdapter', () => {
 
     test('does not fail if Tool prepare method does not exist', async () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter({
-        ...options,
-        constructable: {} as ToolConstructable,
-      });
+      const tool = new InlineToolAdapter(options);
 
       const result = await tool.prepare();
 
@@ -174,7 +171,7 @@ test.describe('inlineToolAdapter', () => {
       const options = createInlineToolOptions();
       let callCount = 0;
 
-      const constructable = options.constructable as InlineToolConstructable;
+      const constructable = options.constructable;
       constructable.reset = () => {
         callCount += 1;
       };
@@ -188,10 +185,7 @@ test.describe('inlineToolAdapter', () => {
 
     test('does not fail if Tool reset method does not exist', async () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter({
-        ...options,
-        constructable: {} as ToolConstructable,
-      });
+      const tool = new InlineToolAdapter(options);
 
       const result = await tool.reset();
 
@@ -204,7 +198,7 @@ test.describe('inlineToolAdapter', () => {
       const options = createInlineToolOptions();
       const tool = new InlineToolAdapter({
         ...options,
-        constructable: {} as ToolConstructable,
+        constructable: options.constructable.bind(null),
       });
       const requiredMethods = [ 'render' ];
 
@@ -213,17 +207,17 @@ test.describe('inlineToolAdapter', () => {
 
     test('returns only methods that are not implemented on the prototype', () => {
       const options = createInlineToolOptions();
-      const BaseConstructable = options.constructable as unknown as new (api: { api: API; config?: ToolConfig }) => { api: Record<string, unknown>; config: ToolSettings; render(): Record<string, unknown> };
+      const BaseConstructable = options.constructable;
 
       const constructableWithRenderClass = class extends BaseConstructable {
-        public render(): Record<string, unknown> {
-          return {};
+        public render(): MenuConfig {
+          return [];
         }
       };
 
       const tool = new InlineToolAdapter({
         ...options,
-        constructable: constructableWithRenderClass as unknown as ToolConstructable,
+        constructable: constructableWithRenderClass,
       });
       const requiredMethods = ['render', 'fakeMethod'];
 
@@ -232,18 +226,18 @@ test.describe('inlineToolAdapter', () => {
 
     test('returns an empty array when all required methods are implemented', () => {
       const options = createInlineToolOptions();
-      const BaseConstructable = options.constructable as unknown as new (api: { api: API; config?: ToolConfig }) => { api: Record<string, unknown>; config: ToolSettings; render(): Record<string, unknown> };
+      const BaseConstructable = options.constructable;
 
       const constructableWithAllMethodsClass = class extends BaseConstructable {
-        public render(): Record<string, unknown> {
-          return {};
+        public render(): MenuConfig {
+          return [];
         }
         public surround(): void {}
       };
 
       const tool = new InlineToolAdapter({
         ...options,
-        constructable: constructableWithAllMethodsClass as unknown as ToolConstructable,
+        constructable: constructableWithAllMethodsClass,
       });
       const requiredMethods = [ 'render' ];
 
@@ -314,7 +308,11 @@ test.describe('inlineToolAdapter', () => {
       const options = createInlineToolOptions();
       const tool = new InlineToolAdapter({
         ...options,
-        constructable: {} as ToolConstructable,
+        constructable: class {
+          public render(): MenuConfig {
+            return [];
+          }
+        },
       });
 
       expect(tool.isReadOnlySupported).toBe(false);

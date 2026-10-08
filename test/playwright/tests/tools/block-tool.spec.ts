@@ -434,7 +434,7 @@ test.describe('blockToolAdapter', () => {
       /**
        * Block tool without sanitize settings for verifying fallback behaviour.
        */
-      class WithoutSanitize extends (baseOptions.constructable as BlockToolConstructable) {
+      class WithoutSanitize extends (baseOptions.constructable) {
         public static override sanitize?: SanitizerConfig;
       }
 
@@ -690,7 +690,7 @@ test.describe('blockToolAdapter', () => {
       /**
        * Block tool stub without a shortcut configured.
        */
-      class WithoutShortcut extends (baseOptions.constructable as BlockToolConstructable) {
+      class WithoutShortcut extends (baseOptions.constructable) {
         public static override shortcut = undefined;
       }
 

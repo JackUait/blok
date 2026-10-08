@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { API, BlockToolConstructable, SanitizerConfig } from '@/types';
+import type { API, BlockToolConstructable, MenuConfig, SanitizerConfig } from '@/types';
 import { BlockToolAdapter } from '../../../src/components/tools/block';
 import { InlineToolAdapter } from '../../../src/components/tools/inline';
 import { ToolsCollection } from '../../../src/components/tools/collection';
@@ -40,7 +40,11 @@ const createAdapter = (overrides: Partial<BlockToolAdapterOptions> = {}): BlockT
   // Enabled inline tools feed the merged sanitize config.
   const bold = new InlineToolAdapter({
     name: 'bold',
-    constructable: Object.assign(class {}, { sanitize: { b: true, strong: true }, isInline: true }) as unknown as BlockToolAdapterOptions['constructable'],
+    constructable: Object.assign(class {
+      public render(): MenuConfig {
+        return [];
+      }
+    }, { sanitize: { b: true, strong: true }, isInline: true }),
     config: {},
     api: {} as API,
     isDefault: false,

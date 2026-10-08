@@ -1,6 +1,6 @@
-import type { API as ApiMethods, I18n } from '../../../types';
+import type { API as ApiMethods, BlockTuneConstructable, I18n } from '../../../types';
 import type { BlokConfig } from '../../../types/configs';
-import type { ToolConfig, ToolConstructable, ToolSettings } from '../../../types/tools';
+import type { InlineToolConstructable, ToolConfig, ToolConstructable, ToolSettings } from '../../../types/tools';
 import type { API as ApiModule } from '../modules/api';
 
 import { InternalInlineToolSettings, InternalTuneSettings } from './base';
@@ -8,7 +8,11 @@ import { BlockToolAdapter } from './block';
 import { InlineToolAdapter } from './inline';
 import { BlockTuneAdapter } from './tune';
 
-type ToolConstructor = typeof InlineToolAdapter | typeof BlockToolAdapter | typeof BlockTuneAdapter;
+const isInlineToolClass = (constructable: ToolConstructable): constructable is InlineToolConstructable =>
+  Boolean(Reflect.get(constructable, InternalInlineToolSettings.IsInline));
+
+const isBlockTuneClass = (constructable: ToolConstructable): constructable is BlockTuneConstructable =>
+  Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune));
 
 /**
  * Factory to construct classes to work with tools
@@ -94,18 +98,25 @@ export class ToolsFactory {
       throw new Error(`Tool "${name}" does not provide a class.`);
     }
 
-    const Constructor = this.getConstructor(constructable);
-    const toolApi = this.createToolApi(name);
-
-    return new Constructor({
+    const isInline = isInlineToolClass(constructable);
+    const isTune = isBlockTuneClass(constructable);
+    const options = {
       name,
-      constructable,
       config,
-      api: toolApi,
+      api: this.createToolApi(name),
       isDefault: name === this.blokConfig.defaultBlock,
       defaultPlaceholder: this.blokConfig.placeholder,
       isInternal,
-    });
+    };
+
+    if (isInline) {
+      return new InlineToolAdapter({ ...options, constructable });
+    }
+    if (isTune) {
+      return new BlockTuneAdapter({ ...options, constructable });
+    }
+
+    return new BlockToolAdapter({ ...options, constructable });
   }
 
   /**
@@ -168,22 +179,5 @@ export class ToolsFactory {
       ...baseApi,
       i18n: namespacedI18n,
     };
-  }
-
-  /**
-   * Find appropriate Tool object constructor for Tool constructable
-   * @param constructable - Tools constructable
-   */
-  private getConstructor(constructable: ToolConstructable): ToolConstructor {
-    const isInline = Boolean(Reflect.get(constructable, InternalInlineToolSettings.IsInline));
-    const isTune = Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune));
-
-    if (isInline) {
-      return InlineToolAdapter;
-    }
-    if (isTune) {
-      return BlockTuneAdapter;
-    }
-    return BlockToolAdapter;
   }
 }

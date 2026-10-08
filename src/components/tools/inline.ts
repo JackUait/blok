@@ -7,7 +7,7 @@ import { ToolType } from '@/types/tools/adapters/tool-type';
 /**
  * InlineTool object to work with Inline Tools constructables
  */
-export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineTool> implements InlineToolAdapterInterface {
+export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineTool, InlineToolConstructable> implements InlineToolAdapterInterface {
   /**
    * Tool type — Inline
    */
@@ -32,10 +32,7 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
    * Constructs new InlineTool instance from constructable
    */
   public create(): IInlineTool {
-
-    const InlineToolClass = this.constructable as InlineToolConstructable;
-
-    return new InlineToolClass({
+    return new this.constructable({
       api: this.api,
       config: this.settings,
     });
@@ -55,7 +52,7 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
    * Returns title of the tool
    */
   public get title(): string {
-    const constructable = this.constructable as InlineToolConstructable;
+    const constructable = this.constructable;
 
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Backward compatibility: title is deprecated but still needs to be supported
     return constructable['title'] || '';
@@ -65,7 +62,7 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
    * Returns the translation key for the tool title
    */
   public get titleKey(): string | undefined {
-    const constructable = this.constructable as InlineToolConstructable;
+    const constructable = this.constructable;
 
     return constructable['titleKey'];
   }

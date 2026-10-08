@@ -105,6 +105,9 @@ const FOCUSABLE_SEPARATOR_ATTRS = [
  * supplies the name, so a reviewer can re-verify it without re-deriving it.
  */
 const INDIRECTLY_NAMED: Record<string, string> = {
+  'playground/history-drawer.ts » tab » tab':
+    'DELIBERATE — tabPair() passes its label to element(), which sets node.textContent ' +
+    'before returning the tab',
   'components/modules/toolbar/plus-button.ts » plusButton » button':
     'DELIBERATE — named by PlusButton.refreshI18n(plusButton), which sets aria-label to ' +
     'a11y.insertBlock on creation and again on every runtime locale change; the scan ' +

@@ -1,6 +1,7 @@
 import { failure } from './errors';
 import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdate, reserveBatchInsertIds } from './plan-block';
 import { PlanState } from './plan-state';
+import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
 
 import type { AgentBatch, AgentWarning } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
@@ -16,6 +17,10 @@ export const HANDLERS: Record<string, CommandHandler> = {
   'block.duplicate': planDuplicate,
   'block.move': planMove,
   'block.convert': planConvert,
+  'text.insert': planTextInsert,
+  'text.delete': planTextDelete,
+  'text.replace': planTextReplace,
+  'text.format': planTextFormat,
 };
 
 export const registerHandlers = (entries: Record<string, CommandHandler>): void => {

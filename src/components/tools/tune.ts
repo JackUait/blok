@@ -9,7 +9,7 @@ import { ToolType } from '@/types/tools/adapters/tool-type';
  * Stub class for BlockTunes
  * @todo Implement
  */
-export class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune> implements BlockTuneAdapterInterface {
+export class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune, BlockTuneConstructable> implements BlockTuneAdapterInterface {
   /**
    * Tool type — Tune
    */
@@ -21,9 +21,7 @@ export class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune>
    * @param block - Block API object
    */
   public create(data: BlockTuneData, block: BlockAPI): IBlockTune {
-    const BlockTuneClass = this.constructable as BlockTuneConstructable;
-
-    return new BlockTuneClass({
+    return new this.constructable({
       api: this.api,
       config: this.settings,
       block,

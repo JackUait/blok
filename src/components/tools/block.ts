@@ -34,7 +34,7 @@ const isLink = (value: unknown): value is { url: string; text: string } =>
 /**
  * Class to work with Block tools constructables
  */
-export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool> implements BlockToolAdapterInterface {
+export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool, BlockToolConstructable> implements BlockToolAdapterInterface {
   /**
    * Tool type — Block
    */
@@ -85,14 +85,14 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
       ...(replaySource !== undefined ? { replaySource } : {}),
       api: this.api,
       config: this.settings,
-    }) as IBlockTool;
+    });
   }
 
   /**
    * Returns true if read-only mode is supported by Tool
    */
   public get isReadOnlySupported(): boolean {
-    return (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.IsReadOnlySupported] === true;
+    return this.constructable[InternalBlockToolSettings.IsReadOnlySupported] === true;
   }
 
   /**
@@ -377,7 +377,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   public get toolbox(): ToolboxConfigEntry[] | undefined {
-    const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox];
+    const toolToolboxSettings = this.constructable[InternalBlockToolSettings.Toolbox];
     const userToolboxSettings = this.config[UserSettings.Toolbox];
 
     if (!toolToolboxSettings || isEmpty(toolToolboxSettings)) {
@@ -498,7 +498,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * Returns Tool conversion configuration
    */
   public get conversionConfig(): ConversionConfig | undefined {
-    return (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.ConversionConfig];
+    return this.constructable[InternalBlockToolSettings.ConversionConfig];
   }
 
   /**
@@ -535,7 +535,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * Returns Tool paste configuration
    */
   public get pasteConfig(): PasteConfig {
-    return (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.PasteConfig] ?? {};
+    return this.constructable[InternalBlockToolSettings.PasteConfig] ?? {};
   }
 
   /**

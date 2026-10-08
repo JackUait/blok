@@ -18,12 +18,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createReactBlock } from '../../../packages/react/src/createReactBlock';
 import { createVueBlock } from '../../../packages/vue/src/createVueBlock';
 import { BlockToolAdapter } from '../../../src/components/tools/block';
-import type { ToolConstructable } from '../../../types/tools';
+import type { BlockToolConstructable } from '../../../types/tools';
 
 type AdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 
 /** Wrap a generated tool class the way core's Tools module does. */
-const asCoreTool = (constructable: ToolConstructable): BlockToolAdapter =>
+const asCoreTool = (constructable: BlockToolConstructable): BlockToolAdapter =>
   new BlockToolAdapter({
     name: 'steps',
     constructable,
@@ -33,7 +33,7 @@ const asCoreTool = (constructable: ToolConstructable): BlockToolAdapter =>
     isInternal: false,
   });
 
-const REACT_STEPS = (keepsChildrenOnEnter: boolean | undefined): ToolConstructable =>
+const REACT_STEPS = (keepsChildrenOnEnter: boolean | undefined): BlockToolConstructable =>
   createReactBlock({
     type: 'steps',
     propSchema: {},
@@ -41,7 +41,7 @@ const REACT_STEPS = (keepsChildrenOnEnter: boolean | undefined): ToolConstructab
     ...(keepsChildrenOnEnter === undefined ? {} : { statics: { keepsChildrenOnEnter } }),
   });
 
-const VUE_STEPS = (keepsChildrenOnEnter: boolean | undefined): ToolConstructable =>
+const VUE_STEPS = (keepsChildrenOnEnter: boolean | undefined): BlockToolConstructable =>
   createVueBlock({
     type: 'steps',
     propSchema: {},

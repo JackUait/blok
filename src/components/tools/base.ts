@@ -209,9 +209,9 @@ type ToolPreparePayload = {
   config: ToolConfig;
 };
 
-export interface ConstructorOptions {
+export interface ConstructorOptions<Constructable extends ToolConstructable = ToolConstructable> {
   name: string;
-  constructable: ToolConstructable;
+  constructable: Constructable;
   config: ToolOptions;
   api: ApiMethods;
   isDefault: boolean;
@@ -222,7 +222,11 @@ export interface ConstructorOptions {
 /**
  * Base abstract class for Tools
  */
-export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClass extends Tool = Tool> implements BaseToolAdapterInterface<ToolType, Tool> {
+export abstract class BaseToolAdapter<
+  Type extends ToolType = ToolType,
+  ToolClass extends Tool = Tool,
+  Constructable extends ToolConstructable = ToolConstructable
+> implements BaseToolAdapterInterface<ToolType, Tool> {
   /**
    * Tool type: Block, Inline or Tune
    */
@@ -256,7 +260,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
   /**
    * Tool's constructable blueprint
    */
-  protected constructable: ToolConstructable;
+  protected readonly constructable: Constructable;
 
   /**
    * Default placeholder specified in Blok user configuration
@@ -275,7 +279,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
     isDefault,
     isInternal = false,
     defaultPlaceholder,
-  }: ConstructorOptions) {
+  }: ConstructorOptions<Constructable>) {
     this.api = api;
     this.name = name;
     this.constructable = constructable;
@@ -283,6 +287,11 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
     this.isDefault = isDefault;
     this.isInternal = isInternal;
     this.defaultPlaceholder = defaultPlaceholder;
+  }
+
+  /** Keep class identity for built-in runtime matching. */
+  public get toolClass(): Constructable {
+    return this.constructable;
   }
 
   /**

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { markdownToBlocks as markdownToSegmentBlocks, markdownToBlocksWithReport as markdownToSegmentBlocksWithReport } from '../../../src/markdown/index';
 import type { MarkdownImportConfig, MarkdownImportResult } from '../../../src/markdown/index';
 import type { OutputBlockData, OutputData } from '../../../types';
@@ -461,14 +461,6 @@ describe('markdownToBlocks — unsafe URL schemes', () => {
 });
 
 describe('markdownToBlocks with title: true', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('lifts a leading # heading into title and an emoji icon', async () => {
     const result = await markdownToSegmentBlocksWithReport('# 🚀 Plan\n\nBody', { title: true });
 

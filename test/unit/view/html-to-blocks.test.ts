@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { blocksToHtml, blocksToPlainText, htmlToBlocks as htmlToSegmentBlocks, htmlToBlocksWithReport as htmlToSegmentBlocksWithReport } from '../../../src/view';
 import type { HtmlImportResult } from '../../../src/view/html-to-blocks';
@@ -1121,14 +1121,6 @@ describe('htmlToBlocks — tabs', () => {
 });
 
 describe('htmlToBlocks with title: true', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('lifts a leading h1 into title and an emoji icon', () => {
     const result = htmlToSegmentBlocksWithReport('<h1><span aria-hidden="true">🚀</span> Plan</h1><p>Body</p>', { title: true });
 

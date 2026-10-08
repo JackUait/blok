@@ -33,6 +33,8 @@ export const bindTitleKeyboard = (title: HTMLElement, host: TitleKeyboardHost): 
     }
     if (mod && FORMAT_KEYS.has(letter)) {
       event.preventDefault();
+      // Inline-tool shortcuts listen on document and ignore defaultPrevented.
+      event.stopPropagation();
 
       return;
     }

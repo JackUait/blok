@@ -272,4 +272,48 @@ describe('PageTitle module', () => {
     expect(window.getSelection()?.anchorNode).toBe(title);
     expect(window.getSelection()?.anchorOffset).toBe(title?.childNodes.length);
   });
+  it('focusing the title clears block selection, so Backspace there keeps the block', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Plans', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+    const { BlockManager, BlockSelection } = core.moduleInstances;
+    const title = titleIn(holder);
+    const first = BlockManager.getBlockByIndex(0);
+
+    if (title === null || first === undefined) {
+      throw new Error('no title or block');
+    }
+    BlockManager.currentBlock = first;
+    BlockSelection.selectBlock(first);
+    title.focus();
+    window.getSelection()?.setPosition(title.firstChild, 5);
+    title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', code: 'Backspace', keyCode: 8, bubbles: true, cancelable: true }));
+
+    expect(BlockManager.blocks.map((block) => block.id)).toEqual(['p1']);
+    expect(BlockSelection.anyBlockSelected).toBe(false);
+    expect(BlockManager.currentBlockIndex).toBe(-1);
+  });
+
+  it('Cmd+B on selected title text runs no inline tool', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Plans', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+    const { BlockManager } = core.moduleInstances;
+    const title = titleIn(holder);
+    const first = BlockManager.getBlockByIndex(0);
+
+    if (title === null || first === undefined || title.firstChild === null) {
+      throw new Error('no title or block');
+    }
+    BlockManager.currentBlock = first;
+    title.focus();
+    window.getSelection()?.setBaseAndExtent(title.firstChild, 0, title.firstChild, 5);
+    const event = new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', metaKey: true, bubbles: true, cancelable: true });
+    const documentKeydown = vi.fn();
+
+    document.addEventListener('keydown', documentKeydown);
+    title.dispatchEvent(event);
+    document.removeEventListener('keydown', documentKeydown);
+
+    expect(title.childNodes.length).toBe(1);
+    expect(title.firstChild).toBeInstanceOf(Text);
+    expect(event.defaultPrevented).toBe(true);
+    expect(documentKeydown).not.toHaveBeenCalled();
+  });
 });

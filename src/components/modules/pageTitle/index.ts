@@ -52,6 +52,7 @@ export class PageTitle extends Module {
     this.syncDirection();
     this.toggleReadOnly(ReadOnly.isEnabled);
     this.dom.title.addEventListener('input', this.onInput);
+    this.dom.title.addEventListener('focusin', this.onFocusIn);
     this.unbindKeyboard = bindTitleKeyboard(this.dom.title, {
       isReadOnly: () => this.readOnly,
       // The title write and the insert land in the same task, so they join one undo step.
@@ -168,6 +169,7 @@ export class PageTitle extends Module {
     this.stopPageListener?.();
     this.unbindKeyboard?.();
     this.unbindKeyboard = null;
+    this.dom?.title.removeEventListener('focusin', this.onFocusIn);
     this.eventsDispatcher.off(I18nChanged, this.relabel);
     this.dom?.header.remove();
     this.dom = null;
@@ -240,6 +242,12 @@ export class PageTitle extends Module {
       this.Blok.Caret.setToBlockAtXPosition(first, x, true);
     }
   }
+
+  // A selected block or a stale current block would take Backspace, Enter and inline-tool shortcuts.
+  private readonly onFocusIn = (): void => {
+    this.Blok.BlockSelection.clearSelection();
+    this.Blok.BlockManager.unsetCurrentBlock();
+  };
 
   private onPageChange(key: 'title' | 'icon', source: 'undo' | 'redo' | 'remote'): void {
     if (key === 'title') {

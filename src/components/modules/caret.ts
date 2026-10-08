@@ -1052,6 +1052,7 @@ export class Caret extends Module {
     if (!this.Blok.PageTitle?.isEnabled || this.Blok.ReadOnly.isEnabled) {
       return false;
     }
+    this.Blok.BlockSelection.clearSelection();
     this.Blok.PageTitle.focusAtX(caretX);
 
     return true;

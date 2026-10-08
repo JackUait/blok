@@ -709,7 +709,7 @@ describe('Caret module', () => {
 
     it('moves into the title from a non-focusable first block, at the title end', () => {
       const focusAtX = vi.fn();
-      const { caret, blockManager } = createCaret({
+      const { caret, blockManager, blockSelection } = createCaret({
         PageTitle: { isEnabled: true, focusAtX } as unknown as BlokModules['PageTitle'],
         ReadOnly: { isEnabled: false } as unknown as BlokModules['ReadOnly'],
       });
@@ -717,6 +717,7 @@ describe('Caret module', () => {
       blockManager.currentBlock = createBlock({ focusable: false });
 
       expect(caret.navigateVerticalPrevious()).toBe(true);
+      expect(blockSelection.clearSelection).toHaveBeenCalled();
       expect(focusAtX).toHaveBeenCalledWith(null);
     });
 

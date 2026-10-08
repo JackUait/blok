@@ -9,7 +9,7 @@ import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfI
 import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
-import { findOwn } from '../../../utils/own-element';
+import { findAllOwn, findOwn } from '../../../utils/own-element';
 
 import { BlockEventComposer } from './__base';
 import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
@@ -113,19 +113,13 @@ export class KeyboardNavigation extends BlockEventComposer {
     return cellA !== null && cellA === cellB;
   }
 
-  /**
-   * Fully close the toolbar if the current block is NOT inside a table cell.
-   * Used for destructive operations (Backspace, Delete, merge) where the
-   * toolbar should be dismissed — unlike arrow navigation where
-   * hideBlockActions() is preferred to allow reopening.
-   */
   private joinIntoTitle(block: Block): void {
     const { PageTitle, BlockManager } = this.Blok;
 
     if (!PageTitle?.isEnabled) {
       return;
     }
-    const inputs = block.holder.querySelectorAll('[contenteditable="true"]:not([data-blok-mutation-free])');
+    const inputs = findAllOwn(block.holder, '[contenteditable="true"]:not([data-blok-mutation-free])');
     const movable = block.contentIds.length === 0 && inputs.length === 1;
 
     if (!movable) {
@@ -144,6 +138,12 @@ export class KeyboardNavigation extends BlockEventComposer {
     });
   }
 
+  /**
+   * Fully close the toolbar if the current block is NOT inside a table cell.
+   * Used for destructive operations (Backspace, Delete, merge) where the
+   * toolbar should be dismissed — unlike arrow navigation where
+   * hideBlockActions() is preferred to allow reopening.
+   */
   private closeToolbarIfNotInTableCell(): void {
     if (this.isCurrentBlockInsideTableCell) {
       return;

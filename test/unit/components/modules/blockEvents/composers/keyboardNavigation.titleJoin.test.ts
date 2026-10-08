@@ -106,6 +106,23 @@ describe('KeyboardNavigation — Backspace at the first block with a page title'
     expect(blok.PageTitle.focus).toHaveBeenCalledWith('end');
   });
 
+  it('a nested child holder\'s input does not count as the first block\'s own', () => {
+    const block = createBlock('hello');
+    const child = document.createElement('div');
+    const childInput = document.createElement('div');
+
+    child.setAttribute('data-blok-element', '');
+    childInput.setAttribute('contenteditable', 'true');
+    child.appendChild(childInput);
+    block.holder.appendChild(child);
+    const blok = createModules(block);
+
+    new KeyboardNavigation(blok).handleBackspace(createBackspaceEvent());
+
+    expect(blok.PageTitle.appendAndFocus).toHaveBeenCalledWith('hello');
+    expect(blok.BlockManager.removeBlock).toHaveBeenCalledWith(block);
+  });
+
   it('without a title, Backspace at the first block still does nothing', () => {
     const block = createBlock('hello');
     const blok = createModules(block, false);

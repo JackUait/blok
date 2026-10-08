@@ -43,6 +43,15 @@ export const findOwn = (holder: Element, selector: string): Element | null => {
 };
 
 /**
+ * Every element matching `selector` that belongs to the block itself, in
+ * document order. The counting form of {@link findOwn}.
+ * @param holder - the block's holder, or any root the block owns (a tool wrapper)
+ * @param selector - CSS selector to match
+ */
+export const findAllOwn = (holder: Element, selector: string): Element[] =>
+  Array.from(holder.querySelectorAll(selector)).filter(element => isOwnedBy(holder, element));
+
+/**
  * A copy of a block's element without nested child blocks and without tool
  * chrome: the block's own content only. Blocks in a table cell stay, because
  * they are the table's own cell content.

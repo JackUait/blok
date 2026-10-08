@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { findOwn } from '../../../../src/components/utils/own-element';
+import { findAllOwn, findOwn } from '../../../../src/components/utils/own-element';
 
 const makeHolder = (): HTMLElement => {
   const holder = document.createElement('div');
@@ -89,5 +89,25 @@ describe('findOwn', () => {
     holder.appendChild(marker);
 
     expect(findOwn(holder, '[data-blok-toggle-open]')).toBe(marker);
+  });
+});
+
+describe('findAllOwn', () => {
+  it('returns every match the block owns, in order, and none from a nested holder', () => {
+    const child = makeHolder();
+    const childInput = document.createElement('div');
+
+    childInput.setAttribute('contenteditable', 'true');
+    child.appendChild(childInput);
+    const callout = makeCallout([child]);
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+
+    first.setAttribute('contenteditable', 'true');
+    second.setAttribute('contenteditable', 'true');
+    callout.prepend(first);
+    callout.append(second);
+
+    expect(findAllOwn(callout, '[contenteditable="true"]')).toEqual([first, second]);
   });
 });

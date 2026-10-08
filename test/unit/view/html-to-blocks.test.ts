@@ -549,6 +549,13 @@ describe('htmlToBlocksWithReport — warnings', () => {
     ]);
   });
 
+  it('points a dropped <title> at the h1 lift instead of denying a page title', () => {
+    const detail = htmlToBlocksWithReport('<html><head><title>Doc</title></head><body><p>a</p></body></html>').warnings[0]?.detail;
+
+    expect(detail).not.toContain('no title field');
+    expect(detail).toContain('`title: true`');
+  });
+
   it('reports an unknown element whose content it flattens', () => {
     const report = htmlToBlocksWithReport('<marquee>scrolling</marquee>');
 

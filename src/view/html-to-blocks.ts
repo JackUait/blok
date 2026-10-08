@@ -1388,8 +1388,8 @@ function convertNodes(ctx: Ctx, nodes: P5ChildNode[]): void {
 }
 
 /**
- * Report a document title, which is metadata about the document rather than
- * content in it — a Blok document has nowhere to put one.
+ * Report a `<title>`. It is not imported; only a leading `<h1>` can become the
+ * page title, through `title: true`.
  * @param ctx - conversion state
  * @param head - the parsed `head` element
  */
@@ -1398,7 +1398,7 @@ const reportTitle = (ctx: Ctx, head: P5ChildNode | undefined): void => {
     .find((node): node is P5Element => isElement(node) && node.tagName === 'title');
 
   if (title !== undefined && rawText(title.childNodes).trim() !== '') {
-    warn(ctx, 'title', 'dropped', 'The document title is not imported; a Blok document has no title field');
+    warn(ctx, 'title', 'dropped', 'The document <title> is not imported; with `title: true` a leading <h1> becomes the page title');
   }
 };
 

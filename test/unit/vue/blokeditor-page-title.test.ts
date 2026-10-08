@@ -87,6 +87,19 @@ describe('Vue BlokEditor pageTitle prop', () => {
     expect(b).toHaveBeenCalledTimes(1);
   });
 
+  it('does not throw on a title change after pageTitle becomes null', async () => {
+    const a = vi.fn();
+    const wrapper = mountEditor({ pageTitle: { onChange: a } });
+    const editor = await readyEditor(wrapper);
+
+    await wrapper.setProps({ pageTitle: null });
+
+    expect(wrapper.emitted('ready')).toHaveLength(1);
+    expect(() => editor.title.set('x')).not.toThrow();
+    expect(() => editor.title.icon.set({ type: 'emoji', value: '🚀' })).not.toThrow();
+    expect(a).not.toHaveBeenCalled();
+  });
+
   it('hears an onChange added after mounting with pageTitle: true', async () => {
     const b = vi.fn();
     const wrapper = mountEditor({ pageTitle: true });

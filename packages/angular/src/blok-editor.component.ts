@@ -568,14 +568,14 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, C
         onChange: (...args: Parameters<NonNullable<TitleConfig['onChange']>>): void => {
           const latest = this.escapeHatchConfig().pageTitle;
 
-          if (typeof latest === 'object' && latest.onChange !== undefined) {
+          if (latest !== null && typeof latest === 'object' && latest.onChange !== undefined) {
             this.ngZone.run(() => latest.onChange?.(...args));
           }
         },
         onIconChange: (...args: Parameters<NonNullable<TitleConfig['onIconChange']>>): void => {
           const latest = this.escapeHatchConfig().pageTitle;
 
-          if (typeof latest === 'object' && latest.onIconChange !== undefined) {
+          if (latest !== null && typeof latest === 'object' && latest.onIconChange !== undefined) {
             this.ngZone.run(() => latest.onIconChange?.(...args));
           }
         },

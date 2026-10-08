@@ -118,6 +118,25 @@ describe('BlokEditorComponent [config].pageTitle', () => {
     expect(b).toHaveBeenCalledTimes(1);
   });
 
+  it('does not throw on a title change after pageTitle becomes null', async () => {
+    const a = vi.fn();
+    const fixture = await mountReady((host) => {
+      host.config = { pageTitle: { onChange: a } };
+    });
+    const host = fixture.componentInstance;
+    const before = host.editor;
+
+    // Not in the type, but a JS host or a loose [config] can pass it.
+    host.config = { pageTitle: null as unknown as BlokConfig['pageTitle'] };
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.editor).toBe(before);
+    expect(() => before?.title.set('x')).not.toThrow();
+    expect(() => before?.title.icon.set({ type: 'emoji', value: '🚀' })).not.toThrow();
+    expect(a).not.toHaveBeenCalled();
+  });
+
   it('hears an onChange added after mounting with pageTitle: true', async () => {
     const b = vi.fn();
     const fixture = await mountReady((host) => {

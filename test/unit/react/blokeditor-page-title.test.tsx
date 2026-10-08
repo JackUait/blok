@@ -4,7 +4,7 @@ import React from 'react';
 
 import { BlokEditor } from '../../../packages/react/src/BlokEditor';
 import { Paragraph } from '../../../src/tools/paragraph';
-import type { Blok } from '@/types';
+import type { Blok, BlokConfig } from '@/types';
 
 const TOOLS = { paragraph: { class: Paragraph } };
 
@@ -96,6 +96,22 @@ describe('BlokEditor pageTitle prop', () => {
 
     expect(a).not.toHaveBeenCalled();
     expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not throw on a title change after pageTitle becomes null', async () => {
+    const a = vi.fn();
+    const onReady = vi.fn();
+    // Not in the type, but a JS host or a loose prop can pass it.
+    const nullTitle = null as unknown as BlokConfig['pageTitle'];
+    const { rerender } = render(<BlokEditor tools={TOOLS} pageTitle={{ onChange: a }} onReady={onReady} />);
+    const before = await readyEditor(onReady);
+
+    rerender(<BlokEditor tools={TOOLS} pageTitle={nullTitle} onReady={onReady} />);
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(() => act(() => before.title.set('x'))).not.toThrow();
+    expect(() => act(() => before.title.icon.set({ type: 'emoji', value: '🚀' }))).not.toThrow();
+    expect(a).not.toHaveBeenCalled();
   });
 
   it('hears an onChange added after mounting with pageTitle: true', async () => {

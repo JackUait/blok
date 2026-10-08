@@ -364,14 +364,14 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
           onChange: (...args: Parameters<NonNullable<TitleConfig['onChange']>>): void => {
             const latest = configRef.current.pageTitle;
 
-            if (typeof latest === 'object') {
+            if (latest !== null && typeof latest === 'object') {
               latest.onChange?.(...args);
             }
           },
           onIconChange: (...args: Parameters<NonNullable<TitleConfig['onIconChange']>>): void => {
             const latest = configRef.current.pageTitle;
 
-            if (typeof latest === 'object') {
+            if (latest !== null && typeof latest === 'object') {
               latest.onIconChange?.(...args);
             }
           },

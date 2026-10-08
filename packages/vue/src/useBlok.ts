@@ -303,14 +303,14 @@ export function useBlok(
         onChange: (...args: Parameters<NonNullable<TitleConfig['onChange']>>): void => {
           const latest = mergedConfig().pageTitle;
 
-          if (typeof latest === 'object') {
+          if (latest !== null && typeof latest === 'object') {
             latest.onChange?.(...args);
           }
         },
         onIconChange: (...args: Parameters<NonNullable<TitleConfig['onIconChange']>>): void => {
           const latest = mergedConfig().pageTitle;
 
-          if (typeof latest === 'object') {
+          if (latest !== null && typeof latest === 'object') {
             latest.onIconChange?.(...args);
           }
         },

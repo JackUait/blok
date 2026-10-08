@@ -30,7 +30,8 @@ describe('page title component — adapter parity', () => {
   });
 
   it.each(ADAPTERS)('%s: %s gives the title back with title.mount(null)', (_index, _name, source) => {
-    expect(read(source), `${source} never calls title.mount(null)`).toContain('title.mount(null)');
+    // A call statement on its own line, so a comment or a string that mentions it does not count.
+    expect(read(source), `${source} never calls title.mount(null)`).toMatch(/^\s*(?:[\w$]+\??\.)*title\??\.mount\(null\);/m);
   });
 
   it.each([['packages/react/types/index.d.ts'], ['packages/vue/types/index.d.ts']])(

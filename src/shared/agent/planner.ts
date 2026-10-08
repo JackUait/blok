@@ -1,5 +1,6 @@
-import { failure } from './errors';
+import { AgentFailure, failure } from './errors';
 import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdate, reserveBatchInsertIds } from './plan-block';
+import { planFind, planRead } from './plan-doc';
 import { PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
 
@@ -11,6 +12,8 @@ import type { Plan, PlannerContext } from './types';
 export type CommandHandler = (state: PlanState, args: Record<string, unknown>) => unknown;
 
 export const HANDLERS: Record<string, CommandHandler> = {
+  'doc.read': planRead,
+  'doc.find': planFind,
   'block.insert': planInsert,
   'block.update': planUpdate,
   'block.delete': planDelete,
@@ -96,7 +99,20 @@ export const planBatch = (input: {
 
     const createdAt = state.changed.created.length;
     const existing = command.ref === undefined ? undefined : new Set(state.draft.ids());
-    const result = handler(state, command.args);
+    const result = (() => {
+      try {
+        return handler(state, command.args);
+      } catch (error) {
+        if (error instanceof AgentFailure && error.error.commandIndex === undefined) {
+          throw new AgentFailure({
+            ...error.error,
+            commandIndex: index,
+            path: `/commands/${index}/args${error.error.path ?? ''}`,
+          });
+        }
+        throw error;
+      }
+    })();
 
     state.results.push(result);
     if (command.ref !== undefined) {

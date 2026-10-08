@@ -1,5 +1,5 @@
 import { failure } from './errors';
-import { planDelete, planDuplicate, planInsert, planUpdate, reserveBatchInsertIds } from './plan-block';
+import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdate, reserveBatchInsertIds } from './plan-block';
 import { PlanState } from './plan-state';
 
 import type { AgentBatch, AgentWarning } from '../../../types/agent';
@@ -14,6 +14,8 @@ export const HANDLERS: Record<string, CommandHandler> = {
   'block.update': planUpdate,
   'block.delete': planDelete,
   'block.duplicate': planDuplicate,
+  'block.move': planMove,
+  'block.convert': planConvert,
 };
 
 export const registerHandlers = (entries: Record<string, CommandHandler>): void => {

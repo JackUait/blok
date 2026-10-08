@@ -16,13 +16,13 @@ export const LIST_DATA = {
   },
 };
 
-const STYLES = ['unordered', 'ordered', 'checklist'];
+const LIST_KINDS = ['unordered', 'ordered', 'checklist'];
 
 export const describeList = (config: Record<string, unknown> = {}): BlockToolDescription => {
   const candidates: unknown[] = Array.isArray(config.styles) ? config.styles : [];
   const styles = candidates.filter((style): style is string =>
-    typeof style === 'string' && STYLES.includes(style));
-  const allowed = styles.length > 0 ? styles : STYLES;
+    typeof style === 'string' && LIST_KINDS.includes(style));
+  const allowed = styles.length > 0 ? styles : LIST_KINDS;
   const preferred = typeof config.defaultStyle === 'string' && allowed.includes(config.defaultStyle)
     ? config.defaultStyle
     : undefined;

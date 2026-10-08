@@ -1,3 +1,4 @@
+import { BUILT_IN_TUNE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import type { API, BlockAPI, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { IconLink } from '../icons';
@@ -8,6 +9,8 @@ import { beautifyShortcut } from '../utils/string';
  * @classdesc Blok's default tune that copies a direct link to the block to the clipboard
  */
 export class CopyLinkTune implements BlockTune {
+  public static describe = BUILT_IN_TUNE_DESCRIPTIONS.copyLink;
+
   /**
    * Set Tool is Tune
    */

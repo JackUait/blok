@@ -3,6 +3,7 @@
  * @classdesc Blok's default tune that moves up selected block
  * @copyright <CodeX Team> 2018
  */
+import { BUILT_IN_TUNE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import type { API, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { IconTrash } from '../icons';
@@ -12,6 +13,8 @@ import { beautifyShortcut } from '../utils/string';
  *
  */
 export class DeleteTune implements BlockTune {
+  public static describe = BUILT_IN_TUNE_DESCRIPTIONS.delete;
+
   /**
    * Set Tool is Tune
    */

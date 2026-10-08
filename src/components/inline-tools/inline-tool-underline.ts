@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { IconUnderline } from '../icons';
 
 import { createSimpleMarkTool } from './simple-mark-tool';
@@ -19,4 +20,6 @@ export class UnderlineInlineTool extends createSimpleMarkTool({
   spec: {
     tag: 'u',
   },
-}) {}
+}) {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.underline;
+}

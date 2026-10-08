@@ -1,5 +1,5 @@
 import { isRichText } from '../rich-text/guards';
-import { checkChildType, satisfiesChildTools } from './placement-rules';
+import { checkChildType, checkMove, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
@@ -190,9 +190,15 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
     const reserved = locations.get(value);
     const block = state.draft.get(value);
 
-    return reserved ?? (block === undefined ? undefined : {
+    const location = reserved ?? (block === undefined ? undefined : {
       type: block.type, inCell: state.draft.cellOf(value) !== null, parent: { id: block.parent },
     });
+
+    if (location !== undefined) {
+      locations.set(value, location);
+    }
+
+    return location;
   };
   const parentOfInsert = (args: Record<string, unknown>): Parent | undefined => {
     if (args.parentId !== undefined && args.parentId !== null) {
@@ -212,6 +218,27 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
 
   batch.commands.forEach((command, index) => {
     state.setCommandIndex(index);
+    if (command.name === 'block.move') {
+      const location = locate(command.args.id);
+      const parent = parentOfInsert(command.args);
+
+      if (location !== undefined && parent !== undefined) {
+        location.parent = parent;
+        location.inCell = 'type' in parent ? parent.inCell : parent.id !== null && state.draft.cellOf(parent.id) !== null;
+      }
+
+      return;
+    }
+    if (command.name === 'block.convert') {
+      const location = locate(command.args.id);
+      const type = command.args.type;
+
+      if (location !== undefined && typeof type === 'string' && state.tool(type) !== undefined) {
+        location.type = type;
+      }
+
+      return;
+    }
     if (command.name === 'block.duplicate' && command.ref !== undefined) {
       const source = locate(command.args.id);
       const parent = parentOfInsert({ position: command.args.position ?? { after: command.args.id } });
@@ -441,6 +468,150 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>): unk
     edits.push({ op: 'setTunes', id: block.id, tunes });
   }
   state.emit(...edits);
+
+  return { id: block.id };
+};
+
+export const planMove = (state: PlanState, args: Record<string, unknown>): unknown => {
+  const block = state.requireBlock(args.id, '/id');
+  const position = args.position;
+  const refKey = isRecord(position) && 'before' in position ? 'before' : 'after';
+  const refId = isRecord(position) ? state.resolveId(position[refKey], `/position/${refKey}`) : undefined;
+
+  if (refId === block.id) {
+    state.fail('INVALID_ARGS', `Cannot place "${block.id}" relative to itself.`, '/position');
+  }
+
+  const placement = state.place(args.parentId, position);
+  const parentType = placement.parentId === null ? undefined : state.draft.get(placement.parentId)?.type;
+
+  if (parentType !== undefined && state.tool(parentType)?.entry.selfPlacesChildren === true) {
+    const actions = state.actionsOf(parentType);
+
+    state.fail('PLACEMENT_REFUSED', `"${parentType}" places its own children. Use one of: ${actions.join(', ')}.`, '/parentId', {
+      reason: 'SELF_PLACED_PARENT', use: actions,
+    });
+  }
+
+  const refusal = checkMove(state.tree(), block.id, placement.parentId, refId, { allowColumnMoves: true });
+
+  if (refusal !== null) {
+    state.fail('PLACEMENT_REFUSED', `${refusal.message}.`, '/parentId', {
+      reason: refusal.reason, ...(refusal.allowed !== undefined && { allowed: refusal.allowed }),
+    });
+  }
+
+  const siblings = state.draft.childrenOf(placement.parentId);
+  const index = siblings.indexOf(block.id);
+  const previousId = index > 0 ? siblings[index - 1] ?? null : null;
+  const afterId = placement.afterId === block.id ? previousId : placement.afterId;
+
+  state.emit({ op: 'move', id: block.id, parentId: placement.parentId, afterId });
+
+  return { id: block.id };
+};
+
+export const planConvert = (state: PlanState, args: Record<string, unknown>): unknown => {
+  const block = state.requireBlock(args.id, '/id');
+  const source = requireTool(state, block);
+  const targetType = args.type;
+
+  if (typeof targetType !== 'string' || targetType === '') {
+    state.fail('INVALID_ARGS', 'Expected a non-empty block type.', '/type');
+  }
+
+  const target = state.tool(targetType) ?? state.fail('UNKNOWN_TOOL', `No block tool "${targetType}" is registered.`, '/type');
+  const from = source.entry.conversion.export;
+  const to = target.entry.conversion.import;
+
+  if (typeof from !== 'string' || typeof to !== 'string') {
+    const missing = [
+      typeof from !== 'string' ? block.type : null,
+      typeof to !== 'string' ? targetType : null,
+    ].filter((type): type is string => type !== null);
+
+    state.fail('CONVERSION_UNSUPPORTED', `Conversion from "${block.type}" to "${targetType}" is not possible: ${missing.join(' and ')} cannot convert here.`, '/type', { missing });
+  }
+
+  const inCell = state.draft.cellOf(block.id) !== null;
+  const refusal: Refusal | null | undefined = checkChildType(state.tree(), block.parent, targetType)
+    ?? (inCell && target.entry.restrictedInTableCell
+      ? { reason: 'RESTRICTED_IN_CELL', message: `"${targetType}" is not allowed inside a table cell` }
+      : null)
+    ?? block.content.map(id => childRefusal(state, { type: targetType, inCell }, state.requireBlock(id, '/id').type))
+      .find(value => value !== null);
+
+  if (refusal !== undefined && refusal !== null) {
+    state.fail('PLACEMENT_REFUSED', `${refusal.message}.`, '/type', {
+      reason: refusal.reason, ...(refusal.allowed !== undefined && { allowed: refusal.allowed }),
+    });
+  }
+
+  const overrides = args.data === undefined ? {} : args.data;
+
+  if (!isRecord(overrides)) {
+    state.fail('INVALID_ARGS', 'Block data must be a record.', '/data');
+  }
+
+  for (const field of Object.keys(overrides)) {
+    const path = `/data/${pointerKey(field)}`;
+
+    if (target.entry.viewState.includes(field)) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" is view state. Agents do not set it.`, path, {
+        reason: 'view-state', field,
+      });
+    }
+    if (Object.hasOwn(target.entry.guardedFields, field) && target.entry.guardedFields[field] !== 'block.convert') {
+      const use = target.entry.guardedFields[field];
+
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" keeps an invariant. Use ${use} instead.`, path, {
+        reason: 'guarded', field, use,
+      });
+    }
+  }
+
+  const text = block.data[from];
+  const plainSegments = !target.entry.richTextFields.includes(to) && isArray(text) ? text : undefined;
+
+  if (plainSegments !== undefined && !isRichText(plainSegments)) {
+    state.fail('INVALID_ARGS', `"${from}" must contain rich-text segments.`, '/id');
+  }
+  const carried = plainSegments === undefined ? text : state.ctx.richText.plainText(plainSegments);
+  const prepared = state.prepareData(targetType, {
+    ...(target.entry.defaultData ?? {}),
+    [to]: carried ?? (target.entry.richTextFields.includes(to) ? [] : ''),
+    ...overrides,
+  }, '/data', block.id, { normalize: false });
+  const normalized = target.runtime.normalize === undefined ? prepared : target.runtime.normalize(structuredClone(prepared));
+
+  if (!isRecord(normalized)) {
+    state.fail('INVALID_ARGS', 'Normalized block data must be a record.', '/data');
+  }
+
+  const rich = target.entry.richTextFields;
+  const produced: Record<string, unknown> = Object.fromEntries(rich
+    .filter(field => Object.hasOwn(normalized, field) && !sameField(prepared, normalized, field))
+    .map(field => [field, normalized[field]]));
+  const data: Record<string, unknown> = {
+    ...Object.fromEntries(Object.entries(normalized).filter(([key]) => !Object.hasOwn(produced, key))),
+    ...(Object.keys(produced).length === 0 ? {} : state.prepareData(
+      targetType, produced, '/data', block.id, { normalize: false }
+    )),
+  };
+
+  for (const field of target.entry.viewState) {
+    if (Object.hasOwn(data, field)) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" is view state. Agents do not set it.`, `/data/${pointerKey(field)}`, {
+        reason: 'view-state', field,
+      });
+    }
+  }
+  for (const field of rich) {
+    if (Object.hasOwn(data, field) && !isRichText(data[field])) {
+      state.fail('INVALID_ARGS', `"${field}" must contain rich-text segments.`, `/data/${pointerKey(field)}`);
+    }
+  }
+  state.emit({ op: 'replaceType', id: block.id, type: targetType, data });
 
   return { id: block.id };
 };

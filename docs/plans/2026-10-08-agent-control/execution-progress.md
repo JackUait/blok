@@ -56,9 +56,11 @@ This file records reviewed implementation, not planned work. All implementation 
 | 01/7 | JSON edit applier | `aed1c89c` | Behavioral RED/GREEN; 49 tests; pair and checkpoint lint/full compiler; independent final review. Planner/executor integration deferred. |
 | 01/8 | Planner refs and insertion | `11d78277` | Behavioral RED/GREEN; final 80 insert + 38 state tests; scoped lint/full compiler; independent final review. Public planner/Jint integration remains pending. |
 | 02/18–22 | Remaining built-in block descriptions | `11d78277` | 293 new + 684 supporting tests; scoped lint/full compiler; independent scoped reviews; fresh built 139 checks. Native-save and action-runtime parity remain pending. |
-| 01/9 | Update, delete and duplicate planners | This checkpoint | Behavioral RED/GREEN; 105 new + 2 boundary + 118 existing tests; scoped lint/stable full compiler; independent source/correction/gate reviews. Public planner/editor/store/Jint parity remains pending. |
-| 02/23 | Shared root page-icon schema | This checkpoint | Semantic identity RED/GREEN; seven preserved controls; shared schema bytes unchanged by extraction; scoped lint/compiler and independent review; built icon/title controls. |
-| 02/24–24a | Real saved image markup values and schema acceptance | This checkpoint | Validation-first RED/GREEN; 112 schema + 578 referring + 107 model tests; exact pin/digest widening; independent source/pin/gate reviews; built native save and schema controls. |
+| 01/9 | Update, delete and duplicate planners | `bae9a911` | Behavioral RED/GREEN; 105 new + 2 boundary + 118 existing tests; scoped lint/stable full compiler; independent source/correction/gate reviews. Public planner/editor/store/Jint parity remains pending. |
+| 02/23 | Shared root page-icon schema | `bae9a911` | Semantic identity RED/GREEN; seven preserved controls; shared schema bytes unchanged by extraction; scoped lint/compiler and independent review; built icon/title controls. |
+| 02/24–24a | Real saved image markup values and schema acceptance | `bae9a911` | Validation-first RED/GREEN; 112 schema + 578 referring + 107 model tests; exact pin/digest widening; independent source/pin/gate reviews; built native save and schema controls. |
+| 01/10 | Move and convert planners | This checkpoint | Behavioral RED/GREEN, including two reservation regressions; 63 new + 225 referring cases; scoped lint; independent core, reservation and lint-shape reviews. Stable compiler and fresh build pass. Public planner/editor/store/Jint parity remains pending. |
+| 02/25 | Inline tool and tune descriptions | This checkpoint | Semantic missing-static RED/GREEN; 26 new + 942 native cases; published-types law; scoped lint and independent review. Fresh built probe passes 115 checks. No action-runtime or full inline interaction claim. |
 
 ## Release obligation
 
@@ -108,3 +110,11 @@ Checkpoint commit: Plan01Task6 cd8a55ec reviewed/verified; two exact paths. UTF-
 - Full compiler and fresh build passed on stable ba6ffddf. Its inventory contained 4099 entries but 4098 distinct hashed paths. Before/after input maps were byte-identical. Twelve checkpoint hashes stayed unchanged.
 - Built native Image/schema/icon controls passed 31 checks; layout/media controls passed 55. All 657 dist files stayed unchanged. Each page reported zero console errors and four warnings. Build and source-test warnings remain recorded.
 - Independent task source, correction and final scoped gate reviews passed. The controller delivers only twelve source/test/snapshot paths and this ledger. Later planner, executor, browser/store/Jint, MCP and eval work remain unfinished. Overall final full-project gates remain pending.
+
+### 2026-10-08 move/convert and inline-description checkpoint
+
+- Task10 final queue `bm1uktyev` passed two reservation cases, all 63 new cases, 225 referring cases and changed-three-file lint. Task25 queue `bzv81aouj` passed 26 new cases, 917 inline cases, 25 tune cases, 122 published-type checks and changed-fifteen-file lint.
+- Four earlier agent-control law failures were reproduced before correction. Queue `bb9a9ibq9` passed all 122 focused cases and changed-four-file lint. Independent spec and quality review passed. No unrelated history-drawer accessibility change is included.
+- Full compiler and fresh build `bch6s0jgk` passed with stable HEAD `3ea46102`, identical 4399-path TS/JSON inventory and all 22 owned hashes preserved. The inventory is not a complete compiler dependency graph. Build warnings remain recorded.
+- Built probe `b7a4ibup5` passed 115 checks through public built bundles. All 657 dist hashes and 22 owned hashes stayed unchanged. The browser reported zero errors and four `addRange` warnings.
+- This delivery excludes the installed, intentionally failing Task11 test. Text commands and browser registry work remain held until checkpoint delivery. Overall implementation, final full-project gates and broad review remain unfinished.

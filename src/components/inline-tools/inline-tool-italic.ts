@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { IconItalic } from '../icons';
 
 import { createSimpleMarkTool } from './simple-mark-tool';
@@ -21,6 +22,8 @@ export class ItalicInlineTool extends createSimpleMarkTool({
     aliasTags: ['em'],
   },
 }) {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.italic;
+
   /**
    * At a collapsed caret, defer Cmd/Ctrl+I to the browser's native
    * pending-italic handler instead of intercepting it (see

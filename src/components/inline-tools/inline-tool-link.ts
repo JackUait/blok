@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { linkSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type {
   InlineTool,
@@ -91,6 +92,8 @@ const RECENT_META_CLASSES = 'block w-full min-h-[14px] text-[11px] leading-[14px
  * Wrap selected text with <a> tag
  */
 export class LinkInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.link;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}

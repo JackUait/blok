@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { boldSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import type { MarkSpec } from '../../../types/api';
@@ -29,6 +30,8 @@ const BOLD_SPEC: MarkSpec = {
  * listeners, and the <b>→<strong> normalization passes.
  */
 export class BoldInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.bold;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}

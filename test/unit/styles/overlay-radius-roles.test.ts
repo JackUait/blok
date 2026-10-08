@@ -7,7 +7,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { list } from 'postcss';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const read = (file: string): string => readFileSync(resolve(__dirname, '../../../src/styles', file), 'utf8')
   .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -15,16 +16,16 @@ const read = (file: string): string => readFileSync(resolve(__dirname, '../../..
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** The winning value of `name` across every rule whose selector list is exactly `selector` (later rules win). */
 const prop = (source: string, selector: string, name: string): string | null => {
-  const rules = [ ...source.matchAll(new RegExp(`(?:^|[}\\s])${escape(selector)} ?\\{([^}]*)\\}`, 'g')) ];
+  const rules = [ ...source.matchAll(/([^{}]+)\{([^{}]*)\}/g) ]
+    .filter((rule) => rule[1].trim() === selector || list.comma(rule[1]).includes(selector));
 
   if (rules.length === 0) {
     throw new Error(`no rule for ${selector}`);
   }
 
   const values = rules
-    .map((rule) => rule[1].match(new RegExp(`(?:^|[;\\s])${escape(name)} ?: ?([^;]+);`)))
+    .map((rule) => rule[2].match(new RegExp(`(?:^|[;\\s])${escape(name)} ?: ?([^;]+);`)))
     .filter((match) => match !== null)
     .map((match) => match[1].trim());
 
@@ -34,6 +35,35 @@ const prop = (source: string, selector: string, name: string): string | null => 
 const radius = (source: string, selector: string): string | null => prop(source, selector, 'border-radius');
 
 const inner = (fallback: string): string => `var(--blok-radius-inner, var(--blok-radius-${fallback}))`;
+
+describe('selector lookup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('matches exact group members without splitting functional or quoted commas', () => {
+    const group = '[data-first], :is([data-second], [data-third]), [data-label="one,two"]';
+    const css = `${group} { border-radius: var(--blok-radius-control-sm); }`;
+
+    expect(radius(css, '[data-first]')).toBe('var(--blok-radius-control-sm)');
+    expect(radius(css, ':is([data-second], [data-third])')).toBe('var(--blok-radius-control-sm)');
+    expect(radius(css, '[data-label="one,two"]')).toBe('var(--blok-radius-control-sm)');
+    expect(radius(css, group)).toBe('var(--blok-radius-control-sm)');
+    expect(() => radius(css, '[data-second]')).toThrow('no rule for [data-second]');
+    expect(() => radius(css, '[data-first-extra]')).toThrow('no rule for [data-first-extra]');
+  });
+
+  it('keeps the last matching value when a later rule omits the property', () => {
+    const css = '[data-label], [data-other] { border-radius: 50%; } [data-label] { border-radius: var(--blok-radius-control-sm); } [data-label] { color: inherit; }';
+
+    expect(radius(css, '[data-label]')).toBe('var(--blok-radius-control-sm)');
+    expect(prop(css, '[data-label]', '--blok-radius-inner')).toBeNull();
+  });
+});
 
 describe('toast card', () => {
   const css = read('notifier-card.css');
@@ -125,9 +155,25 @@ describe('find', () => {
 describe('presence', () => {
   const css = read('presence.css');
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('caret label is a small control; faces stay circles', () => {
     expect(radius(css, '[data-blok-presence-caret-label]')).toBe('var(--blok-radius-control-sm)');
     expect(radius(css, '[data-blok-presence-face], [data-blok-presence-face-overflow]')).toBe('50%');
+  });
+
+  it('pins agent label, outline and face roles separately from human circles', () => {
+    expect(radius(css, '[data-blok-agent-marker-label]')).toBe('var(--blok-radius-control-sm)');
+    expect(radius(css, '[data-blok-agent-marker]')).toBe('var(--blok-radius-control)');
+    expect(radius(css, '[data-blok-presence-face][data-blok-presence-agent]')).toBe('var(--blok-radius-control-sm)');
+    expect(radius(css, '[data-blok-presence-face]')).toBe('50%');
+    expect(radius(css, '[data-blok-presence-face-overflow]')).toBe('50%');
   });
 
   it('keeps the published caret token, which hosts may override', () => {

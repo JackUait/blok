@@ -155,6 +155,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 
 /** Dynamic property setters remain exact review points, never silent escapes. */
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
+  'components/modules/collaboration/agent-marker-layer.ts': 'Writes --blok-presence-color on the holder-local agent outline and name flag; presence.css supplies their placement without root mounts or JS coordinates.',
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
   'components/modules/find/find-bar.ts': 'Writes the host-configured --blok-find-offset-x/y custom properties, finite numbers only; which window edge they measure from is decided by find.css.',

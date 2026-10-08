@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import type { InlineTool, API } from '../../../types';
 import type { Blocks, Selection, Tools, Caret, I18n, Notifier } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
@@ -14,6 +15,8 @@ import { translateToolTitle, translateToolName } from '../utils/tools';
  * Inline tools for converting blocks
  */
 export class ConvertInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.convertTo;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    */

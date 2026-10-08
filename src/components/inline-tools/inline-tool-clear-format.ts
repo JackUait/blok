@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { clearFormatSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
@@ -31,6 +32,8 @@ const isFormattingTag = (element: Element): boolean => {
  * inline code, highlight) from the selection while keeping links.
  */
 export class ClearFormatInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.clearFormat;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    */

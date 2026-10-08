@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { supSubSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type {
   InlineTool,
@@ -41,6 +42,8 @@ const OPPOSITE: Record<ScriptMode, ScriptMode> = {
  * removes the other first — <sup> and <sub> never nest.
  */
 export class SupSubInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.supSub;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    */

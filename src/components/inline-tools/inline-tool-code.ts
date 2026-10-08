@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { inlineCodeSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
@@ -26,6 +27,8 @@ const isCodeTag = (element: Element): boolean => {
  * Style selected text with inline code
  */
 export class CodeInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.inlineCode;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}

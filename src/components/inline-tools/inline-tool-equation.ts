@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { equationSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import { EQUATION_SOURCE_ATTR as EQUATION_ATTR } from '../../shared/equation-mark';
 import type {
@@ -28,6 +29,8 @@ const EDITING_ATTR = 'data-blok-equation-editing';
  * contents are rendered with KaTeX.
  */
 export class EquationInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.equation;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    */

@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 
-const TYPES_FILE = 'src/tools/table/types.ts';
+const TYPES_FILE = 'src/shared/table/types.ts';
 const SUBSYSTEMS_FILE = 'src/tools/table/table-subsystems.ts';
 const CLIPBOARD_FILE = 'src/tools/table/table-cell-clipboard.ts';
 const CELL_BLOCKS_FILE = 'src/tools/table/table-cell-blocks.ts';

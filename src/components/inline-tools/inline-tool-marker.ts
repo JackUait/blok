@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { markerSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type {
   InlineTool,
@@ -41,6 +42,8 @@ const ANY_MARK: MarkSpec = { tag: 'mark' };
  * Wraps selected text in <mark> with color or background-color styles.
  */
 export class MarkerInlineTool implements InlineTool {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.marker;
+
   /**
    * Specifies Tool as Inline Toolbar Tool
    */

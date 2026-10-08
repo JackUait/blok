@@ -1,3 +1,4 @@
+import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import { IconStrikethrough } from '../icons';
 
 import { createSimpleMarkTool } from './simple-mark-tool';
@@ -23,4 +24,6 @@ export class StrikethroughInlineTool extends createSimpleMarkTool({
     // (mirrors bold's ['b'] and italic's ['em']).
     aliasTags: ['del', 'strike'],
   },
-}) {}
+}) {
+  public static describe = BUILT_IN_INLINE_DESCRIPTIONS.strikethrough;
+}

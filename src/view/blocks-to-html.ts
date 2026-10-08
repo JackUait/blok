@@ -61,7 +61,7 @@ export interface ViewUrlContext {
   /**
    * Tool type of the block this URL belongs to (e.g. `'image'`, `'bookmark'`).
    * `undefined` for anchors inside a block's inline-HTML text, which have no
-   * single owning block.
+   * single owning block, and for the page title's icon.
    */
   blockType?: string;
 }
@@ -191,6 +191,11 @@ export interface BlocksToHtmlOptions {
    * Opt-in: without it the output has no `dir` anywhere.
    */
   direction?: 'ltr' | 'rtl';
+  /**
+   * When true, the document's `title` (and its `icon`) is written first, as an
+   * `<h1>`. Default `false`, so existing output stays the same.
+   */
+  title?: boolean;
 }
 
 /**
@@ -683,6 +688,33 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 };
 
 /**
+ * The page title as an `<h1>`, or '' when the document has none. An image
+ * icon's URL takes the same path as a block URL: transform, then the
+ * unsafe-scheme strip.
+ * @param data - saved document
+ * @param options - render options
+ */
+const titleHtml = (data: OutputData | LooseOutputData | null | undefined, options: BlocksToHtmlOptions): string => {
+  const title = data?.title;
+
+  if (typeof title !== 'string' || title.trim() === '') {
+    return '';
+  }
+
+  const icon = data?.icon;
+  const emoji = icon?.type === 'emoji' && typeof icon.value === 'string' ? icon.value : '';
+  const rawSrc = icon?.type === 'image' && typeof icon.url === 'string' ? icon.url : '';
+  const src = rawSrc === '' || options.transformUrl === undefined
+    ? rawSrc
+    : options.transformUrl(rawSrc, { attr: 'src', blockType: undefined });
+  const safeSrc = typeof src === 'string' && src !== '' && !hasUnsafeUrlProtocol(src, 'src') ? src : '';
+  const imageHtml = safeSrc === '' ? '' : `<img alt="" src="${escapeHtml(safeSrc)}"> `;
+  const iconHtml = emoji === '' ? imageHtml : `<span aria-hidden="true">${escapeHtml(emoji)}</span> `;
+
+  return `<h1>${iconHtml}${escapeHtml(title)}</h1>`;
+};
+
+/**
  * Render a saved Blok document to semantic HTML, synchronously and DOM-free.
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
  * @param options - schema / custom renderers / unknown-block policy
@@ -692,7 +724,8 @@ export const blocksToHtml = (
   data: OutputData | LooseOutputData | null | undefined,
   options: BlocksToHtmlOptions = {}
 ): string => {
-  const body = createHtmlRenderer(buildDocumentModel(data), options).renderTopLevel();
+  const rendered = createHtmlRenderer(buildDocumentModel(data), options).renderTopLevel();
+  const body = options.title === true ? titleHtml(data, options) + rendered : rendered;
 
   /**
    * An empty document still yields the wrapper when opted in: consumers style

@@ -1266,3 +1266,59 @@ describe('stray children of tabs', () => {
     expect(out).toBe('**C**\n\n**Do**\n\none\n\nI2\n\nAFTER');
   });
 });
+
+describe('blocksToMarkdown with title: true', () => {
+  const body: OutputBlockData[] = [{ type: 'paragraph', data: { text: 'Body' } }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('writes the title and emoji icon as the first heading', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
+
+    expect(blocksToMarkdown(data, { title: true })).toBe('# 🚀 Plan\n\nBody');
+  });
+
+  it('leaves an image icon out', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'image', url: 'https://x.com/i.png' }, blocks: body };
+
+    expect(blocksToMarkdown(data, { title: true })).toBe('# Plan\n\nBody');
+  });
+
+  it('writes no heading line for a document without a title', () => {
+    expect(blocksToMarkdown({ blocks: body }, { title: true })).toBe('Body');
+    expect(blocksToMarkdown({ title: '', blocks: body }, { title: true })).toBe('Body');
+  });
+
+  it('writes only the heading for a titled document with no blocks', () => {
+    expect(blocksToMarkdown({ title: 'Plan', blocks: [] }, { title: true })).toBe('# Plan');
+  });
+
+  it('escapes the title as plain text', () => {
+    expect(blocksToMarkdown({ title: 'a *b* c', blocks: [] }, { title: true })).toBe('# a \\*b\\* c');
+    expect(blocksToMarkdown({ title: '# Plan', blocks: [] }, { title: true })).toBe('# \\# Plan');
+    expect(blocksToMarkdown({ title: 'Plan #', blocks: [] }, { title: true })).toBe('# Plan \\#');
+  });
+
+  it('keeps the title on one line', () => {
+    expect(blocksToMarkdown({ title: 'a\nb', blocks: [] }, { title: true })).toBe('# a b');
+  });
+
+  it('ignores the title without the option', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
+
+    expect(blocksToMarkdown(data)).toBe('Body');
+    expect(blocksToMarkdown(data, { title: false })).toBe('Body');
+  });
+
+  it('writes the same heading in the report variant', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
+
+    expect(blocksToMarkdownWithReport(data, { title: true })).toEqual({ markdown: '# 🚀 Plan\n\nBody', warnings: [] });
+  });
+});

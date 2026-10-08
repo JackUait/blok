@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { changeTouchesSubtree } from '../../../../src/components/utils/blocks-api';
+import { changeTouchesSubtree, createBlocksApiForEditor } from '../../../../src/components/utils/blocks-api';
 import type { Blok } from '../../../../types';
 
 type FakeRecord = { id: string; name: string; parentId: string | null };
@@ -73,5 +73,23 @@ describe('changeTouchesSubtree', () => {
     ]);
 
     expect(changeTouchesSubtree(cyclic, changeOf('a'), 'elsewhere')).toBe(false);
+  });
+});
+
+describe('exportMarkdown pass-through', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("forwards core's options, so title: true reaches the editor", async () => {
+    const exportMarkdown = vi.fn(async (): Promise<string> => '# Plan');
+    const editor = { blocks: { exportMarkdown } } as unknown as Blok;
+
+    expect(await createBlocksApiForEditor(editor).exportMarkdown({ title: true })).toBe('# Plan');
+    expect(exportMarkdown).toHaveBeenCalledWith({ title: true });
   });
 });

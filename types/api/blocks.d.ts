@@ -169,9 +169,11 @@ export interface Blocks {
    * Degradations (Markdown cannot express them): table `colspan`/`rowspan` and
    * heading columns are dropped; a table with no heading row gets an empty
    * header row, since GFM requires one.
+   * @param options - `title: true` writes the page title first, as a `#`
+   *   heading led by an emoji icon. An image icon is left out. Default off.
    * @returns The document as Markdown ('' when there is nothing to save)
    */
-  exportMarkdown(): Promise<string>;
+  exportMarkdown(options?: { title?: boolean }): Promise<string>;
 
   /**
    * Removes current Block

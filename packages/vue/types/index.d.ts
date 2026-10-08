@@ -336,8 +336,9 @@ export interface UseBlocksApi {
    * {@link insertMarkdown}). Async: the serializer is lazy-loaded. Markdown cannot
    * express every block, so some structure is dropped (table `colspan`/`rowspan`,
    * heading columns). Returns `''` for an empty document. Pre-ready: `''`.
+   * `title: true` writes the page title first, as core's does.
    */
-  exportMarkdown(): Promise<string>;
+  exportMarkdown(options?: { title?: boolean }): Promise<string>;
   /**
    * Move `id` to a flat slot, as a single operation. No-op when `id` is unknown.
    * For a relative `{ before|after }` target it is also a no-op when the ref is

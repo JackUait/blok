@@ -5,6 +5,7 @@ import type { DerivedSource } from '../blockManager/types';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { InsertInsideParentWithCurrentOptions } from '../blockManager/block-insertion';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
+import { withMarkdownTitle } from '../../../markdown/blocks-to-markdown-core';
 import type { InternalMarkdownImportConfig, MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
@@ -59,7 +60,7 @@ export class BlocksAPI extends Module {
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
       importMarkdown: (md: string, options?: MarkdownImportConfig): Promise<OutputData> => this.importMarkdown(md, options),
-      exportMarkdown: (): Promise<string> => this.exportMarkdown(),
+      exportMarkdown: (options?: { title?: boolean }): Promise<string> => this.exportMarkdown(options),
       delete: (index?: number, setCaret?: boolean): Promise<void> => this.delete(index, setCaret),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
@@ -464,9 +465,11 @@ export class BlocksAPI extends Module {
    *
    * Blocks owned by a table cell are serialized INSIDE the pipe table and are not
    * repeated as loose lines (see `blocksToMarkdown`).
+   * @param options - export options
+   * @param options.title - write the page title first, as a `#` heading
    * @returns the document as Markdown ('' when there is nothing to save)
    */
-  public async exportMarkdown(): Promise<string> {
+  public async exportMarkdown(options: { title?: boolean } = {}): Promise<string> {
     // Internal dialect: blocksToMarkdown reads flat blocks holding HTML. The host
     // dialect holds segments and, with legacy output, list items[] and toggleList.
     const output = await this.Blok.Saver.save({ dialect: 'internal' });
@@ -504,7 +507,7 @@ export class BlocksAPI extends Module {
       return 1 + depthOf(parent, seen);
     };
 
-    return blocksToMarkdown(output.blocks.map((block) => ({
+    const markdown = blocksToMarkdown(output.blocks.map((block) => ({
       id: block.id,
       tool: block.type,
       data: block.data,
@@ -512,6 +515,8 @@ export class BlocksAPI extends Module {
       ...(block.content !== undefined ? { contentIds: block.content } : {}),
       indent: depthOf(block.id),
     })));
+
+    return options.title === true ? withMarkdownTitle(markdown, output.title, output.icon) : markdown;
   }
 
   /**

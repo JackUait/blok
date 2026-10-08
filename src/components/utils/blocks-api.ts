@@ -1078,7 +1078,7 @@ export const createBlocksApiForEditor = (
    * {@link UseBlocksApi.insertMarkdown}. Pure delegation to core's async
    * `exportMarkdown` (which lazy-loads the serializer).
    */
-  const exportMarkdown = (): Promise<string> => editor.blocks.exportMarkdown();
+  const exportMarkdown = (options?: { title?: boolean }): Promise<string> => editor.blocks.exportMarkdown(options);
 
   /**
    * The LIVE Yjs-sync flag, read at call time (the api handle is memoized, so a

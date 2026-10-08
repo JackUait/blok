@@ -108,3 +108,33 @@ describe('blocksToPlainTextWithReport', () => {
     expect(report.warnings).toEqual([]);
   });
 });
+
+describe('blocksToPlainText with title: true', () => {
+  const body: OutputBlockData[] = [{ type: 'paragraph', data: { text: 'Body' } }];
+  const titled: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('puts the title on the first line', () => {
+    expect(blocksToPlainText(titled, { title: true })).toBe('Plan\n\nBody');
+    expect(blocksToPlainText({ title: 'Plan', blocks: [] }, { title: true })).toBe('Plan');
+  });
+
+  it('writes nothing for a missing title', () => {
+    expect(blocksToPlainText({ blocks: body }, { title: true })).toBe('Body');
+  });
+
+  it('ignores the title without the option', () => {
+    expect(blocksToPlainText(titled)).toBe('Body');
+  });
+
+  it('puts the same first line in the report variant', () => {
+    expect(blocksToPlainTextWithReport(titled, { title: true })).toEqual({ text: 'Plan\n\nBody', warnings: [] });
+  });
+});

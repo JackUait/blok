@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { BlocksAPI } from '../../../../../src/components/modules/api/blocks'
 import { EventsDispatcher } from '../../../../../src/components/utils/events'
+import { blocksToMarkdown } from '../../../../../src/view'
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config'
 import type { OutputData } from '../../../../../types'
@@ -107,5 +108,38 @@ describe('BlocksAPI.exportMarkdown', () => {
     const blocksApi = createBlocksApi(undefined)
 
     expect(await blocksApi.exportMarkdown()).toBe('')
+  })
+
+  describe('with title: true', () => {
+    const saved: OutputData = {
+      title: 'Plan *x*',
+      icon: { type: 'emoji', value: '🚀' },
+      blocks: [{ id: 'p', type: 'paragraph', data: { text: 'Intro' } }],
+    }
+
+    it('writes the page title first, as the view exporter does', async () => {
+      const blocksApi = createBlocksApi(saved)
+
+      expect(await blocksApi.exportMarkdown({ title: true })).toBe('# 🚀 Plan \\*x\\*\n\nIntro')
+      expect(await blocksApi.exportMarkdown({ title: true })).toBe(blocksToMarkdown(saved, { title: true }))
+    })
+
+    it('passes the option through the public methods surface', async () => {
+      const blocksApi = createBlocksApi(saved)
+
+      expect(await blocksApi.methods.exportMarkdown({ title: true })).toBe('# 🚀 Plan \\*x\\*\n\nIntro')
+    })
+
+    it('leaves the title out without the option', async () => {
+      const blocksApi = createBlocksApi(saved)
+
+      expect(await blocksApi.exportMarkdown()).toBe('Intro')
+    })
+
+    it('writes only the title when there are no blocks', async () => {
+      const blocksApi = createBlocksApi({ title: 'Plan', blocks: [] })
+
+      expect(await blocksApi.exportMarkdown({ title: true })).toBe('# Plan')
+    })
   })
 })

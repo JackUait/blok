@@ -75,7 +75,7 @@ export interface ViewUrlContext {
   /**
    * Tool type of the block this URL belongs to (e.g. `'image'`, `'bookmark'`).
    * `undefined` for anchors inside a block's inline-HTML text, which have no
-   * single owning block.
+   * single owning block, and for the page title's icon.
    */
   blockType?: string;
 }
@@ -209,6 +209,19 @@ export interface BlocksToHtmlOptions {
    * Opt-in: without it the output has no `dir` anywhere.
    */
   direction?: 'ltr' | 'rtl';
+  /**
+   * When true, the document's `title` is written first (default `false`).
+   *
+   * - HTML: an `<h1>` before the body, inside the {@link root} wrapper. An
+   *   emoji icon leads it as `<span aria-hidden="true">`; an image icon as
+   *   `<img alt="">`, whose URL goes through {@link transformUrl} (with no
+   *   `blockType`) and the unsafe-scheme strip.
+   * - Markdown: a `#` heading, led by an emoji icon. An image icon is left out.
+   * - Plain text: the title alone, as the first line.
+   *
+   * A document with no title gets no extra line.
+   */
+  title?: boolean;
 }
 
 /**
@@ -408,7 +421,7 @@ export interface MarkdownSerializationResult {
  */
 export declare function blocksToMarkdown(
   data: OutputData | LooseOutputData | null | undefined,
-  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref' | 'title'>
 ): string;
 
 /**
@@ -422,7 +435,7 @@ export declare function blocksToMarkdown(
  */
 export declare function blocksToMarkdownWithReport(
   data: OutputData | LooseOutputData | null | undefined,
-  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref' | 'title'>
 ): MarkdownSerializationResult;
 
 /**

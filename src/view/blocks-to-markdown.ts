@@ -18,7 +18,8 @@ import {
   inlineLosses,
   markdownDestination,
   markdownTextEscaper,
-  serializeBlocksToMarkdown
+  serializeBlocksToMarkdown,
+  withMarkdownTitle
 } from '../markdown/blocks-to-markdown-core';
 import type { InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
@@ -47,6 +48,9 @@ type LossReporter = (construct: string) => void;
 
 /** Host page metadata and links, as `blocksToHtml` takes them. */
 type PageOptions = Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>;
+
+/** Everything the Markdown exporters take. */
+type MarkdownOptions = Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref' | 'title'>;
 
 /**
  * Read an attribute off a parse5 element.
@@ -241,7 +245,7 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
  */
 export const blocksToMarkdown = (
   data: OutputData | LooseOutputData | null | undefined,
-  options: PageOptions = {}
+  options: MarkdownOptions = {}
 ): string => blocksToMarkdownWithReport(data, options).markdown;
 
 /**
@@ -257,6 +261,11 @@ export const blocksToMarkdown = (
  */
 export const blocksToMarkdownWithReport = (
   data: OutputData | LooseOutputData | null | undefined,
-  options: PageOptions = {}
-): MarkdownSerializationResult =>
-  serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options), options.pageInfo, options.pageHref);
+  options: MarkdownOptions = {}
+): MarkdownSerializationResult => {
+  const report = serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options), options.pageInfo, options.pageHref);
+
+  return options.title === true
+    ? { ...report, markdown: withMarkdownTitle(report.markdown, data?.title, data?.icon) }
+    : report;
+};

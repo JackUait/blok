@@ -465,7 +465,16 @@ const readPlainText = (
 export const blocksToPlainTextWithReport = (
   data: OutputData | LooseOutputData | null | undefined,
   options: BlocksToPlainTextOptions = {}
-): PlainTextResult => readPlainText(data, options);
+): PlainTextResult => {
+  const result = readPlainText(data, options);
+  const title = options.title === true ? data?.title : undefined;
+
+  if (typeof title !== 'string' || title.trim() === '') {
+    return result;
+  }
+
+  return { ...result, text: result.text === '' ? title : `${title}\n\n${result.text}` };
+};
 
 /** Block facts for the internal page index, using the same text walk. */
 export const collectPageIndexBlocks = (

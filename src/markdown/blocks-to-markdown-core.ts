@@ -186,6 +186,37 @@ const escapeProse = (text: string, dollars: boolean): string => {
 const escapePlainText = (text: string): string => escapeLineStarts(markdownTextEscaper(text)(text));
 
 /**
+ * A ` #` run at the end of a heading line would be read as its closing sequence.
+ * @param line - one heading line
+ */
+const escapeClosingHashes = (line: string): string => line.replace(/([ \t])(#+)([ \t]*)$/, '$1\\$2$3');
+
+/**
+ * Plain text (a page title) as the text of one ATX heading line.
+ * @param text - plain text, never HTML
+ */
+export const markdownHeadingText = (text: string): string =>
+  escapeClosingHashes(escapePlainText(text.replace(/\n/g, ' ')));
+
+/**
+ * Put a page title, as a `#` heading, in front of exported Markdown. An emoji
+ * icon leads the heading; an image icon has no Markdown form and is left out.
+ * @param markdown - the exported body
+ * @param title - the document's `title`
+ * @param icon - the document's `icon`
+ */
+export const withMarkdownTitle = (markdown: string, title: unknown, icon: unknown): string => {
+  if (typeof title !== 'string' || title.trim() === '') {
+    return markdown;
+  }
+
+  const emoji = isRecord(icon) && icon.type === 'emoji' ? asString(icon.value) : '';
+  const line = `# ${emoji === '' ? '' : `${markdownTextEscaper(emoji)(emoji)} `}${markdownHeadingText(title)}`;
+
+  return markdown === '' ? line : `${line}\n\n${markdown}`;
+};
+
+/**
  * The escaper for one inline field's text nodes.
  *
  * `$` is escaped only when the field could pair two of them: it holds an
@@ -1223,9 +1254,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
        * rest into a paragraph. Raw `<br>` is the one inline break a heading can
        * hold; the importer reads it back. A soft newline is just a space.
        */
-      const line = text.replace(HARD_BREAKS, '<br>').replace(/\n/g, ' ')
-        /** A ` #` run at the end would be read as the heading's closing sequence. */
-        .replace(/([ \t])(#+)([ \t]*)$/, '$1\\$2$3');
+      const line = escapeClosingHashes(text.replace(HARD_BREAKS, '<br>').replace(/\n/g, ' '));
 
       return `${flatIndent}${'#'.repeat(level)} ${line}`;
     }

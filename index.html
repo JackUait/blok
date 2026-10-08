@@ -2865,7 +2865,7 @@
         if (!state.blokView) return;
         try {
           const data = await blok.save();
-          blokviewPanel.innerHTML = blocksToHtml(data, { toolAttributes: true });
+          blokviewPanel.innerHTML = blocksToHtml(data, { toolAttributes: true, title: true });
         } catch (err) {
           console.error('Blok View render failed', err);
         }

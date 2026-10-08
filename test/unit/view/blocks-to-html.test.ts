@@ -1740,3 +1740,60 @@ describe('media variants', () => {
   });
 });
 
+
+describe('blocksToHtml with title: true', () => {
+  const body: OutputBlockData[] = [{ type: 'paragraph', data: { text: 'Body' } }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('writes an emoji icon and the title as an h1 before the body', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
+
+    expect(blocksToHtml(data, { title: true })).toBe('<h1><span aria-hidden="true">🚀</span> Plan</h1><p>Body</p>');
+  });
+
+  it('puts the h1 inside the root wrapper', () => {
+    const data: OutputData = { title: 'Plan', blocks: body };
+
+    expect(blocksToHtml(data, { title: true, root: true })).toBe('<div data-blok-interface="view"><h1>Plan</h1><p>Body</p></div>');
+  });
+
+  it('writes an image icon as a decorative img', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'image', url: 'https://x.com/i.png?a=1&b=2' }, blocks: [] };
+
+    expect(blocksToHtml(data, { title: true })).toBe('<h1><img alt="" src="https://x.com/i.png?a=1&amp;b=2"> Plan</h1>');
+  });
+
+  it('passes the icon url through transformUrl and the unsafe-scheme strip', () => {
+    const unsafe: OutputData = { title: 'Plan', icon: { type: 'image', url: 'javascript:alert(1)' }, blocks: [] };
+    const routed: OutputData = { title: 'Plan', icon: { type: 'image', url: 'https://x.com/i.png' }, blocks: [] };
+
+    expect(blocksToHtml(unsafe, { title: true })).toBe('<h1>Plan</h1>');
+    expect(blocksToHtml(routed, { title: true, transformUrl: (url) => url.replace('x.com', 'cdn.x.com') }))
+      .toBe('<h1><img alt="" src="https://cdn.x.com/i.png"> Plan</h1>');
+  });
+
+  it('escapes the title and the emoji', () => {
+    const data: OutputData = { title: '<b>a</b> & "b"', icon: { type: 'emoji', value: '<i>' }, blocks: [] };
+
+    expect(blocksToHtml(data, { title: true }))
+      .toBe('<h1><span aria-hidden="true">&lt;i&gt;</span> &lt;b&gt;a&lt;/b&gt; &amp; &quot;b&quot;</h1>');
+  });
+
+  it('writes no h1 without a title', () => {
+    expect(blocksToHtml({ blocks: body }, { title: true })).toBe('<p>Body</p>');
+  });
+
+  it('ignores the title without the option', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
+
+    expect(blocksToHtml(data)).toBe('<p>Body</p>');
+    expect(blocksToHtml(data, { root: true })).toBe('<div data-blok-interface="view"><p>Body</p></div>');
+  });
+});

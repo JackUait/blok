@@ -1,5 +1,6 @@
 import type { OutputBlockData } from './data-formats/output-data';
 import type { MarkdownImportConfig } from './data-formats/markdown-import-config';
+import type { PageIcon } from './tools/page';
 
 /**
  * Convert a Markdown string to an array of Blok `OutputBlockData`.
@@ -34,6 +35,10 @@ export interface MarkdownImportResult {
   blocks: OutputBlockData[];
   /** Constructs that arrived degraded, in document order. */
   warnings: MarkdownDegradation[];
+  /** The lifted page title. Only with `title: true` and a leading `#` heading. */
+  title?: string;
+  /** The lifted page icon: a leading emoji and a space in that heading. */
+  icon?: PageIcon;
 }
 
 /**

@@ -43,4 +43,15 @@ export interface MarkdownImportConfig {
 
   /** Additional mdast extensions */
   mdastExtensions?: MdastExtension[];
+
+  /**
+   * Lift a leading `#` heading out of the blocks as the page title. A leading
+   * emoji and a space in it become the icon. Default `false`.
+   *
+   * `markdownToBlocksWithReport` returns them as `title` and `icon`;
+   * `markdownToBlocks` only drops the heading. `blocks.importMarkdown` sets
+   * the editor's title and icon from them, and clears both when the Markdown
+   * has no such heading. Without the option, it keeps the current ones.
+   */
+  title?: boolean;
 }

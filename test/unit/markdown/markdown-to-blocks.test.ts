@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { markdownToBlocks as markdownToSegmentBlocks, markdownToBlocksWithReport as markdownToSegmentBlocksWithReport } from '../../../src/markdown/index';
 import type { MarkdownImportConfig, MarkdownImportResult } from '../../../src/markdown/index';
-import type { OutputBlockData } from '../../../types';
+import type { OutputBlockData, OutputData } from '../../../types';
+import { blocksToMarkdown } from '../../../src/view';
 import { richTextAsHtml } from '../helpers/rich-text-as-html';
 
 /** Rich fields read back as HTML; markdown-to-blocks-segments.test.ts pins the segments. */
@@ -456,5 +457,92 @@ describe('markdownToBlocks — unsafe URL schemes', () => {
     );
 
     expect(warnings).toEqual([]);
+  });
+});
+
+describe('markdownToBlocks with title: true', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('lifts a leading # heading into title and an emoji icon', async () => {
+    const result = await markdownToSegmentBlocksWithReport('# 🚀 Plan\n\nBody', { title: true });
+
+    expect(result.title).toBe('Plan');
+    expect(result.icon).toEqual({ type: 'emoji', value: '🚀' });
+    expect(result.blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('lifts a title with no icon', async () => {
+    const result = await markdownToSegmentBlocksWithReport('# Plan *now*\n\nBody', { title: true });
+
+    expect(result.title).toBe('Plan now');
+    expect(result).not.toHaveProperty('icon');
+  });
+
+  it('counts only a leading emoji followed by a space as the icon', async () => {
+    const glued = await markdownToSegmentBlocksWithReport('# 🚀Plan', { title: true });
+    const word = await markdownToSegmentBlocksWithReport('# Go 🚀 now', { title: true });
+    const flag = await markdownToSegmentBlocksWithReport('# 🇫🇷 Paris', { title: true });
+    const family = await markdownToSegmentBlocksWithReport('# 👨‍👩‍👧 Home', { title: true });
+    const copyright = await markdownToSegmentBlocksWithReport('# © 2026 Report', { title: true });
+
+    expect(glued).toMatchObject({ title: '🚀Plan' });
+    expect(glued).not.toHaveProperty('icon');
+    expect(word).toMatchObject({ title: 'Go 🚀 now' });
+    expect(word).not.toHaveProperty('icon');
+    expect(flag).toMatchObject({ title: 'Paris', icon: { type: 'emoji', value: '🇫🇷' } });
+    expect(family).toMatchObject({ title: 'Home', icon: { type: 'emoji', value: '👨‍👩‍👧' } });
+    expect(copyright).toMatchObject({ title: '© 2026 Report' });
+    expect(copyright).not.toHaveProperty('icon');
+  });
+
+  it('drops the lifted heading from the plain variant', async () => {
+    const blocks = await markdownToSegmentBlocks('# 🚀 Plan\n\nBody', { title: true });
+
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+  });
+
+  it('does not lift a non-leading # or a leading ##', async () => {
+    const later = await markdownToSegmentBlocksWithReport('Intro\n\n# Plan', { title: true });
+    const second = await markdownToSegmentBlocksWithReport('## Plan\n\nBody', { title: true });
+
+    expect(later).not.toHaveProperty('title');
+    expect(later.blocks.map((block) => block.type)).toEqual(['paragraph', 'header']);
+    expect(second).not.toHaveProperty('title');
+    expect(second.blocks.map((block) => block.type)).toEqual(['header', 'paragraph']);
+  });
+
+  it('leaves every result unchanged without the option', async () => {
+    const md = '# 🚀 Plan\n\nBody';
+    const result = await markdownToSegmentBlocksWithReport(md);
+
+    expect(Object.keys(result).sort()).toEqual(['blocks', 'warnings']);
+    expect(result.blocks.map((block) => block.type)).toEqual(['header', 'paragraph']);
+    const off = await markdownToSegmentBlocksWithReport(md, { title: false });
+
+    expect(Object.keys(off).sort()).toEqual(['blocks', 'warnings']);
+    expect(off.blocks.map(({ id: _id, ...block }) => block)).toEqual(result.blocks.map(({ id: _id, ...block }) => block));
+  });
+
+  it('round-trips the title through blocksToMarkdown', async () => {
+    const data: OutputData = {
+      title: 'Plan *x* #',
+      icon: { type: 'emoji', value: '🚀' },
+      blocks: [
+        { type: 'paragraph', data: { text: 'Body' } },
+        { type: 'header', data: { text: 'Part', level: 2 } },
+      ],
+    };
+    const result = await markdownToSegmentBlocksWithReport(blocksToMarkdown(data, { title: true }), { title: true });
+
+    expect(result.title).toBe('Plan *x* #');
+    expect(result.icon).toEqual({ type: 'emoji', value: '🚀' });
+    expect(result.blocks).toHaveLength(2);
   });
 });

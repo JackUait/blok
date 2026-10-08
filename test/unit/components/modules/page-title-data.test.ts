@@ -121,6 +121,44 @@ describe('page title save and load', () => {
     expect(core.moduleInstances.YjsManager.getPageFields().title).toBe('Kept');
   });
 
+  it('a Markdown import with title: true takes the title and icon from the leading heading', async () => {
+    const core = await boot({ data: { title: 'Old', icon: { type: 'emoji', value: '📌' }, blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+
+    const result = await core.moduleInstances.API.methods.blocks.importMarkdown('# 🚀 Plan\n\nBody', { title: true });
+
+    expect(core.moduleInstances.YjsManager.getPageFields()).toEqual({ title: 'Plan', icon: { type: 'emoji', value: '🚀' } });
+    expect(result).toMatchObject({ title: 'Plan', icon: { type: 'emoji', value: '🚀' } });
+    expect(result.blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect((await core.moduleInstances.Saver.save())?.blocks.map((block) => block.type)).toEqual(['paragraph']);
+  });
+
+  it('a Markdown import with title: true leaves no undo step of its own for the title', async () => {
+    const core = await boot({ data: { title: 'Old', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+
+    await core.moduleInstances.API.methods.blocks.importMarkdown('# Plan\n\nBody', { title: true });
+    core.moduleInstances.YjsManager.undo();
+
+    expect(core.moduleInstances.YjsManager.getPageFields().title).toBe('Plan');
+  });
+
+  it('a Markdown import with title: true and no leading heading clears the title and icon', async () => {
+    const core = await boot({ data: { title: 'Old', icon: { type: 'emoji', value: '📌' }, blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+
+    const result = await core.moduleInstances.API.methods.blocks.importMarkdown('Body', { title: true });
+
+    expect(core.moduleInstances.YjsManager.getPageFields()).toEqual({});
+    expect(result).not.toHaveProperty('title');
+    expect(result).not.toHaveProperty('icon');
+  });
+
+  it('a Markdown import with title: true and an iconless heading clears the old icon', async () => {
+    const core = await boot({ data: { title: 'Old', icon: { type: 'emoji', value: '📌' }, blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+
+    await core.moduleInstances.API.methods.blocks.importMarkdown('# Plan', { title: true });
+
+    expect(core.moduleInstances.YjsManager.getPageFields()).toEqual({ title: 'Plan' });
+  });
+
   it('keeps the title through an HTML import', async () => {
     const core = await boot({ data: { title: 'Kept', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
 

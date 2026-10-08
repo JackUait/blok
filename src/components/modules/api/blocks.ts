@@ -431,7 +431,8 @@ export class BlocksAPI extends Module {
    * Import Markdown string as blocks.
    * Lazy-loads the markdown converter on first call.
    * @param md - Markdown source string
-   * @param options - Optional configuration for tool mapping and extensions
+   * @param options - Optional configuration for tool mapping and extensions;
+   *   `title: true` takes the page title and icon from a leading `#` heading
    */
   public async importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData> {
     // Refuse HERE, not in the render() this delegates to: the message names the
@@ -439,17 +440,25 @@ export class BlocksAPI extends Module {
     // converter's lazy chunk.
     this.refuseWholesaleReplace('importMarkdown');
 
-    const { markdownToBlocks } = await import('../../../markdown/index');
+    const { markdownToBlocksWithReport } = await import('../../../markdown/index');
     // HTML in, so the Saver's own format gates below decide what the host gets.
     const config: InternalMarkdownImportConfig = { ...options, htmlText: true };
-    const blocks = await markdownToBlocks(md, config);
-    const data: OutputData = { blocks };
+    const { blocks, title, icon } = await markdownToBlocksWithReport(md, config);
+    const lifted = {
+      ...(title === undefined ? {} : { title }),
+      ...(icon === undefined ? {} : { icon }),
+    };
 
-    await this.replaceDocument(data, { keepId: true });
+    // With `title: true` the Markdown owns both page fields: present-but-undefined
+    // keys make replaceDocument clear what the Markdown does not name.
+    await this.replaceDocument(
+      options?.title === true ? { title: undefined, icon: undefined, ...lifted, blocks } : { blocks },
+      { keepId: true }
+    );
 
     // After the render: the legacy gate reads the detected input format.
     return {
-      ...data,
+      ...lifted,
       blocks: blocks.map((block) => {
         const tool = this.Blok.Tools.blockTools.get(block.type);
 

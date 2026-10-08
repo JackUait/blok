@@ -725,6 +725,23 @@ export interface HtmlImportResult {
   blocks: OutputBlockData[];
   /** Constructs that arrived degraded or not at all, in document order. */
   warnings: MarkdownDegradation[];
+  /** The lifted page title. Only with `title: true` and a leading `<h1>`. */
+  title?: string;
+  /**
+   * The lifted page icon: a leading emoji and a space in that `<h1>`, or a
+   * leading `<img>` whose `src` passes the image URL check.
+   */
+  icon?: PageIcon;
+}
+
+/** Options for {@link htmlToBlocks} and {@link htmlToBlocksWithReport}. */
+export interface HtmlImportOptions {
+  /**
+   * Lift a leading `<h1>` out of the blocks as the page title (default
+   * `false`). Looks inside the `data-blok-interface` wrapper that
+   * `blocksToHtml` writes with `root: true`. Marks in the heading are dropped.
+   */
+  title?: boolean;
 }
 
 /**
@@ -742,9 +759,10 @@ export interface HtmlImportResult {
  * the HTML could not carry.
  *
  * @param html - the HTML source
+ * @param options - `title: true` lifts a leading `<h1>` as the page title
  * @returns blocks ready for `render()`, `insertMany()`, or storage
  */
-export declare function htmlToBlocks(html: string): OutputBlockData[];
+export declare function htmlToBlocks(html: string, options?: HtmlImportOptions): OutputBlockData[];
 
 /**
  * Parse HTML into Blok blocks and report what degraded on the way in. The
@@ -753,9 +771,10 @@ export declare function htmlToBlocks(html: string): OutputBlockData[];
  * without reading the report is how that loss goes unnoticed.
  *
  * @param html - the HTML source
+ * @param options - `title: true` lifts a leading `<h1>` as the page title
  * @returns the blocks and their degradations
  */
-export declare function htmlToBlocksWithReport(html: string): HtmlImportResult;
+export declare function htmlToBlocksWithReport(html: string, options?: HtmlImportOptions): HtmlImportResult;
 
 /** Where moved root blocks are inserted in the target document. */
 export interface PageBlockPlacement {

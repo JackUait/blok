@@ -1,11 +1,11 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { blocksToHtml, blocksToPlainText, htmlToBlocks as htmlToSegmentBlocks, htmlToBlocksWithReport as htmlToSegmentBlocksWithReport } from '../../../src/view';
 import type { HtmlImportResult } from '../../../src/view/html-to-blocks';
 import { richTextAsHtml } from '../helpers/rich-text-as-html';
 
-import type { OutputBlockData } from '../../../types';
+import type { OutputBlockData, OutputData } from '../../../types';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../../../src/components/shared/color-presets';
 
 /** Rich fields read back as HTML; the rich text output tests below pin segments. */
@@ -1117,5 +1117,74 @@ describe('htmlToBlocks — tabs', () => {
       { type: 'tab', data: { title: 'Last' }, parent: 1 },
       { type: 'paragraph', data: { text: 'after' } },
     ]);
+  });
+});
+
+describe('htmlToBlocks with title: true', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('lifts a leading h1 into title and an emoji icon', () => {
+    const result = htmlToSegmentBlocksWithReport('<h1><span aria-hidden="true">🚀</span> Plan</h1><p>Body</p>', { title: true });
+
+    expect(result.title).toBe('Plan');
+    expect(result.icon).toEqual({ type: 'emoji', value: '🚀' });
+    expect(result.blocks.map((block) => block.type)).toEqual(['paragraph']);
+  });
+
+  it('lifts an image icon with a safe src', () => {
+    const safe = htmlToSegmentBlocksWithReport('<h1><img alt="" src="https://x.com/i.png"> Plan</h1>', { title: true });
+    const unsafe = htmlToSegmentBlocksWithReport('<h1><img alt="" src="javascript:alert(1)"> Plan</h1>', { title: true });
+
+    expect(safe).toMatchObject({ title: 'Plan', icon: { type: 'image', url: 'https://x.com/i.png' } });
+    expect(unsafe).toMatchObject({ title: 'Plan' });
+    expect(unsafe).not.toHaveProperty('icon');
+  });
+
+  it('lifts the h1 from inside the view root wrapper, after whitespace', () => {
+    const result = htmlToSegmentBlocksWithReport('\n<div data-blok-interface="view">\n<h1>Plan</h1><p>Body</p></div>', { title: true });
+
+    expect(result.title).toBe('Plan');
+    expect(result.blocks.map((block) => block.type)).toEqual(['paragraph']);
+  });
+
+  it('drops the lifted h1 from the plain variant', () => {
+    expect(htmlToSegmentBlocks('<h1>Plan</h1><p>Body</p>', { title: true }).map((block) => block.type)).toEqual(['paragraph']);
+  });
+
+  it('does not lift a non-leading h1 or a leading h2', () => {
+    const later = htmlToSegmentBlocksWithReport('<p>Intro</p><h1>Plan</h1>', { title: true });
+    const second = htmlToSegmentBlocksWithReport('<h2>Plan</h2><p>Body</p>', { title: true });
+
+    expect(later).not.toHaveProperty('title');
+    expect(later.blocks.map((block) => block.type)).toEqual(['paragraph', 'header']);
+    expect(second).not.toHaveProperty('title');
+    expect(second.blocks.map((block) => block.type)).toEqual(['header', 'paragraph']);
+  });
+
+  it('leaves every result unchanged without the option', () => {
+    const html = '<h1><span aria-hidden="true">🚀</span> Plan</h1><p>Body</p>';
+    const result = htmlToSegmentBlocksWithReport(html);
+
+    expect(Object.keys(result).sort()).toEqual(['blocks', 'warnings']);
+    expect(result.blocks.map((block) => block.type)).toEqual(['header', 'paragraph']);
+    expect(htmlToSegmentBlocks(html).map((block) => block.type)).toEqual(['header', 'paragraph']);
+  });
+
+  it('round-trips the title through blocksToHtml', () => {
+    const data: OutputData = {
+      title: 'Plan <&>',
+      icon: { type: 'emoji', value: '🚀' },
+      blocks: [{ type: 'paragraph', data: { text: 'Body' } }],
+    };
+    const result = htmlToSegmentBlocksWithReport(blocksToHtml(data, { title: true, root: true }), { title: true });
+
+    expect(result).toMatchObject({ title: 'Plan <&>', icon: { type: 'emoji', value: '🚀' } });
+    expect(result.blocks).toHaveLength(1);
   });
 });

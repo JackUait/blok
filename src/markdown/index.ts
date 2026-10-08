@@ -2,6 +2,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfm } from 'micromark-extension-gfm';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import type { Root, RootContent } from 'mdast';
+import type { PageIcon } from '../../types/tools/page';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { InternalMarkdownImportConfig, MarkdownImportConfig } from './types';
 import { mdastToBlocks } from './mdast-to-blocks';
@@ -10,6 +11,7 @@ import type { MarkdownDegradation } from './blocks-to-markdown-core';
 import { isBareBreak } from './phrasing-to-html';
 import { matchAlert } from './alerts';
 import { hasMathSignal, loadMathExtensions } from './math-syntax';
+import { splitPageTitle } from '../shared/page-title-icon';
 
 export type { MarkdownImportConfig, ToolMapEntry } from './types';
 export type { MarkdownDegradation } from './blocks-to-markdown-core';
@@ -20,6 +22,10 @@ export interface MarkdownImportResult {
   blocks: OutputBlockData[];
   /** Constructs that arrived degraded, in document order. */
   warnings: MarkdownDegradation[];
+  /** The lifted page title. Only with `title: true` and a leading `#` heading. */
+  title?: string;
+  /** The lifted page icon: a leading emoji and a space in that heading. */
+  icon?: PageIcon;
 }
 
 /**
@@ -185,6 +191,48 @@ function softBreaksToBreaks(node: RootContent): void {
 }
 
 /**
+ * The plain text of an inline node: marks are dropped, a break is a space.
+ * @param node - the node to read
+ */
+function plainText(node: RootContent): string {
+  if (node.type === 'text' || node.type === 'inlineCode' || node.type === 'inlineMath') {
+    return node.value;
+  }
+
+  if (node.type === 'break') {
+    return ' ';
+  }
+
+  return 'children' in node && Array.isArray(node.children)
+    ? (node.children as RootContent[]).map(plainText).join('')
+    : '';
+}
+
+/**
+ * Take a leading `#` heading out of the tree as the page title. Marks in it
+ * are dropped: a title is plain text.
+ * @param tree - the parsed document, changed in place
+ * @returns the title and icon, or nothing when there is no such heading
+ */
+function liftTitle(tree: Root): { title?: string; icon?: PageIcon } {
+  const first = tree.children[0];
+
+  if (first?.type !== 'heading' || first.depth !== 1) {
+    return {};
+  }
+
+  const lifted = splitPageTitle(first.children.map(plainText).join(''));
+
+  if (lifted.title === '') {
+    return {};
+  }
+
+  tree.children.shift();
+
+  return lifted;
+}
+
+/**
  * Convert a Markdown string to blocks and report what degraded on the way in.
  *
  * The blocks are identical to {@link markdownToBlocks}; reach for this when the
@@ -193,7 +241,7 @@ function softBreaksToBreaks(node: RootContent): void {
  *
  * @param md - Markdown source string
  * @param config - Optional configuration for tool mapping, GFM, and extensions
- * @returns the blocks and their degradations
+ * @returns the blocks and their degradations, plus the lifted title with `title: true`
  */
 export async function markdownToBlocksWithReport(
   md: string,
@@ -225,11 +273,13 @@ export async function markdownToBlocksWithReport(
   });
 
   const internal: InternalMarkdownImportConfig = config;
+  const page = config.title === true ? liftTitle(tree) : {};
 
   if (internal.softBreaks === true) {
     tree.children.forEach(softBreaksToBreaks);
   }
 
   return { blocks: mdastToBlocks(tree, config, internal.htmlText === true ? 'html' : 'segments'),
-    warnings: collectImportWarnings(tree) };
+    warnings: collectImportWarnings(tree),
+    ...page };
 }

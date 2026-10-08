@@ -60,7 +60,7 @@ export type { LatexRenderOptions } from '../shared/katex';
 export { defineBlokSchema, composeBaseSanitizeConfig } from '../shared/sanitize-schema';
 export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from '../shared/sanitize-schema';
 export { htmlToBlocks, htmlToBlocksWithReport } from './html-to-blocks';
-export type { HtmlImportResult } from './html-to-blocks';
+export type { HtmlImportOptions, HtmlImportResult } from './html-to-blocks';
 export { movePageBlocks, turnBlocksIntoPage, turnPageIntoBlocks } from './page-transfer';
 export type { PageBlockPlacement, PageBlockMove } from './page-transfer';
 export { executePageTransfer, undoPageTransfer } from './page-transfer-host';

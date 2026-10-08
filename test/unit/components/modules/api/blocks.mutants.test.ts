@@ -86,6 +86,8 @@ vi.mock('../../../../../src/markdown/blocks-to-markdown', () => ({
 
 vi.mock('../../../../../src/markdown/index', () => ({
   markdownToBlocks: mockMarkdownToBlocks,
+  // importMarkdown reads the report variant, which also carries a lifted title.
+  markdownToBlocksWithReport: async (md: string, options?: unknown) => ({ blocks: await mockMarkdownToBlocks(md, options), warnings: [] }),
 }));
 
 // Partial mock: the restriction rules stay real, only the "is this block inside a

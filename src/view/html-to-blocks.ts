@@ -22,6 +22,7 @@ import type { DefaultTreeAdapterMap } from 'parse5';
 
 import type { OutputBlockData } from '../../types';
 import type { ImageAlignment } from '../../types/tools/image';
+import type { PageIcon } from '../../types/tools/page';
 import { INLINE_TEXT_SANITIZE } from '../shared/inline-text-sanitize';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { isInvisibleBackground, isNearBlackText } from '../components/utils/default-page-colors';
@@ -32,6 +33,7 @@ import { sanitizeHtmlFragment } from './sanitize';
 import { outputBlocksToSegments } from '../shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
 import { htmlToSegmentsNode } from './rich-text-parse5';
+import { splitPageTitle } from '../shared/page-title-icon';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
@@ -44,6 +46,16 @@ export interface HtmlImportResult {
   blocks: OutputBlockData[];
   /** Constructs that arrived degraded or not at all, in document order. */
   warnings: MarkdownDegradation[];
+  /** The lifted page title. Only with `title: true` and a leading `<h1>`. */
+  title?: string;
+  /** The lifted page icon: a leading emoji and a space, or a leading `<img>`. */
+  icon?: PageIcon;
+}
+
+/** Options for {@link htmlToBlocks} and {@link htmlToBlocksWithReport}. */
+export interface HtmlImportOptions {
+  /** Lift a leading `<h1>` out of the blocks as the page title. Default `false`. */
+  title?: boolean;
 }
 
 /**
@@ -1391,6 +1403,44 @@ const reportTitle = (ctx: Ctx, head: P5ChildNode | undefined): void => {
 };
 
 /**
+ * The first node that is not whitespace or a comment.
+ * @param nodes - nodes to scan
+ */
+const firstContent = (nodes: P5ChildNode[]): P5ChildNode | undefined =>
+  nodes.find((node) => !(isText(node) && node.value.trim() === '') && node.nodeName !== '#comment');
+
+/**
+ * Take a leading `<h1>` out of the body as the page title. Looks inside the
+ * `data-blok-interface` wrapper `blocksToHtml` writes with `root: true`.
+ * @param body - the parsed body, changed in place
+ * @returns the title and icon, or nothing when there is no such heading
+ */
+const liftTitle = (body: P5Element): { title?: string; icon?: PageIcon } => {
+  const outer = firstContent(body.childNodes);
+  const wrapped = outer !== undefined && isElement(outer) && outer.tagName === 'div'
+    && attr(outer, 'data-blok-interface') !== undefined;
+  const container = wrapped ? outer : body;
+  const heading = firstContent(container.childNodes);
+
+  if (heading === undefined || !isElement(heading) || heading.tagName !== 'h1') {
+    return {};
+  }
+
+  const lead = firstContent(heading.childNodes);
+  const rawSrc = lead !== undefined && isElement(lead) && lead.tagName === 'img' ? attr(lead, 'src') ?? '' : '';
+  const src = rawSrc === '' ? null : safeImageSrc(rawSrc);
+  const lifted = splitPageTitle(rawText(heading.childNodes));
+
+  if (lifted.title === '') {
+    return {};
+  }
+
+  container.childNodes.splice(container.childNodes.indexOf(heading), 1);
+
+  return src === null || lifted.icon !== undefined ? lifted : { ...lifted, icon: { type: 'image', url: src } };
+};
+
+/**
  * Current fields only: a legacy field (`quote.caption`) stays a string.
  * @param type - block type
  */
@@ -1404,9 +1454,10 @@ const currentRichTextFields = (type: string): string[] =>
  * same `html > head + body` tree for both, and only the body is converted.
  *
  * @param html - the HTML source
+ * @param options - `title: true` lifts a leading `<h1>` as the page title
  * @returns the blocks and their degradations
  */
-export const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
+export const htmlToBlocksWithReport = (html: string, options: HtmlImportOptions = {}): HtmlImportResult => {
   const ctx: Ctx = { nextId: createIdGenerator(), warnings: [], blocks: [], inCell: false };
   const document = parse(html);
   const root = document.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'html');
@@ -1415,11 +1466,13 @@ export const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
 
   reportTitle(ctx, head);
 
+  const page = options.title === true && body !== undefined ? liftTitle(body) : {};
+
   if (body !== undefined) {
     convertNodes(ctx, body.childNodes);
   }
 
-  return { blocks: outputBlocksToSegments(ctx.blocks, currentRichTextFields, htmlToSegmentsNode), warnings: ctx.warnings };
+  return { blocks: outputBlocksToSegments(ctx.blocks, currentRichTextFields, htmlToSegmentsNode), warnings: ctx.warnings, ...page };
 };
 
 /**
@@ -1430,6 +1483,8 @@ export const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
  * how content goes missing quietly.
  *
  * @param html - the HTML source
+ * @param options - `title: true` lifts a leading `<h1>` as the page title
  * @returns blocks ready for `blok.blocks.render()` or storage
  */
-export const htmlToBlocks = (html: string): OutputBlockData[] => htmlToBlocksWithReport(html).blocks;
+export const htmlToBlocks = (html: string, options: HtmlImportOptions = {}): OutputBlockData[] =>
+  htmlToBlocksWithReport(html, options).blocks;

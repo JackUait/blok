@@ -67,7 +67,6 @@ export const unify = (a: FormulaType, b: FormulaType): FormulaType | undefined =
   return a.kind === b.kind ? a : undefined;
 };
 
-
 export const elementOf = (type: FormulaType): FormulaType => (type.kind === 'list' ? type.of : T.any);
 
 export const isDate = (value: FormulaValue): value is FormulaDate =>

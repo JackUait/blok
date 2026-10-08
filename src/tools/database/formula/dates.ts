@@ -53,14 +53,14 @@ const wallMs = (w: WallTime): number => Date.UTC(w.year, w.month - 1, w.day, w.h
 
 const fromWallMs = (value: number): WallTime => wallTime(value, 'UTC');
 
-/** The instant a wall time names in a zone. In a DST gap it lands after the gap. */
+/** The instant a wall time names in a zone. A time inside a DST gap moves forward by the gap, as JS Date does. */
 export const zonedToEpoch = (w: WallTime, timeZone: string | undefined): number => {
   const guess = wallMs(w);
-  const firstOffset = wallMs(wallTime(guess, timeZone)) - guess;
-  const first = guess - firstOffset;
-  const secondOffset = wallMs(wallTime(first, timeZone)) - first;
+  const first = guess - (wallMs(wallTime(guess, timeZone)) - guess);
+  const second = guess - (wallMs(wallTime(first, timeZone)) - first);
+  const exact = [first, second].find((t) => wallMs(wallTime(t, timeZone)) === guess);
 
-  return secondOffset === firstOffset ? first : guess - secondOffset;
+  return exact ?? Math.max(first, second);
 };
 
 const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(year, month, 0)).getUTCDate();

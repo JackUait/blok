@@ -54,7 +54,7 @@ FORMULA_FUNCTION_NAMES: readonly string[];
 
 Property → formula type, from H-fxs "Properties": Title, Text, URL, rich text and Select → Text (a select reads as its option **label**); Multi-select → Text (list); Checkbox → Boolean; Number → Number; Date → Date; `person` → Person (list); `relation` → Page (list). `person` and `relation` are not Blok property types yet; the map is keyed by name so they light up when they land. A rich-text cell holding legacy `OutputData` reads as `""` (**unverified**).
 
-Stored dates: `YYYY-MM-DD`, `YYYY-MM-DDTHH:mm` (local wall time in `ctx.timeZone`), or `start/end`. The parser in `dates.ts` (`parseStoredDate`) is a stand-in for `parseDateValue` in `src/tools/database/cells/date-value.ts` (branch p1-cells); swap it when that merges.
+Stored dates: `YYYY-MM-DD`, `YYYY-MM-DDTHH:mm` (local wall time in `ctx.timeZone`), or `start/end`. `formulaDateToStored` writes the same forms back; a wall time inside a DST gap (New York `2023-03-12T02:30`) moves forward by the gap, as JS `Date` does, so it comes back as `03:30` (**unverified**). A wall time that occurs twice resolves to the first occurrence. The parser in `dates.ts` (`parseStoredDate`) is a stand-in for `parseDateValue` in `src/tools/database/cells/date-value.ts` (branch p1-cells); swap it when that merges.
 
 ## Operators and precedence
 

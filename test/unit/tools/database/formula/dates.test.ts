@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { formulaDateToStored } from '../../../../../src/tools/database/formula';
-import type { FormulaValue } from '../../../../../src/tools/database/formula';
+import type { FormulaDate, FormulaValue } from '../../../../../src/tools/database/formula';
 import { compileError, run, text } from './helpers';
 
 const LA = { timeZone: 'America/Los_Angeles' };
 const NY = { timeZone: 'America/New_York' };
 const KOLKATA = { timeZone: 'Asia/Kolkata' };
+
+const isDate = (value: FormulaValue): value is FormulaDate =>
+  value !== null && typeof value === 'object' && !Array.isArray(value) && value.kind === 'date';
 
 const startOf = (value: FormulaValue): number => {
   if (value === null || typeof value !== 'object' || Array.isArray(value) || value.kind !== 'date') throw new Error('not a date');
@@ -148,6 +151,25 @@ describe('formula date functions', () => {
   });
 
   describe('stored form', () => {
+    it.each([
+      ['2023-08-30', 'UTC'],
+      ['2023-08-30T09:15', 'Asia/Kolkata'],
+      ['2023-08-30T09:15', 'America/Los_Angeles'],
+      ['2022-09-07/2023-09-07', 'America/Los_Angeles'],
+      ['2023-03-11T22:00/2023-03-12T10:00', 'America/New_York'],
+    ])('round-trips %s in %s', (stored, timeZone) => {
+      const value = run('prop("Due")', { timeZone, properties: { due: stored } });
+
+      expect(isDate(value) && formulaDateToStored(value, timeZone)).toBe(stored);
+    });
+
+    it('moves a wall time inside a DST gap to after the gap', () => {
+      const value = run('prop("Due")', { ...NY, properties: { due: '2023-03-12T02:30' } });
+
+      expect(isDate(value) && formulaDateToStored(value, 'America/New_York')).toBe('2023-03-12T03:30');
+    });
+
+
     it('writes a date back in the stored ISO form, including a range', () => {
       const range = run('dateRange(prop("Start Date"), prop("End Date"))', { ...LA, properties: { start: '2022-09-07', end: '2023-09-07' } });
 

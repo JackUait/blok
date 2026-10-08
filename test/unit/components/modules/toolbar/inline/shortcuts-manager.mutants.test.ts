@@ -610,3 +610,51 @@ describe('InlineShortcutManager — environments without a timer', () => {
     expect(manager.hasShortcut('bold')).toBe(true);
   });
 });
+
+describe('InlineShortcutManager — keyboard-owner subtrees', () => {
+  const ownedText = (): { owner: HTMLElement; text: Text } => {
+    const owner = document.createElement('div');
+    const field = document.createElement('h1');
+
+    owner.setAttribute('data-blok-keyboard-owner', '');
+    field.textContent = 'Plans';
+    owner.appendChild(field);
+    document.body.appendChild(owner);
+    const text = field.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text node missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 0, text, 3);
+
+    return { owner, text };
+  };
+
+  const registerStrike = (): void => {
+    const host = createHost({
+      inlineTools: new Map([['strikethrough', createAdapter({ name: 'strikethrough',
+        adapterShortcut: 'CMD+SHIFT+S' })]]),
+    });
+
+    createManager(host).tryRegisterShortcuts();
+  };
+
+  it('runs no tool for a shortcut pressed inside a keyboard owner', () => {
+    registerStrike();
+    const { owner } = ownedText();
+    const event = new KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    owner.firstElementChild?.dispatchEvent(event);
+
+    expect(onShortcutPressed).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('runs no tool when the selection sits inside a keyboard owner', () => {
+    registerStrike();
+    ownedText();
+
+    expect(press({ code: 'KeyS', ctrlKey: true, shiftKey: true })).toBe(false);
+    expect(onShortcutPressed).not.toHaveBeenCalled();
+  });
+});

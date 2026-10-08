@@ -2,6 +2,7 @@ import type { InlineTool as IInlineTool } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../../tools/base';
 import { Shortcuts } from '../../../utils/shortcuts';
+import { isInsideKeyboardOwner } from '../../blockEvents/utils/keyboard';
 
 /**
  * InlineShortcutManager manages keyboard shortcuts for inline tools.
@@ -171,6 +172,13 @@ export class InlineShortcutManager {
     Shortcuts.add({
       name: shortcut,
       handler: (event) => {
+        // A keyboard-owner subtree (the page title, a tool's own field) keeps its keys.
+        const anchor = window.getSelection()?.anchorNode ?? null;
+        const anchorElement = anchor instanceof Element ? anchor : anchor?.parentElement ?? null;
+
+        if (isInsideKeyboardOwner(event.target) || isInsideKeyboardOwner(anchorElement)) {
+          return;
+        }
         const { BlockManager, Tools } = this.getBlok();
         const block = BlockManager.currentBlock
           ?? BlockManager.getBlockByChildNode(window.getSelection()?.anchorNode as Node);

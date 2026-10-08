@@ -4,6 +4,7 @@ import { Core } from '../../../../../src/components/core';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
 import { findRanges } from '../../../../../src/components/modules/find/text-index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
+import { StrikethroughInlineTool } from '../../../../../src/components/inline-tools/inline-tool-strikethrough';
 import type { BlokConfig } from '../../../../../types';
 
 describe('PageTitle module', () => {
@@ -315,5 +316,42 @@ describe('PageTitle module', () => {
     expect(title.firstChild).toBeInstanceOf(Text);
     expect(event.defaultPrevented).toBe(true);
     expect(documentKeydown).not.toHaveBeenCalled();
+  });
+  it('after a Backspace join, an inline-tool shortcut on title text runs no tool', async () => {
+    const core = await boot({
+      pageTitle: true,
+      tools: { paragraph: { class: Paragraph, inlineToolbar: true }, strikethrough: { class: StrikethroughInlineTool } },
+      data: { title: 'Plans', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }, { id: 'p2', type: 'paragraph', data: { text: 'yo' } }] },
+    });
+    // Inline shortcuts register on a timer after ready.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const { BlockManager } = core.moduleInstances;
+    const title = titleIn(holder);
+    const first = BlockManager.getBlockByIndex(0);
+    const input = first?.holder.querySelector('[data-blok-element-content] > *');
+
+    if (title === null || first === undefined || !(input instanceof HTMLElement) || input.firstChild === null) {
+      throw new Error('no title or block');
+    }
+    // jsdom does not reflect contentEditable, so the block would find no input.
+    input.setAttribute('contenteditable', 'true');
+    BlockManager.currentBlock = first;
+    input.focus();
+    window.getSelection()?.setPosition(input.firstChild, 0);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', code: 'Backspace', keyCode: 8, bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(title.textContent).toBe('Planshi');
+    expect(BlockManager.currentBlock).toBeUndefined();
+
+    if (title.firstChild === null) {
+      throw new Error('title emptied');
+    }
+    window.getSelection()?.setBaseAndExtent(title.firstChild, 0, title.firstChild, 5);
+    title.dispatchEvent(new KeyboardEvent('keydown', { key: 's', code: 'KeyS', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(title.childNodes.length).toBe(1);
+    expect(title.firstChild).toBeInstanceOf(Text);
   });
 });

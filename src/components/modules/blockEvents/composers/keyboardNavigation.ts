@@ -134,7 +134,14 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
     PageTitle.appendAndFocus(block.currentInput?.textContent ?? '');
-    void BlockManager.removeBlock(block);
+    // Removal hands the current pointer to block 0, but focus is already in the title.
+    void BlockManager.removeBlock(block).then(() => {
+      const title = PageTitle.titleElement;
+
+      if (title !== null && title.contains(document.activeElement)) {
+        BlockManager.unsetCurrentBlock();
+      }
+    });
   }
 
   private closeToolbarIfNotInTableCell(): void {

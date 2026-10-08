@@ -58,7 +58,7 @@ const createModules = (block: Block, titleEnabled = true): BlokModules => ({
     navigatePrevious: vi.fn(),
   },
   Toolbar: { close: vi.fn() },
-  PageTitle: { isEnabled: titleEnabled, appendAndFocus: vi.fn(), focus: vi.fn() },
+  PageTitle: { isEnabled: titleEnabled, titleElement: null, appendAndFocus: vi.fn(), focus: vi.fn() },
 }) as unknown as BlokModules;
 
 describe('KeyboardNavigation — Backspace at the first block with a page title', () => {

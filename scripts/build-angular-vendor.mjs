@@ -38,7 +38,7 @@ mkdirSync(outDir, { recursive: true });
 const APP_SOURCE = `
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { BlokEditorComponent, createAngularBlock, BLOK_BLOCK_CONTEXT } from '@bloklabs/angular';
+import { BlokEditorComponent, BlokTitleComponent, createAngularBlock, BLOK_BLOCK_CONTEXT } from '@bloklabs/angular';
 import { Paragraph, Header } from '@bloklabs/core/tools';
 
 @Component({
@@ -65,15 +65,27 @@ const NgCounter = createAngularBlock({
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [BlokEditorComponent],
+  imports: [BlokEditorComponent, BlokTitleComponent],
   template: \`
     <div data-blok-testid="status">{{ status }}</div>
     <button data-blok-testid="toggle-readonly" (click)="readOnly = !readOnly">Toggle Read Only</button>
+    @if (withTitle) {
+      <button data-blok-testid="toggle-title" (click)="showTitle = !showTitle">Toggle Title</button>
+      <div data-blok-testid="title-log">{{ titleLog }}</div>
+      <div data-blok-testid="title-area">
+        @if (showTitle) {
+          <blok-title data-blok-testid="title-host" [editor]="ed.instance()"></blok-title>
+        }
+        <div data-blok-testid="title-meta">Owner: E2E · Updated today</div>
+      </div>
+    }
     <div id="editor-host" data-blok-testid="editor-host">
       <blok-editor
+        #ed="blok"
         [tools]="tools"
         [data]="data"
         [readOnly]="readOnly"
+        [config]="config"
         (ready)="onReady()"
         (dataChange)="onData($event)"
       ></blok-editor>
@@ -84,6 +96,11 @@ const NgCounter = createAngularBlock({
 class AppComponent {
   status = 'loading';
   readOnly = false;
+  // ?title=1 turns the page title on and places it with <blok-title>.
+  withTitle = new URLSearchParams(window.location.search).has('title');
+  showTitle = true;
+  titleLog = '';
+  config = this.withTitle ? { pageTitle: { onChange: (title) => { this.titleLog = title; } } } : {};
   output = '';
   tools = { paragraph: { class: Paragraph }, header: { class: Header }, 'ng-counter': { class: NgCounter } };
   data = { blocks: [

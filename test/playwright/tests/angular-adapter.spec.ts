@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { definePageTitleTests } from './helpers/adapter-page-title';
 
 const ANGULAR_TEST_URL = 'http://localhost:4444/test/playwright/fixtures/angular-test.html';
 
@@ -7,6 +8,8 @@ test.describe('Angular adapter', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
+
+  definePageTitleTests(ANGULAR_TEST_URL, 'editor-host');
 
   test('bootstraps a real Angular app driving the live editor', async ({ page }) => {
     await page.goto(ANGULAR_TEST_URL);

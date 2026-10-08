@@ -32,13 +32,18 @@
     import React, { useState, useCallback } from 'react';
     import { createRoot } from 'react-dom/client';
     import { jsx, jsxs } from 'react/jsx-runtime';
-    import { useBlok, useBlocks, BlokContent } from '/packages/react/dist/index.mjs?_v=1';
+    import { useBlok, useBlocks, BlokContent, BlokTitle } from '/packages/react/dist/index.mjs?_v=1';
 
     // Import tools from the built dist
     const { Paragraph, Header } = await import('/dist/tools.mjs?_v=1');
 
+    // ?title=1 turns the page title on and places it with BlokTitle.
+    const withTitle = new URLSearchParams(window.location.search).has('title');
+
     function App() {
       const [readOnly, setReadOnly] = useState(false);
+      const [showTitle, setShowTitle] = useState(true);
+      const [titleLog, setTitleLog] = useState('');
       const [output, setOutput] = useState('');
       const [status, setStatus] = useState('loading');
 
@@ -53,6 +58,7 @@
           ],
         },
         readOnly,
+        ...(withTitle ? { pageTitle: { onChange: (title) => setTitleLog(title) } } : {}),
         onReady: () => {
           setStatus('ready');
         },
@@ -98,6 +104,15 @@
           jsx('div', { 'data-blok-testid': 'root-count', children: String(rootCount) }),
           jsx('button', { 'data-blok-testid': 'save', onClick: handleSave, children: 'Save' }),
           jsx('button', { 'data-blok-testid': 'toggle-readonly', onClick: toggleReadOnly, children: readOnly ? 'Enable Editing' : 'Toggle Read Only' }),
+          withTitle ? jsx('button', { 'data-blok-testid': 'toggle-title', onClick: () => setShowTitle(prev => !prev), children: 'Toggle Title' }) : null,
+          withTitle ? jsx('div', { 'data-blok-testid': 'title-log', children: titleLog }) : null,
+          withTitle ? jsxs('div', {
+            'data-blok-testid': 'title-area',
+            children: [
+              showTitle ? jsx(BlokTitle, { editor, 'data-blok-testid': 'title-host' }) : null,
+              jsx('div', { 'data-blok-testid': 'title-meta', children: 'Owner: E2E · Updated today' }),
+            ],
+          }) : null,
           jsx(BlokContent, { editor, 'data-blok-testid': 'editor-container', id: 'editor-container' }),
           jsx('pre', { 'data-blok-testid': 'output', id: 'output', children: output }),
         ],

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Locator } from '@playwright/test';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { definePageTitleTests } from './helpers/adapter-page-title';
 
 const VUE_TEST_URL = 'http://localhost:4444/test/playwright/fixtures/vue-test.html';
 
@@ -23,6 +24,8 @@ test.describe('Vue adapter', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
+
+  definePageTitleTests(VUE_TEST_URL, 'editor-container');
 
   test('renders a functional editor and supports save', async ({ page }) => {
     await page.goto(VUE_TEST_URL);

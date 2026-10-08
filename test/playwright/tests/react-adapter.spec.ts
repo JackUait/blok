@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { definePageTitleTests } from './helpers/adapter-page-title';
 import { blocksAsHtml } from './helpers/saved-as-html';
 
 const REACT_TEST_URL = 'http://localhost:4444/test/playwright/fixtures/react-test.html';
@@ -8,6 +9,8 @@ test.describe('React adapter', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
+
+  definePageTitleTests(REACT_TEST_URL, 'editor-container');
 
   test('should render a functional editor and support save', async ({ page }) => {
     await page.goto(REACT_TEST_URL);

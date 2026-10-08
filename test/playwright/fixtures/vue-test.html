@@ -25,7 +25,10 @@
 
   <script type="module">
     import { createApp, h, ref } from 'vue';
-    import { BlokEditor } from '/packages/vue/dist/index.mjs?_v=1';
+    import { BlokEditor, BlokTitle } from '/packages/vue/dist/index.mjs?_v=1';
+
+    // ?title=1 turns the page title on and places it with BlokTitle.
+    const withTitle = new URLSearchParams(window.location.search).has('title');
 
     const { Paragraph, Header } = await import('/dist/tools.mjs?_v=1');
 
@@ -40,6 +43,9 @@
         const theme = ref('light');
         const width = ref('full');
         const editorRef = ref(null);
+        const showTitle = ref(true);
+        const titleLog = ref('');
+        const pageTitle = withTitle ? { onChange: (title) => { titleLog.value = title; } } : undefined;
 
         const onReady = () => { status.value = 'ready'; };
         const save = async () => {
@@ -62,8 +68,18 @@
             'data-blok-testid': 'toggle-width',
             onClick: () => { width.value = width.value === 'full' ? 'narrow' : 'full'; },
           }, 'Toggle Width'),
+          withTitle ? h('button', {
+            'data-blok-testid': 'toggle-title',
+            onClick: () => { showTitle.value = !showTitle.value; },
+          }, 'Toggle Title') : null,
+          withTitle ? h('div', { 'data-blok-testid': 'title-log' }, titleLog.value) : null,
+          withTitle ? h('div', { 'data-blok-testid': 'title-area' }, [
+            showTitle.value ? h(BlokTitle, { editor: editorRef.value?.instance ?? null, 'data-blok-testid': 'title-host' }) : null,
+            h('div', { 'data-blok-testid': 'title-meta' }, 'Owner: E2E · Updated today'),
+          ]) : null,
           h(BlokEditor, {
             ref: editorRef,
+            pageTitle,
             id: 'editor-container',
             'data-blok-testid': 'editor-container',
             tools: { paragraph: { class: Paragraph }, header: { class: Header } },

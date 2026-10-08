@@ -34,3 +34,9 @@ export interface BlokContentProps {
   /** The Blok editor instance returned by `useBlok`. Pass null before it is ready. */
   editor: Blok | null;
 }
+
+/** Props for the `BlokTitle` component. Other attributes fall through to its `<div>`. */
+export interface BlokTitleProps {
+  /** The Blok editor instance, or null while it is not ready. */
+  editor: Blok | null;
+}

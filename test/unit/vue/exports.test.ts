@@ -13,6 +13,10 @@ describe('@bloklabs/vue exports', () => {
     expect(VueApi.BLOK_DEFAULT_CONFIG).toBeDefined();
   });
 
+  it('exports BlokTitle (places the page title)', () => {
+    expect(VueApi.BlokTitle).toBeDefined();
+  });
+
   it('exports useBlokReady', () => {
     expect(typeof VueApi.useBlokReady).toBe('function');
   });

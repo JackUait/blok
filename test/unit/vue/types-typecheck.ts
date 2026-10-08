@@ -9,6 +9,8 @@
 import type { UseBlokConfig as PublishedConfig, BlokContentProps as PublishedContentProps } from '../../../packages/vue/types/index';
 import type { UseBlokConfig as InternalConfig } from '../../../packages/vue/src/types';
 import type { BlokContentProps as InternalContentProps } from '../../../packages/vue/src/types';
+import type { BlokTitleProps as PublishedTitleProps } from '../../../packages/vue/types/index';
+import type { BlokTitleProps as InternalTitleProps } from '../../../packages/vue/src/types';
 import type { UseBlocksApi as PublishedBlocksApi } from '../../../packages/vue/types/index';
 import type { UseBlocksApi as InternalBlocksApi } from '../../../packages/vue/src/blocks-snapshot';
 
@@ -18,6 +20,7 @@ type Expect<T extends true> = T;
 
 type _ConfigMatches = Expect<Equal<PublishedConfig, InternalConfig>>;
 type _ContentPropsMatch = Expect<Equal<PublishedContentProps, InternalContentProps>>;
+type _TitlePropsMatch = Expect<Equal<PublishedTitleProps, InternalTitleProps>>;
 type _BlocksApiMatches = Expect<Equal<PublishedBlocksApi, InternalBlocksApi>>;
 
 // Every published export name must exist in the runtime entry (and vice-versa for
@@ -29,6 +32,7 @@ type PublishedValueExports = Exclude<
   keyof typeof Published,
   | 'UseBlokConfig'
   | 'BlokContentProps'
+  | 'BlokTitleProps'
   | 'BlokEditorProps'
   | 'BlokEditorEmits'
   | 'BlokEditorExposed'
@@ -45,7 +49,7 @@ type PublishedValueExports = Exclude<
 >;
 type _ExportsCovered = Expect<Equal<PublishedValueExports, keyof typeof Source>>;
 
-export type { _ConfigMatches, _ContentPropsMatch, _BlocksApiMatches, _ExportsCovered };
+export type { _ConfigMatches, _ContentPropsMatch, _TitlePropsMatch, _BlocksApiMatches, _ExportsCovered };
 
 // The exposed facade must carry confirmLeave, the ref-side route to Blok.confirmLeave.
 const _exposedConfirmLeave: ReturnType<Published.BlokEditorExposed['confirmLeave']> extends Promise<boolean> ? true : never = true;

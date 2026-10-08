@@ -86,6 +86,24 @@ export declare function useBlok(
  */
 export declare const BlokContent: DefineComponent<BlokContentProps>;
 
+/** Props for the `BlokTitle` component. Other attributes fall through to its `<div>`. */
+export interface BlokTitleProps {
+  /** The Blok editor instance, or null while it is not ready. */
+  editor: Blok | null;
+}
+
+/**
+ * Places the editor's page title in a `<div>` of your own, through `editor.title.mount`.
+ * The editor needs `pageTitle` set: this component only moves the title.
+ * On unmount the title goes back above the first block. Slot content is not rendered.
+ *
+ * @example
+ * ```ts
+ * h(BlokTitle, { editor: editorRef.value?.instance ?? null })
+ * ```
+ */
+export declare const BlokTitle: DefineComponent<BlokTitleProps>;
+
 /**
  * Props for `<BlokEditor>` — every `UseBlokConfig` option except the callbacks
  * surfaced as emits (`onReady`/`onChange`/`onSave`/`onAfterRender`/`onThemeChange`),

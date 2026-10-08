@@ -177,6 +177,16 @@ public sealed class CollabEditOpsTests
     Assert.Contains("NUL", message, StringComparison.Ordinal);
   }
 
+  /// <summary>Restore digests its request line, never its plan, so a map patch has no canonical body.</summary>
+  [Fact]
+  public void SaysAMapPatchHasNoCanonicalBody()
+  {
+    var error = Assert.Throws<InvalidOperationException>(() => CollabEditOps.CanonicalBody(
+        [new CollabEditOp.PatchMaps([new CollabMapPatch("page", "title", "x", Remove: false)])]));
+
+    Assert.Contains("restore", error.Message, StringComparison.Ordinal);
+  }
+
   [Fact]
   public void RejectsABodyNestedDeeperThanTheJsonReaderAllows()
   {

@@ -186,6 +186,10 @@ internal static class CollabEditOps
         writer.WriteString("op", "remove");
         break;
 
+      // Only restore builds one, and restore digests its request line, never its plan.
+      case CollabEditOp.PatchMaps:
+        throw new InvalidOperationException("collab: a map patch comes only from restore, which never digests its ops.");
+
       default:
         throw new ArgumentOutOfRangeException(nameof(op));
     }

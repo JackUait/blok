@@ -1,3 +1,4 @@
+import { paragraphSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 /**
  * Paragraph Tool for the Blok Editor
  * Provides Text Block
@@ -20,13 +21,7 @@ import type {
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR } from '../../components/constants';
 import { IconText } from '../../components/icons';
-import {
-  applyBlockColor,
-  buildBlockColorTunes,
-  BLOCK_COLOR_SANITIZE,
-  type BlockColorData,
-} from '../../components/shared/block-color';
-import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { applyBlockColor, buildBlockColorTunes, type BlockColorData } from '../../components/shared/block-color';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
@@ -482,20 +477,7 @@ export class Paragraph implements BlockTool {
    * @returns SanitizerConfig
    */
   public static get sanitize(): ToolSanitizerConfig {
-    return {
-      ...BLOCK_COLOR_SANITIZE,
-      text: {
-        ...INLINE_TEXT_SANITIZE,
-        img: {
-          src: true,
-          alt: true,
-          style: true,
-        },
-        p: true,
-        ul: true,
-        li: true,
-      },
-    };
+    return paragraphSanitize();
   }
 
   /**

@@ -1,3 +1,4 @@
+import { tabSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockAPI,
@@ -205,7 +206,7 @@ export class TabTool implements BlockTool, TabHandle {
   }
 
   public static get sanitize(): SanitizerConfig {
-    return { title: false, icon: false };
+    return tabSanitize();
   }
 }
 

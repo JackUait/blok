@@ -1,3 +1,4 @@
+import { linkSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type {
   InlineTool,
   InlineToolConstructorOptions,
@@ -18,7 +19,7 @@ import { twMerge } from '../utils/tw';
 import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
-import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
+import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
 const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
@@ -115,9 +116,7 @@ export class LinkInlineTool implements InlineTool {
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      a: preservePageReferenceAnchor,
-    };
+    return linkSanitize();
   }
 
   /**

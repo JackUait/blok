@@ -1,3 +1,4 @@
+import { dividerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   BlockTool,
   BlockToolConstructorOptions,
@@ -112,6 +113,6 @@ export class DividerTool implements BlockTool {
    * Nothing to sanitize — no HTML content
    */
   public static get sanitize(): SanitizerConfig {
-    return {};
+    return dividerSanitize();
   }
 }

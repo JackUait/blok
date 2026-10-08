@@ -1,3 +1,4 @@
+import { clearFormatSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
 import { IconClearFormat } from '../icons';
@@ -54,7 +55,7 @@ export class ClearFormatInlineTool implements InlineTool {
    * This tool introduces no tags of its own
    */
   public static get sanitize(): SanitizerConfig {
-    return {};
+    return clearFormatSanitize();
   }
 
   /**

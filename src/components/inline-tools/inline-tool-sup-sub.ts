@@ -1,3 +1,4 @@
+import { supSubSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type {
   InlineTool,
   InlineToolConstructorOptions,
@@ -59,10 +60,7 @@ export class SupSubInlineTool implements InlineTool {
    * Sanitizer Rule — keep plain <sup>/<sub> wrappers
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      sup: {},
-      sub: {},
-    };
+    return supSubSanitize();
   }
 
   /**

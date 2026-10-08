@@ -1,3 +1,5 @@
+import { equationSanitize } from '../../shared/tool-descriptions/sanitize/inline';
+import { EQUATION_SOURCE_ATTR as EQUATION_ATTR } from '../../shared/equation-mark';
 import type {
   InlineTool,
   InlineToolConstructorOptions,
@@ -10,13 +12,6 @@ import { IconEquation, IconReturn } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
 import { renderLatex } from '../../shared/katex';
-
-/**
- * Marks a rendered inline equation. The original LaTeX source is kept in the
- * `data-latex` attribute so the formula round-trips through save/load while the
- * span's inner HTML holds the KaTeX-rendered markup for display.
- */
-const EQUATION_ATTR = 'data-latex';
 
 /**
  * Marks the chip the popover is editing, so CSS can paint it as selected.
@@ -71,11 +66,7 @@ export class EquationInlineTool implements InlineTool {
    * (class names, inline styles produced by KaTeX) is dropped at save time.
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      span: {
-        [EQUATION_ATTR]: true,
-      },
-    };
+    return equationSanitize();
   }
 
   /**

@@ -23,16 +23,7 @@ export type CellBlockInsert =
   | { tool: 'list'; data: { text: string; style: ListItemStyle; checked: boolean; depth: number } }
   | { tool: 'code'; data: { code: string } };
 
-/** Block tags the parser below reads, with the attributes it reads. */
-export const CELL_BLOCK_TAGS_SANITIZE = {
-  ul: true,
-  ol: true,
-  li: { style: true, 'aria-level': true, 'data-list-style': true },
-  input: { type: true, checked: true },
-  // Each <p>/<div> is a separate paragraph to the parser; stripped, lines glue together.
-  p: {},
-  div: {},
-};
+export { CELL_BLOCK_TAGS_SANITIZE } from '../../shared/table/cell-sanitize';
 
 const BR_SPLIT_RE = /<br\s*\/?>/i;
 

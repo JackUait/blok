@@ -1,3 +1,4 @@
+import { bookmarkSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockAPI,
@@ -10,7 +11,6 @@ import type {
   ToolboxConfig,
   SanitizerConfig,
 } from '../../../../types';
-import { PLAINTEXT } from '../../../components/utils/sanitizer';
 import { IconCopy, IconLink, IconLinkExternal } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
@@ -77,14 +77,7 @@ export class Bookmark implements BlockTool {
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      url: PLAINTEXT,
-      title: PLAINTEXT,
-      description: PLAINTEXT,
-      image: PLAINTEXT,
-      favicon: PLAINTEXT,
-      domain: PLAINTEXT,
-    };
+    return bookmarkSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

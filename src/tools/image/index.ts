@@ -1,3 +1,4 @@
+import { imageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   AssetKind,
   BlockTool,
@@ -12,7 +13,6 @@ import type {
   PatternPasteEvent,
   SanitizerConfig,
 } from '../../../types';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type {
   ImageAlignment,
@@ -217,14 +217,7 @@ export class ImageTool implements BlockTool {
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      url: PLAINTEXT,
-      caption: PLAINTEXT,
-      alt: PLAINTEXT,
-      fileName: PLAINTEXT,
-      // Applies to every string inside the items too: the sanitizer passes the rule down.
-      markup: PLAINTEXT,
-    };
+    return imageSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

@@ -1,3 +1,4 @@
+import { tableSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockAPI,
@@ -20,12 +21,10 @@ import {
   IconTextSizeSmall,
 } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
-import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
-import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import type { ConvertedBlock, InitCellContent } from './table-cell-blocks';
-import { ALLOWED_MARK_STYLE_PROPS, pastedGridDirection, readPastedCell } from './table-cell-clipboard';
+import { pastedGridDirection, readPastedCell } from './table-cell-clipboard';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR, ownCells } from './table-core';
 import {
   applyCellColors,
@@ -49,7 +48,7 @@ import {
 import { mergePaddedCells } from './table-ids';
 import { TableModel } from './table-model';
 import { renderTablePreview } from './preview';
-import { CELL_BLOCK_TAGS_SANITIZE, ownPastedCells, ownPastedRows } from './table-cell-paste';
+import { ownPastedCells, ownPastedRows } from './table-cell-paste';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
@@ -546,39 +545,7 @@ export class Table implements BlockTool {
   }
 
   public static get sanitize(): ToolSanitizerConfig {
-    return {
-      content: {
-        ...INLINE_TEXT_SANITIZE,
-        b: true,
-        i: true,
-        strong: true,
-        em: true,
-        u: true,
-        s: true,
-        del: true,
-        code: true,
-        mark: (node: Element): { [attr: string]: boolean | string } => {
-          const el = node as HTMLElement;
-          const style = el.style;
-
-          const props = Array.from({ length: style.length }, (_, i) => style.item(i));
-
-          for (const prop of props) {
-            if (!ALLOWED_MARK_STYLE_PROPS.has(prop)) {
-              style.removeProperty(prop);
-            }
-          }
-
-          return style.length > 0 ? { style: true } : {};
-        },
-        a: (node: Element) => node.getAttribute(PAGE_REFERENCE_ATTR)
-          ? preservePageReferenceAnchor(node)
-          : { href: true, target: '_blank', rel: 'nofollow' },
-        // Legacy string cells may hold lists and lines; this runs before
-        // parseCellContentToBlocks reads them.
-        ...CELL_BLOCK_TAGS_SANITIZE,
-      },
-    };
+    return tableSanitize();
   }
 
   /**

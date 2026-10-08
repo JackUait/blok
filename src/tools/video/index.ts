@@ -1,3 +1,4 @@
+import { videoSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   AssetKind,
@@ -11,7 +12,6 @@ import type {
   ToolboxConfig,
   SanitizerConfig,
 } from '../../../types';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { VideoAlignment, VideoConfig, VideoData } from '../../../types/tools/video';
 import {
@@ -139,13 +139,7 @@ export class VideoTool implements BlockTool {
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      url: PLAINTEXT,
-      caption: PLAINTEXT,
-      fileName: PLAINTEXT,
-      mimeType: PLAINTEXT,
-      aspectRatio: PLAINTEXT,
-    };
+    return videoSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

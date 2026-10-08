@@ -1,3 +1,4 @@
+import { spacerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockTool,
@@ -205,7 +206,7 @@ export class SpacerTool implements BlockTool {
    * Nothing to sanitize — no HTML content
    */
   public static get sanitize(): SanitizerConfig {
-    return {};
+    return spacerSanitize();
   }
 
   /**

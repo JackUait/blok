@@ -1,0 +1,224 @@
+{
+  "paragraph": {
+    "textColor": false,
+    "backgroundColor": false,
+    "text": {
+      "br": true,
+      "strong": {},
+      "b": {},
+      "em": {},
+      "i": {},
+      "u": {},
+      "s": {},
+      "del": {},
+      "a": "[fn preservePageReferenceAnchor]",
+      "code": {},
+      "sup": {},
+      "sub": {},
+      "mark": "[fn preserveColorStyles]",
+      "span": "[fn preserveEquationSpan]",
+      "img": {
+        "src": true,
+        "alt": true,
+        "style": true
+      },
+      "p": true,
+      "ul": true,
+      "li": true
+    }
+  },
+  "header": {
+    "level": false,
+    "text": {
+      "br": true,
+      "strong": {},
+      "b": {},
+      "em": {},
+      "i": {},
+      "u": {},
+      "s": {},
+      "del": {},
+      "a": "[fn preservePageReferenceAnchor]",
+      "code": {},
+      "sup": {},
+      "sub": {},
+      "mark": "[fn preserveColorStyles]",
+      "span": "[fn preserveEquationSpan]"
+    },
+    "isToggleable": false,
+    "anchor": false,
+    "textColor": false,
+    "backgroundColor": false
+  },
+  "list": {
+    "text": {
+      "br": true,
+      "strong": {},
+      "b": {},
+      "em": {},
+      "i": {},
+      "u": {},
+      "s": {},
+      "del": {},
+      "a": "[fn preservePageReferenceAnchor]",
+      "code": {},
+      "sup": {},
+      "sub": {},
+      "mark": "[fn preserveColorStyles]",
+      "span": "[fn preserveEquationSpan]"
+    }
+  },
+  "toggle": {
+    "textColor": false,
+    "backgroundColor": false,
+    "text": {
+      "br": true,
+      "strong": {},
+      "b": {},
+      "em": {},
+      "i": {},
+      "u": {},
+      "s": {},
+      "del": {},
+      "a": "[fn preservePageReferenceAnchor]",
+      "code": {},
+      "sup": {},
+      "sub": {},
+      "mark": "[fn preserveColorStyles]",
+      "span": "[fn preserveEquationSpan]"
+    }
+  },
+  "callout": {
+    "emoji": false,
+    "textColor": false,
+    "backgroundColor": false
+  },
+  "quote": {
+    "text": {
+      "br": true,
+      "strong": {},
+      "b": {},
+      "em": {},
+      "i": {},
+      "u": {},
+      "s": {},
+      "del": {},
+      "a": "[fn preservePageReferenceAnchor]",
+      "code": {},
+      "sup": {},
+      "sub": {},
+      "mark": "[fn preserveColorStyles]",
+      "span": "[fn preserveEquationSpan]"
+    }
+  },
+  "code": {
+    "code": "plaintext",
+    "filename": "plaintext"
+  },
+  "table_of_contents": {
+    "textColor": false,
+    "backgroundColor": false
+  },
+  "spacer": {},
+  "divider": {},
+  "image": {
+    "url": "plaintext",
+    "caption": "plaintext",
+    "alt": "plaintext",
+    "fileName": "plaintext",
+    "markup": "plaintext"
+  },
+  "video": {
+    "url": "plaintext",
+    "caption": "plaintext",
+    "fileName": "plaintext",
+    "mimeType": "plaintext",
+    "aspectRatio": "plaintext"
+  },
+  "audio": {
+    "url": "plaintext",
+    "caption": "plaintext",
+    "title": "plaintext",
+    "artist": "plaintext",
+    "coverUrl": "plaintext",
+    "fileName": "plaintext",
+    "mimeType": "plaintext"
+  },
+  "file": {
+    "url": "plaintext",
+    "caption": "plaintext",
+    "fileName": "plaintext",
+    "mimeType": "plaintext"
+  },
+  "embed": {
+    "service": "plaintext",
+    "source": "plaintext",
+    "embed": "plaintext",
+    "caption": "plaintext"
+  },
+  "bookmark": {
+    "url": "plaintext",
+    "title": "plaintext",
+    "description": "plaintext",
+    "image": "plaintext",
+    "favicon": "plaintext",
+    "domain": "plaintext"
+  },
+  "page": {
+    "pageId": "plaintext",
+    "cache": "plaintext"
+  },
+  "page-link": {
+    "pageId": "plaintext"
+  },
+  "database": {
+    "title": "plaintext",
+    "schema": "plaintext",
+    "views": "plaintext",
+    "activeViewId": "plaintext"
+  },
+  "database-row": {
+    "title": "plaintext",
+    "properties": "plaintext",
+    "position": "plaintext",
+    "pageId": "plaintext"
+  },
+  "tab": {
+    "title": false,
+    "icon": false
+  },
+  "column_list": {},
+  "column": {},
+  "tabs": {},
+  "table": {
+    "content": {
+      "br": true,
+      "strong": true,
+      "b": true,
+      "em": true,
+      "i": true,
+      "u": true,
+      "s": true,
+      "del": true,
+      "a": "[fn a]",
+      "code": true,
+      "sup": {},
+      "sub": {},
+      "mark": "[fn mark]",
+      "span": "[fn preserveEquationSpan]",
+      "ul": true,
+      "ol": true,
+      "li": {
+        "style": true,
+        "aria-level": true,
+        "data-list-style": true
+      },
+      "input": {
+        "type": true,
+        "checked": true
+      },
+      "p": {},
+      "div": {}
+    }
+  }
+}

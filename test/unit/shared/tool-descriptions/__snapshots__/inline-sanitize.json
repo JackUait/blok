@@ -1,0 +1,122 @@
+{
+  "marker": {
+    "all marks and aliases": "bsieusdtc12<mark style=\"color: red; background-color: transparent;\">m</mark>lx2",
+    "color without background": "<mark style=\"color: red; background-color: transparent;\">m</mark>",
+    "transparent background": "<mark>m</mark>",
+    "near white background": "<mark>m</mark>",
+    "dark page background": "<mark>m</mark>",
+    "visible pale gray highlight": "<mark style=\"background-color: rgb(241, 241, 239)\">m</mark>",
+    "color with invisible background": "<mark style=\"color: blue; background-color: transparent;\">m</mark>",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "bold": {
+    "all marks and aliases": "<b>b</b><strong>s</strong>ieusdtc12mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "italic": {
+    "all marks and aliases": "bs<i>i</i><em>e</em>usdtc12mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "<i>rendered cache</i>"
+  },
+  "underline": {
+    "all marks and aliases": "bsie<u>u</u>sdtc12mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "clearFormat": {
+    "all marks and aliases": "bsieusdtc12mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "link": {
+    "all marks and aliases": "bsieusdtc12m<a href=\"https://x.y\">l</a>x2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "<a href=\"https://x.y\" target=\"_self\" rel=\"author\">l</a>",
+    "page reference drops cached title": "<a data-blok-page-id=\"p1\">Page</a>",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "strikethrough": {
+    "all marks and aliases": "bsieu<s>s</s><del>d</del><strike>t</strike>c12mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "inlineCode": {
+    "all marks and aliases": "bsieusdt<code>c</code>12mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  },
+  "equation": {
+    "all marks and aliases": "bsieusdtc12ml<span data-latex=\"x^2\">x2</span>",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "<span data-latex=\"x^2\">rendered cache</span>"
+  },
+  "supSub": {
+    "all marks and aliases": "bsieusdtc<sup>1</sup><sub>2</sub>mlx2",
+    "color without background": "m",
+    "transparent background": "m",
+    "near white background": "m",
+    "dark page background": "m",
+    "visible pale gray highlight": "m",
+    "color with invisible background": "m",
+    "plain link preserves target and rel": "l",
+    "page reference drops cached title": "Cached title",
+    "equation keeps source attribute": "rendered cache"
+  }
+}

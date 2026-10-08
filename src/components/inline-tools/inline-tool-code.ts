@@ -1,3 +1,4 @@
+import { inlineCodeSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
 import { IconCode } from '../icons';
@@ -47,9 +48,7 @@ export class CodeInlineTool implements InlineTool {
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      code: {},
-    };
+    return inlineCodeSanitize();
   }
 
   /**

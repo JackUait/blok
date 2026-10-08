@@ -1,3 +1,4 @@
+import { pageLinkSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockTool,
@@ -7,7 +8,6 @@ import type {
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconLock } from '../../components/icons';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
   PAGE_ICON_CLASSES,
@@ -48,7 +48,7 @@ export class PageLink implements BlockTool {
   }
 
   public static get sanitize(): SanitizerConfig {
-    return { pageId: PLAINTEXT };
+    return pageLinkSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

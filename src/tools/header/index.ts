@@ -1,3 +1,4 @@
+import { headerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 /**
  * Header Tool for the Blok Editor
  * Provides Headings Blocks (H1-H6)
@@ -26,8 +27,7 @@ import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/
 import { twMerge } from '../../components/utils/tw';
 import { stripFakeBackgroundElements } from '../../components/utils/html';
 import { HEADER_BASE_CLASSES, HEADER_LEVEL_CLASSES } from '../../shared/tool-classes/header';
-import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
-import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
+import { applyBlockColor, buildBlockColorTunes, type BlockColorData } from '../../components/shared/block-color';
 import { normalizeHeadingAnchor } from '../../shared/heading-anchor';
 import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
@@ -752,20 +752,7 @@ export class Header implements BlockTool {
    * Sanitizer Rules
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      level: false,
-      // Spread the shared inline whitelist so bold/italic/underline/strike/link/
-      // code/color marks survive save AND "Turn into" conversion (conversion
-      // re-sanitizes with the TARGET tool's `text` config). Matches Notion.
-      text: {
-        ...INLINE_TEXT_SANITIZE,
-      },
-      isToggleable: false,
-      // Plain fragment string, already validated by normalizeHeadingAnchor — pass through.
-      anchor: false,
-      // Block-level color fields hold plain preset names (not HTML) — pass through.
-      ...BLOCK_COLOR_SANITIZE,
-    } as SanitizerConfig;
+    return headerSanitize();
   }
 
   /**

@@ -1,3 +1,4 @@
+import { pageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockAPI,
@@ -30,7 +31,6 @@ import type { MenuConfig, MenuConfigItem } from '../../../types/tools/menu-confi
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { log } from '../../components/utils/logger';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
   PAGE_ICON_CLASSES,
@@ -175,10 +175,7 @@ export class PageTool implements BlockTool {
 
   /** Plain text: an HTML parse would cut a title at `<` and turn `&` into `&amp;`. */
   public static get sanitize(): SanitizerConfig {
-    return {
-      pageId: PLAINTEXT,
-      cache: PLAINTEXT,
-    };
+    return pageSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

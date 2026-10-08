@@ -1,0 +1,11 @@
+{
+  "mark keeps color only": "<mark style=\"color: red;\">x</mark>",
+  "mark keeps background color": "<mark style=\"background-color: white;\">x</mark>",
+  "mark without colors loses style": "<mark>x</mark>",
+  "plain link gets target and rel": "<a href=\"https://a.b\">a</a>",
+  "page reference keeps its id": "<a data-blok-page-id=\"p1\">Page</a>",
+  "nested list keeps depth and style": "<ul><li aria-level=\"2\" data-list-style=\"ordered\" style=\"list-style-type: decimal\">i<ol><li aria-level=\"3\">j</li></ol></li></ul>",
+  "checkbox input survives": "<li><input type=\"checkbox\" checked=\"\">t</li>",
+  "paragraph and div survive": "<p>a</p><div>b</div>",
+  "inline aliases and equations survive": "<b>b</b><strong>s</strong><i>i</i><em>e</em><u>u</u><s>s</s><del>d</del><code>c</code><sup>1</sup><sub>2</sub><span data-latex=\"x^2\">x^2</span>"
+}

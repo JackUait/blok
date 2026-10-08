@@ -1,3 +1,4 @@
+import { quoteSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockTool,
@@ -13,7 +14,6 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconQuote } from '../../components/icons';
 import { renderQuotePreview } from './preview';
-import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
@@ -245,11 +245,7 @@ export class Quote implements BlockTool {
   }
 
   public static get sanitize(): ToolSanitizerConfig {
-    return {
-      text: {
-        ...INLINE_TEXT_SANITIZE,
-      },
-    };
+    return quoteSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

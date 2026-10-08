@@ -1,3 +1,4 @@
+import { tableOfContentsSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockAPI,
@@ -10,7 +11,7 @@ import type {
 import type { TableOfContentsData } from './types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconTableOfContents } from '../../components/icons';
-import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
+import { applyBlockColor, buildBlockColorTunes, type BlockColorData } from '../../components/shared/block-color';
 import { COLOR_PRESETS } from '../../components/shared/color-presets';
 import { outlineDepths } from '../../shared/outline-depths';
 import { collectHeadings, type TocHeading } from './headings';
@@ -82,7 +83,7 @@ export class TableOfContentsTool implements BlockTool {
   }
 
   public static get sanitize(): SanitizerConfig {
-    return { ...BLOCK_COLOR_SANITIZE };
+    return tableOfContentsSanitize();
   }
 
   public static get toolbox(): ToolboxConfig {

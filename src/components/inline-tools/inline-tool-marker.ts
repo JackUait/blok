@@ -1,3 +1,4 @@
+import { markerSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type {
   InlineTool,
   InlineToolConstructorOptions,
@@ -13,7 +14,6 @@ import { createColorPicker } from '../shared/color-picker';
 import type { ColorPickerHandle } from '../shared/color-picker';
 import { colorVarName } from '../shared/color-presets';
 import { mapToNearestPresetName } from '../utils/color-mapping';
-import { isInvisibleBackground } from '../utils/default-page-colors';
 
 /**
  * Color mode type — either text color or background color
@@ -79,62 +79,13 @@ export class MarkerInlineTool implements InlineTool {
   };
 
   /**
-   * CSS properties allowed on <mark> elements.
-   * All other properties are stripped during sanitization to prevent
-   * style-based attacks (e.g. position:fixed overlays via pasted HTML).
-   */
-  private static readonly ALLOWED_STYLE_PROPS = new Set(['color', 'background-color']);
-
-  /**
    * Sanitizer Rule — preserve <mark> tags with only color-related style properties.
    *
    * Uses a function-based rule so HTMLJanitor calls it with the live DOM node,
    * allowing in-place filtering of CSS properties before the node is serialized.
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      mark: (node: Element): { [attr: string]: boolean | string } => {
-        const el = node as HTMLElement;
-        const style = el.style;
-
-        /**
-         * Collect property names first, then remove disallowed ones.
-         * This avoids mutating the CSSStyleDeclaration while iterating its indices.
-         */
-        const props = Array.from({ length: style.length }, (_, i) => style.item(i));
-
-        for (const prop of props) {
-          if (!MarkerInlineTool.ALLOWED_STYLE_PROPS.has(prop)) {
-            style.removeProperty(prop);
-          }
-        }
-
-        /**
-         * Strip invisible background-colors (transparent, near-white light-page
-         * bg, near-black dark-page bg) so a pasted <mark> from another editor
-         * (Notion/Word/Summernote/old Blok) doesn't persist a bg that produced
-         * no visible highlight — otherwise it lands as a spurious empty <mark>.
-         */
-        const bg = style.getPropertyValue('background-color');
-
-        if (bg && isInvisibleBackground(bg)) {
-          style.removeProperty('background-color');
-        }
-
-        /**
-         * When text color is set without an explicit background-color,
-         * add transparent background to override the browser's default
-         * <mark> background (yellow/Mark system color). This handles
-         * pasted content where the browser may have dropped the
-         * transparent value during clipboard serialization.
-         */
-        if (style.getPropertyValue('color') && !style.getPropertyValue('background-color')) {
-          style.setProperty('background-color', 'transparent');
-        }
-
-        return style.length > 0 ? { style: true } : {};
-      },
-    };
+    return markerSanitize();
   }
 
   /**

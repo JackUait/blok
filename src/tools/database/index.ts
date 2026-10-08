@@ -1,5 +1,5 @@
+import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
@@ -126,12 +126,7 @@ export class DatabaseTool implements BlockTool {
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
   static get sanitize(): SanitizerConfig {
-    return {
-      title: PLAINTEXT,
-      schema: PLAINTEXT,
-      views: PLAINTEXT,
-      activeViewId: PLAINTEXT,
-    };
+    return databaseSanitize();
   }
 
   static get isReadOnlySupported(): boolean {

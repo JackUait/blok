@@ -1,3 +1,4 @@
+import { boldSanitize } from '../../shared/tool-descriptions/sanitize/inline';
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import type { MarkSpec } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
@@ -57,10 +58,7 @@ export class BoldInlineTool implements InlineTool {
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      strong: {},
-      b: {},
-    };
+    return boldSanitize();
   }
 
   private static mutationObserver?: MutationObserver;

@@ -1,3 +1,4 @@
+import { codeSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
   BlockTool,
@@ -17,7 +18,6 @@ import { caretLineIndex, measureLineRows, rowHeight } from './line-geometry';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
 import { PopoverDesktop } from '../../components/utils/popover';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -1340,15 +1340,7 @@ export class CodeTool implements BlockTool {
   }
 
   public static get sanitize(): ToolSanitizerConfig {
-    return {
-      /**
-       * `code` is literal source text, not markup. `true` would route it
-       * through the HTML parser, which entity-encodes `<`/`&` and deletes
-       * anything shaped like a stray end tag — irrecoverable corruption.
-       */
-      code: PLAINTEXT,
-      filename: PLAINTEXT,
-    };
+    return codeSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

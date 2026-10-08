@@ -1,6 +1,6 @@
+import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { SanitizerConfig } from '../../../types';
-import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { DatabaseRowData, PropertyValue } from '../database/types';
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId']);
@@ -157,12 +157,7 @@ export class DatabaseRowTool implements BlockTool {
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
   public static get sanitize(): SanitizerConfig {
-    return {
-      title: PLAINTEXT,
-      properties: PLAINTEXT,
-      position: PLAINTEXT,
-      pageId: PLAINTEXT,
-    };
+    return databaseRowSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

@@ -1,3 +1,4 @@
+import { toggleSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 /**
  * Toggle Tool for the Blok Editor
  * Provides collapsible toggle blocks with an arrow indicator.
@@ -25,8 +26,7 @@ import {
   setToggleItemData,
   parseHTML,
 } from './block-operations';
-import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE } from '../../components/shared/block-color';
-import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { applyBlockColor, buildBlockColorTunes } from '../../components/shared/block-color';
 import { clean } from '../../components/utils/sanitizer';
 import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
@@ -534,12 +534,7 @@ export class ToggleItem implements BlockTool {
   }
 
   public static get sanitize(): ToolSanitizerConfig {
-    return {
-      ...BLOCK_COLOR_SANITIZE,
-      text: {
-        ...INLINE_TEXT_SANITIZE,
-      },
-    };
+    return toggleSanitize();
   }
 
   public static get pasteConfig(): PasteConfig {

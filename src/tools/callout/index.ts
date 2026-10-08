@@ -1,3 +1,4 @@
+import { calloutSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 // src/tools/callout/index.ts
 
 import type {
@@ -676,11 +677,7 @@ export class CalloutTool implements BlockTool {
   }
 
   public static get sanitize(): ToolSanitizerConfig {
-    return {
-      emoji: false,
-      textColor: false,
-      backgroundColor: false,
-    };
+    return calloutSanitize();
   }
 
   public static get isReadOnlySupported(): boolean {

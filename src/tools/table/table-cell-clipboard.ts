@@ -1,3 +1,4 @@
+import { ALLOWED_MARK_STYLE_PROPS } from '../../shared/table/cell-sanitize';
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
 import { mapPastedTableCells } from './table-operations';
@@ -440,11 +441,7 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
     .join('\n');
 }
 
-/**
- * CSS properties allowed on <mark> elements inside table cells.
- * Matches MarkerInlineTool.ALLOWED_STYLE_PROPS.
- */
-export const ALLOWED_MARK_STYLE_PROPS = new Set(['color', 'background-color']);
+export { ALLOWED_MARK_STYLE_PROPS } from '../../shared/table/cell-sanitize';
 
 /**
  * Sanitizer config for cell content: every inline mark a text block keeps,

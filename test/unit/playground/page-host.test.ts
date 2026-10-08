@@ -2,10 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { I18n } from '../../../types';
-import { getCaretXPosition, isCaretAtFirstLine, isCaretAtLastLine, setCaretAtXPosition } from '../../../src/components/utils/caret';
+import { getCaretXPosition, isCaretAtFirstLine, setCaretAtXPosition } from '../../../src/components/utils/caret';
 import type * as Caret from '../../../src/components/utils/caret';
-import { loadEmojiGrid } from '../../../src/components/utils/emoji/emoji-data';
 import {
   PAGES_STORAGE_KEY,
   ROOT_STORAGE_KEY,
@@ -388,298 +386,16 @@ describe('root page header', () => {
     localStorage.clear();
   });
 
-  const pressEnterAt = (title: HTMLElement, offset: number, end = offset): KeyboardEvent => {
-    const text = title.firstChild ?? title;
-
-    window.getSelection()?.setBaseAndExtent(text, offset, text, end);
-
-    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
-
-    title.dispatchEvent(event);
-
-    return event;
-  };
-
-  const renderRootTitle = (): { host: HTMLElement; title: HTMLElement; options: Parameters<typeof renderPageHeader>[1] } => {
-    const host = document.createElement('header');
-    const options = headerOptions(new PageRegistry(seed()), null);
-
-    document.body.append(host);
-    renderPageHeader(host, options);
-    const title = host.querySelector<HTMLElement>('h1');
-
-    if (title === null) {
-      throw new Error('no title');
-    }
-
-    return { host, title, options };
-  };
-
-  it('records typing in the title as typing, and a paste as a step of its own', () => {
-    const { host, title, options } = renderRootTitle();
-
-    title.textContent = 'Bloke';
-    title.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: 'e' }));
-
-    expect(options.recordTitle).toHaveBeenLastCalledWith('Bloke', true);
-
-    window.getSelection()?.setPosition(title.firstChild, 5);
-    const paste = new Event('paste', { cancelable: true });
-
-    Object.defineProperty(paste, 'clipboardData', { value: { getData: () => 'd' } });
-    title.dispatchEvent(paste);
-
-    expect(options.recordTitle).toHaveBeenLastCalledWith('Bloked', false);
-    host.remove();
-  });
-
-  it('Enter records the shortened title as a step before opening the block', () => {
-    const { host, title, options } = renderRootTitle();
-    const order: string[] = [];
-
-    vi.mocked(options.recordTitle).mockImplementation((text, typing) => order.push(`record ${text} ${typing}`));
-    vi.mocked(options.splitTitle).mockImplementation((html) => order.push(`split ${html}`));
-    pressEnterAt(title, 2);
-
-    expect(order).toEqual(['record Bl false', 'split ok']);
-    host.remove();
-  });
-
-  it('Cmd+Z and Cmd+Shift+Z in the title run the editor history, not the browser\'s', () => {
-    const { host, title, options } = renderRootTitle();
-    const press = (init: KeyboardEventInit): KeyboardEvent => {
-      const event = new KeyboardEvent('keydown', { cancelable: true, ...init });
-
-      title.dispatchEvent(event);
-
-      return event;
-    };
-
-    expect(press({ key: 'z', metaKey: true }).defaultPrevented).toBe(true);
-    expect(options.undo).toHaveBeenCalledTimes(1);
-    expect(press({ key: 'z', metaKey: true, shiftKey: true }).defaultPrevented).toBe(true);
-    expect(press({ key: 'y', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(options.redo).toHaveBeenCalledTimes(2);
-    expect(press({ key: 'y', ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(false);
-    expect(options.redo).toHaveBeenCalledTimes(2);
-    host.remove();
-  });
-
-  it('ArrowDown on the last line of the title goes to the first block at the same x', () => {
-    const host = document.createElement('header');
-    const options = headerOptions(new PageRegistry(seed()), null);
-
-    document.body.append(host);
-    renderPageHeader(host, options);
-    const title = host.querySelector<HTMLElement>('h1');
-
-    if (title === null) {
-      throw new Error('no title');
-    }
-    vi.mocked(getCaretXPosition).mockReturnValueOnce(64);
-    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
-
-    title.dispatchEvent(event);
-
-    expect(event.defaultPrevented).toBe(true);
-    expect(isCaretAtLastLine).toHaveBeenCalledWith(title);
-    expect(options.toFirstBlock).toHaveBeenCalledWith(64);
-
-    vi.mocked(isCaretAtLastLine).mockReturnValueOnce(false);
-    const above = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
-
-    title.dispatchEvent(above);
-
-    expect(above.defaultPrevented).toBe(false);
-    expect(options.toFirstBlock).toHaveBeenCalledTimes(1);
-    host.remove();
-  });
-
-  it('Enter at the end of the title opens an empty first block', () => {
-    const host = document.createElement('header');
-    const options = headerOptions(new PageRegistry(seed()), null);
-
-    document.body.append(host);
-    renderPageHeader(host, options);
-
-    const title = host.querySelector<HTMLElement>('h1');
-
-    if (title === null) {
-      throw new Error('no title');
-    }
-
-    expect(pressEnterAt(title, 4).defaultPrevented).toBe(true);
-    expect(options.splitTitle).toHaveBeenCalledWith('');
-    expect(title.textContent).toBe('Blok');
-    host.remove();
-  });
-
-  it('Enter mid-title moves the text after the caret into the new block', () => {
-    const host = document.createElement('header');
-    const pages = new PageRegistry(seed());
-    const options = headerOptions(pages, null);
-
-    document.body.append(host);
-    renderPageHeader(host, options);
-    const title = host.querySelector<HTMLElement>('h1');
-
-    if (title === null) {
-      throw new Error('no title');
-    }
-    title.textContent = 'Tom & <Jerry>';
-    pressEnterAt(title, 3);
-
-    expect(options.splitTitle).toHaveBeenCalledWith(' &amp; &lt;Jerry&gt;');
-    expect(title.textContent).toBe('Tom');
-    expect(pages.root().title).toBe('Tom');
-    host.remove();
-  });
-
-  it('Enter over a selection in the title drops the selected text first', () => {
-    const host = document.createElement('header');
-    const options = headerOptions(new PageRegistry(seed()), null);
-
-    document.body.append(host);
-    renderPageHeader(host, options);
-    const title = host.querySelector<HTMLElement>('h1');
-
-    if (title === null) {
-      throw new Error('no title');
-    }
-    pressEnterAt(title, 1, 2);
-
-    expect(options.splitTitle).toHaveBeenCalledWith('ok');
-    expect(title.textContent).toBe('B');
-    host.remove();
-  });
-
-  it('the root document shows a title and an icon button, like a page', () => {
+  it('the root document header draws no title or icon of its own: Blok draws them', () => {
     const host = document.createElement('header');
 
     renderPageHeader(host, headerOptions(new PageRegistry(seed()), null));
 
     expect(host.hidden).toBe(false);
-    expect(host.querySelector('h1')?.textContent).toBe('Blok');
-    expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Add icon');
+    expect(host.querySelector('h1')).toBeNull();
+    expect(host.querySelector('button')).toBeNull();
     expect(host.querySelector('[role="status"]')).toBeNull();
     expect(host.querySelector('nav')).toBeNull();
-  });
-
-  it('a root title typed in the header is saved', () => {
-    const pages = new PageRegistry(seed());
-    const host = document.createElement('header');
-    const options = headerOptions(pages, null);
-
-    renderPageHeader(host, options);
-
-    const title = host.querySelector('h1');
-
-    if (title === null) throw new Error('no title');
-    title.textContent = 'Workspace';
-    title.dispatchEvent(new Event('input'));
-
-    expect(pages.root().title).toBe('Workspace');
-    expect(options.changed).toHaveBeenCalled();
-  });
-
-  it('clicking Add icon sets a random icon at once and opens the picker on it', async () => {
-    const pages = new PageRegistry(seed());
-    const host = document.createElement('header');
-    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
-    const options = { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) };
-
-    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
-    const emojis = await loadEmojiGrid();
-    const flagIndex = emojis.findIndex((emoji) => emoji.native === '🇸🇮');
-
-    if (flagIndex < 0) throw new Error('flag missing from emoji grid');
-    vi.spyOn(Math, 'random').mockReturnValue((flagIndex + 0.5) / emojis.length);
-
-    renderPageHeader(host, options);
-    host.querySelector<HTMLButtonElement>('button[aria-label="Add icon"]')?.click();
-    await vi.waitFor(() => expect(pages.root().icon).toBeDefined());
-
-    const icon = pages.root().icon;
-
-    expect(emojis.some((emoji) => emoji.native === icon)).toBe(true);
-    expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Change icon');
-    expect(host.querySelector('button')?.textContent).toBe(icon);
-    expect(options.changed).toHaveBeenCalled();
-    expect(document.body.querySelector('[data-emoji-picker-random]')).not.toBeNull();
-    // The open finishes async and still reads matchMedia.
-    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    await vi.waitFor(() => expect(host.querySelector('button')?.getAttribute('aria-expanded')).toBe('false'));
-
-    document.body.replaceChildren();
-    vi.unstubAllGlobals();
-  });
-
-  it('the page icon picker has no Callout section', async () => {
-    const pages = new PageRegistry(seed());
-    const host = document.createElement('header');
-    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
-
-    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
-    pages.setIcon(null, '😭');
-    document.body.append(host);
-    renderPageHeader(host, { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) });
-    host.querySelector('button')?.click();
-    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
-
-    expect(document.body.querySelector('[data-emoji-section="callout"]')).toBeNull();
-    expect(document.body.querySelector('[data-emoji-section]')?.getAttribute('data-emoji-section')).toBe('people');
-
-    document.body.replaceChildren();
-    vi.unstubAllGlobals();
-  });
-
-  it('the page icon picker starts where the icon starts', async () => {
-    const pages = new PageRegistry(seed());
-    const host = document.createElement('header');
-    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
-
-    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
-    pages.setIcon(null, '😭');
-    document.body.append(host);
-    renderPageHeader(host, { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) });
-
-    const button = host.querySelector('button');
-
-    if (button === null) throw new Error('no icon button');
-    button.getBoundingClientRect = () => new DOMRect(120, 40, 78, 78);
-    button.click();
-    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
-
-    expect(document.body.querySelector<HTMLElement>('[data-emoji-picker-header]')?.closest<HTMLElement>('[style*="left"]')?.style.left).toBe('120px');
-
-    document.body.replaceChildren();
-    vi.unstubAllGlobals();
-  });
-
-  it('the icon stays marked as open while its picker is open', async () => {
-    const pages = new PageRegistry(seed());
-    const host = document.createElement('header');
-    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
-
-    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
-    pages.setIcon(null, '😭');
-    document.body.append(host);
-    renderPageHeader(host, { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) });
-
-    const button = host.querySelector('button');
-
-    if (button === null) throw new Error('no icon button');
-    button.click();
-    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
-
-    expect(button.getAttribute('aria-expanded')).toBe('true');
-
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('false'));
-
-    document.body.replaceChildren();
-    vi.unstubAllGlobals();
   });
 
   it('keeps the root title and icon in localStorage, and reset brings back the default', () => {
@@ -784,11 +500,6 @@ describe('root page header', () => {
     expect(pages.info('guide')?.path).toEqual(['New page']);
   });
 
-  it('an empty title shows the same New page label as the path', () => {
-    const { title } = renderRootTitle();
-
-    expect(title.getAttribute('data-placeholder')).toBe('New page');
-  });
 });
 
 describe('page trash', () => {
@@ -946,7 +657,7 @@ describe('page trash', () => {
     expect(purge).toHaveBeenCalledWith('guide');
   });
 
-  it('every rounded header control carries the radius tokens, but the title does not get the editor resets', () => {
+  it('every rounded header control carries the radius tokens', () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');
 
@@ -976,7 +687,6 @@ describe('page trash', () => {
 
     expect(rounded.length).toBeGreaterThan(4);
     rounded.forEach((el) => expect(el?.closest('[data-blok-interface]')).not.toBeNull());
-    expect(host.querySelector('h1')?.closest('[data-blok-interface]')).toBeNull();
   });
 
   it('a page that is not in trash has no banner', () => {
@@ -1155,29 +865,31 @@ describe('playground follows a rename made in another tab', () => {
     localStorage.clear();
   });
 
-  const boot = (currentPageId: string | null = 'keys', { titleFocused = false } = {}) => {
+  const boot = (currentPageId: string | null = 'keys', { collab = false, remote = false } = {}) => {
     const listeners = new Map<string, (event: { key: string | null }) => void>();
     const pages = new PageRegistry(seed());
+    const blok = {};
     const context = {
       pages,
       currentPageId,
+      editorPageId: currentPageId,
+      blok,
+      remotePages: remote ? {} : null,
+      collaborationConfig: () => (collab ? { doc: 'shared' } : null),
+      pushRecord: vi.fn(),
       pageHeader: {},
       keepPageHeaderAligned: () => undefined,
       renderHeader: vi.fn(),
       updateDocumentTitle: vi.fn(),
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
       PAGES_STORAGE_KEY,
       ROOT_STORAGE_KEY,
       window: { addEventListener: (type: string, fn: (event: { key: string | null }) => void) => listeners.set(type, fn) },
-      document: {
-        getElementById: () => null,
-        activeElement: { matches: (selector: string) => titleFocused && selector === '#pg-page-title' },
-      },
+      document: { getElementById: () => null },
     };
 
     runInNewContext(source, context);
 
-    return { context, pages, fire: (key: string | null) => listeners.get('storage')?.({ key }) };
+    return { context, pages, blok, fire: (key: string | null) => listeners.get('storage')?.({ key }) };
   };
 
   it('picks up the new title, so page links and crumbs show it', () => {
@@ -1209,13 +921,34 @@ describe('playground follows a rename made in another tab', () => {
     expect(tab.context.updateDocumentTitle).toHaveBeenCalledTimes(1);
   });
 
-  it('never rebuilds the header under a caret in the title', () => {
-    const tab = boot('keys', { titleFocused: true });
+  it('pushes the open page\'s record into the editor', () => {
+    const tab = boot('keys');
 
-    new PageRegistry(seed()).setTitle('guide', 'Handbook');
+    new PageRegistry(seed()).setTitle('keys', 'Shortcuts');
     tab.fire(PAGES_STORAGE_KEY);
 
-    expect(tab.context.renderHeader).not.toHaveBeenCalled();
+    expect(tab.context.pushRecord).toHaveBeenCalledWith(tab.blok, expect.objectContaining({ title: 'Shortcuts' }));
+  });
+
+  it('pushes the root record when the root is open', () => {
+    const tab = boot(null);
+
+    new PageRegistry(seed()).setTitle(null, 'Home');
+    tab.fire(ROOT_STORAGE_KEY);
+
+    expect(tab.context.pushRecord).toHaveBeenCalledWith(tab.blok, expect.objectContaining({ title: 'Home' }));
+  });
+
+  it('pushes nothing under collaboration or a remote host, which carry the title themselves', () => {
+    const collab = boot('keys', { collab: true });
+    const remote = boot('keys', { remote: true });
+
+    new PageRegistry(seed()).setTitle('keys', 'Shortcuts');
+    collab.fire(PAGES_STORAGE_KEY);
+    remote.fire(PAGES_STORAGE_KEY);
+
+    expect(collab.context.pushRecord).not.toHaveBeenCalled();
+    expect(remote.context.pushRecord).not.toHaveBeenCalled();
   });
 
   it('ignores storage keys that are not the page registry', () => {

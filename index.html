@@ -1628,6 +1628,8 @@
           <div id="editor-col">
             <div class="pg-col-label" id="editor-col-label" hidden>Editor</div>
             <header id="page-header" class="pg-page-header" hidden></header>
+            <!-- Blok's pageTitle holder. A sibling of #page-header: renderPageHeader empties that one. -->
+            <div id="page-title-slot"></div>
             <div id="blok"></div>
           </div>
           <div id="blokview-col" class="hidden">
@@ -1820,6 +1822,7 @@
     import { PAGE_TITLE_SELECTOR, PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
+    import { pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
     import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
@@ -2034,13 +2037,17 @@
       const collaboration = collaborationConfig(pageId);
       // ?slowLoad=<ms> holds the document back to show the boot skeleton.
       const slowLoadMs = Number(new URLSearchParams(location.search).get('slowLoad'));
+      // The title rides in the load result too: core loads `data.title`, so a blocks-only result clears it.
+      const documentData = () => ({ ...titleData(pages, pageId), blocks: blocksFor(pageId) });
       const documentSource = slowLoadMs > 0
-        ? { persistence: { load: () => new Promise(r => setTimeout(() => r({ blocks: blocksFor(pageId) }), slowLoadMs)), save: async () => {} } }
-        : { data: { blocks: blocksFor(pageId) } };
+        ? { persistence: { load: () => new Promise(r => setTimeout(() => r(documentData()), slowLoadMs)), save: async () => {} } }
+        : { data: documentData() };
 
       return {
         readOnly: state.readOnly,
         holder: 'blok',
+        // The slot must exist before `new Blok`: core resolves the holder in prepare().
+        pageTitle: { holder: '#page-title-slot', ...titleCallbacks({ pages, pageId, changed: () => renderHeader() }) },
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
@@ -2250,11 +2257,16 @@
       const crumbs = () => JSON.stringify([pages.root(), ...(currentPageId === null ? [] : pages.trail(currentPageId).map(({ title, icon }) => [title, icon]))]);
       const before = crumbs();
       pages.reload();
-      // Block saves land here too; a rebuilt header would close its icon picker.
-      if (crumbs() !== before && document.activeElement?.matches(PAGE_TITLE_SELECTOR) !== true) {
+      if (crumbs() !== before) {
         renderHeader();
       } else {
         updateDocumentTitle();
+      }
+      // Local mode only: under collaboration Yjs carries the title, under ?host=remote the host does.
+      if (remotePages === null && collaborationConfig(editorPageId) === null && editorPageId === currentPageId) {
+        const record = editorPageId === null ? pages.root() : pages.get(editorPageId);
+        // record:false fires onChange as an unrecorded api set, which skips the registry: no echo.
+        if (record !== undefined) pushRecord(blok, record);
       }
     });
     // Capture: runs before the editor's own Backspace and ArrowUp handling.
@@ -2445,7 +2457,7 @@
           window.scrollTo(0, saved?.y ?? 0);
           // A brand-new page starts at its title, like Notion.
           if (target !== null && pages.get(target)?.title === '' && !state.readOnly) {
-            document.querySelector(PAGE_TITLE_SELECTOR)?.focus();
+            blok.title.focus();
           }
         }, {
           direction: back ? 'back' : 'forward',

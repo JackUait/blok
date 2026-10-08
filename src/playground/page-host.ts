@@ -931,7 +931,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
 
   const crumbs = pageId === null ? [] : [nav];
 
-  host.replaceChildren(...banner, ...crumbs, iconRow, title);
+  host.replaceChildren(...banner, ...crumbs);
 };
 
 const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, options: PageHeaderOptions): HTMLElement => {

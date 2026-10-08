@@ -219,6 +219,14 @@ docker run \
 
 A document also carries its page title and icon as top-level `title` and `icon` keys, for example `{"blocks": [...], "title": "Plan", "icon": {"type": "emoji", "value": "🚀"}}`. The service seeds a room from them, and writes them back on every PUT and on `GET /sync/{doc}/state`. A key is left out when the page has none. A malformed value is dropped, not refused: a title must be a non-empty string, and an icon `{"type": "emoji", "value": "…"}` or `{"type": "image", "url": "…"}`. A title or icon that holds a NUL (U+0000), say from an older client, is left out of the write-back the same way. A dropped value is gone from your record after the next write-back, because that PUT leaves the key out. A reset reseeds from your record, so a title change newer than the last PUT is lost, the same as a block edit.
 
+**Breaking.** The write-back now carries the page title and icon. Before, the service read only `blocks` from your record, and the PUT body and `GET /sync/{doc}/state` held only `time` and `blocks`. Now the service seeds the room from your record's top-level `title` and `icon`, and sends both back on every write-back. This affects a host that keeps its own top-level `title` or `icon` with another meaning. It also affects a host that renames a page outside the room: the next PUT overwrites the new name with the room's title, or leaves the key out when the room has none.
+
+What to change in your app:
+
+- If your top-level `title` or `icon` means something else, rename your field.
+- Otherwise treat the PUT's `title` and `icon` as Blok's page title and icon, and save them.
+- Rename a page through an editor in the room, with `title.set`. The room reads your record only when it seeds, so a rename made only there is overwritten by the next PUT. The `/edit` endpoint cannot set the title.
+
 Documents written to your endpoint carry rich text fields as segments, the shape the editor's `save()` returns. A document your endpoint returns may hold HTML strings or segments. A custom block tool's rich fields go in `--rich-text-fields` (or `BLOK_RICH_TEXT_FIELDS`; the flag wins), as JSON keyed by block type: `--rich-text-fields '{"callout":["title"]}'`. In-process, the same list is `options.RichTextFields`. List exactly the fields the tool declares in `static richTextFields` on the client, or the two write the field in different shapes. The built-in paragraph, header, quote, toggle and list `text` fields need no entry. See [Rich text is segments](#rich-text-is-segments).
 
 Collaboration rooms are stored in format 2. Upgrade the service and the editor together. An older editor reads the format 2 room and ends its own session with `unsupported-format`. A room stored in format 1 is converted the first time it opens, and offline edits made in format 1 are not replayed.

@@ -955,14 +955,15 @@ export class Caret extends Module {
      * For non-focusable blocks (images, embeds, contentless), navigate to previous block
      */
     if (!currentBlock.focusable) {
-      return this.navigateToBlock(previousBlock, false);
+      // No caret column in a selected non-focusable block: land at the title end.
+      return previousBlock === null ? this.toPageTitle(null) : this.navigateToBlock(previousBlock, false);
     }
 
     /**
      * For empty blocks, jump immediately to the previous block
      */
     if (currentBlock.isEmpty) {
-      return this.navigateToBlock(previousBlock, false);
+      return previousBlock === null ? this.toPageTitle(this.resolveGoalColumnX()) : this.navigateToBlock(previousBlock, false);
     }
 
     const { currentInput } = currentBlock;

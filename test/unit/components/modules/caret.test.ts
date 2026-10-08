@@ -692,6 +692,58 @@ describe('Caret module', () => {
       expect(caret.navigateVerticalPrevious()).toBe(false);
       expect(focusAtX).not.toHaveBeenCalled();
     });
+
+    it('moves into the title from an empty first block', () => {
+      const focusAtX = vi.fn();
+      const { caret, blockManager } = createCaret({
+        PageTitle: { isEnabled: true, focusAtX } as unknown as BlokModules['PageTitle'],
+        ReadOnly: { isEnabled: false } as unknown as BlokModules['ReadOnly'],
+      });
+
+      blockManager.currentBlock = createBlock({ isEmpty: true });
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(40);
+
+      expect(caret.navigateVerticalPrevious()).toBe(true);
+      expect(focusAtX).toHaveBeenCalledWith(40);
+    });
+
+    it('moves into the title from a non-focusable first block, at the title end', () => {
+      const focusAtX = vi.fn();
+      const { caret, blockManager } = createCaret({
+        PageTitle: { isEnabled: true, focusAtX } as unknown as BlokModules['PageTitle'],
+        ReadOnly: { isEnabled: false } as unknown as BlokModules['ReadOnly'],
+      });
+
+      blockManager.currentBlock = createBlock({ focusable: false });
+
+      expect(caret.navigateVerticalPrevious()).toBe(true);
+      expect(focusAtX).toHaveBeenCalledWith(null);
+    });
+
+    it('without a title, an empty first block still stays put', () => {
+      const { caret, blockManager } = createCaret();
+
+      blockManager.currentBlock = createBlock({ isEmpty: true });
+
+      expect(caret.navigateVerticalPrevious()).toBe(false);
+    });
+
+    it('an empty block with a block above still goes to that block, not the title', () => {
+      const focusAtX = vi.fn();
+      const { caret, blockManager } = createCaret({
+        PageTitle: { isEnabled: true, focusAtX } as unknown as BlokModules['PageTitle'],
+        ReadOnly: { isEnabled: false } as unknown as BlokModules['ReadOnly'],
+      });
+      const above = createBlock();
+
+      blockManager.currentBlock = createBlock({ isEmpty: true });
+      blockManager.previousVisibleBlock = above;
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      expect(caret.navigateVerticalPrevious()).toBe(true);
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(above, null, false);
+      expect(focusAtX).not.toHaveBeenCalled();
+    });
   });
 
   describe('navigateVerticalNext navigates within same cell container', () => {

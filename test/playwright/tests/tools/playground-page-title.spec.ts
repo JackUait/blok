@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -153,5 +153,137 @@ test.describe('playground page title', () => {
 
     await expect(titleOf(page)).toHaveText('Getting started');
     await expect(page.getByRole('textbox', { name: 'Page title' })).toHaveCount(1);
+  });
+});
+
+const KEY_GAP_MS = 60;
+
+const firstBlock = (page: Page): ReturnType<Page['getByTestId']> => page.getByTestId('block-wrapper').first();
+
+const firstField = (page: Page): ReturnType<Page['locator']> => firstBlock(page).locator('[contenteditable="true"]').first();
+
+/** A click at the field's left edge puts the caret at its start. Not Home: on macOS Home scrolls. */
+const caretToStart = async (field: ReturnType<Page['locator']>): Promise<void> => {
+  const box = await field.boundingBox();
+
+  if (box === null) {
+    throw new Error('The field is not on screen');
+  }
+  await field.click({ position: { x: 1, y: Math.min(box.height / 2, 12) } });
+};
+
+test.describe('playground page icon undo', () => {
+  test.setTimeout(90_000);
+
+  test('Cmd+Z steps back through icon changes, and the breadcrumb follows', async ({ page }) => {
+    const seedPages: unknown = JSON.parse(readFileSync(resolve(__dirname, '../../../../playground-pages.json'), 'utf8'));
+    const seedRecord: unknown = typeof seedPages === 'object' && seedPages !== null ? Reflect.get(seedPages, 'getting-started') : undefined;
+
+    if (typeof seedRecord !== 'object' || seedRecord === null) {
+      throw new Error('playground-pages.json has no getting-started page');
+    }
+    const { icon: _icon, ...withoutIcon } = Object.fromEntries(Object.entries(seedRecord));
+
+    // A stored record replaces the seed's, so the page starts with no icon.
+    await page.goto(url('/editor'));
+    await page.evaluate((record) => {
+      localStorage.setItem('blok-playground-pages', JSON.stringify({ 'getting-started': record }));
+    }, withoutIcon);
+    await page.goto(url('/editor/page/getting-started'));
+
+    const current = crumbs(page).locator('[aria-current="page"]');
+    const icon = page.getByTestId('page-header-icon');
+
+    await expect(titleOf(page)).toHaveText('Getting started');
+    await expect(current).toHaveText('Getting started');
+
+    await page.getByTestId('page-header').hover();
+    await page.getByTestId('page-header-add-icon').click();
+    await expect(icon).not.toBeEmpty();
+    const random = (await icon.textContent()) ?? '';
+
+    await expect(current).toHaveText(`${random}Getting started`);
+    await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
+    await page.locator('[data-blok-emoji-picker]').evaluate((picker) => picker.getAnimations().forEach((animation) => animation.finish()));
+
+    const other = random === '👉' ? '👈' : '👉';
+
+    await page.locator(`[data-emoji-native="${other}"]`).click();
+    await expect(icon).toHaveText(other);
+    await expect(current).toHaveText(`${other}Getting started`);
+
+    // Undo runs from the title: the header owns its keys.
+    await typeAtEnd(page, '');
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(icon).toHaveText(random);
+    await expect(current).toHaveText(`${random}Getting started`);
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Blok drops a second identical key within 50ms
+    await page.waitForTimeout(KEY_GAP_MS);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(page.getByTestId('page-header-add-icon')).toBeAttached();
+    await expect(icon).toHaveCount(0);
+    await expect(current).toHaveText('Getting started');
+    await expect(titleOf(page)).toHaveText('Getting started');
+  });
+});
+
+test.describe('playground page title keyboard', () => {
+  test.setTimeout(90_000);
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(url('/editor/page/getting-started'));
+    await expect(titleOf(page)).toHaveText('Getting started');
+  });
+
+  test('Enter mid-title splits the title into a new first block', async ({ page }) => {
+    await typeAtEnd(page, '');
+    for (let i = 0; i < ' started'.length; i += 1) {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.press('Enter');
+
+    await expect(titleOf(page)).toHaveText('Getting');
+    await expect(firstField(page)).toBeFocused();
+    expect(((await firstField(page).textContent()) ?? '').replace(/ /g, ' ')).toBe(' started');
+    await expect(crumbs(page).locator('[aria-current="page"]')).toContainText('Getting');
+  });
+
+  test('ArrowDown from the end of the title lands in the first block', async ({ page }) => {
+    await typeAtEnd(page, '');
+    await page.keyboard.press('ArrowDown');
+
+    await expect(firstField(page)).toBeFocused();
+    await expect(firstField(page)).toContainText('This is a page inside the playground.');
+  });
+
+  test('Backspace at the start of a paragraph first block joins it into the title', async ({ page }) => {
+    await caretToStart(firstField(page));
+    await page.keyboard.press('Backspace');
+
+    await expect(titleOf(page)).toHaveText(/^Getting startedThis is a page inside the playground\./);
+    await expect(titleOf(page)).toBeFocused();
+    await expect(firstBlock(page)).toHaveAttribute('data-blok-component', 'header');
+  });
+
+  test('Backspace at the start of a heading first block makes it a paragraph first, then joins', async ({ page }) => {
+    // Remove the intro paragraph so the heading is the first block.
+    await caretToStart(firstField(page));
+    await page.keyboard.press('Backspace');
+    await expect(firstBlock(page)).toHaveAttribute('data-blok-component', 'header');
+    const joined = (await titleOf(page).textContent()) ?? '';
+
+    await caretToStart(firstField(page));
+    await page.keyboard.press('Backspace');
+
+    await expect(firstBlock(page)).toHaveAttribute('data-blok-component', 'paragraph');
+    await expect(firstField(page)).toHaveText('Things to try');
+    await expect(titleOf(page)).toHaveText(joined);
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Blok drops a second identical key within 50ms
+    await page.waitForTimeout(KEY_GAP_MS);
+    await page.keyboard.press('Backspace');
+
+    await expect(titleOf(page)).toHaveText(`${joined}Things to try`);
   });
 });

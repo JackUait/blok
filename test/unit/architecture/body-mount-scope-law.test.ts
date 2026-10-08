@@ -73,6 +73,7 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'tools/callout/index.ts': { scopedBy: 'tools/callout/emoji-picker/index.ts' },
   'tools/tabs/index.ts': { scopedBy: 'tools/callout/emoji-picker/index.ts' },
   'components/modules/blockEvents/composers/emojiTrigger.ts': { scopedBy: 'tools/callout/emoji-picker/index.ts' },
+  'components/modules/pageTitle/icon-control.ts': { scopedBy: 'tools/callout/emoji-picker/index.ts' },
   'components/utils/popover/popover-desktop.ts': { scopedBy: 'components/utils/popover/popover-abstract.ts' },
 
   // Genuinely scope-free mounts.

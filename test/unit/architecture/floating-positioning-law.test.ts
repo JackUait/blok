@@ -85,6 +85,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/blockEvents/composers/emojiTrigger.ts': 'Mount owner for the inline ":" menu, which is the tracked emoji-picker root surface.',
   'components/modules/drag/DragController.ts': 'Pointer-following drag preview; coordinates refresh on every pointer move.',
   'components/ui/toolbox-preview.ts': 'Top-layer toolbox hover card placed beside the menu on each row change; it follows its row when the menu list scrolls and closes on any other scroll.',
+  'components/modules/pageTitle/icon-control.ts': 'Mount owner for the tracked emoji-picker root surface (page title icon).',
   'components/modules/find/index.ts': 'Find bar is fixed to the window at the host-configured placement and promoted to the top layer while open; find.css places it, no JS coordinates.',
   'components/utils/announcer.ts': 'Visually hidden ARIA live region with no element anchor or collision boundary.',
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',

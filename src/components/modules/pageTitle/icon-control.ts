@@ -2,6 +2,7 @@ import { EmojiPicker } from '../../../tools/callout/emoji-picker';
 import { IconEmojiSmile } from '../../icons';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { loadEmojiGrid } from '../../utils/emoji/emoji-data';
+import { pageIconNode } from '../../../tools/page/icon-node';
 import type { PageIcon } from '../../../../types/tools/page';
 
 export interface IconControlHost {
@@ -29,6 +30,10 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
     locale: null,
     watch: null,
   };
+
+  // The open picker is anchored to the button and gives focus back to it, so a
+  // redraw of the same kind updates that button instead of replacing it.
+  const shown: { kind: 'add' | 'icon' | null; button: HTMLButtonElement | null } = { kind: null, button: null };
 
   const openPicker = (anchor: HTMLElement): void => {
     const { i18n, locale } = host.picker();
@@ -63,60 +68,94 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
     void slot.picker.open(anchor);
   };
 
+  const closePicker = (): void => {
+    if (slot.picker?.isOpen() === true) {
+      slot.picker.close();
+    }
+  };
+
+  const buildAdd = (): HTMLButtonElement => {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute(DATA_ATTR.pageAddIcon, '');
+    button.setAttribute('data-blok-testid', 'page-header-add-icon');
+    // A trusted constant from the icon module; the label goes in as text.
+    button.innerHTML = IconEmojiSmile;
+    button.append(document.createElement('span'));
+    button.addEventListener('click', () => {
+      void randomEmoji().then((native) => {
+        host.setIcon({ type: 'emoji', value: native });
+        openPicker(shown.button ?? button);
+      }, () => openPicker(button));
+    });
+    // Loaded now so the click's random pick resolves at once.
+    void loadEmojiGrid().catch(() => undefined);
+
+    return button;
+  };
+
+  const buildIcon = (): HTMLButtonElement => {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute(DATA_ATTR.pageIcon, '');
+    button.setAttribute('data-blok-testid', 'page-header-icon');
+    button.addEventListener('click', () => openPicker(button));
+
+    return button;
+  };
+
+  const kindOf = (icon: PageIcon | null, readOnly: boolean): 'add' | 'icon' | null => {
+    if (icon !== null) {
+      return 'icon';
+    }
+
+    return readOnly ? null : 'add';
+  };
+
   const redraw = (): void => {
     const icon = host.getIcon();
     const readOnly = host.isReadOnly();
     const { add, change } = host.labels();
+    const kind = kindOf(icon, readOnly);
 
-    row.replaceChildren();
+    if (readOnly || kind !== shown.kind) {
+      closePicker();
+    }
     row.toggleAttribute('data-has-icon', icon !== null);
-    if (icon === null) {
-      if (readOnly) {
-        return;
+    if (kind !== shown.kind) {
+      const hadFocus = shown.button !== null && shown.button.contains(document.activeElement);
+
+      shown.kind = kind;
+      shown.button = null;
+      if (kind === 'add') {
+        shown.button = buildAdd();
+      } else if (kind === 'icon') {
+        shown.button = buildIcon();
       }
-      const button = document.createElement('button');
+      row.replaceChildren(...(shown.button === null ? [] : [shown.button]));
+      if (hadFocus) {
+        shown.button?.focus();
+      }
+    }
+    const button = shown.button;
 
-      button.type = 'button';
-      button.setAttribute(DATA_ATTR.pageAddIcon, '');
-      button.setAttribute('data-blok-testid', 'page-header-add-icon');
-      // A trusted constant from the icon module; the label goes in as text.
-      button.innerHTML = IconEmojiSmile;
-      const label = document.createElement('span');
+    if (button === null) {
+      return;
+    }
+    if (icon === null) {
+      const label = button.querySelector('span');
 
-      label.textContent = add;
-      button.append(label);
-      button.addEventListener('click', () => {
-        void randomEmoji().then((native) => {
-          host.setIcon({ type: 'emoji', value: native });
-          const shown = row.querySelector<HTMLElement>(`[${DATA_ATTR.pageIcon}]`);
-
-          openPicker(shown ?? button);
-        }, () => openPicker(button));
-      });
-      row.append(button);
-      // Loaded now so the click's random pick resolves at once.
-      void loadEmojiGrid().catch(() => undefined);
+      if (label !== null) {
+        label.textContent = add;
+      }
 
       return;
     }
-    const button = document.createElement('button');
-
-    button.type = 'button';
     button.disabled = readOnly;
-    button.setAttribute(DATA_ATTR.pageIcon, '');
-    button.setAttribute('data-blok-testid', 'page-header-icon');
     button.setAttribute('aria-label', change);
-    if (icon.type === 'emoji') {
-      button.textContent = icon.value;
-    } else {
-      const img = document.createElement('img');
-
-      img.src = icon.url;
-      img.alt = '';
-      button.append(img);
-    }
-    button.addEventListener('click', () => openPicker(button));
-    row.append(button);
+    button.replaceChildren(pageIconNode(icon));
   };
 
   redraw();
@@ -128,6 +167,8 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
       slot.picker?.close();
       slot.picker?.getElement().remove();
       row.replaceChildren();
+      shown.kind = null;
+      shown.button = null;
     },
   };
 };

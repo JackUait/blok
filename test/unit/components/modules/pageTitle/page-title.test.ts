@@ -434,6 +434,7 @@ describe('PageTitle module', () => {
     expect(onIconChange).toHaveBeenNthCalledWith(1, { type: 'emoji', value: '🚀' }, { source: 'user' });
     expect(onIconChange).toHaveBeenNthCalledWith(2, null, { source: 'undo' });
     expect(onIconChange).toHaveBeenCalledTimes(2);
+    expect(core.moduleInstances.PageTitle.titleElement).toHaveFocus();
   });
 
   it('draws Add icon by default', async () => {

@@ -114,7 +114,9 @@ export class PageTitle extends Module {
   }
 
   public setText(text: string, source: 'api'): void {
-    this.Blok.YjsManager.setPageField('title', text);
+    if (!this.writeField('title', text)) {
+      return;
+    }
     this.renderText();
     this.notifyTitle({ source });
   }
@@ -124,7 +126,9 @@ export class PageTitle extends Module {
   }
 
   public setIcon(icon: PageIcon | null, source: 'user' | 'api'): void {
-    this.Blok.YjsManager.setPageField('icon', icon);
+    if (!this.writeField('icon', icon)) {
+      return;
+    }
     this.iconControl?.redraw();
     this.resolved?.onIconChange?.(this.getIcon(), { source });
   }
@@ -278,10 +282,29 @@ export class PageTitle extends Module {
     } else if (title.childNodes.length !== 1 || !(title.firstChild instanceof Text)) {
       this.flattenToText(title, text);
     }
-    this.Blok.YjsManager.setPageField('title', text, { typing: event instanceof InputEvent });
+    if (!this.writeField('title', text, { typing: event instanceof InputEvent })) {
+      return;
+    }
     this.renderText();
     this.notifyTitle({ source: 'user' });
   };
+
+  /**
+   * Writes one page field and marks the document unsaved.
+   * @returns false when the value was already there: setPageField then writes nothing
+   */
+  private writeField(key: 'title' | 'icon', value: string | PageIcon | null, options?: { typing: boolean }): boolean {
+    const { YjsManager, ModificationsObserver } = this.Blok;
+    const before = JSON.stringify(YjsManager.getPageFields()[key] ?? null);
+
+    YjsManager.setPageField(key, value, options);
+    if (JSON.stringify(YjsManager.getPageFields()[key] ?? null) === before) {
+      return false;
+    }
+    ModificationsObserver.markPageEdited();
+
+    return true;
+  }
 
   /** Drops elements a native format key or a drop put in. Keeps the caret offset, clamped. */
   private flattenToText(title: HTMLElement, text: string): void {
@@ -311,16 +334,20 @@ export class PageTitle extends Module {
   };
 
   private onPageChange(key: 'title' | 'icon', source: 'undo' | 'redo' | 'remote'): void {
+    // A peer saved its own write; another tab's write is marked by TabSync.
+    if (source !== 'remote') {
+      this.Blok.ModificationsObserver.markPageEdited();
+    }
     if (key === 'title') {
       this.renderText();
       this.notifyTitle({ source });
-      if (source !== 'remote') {
-        this.focus('end');
-      }
     }
     if (key === 'icon') {
       this.iconControl?.redraw();
       this.resolved?.onIconChange?.(this.getIcon(), { source });
+    }
+    if (source !== 'remote') {
+      this.focus('end');
     }
   }
 

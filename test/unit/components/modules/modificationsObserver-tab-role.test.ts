@@ -538,4 +538,90 @@ describe('ModificationsObserver — tab role', () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  describe('markPageEdited (a title or icon write)', () => {
+    it('in a leader arms the close prompt and saves once, when the window closes, with no onChange', async () => {
+      const { observer, onChange, onSave } = setup({ role: 'leader' });
+
+      observer.markPageEdited();
+      expect(observer.hasUnsavedChanges).toBe(true);
+      await flushWindow();
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('in a follower saves nothing and arms no close prompt', async () => {
+      const { observer, onSave } = setup({ role: 'follower' });
+
+      observer.markPageEdited();
+      await flushWindow();
+
+      expect(observer.hasUnsavedChanges).toBe(false);
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('in a follower whose takeover waits keeps the edit and saves it as leader', async () => {
+      const { observer, onSave, tabSync } = setup({ role: 'follower' });
+
+      observer.keepLocalEdits(true);
+      observer.markPageEdited();
+      expect(observer.hasUnsavedChanges).toBe(true);
+
+      tabSync.role = 'leader';
+      observer.onRoleChanged('leader');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('in a joining tab holds the save until the role resolves', async () => {
+      const { observer, onSave, tabSync } = setup({ role: 'joining' });
+
+      observer.markPageEdited();
+      await flushWindow();
+      expect(onSave).not.toHaveBeenCalled();
+      expect(observer.hasUnsavedChanges).toBe(true);
+
+      tabSync.role = 'solo';
+      observer.onRoleChanged('solo');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('in read-only does nothing', async () => {
+      const { observer, onSave, readOnly } = setup({ role: 'leader' });
+
+      readOnly.isEnabled = true;
+      observer.markPageEdited();
+      await flushWindow();
+
+      expect(observer.hasUnsavedChanges).toBe(false);
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('while disabled does nothing', async () => {
+      const { observer, onSave } = setup({ role: 'leader' });
+
+      observer.disable();
+      observer.markPageEdited();
+      observer.enable();
+      await flushWindow();
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('leaves the window unled, so a block change after it still gets its leading onChange', async () => {
+      const { observer, onChange, onSave, emitBlockChanged } = setup({ role: 'leader' });
+
+      observer.markPageEdited();
+      emitBlockChanged({ origin: 'local' });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onChange).toHaveBeenCalledTimes(1);
+
+      await flushWindow();
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+  });
 });

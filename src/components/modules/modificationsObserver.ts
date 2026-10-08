@@ -359,6 +359,31 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Marks the document unsaved for a local title or icon write (typing, API,
+   * undo, redo). A page field is not a block, so no BlockChanged carries it.
+   * Gated like a local block edit in {@link particularBlockChanged}, but it
+   * fires no onChange: that callback takes block mutation events only, and
+   * `pageTitle.onChange` / `onIconChange` report these writes. The window it
+   * opens stays unled, so a block change in it still leads with onChange.
+   */
+  public markPageEdited(): void {
+    if (
+      this.disabled ||
+      this.Blok.ReadOnly.isEnabled ||
+      (!isFunction(this.config.onChange) && !isFunction(this.config.onSave))
+    ) {
+      return;
+    }
+    if (this.tabRole !== 'follower' || this.keepsLocalEdits) {
+      this.pendingSave = true;
+      this.syncUnloadGuard();
+    }
+    if (this.batchingTimeout === null) {
+      this.openBatchWindow({ led: false });
+    }
+  }
+
+  /**
    * Forgets the unsaved edit without touching queued onChange events: the
    * leader saves it, and onChange fires in every role.
    */

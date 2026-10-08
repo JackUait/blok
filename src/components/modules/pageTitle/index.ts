@@ -295,6 +295,9 @@ export class PageTitle extends Module {
       this.flattenToText(title, text);
     }
     if (!this.writeField('title', text, { typing: event instanceof InputEvent })) {
+      // The stored text can differ from the typed one (a NUL is dropped).
+      this.renderText();
+
       return;
     }
     this.renderText();

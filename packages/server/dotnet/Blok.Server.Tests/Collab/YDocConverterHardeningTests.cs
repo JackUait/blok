@@ -788,6 +788,63 @@ public sealed class YDocConverterHardeningTests
     Assert.Equal("""{"title":"Plan"}""", ExportedPage(doc));
   }
 
+  /// <summary>A host store cannot hold a NUL, so a title or icon with one is left out of the PUT.</summary>
+  [Fact]
+  public void ExportPageDropsATitleWithANul()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction =>
+    {
+      doc.GetMap("page").Set(transaction, "title", "Pl\u0000an");
+      doc.GetMap("page").Set(transaction, "icon", EmojiIcon("x"));
+    });
+
+    Assert.Equal("""{"icon":{"type":"emoji","value":"x"}}""", ExportedPage(doc));
+  }
+
+  [Fact]
+  public void ExportPageDropsAnIconWithANulInItsValue()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction =>
+    {
+      doc.GetMap("page").Set(transaction, "title", "Plan");
+      doc.GetMap("page").Set(transaction, "icon", EmojiIcon("x\u0000"));
+    });
+
+    Assert.Equal("""{"title":"Plan"}""", ExportedPage(doc));
+  }
+
+  [Fact]
+  public void ExportPageDropsAnIconWithANulInAnExtraKey()
+  {
+    var doc = new YDoc();
+    var icon = EmojiIcon("x");
+    var nested = new AnyObject();
+
+    nested.Add("n\u0000", "y");
+    icon.Add("extra", nested);
+    doc.Transact(transaction =>
+    {
+      doc.GetMap("page").Set(transaction, "title", "Plan");
+      doc.GetMap("page").Set(transaction, "icon", icon);
+    });
+
+    Assert.Equal("""{"title":"Plan"}""", ExportedPage(doc));
+  }
+
+  private static AnyObject EmojiIcon(string value)
+  {
+    var icon = new AnyObject();
+
+    icon.Add("type", "emoji");
+    icon.Add("value", value);
+
+    return icon;
+  }
+
   /// <summary>A malformed icon is dropped before conversion, so its depth cannot refuse the seed.</summary>
   [Fact]
   public void SeedDropsAMalformedIconNestedPastTheDepthCap()

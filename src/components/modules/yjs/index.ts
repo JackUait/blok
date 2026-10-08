@@ -10,7 +10,7 @@ import { logLabeled } from '../../utils';
 
 import { BlockObserver } from './block-observer';
 import { DocumentStore, type DataKeySnapshot } from './document-store';
-import { readPageFields, writePageField, type PageFieldKey, type PageFields } from './page-fields';
+import { cleanPageField, readPageFields, writePageField, type PageFieldKey, type PageFields } from './page-fields';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
@@ -962,8 +962,10 @@ export class YjsManager extends Module {
 
   public setPageField(key: PageFieldKey, value: string | PageIcon | null, options: { typing?: boolean; record?: boolean } = {}): void {
     const current = this.documentStore.page.get(key);
+    // Cleaned before the compare: a write that only adds a NUL must not make an empty undo step.
+    const clean = cleanPageField(value);
 
-    if (JSON.stringify(current ?? null) === JSON.stringify(value === '' ? null : value)) {
+    if (JSON.stringify(current ?? null) === JSON.stringify(clean === '' ? null : clean)) {
       return;
     }
     if (options.record === false) {

@@ -250,7 +250,8 @@ internal static class YDocConverter
   /// <summary>
   /// The page map's title and icon, by the client's <c>readPageFields</c>:
   /// only a non-empty string title and a well-formed icon, extra icon keys
-  /// included. Anything else reads as absent.
+  /// included. Anything else reads as absent. Unlike the client read, a title
+  /// or icon holding U+0000 is left out too: a host store may refuse it.
   /// </summary>
   internal static JsonObject ExportPage(YDoc doc)
   {
@@ -259,7 +260,7 @@ internal static class YDocConverter
     var map = doc.GetMap(PageRoot);
     var page = new JsonObject();
 
-    if (Value(map, "title") is string { Length: > 0 } title)
+    if (Value(map, "title") is string { Length: > 0 } title && !title.Contains('\0', StringComparison.Ordinal))
     {
       page["title"] = title;
     }
@@ -270,7 +271,12 @@ internal static class YDocConverter
     {
       try
       {
-        page["icon"] = RichText.ToJsonNode(icon);
+        var json = RichText.ToJsonNode(icon);
+
+        if (!HasNul(json))
+        {
+          page["icon"] = json;
+        }
       }
       catch (InvalidDataException)
       {
@@ -280,6 +286,16 @@ internal static class YDocConverter
 
     return page;
   }
+
+  /// <summary>A NUL in any string or property name under <paramref name="node"/>.</summary>
+  private static bool HasNul(JsonNode? node) => node switch
+  {
+    JsonObject obj => obj.Any(entry => entry.Key.Contains('\0', StringComparison.Ordinal) || HasNul(entry.Value)),
+    JsonArray array => array.Any(HasNul),
+    JsonValue value => value.GetValueKind() == JsonValueKind.String
+        && value.GetValue<string>().Contains('\0', StringComparison.Ordinal),
+    _ => false,
+  };
 
   /// <summary>
   /// <c>isPageIcon</c> in page-fields.ts: <c>{type:'emoji', value:string}</c> or

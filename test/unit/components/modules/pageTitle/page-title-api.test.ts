@@ -513,4 +513,83 @@ describe('blok.title API', () => {
     expect(holder.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent).toBe('Early');
   });
 
+  // The server cannot store a NUL, so the document never holds one.
+  describe('a NUL character', () => {
+    const titleText = (): string | null | undefined => holder.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent;
+
+    const typeInTitle = (text: string): void => {
+      const title = holder.querySelector<HTMLElement>(`[${DATA_ATTR.pageTitle}]`);
+
+      if (title === null) {
+        throw new Error('no title');
+      }
+      title.textContent = text;
+      title.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'x' }));
+    };
+
+    it('title.set drops it', async () => {
+      const onChange = vi.fn();
+
+      blok = create({ holder, pageTitle: { onChange } });
+      await blok.isReady;
+      blok.title.set('Pl\u0000an');
+
+      expect(blok.title.get()).toBe('Plan');
+      expect(titleText()).toBe('Plan');
+      expect(onChange).toHaveBeenCalledWith('Plan', { source: 'api' });
+    });
+
+    it('title.set of the same title plus a NUL changes nothing and adds no undo step', async () => {
+      const onChange = vi.fn();
+
+      blok = create({ holder, pageTitle: { onChange }, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+      blok.title.set('Doc\u0000');
+
+      expect(blok.history.canUndo()).toBe(false);
+      expect(onChange).not.toHaveBeenCalled();
+      expect(blok.title.get()).toBe('Doc');
+    });
+
+    it('title.icon.set drops it from the emoji and the image url', async () => {
+      blok = create({ holder, pageTitle: true });
+      await blok.isReady;
+      blok.title.icon.set({ type: 'emoji', value: '🚀\u0000' });
+
+      expect(blok.title.icon.get()).toEqual({ type: 'emoji', value: '🚀' });
+
+      blok.title.icon.set({ type: 'image', url: 'https://x.test/\u0000a.png' });
+
+      expect(blok.title.icon.get()).toEqual({ type: 'image', url: 'https://x.test/a.png' });
+    });
+
+    it('a loaded title and icon drop it, and save carries neither', async () => {
+      blok = create({
+        holder,
+        pageTitle: true,
+        data: { title: 'Pl\u0000an', icon: { type: 'emoji', value: '\u0000🚀' }, blocks: [] },
+      });
+      await blok.isReady;
+
+      const saved = await blok.save();
+
+      expect(saved.title).toBe('Plan');
+      expect(saved.icon).toEqual({ type: 'emoji', value: '🚀' });
+      expect(titleText()).toBe('Plan');
+    });
+
+    it('typed or pasted text drops it, on screen too', async () => {
+      blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+      typeInTitle('Do\u0000cs');
+
+      expect(blok.title.get()).toBe('Docs');
+      expect(titleText()).toBe('Docs');
+
+      typeInTitle('Docs\u0000');
+
+      expect(blok.title.get()).toBe('Docs');
+      expect(titleText()).toBe('Docs');
+    });
+  });
 });

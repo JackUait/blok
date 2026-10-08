@@ -81,6 +81,24 @@ describe('DocumentStore', () => {
       expect(store.page.has('title')).toBe(false);
     });
 
+    it('drops a NUL from the title and from every string of the icon, extra keys included', () => {
+      const store = createDocumentStore();
+      const icon = { type: 'emoji', value: '🚀\u0000', note: 'a\u0000b', size: 2 } as const;
+
+      store.pageFromJSON({ title: 'P\u0000lans', icon });
+
+      expect(store.page.get('title')).toBe('Plans');
+      expect(store.page.get('icon')).toEqual({ type: 'emoji', value: '🚀', note: 'ab', size: 2 });
+    });
+
+    it('treats a title of only NUL as absent', () => {
+      const store = createDocumentStore();
+
+      store.pageFromJSON({ title: '\u0000' });
+
+      expect(store.page.has('title')).toBe(false);
+    });
+
     it('gives a fresh page map after a lineage reset', () => {
       const store = createDocumentStore();
       const before = store.page;

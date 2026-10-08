@@ -63,4 +63,52 @@ describe('BlokEditor pageTitle prop', () => {
 
     expect(editor.title.get()).toBe('T');
   });
+
+  it('calls the onChange of the latest render', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const onReady = vi.fn();
+    const { rerender } = render(<BlokEditor tools={TOOLS} pageTitle={{ onChange: a }} onReady={onReady} />);
+    const before = await readyEditor(onReady);
+
+    rerender(<BlokEditor tools={TOOLS} pageTitle={{ onChange: b }} onReady={onReady} />);
+
+    // A recreated editor would call b with no fix at all.
+    expect(onReady).toHaveBeenCalledTimes(1);
+    act(() => before.title.set('x'));
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+    expect(b).toHaveBeenCalledWith('x', { source: 'api' });
+  });
+
+  it('calls the onIconChange of the latest render', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const onReady = vi.fn();
+    const { rerender } = render(<BlokEditor tools={TOOLS} pageTitle={{ onIconChange: a }} onReady={onReady} />);
+    const before = await readyEditor(onReady);
+
+    rerender(<BlokEditor tools={TOOLS} pageTitle={{ onIconChange: b }} onReady={onReady} />);
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    act(() => before.title.icon.set({ type: 'emoji', value: '🚀' }));
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it('hears an onChange added after mounting with pageTitle: true', async () => {
+    const b = vi.fn();
+    const onReady = vi.fn();
+    const { rerender } = render(<BlokEditor tools={TOOLS} pageTitle onReady={onReady} />);
+    const before = await readyEditor(onReady);
+
+    rerender(<BlokEditor tools={TOOLS} pageTitle={{ onChange: b }} onReady={onReady} />);
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    act(() => before.title.set('x'));
+
+    expect(b).toHaveBeenCalledTimes(1);
+  });
 });

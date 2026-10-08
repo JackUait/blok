@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, NgZone } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Blok, BlokConfig, OutputData } from '@/types';
@@ -11,13 +11,15 @@ const TOOLS = { paragraph: { class: Paragraph } };
   changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
-  template: `<blok-editor [tools]="tools" [data]="data" [config]="config" (ready)="editor = $event"></blok-editor>`,
+  template: `<span data-testid="shown-title">{{ shownTitle }}</span>
+    <blok-editor [tools]="tools" [data]="data" [config]="config" (ready)="editor = $event"></blok-editor>`,
 })
 class Host {
   tools = TOOLS;
   data: OutputData | undefined = undefined;
   config: { pageTitle?: BlokConfig['pageTitle'] } = {};
   editor: Blok | null = null;
+  shownTitle = '';
 }
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,5 +74,86 @@ describe('BlokEditorComponent [config].pageTitle', () => {
     });
 
     expect(fixture.componentInstance.editor?.title.get()).toBe('T');
+  });
+
+  it('calls the onChange of the latest [config]', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const fixture = await mountReady((host) => {
+      host.config = { pageTitle: { onChange: a } };
+    });
+    const host = fixture.componentInstance;
+    const before = host.editor;
+
+    host.config = { pageTitle: { onChange: b } };
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // A recreated editor would call b with no fix at all.
+    expect(host.editor).toBe(before);
+    before?.title.set('x');
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+    expect(b).toHaveBeenCalledWith('x', { source: 'api' });
+  });
+
+  it('calls the onIconChange of the latest [config]', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const fixture = await mountReady((host) => {
+      host.config = { pageTitle: { onIconChange: a } };
+    });
+    const host = fixture.componentInstance;
+    const before = host.editor;
+
+    host.config = { pageTitle: { onIconChange: b } };
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.editor).toBe(before);
+    before?.title.icon.set({ type: 'emoji', value: '🚀' });
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it('hears an onChange added after mounting with pageTitle: true', async () => {
+    const b = vi.fn();
+    const fixture = await mountReady((host) => {
+      host.config = { pageTitle: true };
+    });
+    const host = fixture.componentInstance;
+    const before = host.editor;
+
+    host.config = { pageTitle: { onChange: b } };
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.editor).toBe(before);
+    before?.title.set('x');
+
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs change detection after a title onChange from outside the zone', async () => {
+    const fixture = await mountReady((host) => {
+      host.config = {
+        pageTitle: {
+          onChange: (title: string): void => {
+            host.shownTitle = title;
+          },
+        },
+      };
+    });
+    const editor = fixture.componentInstance.editor;
+
+    // The editor runs outside the zone, so this is how a typed title reaches the host.
+    TestBed.inject(NgZone).runOutsideAngular(() => editor?.title.set('Plans'));
+    await wait(50);
+
+    const shown = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="shown-title"]');
+
+    expect(shown?.textContent).toBe('Plans');
   });
 });

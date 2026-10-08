@@ -54,4 +54,49 @@ describe('Vue BlokEditor pageTitle prop', () => {
 
     expect(editor.title.get()).toBe('T');
   });
+
+  it('calls the onChange of the latest props', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const wrapper = mountEditor({ pageTitle: { onChange: a } });
+    const editor = await readyEditor(wrapper);
+
+    await wrapper.setProps({ pageTitle: { onChange: b } });
+
+    // A recreated editor would call b with no fix at all.
+    expect(wrapper.emitted('ready')).toHaveLength(1);
+    editor.title.set('x');
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+    expect(b).toHaveBeenCalledWith('x', { source: 'api' });
+  });
+
+  it('calls the onIconChange of the latest props', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const wrapper = mountEditor({ pageTitle: { onIconChange: a } });
+    const editor = await readyEditor(wrapper);
+
+    await wrapper.setProps({ pageTitle: { onIconChange: b } });
+
+    expect(wrapper.emitted('ready')).toHaveLength(1);
+    editor.title.icon.set({ type: 'emoji', value: '🚀' });
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it('hears an onChange added after mounting with pageTitle: true', async () => {
+    const b = vi.fn();
+    const wrapper = mountEditor({ pageTitle: true });
+    const editor = await readyEditor(wrapper);
+
+    await wrapper.setProps({ pageTitle: { onChange: b } });
+
+    expect(wrapper.emitted('ready')).toHaveLength(1);
+    editor.title.set('x');
+
+    expect(b).toHaveBeenCalledTimes(1);
+  });
 });

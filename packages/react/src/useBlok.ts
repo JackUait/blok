@@ -18,7 +18,7 @@ import {
   normalizeReadOnlyConfig,
   toRenderableData,
 } from '@bloklabs/core/adapters';
-import type { Blok, LiveHandlers } from '@/types';
+import type { Blok, LiveHandlers, TitleConfig } from '@/types';
 import type { UseBlokConfig } from './types';
 
 interface EditorInstanceState {
@@ -356,8 +356,31 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
 
     appliedHandlerPresenceRef.current = handlerPresence;
 
+    // Always both wrappers: core captures them once, and no channel pushes a later presence flip.
+    // A falsy pageTitle stays as-is, since any object switches the title on.
+    const livePageTitle = currentConfig.pageTitle
+      ? {
+          ...(typeof currentConfig.pageTitle === 'object' ? currentConfig.pageTitle : {}),
+          onChange: (...args: Parameters<NonNullable<TitleConfig['onChange']>>): void => {
+            const latest = configRef.current.pageTitle;
+
+            if (typeof latest === 'object') {
+              latest.onChange?.(...args);
+            }
+          },
+          onIconChange: (...args: Parameters<NonNullable<TitleConfig['onIconChange']>>): void => {
+            const latest = configRef.current.pageTitle;
+
+            if (typeof latest === 'object') {
+              latest.onIconChange?.(...args);
+            }
+          },
+        }
+      : undefined;
+
     const blokConfig = {
       ...currentConfig,
+      ...(livePageTitle === undefined ? {} : { pageTitle: livePageTitle }),
       ...(liveTools === undefined ? {} : { tools: liveTools as UseBlokConfig['tools'] }),
       holder,
       onReady: (...args: Parameters<NonNullable<UseBlokConfig['onReady']>>): void => {

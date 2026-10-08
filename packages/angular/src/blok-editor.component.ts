@@ -37,6 +37,7 @@ import type {
   OutputData,
   ResolvedTheme,
   ThemeMode,
+  TitleConfig,
 } from '@bloklabs/core';
 import type { BlokAngularConfig } from './types';
 
@@ -558,6 +559,28 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, C
     cfg.onAfterRender = handlers.onAfterRender;
 
     this.appliedHandlers = handlers;
+
+    // Always both wrappers: core captures them once, and no channel pushes a later presence flip.
+    // A falsy pageTitle stays as-is, since any object switches the title on.
+    if (cfg.pageTitle) {
+      cfg.pageTitle = {
+        ...(typeof cfg.pageTitle === 'object' ? cfg.pageTitle : {}),
+        onChange: (...args: Parameters<NonNullable<TitleConfig['onChange']>>): void => {
+          const latest = this.escapeHatchConfig().pageTitle;
+
+          if (typeof latest === 'object' && latest.onChange !== undefined) {
+            this.ngZone.run(() => latest.onChange?.(...args));
+          }
+        },
+        onIconChange: (...args: Parameters<NonNullable<TitleConfig['onIconChange']>>): void => {
+          const latest = this.escapeHatchConfig().pageTitle;
+
+          if (typeof latest === 'object' && latest.onIconChange !== undefined) {
+            this.ngZone.run(() => latest.onIconChange?.(...args));
+          }
+        },
+      };
+    }
 
     if (this.themeChange.observed) {
       cfg.onThemeChange = (resolved: ResolvedTheme): void =>

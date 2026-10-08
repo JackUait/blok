@@ -26,7 +26,7 @@ import {
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
-import type { Blok, BlokConfig, LiveHandlers, LooseOutputData, OutputData } from '@/types';
+import type { Blok, BlokConfig, LiveHandlers, LooseOutputData, OutputData, TitleConfig } from '@/types';
 import type { UseBlokConfig } from './types';
 
 /** Presence map for the live callback config (see the handler watcher below). */
@@ -292,6 +292,30 @@ export function useBlok(
     snapshot.onAfterRender = presence.onAfterRender ? handlerWrappers.onAfterRender : undefined;
 
     state.appliedHandlerPresence = presence;
+
+    // Always both wrappers: core captures them once, and no channel pushes a later presence flip.
+    // A falsy pageTitle stays as-is, since any object switches the title on.
+    const pageTitle = snapshot.pageTitle as UseBlokConfig['pageTitle'];
+
+    if (pageTitle) {
+      snapshot.pageTitle = {
+        ...(typeof pageTitle === 'object' ? toRaw(pageTitle) : {}),
+        onChange: (...args: Parameters<NonNullable<TitleConfig['onChange']>>): void => {
+          const latest = mergedConfig().pageTitle;
+
+          if (typeof latest === 'object') {
+            latest.onChange?.(...args);
+          }
+        },
+        onIconChange: (...args: Parameters<NonNullable<TitleConfig['onIconChange']>>): void => {
+          const latest = mergedConfig().pageTitle;
+
+          if (typeof latest === 'object') {
+            latest.onIconChange?.(...args);
+          }
+        },
+      };
+    }
 
     const blok = new BlokRuntime({ ...snapshot, holder });
 

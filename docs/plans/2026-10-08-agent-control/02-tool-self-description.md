@@ -429,8 +429,9 @@ export interface BlockToolDescription {
   /** Scalar fields shown in the outline view (06 §3.4, 01-Q8). */
   summaryFields?: string[];
   /**
-   * Field i is the data field DOM input i edits (06 §10.2). Absent: a block with
-   * exactly one rich-text field maps it to input 0; anything else is block-level.
+   * Stable raw input slots for top-level plain/rich-text fields (06 §10.2).
+   * [] disables inference. Absent: one rich field supplies candidate input 0.
+   * Consumers must validate the live binding or use a block marker.
    */
   inputFields?: string[];
   /** Fields that are view-state and must never be written by an agent. */
@@ -946,7 +947,7 @@ All TDD: each test is written first and watched failing.
 10. **Tool runtimes.** Each moved built-in `sanitize` config deep-equals a snapshot of today's class static, taken before the move. The old import paths of `BLOCK_COLOR_SANITIZE` and `INLINE_TEXT_SANITIZE` still resolve to the same values. `buildToolRuntimes(config)` merges enabled inline tools' rules the same way `BlockToolAdapter.sanitizeConfig` does (`block.ts:562-617`). Table `normalize` fills missing column and row ids and is idempotent. Explicit `children` on insert suppress `defaultChildren` (06 01-Q4).
 11. **Node build.** Build the default manifest and contract in a plain Node test with no jsdom, from `BUILT_IN_BLOCK_DESCRIPTIONS` and `BUILT_IN_TOOL_RUNTIMES`.
 12. **Jint `manifest` op.** Extend `test/unit/scripts/build-server-runtime.test.ts` (06 §7.5) with an `invoke('manifest')` round trip in the globals-free realm. Assert: the output equals the Node build for the same input; every action with `prepare` or `requires` is `available: false`; a `customTools` file adds a structural-plus-description entry whose actions are `available: false`; `overrides.hidden` removes a tool.
-13. **Input field order.** One jsdom test per built-in tool: render it, count its real inputs, and compare with `inputFields` (06 §10.2). Every built-in with more than one input must declare `inputFields`; the test finds them by count, not by a hand list. Unverified (06 §10.2): that each tool's input order is stable across its states, so the test renders each documented state.
+13. **Input field order.** Render every built-in through real `Block.inputs`, including contradictory caption/rename/child states, and retain exact raw identity, count and order checks (06 §10.2). Declare only stable own top-level plain/rich-text slots; use `[]` for unsafe inference. Optional trailing Audio/File captions may use a maximal stable prefix. Code's shifting filename, foreign/nondata controls, nested schema/views and host-only page rename use block fallback. Live binding and topology revalidation are separate unmet 03 consumer gates, not proof supplied by these description tests.
 14. **Adapters.** Extend the existing `statics` forwarding tests (React `test/unit/react/createReactBlock.test.tsx:1025`, Vue `test/unit/vue/createVueBlock.test.ts:515`, Angular `test/unit/angular/createAngularBlock.test.ts:497`) to cover `describe` and `actionHandlers`.
 
 E2E: one per container family (table, database, columns/tabs) driving actions through 03's in-app surface in a real browser. These belong to 03's test plan; this spec only requires they exist.

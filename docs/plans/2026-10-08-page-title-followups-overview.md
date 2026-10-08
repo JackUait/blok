@@ -1,6 +1,8 @@
 # Page title follow-ups — overview
 
-Status: researched plan, 2026-10-08. Nothing here is implemented yet.
+Status: SHIPPED 2026-10-08 (fd5545dc..f50c9076). Outcome differs from this plan in two places:
+- `record: false` does not cancel older undo steps; they return after the next recorded change to the same field. Call `history.clear()` after the write to make it a floor (`types/api/title.d.ts`).
+- The collab server write-back now carries `title`/`icon`, labelled BREAKING for hosts (042338ca, `packages/server/README.md`).
 
 Plan 1 (core) shipped in b679a115..ef5eb8bc. See `2026-10-08-page-title-design.md` and `2026-10-08-page-title-core-plan.md`.
 

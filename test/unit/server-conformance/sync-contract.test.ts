@@ -13,6 +13,7 @@ import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
 
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
+import { readPageFields } from '../../../src/components/modules/yjs/page-fields';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
@@ -745,6 +746,143 @@ it('resets a document: 204, open sockets close 4409, the next join sees epoch + 
     expect(blockIds(bob.doc)).toEqual(['seed-1']);
   });
 }, TEST_TIMEOUT_MS);
+
+const PAGE_ICON = { type: 'emoji', value: '🚀' };
+
+function bodyField(body: unknown, key: string): unknown {
+  return typeof body === 'object' && body !== null ? (body as Record<string, unknown>)[key] : undefined;
+}
+
+function hasBodyField(body: unknown, key: string): boolean {
+  return typeof body === 'object' && body !== null && Object.prototype.hasOwnProperty.call(body, key);
+}
+
+it('page title: a joining client reads the host record\'s title and icon from its page map', async () => {
+  await withSyncServer('none', async ({ endpoint, connect }) => {
+    const docId = 'page-title-seed';
+
+    endpoint.serve(docId, { time: Date.now(), blocks: [paragraph('seed-1', 'seeded')], title: 'Plan', icon: PAGE_ICON });
+
+    const client = connect(docId);
+
+    await client.whenSynced();
+
+    expect(readPageFields(client.doc.getMap('page'))).toEqual({ title: 'Plan', icon: PAGE_ICON });
+    expect(blockIds(client.doc)).toEqual(['seed-1']);
+  });
+}, TEST_TIMEOUT_MS);
+
+it('page title: a title-only edit reaches the host in the next PUT', async () => {
+  await withSyncServer('none', async ({ endpoint, connect }) => {
+    const docId = 'page-title-edit';
+
+    endpoint.serve(docId, { time: Date.now(), blocks: [paragraph('seed-1', 'seeded')], title: 'Plan' });
+
+    const client = connect(docId);
+
+    await client.whenSynced();
+    client.doc.getMap('page').set('title', 'Renamed');
+
+    await waitFor(
+      () => endpoint.puts.some((put) => put.docId === docId && bodyField(put.body, 'title') === 'Renamed'),
+      () => `a PUT with title "Renamed"; PUTs so far: ${JSON.stringify(endpoint.puts)}; ${client.describe()}`,
+      EXPORT_DEADLINE_MS,
+    );
+  });
+}, EXPORT_DEADLINE_MS + TEST_TIMEOUT_MS);
+
+it('page title: a reset reseeds the title the last PUT wrote to the host', async () => {
+  await withSyncServer('ticket', async ({ endpoint, server, connect }) => {
+    endpoint.serve(TICKET_DOC_ID, { time: Date.now(), blocks: [paragraph('seed-1', 'seeded')], title: 'Plan' });
+
+    const alice = connect(TICKET_DOC_ID, { ticket: tickets.compatible, reconnect: false });
+
+    await alice.whenSynced();
+    alice.doc.getMap('page').set('title', 'Renamed');
+
+    const renamed = (put: { body: unknown; docId: string }): boolean =>
+      put.docId === TICKET_DOC_ID && bodyField(put.body, 'title') === 'Renamed';
+
+    await waitFor(
+      () => endpoint.puts.some(renamed),
+      () => `a PUT with title "Renamed"; PUTs so far: ${JSON.stringify(endpoint.puts)}; ${alice.describe()}`,
+      EXPORT_DEADLINE_MS,
+    );
+
+    // A real host stores what it was PUT; the fake one only records it.
+    endpoint.serve(TICKET_DOC_ID, endpoint.puts.filter(renamed).at(-1)?.body);
+
+    const reset = await server.request(
+      'POST',
+      `/sync/${TICKET_DOC_ID}/reset`,
+      { headers: ticketHeaders(tickets.compatible) },
+    );
+
+    expect(reset.status, reset.text).toBe(204);
+
+    await waitFor(
+      () => alice.closeCodes.length > 0,
+      () => `alice's socket to close after the reset; ${alice.describe()}`,
+    );
+
+    const bob = connect(TICKET_DOC_ID, { ticket: tickets.compatible });
+
+    await bob.whenSynced();
+
+    expect(readPageFields(bob.doc.getMap('page'))).toEqual({ title: 'Renamed' });
+    expect(blockIds(bob.doc)).toEqual(['seed-1']);
+  });
+}, EXPORT_DEADLINE_MS + TEST_TIMEOUT_MS);
+
+it('page title: GET state carries the title and icon', async () => {
+  await withSyncServer('none', async ({ endpoint, server }) => {
+    const docId = 'page-title-state';
+
+    endpoint.serve(docId, { time: Date.now(), blocks: [paragraph('seed-1', 'seeded')], title: 'Plan', icon: PAGE_ICON });
+
+    const state = await server.request('GET', `/sync/${docId}/state`, { parseJson: true });
+
+    expect(state.status, state.text).toBe(200);
+    expect(outputBlocks(state.json)).toEqual([{ id: 'seed-1', type: 'paragraph', data: { text: [ { text: 'seeded' } ] } }]);
+    expect(bodyField(state.json, 'title')).toBe('Plan');
+    expect(bodyField(state.json, 'icon')).toEqual(PAGE_ICON);
+  });
+}, TEST_TIMEOUT_MS);
+
+it('page title: clearing the title leaves no title key in the PUT, and the icon stays', async () => {
+  await withSyncServer('none', async ({ endpoint, connect }) => {
+    const docId = 'page-title-clear';
+
+    endpoint.serve(docId, { time: Date.now(), blocks: [paragraph('seed-1', 'seeded')], title: 'Plan', icon: PAGE_ICON });
+
+    const client = connect(docId);
+
+    await client.whenSynced();
+    client.doc.getMap('page').delete('title');
+    // A marker block, so the PUT waited for is one that saw the clear.
+    addParagraph(client.doc, 'c1', 'after the clear');
+
+    const carriesMarker = (put: { body: unknown; docId: string }): boolean => {
+      const blocks = outputBlocks(put.body);
+
+      return put.docId === docId &&
+        Array.isArray(blocks) &&
+        blocks.some((block: unknown) => typeof block === 'object' && block !== null &&
+          (block as Record<string, unknown>).id === 'c1');
+    };
+
+    await waitFor(
+      () => endpoint.puts.some(carriesMarker),
+      () => `a PUT carrying c1; PUTs so far: ${JSON.stringify(endpoint.puts)}; ${client.describe()}`,
+      EXPORT_DEADLINE_MS,
+    );
+
+    const exported = endpoint.puts.filter(carriesMarker).at(-1)?.body;
+
+    expect(hasBodyField(exported, 'title')).toBe(false);
+    expect(bodyField(exported, 'icon')).toEqual(PAGE_ICON);
+  });
+}, EXPORT_DEADLINE_MS + TEST_TIMEOUT_MS);
 
 it('journals a v1 member\'s write before it broadcasts it, and sends it no receipt', async () => {
   await withSyncServer('none', async ({ collabDirectory, connect }) => {

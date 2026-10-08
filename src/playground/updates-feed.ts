@@ -248,6 +248,9 @@ const combineRecords = (run: ChangeRecord[]): ChangeRecord => {
   };
 };
 
+/** A reload writes an empty record and a repaint a tool's own tidy-up: neither says anything in the feed. */
+const isVisible = ({ record }: UpdateItem): boolean => record.blocks.length > 0 || (record.page ?? []).length > 0;
+
 /**
  * Folds runs of neighbouring records by one person, in one version and less
  * than two minutes apart, into one item each.
@@ -364,7 +367,7 @@ export const blockSnippet = (block: ChangeBlock, plainText: PlainText): BlockSni
 export const updateCards = (
   items: UpdateItem[],
   options: { nameOf(actor: string | null): string; now: Date; pageTitle: string; plainText: PlainText }
-): UpdateCard[] => mergeUpdates(items).map(({ lineage, sequence, truncated, record }) => {
+): UpdateCard[] => mergeUpdates(items.filter(isVisible)).map(({ lineage, sequence, truncated, record }) => {
   const snippets = record.blocks.map((block) => blockSnippet(block, options.plainText));
 
   return {

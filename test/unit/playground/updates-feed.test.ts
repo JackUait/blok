@@ -318,9 +318,18 @@ describe('updateCards', () => {
     expect(card.shown).toBe(4);
   });
 
+  it('leaves records with no blocks and no page keys out of the feed', () => {
+    const cards = updateCards(
+      [item(9, []), item(8, [changed('a', 'x', 'y')]), item(7, [], 'playground-anna', false, { page: [] })],
+      { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText }
+    );
+
+    expect(cards.map((card) => card.key)).toEqual(['L:8']);
+  });
+
   it('names the page fields a card changed', () => {
     const [title, none] = updateCards(
-      [item(8, [], 'playground-anna', false, { page: ['values.title'] }), item(5, [])],
+      [item(8, [], 'playground-anna', false, { page: ['values.title'] }), item(5, [changed('a', 'x', 'y')])],
       { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText }
     );
 
@@ -329,7 +338,7 @@ describe('updateCards', () => {
   });
 
   it('calls an untitled page Untitled', () => {
-    const [card] = updateCards([item(7, [], null)], { nameOf, now: NOW, pageTitle: '  ', plainText: blocksToPlainText });
+    const [card] = updateCards([item(7, [changed('a', 'x', 'y')], null)], { nameOf, now: NOW, pageTitle: '  ', plainText: blocksToPlainText });
 
     expect(card.title).toBe('Untitled');
     expect(card.who).toBe('Someone');
@@ -469,7 +478,7 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('notes a truncated version on its oldest card', async () => {
-    const { feed } = mount(async () => loaded([item(9, []), item(8, [], null, true)]));
+    const { feed } = mount(async () => loaded([item(9, [changed('a', 'x', 'y')]), item(8, [changed('b', 'x', 'y')], null, true)]));
 
     await feed.ready;
 

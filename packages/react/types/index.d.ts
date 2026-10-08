@@ -108,6 +108,29 @@ export function useBlok(
 export declare const BlokContent: React.ForwardRefExoticComponent<BlokContentProps & React.RefAttributes<HTMLDivElement>>;
 
 /**
+ * Props for the BlokTitle component.
+ * Div attributes pass through. Children are not rendered: the div belongs to Blok.
+ */
+export type BlokTitleProps = {
+  /** The Blok editor instance, or null while it is not ready. */
+  editor: Blok | null;
+} & Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>;
+
+/**
+ * Places the editor's page title in a div of your own, through `editor.title.mount`.
+ * The editor needs `pageTitle` set: this component only moves the title.
+ * On unmount the title goes back above the first block.
+ *
+ * @example
+ * ```tsx
+ * const [editor, setEditor] = useState<Blok | null>(null);
+ * <BlokTitle editor={editor} />
+ * <BlokEditor ref={setEditor} pageTitle />
+ * ```
+ */
+export declare const BlokTitle: React.ForwardRefExoticComponent<BlokTitleProps & React.RefAttributes<HTMLDivElement>>;
+
+/**
  * Props for the BlokEditor component — all useBlok config (except `onReady`,
  * re-typed to receive the ready instance) plus every standard HTML div attribute
  * (forwarded to the container, like `BlokContent`) and an optional `deps` list

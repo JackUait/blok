@@ -4,12 +4,13 @@ export { useBlok } from './useBlok';
 // deep-importing core. `<BlokEditor locale>` pairs with these.
 export { getDirection, normalizeLocale } from '@bloklabs/core/locales';
 export { BlokContent } from './BlokContent';
+export { BlokTitle } from './BlokTitle';
 export { BlokEditor } from './BlokEditor';
 export { useBlokHandle } from './useBlokHandle';
 export type { BlokEditorHandle } from './useBlokHandle';
 export { BlokProvider, useBlokDefaults } from './provide-blok';
 export { useBlokInstance } from './blok-instance-context';
-export type { UseBlokConfig, BlokContentProps } from './types';
+export type { UseBlokConfig, BlokContentProps, BlokTitleProps } from './types';
 // The config/DOM prop split `BlokEditor` applies: a key not in this list is
 // spread onto the container div instead of routing into the editor config.
 // Hosts that filter props themselves must read it from here, not copy it.

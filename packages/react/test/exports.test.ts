@@ -18,6 +18,10 @@ describe('@bloklabs/react exports', () => {
     expect(typeof ReactApi.useBlokDefaults).toBe('function');
   });
 
+  it('exports BlokTitle (places the page title)', () => {
+    expect(ReactApi.BlokTitle).toBeDefined();
+  });
+
   it('exports useBlokInstance (the live editor inside a block component)', () => {
     expect(typeof ReactApi.useBlokInstance).toBe('function');
   });

@@ -36,3 +36,12 @@ export interface BlokContentProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The Blok editor instance returned by useBlok. Pass null if editor is not ready yet. */
   editor: Blok | null;
 }
+
+/**
+ * Props for the BlokTitle component.
+ * Div attributes pass through. Children are not rendered: the div belongs to Blok.
+ */
+export type BlokTitleProps = {
+  /** The Blok editor instance, or null while it is not ready. */
+  editor: Blok | null;
+} & Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>;

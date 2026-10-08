@@ -8,6 +8,7 @@
 import type {
   UseBlokConfig as PublishedUseBlokConfig,
   BlokContentProps as PublishedBlokContentProps,
+  BlokTitleProps as PublishedBlokTitleProps,
   BlokEditorProps as PublishedBlokEditorProps,
   BlockNode as PublishedBlockNode,
   CaretTarget as PublishedCaretTarget,
@@ -48,6 +49,7 @@ import type { BlockPortalHostProps as SourceBlockPortalHostProps } from '../../.
 import type { UseBlokConfig as SourceUseBlokConfig } from '../../../packages/react/src/types';
 import type { BlokEditorProps as SourceBlokEditorProps } from '../../../packages/react/src/BlokEditor';
 import type { BlokContentProps as SourceBlokContentProps } from '../../../packages/react/src/types';
+import type { BlokTitleProps as SourceBlokTitleProps } from '../../../packages/react/src/types';
 import type {
   BlockNode as SourceBlockNode,
   CaretTarget as SourceCaretTarget,
@@ -81,6 +83,7 @@ type AssertIdentical<A, B> =
 const _useBlokConfig: AssertEqual<PublishedUseBlokConfig, SourceUseBlokConfig> = true;
 const _editorHandle: AssertEqual<keyof PublishedBlokEditorHandle, keyof SourceBlokEditorHandle> = true;
 const _contentProps: AssertEqual<PublishedBlokContentProps, SourceBlokContentProps> = true;
+const _titleProps: AssertExact<PublishedBlokTitleProps, SourceBlokTitleProps> = true;
 const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps> = true;
 const _viewProps: AssertEqual<keyof PublishedBlokViewProps, keyof SourceBlokViewProps> = true;
 

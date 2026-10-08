@@ -374,3 +374,37 @@ test.describe('W4D database-level gestures (work)', () => {
     });
   }
 });
+
+test.describe('W4D column delete keeps rows', () => {
+  test('W4D-C3b: deleting a column clears its rows, and one undo restores the option and every value', async ({ page }) => {
+    await mount(page);
+    await gap(page);
+
+    const col = page.locator('[data-blok-database-column][data-option-id="opt-done"]');
+
+    await col.hover();
+    await col.locator('[data-blok-database-delete-column]').click();
+    await gap(page);
+
+    const options = async (): Promise<string[]> => {
+      const db = (await save(page)).find(b => b.id === 'db-1');
+      const schema = (db?.data.schema ?? []) as Array<{ id: string; config?: { options?: Array<{ id: string }> } }>;
+
+      return (schema.find(p => p.id === 'prop-status')?.config?.options ?? []).map(o => o.id);
+    };
+    const cardsIn = (optionId: string): Locator => page.locator(`[data-blok-database-column][data-option-id="${optionId}"] [data-blok-database-card]`);
+
+    expect(await rowData(page, 'row-2')).toEqual({ position: 'a1', properties: { 'prop-title': 'Card two', 'prop-status': null } });
+    expect(await options()).toEqual(['opt-todo']);
+    await expect(cardsIn('__blok-no-value-group__')).toHaveAttribute('data-row-id', 'row-2');
+
+    await park(page);
+    await gap(page);
+    await undo(page);
+
+    expect(await options()).toEqual(['opt-todo', 'opt-done']);
+    expect(await rowData(page, 'row-2')).toEqual({ position: 'a1', properties: { 'prop-title': 'Card two', 'prop-status': 'opt-done' } });
+    await expect(cardsIn('opt-done')).toHaveAttribute('data-row-id', 'row-2');
+    expect(await canRedo(page)).toBe(true);
+  });
+});

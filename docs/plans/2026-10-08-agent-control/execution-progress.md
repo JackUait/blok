@@ -9,9 +9,9 @@ This file records reviewed implementation, not planned work. All implementation 
 
 - Preflight reports exist for all five plans. Checks not established by the scan remain explicit task-local prerequisites.
 - Initial command/manifest types, schema validator, placement, and capability scanner have approved independent reviews, passing scoped tests/lint, and a clean full compiler gate. Their explicit-path commits are recorded below. No public agent runtime is wired yet.
-- The schema pin, shared sanitizer/schema extractions, deep-sanitize walk, marker layer, manifest, canonical action context, command names/errors, built-in sanitizer factories, effective contract, public manifest exports, shared runtime, and shared IDs are committed. The EOF-only shared-ID follow-up is committed. The public conversion sanitation regression (01/22) is reviewed, verified, and committed with its BREAKING migration note. The core command envelope and paragraph description are reviewed and committed. Snapshot, provider renderers, and pure table normalization remain in test-first execution.
+- The schema pin, shared sanitizer/schema extractions, deep-sanitize walk, marker layer, manifest, canonical action context, command names/errors, built-in sanitizer factories, effective contract, public manifest exports, shared runtime, and shared IDs are committed. The EOF-only shared-ID follow-up is committed. The public conversion sanitation regression (01/22) is reviewed, verified, and committed with its BREAKING migration note. The core command envelope and paragraph description are reviewed and committed. ID-only headless table normalization is reviewed and committed; full browser/store parity remains deferred. Snapshot and provider renderers remain in test-first execution.
 - Independent implementers own disjoint files. Only the controller stages and commits. Shared memory-heavy checks run sequentially.
-- Twenty-three tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
+- Twenty-four tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
 - Per-task evidence and independent-review verdicts live under `.superpowers/sdd/<plan-name>/progress.md` during execution.
 - Build sequence: reconciliation ledger section 14 (W0–W6). The user's later instruction to use parallel subagents supersedes the single-implementer restriction.
 
@@ -45,9 +45,10 @@ This file records reviewed implementation, not planned work. All implementation 
 | 02/14 | Pure IDs and shared table ID helpers | `5edca6bd`, `4ef7c5f8` | Behavioral RED/GREEN; final 5 mint + 24 shared tests; 57 runtime references covered; lint/compiler, independent preservation/log review, built editor 9 checks. EOF-only follow-up independently reviewed; fresh fixtures/compiler and built editor pass. |
 | 02/13 | Effective headless tool runtimes | `7362e425` | Behavioral RED 15 failures; final 19 tests with all 25 real adapters; lint/compiler; independent review and helper-type re-review; built export boundary. |
 | 01/22 | BREAKING public conversion override sanitation | `ae027271` | Malicious HTML/segment regression RED/GREEN; permitted-markup controls; 26 related unit suites, 39 conversion E2E cases; lint/compiler; independent review; fresh built 13 checks. Normal hooks passed after wrapping the release-note footer. |
-
 | 01/3 | Core command envelope and registry | `798b6139` | Behavioral RED/GREEN; 148 envelope and 314 related tests; scoped lint/full compiler; independent spec/quality review. |
 | 02/16 | Paragraph self-description and schema scaffolding | `61315ad6` | Behavioral RED; 151 related tests, exact schema byte pin; lint/compiler; independent review; fresh built Node-view 6/browser-class 11 checks. |
+
+| 02/15 | ID-only headless table normalization | `11dfc71b` | Behavioral RED/GREEN; ragged idempotence regression; 17 normalization +19 runtime tests; lint/compiler; independent re-review; fresh built preservation checks. Full browser/store parity is not claimed. |
 
 ## Release obligation
 

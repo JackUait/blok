@@ -730,6 +730,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // title, size tiers), its @import, and the main.css rule that lets an in-editor header inherit the gutter.
     const PAGE_TITLE_HEADER_BYTES = 5_347 + 28 + 524;
     const AGENT_MARKER_BYTES = 633;
+    // find.css: the field's grid-column pin and its comment (read-only find field gap).
+    const FIND_FIELD_COLUMN_BYTES = 140;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -782,7 +784,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABS_FOCUS_RING_BYTES
       + TABS_EMPTY_HINT_BYTES
       + PAGE_TITLE_HEADER_BYTES
-      + AGENT_MARKER_BYTES;
+      + AGENT_MARKER_BYTES
+      + FIND_FIELD_COLUMN_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

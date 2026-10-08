@@ -173,7 +173,10 @@
 /* ─── Field ─── */
 
 /* The box itself is the shared field look (field.css, data-blok-field). */
+/* Pinned to column 2: read-only drops the toggle, and the field would
+   otherwise fall into the empty auto column 1. */
 [data-blok-find-field] {
+  grid-column: 2;
   flex: 1 1 auto;
   min-width: 0;
   margin-inline-end: var(--blok-space-1);

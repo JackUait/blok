@@ -15226,6 +15226,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-find-field] {
+  grid-column: 2;
   flex: 1 1 auto;
   min-width: 0;
   margin-inline-end: var(--blok-space-1);

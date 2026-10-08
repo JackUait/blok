@@ -1766,6 +1766,23 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
     });
 
+    test('read-only: the find field fills the row, with no gap before the controls', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two'), { config: { readOnly: true } });
+      await page.keyboard.press(FIND_KEY);
+      await expect(page.getByTestId('find-input')).toBeVisible();
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
+
+      const gap = await page.evaluate(() => {
+        const field = document.querySelector('[data-blok-find-field]')?.getBoundingClientRect();
+        const controls = document.querySelector('[data-blok-find-controls]')?.getBoundingClientRect();
+
+        return field === undefined || controls === undefined ? null : controls.left - field.right;
+      });
+
+      expect(gap).not.toBeNull();
+      expect(gap ?? Infinity).toBeLessThanOrEqual(10);
+    });
+
     test('find: false leaves Mod+F to the browser', async ({ page }) => {
       await createEditor(page, paragraphs('alpha'), { config: { find: false } });
       await focusParagraph(page, 'alpha');

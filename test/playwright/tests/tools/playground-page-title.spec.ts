@@ -287,3 +287,125 @@ test.describe('playground page title keyboard', () => {
     await expect(titleOf(page)).toHaveText(`${joined}Things to try`);
   });
 });
+
+interface MorphRecord {
+  /** `ready` settled: 'ok', or the error name when the browser skipped the transition (a hard cut). */
+  ready: string;
+  /** The morph rules on the page being left. */
+  leaving: string;
+  /** The morph rules in force once the new page is in. */
+  arriving: string;
+}
+
+declare global {
+  interface Window {
+    pgMorphs?: MorphRecord[];
+  }
+}
+
+/** Records every page transition: whether it ran, and which parts it named on arrival. */
+const recordMorphs = async (page: Page): Promise<void> => {
+  await page.addInitScript(() => {
+    const start = document.startViewTransition?.bind(document);
+
+    if (start === undefined) {
+      return;
+    }
+    window.pgMorphs = [];
+    document.startViewTransition = (update?: ViewTransitionUpdateCallback | StartViewTransitionOptions) => {
+      // The transition's own sheet starts with the body rule; playground.css also mentions these names.
+      const rules = (side: string): string => [...document.head.querySelectorAll('style')]
+        .map((style) => style.textContent ?? '')
+        .filter((text) => text.startsWith(`#tab-editor { view-transition-name: ${side}; }`))
+        .join('\n');
+      const record: MorphRecord = { ready: 'pending', leaving: rules('pg-page-out'), arriving: '' };
+
+      window.pgMorphs?.push(record);
+      const callback = typeof update === 'function' ? update : undefined;
+      const transition = start(async () => {
+        await callback?.();
+        record.arriving = rules('pg-page-in');
+      });
+
+      transition.ready.then(() => {
+        record.ready = 'ok';
+      }, (error: unknown) => {
+        record.ready = error instanceof Error ? error.name : 'rejected';
+      });
+
+      return transition;
+    };
+  });
+};
+
+const lastMorph = (page: Page): Promise<MorphRecord | undefined> => page.evaluate(() => window.pgMorphs?.at(-1));
+
+test.describe('playground page morphs', () => {
+  test.setTimeout(90_000);
+
+  test('opening a page from its link block morphs the row into Blok\'s title and icon', async ({ page }) => {
+    await recordMorphs(page);
+    await page.goto(url('/editor/page/getting-started'));
+    await expect(titleOf(page)).toHaveText('Getting started');
+
+    await page.getByTestId('page-link').getByTestId('page-title').click();
+    await expect(titleOf(page)).toHaveText('Keyboard shortcuts');
+
+    await expect.poll(async () => (await lastMorph(page))?.ready).toBe('ok');
+    const morph = await lastMorph(page);
+
+    expect(morph?.arriving).toContain('[data-blok-testid="page-header-title"] { view-transition-name: pg-page-title; }');
+    expect(morph?.arriving).toContain('[data-blok-testid="page-header-icon"] { view-transition-name: pg-page-icon; }');
+  });
+
+  test('a page with no icon morphs its title and names no icon', async ({ page }) => {
+    const seedPages: unknown = JSON.parse(readFileSync(resolve(__dirname, '../../../../playground-pages.json'), 'utf8'));
+    const seedRecord: unknown = typeof seedPages === 'object' && seedPages !== null ? Reflect.get(seedPages, 'keyboard-shortcuts') : undefined;
+
+    if (typeof seedRecord !== 'object' || seedRecord === null) {
+      throw new Error('playground-pages.json has no keyboard-shortcuts page');
+    }
+    const { icon: _icon, ...withoutIcon } = Object.fromEntries(Object.entries(seedRecord));
+
+    await recordMorphs(page);
+    await page.goto(url('/editor'));
+    await page.evaluate((record) => {
+      localStorage.setItem('blok-playground-pages', JSON.stringify({ 'keyboard-shortcuts': record }));
+    }, withoutIcon);
+    await page.goto(url('/editor/page/getting-started'));
+    await expect(titleOf(page)).toHaveText('Getting started');
+
+    await page.getByTestId('page-link').getByTestId('page-title').click();
+    await expect(titleOf(page)).toHaveText('Keyboard shortcuts');
+    await expect(page.getByTestId('page-header-add-icon')).toBeAttached();
+
+    await expect.poll(async () => (await lastMorph(page))?.ready).toBe('ok');
+    const morph = await lastMorph(page);
+
+    expect(morph?.arriving).toContain('view-transition-name: pg-page-title;');
+    // A view-transition name, not a class: the CSS-selector lint misreads it inside toContain.
+    expect(morph?.arriving.includes('view-transition-name: pg-page-icon;')).toBe(false);
+  });
+
+  test('going back up morphs Blok\'s title and icon into the parent\'s link block', async ({ page }) => {
+    await recordMorphs(page);
+    await page.goto(url('/editor/page/getting-started'));
+    await expect(titleOf(page)).toHaveText('Getting started');
+    await page.getByTestId('page-link').getByTestId('page-title').click();
+    await expect(titleOf(page)).toHaveText('Keyboard shortcuts');
+    await expect.poll(async () => (await lastMorph(page))?.ready).toBe('ok');
+
+    // Browser Back, not a crumb: a crumb opens the page out of the crumb and morphs no part.
+    await page.goBack();
+    await expect(titleOf(page)).toHaveText('Getting started');
+
+    await expect.poll(() => page.evaluate(() => window.pgMorphs?.length)).toBe(2);
+    await expect.poll(async () => (await lastMorph(page))?.ready).toBe('ok');
+    const morph = await lastMorph(page);
+
+    expect(morph?.leaving).toContain('[data-blok-testid="page-header-title"] { view-transition-name: pg-page-title; }');
+    expect(morph?.leaving).toContain('[data-blok-testid="page-header-icon"] { view-transition-name: pg-page-icon; }');
+    expect(morph?.arriving).toContain('[data-blok-testid="page-title"] { view-transition-name: pg-page-title; }');
+    expect(morph?.arriving).toContain('[data-blok-testid="page-icon"] { view-transition-name: pg-page-icon; }');
+  });
+});

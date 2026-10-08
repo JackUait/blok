@@ -1,0 +1,147 @@
+import type { BlockToolData } from '../../../types';
+
+/**
+ * Content placement within a cell.
+ * Describes vertical (top/middle/bottom) and horizontal (left/center/right) alignment.
+ */
+export type CellPlacement =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+/**
+ * Cell content always contains block IDs.
+ * Every cell in the table is represented as an array of block references.
+ */
+export type CellContent = {
+  blocks: string[];
+  /**
+   * Column id. Every cell of one column carries the same value. Named `id` on
+   * purpose: a row whose cells carry unique ids is stored keyed by id in Yjs
+   * (`isIdentityArray`), so a column move and a peer's delete stop racing.
+   */
+  id?: string;
+  /** Row id. Every cell of one row carries the same value. */
+  rowId?: string;
+  color?: string;
+  textColor?: string;
+  text?: string;
+  /**
+   * Structured block seeds for a cell whose content cannot be expressed as
+   * HTML text (image / code / embed blocks, or blocks carrying tunes).
+   * Consumed by TableCellBlocks.initializeCells — which replaces it with the
+   * created block ids — so it never reaches saved data. Seeding via `text`
+   * alone silently dropped every non-text block pasted into a new table.
+   */
+  blockData?: ClipboardBlockData[];
+  /** Content placement within the cell (vertical + horizontal alignment). */
+  placement?: CellPlacement;
+  /** Number of columns this cell spans (default 1 when omitted). Only set on origin cells. */
+  colspan?: number;
+  /** Number of rows this cell spans (default 1 when omitted). Only set on origin cells. */
+  rowspan?: number;
+  /** If set, this cell is covered by a merge whose origin is at [row, col]. */
+  mergedInto?: [number, number];
+};
+
+/**
+ * Legacy cell content type for migration from string-based cells.
+ * Used when loading saved data that may contain plain text strings.
+ */
+export type LegacyCellContent = string | CellContent;
+
+/**
+ * Cell text density. 'compact' is the default small table text;
+ * 'comfortable' matches the regular editor text size.
+ */
+export type TableTextSize = 'compact' | 'comfortable';
+
+/**
+ * Type guard to check if legacy cell content has been migrated to blocks format.
+ * Used during data loading to identify cells that need migration.
+ */
+export const isCellWithBlocks = (cell: LegacyCellContent): cell is CellContent => {
+  return typeof cell === 'object' && cell !== null && 'blocks' in cell;
+};
+
+/**
+ * Data format for the Table tool.
+ * In legacy mode, this is the single-block data.
+ * In hierarchical mode, this is the parent block data
+ * (child row blocks use the same type with cells populated).
+ */
+export interface TableData extends BlockToolData {
+  /** Whether the first row is a heading row */
+  withHeadings: boolean;
+  /** Whether the first column is a heading column */
+  withHeadingColumn: boolean;
+  /** Whether the table is full-width */
+  stretched?: boolean;
+  /** 2D array of cell content (may contain legacy string format when loading saved data) */
+  content: LegacyCellContent[][];
+  /** Column widths in pixels (e.g., [200, 300, 250]). Omit for equal widths. */
+  colWidths?: number[];
+  /** Original per-column width in pixels, set once at creation. New columns = initialColWidth / 2. */
+  initialColWidth?: number;
+  /** Cell text density. Omitted means 'compact' (the default small text). */
+  textSize?: TableTextSize;
+}
+
+/**
+ * Table tool configuration
+ */
+export interface TableConfig {
+  /** Initial number of rows (default: 2) */
+  rows?: number;
+  /** Initial number of columns (default: 2) */
+  cols?: number;
+  /** Whether to start with heading row enabled */
+  withHeadings?: boolean;
+  /** Whether to start with heading column enabled */
+  withHeadingColumn?: boolean;
+  /** Whether to start stretched */
+  stretched?: boolean;
+  /** Additional tool names to restrict from being inserted into table cells */
+  restrictedTools?: string[];
+}
+
+/**
+ * Block data within a clipboard cell (no IDs — those are assigned on paste).
+ */
+export interface ClipboardBlockData {
+  tool: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+  /** Nested child blocks, in order. Ids are minted on paste, so the tree is nested, not id-linked. */
+  children?: ClipboardBlockData[];
+}
+
+/**
+ * One cell of a {@link TableCellsClipboard} payload.
+ */
+export interface TableClipboardCell {
+  blocks: ClipboardBlockData[];
+  color?: string;
+  textColor?: string;
+  placement?: CellPlacement;
+  /** True when this position is covered by a merge (no physical cell). */
+  covered?: boolean;
+  /** Number of columns this cell spans (only set on merge origins, > 1). */
+  colspan?: number;
+  /** Number of rows this cell spans (only set on merge origins, > 1). */
+  rowspan?: number;
+}
+
+/**
+ * Clipboard payload for copied table cells.
+ * Stored as JSON in a data attribute on the HTML table element.
+ */
+export interface TableCellsClipboard {
+  rows: number;
+  cols: number;
+  cells: TableClipboardCell[][];
+  /** Set only when the copied range includes the heading row of a headed table. */
+  withHeadings?: boolean;
+  /** Set only when the copied range includes the heading column of a headed table. */
+  withHeadingColumn?: boolean;
+}

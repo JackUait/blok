@@ -191,12 +191,15 @@ const escapePlainText = (text: string): string => escapeLineStarts(markdownTextE
  */
 const escapeClosingHashes = (line: string): string => line.replace(/([ \t])(#+)([ \t]*)$/, '$1\\$2$3');
 
+/** CommonMark ends a line at `\r\n`, `\r` or `\n`; any of them would end the heading. */
+const LINE_BREAK = /\r\n?|\n/g;
+
 /**
  * Plain text (a page title) as the text of one ATX heading line.
  * @param text - plain text, never HTML
  */
 export const markdownHeadingText = (text: string): string =>
-  escapeClosingHashes(escapePlainText(text.replace(/\n/g, ' ')));
+  escapeClosingHashes(escapePlainText(text.replace(LINE_BREAK, ' ')));
 
 /**
  * Put a page title, as a `#` heading, in front of exported Markdown. An emoji
@@ -210,7 +213,7 @@ export const withMarkdownTitle = (markdown: string, title: unknown, icon: unknow
     return markdown;
   }
 
-  const emoji = isRecord(icon) && icon.type === 'emoji' ? asString(icon.value) : '';
+  const emoji = isRecord(icon) && icon.type === 'emoji' ? asString(icon.value).replace(LINE_BREAK, ' ') : '';
   const line = `# ${emoji === '' ? '' : `${markdownTextEscaper(emoji)(emoji)} `}${markdownHeadingText(title)}`;
 
   return markdown === '' ? line : `${line}\n\n${markdown}`;

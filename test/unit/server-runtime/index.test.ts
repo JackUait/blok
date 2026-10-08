@@ -823,6 +823,13 @@ describe('server runtime page title', () => {
     expect(JSON.parse(await invoke('blocksToMarkdownWithPages', request(false)))).toEqual({ markdown: 'Body', warnings: [] });
   });
 
+  it('keeps a title and emoji with line breaks on one Markdown line', async () => {
+    const document = { title: 'T\r- item', icon: { type: 'emoji', value: 'x\r\n> evil' }, blocks: [] };
+    const output = JSON.parse(await invoke('blocksToMarkdown', JSON.stringify({ document, title: true }))) as unknown;
+
+    expect(output).toEqual({ markdown: '# x > evil T - item', warnings: [] });
+  });
+
   it('carries an image icon through to the HTML', async () => {
     const document = { ...titled, icon: { type: 'image', url: 'https://x.com/i.png' } };
 

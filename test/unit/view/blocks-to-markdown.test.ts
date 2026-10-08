@@ -1309,6 +1309,17 @@ describe('blocksToMarkdown with title: true', () => {
     expect(blocksToMarkdown({ title: 'a\nb', blocks: [] }, { title: true })).toBe('# a b');
   });
 
+  it('keeps a title with a carriage return on one line', () => {
+    expect(blocksToMarkdown({ title: 'T\r- item', blocks: [] }, { title: true })).toBe('# T - item');
+    expect(blocksToMarkdown({ title: 'T\r\n> quote', blocks: [] }, { title: true })).toBe('# T > quote');
+  });
+
+  it('keeps an emoji icon holding a line break on the heading line', () => {
+    const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: 'x\n> evil' }, blocks: [] };
+
+    expect(blocksToMarkdown(data, { title: true })).toBe('# x > evil Plan');
+  });
+
   it('ignores the title without the option', () => {
     const data: OutputData = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: body };
 

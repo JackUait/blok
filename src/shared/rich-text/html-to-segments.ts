@@ -17,7 +17,7 @@ const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
  * an html embed. Explicit on purpose: a tag missing here is walked as a mark, so
  * a text-less one vanishes (that is right for an empty `<b></b>`).
  */
-const OPAQUE_TAGS = new Set([
+export const OPAQUE_TAGS = new Set([
   'img', 'p', 'ul', 'ol', 'li', 'div', 'table', 'hr',
   'input', 'video', 'audio', 'iframe', 'svg', 'math', 'canvas', 'object', 'embed', 'picture', 'wbr', 'source', 'track',
 ]);

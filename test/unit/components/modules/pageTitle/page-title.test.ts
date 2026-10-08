@@ -354,4 +354,28 @@ describe('PageTitle module', () => {
     expect(title.childNodes.length).toBe(1);
     expect(title.firstChild).toBeInstanceOf(Text);
   });
+
+  it('an icon change is undoable and fires onIconChange', async () => {
+    const onIconChange = vi.fn();
+    const core = await boot({ pageTitle: { onIconChange } });
+
+    core.moduleInstances.PageTitle.setIcon({ type: 'emoji', value: '🚀' }, 'user');
+    core.moduleInstances.YjsManager.stopCapturing();
+    core.moduleInstances.YjsManager.undo();
+
+    expect(core.moduleInstances.PageTitle.getIcon()).toBeNull();
+    expect(onIconChange).toHaveBeenNthCalledWith(1, { type: 'emoji', value: '🚀' }, { source: 'user' });
+    expect(onIconChange).toHaveBeenNthCalledWith(2, null, { source: 'undo' });
+    expect(onIconChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('draws Add icon by default', async () => {
+    await boot({ pageTitle: true });
+    expect(holder.querySelector(`[${DATA_ATTR.pageAddIcon}]`)).not.toBeNull();
+  });
+
+  it('icon: false draws no icon row content', async () => {
+    await boot({ pageTitle: { icon: false } });
+    expect(holder.querySelector(`[${DATA_ATTR.pageAddIcon}]`)).toBeNull();
+  });
 });

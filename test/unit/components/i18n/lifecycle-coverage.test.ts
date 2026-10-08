@@ -24,10 +24,6 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
-  // Not called yet. Move them to executable-literal once the page title
-  // header calls them by literal.
-  'title.addIcon',
-  'title.changeIcon',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -269,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 598 + 117 + 61 + 6 closure for all 782 keys', () => {
+  it('rebuilds a disjoint 600 + 117 + 61 + 4 closure for all 782 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -324,7 +320,8 @@ describe('current English catalog lifecycle coverage', () => {
       // toolbox.preview keys by literal.
       // +2: the find bar names why a replace button is disabled by literal.
       // +2: the page title header calls title.placeholder and title.ariaLabel by literal.
-      'executable-literal': 598,
+      // +2: the page icon calls title.addIcon and title.changeIcon by literal.
+      'executable-literal': 600,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -339,8 +336,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the video keys above.
       // -9: the shortcut sheet now names those 9 markup tools by literal.
       'registered-namespace-compatible': 61,
-      // +2: the title.* keys above.
-      'catalog-only': 6,
+      'catalog-only': 4,
     });
     expect(
       [...lifecycle.entries()]

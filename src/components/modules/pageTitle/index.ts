@@ -9,6 +9,7 @@ import { normalizeTitleConfig, type ResolvedTitleConfig } from '../../utils/titl
 import { setCaretAtXPosition } from '../../utils/caret';
 import { buildHeader, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
+import { createIconControl } from './icon-control';
 
 export class PageTitle extends Module {
   private resolved: ResolvedTitleConfig | null = null;
@@ -16,6 +17,7 @@ export class PageTitle extends Module {
   private stopPageListener: (() => void) | null = null;
   private unbindKeyboard: (() => void) | null = null;
   private readOnly = false;
+  private iconControl: { redraw(): void; destroy(): void } | null = null;
 
   public get isEnabled(): boolean {
     return this.dom !== null;
@@ -51,6 +53,15 @@ export class PageTitle extends Module {
     this.syncWidth(UI.getWidthMode());
     this.syncDirection();
     this.toggleReadOnly(ReadOnly.isEnabled);
+    if (this.resolved.icon) {
+      this.iconControl = createIconControl(this.dom.iconRow, {
+        getIcon: () => this.getIcon(),
+        setIcon: (icon) => this.setIcon(icon, 'user'),
+        isReadOnly: () => this.readOnly,
+        labels: () => ({ add: I18n.t('title.addIcon'), change: I18n.t('title.changeIcon') }),
+        picker: () => ({ i18n: this.Blok.API.methods.i18n, locale: I18n.getLocale() }),
+      });
+    }
     this.dom.title.addEventListener('input', this.onInput);
     this.dom.title.addEventListener('focusin', this.onFocusIn);
     this.unbindKeyboard = bindTitleKeyboard(this.dom.title, {
@@ -84,13 +95,16 @@ export class PageTitle extends Module {
     return this.Blok.YjsManager.getPageFields().icon ?? null;
   }
 
-  public setIcon(icon: PageIcon | null, _source: 'user' | 'api'): void {
+  public setIcon(icon: PageIcon | null, source: 'user' | 'api'): void {
     this.Blok.YjsManager.setPageField('icon', icon);
+    this.iconControl?.redraw();
+    this.resolved?.onIconChange?.(this.getIcon(), { source });
   }
 
   /** Redraw from the document after a load. Fires no callbacks. */
   public refresh(): void {
     this.renderText();
+    this.iconControl?.redraw();
   }
 
   public focus(position: 'start' | 'end' = 'end'): void {
@@ -163,12 +177,15 @@ export class PageTitle extends Module {
     if (this.dom !== null) {
       this.dom.title.setAttribute('contenteditable', state ? 'false' : 'true');
     }
+    this.iconControl?.redraw();
   }
 
   public destroy(): void {
     this.stopPageListener?.();
     this.unbindKeyboard?.();
     this.unbindKeyboard = null;
+    this.iconControl?.destroy();
+    this.iconControl = null;
     this.dom?.title.removeEventListener('focusin', this.onFocusIn);
     this.eventsDispatcher.off(I18nChanged, this.relabel);
     this.dom?.header.remove();
@@ -257,6 +274,10 @@ export class PageTitle extends Module {
         this.focus('end');
       }
     }
+    if (key === 'icon') {
+      this.iconControl?.redraw();
+      this.resolved?.onIconChange?.(this.getIcon(), { source });
+    }
   }
 
   /** Keeps the caret offset, clamped. Writes no empty text node: the placeholder needs :empty. */
@@ -293,5 +314,6 @@ export class PageTitle extends Module {
 
     this.dom.title.setAttribute('data-placeholder', this.resolved.placeholder ?? I18n.t('title.placeholder'));
     this.dom.title.setAttribute('aria-label', I18n.t('title.ariaLabel'));
+    this.iconControl?.redraw();
   };
 }

@@ -157,6 +157,7 @@ describe('blok.title API', () => {
       await expect(blok.isReady).resolves.toBeDefined();
 
       expect(blok.title.icon.get()).toEqual({ type: 'emoji', value: '🚀' });
+      expect(holder.querySelector(`[${DATA_ATTR.pageIcon}]`)?.textContent).toBe('🚀');
     });
   });
 

@@ -293,6 +293,26 @@ test.describe('page title behaviour', () => {
     await expect(iconButton(page)).toHaveCount(0);
   });
 
+  test('an empty title shows its placeholder in the placeholder gray, not the text ink', async ({ page }) => {
+    await createBlok(page, { data: { blocks: [] } });
+    await expect(title(page)).toBeEmpty();
+
+    const colors = await title(page).evaluate((el) => {
+      const probe = document.createElement('span');
+
+      probe.style.color = 'var(--blok-gray-text)';
+      el.parentElement?.appendChild(probe);
+      const gray = getComputedStyle(probe).color;
+
+      probe.remove();
+
+      return { placeholder: getComputedStyle(el, '::before').color, ink: getComputedStyle(el).color, gray };
+    });
+
+    expect(colors.placeholder).not.toBe(colors.ink);
+    expect(colors.placeholder).toBe(colors.gray);
+  });
+
   test('read-only: no editing, no Add icon', async ({ page }) => {
     await createBlok(page, { readOnly: true });
 

@@ -10705,7 +10705,7 @@ span[data-blok-slash-search] {
 
 [data-blok-page-title]:empty::before {
   content: attr(data-placeholder);
-  color: var(--color-block-placeholder);
+  color: var(--blok-placeholder-color, var(--blok-gray-text));
   pointer-events: none;
 }
 

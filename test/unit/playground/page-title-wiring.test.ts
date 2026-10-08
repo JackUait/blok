@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PageRegistry, ROOT_STORAGE_KEY, type PageMap } from '../../../src/playground/page-host';
 import type { PageIcon } from '../../../types/tools/page';
 import {
+  createdPageSeed,
   fromPageIcon,
   pushRecord,
   titleCallbacks,
@@ -198,5 +199,83 @@ describe('pushRecord', () => {
 
     expect(setTitle).not.toHaveBeenCalled();
     title.remove();
+  });
+});
+
+describe('createdPageSeed', () => {
+  const editorShowing = (title: string, icon: PageIcon | null = null): {
+    editor: TitleEditor;
+    setTitle: ReturnType<typeof vi.fn>;
+    setIcon: ReturnType<typeof vi.fn>;
+  } => {
+    const setTitle = vi.fn();
+    const setIcon = vi.fn();
+
+    return { editor: { title: { get: () => title, set: setTitle, icon: { get: () => icon, set: setIcon } } }, setTitle, setIcon };
+  };
+
+  it('seeds a page this tab created into its empty room on connect, with no undo step', () => {
+    const { editor, setTitle, setIcon } = editorShowing('');
+    const onStatus = createdPageSeed(editor, { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'Named here', icon: '🌱' }) });
+
+    onStatus({ status: 'connected' });
+
+    expect(setTitle).toHaveBeenCalledWith('Named here', { record: false });
+    expect(setIcon).toHaveBeenCalledWith({ type: 'emoji', value: '🌱' }, { record: false });
+  });
+
+  it('never seeds a page that exists elsewhere: a stale title must not resurrect one a peer cleared', () => {
+    const { editor, setTitle, setIcon } = editorShowing('');
+    const onStatus = createdPageSeed(editor, { pageId: 'guide', created: new Set(['fresh']), record: () => ({ title: 'Stale', icon: '📘' }) });
+
+    onStatus({ status: 'connected' });
+
+    expect(setTitle).not.toHaveBeenCalled();
+    expect(setIcon).not.toHaveBeenCalled();
+  });
+
+  it('never seeds the root document', () => {
+    const { editor, setTitle } = editorShowing('');
+    const onStatus = createdPageSeed(editor, { pageId: null, created: new Set(['fresh']), record: () => ({ title: 'Root' }) });
+
+    onStatus({ status: 'connected' });
+
+    expect(setTitle).not.toHaveBeenCalled();
+  });
+
+  it('leaves a room that already has a title or icon alone', () => {
+    const { editor, setTitle, setIcon } = editorShowing('From the room', { type: 'emoji', value: '🛰️' });
+    const onStatus = createdPageSeed(editor, { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'Local', icon: '🌱' }) });
+
+    onStatus({ status: 'connected' });
+
+    expect(setTitle).not.toHaveBeenCalled();
+    expect(setIcon).not.toHaveBeenCalled();
+  });
+
+  it('seeds once: a reconnect after a peer cleared the title does not bring it back', () => {
+    const shown = { title: '' };
+    const setTitle = vi.fn((value: string) => {
+      shown.title = value;
+    });
+    const editor: TitleEditor = { title: { get: () => shown.title, set: setTitle, icon: { get: () => null, set: vi.fn() } } };
+    const onStatus = createdPageSeed(editor, { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'Named here' }) });
+
+    onStatus({ status: 'connected' });
+    shown.title = '';
+    onStatus({ status: 'offline' });
+    onStatus({ status: 'connected' });
+
+    expect(setTitle).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for the room: no seed while connecting or offline', () => {
+    const { editor, setTitle } = editorShowing('');
+    const onStatus = createdPageSeed(editor, { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'Named here' }) });
+
+    onStatus({ status: 'connecting' });
+    onStatus({ status: 'offline' });
+
+    expect(setTitle).not.toHaveBeenCalled();
   });
 });

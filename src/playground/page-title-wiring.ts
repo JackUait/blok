@@ -75,3 +75,38 @@ export const pushRecord = (editor: TitleEditor, record: { title: string; icon?: 
     editor.title.icon.set(icon, { record: false });
   }
 };
+
+/**
+ * A `collaboration:status` listener that puts this profile's title and icon
+ * into a page it created this session, once its room is synced and still
+ * empty. Never for a page that exists elsewhere: its stale local title would
+ * bring back one a peer cleared. Once only: 'connected' fires on every reconnect.
+ */
+export const createdPageSeed = (
+  editor: TitleEditor,
+  { pageId, created, record }: {
+    pageId: string | null;
+    created: ReadonlySet<string>;
+    record(): { title: string; icon?: string } | undefined;
+  }
+): ((event: { status: string }) => void) => {
+  const state = { done: pageId === null || !created.has(pageId) };
+
+  return ({ status }) => {
+    // 'connected' is reported after the first sync, so an empty title means an empty room.
+    if (state.done || status !== 'connected') {
+      return;
+    }
+    state.done = true;
+
+    const page = record();
+    const icon = toPageIcon(page?.icon);
+
+    if (page !== undefined && page.title !== '' && editor.title.get() === '') {
+      editor.title.set(page.title, { record: false });
+    }
+    if (icon !== undefined && editor.title.icon.get() === null) {
+      editor.title.icon.set(icon, { record: false });
+    }
+  };
+};

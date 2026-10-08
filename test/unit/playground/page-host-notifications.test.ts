@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutputBlockData } from '../../../types';
 import {
@@ -6,7 +9,7 @@ import {
   type PageMap,
 } from '../../../src/playground/page-host';
 import { buildPageTree, findPageLink } from '../../../src/playground/page-tree';
-import { titleCallbacks } from '../../../src/playground/page-title-wiring';
+import { createdPageSeed, titleCallbacks } from '../../../src/playground/page-title-wiring';
 
 const seed = (): PageMap => ({
   guide: { title: 'Guide', icon: '📘', parentId: null, blocks: [] },
@@ -248,5 +251,66 @@ describe('playground page metadata notifications', () => {
     expect(findPageLink(blocksOf, 'unknown')).toEqual({ parentId: null, title: '' });
     const tree = buildPageTree(pages, blocksOf);
     expect(tree.children[0]).toEqual({ id: 'unknown', title: 'New page', children: [] });
+  });
+});
+
+describe('playground collaboration title seed', () => {
+  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+  const start = html.indexOf('function wireCollaborationTitleSeed(');
+  const source = html.slice(start, html.indexOf('// Navigation, tool toggles and reset', start));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  const wire = (collab: boolean, created: string[]): {
+    on: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    connect(): void;
+  } => {
+    const set = vi.fn();
+    const listeners: Array<(event: { status: string }) => void> = [];
+    const on = vi.fn((_name: string, listener: (event: { status: string }) => void) => {
+      listeners.push(listener);
+    });
+    const editor = { on, title: { get: () => '', set, icon: { get: () => null, set: vi.fn() } } };
+    const pages = new PageRegistry({ fresh: { title: 'Named here', parentId: null, blocks: [] } });
+
+    runInNewContext(`${source}; wireCollaborationTitleSeed(editor, 'fresh')`, {
+      editor,
+      pages,
+      createdHere: new Set(created),
+      createdPageSeed,
+      collaborationConfig: () => (collab ? { doc: 'shared' } : null),
+    });
+
+    return { on, set, connect: () => listeners.forEach((listener) => listener({ status: 'connected' })) };
+  };
+
+  it('seeds a page this tab created when its shared room connects', () => {
+    const tab = wire(true, ['fresh']);
+
+    tab.connect();
+
+    expect(tab.on).toHaveBeenCalledWith('collaboration:status', expect.any(Function));
+    expect(tab.set).toHaveBeenCalledWith('Named here', { record: false });
+  });
+
+  it('never seeds a page this tab did not create', () => {
+    const tab = wire(true, []);
+
+    tab.connect();
+
+    expect(tab.set).not.toHaveBeenCalled();
+  });
+
+  it('listens for nothing in local mode, where config.data carries the title', () => {
+    expect(wire(false, ['fresh']).on).not.toHaveBeenCalled();
   });
 });

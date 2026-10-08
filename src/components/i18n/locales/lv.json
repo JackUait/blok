@@ -268,6 +268,7 @@
   "tools.database.addColumn": "Pievienot kolonnu",
   "tools.database.cardTitlePlaceholder": "Tukša lapa",
   "tools.database.columnTitlePlaceholder": "Kolonna",
+  "tools.database.noValueGroup": "Bez {property}",
   "tools.database.deleteCard": "Dzēst kartīti",
   "tools.database.editCardTitle": "Rediģēt nosaukumu",
   "tools.database.cardMenuLabel": "Kartītes opcijas",

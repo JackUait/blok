@@ -257,6 +257,7 @@
   "tools.database.addColumn": "کالم شامل کریں",
   "tools.database.cardTitlePlaceholder": "خالی صفحہ",
   "tools.database.columnTitlePlaceholder": "کالم",
+  "tools.database.noValueGroup": "کوئی {property} نہیں",
   "tools.database.deleteCard": "کارڈ حذف کریں",
   "tools.database.editCardTitle": "عنوان میں ترمیم کریں",
   "tools.database.cardMenuLabel": "کارڈ کے اختیارات",

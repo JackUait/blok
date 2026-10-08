@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Pridať stĺpec",
   "tools.database.cardTitlePlaceholder": "Prázdna stránka",
   "tools.database.columnTitlePlaceholder": "Stĺpec",
+  "tools.database.noValueGroup": "Bez {property}",
   "tools.database.deleteCard": "Odstrániť kartu",
   "tools.database.editCardTitle": "Upraviť názov",
   "tools.database.cardMenuLabel": "Možnosti karty",

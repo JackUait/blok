@@ -257,6 +257,7 @@
   "tools.database.addColumn": "إضافة عمود",
   "tools.database.cardTitlePlaceholder": "صفحة فارغة",
   "tools.database.columnTitlePlaceholder": "عمود",
+  "tools.database.noValueGroup": "بدون {property}",
   "tools.database.deleteCard": "حذف البطاقة",
   "tools.database.editCardTitle": "تعديل العنوان",
   "tools.database.cardMenuLabel": "خيارات البطاقة",

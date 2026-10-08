@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "Opcije kartice",
   "tools.database.cardTitlePlaceholder": "Prazna stranica",
   "tools.database.columnTitlePlaceholder": "Kolona",
+  "tools.database.noValueGroup": "Bez {property}",
   "tools.database.emptyColumn": "Nema kartica",
   "tools.database.rowTitlePlaceholder": "Prazna stranica",
   "tools.database.addRow": "Dodaj red",

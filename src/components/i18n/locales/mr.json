@@ -273,6 +273,7 @@
   "tools.database.cardMenuLabel": "कार्ड पर्याय",
   "tools.database.cardTitlePlaceholder": "रिक्त पृष्ठ",
   "tools.database.columnTitlePlaceholder": "स्तंभ",
+  "tools.database.noValueGroup": "{property} नाही",
   "tools.database.emptyColumn": "कार्ड नाहीत",
   "tools.database.rowTitlePlaceholder": "रिक्त पृष्ठ",
   "tools.database.addRow": "पंक्ती जोडा",

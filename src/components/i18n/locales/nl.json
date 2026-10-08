@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Kolom toevoegen",
   "tools.database.cardTitlePlaceholder": "Lege pagina",
   "tools.database.columnTitlePlaceholder": "Kolom",
+  "tools.database.noValueGroup": "Geen {property}",
   "tools.database.deleteCard": "Kaart verwijderen",
   "tools.database.editCardTitle": "Titel bewerken",
   "tools.database.cardMenuLabel": "Kaartopties",

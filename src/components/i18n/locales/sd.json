@@ -257,6 +257,7 @@
   "tools.database.addColumn": "ڪالم شامل ڪريو",
   "tools.database.cardTitlePlaceholder": "خالي صفحو",
   "tools.database.columnTitlePlaceholder": "ڪالم",
+  "tools.database.noValueGroup": "{property} ناهي",
   "tools.database.deleteCard": "ڪارڊ ختم ڪريو",
   "tools.database.editCardTitle": "عنوان تبديل ڪريو",
   "tools.database.cardMenuLabel": "ڪارڊ جا اختيار",

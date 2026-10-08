@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "Mga pagpipilian ng card",
   "tools.database.cardTitlePlaceholder": "Walang laman na pahina",
   "tools.database.columnTitlePlaceholder": "Kolum",
+  "tools.database.noValueGroup": "Walang {property}",
   "tools.database.emptyColumn": "Walang mga card",
   "tools.database.rowTitlePlaceholder": "Walang laman na pahina",
   "tools.database.addRow": "Magdagdag ng hanay",

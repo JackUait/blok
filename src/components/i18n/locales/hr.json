@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Dodaj stupac",
   "tools.database.cardTitlePlaceholder": "Prazna stranica",
   "tools.database.columnTitlePlaceholder": "Stupac",
+  "tools.database.noValueGroup": "Bez {property}",
   "tools.database.deleteCard": "Obriši karticu",
   "tools.database.editCardTitle": "Uredi naslov",
   "tools.database.cardMenuLabel": "Opcije kartice",

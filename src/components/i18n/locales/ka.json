@@ -257,6 +257,7 @@
   "tools.database.addColumn": "სვეტის დამატება",
   "tools.database.cardTitlePlaceholder": "ცარიელი გვერდი",
   "tools.database.columnTitlePlaceholder": "სვეტი",
+  "tools.database.noValueGroup": "{property} არ არის",
   "tools.database.deleteCard": "ბარათის წაშლა",
   "tools.database.editCardTitle": "სათაურის რედაქტირება",
   "tools.database.cardMenuLabel": "ბარათის პარამეტრები",

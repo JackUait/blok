@@ -283,6 +283,7 @@
   "tools.database.cardMenuLabel": "卡片選項",
   "tools.database.cardTitlePlaceholder": "空白頁面",
   "tools.database.columnTitlePlaceholder": "欄",
+  "tools.database.noValueGroup": "無{property}",
   "tools.database.emptyColumn": "沒有卡片",
   "tools.database.rowTitlePlaceholder": "空白頁面",
   "tools.database.addRow": "新增列",

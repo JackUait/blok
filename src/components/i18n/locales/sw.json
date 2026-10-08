@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Ongeza safu wima",
   "tools.database.cardTitlePlaceholder": "Ukurasa tupu",
   "tools.database.columnTitlePlaceholder": "Safu wima",
+  "tools.database.noValueGroup": "Hakuna {property}",
   "tools.database.deleteCard": "Futa kadi",
   "tools.database.editCardTitle": "Hariri kichwa",
   "tools.database.cardMenuLabel": "Chaguo za kadi",

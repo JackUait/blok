@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "Kart seçimləri",
   "tools.database.cardTitlePlaceholder": "Boş səhifə",
   "tools.database.columnTitlePlaceholder": "Sütun",
+  "tools.database.noValueGroup": "{property} yoxdur",
   "tools.database.emptyColumn": "Kart yoxdur",
   "tools.database.rowTitlePlaceholder": "Boş səhifə",
   "tools.database.addRow": "Sətir əlavə et",

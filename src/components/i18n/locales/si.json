@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "කාඩ්පත් විකල්ප",
   "tools.database.cardTitlePlaceholder": "හිස් පිටුව",
   "tools.database.columnTitlePlaceholder": "තීරුව",
+  "tools.database.noValueGroup": "{property} නැත",
   "tools.database.emptyColumn": "කාඩ්පත් නැත",
   "tools.database.rowTitlePlaceholder": "හිස් පිටුව",
   "tools.database.addRow": "පේළිය එක් කරන්න",

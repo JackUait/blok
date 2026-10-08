@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Sütun ekle",
   "tools.database.cardTitlePlaceholder": "Boş sayfa",
   "tools.database.columnTitlePlaceholder": "Sütun",
+  "tools.database.noValueGroup": "{property} yok",
   "tools.database.deleteCard": "Kartı sil",
   "tools.database.editCardTitle": "Başlığı düzenle",
   "tools.database.cardMenuLabel": "Kart seçenekleri",

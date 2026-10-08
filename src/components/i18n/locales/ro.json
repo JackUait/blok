@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Adaugă coloană",
   "tools.database.cardTitlePlaceholder": "Pagină goală",
   "tools.database.columnTitlePlaceholder": "Coloană",
+  "tools.database.noValueGroup": "Fără {property}",
   "tools.database.deleteCard": "Șterge card",
   "tools.database.editCardTitle": "Editează titlul",
   "tools.database.cardMenuLabel": "Opțiunile cardului",

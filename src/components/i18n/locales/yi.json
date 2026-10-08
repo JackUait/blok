@@ -257,6 +257,7 @@
   "tools.database.addColumn": "צוגעבן שפּאַלט",
   "tools.database.cardTitlePlaceholder": "ליידיק בלאַט",
   "tools.database.columnTitlePlaceholder": "שפּאַלט",
+  "tools.database.noValueGroup": "קיין {property}",
   "tools.database.deleteCard": "אויסמעקן קאַרטל",
   "tools.database.editCardTitle": "רעדאַקטירן טיטל",
   "tools.database.cardMenuLabel": "קאַרטל אָפּציעס",

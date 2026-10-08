@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Shto kolonë",
   "tools.database.cardTitlePlaceholder": "Faqe boshe",
   "tools.database.columnTitlePlaceholder": "Kolonë",
+  "tools.database.noValueGroup": "Pa {property}",
   "tools.database.deleteCard": "Fshi kartën",
   "tools.database.editCardTitle": "Ndrysho titullin",
   "tools.database.cardMenuLabel": "Opsionet e kartës",

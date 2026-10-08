@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Oszlop hozzáadása",
   "tools.database.cardTitlePlaceholder": "Üres oldal",
   "tools.database.columnTitlePlaceholder": "Oszlop",
+  "tools.database.noValueGroup": "Nincs {property}",
   "tools.database.deleteCard": "Kártya törlése",
   "tools.database.editCardTitle": "Cím szerkesztése",
   "tools.database.cardMenuLabel": "Kártya beállításai",

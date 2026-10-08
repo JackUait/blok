@@ -273,6 +273,7 @@
   "tools.database.cardMenuLabel": "कार्ड विकल्पहरू",
   "tools.database.cardTitlePlaceholder": "खाली पृष्ठ",
   "tools.database.columnTitlePlaceholder": "स्तम्भ",
+  "tools.database.noValueGroup": "{property} छैन",
   "tools.database.emptyColumn": "कुनै कार्ड छैन",
   "tools.database.rowTitlePlaceholder": "खाली पृष्ठ",
   "tools.database.addRow": "पङ्क्ति थप्नुहोस्",

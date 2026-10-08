@@ -273,6 +273,7 @@
   "tools.database.cardMenuLabel": "കാർഡ് ഓപ്ഷനുകൾ",
   "tools.database.cardTitlePlaceholder": "ശൂന്യ പേജ്",
   "tools.database.columnTitlePlaceholder": "കോളം",
+  "tools.database.noValueGroup": "{property} ഇല്ല",
   "tools.database.emptyColumn": "കാർഡുകളില്ല",
   "tools.database.rowTitlePlaceholder": "ശൂന്യ പേജ്",
   "tools.database.addRow": "വരി ചേർക്കുക",

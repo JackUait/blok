@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "కార్డ్ ఎంపికలు",
   "tools.database.cardTitlePlaceholder": "ఖాళీ పేజీ",
   "tools.database.columnTitlePlaceholder": "నిలువు వరుస",
+  "tools.database.noValueGroup": "{property} లేదు",
   "tools.database.emptyColumn": "కార్డ్‌లు లేవు",
   "tools.database.rowTitlePlaceholder": "ఖాళీ పేజీ",
   "tools.database.addRow": "వరుస జోడించండి",

@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Thêm cột",
   "tools.database.cardTitlePlaceholder": "Trang trống",
   "tools.database.columnTitlePlaceholder": "Cột",
+  "tools.database.noValueGroup": "Không có {property}",
   "tools.database.deleteCard": "Xóa thẻ",
   "tools.database.editCardTitle": "Chỉnh sửa tiêu đề",
   "tools.database.cardMenuLabel": "Tùy chọn thẻ",

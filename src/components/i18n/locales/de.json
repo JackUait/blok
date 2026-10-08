@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Spalte hinzufügen",
   "tools.database.cardTitlePlaceholder": "Leere Seite",
   "tools.database.columnTitlePlaceholder": "Spalte",
+  "tools.database.noValueGroup": "Ohne {property}",
   "tools.database.deleteCard": "Karte löschen",
   "tools.database.editCardTitle": "Titel bearbeiten",
   "tools.database.cardMenuLabel": "Kartenoptionen",

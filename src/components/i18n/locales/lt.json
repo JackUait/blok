@@ -268,6 +268,7 @@
   "tools.database.addColumn": "Pridėti stulpelį",
   "tools.database.cardTitlePlaceholder": "Tuščias puslapis",
   "tools.database.columnTitlePlaceholder": "Stulpelis",
+  "tools.database.noValueGroup": "Be {property}",
   "tools.database.deleteCard": "Ištrinti kortelę",
   "tools.database.editCardTitle": "Redaguoti pavadinimą",
   "tools.database.cardMenuLabel": "Kortelės parinktys",

@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "কার্ডের বিকল্প",
   "tools.database.cardTitlePlaceholder": "খালি পৃষ্ঠা",
   "tools.database.columnTitlePlaceholder": "কলাম",
+  "tools.database.noValueGroup": "{property} নেই",
   "tools.database.emptyColumn": "কোনো কার্ড নেই",
   "tools.database.rowTitlePlaceholder": "খালি পৃষ্ঠা",
   "tools.database.addRow": "সারি যোগ করুন",

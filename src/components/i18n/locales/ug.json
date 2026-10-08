@@ -257,6 +257,7 @@
   "tools.database.addColumn": "ئىستون قوشۇش",
   "tools.database.cardTitlePlaceholder": "بوش بەت",
   "tools.database.columnTitlePlaceholder": "ئىستون",
+  "tools.database.noValueGroup": "{property} يوق",
   "tools.database.deleteCard": "كارتىنى ئۆچۈرۈش",
   "tools.database.editCardTitle": "ماۋزۇنى تەھرىرلەش",
   "tools.database.cardMenuLabel": "كارتا تاللانمىلىرى",

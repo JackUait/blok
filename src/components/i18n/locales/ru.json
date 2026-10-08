@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Добавить столбец",
   "tools.database.cardTitlePlaceholder": "Пустая страница",
   "tools.database.columnTitlePlaceholder": "Столбец",
+  "tools.database.noValueGroup": "Без {property}",
   "tools.database.deleteCard": "Удалить карточку",
   "tools.database.editCardTitle": "Редактировать заголовок",
   "tools.database.cardMenuLabel": "Параметры карточки",

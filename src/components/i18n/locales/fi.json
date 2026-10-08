@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Lisää sarake",
   "tools.database.cardTitlePlaceholder": "Tyhjä sivu",
   "tools.database.columnTitlePlaceholder": "Sarake",
+  "tools.database.noValueGroup": "Ei {property}",
   "tools.database.deleteCard": "Poista kortti",
   "tools.database.editCardTitle": "Muokkaa otsikkoa",
   "tools.database.cardMenuLabel": "Kortin vaihtoehdot",

@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Додати стовпець",
   "tools.database.cardTitlePlaceholder": "Порожня сторінка",
   "tools.database.columnTitlePlaceholder": "Стовпець",
+  "tools.database.noValueGroup": "Без {property}",
   "tools.database.deleteCard": "Видалити картку",
   "tools.database.editCardTitle": "Редагувати заголовок",
   "tools.database.cardMenuLabel": "Параметри картки",

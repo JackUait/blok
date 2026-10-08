@@ -273,6 +273,7 @@
   "tools.database.cardMenuLabel": "ຕົວເລືອກບັດ",
   "tools.database.cardTitlePlaceholder": "ໜ້າເປົ່າ",
   "tools.database.columnTitlePlaceholder": "ຖັນ",
+  "tools.database.noValueGroup": "ບໍ່ມີ {property}",
   "tools.database.emptyColumn": "ບໍ່ມີບັດ",
   "tools.database.rowTitlePlaceholder": "ໜ້າເປົ່າ",
   "tools.database.addRow": "ເພີ່ມແຖວ",

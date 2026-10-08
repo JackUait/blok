@@ -257,6 +257,7 @@
   "tools.database.addColumn": "افزودن ستون",
   "tools.database.cardTitlePlaceholder": "صفحه خالی",
   "tools.database.columnTitlePlaceholder": "ستون",
+  "tools.database.noValueGroup": "بدون {property}",
   "tools.database.deleteCard": "حذف کارت",
   "tools.database.editCardTitle": "ویرایش عنوان",
   "tools.database.cardMenuLabel": "گزینه‌های کارت",

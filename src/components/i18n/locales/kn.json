@@ -273,6 +273,7 @@
   "tools.database.cardMenuLabel": "ಕಾರ್ಡ್ ಆಯ್ಕೆಗಳು",
   "tools.database.cardTitlePlaceholder": "ಖಾಲಿ ಪುಟ",
   "tools.database.columnTitlePlaceholder": "ಕಾಲಮ್",
+  "tools.database.noValueGroup": "{property} ಇಲ್ಲ",
   "tools.database.emptyColumn": "ಯಾವುದೇ ಕಾರ್ಡ್‌ಗಳಿಲ್ಲ",
   "tools.database.rowTitlePlaceholder": "ಖಾಲಿ ಪುಟ",
   "tools.database.addRow": "ಸಾಲು ಸೇರಿಸಿ",

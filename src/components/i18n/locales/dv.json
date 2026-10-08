@@ -257,6 +257,7 @@
   "tools.database.addColumn": "ކޮލަމެއް އިތުރުކުރޭ",
   "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",
+  "tools.database.noValueGroup": "{property} ނެތް",
   "tools.database.deleteCard": "ކާޑު ފޮހެލާ",
   "tools.database.editCardTitle": "ނަން ބަދަލުކުރޭ",
   "tools.database.cardMenuLabel": "ކާޑުގެ އިޚްތިޔާރުތައް",

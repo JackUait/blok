@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Lisa veerg",
   "tools.database.cardTitlePlaceholder": "Tühi leht",
   "tools.database.columnTitlePlaceholder": "Veerg",
+  "tools.database.noValueGroup": "{property} puudub",
   "tools.database.deleteCard": "Kustuta kaart",
   "tools.database.editCardTitle": "Muuda pealkirja",
   "tools.database.cardMenuLabel": "Kaardi valikud",

@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Přidat sloupec",
   "tools.database.cardTitlePlaceholder": "Prázdná stránka",
   "tools.database.columnTitlePlaceholder": "Sloupec",
+  "tools.database.noValueGroup": "Bez {property}",
   "tools.database.deleteCard": "Smazat kartu",
   "tools.database.editCardTitle": "Upravit název",
   "tools.database.cardMenuLabel": "Možnosti karty",

@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Ավելացնել սյունակ",
   "tools.database.cardTitlePlaceholder": "Դատարկ էջ",
   "tools.database.columnTitlePlaceholder": "Սյունակ",
+  "tools.database.noValueGroup": "{property} չկա",
   "tools.database.deleteCard": "Ջնջել քարտը",
   "tools.database.editCardTitle": "Խմբագրել վերնագիրը",
   "tools.database.cardMenuLabel": "Քարտի ընտրանքներ",

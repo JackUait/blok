@@ -257,6 +257,7 @@
   "tools.database.addColumn": "添加列",
   "tools.database.cardTitlePlaceholder": "空白页面",
   "tools.database.columnTitlePlaceholder": "列",
+  "tools.database.noValueGroup": "无{property}",
   "tools.database.deleteCard": "删除卡片",
   "tools.database.editCardTitle": "编辑标题",
   "tools.database.cardMenuLabel": "卡片选项",

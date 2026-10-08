@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Lägg till kolumn",
   "tools.database.cardTitlePlaceholder": "Tom sida",
   "tools.database.columnTitlePlaceholder": "Kolumn",
+  "tools.database.noValueGroup": "Ingen {property}",
   "tools.database.deleteCard": "Ta bort kort",
   "tools.database.editCardTitle": "Redigera titel",
   "tools.database.cardMenuLabel": "Kortalternativ",

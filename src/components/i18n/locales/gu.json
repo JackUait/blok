@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "કાર્ડ વિકલ્પો",
   "tools.database.cardTitlePlaceholder": "ખાલી પાનું",
   "tools.database.columnTitlePlaceholder": "કૉલમ",
+  "tools.database.noValueGroup": "{property} નથી",
   "tools.database.emptyColumn": "કોઈ કાર્ડ નથી",
   "tools.database.rowTitlePlaceholder": "ખાલી પાનું",
   "tools.database.addRow": "પંક્તિ ઉમેરો",

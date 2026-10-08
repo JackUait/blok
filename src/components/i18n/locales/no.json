@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Legg til kolonne",
   "tools.database.cardTitlePlaceholder": "Tom side",
   "tools.database.columnTitlePlaceholder": "Kolonne",
+  "tools.database.noValueGroup": "Ingen {property}",
   "tools.database.deleteCard": "Slett kort",
   "tools.database.editCardTitle": "Rediger tittel",
   "tools.database.cardMenuLabel": "Kortalternativer",

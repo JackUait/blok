@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Tambah kolom",
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Kolom",
+  "tools.database.noValueGroup": "Tanpa {property}",
   "tools.database.deleteCard": "Hapus kartu",
   "tools.database.editCardTitle": "Ubah judul",
   "tools.database.cardMenuLabel": "Opsi kartu",

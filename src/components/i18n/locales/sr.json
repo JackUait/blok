@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Додај колону",
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.columnTitlePlaceholder": "Колона",
+  "tools.database.noValueGroup": "Без {property}",
   "tools.database.deleteCard": "Обриши картицу",
   "tools.database.editCardTitle": "Уреди наслов",
   "tools.database.cardMenuLabel": "Опције картице",

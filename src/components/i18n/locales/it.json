@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Aggiungi colonna",
   "tools.database.cardTitlePlaceholder": "Pagina vuota",
   "tools.database.columnTitlePlaceholder": "Colonna",
+  "tools.database.noValueGroup": "Senza {property}",
   "tools.database.deleteCard": "Elimina scheda",
   "tools.database.editCardTitle": "Modifica titolo",
   "tools.database.cardMenuLabel": "Opzioni scheda",

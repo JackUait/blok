@@ -257,6 +257,7 @@
   "tools.database.addColumn": "הוסף עמודה",
   "tools.database.cardTitlePlaceholder": "דף ריק",
   "tools.database.columnTitlePlaceholder": "עמודה",
+  "tools.database.noValueGroup": "ללא {property}",
   "tools.database.deleteCard": "מחק כרטיס",
   "tools.database.editCardTitle": "ערוך כותרת",
   "tools.database.cardMenuLabel": "אפשרויות כרטיס",

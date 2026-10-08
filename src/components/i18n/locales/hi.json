@@ -257,6 +257,7 @@
   "tools.database.addColumn": "कॉलम जोड़ें",
   "tools.database.cardTitlePlaceholder": "खाली पेज",
   "tools.database.columnTitlePlaceholder": "कॉलम",
+  "tools.database.noValueGroup": "{property} नहीं",
   "tools.database.deleteCard": "कार्ड हटाएं",
   "tools.database.editCardTitle": "शीर्षक संपादित करें",
   "tools.database.cardMenuLabel": "कार्ड विकल्प",

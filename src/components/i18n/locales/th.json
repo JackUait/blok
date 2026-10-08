@@ -257,6 +257,7 @@
   "tools.database.addColumn": "เพิ่มคอลัมน์",
   "tools.database.cardTitlePlaceholder": "หน้าเปล่า",
   "tools.database.columnTitlePlaceholder": "คอลัมน์",
+  "tools.database.noValueGroup": "ไม่มี {property}",
   "tools.database.deleteCard": "ลบการ์ด",
   "tools.database.editCardTitle": "แก้ไขชื่อ",
   "tools.database.cardMenuLabel": "ตัวเลือกการ์ด",

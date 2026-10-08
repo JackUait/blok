@@ -257,6 +257,7 @@
   "tools.database.addColumn": "Ajouter une colonne",
   "tools.database.cardTitlePlaceholder": "Page vide",
   "tools.database.columnTitlePlaceholder": "Colonne",
+  "tools.database.noValueGroup": "Sans {property}",
   "tools.database.deleteCard": "Supprimer la carte",
   "tools.database.editCardTitle": "Modifier le titre",
   "tools.database.cardMenuLabel": "Options de la carte",

@@ -262,6 +262,7 @@
   "tools.database.cardMenuLabel": "ជម្រើសកាត",
   "tools.database.cardTitlePlaceholder": "ទំព័រទទេ",
   "tools.database.columnTitlePlaceholder": "ជួរឈរ",
+  "tools.database.noValueGroup": "គ្មាន {property}",
   "tools.database.emptyColumn": "គ្មានកាត",
   "tools.database.rowTitlePlaceholder": "ទំព័រទទេ",
   "tools.database.addRow": "បន្ថែមជួរដេក",

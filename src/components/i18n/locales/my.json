@@ -273,6 +273,7 @@
   "tools.database.cardMenuLabel": "ကတ်ရွေးချယ်စရာများ",
   "tools.database.cardTitlePlaceholder": "စာမျက်နှာအလွတ်",
   "tools.database.columnTitlePlaceholder": "ကော်လံ",
+  "tools.database.noValueGroup": "{property} မရှိ",
   "tools.database.emptyColumn": "ကတ်မရှိ",
   "tools.database.rowTitlePlaceholder": "စာမျက်နှာအလွတ်",
   "tools.database.addRow": "အတန်းထည့်ရန်",

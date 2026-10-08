@@ -206,7 +206,7 @@ const joins = (newer: UpdateItem, older: UpdateItem): boolean =>
   && newer.record.actor === older.record.actor
   && newer.record.committedAt !== null
   && older.record.committedAt !== null
-  && Math.abs(newer.record.committedAt - older.record.committedAt) <= MERGE_GAP;
+  && Math.abs(newer.record.committedAt - older.record.committedAt) < MERGE_GAP;
 
 /** One block over a run: `before` from the oldest record, `after` from the newest; null when added then removed. */
 const combineBlock = (older: ChangeBlock, newer: ChangeBlock): ChangeBlock | null => {

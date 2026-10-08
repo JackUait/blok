@@ -260,7 +260,7 @@ describe('mergeUpdates', () => {
 
   it('measures the gap between neighbours, not from the newest record', () => {
     expect(mergeUpdates([typed(3, 0), typed(2, 100), typed(1, 200)])).toHaveLength(1);
-    expect(mergeUpdates([typed(2, 0), typed(1, 121)])).toHaveLength(2);
+    expect(mergeUpdates([typed(2, 0), typed(1, 120)])).toHaveLength(2);
   });
 
   it('keeps other people, other versions and undated or anonymous records apart', () => {

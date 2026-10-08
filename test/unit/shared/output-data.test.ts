@@ -111,6 +111,33 @@ describe('equalsOutputData', () => {
     expect(equalsOutputData(child, root)).toBe(false);
   });
 
+  describe('page fields', () => {
+    it('detects a title change with the same blocks', () => {
+      expect(equalsOutputData({ title: 'A', blocks: [] }, { title: 'B', blocks: [] })).toBe(false);
+    });
+
+    it('treats absent, empty and null titles as no title', () => {
+      expect(equalsOutputData({ blocks: [] }, { title: '', blocks: [] })).toBe(true);
+      expect(equalsOutputData({ title: null, blocks: [] }, { blocks: [] })).toBe(true);
+      expect(equalsOutputData({ title: 'A', blocks: [] }, { blocks: [] })).toBe(false);
+    });
+
+    it('detects an icon change and treats absent and null icons as none', () => {
+      const icon = { type: 'emoji' as const, value: '🚀' };
+
+      expect(equalsOutputData({ icon, blocks: [] }, { icon: { type: 'emoji', value: '🐢' }, blocks: [] })).toBe(false);
+      expect(equalsOutputData({ icon, blocks: [] }, { blocks: [] })).toBe(false);
+      expect(equalsOutputData({ icon: null, blocks: [] }, { blocks: [] })).toBe(true);
+    });
+
+    it('compares icons by structure, not key order', () => {
+      expect(equalsOutputData(
+        { icon: { type: 'emoji', value: '🚀' }, blocks: [] },
+        { icon: { value: '🚀', type: 'emoji' }, blocks: [] }
+      )).toBe(true);
+    });
+  });
+
   describe('edit metadata', () => {
     it('ignores lastEditedAt/lastEditedBy — a load is not an edit', () => {
       // A document persisted before edit metadata existed (or by a DTO that

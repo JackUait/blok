@@ -313,7 +313,8 @@ export interface EqualsOutputDataOptions {
 }
 
 /**
- * Structural equality for saved documents. Compares the `blocks` arrays
+ * Structural equality for saved documents. Compares the page `title` and
+ * `icon` (absent, `''` and `null` all mean none) and the `blocks` arrays
  * deeply; the volatile `time` and `version` envelope fields are ignored, so a
  * document round-tripped through `save()` compares equal to its echo. Block
  * ids participate only when BOTH sides carry one — the editor mints fresh ids

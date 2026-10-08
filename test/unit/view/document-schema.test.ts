@@ -40,10 +40,12 @@ import {
   Video,
   defaultBlockTools,
 } from '../../../src/tools';
+import { validateAgainst } from '../../../src/shared/schema/validate';
 import { blokDocumentSchema } from '../../../src/view/document-schema';
 import { createMemoryViewState } from '../../helpers/view-state';
 
 import type { API, BlockToolConstructorOptions, OutputData } from '../../../types';
+import type { Title } from '../../../types/api/title';
 
 type JsonSchema = {
   description?: string;
@@ -265,11 +267,11 @@ describe('blokDocumentSchema', () => {
 
   it('is a draft 2020-12 schema for the saved document envelope', () => {
     expect(blokDocumentSchema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
-    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'id', 'time', 'version']);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'icon', 'id', 'time', 'title', 'version']);
   });
 
   describe('published bytes', () => {
-    // Re-pin only in the commit that adds `page` (S6). Any other diff here is a published change.
+    // Any diff here is a published change. Re-pin only on purpose.
     it('serializes exactly as the pinned snapshot', async () => {
       await expect(JSON.stringify(blokDocumentSchema, null, 2))
         .toMatchFileSnapshot('./__snapshots__/document-schema.json');
@@ -509,7 +511,7 @@ describe('blokDocumentSchema', () => {
         const saved = await editor.save();
         const blockProperties = Object.keys((blockSchema.items ?? {}).properties ?? {});
 
-        expect(Object.keys(saved).sort()).toEqual(Object.keys(schema.properties ?? {}).sort());
+        Object.keys(saved).forEach(key => expect(Object.keys(schema.properties ?? {})).toContain(key));
         expect(saved.id).toBe('doc-1');
         expect(typeof saved.time).toBe('number');
         expect(typeof saved.version).toBe('string');
@@ -530,5 +532,49 @@ describe('blokDocumentSchema', () => {
         holder.remove();
       }
     }, 60_000);
+
+    const saveWithTitle = async (icon: Parameters<Title['icon']['set']>[0]): Promise<OutputData> => {
+      const holder = document.createElement('div');
+
+      document.body.appendChild(holder);
+
+      const editor = new Blok({
+        holder,
+        pageTitle: true,
+        tools: { paragraph: Paragraph },
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hi' } }] },
+      }) as unknown as { isReady: Promise<unknown>; save: () => Promise<OutputData>; destroy: () => void; title: Title };
+
+      try {
+        await editor.isReady;
+        editor.title.set('Plan');
+        editor.title.icon.set(icon);
+
+        return await editor.save();
+      } finally {
+        editor.destroy();
+        holder.remove();
+      }
+    };
+
+    it('accepts a saved document with a title and an emoji icon', async () => {
+      const saved = await saveWithTitle({ type: 'emoji', value: '🚀' });
+
+      expect(validateAgainst(blokDocumentSchema, saved)).toEqual([]);
+      expect(saved.title).toBe('Plan');
+      expect(saved.icon).toEqual({ type: 'emoji', value: '🚀' });
+      expect(Object.keys(saved).sort()).toEqual(Object.keys(schema.properties ?? {}).sort());
+    }, 60_000);
+
+    it('accepts a saved document with an image icon', async () => {
+      const saved = await saveWithTitle({ type: 'image', url: 'https://x/y.png' });
+
+      expect(validateAgainst(blokDocumentSchema, saved)).toEqual([]);
+      expect(saved.icon).toEqual({ type: 'image', url: 'https://x/y.png' });
+    }, 60_000);
+
+    it('still rejects an unknown top-level key', () => {
+      expect(validateAgainst(blokDocumentSchema, { blocks: [], extra: 1 })).not.toEqual([]);
+    });
   });
 });

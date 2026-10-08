@@ -42,6 +42,33 @@ export const blokDocumentSchema = {
       type: 'string',
       description: 'Version of Blok that produced the document.',
     },
+    title: {
+      type: 'string',
+      minLength: 1,
+      description: 'The page title. Absent when empty.',
+    },
+    icon: {
+      description:
+        'The page icon. Absent when none. The editor ignores a malformed icon when it loads one; this schema rejects it. Extra keys are allowed, because the editor keeps them.',
+      oneOf: [
+        {
+          type: 'object',
+          required: ['type', 'value'],
+          properties: {
+            type: { const: 'emoji' },
+            value: { type: 'string' },
+          },
+        },
+        {
+          type: 'object',
+          required: ['type', 'url'],
+          properties: {
+            type: { const: 'image' },
+            url: { type: 'string' },
+          },
+        },
+      ],
+    },
     blocks: {
       type: 'array',
       description: 'Every block in the document, in reading order.',

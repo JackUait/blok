@@ -1,3 +1,4 @@
+import { describePageLink } from '../../shared/tool-descriptions/page-link';
 import { pageLinkSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -29,6 +30,8 @@ type PageLinkState = 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-acce
 
 /** A non-owning reference to a host page. */
 export class PageLink implements BlockTool {
+  public static describe = describePageLink;
+
   private readonly api: API;
   private readonly config: PageConfig;
   private data: PageLinkData;

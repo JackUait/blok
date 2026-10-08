@@ -1,3 +1,4 @@
+import { describeFile } from '../../shared/tool-descriptions/file';
 import { fileSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -39,6 +40,8 @@ const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
 const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
 
 export class FileTool implements BlockTool {
+  public static describe = describeFile;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: FileConfig;

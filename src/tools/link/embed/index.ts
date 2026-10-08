@@ -1,3 +1,4 @@
+import { describeEmbed } from '../../../shared/tool-descriptions/embed';
 import { embedSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -166,6 +167,8 @@ const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
  * a provider-sanctioned iframe URL. Only registry-matched URLs are ever embedded.
  */
 export class Embed implements BlockTool {
+  public static describe = describeEmbed;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readOnly: boolean;

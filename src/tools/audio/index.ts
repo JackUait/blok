@@ -1,3 +1,4 @@
+import { describeAudio } from '../../shared/tool-descriptions/audio';
 import { audioSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -48,6 +49,8 @@ import { renderAudioPreview } from './preview';
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
 export class AudioTool implements BlockTool {
+  public static describe = describeAudio;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: AudioConfig;

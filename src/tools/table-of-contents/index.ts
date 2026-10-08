@@ -1,3 +1,4 @@
+import { describeTableOfContents } from '../../shared/tool-descriptions/table-of-contents';
 import { tableOfContentsSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -51,6 +52,8 @@ const targetOf = (link: Element): string => link.getAttribute(TARGET) ?? '';
  * a real `#<block id>` link, so copying or opening it in a new tab still works.
  */
 export class TableOfContentsTool implements BlockTool {
+  public static describe = describeTableOfContents;
+
   private readonly api: API;
   private readonly block: BlockAPI | undefined;
   private readonly isProbe: boolean;

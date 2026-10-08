@@ -1,3 +1,4 @@
+import { describeTab } from '../../shared/tool-descriptions/tab';
 import { tabSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -25,6 +26,8 @@ const normalize = (data: Partial<TabData> | undefined): TabData => {
  * renders only its panel.
  */
 export class TabTool implements BlockTool, TabHandle {
+  public static describe = describeTab;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly blockId: string;

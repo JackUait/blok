@@ -1,3 +1,4 @@
+import { describeImage } from '../../shared/tool-descriptions/image';
 import { imageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   AssetKind,
@@ -86,6 +87,8 @@ function prefersReducedMotion(): boolean {
 }
 
 export class ImageTool implements BlockTool {
+  public static describe = describeImage;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: ImageConfig;

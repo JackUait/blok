@@ -1,3 +1,4 @@
+import { describeVideo } from '../../shared/tool-descriptions/video';
 import { videoSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -57,6 +58,8 @@ const DEFAULT_MAX_TRANSCODE_SECONDS = 600;
 const CONVERSION_IDLE_MS = 10 * 60_000;
 
 export class VideoTool implements BlockTool {
+  public static describe = describeVideo;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: VideoConfig;

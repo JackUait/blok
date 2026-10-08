@@ -1,3 +1,4 @@
+import { describeQuote } from '../../shared/tool-descriptions/quote';
 import { quoteSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -36,6 +37,8 @@ const DEFAULT_PLACEHOLDER = 'tools.quote.placeholder';
 const EDIT_CLASSES = ['outline-hidden'];
 
 export class Quote implements BlockTool {
+  public static describe = describeQuote;
+
   private api: API;
   private readOnly: boolean;
   private placeholderCleanup: (() => void) | null = null;

@@ -1,3 +1,4 @@
+import { describePage } from '../../shared/tool-descriptions/page';
 import { pageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -105,6 +106,8 @@ const readIcon = (value: unknown): PageIcon | undefined => {
 
 /** A page block points to a host-owned page. Only its ID is saved. */
 export class PageTool implements BlockTool {
+  public static describe = describePage;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: PageConfig;

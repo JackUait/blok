@@ -1,3 +1,4 @@
+import { describeTabs } from '../../shared/tool-descriptions/tabs';
 import type {
   API,
   BlockAPI,
@@ -42,6 +43,8 @@ interface SeedData {
  * Each tab is a `tab` child block. Which tab is open is UI state, not data.
  */
 export class TabsTool implements BlockTool, TabsHandle {
+  public static describe = describeTabs;
+
   private readonly api: API;
   private readonly blockId: string;
   private readonly block: BlockAPI;

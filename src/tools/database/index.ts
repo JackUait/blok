@@ -1,3 +1,4 @@
+import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
@@ -52,6 +53,8 @@ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup
  * DatabaseBackendSync (adapter), and a DatabaseTabBar for view switching.
  */
 export class DatabaseTool implements BlockTool {
+  public static describe = describeDatabase;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readOnly: boolean;

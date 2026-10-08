@@ -1,3 +1,4 @@
+import { describeCode } from '../../shared/tool-descriptions/code';
 import { codeSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -95,6 +96,8 @@ function findTextPosition(root: Node, targetOffset: number): { node: Node; offse
 }
 
 export class CodeTool implements BlockTool {
+  public static describe = describeCode;
+
   private api: API;
   private block: BlockAPI | undefined;
   private readOnly: boolean;

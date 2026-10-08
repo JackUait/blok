@@ -45,6 +45,10 @@ describe('page safe outputs', () => {
   });
 
   it('declares the ID and block color, never page metadata, in the saved page schema', () => {
+    if (typeof blokDocumentSchema.$defs.page.properties !== 'object' || blokDocumentSchema.$defs.page.properties === null) {
+      throw new Error('Page schema must expose properties.');
+    }
+
     expect(Object.keys(blokDocumentSchema.$defs.page.properties)).toEqual(['pageId', 'textColor', 'backgroundColor']);
   });
 });

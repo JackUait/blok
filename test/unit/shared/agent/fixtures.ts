@@ -1,6 +1,11 @@
 import { COMMANDS } from '../../../../src/shared/agent/commands';
+import { planBatch } from '../../../../src/shared/agent/planner';
+import { richTextHelpers } from '../../../../src/shared/agent/rich-text-ops';
+import { DocSnapshot } from '../../../../src/shared/agent/snapshot';
+import { validateAgainst } from '../../../../src/shared/schema/validate';
 
-import type { JsonSchema, PlannerCommand, PlannerTool } from '../../../../src/shared/agent/types';
+import type { AgentPorts, JsonSchema, PlannerCommand, PlannerContext, PlannerTool } from '../../../../src/shared/agent/types';
+import type { AgentCommand, AgentWarning, OutputData } from '../../../../types';
 
 export const coreCommandMap = (
   unavailable: Record<string, 'runtime' | 'service'> = {}
@@ -86,3 +91,45 @@ export const TOOLS: Map<string, PlannerTool> = new Map([
     data: { type: 'object', properties: { url: { type: 'string' }, zoom: { type: 'number' } } },
   })],
 ]);
+
+export const stubPorts = (over: Partial<AgentPorts> = {}): AgentPorts => {
+  let next = 0;
+
+  return {
+    htmlToSegments: html => html === '' ? [] : [{ text: html }],
+    sanitizeBlockData: (_type, data) => data,
+    markdownToBlocks: () => Promise.resolve({ blocks: [], warnings: [] }),
+    blocksToMarkdown: () => ({ markdown: '', warnings: [] }),
+    newId: () => `n${++next}`,
+    ...over,
+  };
+};
+
+export const plannerContext = (over: Partial<PlannerContext> = {}): PlannerContext => ({
+  tools: TOOLS,
+  commands: coreCommandMap(),
+  ports: stubPorts(),
+  validate: validateAgainst,
+  defaultBlock: 'paragraph',
+  richText: richTextHelpers,
+  prepared: new Map(),
+  services: {},
+  ...over,
+});
+
+export const planOn = (
+  doc: OutputData,
+  commands: AgentCommand[],
+  over: Partial<PlannerContext> = {}
+) => {
+  const warnings: AgentWarning[] = [];
+  const out = planBatch({
+    snapshot: DocSnapshot.fromOutput(doc),
+    batch: { commands },
+    ctx: plannerContext(over),
+    stamp: { actorId: 'agent', at: 1 },
+    warnings,
+  });
+
+  return { ...out, warnings };
+};

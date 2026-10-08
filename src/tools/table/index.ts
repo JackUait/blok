@@ -1,3 +1,4 @@
+import { describeTable } from '../../shared/tool-descriptions/table';
 import { tableSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -82,6 +83,8 @@ const WRAPPER_EDIT_CLASSES = [
  * Renders a 2D grid of contentEditable cells.
  */
 export class Table implements BlockTool {
+  public static describe = describeTable;
+
   private api: API;
   private readOnly: boolean;
   private config: TableConfig;

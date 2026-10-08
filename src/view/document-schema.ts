@@ -15,10 +15,31 @@
  * directions.
  */
 
+import { describeAudio } from '../shared/tool-descriptions/audio';
+import { describeBookmark } from '../shared/tool-descriptions/bookmark';
+import { describeCallout } from '../shared/tool-descriptions/callout';
+import { describeCode } from '../shared/tool-descriptions/code';
+import { describeColumnList } from '../shared/tool-descriptions/column-list';
+import { describeColumn } from '../shared/tool-descriptions/column';
+import { describeDatabase } from '../shared/tool-descriptions/database';
+import { describeDatabaseRow } from '../shared/tool-descriptions/database-row';
+import { describeDivider } from '../shared/tool-descriptions/divider';
+import { describeEmbed } from '../shared/tool-descriptions/embed';
+import { describeFile } from '../shared/tool-descriptions/file';
 import { describeHeader } from '../shared/tool-descriptions/header';
+import { describeImage } from '../shared/tool-descriptions/image';
 import { describeList } from '../shared/tool-descriptions/list';
+import { describePage } from '../shared/tool-descriptions/page';
+import { describePageLink } from '../shared/tool-descriptions/page-link';
 import { describeParagraph } from '../shared/tool-descriptions/paragraph';
-import { ALIGNMENT, richText } from '../shared/tool-descriptions/rich-text';
+import { describeQuote } from '../shared/tool-descriptions/quote';
+import { describeSpacer } from '../shared/tool-descriptions/spacer';
+import { describeTab } from '../shared/tool-descriptions/tab';
+import { describeTable } from '../shared/tool-descriptions/table';
+import { describeTableOfContents } from '../shared/tool-descriptions/table-of-contents';
+import { describeTabs } from '../shared/tool-descriptions/tabs';
+import { describeToggle } from '../shared/tool-descriptions/toggle';
+import { describeVideo } from '../shared/tool-descriptions/video';
 
 export const blokDocumentSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -150,518 +171,48 @@ export const blokDocumentSchema = {
 
     list: describeList().data,
 
-    table: {
-      type: 'object',
-      description: 'A grid whose cells reference child blocks by id; the referenced blocks are siblings in `blocks` carrying `parent` = the table id.',
-      required: ['withHeadings', 'withHeadingColumn', 'content'],
-      additionalProperties: false,
-      properties: {
-        withHeadings: { type: 'boolean', description: 'First row is a heading row.' },
-        withHeadingColumn: { type: 'boolean', description: 'First column is a heading column.' },
-        stretched: { type: 'boolean', description: 'Table spans the full editor width.' },
-        content: {
-          type: 'array',
-          description: 'Rows of cells.',
-          items: {
-            type: 'array',
-            items: {
-              anyOf: [
-                { type: 'string', description: 'Legacy plain-text cell, still accepted on load.' },
-                {
-                  type: 'object',
-                  required: ['blocks'],
-                  additionalProperties: false,
-                  properties: {
-                    blocks: { type: 'array', items: { type: 'string' }, description: 'Ids of the blocks rendered in this cell, in order.' },
-                    id: { type: 'string', description: 'Column id. Every cell of one column carries the same value.' },
-                    rowId: { type: 'string', description: 'Row id. Every cell of one row carries the same value.' },
-                    text: { type: 'string', description: 'Inline HTML mirror of the cell, kept for import/export paths.' },
-                    color: { type: 'string', description: 'Cell background color preset name.' },
-                    textColor: { type: 'string' },
-                    placement: {
-                      type: 'string',
-                      enum: [
-                        'top-left', 'top-center', 'top-right',
-                        'middle-left', 'middle-center', 'middle-right',
-                        'bottom-left', 'bottom-center', 'bottom-right',
-                      ],
-                    },
-                    colspan: { type: 'integer', minimum: 1, description: 'Only set on a merge origin.' },
-                    rowspan: { type: 'integer', minimum: 1, description: 'Only set on a merge origin.' },
-                    mergedInto: {
-                      type: 'array',
-                      description: '[row, col] of the merge origin covering this cell.',
-                      items: { type: 'integer' },
-                      minItems: 2,
-                      maxItems: 2,
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-        colWidths: { type: 'array', items: { type: 'number' }, description: 'Column widths in pixels. Omit for equal widths.' },
-        initialColWidth: { type: 'number', description: 'Per-column width in pixels captured at creation.' },
-        textSize: { type: 'string', enum: ['compact', 'comfortable'], description: 'Omitted means "compact".' },
-      },
-    },
+    table: describeTable().data,
 
-    toggle: {
-      type: 'object',
-      description: 'A collapsible summary line. Its body blocks reference it as `parent`.',
-      required: ['text'],
-      additionalProperties: false,
-      properties: {
-        text: richText('Rich text of the summary.'),
-        isOpen: { type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' },
-      },
-    },
+    toggle: describeToggle().data,
 
-    callout: {
-      type: 'object',
-      description: 'A highlighted panel. Its body blocks reference it as `parent`; the panel itself holds no text.',
-      required: ['emoji'],
-      additionalProperties: false,
-      properties: {
-        emoji: { type: 'string', description: 'Leading emoji. Empty string hides it.' },
-        textColor: { type: ['string', 'null'], description: 'Preset name, or null to inherit.' },
-        backgroundColor: { type: ['string', 'null'], description: 'Preset name, or null for none.' },
-      },
-    },
+    callout: describeCallout().data,
 
-    database: {
-      type: 'object',
-      description: 'Schema and view configuration only — rows are child `database-row` blocks.',
-      required: ['schema', 'views', 'activeViewId'],
-      additionalProperties: false,
-      properties: {
-        title: { type: 'string' },
-        activeViewId: { type: 'string', description: 'Id of the view shown by default.' },
-        schema: {
-          type: 'array',
-          description: 'Column definitions. Exactly one must have type "title".',
-          items: {
-            type: 'object',
-            required: ['id', 'name', 'type', 'position'],
-            additionalProperties: false,
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              type: {
-                type: 'string',
-                enum: ['title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url', 'richText'],
-              },
-              position: { type: 'string', description: 'Fractional-index sort key.' },
-              config: {
-                type: 'object',
-                description: 'Type-specific options; select/multiSelect carry their choices here.',
-                required: ['options'],
-                additionalProperties: false,
-                properties: {
-                  options: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      required: ['id', 'label', 'position'],
-                      additionalProperties: false,
-                      properties: {
-                        id: { type: 'string' },
-                        label: { type: 'string' },
-                        color: { type: 'string' },
-                        position: { type: 'string' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        views: {
-          type: 'array',
-          minItems: 1,
-          items: {
-            type: 'object',
-            required: ['id', 'name', 'type', 'position', 'sorts', 'filters', 'visibleProperties'],
-            additionalProperties: false,
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              type: { type: 'string', enum: ['board', 'table', 'gallery', 'list'] },
-              position: { type: 'string' },
-              groupBy: { type: 'string', description: 'Property id. Required for a board view.' },
-              sorts: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  required: ['propertyId', 'direction'],
-                  additionalProperties: false,
-                  properties: {
-                    propertyId: { type: 'string' },
-                    direction: { type: 'string', enum: ['asc', 'desc'] },
-                  },
-                },
-              },
-              filters: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  required: ['propertyId', 'operator', 'value'],
-                  additionalProperties: false,
-                  properties: {
-                    propertyId: { type: 'string' },
-                    operator: { type: 'string' },
-                    value: { description: 'Any property value; shape follows the property type.' },
-                  },
-                },
-              },
-              visibleProperties: { type: 'array', items: { type: 'string' } },
-            },
-          },
-        },
-      },
-    },
+    database: describeDatabase().data,
 
-    'database-row': {
-      type: 'object',
-      description: 'One row of a database block. Optional pageId points to a separate body document.',
-      required: ['properties', 'position'],
-      additionalProperties: false,
-      properties: {
-        properties: {
-          type: 'object',
-          description: 'Column values keyed by property id. Values follow the parent database\'s schema, so the shape is open.',
-          additionalProperties: true,
-        },
-        position: { type: 'string', description: 'Fractional-index sort key.' },
-        title: {
-          type: 'string',
-          description: 'Row title, mirrored from the title column. Absent on rows written before this key existed.',
-        },
-        pageId: { type: 'string', minLength: 1, description: 'Id of the separate document that holds the row page body.' },
-      },
-    },
+    'database-row': describeDatabaseRow().data,
 
-    divider: {
-      type: 'object',
-      description: 'A horizontal rule. Carries no data.',
-      additionalProperties: false,
-    },
+    divider: describeDivider().data,
 
-    spacer: {
-      type: 'object',
-      description: 'Vertical whitespace.',
-      additionalProperties: false,
-      properties: {
-        height: { type: 'number', minimum: 38, maximum: 600, description: 'Gap in pixels. Defaults to 38; out-of-range values are clamped on load.' },
-      },
-    },
+    spacer: describeSpacer().data,
 
-    table_of_contents: {
-      type: 'object',
-      description: 'An outline of the page headings. The list is read from the document each time and never saved.',
-      additionalProperties: false,
-      properties: {
-        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
-        backgroundColor: { type: 'string', description: 'Background color preset name.' },
-      },
-    },
+    table_of_contents: describeTableOfContents().data,
 
-    quote: {
-      type: 'object',
-      required: ['text'],
-      additionalProperties: false,
-      properties: {
-        text: richText('Rich text of the quote.'),
-        size: { type: 'string', enum: ['default', 'large'] },
-      },
-    },
+    quote: describeQuote().data,
 
-    code: {
-      type: 'object',
-      description: 'A code block. `code` is raw text, never HTML.',
-      required: ['code', 'language'],
-      additionalProperties: false,
-      properties: {
-        code: { type: 'string' },
-        language: { type: 'string', description: 'Language identifier, e.g. "javascript", "plain text".' },
-        lineNumbers: { type: 'boolean' },
-        filename: { type: 'string', description: 'File name shown above the code, e.g. "block.ts". Omitted when empty.' },
-      },
-    },
+    code: describeCode().data,
 
-    image: {
-      type: 'object',
-      required: ['url'],
-      additionalProperties: false,
-      properties: {
-        url: { type: 'string', description: 'http(s) or blob: source.' },
-        variants: {
-          type: 'array',
-          description: 'Every rendition, best format first. Ignored unless it contains `url`, the most compatible one.',
-          items: {
-            type: 'object',
-            required: ['url', 'mimeType'],
-            additionalProperties: false,
-            properties: { url: { type: 'string' }, mimeType: { type: 'string' } },
-          },
-        },
-        caption: { type: 'string', description: 'Plain text.' },
-        captionVisible: { type: 'boolean' },
-        alt: { type: 'string' },
-        fileName: { type: 'string' },
-        width: { type: 'number', minimum: 10, maximum: 100, description: 'Percent of the container.' },
-        alignment: { type: 'string', enum: ALIGNMENT },
-        size: { type: 'string', enum: ['sm', 'md', 'lg', 'full'], description: 'Preset; overrides `width` when present.' },
-        frame: { type: 'string', enum: ['none', 'border', 'shadow'] },
-        rounded: { type: 'boolean' },
-        // Fractional for an SVG whose viewBox is (see dimensions-from-svg.ts).
-        naturalWidth: { type: 'number', description: 'Intrinsic pixel width, cached after first load.' },
-        naturalHeight: { type: 'number' },
-        crop: {
-          type: 'object',
-          description: 'Non-destructive crop, in percent of the intrinsic image. Omitted for an uncropped rectangle. With `rotation`, `flipX` or `straighten` set, it is in percent of the turned image\'s box.',
-          required: ['x', 'y', 'w', 'h'],
-          additionalProperties: false,
-          properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            w: { type: 'number' },
-            h: { type: 'number' },
-            shape: { type: 'string', enum: ['rect', 'circle', 'ellipse'] },
-          },
-        },
-        rotation: { type: 'number', enum: [0, 90, 180, 270], description: 'Clockwise quarter turn, applied after the mirror. Omitted for 0.' },
-        flipX: { type: 'boolean', description: 'Mirror left to right, before the turn. Omitted for false.' },
-        straighten: { type: 'number', minimum: -45, maximum: 45, description: 'Clockwise degrees, after the turn. Omitted for 0.' },
-        filter: {
-          type: 'string',
-          minLength: 1,
-          description: 'Colour look: a built-in preset (vivid, noir, sepia, …) or a host filter name from the image tool\'s `filters` config. Omitted for "none".',
-        },
-        filterStrength: { type: 'number', minimum: 0, maximum: 100, description: 'How strongly `filter` applies. Omitted for 100 and when there is no filter.' },
-        adjust: {
-          type: 'object',
-          description: 'Colour adjustments, each -100..100. Zero entries are omitted, and so is an empty object.',
-          additionalProperties: false,
-          properties: {
-            brightness: { type: 'number', minimum: -100, maximum: 100 },
-            contrast: { type: 'number', minimum: -100, maximum: 100 },
-            saturation: { type: 'number', minimum: -100, maximum: 100 },
-          },
-        },
-        markup: {
-          type: 'array',
-          description: 'Drawings, shapes and text over the image, back to front. Omitted when empty. Coordinates are fractions (0..1) of the turned image\'s box, before crop and straighten. Sizes are fractions of that box\'s shorter side.',
-          maxItems: 500,
-          items: {
-            anyOf: [
-              {
-                type: 'object',
-                description: 'A freehand stroke.',
-                required: ['id', 'type', 'color', 'points', 'size'],
-                additionalProperties: false,
-                properties: {
-                  id: { type: 'string', description: 'Unique within the image.' },
-                  type: { type: 'string', enum: ['pen', 'highlighter'] },
-                  color: { type: 'string', pattern: '^#[0-9a-f]{6}$' },
-                  points: { type: 'array', items: { type: 'number' }, description: 'Flat x, y, pressure triples. Pressure is 0..1.' },
-                  size: { type: 'number', exclusiveMinimum: 0, maximum: 0.5, description: 'Stroke width.' },
-                },
-              },
-              {
-                type: 'object',
-                description: 'A shape between two corners. Rect and ellipse fill the box they span; line and arrow join the points.',
-                required: ['id', 'type', 'color', 'x1', 'y1', 'x2', 'y2', 'size'],
-                additionalProperties: false,
-                properties: {
-                  id: { type: 'string' },
-                  type: { type: 'string', enum: ['rect', 'ellipse', 'line', 'arrow'] },
-                  color: { type: 'string', pattern: '^#[0-9a-f]{6}$' },
-                  x1: { type: 'number' },
-                  y1: { type: 'number' },
-                  x2: { type: 'number' },
-                  y2: { type: 'number' },
-                  size: { type: 'number', exclusiveMinimum: 0, maximum: 0.5, description: 'Stroke width.' },
-                  fill: { type: 'boolean', description: 'Rect and ellipse only: a translucent fill. Omitted for false.' },
-                },
-              },
-              {
-                type: 'object',
-                description: 'A text label.',
-                required: ['id', 'type', 'color', 'x', 'y', 'text', 'size'],
-                additionalProperties: false,
-                properties: {
-                  id: { type: 'string' },
-                  type: { type: 'string', enum: ['text'] },
-                  color: { type: 'string', pattern: '^#[0-9a-f]{6}$' },
-                  x: { type: 'number', description: 'Centre of the text block.' },
-                  y: { type: 'number' },
-                  text: { type: 'string', maxLength: 2000, description: 'Plain text; a newline breaks the line.' },
-                  size: { type: 'number', exclusiveMinimum: 0, maximum: 0.5, description: 'Font size.' },
-                  style: { type: 'string', enum: ['plain', 'outline', 'background'], description: 'Omitted for "plain".' },
-                  rotation: { type: 'number', description: 'Clockwise degrees about the centre. Omitted for 0.' },
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
+    image: describeImage().data,
 
-    file: {
-      type: 'object',
-      description: 'A downloadable file card.',
-      required: ['url'],
-      additionalProperties: false,
-      properties: {
-        url: { type: 'string' },
-        fileName: { type: 'string' },
-        size: { type: 'integer', description: 'Bytes.' },
-        mimeType: { type: 'string' },
-        caption: { type: 'string' },
-        captionVisible: { type: 'boolean' },
-      },
-    },
+    file: describeFile().data,
 
-    audio: {
-      type: 'object',
-      required: ['url'],
-      additionalProperties: false,
-      properties: {
-        url: { type: 'string' },
-        caption: { type: 'string' },
-        captionVisible: { type: 'boolean' },
-        title: { type: 'string' },
-        artist: { type: 'string' },
-        coverUrl: { type: 'string' },
-        loop: { type: 'boolean' },
-        width: { type: 'number', minimum: 10, maximum: 100 },
-        alignment: { type: 'string', enum: ALIGNMENT },
-        fileName: { type: 'string' },
-        mimeType: { type: 'string' },
-        duration: { type: 'number', description: 'Seconds.' },
-        peaks: { type: 'array', items: { type: 'number' }, description: 'Precomputed waveform samples.' },
-      },
-    },
+    audio: describeAudio().data,
 
-    video: {
-      type: 'object',
-      required: ['url'],
-      additionalProperties: false,
-      properties: {
-        url: { type: 'string' },
-        variants: {
-          type: 'array',
-          description: 'Every rendition, best format first. Ignored unless it contains `url`, the most compatible one.',
-          items: {
-            type: 'object',
-            required: ['url', 'mimeType'],
-            additionalProperties: false,
-            properties: { url: { type: 'string' }, mimeType: { type: 'string' } },
-          },
-        },
-        caption: { type: 'string' },
-        captionVisible: { type: 'boolean' },
-        width: { type: 'number', minimum: 10, maximum: 100 },
-        alignment: { type: 'string', enum: ALIGNMENT },
-        autoplay: { type: 'boolean' },
-        loop: { type: 'boolean' },
-        hideControls: { type: 'boolean' },
-        fileName: { type: 'string' },
-        mimeType: { type: 'string' },
-        aspectRatio: { type: 'string', description: 'Intrinsic ratio, e.g. "16 / 9".' },
-      },
-    },
+    video: describeVideo().data,
 
-    column_list: {
-      type: 'object',
-      description: 'A row of columns. Carries no data — the columns are its `content` children.',
-      additionalProperties: false,
-    },
+    column_list: describeColumnList().data,
 
-    column: {
-      type: 'object',
-      description: 'One column of a column_list. Its content is its `content` children.',
-      additionalProperties: false,
-      properties: {
-        widthRatio: { type: 'number', exclusiveMinimum: 0, description: 'Width relative to sibling columns. Omitted for an even split.' },
-      },
-    },
+    column: describeColumn().data,
 
-    tabs: {
-      type: 'object',
-      description: 'A set of tabs. Carries no data — the tabs are its `content` children, which are only `tab` blocks. The open tab is not saved.',
-      additionalProperties: false,
-      properties: {},
-    },
+    tabs: describeTabs().data,
 
-    tab: {
-      type: 'object',
-      description: 'One tab of a tabs block. Its content is its `content` children.',
-      required: ['title'],
-      additionalProperties: false,
-      properties: {
-        title: { type: 'string', description: 'Plain text, not HTML. Empty for an untitled tab.' },
-        icon: { type: 'string', description: 'Emoji shown before the title. Omitted when the tab has none.' },
-      },
-    },
+    tab: describeTab().data,
 
-    embed: {
-      type: 'object',
-      description: 'A live third-party embed. Only registry-matched provider URLs are embedded.',
-      required: ['service', 'source', 'embed'],
-      additionalProperties: false,
-      properties: {
-        service: { type: 'string', description: 'Registry key, e.g. "youtube".' },
-        source: { type: 'string', description: 'The original pasted URL.' },
-        embed: { type: 'string', description: 'Provider-sanctioned embed URL. Must be https.' },
-        kind: { type: 'string', enum: ['iframe', 'script'] },
-        width: { type: 'number' },
-        height: { type: 'number' },
-        widthPercent: { type: 'number', minimum: 10, maximum: 100 },
-        alignment: { type: 'string', enum: ALIGNMENT },
-        caption: { type: 'string' },
-        captionVisible: { type: 'boolean' },
-      },
-    },
+    embed: describeEmbed().data,
 
-    bookmark: {
-      type: 'object',
-      description: 'A static link preview card built from OpenGraph metadata.',
-      required: ['url'],
-      additionalProperties: false,
-      properties: {
-        url: { type: 'string' },
-        title: { type: 'string' },
-        description: { type: 'string' },
-        image: { type: 'string', description: 'Preview image URL.' },
-        favicon: { type: 'string' },
-        domain: { type: 'string' },
-      },
-    },
+    bookmark: describeBookmark().data,
 
-    page: {
-      type: 'object',
-      description: 'A link to a sub-page. The page body lives in a separate document named by `pageId`, not in this one, so the block has no children.',
-      required: ['pageId'],
-      additionalProperties: false,
-      properties: {
-        pageId: { type: 'string', description: 'Id of the separate document that holds the page.' },
-        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
-        backgroundColor: { type: 'string', description: 'Background color preset name.' },
-      },
-    },
+    page: describePage().data,
 
-    'page-link': {
-      type: 'object',
-      description: 'A non-owning reference to a page. It has no children.',
-      required: ['pageId'],
-      additionalProperties: false,
-      properties: {
-        pageId: { type: 'string', minLength: 1, description: 'Id of the referenced page.' },
-      },
-    },
+    'page-link': describePageLink().data,
   },
 } as const;

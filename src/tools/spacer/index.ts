@@ -1,3 +1,4 @@
+import { describeSpacer } from '../../shared/tool-descriptions/spacer';
 import { spacerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -53,6 +54,8 @@ const clampHeight = (value: number): number => Math.min(MAX_HEIGHT, Math.max(MIN
  * sibling columns of unequal length, replacing piles of empty paragraphs.
  */
 export class SpacerTool implements BlockTool {
+  public static describe = describeSpacer;
+
   /**
    * Rendered wrapper element
    */

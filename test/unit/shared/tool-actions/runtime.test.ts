@@ -252,19 +252,34 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(Object.keys(builtInEditorTools())).toEqual([...BLOCK_KEYS, ...INLINE_KEYS]);
   });
 
-  it('registers only the table normalizer without actions or child seeds', () => {
+  it('registers callout body seeds with table-only normalization and no actions', () => {
+    const defaultChildren: InsertSpec[] = [{ type: 'paragraph', data: { text: [] } }];
+
+    expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren).toEqual(defaultChildren);
+
     const normalize = BUILT_IN_RUNTIME_PARTS.table?.normalize;
 
     expect(typeof normalize).toBe('function');
-    expect(BUILT_IN_RUNTIME_PARTS).toEqual({ table: { normalize } });
+    expect(BUILT_IN_RUNTIME_PARTS).toEqual({
+      table: { normalize },
+      callout: { defaultChildren },
+    });
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);
+    expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren)
+      .toBe(BUILT_IN_RUNTIME_PARTS.callout?.defaultChildren);
 
     for (const runtime of BUILT_IN_TOOL_RUNTIMES.values()) {
       expect(runtime.actions, runtime.name).toEqual({});
+
       if (runtime.name !== 'table') {
         expect(runtime, runtime.name).not.toHaveProperty('normalize');
       }
-      expect(runtime, runtime.name).not.toHaveProperty('defaultChildren');
+
+      if (runtime.name === 'callout') {
+        expect(runtime.defaultChildren).toEqual(defaultChildren);
+      } else {
+        expect(runtime, runtime.name).not.toHaveProperty('defaultChildren');
+      }
     }
   });
 

@@ -1,3 +1,4 @@
+import { describeCallout } from '../../shared/tool-descriptions/callout';
 import { calloutSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 // src/tools/callout/index.ts
 
@@ -100,6 +101,8 @@ function disposeSharedEmojiPicker(shared: SharedEmojiPicker): void {
 }
 
 export class CalloutTool implements BlockTool {
+  public static describe = describeCallout;
+
   private readonly api: API;
   private readOnly: boolean;
   private _data: CalloutData;

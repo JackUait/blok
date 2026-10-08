@@ -1,3 +1,4 @@
+import { describeDivider } from '../../shared/tool-descriptions/divider';
 import { dividerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   BlockTool,
@@ -19,6 +20,8 @@ import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../shared/tool
  * Contentless void block with no editable content or settings.
  */
 export class DividerTool implements BlockTool {
+  public static describe = describeDivider;
+
   /**
    * Rendered wrapper element
    */

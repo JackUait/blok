@@ -1,3 +1,4 @@
+import { describeToggle } from '../../shared/tool-descriptions/toggle';
 import { toggleSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 /**
  * Toggle Tool for the Blok Editor
@@ -36,6 +37,8 @@ import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
 
 export class ToggleItem implements BlockTool {
+  public static describe = describeToggle;
+
   private api: API;
   private readOnly: boolean;
   private _settings: ToggleItemConfig;

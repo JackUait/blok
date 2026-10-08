@@ -8,6 +8,7 @@ import type { RuntimeBlockInput, ToolRuntimeRegistry } from './runtime';
 
 export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockInput, 'normalize' | 'defaultChildren' | 'actions'>>> = {
   table: { normalize: (data) => normalizeTable(data) },
+  callout: { defaultChildren: [{ type: 'paragraph', data: { text: [] } }] },
 };
 
 // convertTo and the internal tunes contribute no rules. Code opts out in defaultBlockTools.

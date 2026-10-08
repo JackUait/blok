@@ -1,3 +1,4 @@
+import { describeColumnList } from '../../shared/tool-descriptions/column-list';
 import type {
   API,
   BlockOrigin,
@@ -38,6 +39,8 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
  * Created via slash-menu presets carrying a transient `columnCount` seed.
  */
 export class ColumnList implements BlockTool {
+  public static describe = describeColumnList;
+
   private readonly api: API;
   private _data: ColumnListData;
   private readonly blockId: string;

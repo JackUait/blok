@@ -68,3 +68,26 @@ Checkpoint commit: Plan02Task17 0d222cc9 reviewed/verified; seven exact paths, d
 Checkpoint commit: Plan03Tasks2–5 05c56c2d reviewed/verified; six exact paths. No public AgentAPI wiring or authenticated-provider claim; overall plan and push pending.
 
 Checkpoint commit: Plan01Task6 cd8a55ec reviewed/verified; two exact paths. UTF-16/mark/embed helper scope; public/Jint integration not claimed.
+
+### 2026-10-08 checkpoint compiler recovery
+
+- Frozen descriptor new suites: 293 passed. Descriptor supporting/focused queue `b9woq0tfd` terminated with exit 0; final audit records the exact counts and retained notices.
+- Task8 recovered seven-file lint passed. Final-source insertion/state rerun is running as `bzeylgums`; no result is claimed yet.
+- Full compiler `bwbudpfgl` failed with TS2769 at `test/unit/tools/page/page-safe-outputs.test.ts:48`. The test is unchanged, but its `$defs.page.properties` now flows through `describePage().data: Schema`, whose property values are unknown.
+- Ruling: this is a checkpoint-owned direct type cascade, not a pre-existing failure — verified test/schema/descriptor/declaration chain — treating it as pre-existing would hide a consumer of the extraction change. Task21 owner adds only an object/null guard and retains the exact saved-key assertion; fresh scoped lint, test and full compiler remain required.
+- Fresh built-package verification is running as `bw1j3iggt`; existing port-4446 server and `agent-control` browser remain in use. Four prepared probes remain unrun. No checkpoint or overall completion claim.
+
+### 2026-10-08 final-byte tests and built checkpoint evidence
+
+- `bzeylgums` terminated 0: final frozen Task8 files passed 80 insertion and 38 state cases; before/after seven hashes matched. The full log was controller-read.
+- `b9woq0tfd` terminated 0: descriptor lint passed; 14 supporting suites passed 560 cases and 11 focused compatibility suites passed 124 cases. Independent audit read all 910 lines. Vite, Storybook and Angular dependency-scan notices remain recorded.
+- Fresh build `bw1j3iggt` terminated 0. Built browser probes `br1q0se2x` passed 23/55/28/33 checks (139 total), with no failed checks or console errors. Four console warnings per page and build warnings remain; this verifies descriptors/schema/validator only, not editor seeding, native save, action effects or planner/Jint execution.
+- Task21 compiler recovery is exactly four added guard lines in `page-safe-outputs.test.ts`; the assertion and all other bytes are preserved. Updated ownership/hash manifest: scratchpad/checkpoint-final-61.sha256.json. Recovery lint is observed 0; test/compiler terminal results remain pending.
+- Peer adapter integration fast-forwarded 4979a321 to a982d607 across 42 paths. Measured overlap with the checkpoint is empty; all 61 checkpoint hashes remain unchanged. Ruling: preserve scoped evidence, but require a stable-HEAD full compiler result if the active compiler's input timing cannot be established — otherwise peer file changes could invalidate a broad current-tree claim.
+- Current delivery remains uncommitted and overall implementation remains unfinished. Source handovers for Task9/Task23 are still held.
+
+### 2026-10-08 reviewed checkpoint ready for delivery
+
+- Stable full TypeScript gate `b9yh40v7d` passed with HEAD unchanged at a982d607 before/after and all 61 source/test hashes preserved. The guard recovery also passed scoped lint, all five referencing tests and its compiler run.
+- Task8 final review now has SPEC APPROVED and QUALITY APPROVED. Descriptor18–22 static reviews and the combined scoped/build/compiler gate signoff pass, with warnings and published-declaration/runtime/full-suite limits retained.
+- The controller is delivering only the reviewed 61 source/test paths and this execution ledger. Remaining planner handlers, surface/runtime/Jint/MCP/eval work and mandatory final full-project gates are not complete. Task9/Task23 source release follows measured delivery, not this readiness note.

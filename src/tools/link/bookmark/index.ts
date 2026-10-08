@@ -1,3 +1,4 @@
+import { describeBookmark } from '../../../shared/tool-descriptions/bookmark';
 import { bookmarkSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -39,6 +40,8 @@ const URL_PATTERN = /https?:\/\/\S+/;
  * that cannot be read renders the link itself.
  */
 export class Bookmark implements BlockTool {
+  public static describe = describeBookmark;
+
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly fetcher: MetadataFetcher;

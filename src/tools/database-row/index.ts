@@ -1,3 +1,4 @@
+import { describeDatabaseRow } from '../../shared/tool-descriptions/database-row';
 import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { SanitizerConfig } from '../../../types';
@@ -44,6 +45,8 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
  * which invokes tool instance methods by name through the Block adapter.
  */
 export class DatabaseRowTool implements BlockTool {
+  public static describe = describeDatabaseRow;
+
   private _data: DatabaseRowData;
   private unknown: Record<string, unknown>;
 

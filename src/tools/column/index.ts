@@ -1,3 +1,4 @@
+import { describeColumn } from '../../shared/tool-descriptions/column';
 import type {
   API,
   BlockOrigin,
@@ -29,6 +30,8 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
  * paragraph when created so it is never empty.
  */
 export class Column implements BlockTool {
+  public static describe = describeColumn;
+
   private readonly api: API;
   private _data: ColumnData;
   private readonly blockId: string;

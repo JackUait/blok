@@ -7,6 +7,7 @@ import type {
   PropertyValue,
   SortConfig,
 } from './types';
+import { parseDateValue } from './cells/date-value';
 
 const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
 
@@ -159,23 +160,27 @@ const matchCheckbox = (value: PropertyValue | undefined, operator: string, targe
   return undefined;
 };
 
+/** A range matches when any of its days does; a single day is a range of one. */
 const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
-  const day = toDay(value);
+  const parsed = parseDateValue(value);
 
-  if (operator === 'is_empty') return day === undefined;
-  if (operator === 'is_not_empty') return day !== undefined;
+  if (operator === 'is_empty') return parsed === null;
+  if (operator === 'is_not_empty') return parsed !== null;
 
   const t = toDay(target);
 
   if (t === undefined) return undefined;
-  if (day === undefined) return false;
+  if (parsed === null) return false;
+
+  const first = parsed.start.slice(0, 10);
+  const last = (parsed.end ?? parsed.start).slice(0, 10);
 
   switch (operator) {
-    case 'equals': return day === t;
-    case 'before': return day < t;
-    case 'after': return day > t;
-    case 'on_or_before': return day <= t;
-    case 'on_or_after': return day >= t;
+    case 'equals': return first <= t && t <= last;
+    case 'before': return first < t;
+    case 'after': return last > t;
+    case 'on_or_before': return first <= t;
+    case 'on_or_after': return last >= t;
     default: return undefined;
   }
 };
@@ -229,7 +234,7 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
   switch (property.type) {
     case 'number': return toNumber(value);
     case 'checkbox': return value === true ? 1 : 0;
-    case 'date': return toDay(value);
+    case 'date': return parseDateValue(value)?.start;
     case 'select': return typeof value === 'string' && value !== '' ? optionPosition(value) ?? value : undefined;
     case 'multiSelect': {
       const keys = toIdList(value ?? null).map((id) => optionPosition(id) ?? id).sort(compareKeys);

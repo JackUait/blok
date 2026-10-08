@@ -464,3 +464,56 @@ describe('database-query', () => {
     });
   });
 });
+
+describe('database-query — date ranges', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const ranged = row('r', 'a0', { due: '2026-10-05/2026-10-10' });
+
+  it.each([
+    ['equals', '2026-10-05', true],
+    ['equals', '2026-10-07', true],
+    ['equals', '2026-10-10', true],
+    ['equals', '2026-10-11', false],
+    ['before', '2026-10-06', true],
+    ['before', '2026-10-05', false],
+    ['after', '2026-10-09', true],
+    ['after', '2026-10-10', false],
+    ['on_or_before', '2026-10-05', true],
+    ['on_or_before', '2026-10-04', false],
+    ['on_or_after', '2026-10-10', true],
+    ['on_or_after', '2026-10-11', false],
+  ])('a range %s %s → %s (any day of the range counts)', (operator, value, expected) => {
+    expect(matches(ranged, { propertyId: 'due', operator, value })).toBe(expected);
+  });
+
+  it('treats a range as not empty', () => {
+    expect(matches(ranged, { propertyId: 'due', operator: 'is_not_empty', value: null })).toBe(true);
+    expect(matches(ranged, { propertyId: 'due', operator: 'is_empty', value: null })).toBe(false);
+  });
+
+  it('sorts ranges and single days by their start', () => {
+    const rows = [
+      row('late', 'a0', { due: '2026-10-20' }),
+      row('range', 'a1', { due: '2026-10-05/2026-10-30' }),
+      row('early', 'a2', { due: '2026-10-01' }),
+    ];
+
+    expect(ids(sortRows(rows, [{ propertyId: 'due', direction: 'asc' }], schema))).toEqual(['early', 'range', 'late']);
+  });
+
+  it('sorts two times on one day by the time', () => {
+    const rows = [
+      row('pm', 'a0', { due: '2026-10-05T15:00' }),
+      row('am', 'a1', { due: '2026-10-05T09:00' }),
+    ];
+
+    expect(ids(sortRows(rows, [{ propertyId: 'due', direction: 'asc' }], schema))).toEqual(['am', 'pm']);
+  });
+});

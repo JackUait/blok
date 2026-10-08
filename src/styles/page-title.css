@@ -126,7 +126,9 @@
 }
 [data-blok-page-title]:empty::before {
   content: attr(data-placeholder);
-  color: var(--color-block-placeholder);
+  /* Not var(--color-block-placeholder): that one resolves on :root, where
+     --blok-gray-text is undefined, so it would fall back to the text ink. */
+  color: var(--blok-placeholder-color, var(--blok-gray-text));
   pointer-events: none;
 }
 

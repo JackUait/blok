@@ -3060,6 +3060,11 @@
   --blok-editor-gutter-end: 0px;
 }
 
+:where([data-blok-interface=blok] [data-blok-interface=page-title]) {
+  --blok-editor-gutter-start: inherit;
+  --blok-editor-gutter-end: inherit;
+}
+
 :where([data-blok-interface=blok]) {
   --_blok-slot-indent-step: var(--blok-block-indent-step, 24px);
 }
@@ -10559,15 +10564,44 @@ span[data-blok-slash-search] {
   --blok-page-icon-glyph: 78px;
   container-type: inline-size;
   box-sizing: border-box;
-  max-width: var(--blok-content-column);
-  margin-inline: auto;
-  padding-inline: var(--blok-block-padding-inline, 2px);
+  padding-inline: var(--blok-editor-gutter-start, 0px) var(--blok-editor-gutter-end, 0px);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   color: var(--blok-text-primary);
 }
 
 [data-blok-page-header][data-blok-width="full"] {
   --blok-content-column: var(--blok-content-max-width, none);
+}
+
+[data-blok-page-icon-row], [data-blok-page-title] {
+  box-sizing: border-box;
+  max-width: var(--blok-content-column);
+  margin-inline: auto;
+  padding-inline: var(--blok-block-padding-inline, 2px);
+}
+
+[data-blok-content-align="left"] :is([data-blok-page-icon-row], [data-blok-page-title]) {
+  margin-left: 0;
+}
+
+[data-blok-content-align="center"] :is([data-blok-page-icon-row], [data-blok-page-title]) {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+[data-blok-content-align="right"] :is([data-blok-page-icon-row], [data-blok-page-title]) {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+[data-blok-rtl="true"][data-blok-content-align="left"] :is([data-blok-page-icon-row], [data-blok-page-title]) {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+[data-blok-rtl="true"][data-blok-content-align="right"] :is([data-blok-page-icon-row], [data-blok-page-title]) {
+  margin-left: 0;
+  margin-right: auto;
 }
 
 [data-blok-page-icon-row] {
@@ -10657,8 +10691,8 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-page-title] {
-  margin: 0;
-  padding: var(--blok-space-0-75) 0;
+  margin-block: 0;
+  padding-block: var(--blok-space-0-75);
   color: var(--blok-text-primary);
   font-size: var(--blok-page-title-size);
   font-weight: 700;

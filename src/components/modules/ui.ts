@@ -359,6 +359,7 @@ export class UI extends Module<UINodes> {
       DATA_ATTR.controlsHidden,
       readOnlyEnabled && this.Blok.ReadOnly.isControlsHidden
     );
+    this.Blok.PageTitle?.syncLayoutAttributes();
 
     /**
      * Collapse the bottom zone in read-only mode. Its only purpose is to act as

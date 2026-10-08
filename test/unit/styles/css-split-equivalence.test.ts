@@ -726,8 +726,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const TABS_FOCUS_RING_BYTES = 208;
     // Tabs empty hint takes the empty paragraph's box, so the first block never resizes the tab.
     const TABS_EMPTY_HINT_BYTES = 519;
-    // Page title header: page-title.css (content column, icon, Add icon, title, size tiers) and its @import.
-    const PAGE_TITLE_HEADER_BYTES = 4_190 + 28;
+    // Page title header: page-title.css (gutter, content column and its align rules, icon, Add icon,
+    // title, size tiers), its @import, and the main.css rule that lets an in-editor header inherit the gutter.
+    const PAGE_TITLE_HEADER_BYTES = 5_347 + 28 + 524;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

@@ -524,6 +524,18 @@
 }
 
 /*
+ * A page header inside the wrapper carries [data-blok-interface] too, so the
+ * rules above would re-declare the gutter on it and drop host overrides set on
+ * the wrapper. It takes the wrapper's value instead. Must stay last of these
+ * (0,0,0) rules. A header in a host holder skips this and uses the rules above
+ * through the attributes PageTitle copies onto it.
+ */
+:where([data-blok-interface=blok] [data-blok-interface=page-title]) {
+  --blok-editor-gutter-start: inherit;
+  --blok-editor-gutter-end: inherit;
+}
+
+/*
  * Block nesting indent. BlockHierarchy writes only the MULTIPLIER (the inline
  * --_blok-block-depth) and the cascade turns it into the margin; it used to
  * stamp the margin itself, which a container tool could only decline with

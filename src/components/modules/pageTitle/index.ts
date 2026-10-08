@@ -11,6 +11,16 @@ import { buildHeader, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
 import { createIconControl } from './icon-control';
 
+// main.css keys the gutter and the content-align margins on these. A header in
+// an outside holder has no wrapper ancestor, so it carries its own copy.
+const WRAPPER_LAYOUT_ATTRIBUTES = [
+  DATA_ATTR.contentAlign,
+  DATA_ATTR.toolbarPosition,
+  DATA_ATTR.toolbarHidden,
+  DATA_ATTR.controlsHidden,
+  DATA_ATTR.rtl,
+];
+
 export class PageTitle extends Module {
   private resolved: ResolvedTitleConfig | null = null;
   private dom: HeaderNodes | null = null;
@@ -169,6 +179,27 @@ export class PageTitle extends Module {
 
   public syncDirection(): void {
     this.dom?.header.setAttribute('dir', this.isRtl ? 'rtl' : 'ltr');
+    this.syncLayoutAttributes();
+  }
+
+  /** Call after any of WRAPPER_LAYOUT_ATTRIBUTES changes on the wrapper. */
+  public syncLayoutAttributes(): void {
+    const header = this.dom?.header;
+
+    if (header === undefined) {
+      return;
+    }
+    const { wrapper } = this.Blok.UI.nodes;
+
+    for (const name of WRAPPER_LAYOUT_ATTRIBUTES) {
+      const value = wrapper.getAttribute(name);
+
+      if (value === null) {
+        header.removeAttribute(name);
+      } else {
+        header.setAttribute(name, value);
+      }
+    }
   }
 
   // ReadOnly calls this during its own prepare, before ours: dom may still be null.

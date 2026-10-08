@@ -64,6 +64,51 @@ describe('blok.title API', () => {
     expect(header?.hasAttribute(DATA_ATTR.width)).toBe(false);
   });
 
+  describe('the header carries the wrapper attributes the gutter and content-align CSS key on', () => {
+    const header = (): Element | null => document.querySelector(`[${DATA_ATTR.pageHeader}]`);
+
+    it('copies content align, toolbar position and hidden toolbar at boot, also in an outside holder', async () => {
+      target = document.createElement('div');
+      document.body.appendChild(target);
+      blok = create({ holder, pageTitle: { holder: target }, style: { contentAlign: 'center' }, toolbarPosition: 'right', hideToolbar: true });
+
+      await blok.isReady;
+
+      expect(target.contains(header())).toBe(true);
+      expect(header()?.getAttribute(DATA_ATTR.contentAlign)).toBe('center');
+      expect(header()?.getAttribute(DATA_ATTR.toolbarPosition)).toBe('right');
+      expect(header()?.hasAttribute(DATA_ATTR.toolbarHidden)).toBe(true);
+    });
+
+    it('follows toolbar.setPosition', async () => {
+      blok = create({ holder, pageTitle: true });
+
+      await blok.isReady;
+      blok.toolbar.setPosition('right');
+
+      expect(header()?.getAttribute(DATA_ATTR.toolbarPosition)).toBe('right');
+    });
+
+    it('follows chromeless read-only on and off', async () => {
+      blok = create({ holder, pageTitle: true, readOnly: { hideControls: true } });
+
+      await blok.isReady;
+      expect(header()?.hasAttribute(DATA_ATTR.controlsHidden)).toBe(true);
+
+      await blok.readOnly.set(false);
+      expect(header()?.hasAttribute(DATA_ATTR.controlsHidden)).toBe(false);
+    });
+
+    it('follows a switch to an RTL locale', async () => {
+      blok = create({ holder, pageTitle: true });
+
+      await blok.isReady;
+      await blok.i18n.update({ locale: 'ar' });
+
+      expect(header()?.getAttribute(DATA_ATTR.rtl)).toBe('true');
+    });
+  });
+
   it('a locale switch to RTL flips the header direction', async () => {
     blok = create({ holder, pageTitle: true });
 

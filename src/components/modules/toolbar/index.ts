@@ -563,6 +563,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (editorWrapper instanceof HTMLElement) {
       editorWrapper.setAttribute(DATA_ATTR.toolbarPosition, position);
     }
+    this.Blok.PageTitle?.syncLayoutAttributes();
 
     if (this.opened && this.hoveredBlock) {
       this.moveAndOpen(this.hoveredBlock, this.positioner.target);

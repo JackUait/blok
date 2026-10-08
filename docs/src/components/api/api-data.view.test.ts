@@ -39,8 +39,8 @@ describe("view renderer section", () => {
     expect(names).toEqual([
       "blocksToHtml(data, options?)",
       "blocksToPlainText(data, options?)",
-      "blocksToMarkdown(data)",
-      "blocksToMarkdownWithReport(data)",
+      "blocksToMarkdown(data, options?)",
+      "blocksToMarkdownWithReport(data, options?)",
       "htmlTextContent(html)",
       "sanitizeHtmlFragment(html, config)",
       "outlineFromOutputData(data)",

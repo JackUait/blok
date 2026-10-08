@@ -32,7 +32,7 @@
     "date": "2026-10-07"
   },
   "/docs/blocks-api": {
-    "hash": "7c66c2885bdfea6b",
+    "hash": "871e0ded400755b8",
     "date": "2026-10-08"
   },
   "/docs/blok-editor": {
@@ -256,7 +256,7 @@
     "date": "2026-09-08"
   },
   "/docs/title-api": {
-    "hash": "d1876e1da5317412",
+    "hash": "3f8aff3f8b700c33",
     "date": "2026-10-08"
   },
   "/docs/toggle": {
@@ -292,8 +292,8 @@
     "date": "2026-09-08"
   },
   "/docs/use-blocks": {
-    "hash": "084cdb52d8eb8fb6",
-    "date": "2026-10-07"
+    "hash": "1074dffbe020e05d",
+    "date": "2026-10-08"
   },
   "/docs/use-blok-ready": {
     "hash": "76036f6e147870be",
@@ -304,7 +304,7 @@
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "a7c918fee19d1081",
+    "hash": "b7c813dc5869154a",
     "date": "2026-10-08"
   },
   "/docs/view-state-api": {
@@ -356,7 +356,7 @@
     "date": "2026-10-07"
   },
   "/ru/docs/blocks-api": {
-    "hash": "873aa7c1c1443ee2",
+    "hash": "74162e50cce1d218",
     "date": "2026-10-08"
   },
   "/ru/docs/blok-editor": {
@@ -580,7 +580,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/title-api": {
-    "hash": "1cbfe1a1b9cf454a",
+    "hash": "b0508bb15f7e12e2",
     "date": "2026-10-08"
   },
   "/ru/docs/toggle": {
@@ -616,8 +616,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/use-blocks": {
-    "hash": "f8b3403bc109a6c0",
-    "date": "2026-10-07"
+    "hash": "191b9ffab28b29ba",
+    "date": "2026-10-08"
   },
   "/ru/docs/use-blok-ready": {
     "hash": "c73705579e3d719a",
@@ -628,7 +628,7 @@
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "66d43d16acf086ca",
+    "hash": "dd809ec11e8e7e37",
     "date": "2026-10-08"
   },
   "/ru/docs/view-state-api": {

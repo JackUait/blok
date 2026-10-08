@@ -777,7 +777,7 @@ await editor.blocks.renderFromHTML(html);
         name: "blocks.importMarkdown(md, options?)",
         returnType: "Promise<OutputData>",
         description:
-          "Converts a Markdown string to blocks and renders them. This REPLACES the current document, because it calls `blocks.render()` internally.\n\nThe converter is lazy-loaded on the first call. The resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions).\n\nTo add blocks instead of replacing them, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.\n\nWith `title: true` in `options`, a leading `#` heading becomes the page title, and a leading emoji in it becomes the icon. If the Markdown has no such heading, the title and icon are cleared. Without the option, they stay as they are.",
+          "Converts a Markdown string to blocks and renders them. This REPLACES the current document, because it calls `blocks.render()` internally.\n\nThe converter is lazy-loaded on the first call. The resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions).\n\nTo add blocks instead of replacing them, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.\n\nWith `title: true` in `options`, a leading `#` heading becomes the page title, and a leading emoji in it becomes the icon. The Markdown then owns both fields. A heading with no emoji clears the icon, and no such heading clears both. Without the option, they stay as they are.",
         example: `const data = await editor.blocks.importMarkdown('# Title\\n\\n- one\\n- two');
 // The whole document is replaced; data is the rendered OutputData`,
         params: [
@@ -797,12 +797,21 @@ await editor.blocks.renderFromHTML(html);
         ],
       },
       {
-        name: "blocks.exportMarkdown()",
+        name: "blocks.exportMarkdown(options?)",
         returnType: "Promise<string>",
         description:
           "Serializes the current document to Markdown. It is the outbound twin of `importMarkdown`. Blocks are read through the Saver, so the output reflects the saved (validated) document, not the raw DOM.\n\nThe promise resolves to '' when there is nothing to save. Blocks owned by a table cell are serialized inside the pipe table, not repeated as loose lines.\n\nWhat Markdown cannot express is degraded.\n\n- Table `colspan`/`rowspan` and heading columns are dropped.\n- A table with no heading row gets an empty header row, because GFM requires one.\n\nPass `{ title: true }` to write the page title first, as a `#` heading led by an emoji icon. An image icon is left out.",
         example: `const md = await editor.blocks.exportMarkdown();
 // → '# Title\\n\\n- one\\n- two'`,
+        params: [
+          {
+            name: "options.title",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description: "`true` writes the page title first, as a `#` heading led by an emoji icon.",
+          },
+        ],
       },
       {
         name: "blocks.delete(index?, setCaret?)",
@@ -2889,7 +2898,7 @@ editor.placeholder.set(false);`,
     badge: "Title",
     title: "Title API",
     description:
-      "Read and change the page title and its icon. They sit above the first block, or in an element of your own. The title is one line of plain text. Both are stored in the document and saved as `title` and `icon` in OutputData.\n\nTurn it on with the `pageTitle` option. `editor.title` exists right after `new Blok()`, and calls made before `isReady` are replayed once the editor is ready. `title.focus()` is the exception: before `isReady` it does nothing.\n\nThe opt-in `title: true` option carries the title through conversions. Without it, every conversion works as it did before.\n\n- `blocksToHtml` writes it first as an `<h1>`, led by the icon.\n- `blocksToMarkdown`, `blocksToMarkdownWithReport` and `blocks.exportMarkdown` write it as a `#` heading. An image icon is left out.\n- `blocksToPlainText` writes it as the first line.\n- `markdownToBlocksWithReport` and `htmlToBlocksWithReport` lift a leading `#` heading or `<h1>` out of the blocks. They return it as `title` and `icon`.\n  - The title is plain text, so formatting in that heading is dropped. The Markdown report adds a `heading` warning for it. The HTML report does not.\n- `blocks.importMarkdown` sets the editor's title and icon from that heading, and clears both when there is none.\n- `extractTexts` puts the title first in the list, and `injectTexts` writes it back from there. Every other index moves by one.\n\nThese limits are known.\n\n- Restoring a version saved before the server kept page titles clears the current title.\n- A collaborative editor that opens offline shows its last-known blocks, but no title.\n- A host cannot set the title through the server's `/edit` endpoint.\n- When two people type in the title at once, the last write wins.",
+      "Read and change the page title and its icon. They sit above the first block, or in an element of your own. The title is one line of plain text. Both are stored in the document and saved as `title` and `icon` in OutputData.\n\nTurn it on with the `pageTitle` option. `editor.title` exists right after `new Blok()`, and calls made before `isReady` are replayed once the editor is ready. `title.focus()` is the exception: before `isReady` it does nothing.\n\nThe opt-in `title: true` option carries the title through conversions. Without it, every conversion works as it did before.\n\n- `blocksToHtml` writes it first as an `<h1>`, led by the icon.\n- `blocksToMarkdown`, `blocksToMarkdownWithReport` and `blocks.exportMarkdown` write it as a `#` heading. An image icon is left out.\n- `blocksToPlainText` writes it as the first line.\n- `markdownToBlocksWithReport` and `htmlToBlocksWithReport` lift a leading `#` heading or `<h1>` out of the blocks. They return it as `title` and `icon`.\n  - The title is plain text, so formatting in that heading is dropped. The Markdown report adds a `heading` warning for it. The HTML report does not.\n  - `markdownToBlocks` and `htmlToBlocks` with the option only drop the heading.\n- `blocks.importMarkdown` sets the editor's title and icon from that heading. A heading with no emoji clears the icon, and no heading clears both.\n- `extractTexts` puts the title first in the list, and `injectTexts` writes it back from there. Every other index moves by one.\n\nThese limits are known.\n\n- Restoring a version saved before the server kept page titles clears the current title.\n- A collaborative editor that opens offline shows its last-known blocks, but no title.\n- A host cannot set the title through the server's `/edit` endpoint.\n- When two people type in the title at once, the last write wins.",
     example: `import { Blok } from '@bloklabs/core';
 
 const editor = new Blok({
@@ -2953,7 +2962,7 @@ editor.title.set(serverTitle, { record: false });`,
         name: "title.mount(holder)",
         returnType: "void",
         description:
-          "Moves the title and icon into `holder`, an element or a selector. Focus and the caret are kept. `null` puts the title back above the first block.\n\nAfter `isReady`, a selector that matches nothing throws. Before `isReady` the call waits for the editor. A bad selector is then logged, and the title stays where it is.\n\nTo line up a section of your own between the title and the editor, copy the title's layout. Its `--blok-content-column` variable is set on the title's own element, so a section beside it cannot read it.\n\n- Pad the section's start by the editor gutter, `56px` by default.\n  - It is `0` with `hideToolbar: true` or `readOnly: { hideControls: true }`.\n  - `toolbarPosition: 'right'` moves it to the end.\n  - A host value for `--blok-editor-gutter-start` replaces it.\n- Inside it, give the content `box-sizing: border-box`, `max-width: var(--blok-content-max-width, 720px)` and `padding-inline: 2px`.\n- In `full` width, use `none` instead of `720px`.\n- With `style.contentAlign: 'center'`, add `margin-inline: auto`. The default `'left'` needs no margin.",
+          "Moves the title and icon into `holder`, an element or a selector. Focus and the caret are kept. `null` puts the title back above the first block.\n\nAfter `isReady`, a selector that matches nothing throws. Before `isReady` the call waits for the editor. A bad selector is then logged, and the title stays where it is.\n\nTo line up a section of your own between the title and the editor, copy the title's layout. Its `--blok-content-column` variable is set on the title's own element, so a section beside it cannot read it.\n\n- Pad the section's start by the editor gutter, `56px` by default.\n  - It is `0` with `hideToolbar: true` or `readOnly: { hideControls: true }`.\n  - `toolbarPosition: 'right'` moves it to the end.\n- Inside it, give the content `box-sizing: border-box`, `max-width: var(--blok-content-max-width, 720px)` and `padding-inline: var(--blok-block-padding-inline, 2px)`.\n- In `full` width, use `none` instead of `720px`.\n- Align it as `style.contentAlign` says.\n  - The default `'left'` needs no margin.\n  - `'center'` needs `margin-inline: auto`.\n  - `'right'` needs `margin-inline-start: auto`.\n\nThe section reads these variables only from its own ancestors. Blok applies `style.tokens` to its own elements only, so a section beside the title does not see them.\n\n- If you set `--blok-content-max-width` or a gutter variable, declare it on an element that holds both the section and the editor.\n- Otherwise the section falls back to `720px` and drifts away from the title.",
         example: `editor.title.mount('#page-title');
 
 // A section of your own between the title and the editor
@@ -2961,7 +2970,7 @@ editor.title.set(serverTitle, { record: false });`,
 // .page-meta > div {
 //   box-sizing: border-box;
 //   max-width: var(--blok-content-max-width, 720px);
-//   padding-inline: 2px;
+//   padding-inline: var(--blok-block-padding-inline, 2px);
 // }
 
 // Back above the first block
@@ -4510,7 +4519,7 @@ const rowBlocks = blocks.getChildren(databaseBlockId);`,
         name: "markdownToBlocks(md, config?)",
         returnType: "Promise<OutputBlockData[]>",
         description:
-          "Convert Markdown to blocks WITHOUT an editor instance. It is the standalone `@bloklabs/core/markdown` subpath, not a method on the hook.\n\nIt needs no DOM and no mounted Blok, so it covers the server-side path that insertMarkdown/exportMarkdown cannot:\n\n- import Markdown in a Node job\n- seed a document\n- precompute `data` before the editor mounts\n\n`config` is a `MarkdownImportConfig` (tool mapping, GFM, extensions). The result is ready for `blocks.render()` or `blocks.insertMany()`.",
+          "Convert Markdown to blocks WITHOUT an editor instance. It is the standalone `@bloklabs/core/markdown` subpath, not a method on the hook.\n\nIt needs no DOM and no mounted Blok, so it covers the server-side path that insertMarkdown/exportMarkdown cannot:\n\n- import Markdown in a Node job\n- seed a document\n- precompute `data` before the editor mounts\n\n`config` is a `MarkdownImportConfig` (tool mapping, GFM, extensions). The result is ready for `blocks.render()` or `blocks.insertMany()`.\n\nWith `title: true` in `config`, a leading `#` heading is dropped from the blocks. markdownToBlocksWithReport returns it as `title` and `icon`.",
         example: `import { markdownToBlocks } from '@bloklabs/core/markdown';
 
 // No editor instance required — this also runs on the server
@@ -4521,9 +4530,9 @@ await blocks.render({ blocks: parsed });`,
       },
       {
         name: "markdownToBlocksWithReport(md, config?)",
-        returnType: "Promise<{ blocks: OutputBlockData[]; warnings: MarkdownDegradation[] }>",
+        returnType: "Promise<{ blocks: OutputBlockData[]; warnings: MarkdownDegradation[]; title?: string; icon?: PageIcon }>",
         description:
-          "The same blocks, plus what Markdown could not carry into them. Blok has no raw-HTML block, so markup written into the Markdown is escaped and stored as literal text. The one exception is a bare `<br>`, which becomes a line break. The escaping is safe, but silent.\n\nUse this when the import is unattended (an MCP tool, an agent, a bulk migration) and something has to be told what changed. Its outbound twin is blocksToMarkdownWithReport in @bloklabs/core/view.",
+          "The same blocks, plus what Markdown could not carry into them. Blok has no raw-HTML block, so markup written into the Markdown is escaped and stored as literal text. The one exception is a bare `<br>`, which becomes a line break. The escaping is safe, but silent.\n\nUse this when the import is unattended (an MCP tool, an agent, a bulk migration) and something has to be told what changed. Its outbound twin is blocksToMarkdownWithReport in @bloklabs/core/view.\n\nWith `title: true` in `config`, it also returns the lifted heading as `title` and `icon`. A heading that held formatting adds a `heading` warning, because the title is plain text.",
         example: `import { markdownToBlocksWithReport } from '@bloklabs/core/markdown';
 
 const { blocks: parsed, warnings } = await markdownToBlocksWithReport(source);
@@ -4921,7 +4930,7 @@ if (transportBytes > 500 * 1024) {
 }`,
       },
       {
-        name: "blocksToMarkdown(data)",
+        name: "blocksToMarkdown(data, options?)",
         returnType: "string",
         description:
           "Serialize a saved document to Markdown. It is synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], and tables GFM pipe grids.\n\nMarkdown has no callout, toggle, column or spacer. So a callout becomes a blockquote carrying its emoji, a toggle becomes a bold summary followed by its body, columns flatten into reading order, and a spacer is dropped.\n\nReturns '' for empty or malformed documents.\n\nThe second argument takes `pageInfo`, `pageHref` and `title` from the blocksToHtml options. `title: true` writes the page title first, as a `#` heading led by an emoji icon.",
@@ -4929,9 +4938,23 @@ if (transportBytes > 500 * 1024) {
 
 // Feed an article to an LLM, or write it to a .md file
 const markdown = blocksToMarkdown(savedData);`,
+        params: [
+          {
+            name: "data",
+            type: "OutputData | LooseOutputData | null | undefined",
+            required: true,
+            description: "Saved document, in the strict save() shape or the loose wire shape.",
+          },
+          {
+            name: "options",
+            type: "Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref' | 'title'>",
+            required: false,
+            description: "`pageInfo`, `pageHref` and `title`, as for blocksToHtml.",
+          },
+        ],
       },
       {
-        name: "blocksToMarkdownWithReport(data)",
+        name: "blocksToMarkdownWithReport(data, options?)",
         returnType: "{ markdown: string; warnings: MarkdownDegradation[] }",
         description:
           "The same Markdown, plus a list of what could not be carried across. Each entry names the construct, says whether it was 'dropped' (nothing emitted) or 'degraded' (emitted lossily), and why.\n\nUse it when the result goes somewhere that cannot ask a follow-up question, such as an AI client or an export, and needs to be told what it is missing. A block that leaves no output and carries no inline text is reported too, so a custom tool with no Markdown form is named rather than vanishing.\n\nIt takes the same options as blocksToMarkdown, `title` included.",
@@ -4939,6 +4962,20 @@ const markdown = blocksToMarkdown(savedData);`,
 
 const { markdown, warnings } = blocksToMarkdownWithReport(savedData);
 // warnings: [{ construct: 'callout', action: 'degraded', detail: 'callout is rendered as a blockquote; …' }]`,
+        params: [
+          {
+            name: "data",
+            type: "OutputData | LooseOutputData | null | undefined",
+            required: true,
+            description: "Saved document, in the strict save() shape or the loose wire shape.",
+          },
+          {
+            name: "options",
+            type: "Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref' | 'title'>",
+            required: false,
+            description: "`pageInfo`, `pageHref` and `title`, as for blocksToHtml.",
+          },
+        ],
       },
       {
         name: "htmlTextContent(html)",

@@ -1,10 +1,12 @@
+import { isRichText } from '../rich-text/guards';
 import { checkChildType, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
 
-import type { AgentBatch, InsertSpec, PlannedBlock } from '../../../types/agent';
+import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { Refusal } from './placement-rules';
 import type { PlanState } from './plan-state';
-import type { JsonSchema } from './types';
+import type { SnapBlock } from './snapshot';
+import type { JsonSchema, PlannerTool } from './types';
 
 type Parent = { id: string | null } | { type: string; inCell: boolean };
 type ReservedLocation = { type: string; inCell: boolean; parent: Parent };
@@ -210,6 +212,23 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
 
   batch.commands.forEach((command, index) => {
     state.setCommandIndex(index);
+    if (command.name === 'block.duplicate' && command.ref !== undefined) {
+      const source = locate(command.args.id);
+      const parent = parentOfInsert({ position: command.args.position ?? { after: command.args.id } });
+
+      if (source === undefined || parent === undefined) {
+        return;
+      }
+
+      // A duplicate must not reserve runtime default children.
+      const location = reserveBlockIds(state, { type: source.type, children: [] }, parent, '', false, true);
+
+      if (location !== undefined) {
+        refs.set(command.ref, location);
+      }
+
+      return;
+    }
     if (command.name !== 'block.insert') {
       return;
     }
@@ -313,6 +332,188 @@ export const planInsert = (state: PlanState, args: Record<string, unknown>): unk
   reserveBlockIds(state, spec, { id: placement.parentId }, '', args.demote === true, true);
 
   const planned = buildBlock(state, spec, { id: placement.parentId }, '', args.demote === true, true, pending, isRecord(prepared) ? prepared : undefined);
+
+  state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
+
+  return { id: planned.id, childIds: planned.children.map(child => child.id) };
+};
+
+const requireTool = (state: PlanState, block: SnapBlock): PlannerTool => state.tool(block.type)
+  ?? state.fail('UNKNOWN_TOOL', `Block "${block.id}" is a "${block.type}", which is not registered here. Only block.move and block.delete work on it.`, '/id', { opaque: true });
+
+const pointerKey = (key: string): string => key.replace(/~/g, '~0').replace(/\//g, '~1');
+const sameField = (left: Record<string, unknown>, right: Record<string, unknown>, field: string): boolean =>
+  Object.hasOwn(left, field) === Object.hasOwn(right, field) &&
+  (!Object.hasOwn(left, field) || JSON.stringify(left[field]) === JSON.stringify(right[field]));
+
+export const planUpdate = (state: PlanState, args: Record<string, unknown>): unknown => {
+  const block = state.requireBlock(args.id, '/id');
+  const tool = requireTool(state, block);
+  const patch = args.data === undefined ? {} : args.data;
+  const tunes = args.tunes;
+
+  if (!isRecord(patch)) {
+    state.fail('INVALID_ARGS', 'Block data must be a record.', '/data');
+  }
+  if (tunes !== undefined && !isRecord(tunes)) {
+    state.fail('INVALID_ARGS', 'Block tunes must be a record.', '/tunes');
+  }
+
+  for (const field of Object.keys(patch)) {
+    const path = `/data/${pointerKey(field)}`;
+
+    if (tool.entry.viewState.includes(field)) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" is view state. Agents do not set it.`, path, {
+        reason: 'view-state', field,
+      });
+    }
+    if (Object.hasOwn(tool.entry.guardedFields, field)) {
+      const use = tool.entry.guardedFields[field];
+
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" keeps an invariant. Use ${use} instead.`, path, {
+        reason: 'guarded', field, use,
+      });
+    }
+  }
+
+  const written = args.data === undefined ? {} : state.prepareData(
+    block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null)),
+    '/data', block.id, { normalize: false }
+  );
+  const merged = { ...structuredClone(block.data), ...written };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) {
+      Reflect.deleteProperty(merged, key);
+    }
+  }
+
+  const normalized = tool.runtime.normalize === undefined ? merged : tool.runtime.normalize(structuredClone(merged));
+
+  if (!isRecord(normalized)) {
+    state.fail('INVALID_ARGS', 'Normalized block data must be a record.', '/data');
+  }
+
+  const rich = tool.entry.richTextFields;
+  const produced: Record<string, unknown> = Object.fromEntries(rich
+    .filter(field => Object.hasOwn(normalized, field) && !sameField(merged, normalized, field))
+    .map(field => [field, normalized[field]]));
+  const effective: Record<string, unknown> = {
+    ...Object.fromEntries(Object.entries(normalized).filter(([key]) => !Object.hasOwn(produced, key))),
+    ...(Object.keys(produced).length === 0 ? {} : state.prepareData(
+      block.type, produced, '/data', block.id, { normalize: false }
+    )),
+  };
+
+  for (const field of tool.entry.viewState) {
+    if (!sameField(block.data, effective, field)) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" is view state. Normalization cannot change it.`, `/data/${pointerKey(field)}`, {
+        reason: 'view-state', field,
+      });
+    }
+  }
+
+  const edits: Edit[] = [];
+
+  for (const field of rich) {
+    if (!Object.hasOwn(effective, field) ||
+        (!Object.hasOwn(patch, field) && sameField(block.data, effective, field))) {
+      continue;
+    }
+    const value = effective[field];
+
+    if (!isRichText(value)) {
+      state.fail('INVALID_ARGS', `"${field}" must contain rich-text segments.`, `/data/${pointerKey(field)}`);
+    }
+    edits.push({ op: 'setRichText', id: block.id, field, value });
+  }
+
+  const fields = new Set([...Object.keys(patch), ...Object.keys(block.data), ...Object.keys(effective)]);
+  const dataPatch: Record<string, unknown> = Object.fromEntries([...fields]
+    .filter(field => !rich.includes(field) || !Object.hasOwn(effective, field))
+    .filter(field => Object.hasOwn(patch, field) || !sameField(block.data, effective, field))
+    .map(field => [field, Object.hasOwn(effective, field) ? effective[field] : null]));
+
+  if (Object.keys(dataPatch).length > 0) {
+    edits.push({ op: 'setData', id: block.id, patch: dataPatch });
+  }
+  if (tunes !== undefined) {
+    edits.push({ op: 'setTunes', id: block.id, tunes });
+  }
+  state.emit(...edits);
+
+  return { id: block.id };
+};
+
+export const planDelete = (state: PlanState, args: Record<string, unknown>): unknown => {
+  const block = state.requireBlock(args.id, '/id');
+  const withChildren = state.tool(block.type)?.entry.children.deletedWithParent === true;
+  const result = {
+    removedIds: withChildren ? state.draft.subtree(block.id) : [block.id],
+    liftedIds: withChildren ? [] : [...state.draft.childrenOf(block.id)],
+  };
+
+  // Explicit lifts give every applier the same move attribution.
+  result.liftedIds.reduce((after, child) => {
+    state.emit({ op: 'move', id: child, parentId: block.parent, afterId: after });
+
+    return child;
+  }, block.id);
+  state.emit({ op: 'remove', id: block.id, withChildren });
+
+  return result;
+};
+
+export const planDuplicate = (state: PlanState, args: Record<string, unknown>): unknown => {
+  const source = state.requireBlock(args.id, '/id');
+
+  requireTool(state, source);
+
+  const placement = state.place(undefined, args.position ?? { after: source.id });
+  const parent = placement.parentId === null ? undefined : state.draft.get(placement.parentId);
+
+  if (parent !== undefined && state.tool(parent.type)?.entry.selfPlacesChildren === true) {
+    const actions = state.actionsOf(parent.type);
+
+    state.fail('PLACEMENT_REFUSED', `"${parent.type}" places its own children. Use one of: ${actions.join(', ')}.`, '/position', {
+      reason: 'SELF_PLACED_PARENT', use: actions,
+    });
+  }
+
+  const ids = new Map<string, string>();
+  const reserveCopyIds = (block: SnapBlock, path: string): void => {
+    ids.set(block.id, state.reserveFreshId(`${path}/id`));
+    block.content.forEach((id, index) =>
+      reserveCopyIds(state.requireBlock(id, '/id'), `${path}/children/${index}`));
+  };
+
+  reserveCopyIds(source, '');
+
+  const toSpec = (block: SnapBlock): InsertSpec => {
+    const data = structuredClone(block.data);
+
+    if (block.type === 'table' && isArray(data.content)) {
+      data.content = data.content.map(row => !isArray(row) ? row : row.map(cell => {
+        if (!isRecord(cell) || !isArray(cell.blocks)) {
+          return cell;
+        }
+
+        return {
+          ...cell,
+          blocks: cell.blocks.map(id => typeof id === 'string' ? ids.get(id) ?? id : id),
+        };
+      }));
+    }
+
+    return {
+      type: block.type,
+      id: ids.get(block.id) ?? state.fail('INVALID_ARGS', 'The copied block has no reserved ID.', '/id'),
+      data,
+      ...(block.tunes !== undefined && { tunes: structuredClone(block.tunes) }),
+      children: block.content.map(id => toSpec(state.requireBlock(id, '/id'))),
+    };
+  };
+  const planned = buildPlannedBlock(state, toSpec(source), { id: placement.parentId }, '', false);
 
   state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
 

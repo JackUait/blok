@@ -90,6 +90,15 @@ export class PlanState {
       return explicit;
     }
 
+    const id = this.reserveFreshId(path);
+
+    this.allocated.add(id);
+
+    return id;
+  }
+
+  // The builder claims these IDs after copy references are remapped.
+  public reserveFreshId(path: string): string {
     while (true) {
       const id = this.ctx.ports.newId();
 
@@ -99,7 +108,7 @@ export class PlanState {
       if (this.draft.has(id) || this.reserved.has(id) || this.allocated.has(id)) {
         continue;
       }
-      this.allocated.add(id);
+      this.reserveId(id, path);
 
       return id;
     }

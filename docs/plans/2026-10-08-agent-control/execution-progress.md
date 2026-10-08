@@ -11,7 +11,7 @@ This file records reviewed implementation, not planned work. All implementation 
 - Initial command/manifest types, schema validator, placement, and capability scanner have approved independent reviews, passing scoped tests/lint, and a clean full compiler gate. Their explicit-path commits are recorded below. No public agent runtime is wired yet.
 - The schema pin, shared sanitizer/schema extractions, deep-sanitize walk, marker layer, manifest, canonical action context, command names/errors, built-in sanitizer factories, effective contract, public manifest exports, shared runtime, and shared IDs are committed. The EOF-only shared-ID follow-up is committed. The public conversion sanitation regression (01/22) is reviewed, verified, and committed with its BREAKING migration note. The core command envelope and paragraph description are reviewed and committed. ID-only headless table normalization is reviewed and committed; full browser/store parity remains deferred. The pure document snapshot is reviewed and committed. Provider renderers, shared placement, rich-text operations, JSON edit application, and Header/List descriptions are reviewed and committed. Further descriptions and planner/runtime work remain in test-first execution.
 - Independent implementers own disjoint files. Only the controller stages and commits. Shared memory-heavy checks run sequentially.
-- Thirty-three tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
+- Forty-three tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
 - Per-task evidence and independent-review verdicts live under `.superpowers/sdd/<plan-name>/progress.md` during execution.
 - Build sequence: reconciliation ledger section 14 (W0–W6). The user's later instruction to use parallel subagents supersedes the single-implementer restriction.
 
@@ -54,6 +54,11 @@ This file records reviewed implementation, not planned work. All implementation 
 | 01/6 | Rich-text range operations | `cd8a55ec` | Behavioral RED/GREEN; 49 new + 151 supporting tests; lint/compiler; independent final review. Public/Jint integration deferred. |
 | 01/5 | Shared placement rules | `393fa802` | Behavioral RED/GREEN; 82 + 49 new and 749 additional referring tests; lint/compiler; independent final review; fresh built public placement 22 checks. |
 | 01/7 | JSON edit applier | `aed1c89c` | Behavioral RED/GREEN; 49 tests; pair and checkpoint lint/full compiler; independent final review. Planner/executor integration deferred. |
+| 01/8 | Planner refs and insertion | `11d78277` | Behavioral RED/GREEN; final 80 insert + 38 state tests; scoped lint/full compiler; independent final review. Public planner/Jint integration remains pending. |
+| 02/18–22 | Remaining built-in block descriptions | `11d78277` | 293 new + 684 supporting tests; scoped lint/full compiler; independent scoped reviews; fresh built 139 checks. Native-save and action-runtime parity remain pending. |
+| 01/9 | Update, delete and duplicate planners | This checkpoint | Behavioral RED/GREEN; 105 new + 2 boundary + 118 existing tests; scoped lint/stable full compiler; independent source/correction/gate reviews. Public planner/editor/store/Jint parity remains pending. |
+| 02/23 | Shared root page-icon schema | This checkpoint | Semantic identity RED/GREEN; seven preserved controls; shared schema bytes unchanged by extraction; scoped lint/compiler and independent review; built icon/title controls. |
+| 02/24–24a | Real saved image markup values and schema acceptance | This checkpoint | Validation-first RED/GREEN; 112 schema + 578 referring + 107 model tests; exact pin/digest widening; independent source/pin/gate reviews; built native save and schema controls. |
 
 ## Release obligation
 
@@ -91,3 +96,15 @@ Checkpoint commit: Plan01Task6 cd8a55ec reviewed/verified; two exact paths. UTF-
 - Stable full TypeScript gate `b9yh40v7d` passed with HEAD unchanged at a982d607 before/after and all 61 source/test hashes preserved. The guard recovery also passed scoped lint, all five referencing tests and its compiler run.
 - Task8 final review now has SPEC APPROVED and QUALITY APPROVED. Descriptor18–22 static reviews and the combined scoped/build/compiler gate signoff pass, with warnings and published-declaration/runtime/full-suite limits retained.
 - The controller is delivering only the reviewed 61 source/test paths and this execution ledger. Remaining planner handlers, surface/runtime/Jint/MCP/eval work and mandatory final full-project gates are not complete. Task9/Task23 source release follows measured delivery, not this readiness note.
+
+### 2026-10-08 checkpoint delivered; next TDD handovers
+
+- 11d78277 pushed successfully. At handover HEAD equaled origin/main and git status was clean. The exact reviewed61 source/test paths plus this ledger were committed with normal hooks and required attribution.
+- CoreTask8 and descriptorTasks18–22 are delivered within their reviewed scope. CoreTask9 and descriptorTask23 now receive disjoint test-first ownership. Whole-project final gates and later implementation remain pending.
+
+### 2026-10-08 block-edit and saved-schema checkpoint
+
+- Final Task9 scoped queue passed 225 tests and changed-five-file lint. Schema/reference queue passed 690 tests and changed-six-file lint. The required unchanged markup model suite passed all 107 cases.
+- Full compiler and fresh build passed on stable ba6ffddf. Its inventory contained 4099 entries but 4098 distinct hashed paths. Before/after input maps were byte-identical. Twelve checkpoint hashes stayed unchanged.
+- Built native Image/schema/icon controls passed 31 checks; layout/media controls passed 55. All 657 dist files stayed unchanged. Each page reported zero console errors and four warnings. Build and source-test warnings remain recorded.
+- Independent task source, correction and final scoped gate reviews passed. The controller delivers only twelve source/test/snapshot paths and this ledger. Later planner, executor, browser/store/Jint, MCP and eval work remain unfinished. Overall final full-project gates remain pending.

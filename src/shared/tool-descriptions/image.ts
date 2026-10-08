@@ -78,6 +78,7 @@ export const IMAGE_DATA = {
               color: { type: 'string', pattern: '^#[0-9a-f]{6}$' },
               points: { type: 'array', items: { type: 'number' }, description: 'Flat x, y, pressure triples. Pressure is 0..1.' },
               size: { type: 'number', exclusiveMinimum: 0, maximum: 0.5, description: 'Stroke width.' },
+              cut: { type: 'string', enum: ['start', 'end', 'both'], description: 'Ends the eraser cut. Omitted when none.' },
             },
           },
           {
@@ -87,7 +88,7 @@ export const IMAGE_DATA = {
             additionalProperties: false,
             properties: {
               id: { type: 'string' },
-              type: { type: 'string', enum: ['rect', 'ellipse', 'line', 'arrow'] },
+              type: { type: 'string', enum: ['rect', 'rounded-rect', 'ellipse', 'line', 'arrow', 'bubble', 'star', 'polygon', 'spotlight', 'magnifier'] },
               color: { type: 'string', pattern: '^#[0-9a-f]{6}$' },
               x1: { type: 'number' },
               y1: { type: 'number' },
@@ -95,6 +96,9 @@ export const IMAGE_DATA = {
               y2: { type: 'number' },
               size: { type: 'number', exclusiveMinimum: 0, maximum: 0.5, description: 'Stroke width.' },
               fill: { type: 'boolean', description: 'Rect and ellipse only: a translucent fill. Omitted for false.' },
+              rotation: { type: 'number', description: 'Star and polygon only: clockwise degrees. Omitted for 0.' },
+              tx: { type: 'number', description: 'Bubble only: where the tail points.' },
+              ty: { type: 'number' },
             },
           },
           {

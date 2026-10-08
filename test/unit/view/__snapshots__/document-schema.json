@@ -2482,6 +2482,15 @@
                     "exclusiveMinimum": 0,
                     "maximum": 0.5,
                     "description": "Stroke width."
+                  },
+                  "cut": {
+                    "type": "string",
+                    "enum": [
+                      "start",
+                      "end",
+                      "both"
+                    ],
+                    "description": "Ends the eraser cut. Omitted when none."
                   }
                 }
               },
@@ -2507,9 +2516,15 @@
                     "type": "string",
                     "enum": [
                       "rect",
+                      "rounded-rect",
                       "ellipse",
                       "line",
-                      "arrow"
+                      "arrow",
+                      "bubble",
+                      "star",
+                      "polygon",
+                      "spotlight",
+                      "magnifier"
                     ]
                   },
                   "color": {
@@ -2537,6 +2552,17 @@
                   "fill": {
                     "type": "boolean",
                     "description": "Rect and ellipse only: a translucent fill. Omitted for false."
+                  },
+                  "rotation": {
+                    "type": "number",
+                    "description": "Star and polygon only: clockwise degrees. Omitted for 0."
+                  },
+                  "tx": {
+                    "type": "number",
+                    "description": "Bubble only: where the tail points."
+                  },
+                  "ty": {
+                    "type": "number"
                   }
                 }
               },

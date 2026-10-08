@@ -41,11 +41,14 @@ import {
   defaultBlockTools,
 } from '../../../src/tools';
 import { validateAgainst } from '../../../src/shared/schema/validate';
+import * as pageDescriptions from '../../../src/shared/tool-descriptions/page';
+import { BUILT_IN_BLOCK_DESCRIPTIONS } from '../../../src/shared/tool-descriptions';
 import { blokDocumentSchema } from '../../../src/view/document-schema';
 import { createMemoryViewState } from '../../helpers/view-state';
 
 import type { API, BlockToolConstructorOptions, OutputData } from '../../../types';
 import type { Title } from '../../../types/api/title';
+import type { ImageMarkup } from '../../../types/tools/image';
 
 type JsonSchema = {
   description?: string;
@@ -209,6 +212,17 @@ const savedData: Record<string, Record<string, unknown>> = {
       { id: 'm1', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.012 },
       { id: 'm2', type: 'rect', color: '#0a84ff', x1: 0.1, y1: 0.1, x2: 0.5, y2: 0.5, size: 0.012, fill: true },
       { id: 'm3', type: 'text', color: '#ffffff', x: 0.5, y: 0.5, text: 'Hi', size: 0.06, style: 'outline', rotation: 15 },
+      { id: 'm4', type: 'rounded-rect', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm5', type: 'bubble', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012, tx: 0.15, ty: 0.8 },
+      { id: 'm6', type: 'star', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012, rotation: 30 },
+      { id: 'm7', type: 'polygon', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm8', type: 'spotlight', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm9', type: 'magnifier', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm10', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.012, cut: 'both' },
+      { id: 'm11', type: 'ellipse', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm12', type: 'line', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm13', type: 'arrow', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+      { id: 'm14', type: 'highlighter', color: '#ffcc00', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.036 },
     ],
   })).save(),
 
@@ -275,6 +289,48 @@ describe('blokDocumentSchema', () => {
     it('serializes exactly as the pinned snapshot', async () => {
       await expect(JSON.stringify(blokDocumentSchema, null, 2))
         .toMatchFileSnapshot('./__snapshots__/document-schema.json');
+    });
+  });
+
+  describe('shared page icon schema', () => {
+    it('exports the same icon schema used by the document root', () => {
+      const sharedIconSchema: unknown = 'PAGE_ICON_SCHEMA' in pageDescriptions
+        ? pageDescriptions.PAGE_ICON_SCHEMA
+        : undefined;
+
+      expect(sharedIconSchema).toBe(blokDocumentSchema.properties.icon);
+    });
+
+    it('keeps page fields optional and rejects an empty title', () => {
+      expect(validateAgainst(blokDocumentSchema, { blocks: [], title: '' })
+        .map(problem => problem.path)).toEqual(['/title']);
+      expect(validateAgainst(blokDocumentSchema, { blocks: [] })).toEqual([]);
+    });
+
+    it.each([
+      {
+        branch: 'emoji',
+        icon: { type: 'emoji', value: '🗺', extension: 'kept' },
+      },
+      {
+        branch: 'image',
+        icon: { type: 'image', url: 'https://example.com/icon.png', extension: 'kept' },
+      },
+    ])('$branch: accepts icon extra keys preserved by the page map', ({ icon }) => {
+      expect(validateAgainst(blokDocumentSchema, { blocks: [], icon })).toEqual([]);
+    });
+
+    it.each([
+      { branch: 'emoji', icon: { type: 'emoji' } },
+      { branch: 'image', icon: { type: 'image' } },
+    ])('$branch: rejects an icon without its required payload', ({ icon }) => {
+      expect(validateAgainst(blokDocumentSchema, { blocks: [], icon })
+        .map(problem => problem.path)).toEqual(['/icon']);
+    });
+
+    it('rejects a nested page object instead of changing the flat envelope', () => {
+      expect(validateAgainst(blokDocumentSchema, { blocks: [], page: { title: 'Plan' } })
+        .map(problem => problem.path)).toEqual(['/page']);
     });
   });
 
@@ -408,6 +464,79 @@ describe('blokDocumentSchema', () => {
     });
   });
 
+  describe('values', () => {
+    it.each(BUILT_IN_BLOCK_TOOLS)('%s: the maximal save() sample is valid data', (name) => {
+      expect(validateAgainst(BUILT_IN_BLOCK_DESCRIPTIONS[name]({}).data, savedData[name])).toEqual([]);
+    });
+
+    it('accepts every markup item an image saved by v1.16.1 can hold', () => {
+      const expected: ImageMarkup[] = [
+        { id: 'm1', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.012 },
+        { id: 'm2', type: 'rect', color: '#0a84ff', x1: 0.1, y1: 0.1, x2: 0.5, y2: 0.5, size: 0.012, fill: true },
+        { id: 'm3', type: 'text', color: '#ffffff', x: 0.5, y: 0.5, text: 'Hi', size: 0.06, style: 'outline', rotation: 15 },
+        { id: 'm4', type: 'rounded-rect', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm5', type: 'bubble', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012, tx: 0.15, ty: 0.8 },
+        { id: 'm6', type: 'star', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012, rotation: 30 },
+        { id: 'm7', type: 'polygon', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm8', type: 'spotlight', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm9', type: 'magnifier', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm10', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.012, cut: 'both' },
+        { id: 'm11', type: 'ellipse', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm12', type: 'line', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm13', type: 'arrow', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, size: 0.012 },
+        { id: 'm14', type: 'highlighter', color: '#ffcc00', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.036 },
+      ];
+
+      expect(validateAgainst(BUILT_IN_BLOCK_DESCRIPTIONS.image({}).data, savedData.image)).toEqual([]);
+      expect(savedData.image.markup).toEqual(expected);
+    });
+
+    it('still accepts the old markup items unchanged', () => {
+      const old = {
+        url: 'https://x.y/a.png',
+        markup: [
+          { id: 'a', type: 'pen', color: '#ff0000', points: [0.1, 0.1, 0.5], size: 0.01 },
+          { id: 'b', type: 'rect', color: '#00ff00', x1: 0, y1: 0, x2: 1, y2: 1, size: 0.02, fill: true },
+          { id: 'c', type: 'text', color: '#0000ff', x: 0.5, y: 0.5, text: 'hi', size: 0.05 },
+        ],
+      };
+
+      expect(validateAgainst(BUILT_IN_BLOCK_DESCRIPTIONS.image({}).data, old)).toEqual([]);
+    });
+
+    it.each([
+      { tool: 'spacer', field: 'height', value: 20, path: '/height' },
+      { tool: 'spacer', field: 'height', value: '40', path: '/height' },
+      { tool: 'quote', field: 'size', value: 'huge', path: '/size' },
+    ])('rejects malformed $tool.$field ($value) without normalizing it', ({ tool, field, value, path }) => {
+      const description = BUILT_IN_BLOCK_DESCRIPTIONS[tool]({}).data;
+      const valid = savedData[tool];
+      const problems = validateAgainst(description, { ...valid, [field]: value });
+
+      expect(problems.map(problem => problem.path)).toEqual([path]);
+      expect(validateAgainst(description, valid)).toEqual([]);
+    });
+
+    it.each([
+      { field: 'color', value: '#abc' },
+      { field: 'size', value: 0 },
+      { field: 'x1', value: '0.1' },
+    ])('rejects malformed raw markup $field ($value)', ({ field, value }) => {
+      const description = BUILT_IN_BLOCK_DESCRIPTIONS.image({}).data;
+      const valid = {
+        url: 'https://x.y/a.png',
+        markup: [
+          { id: 'control', type: 'rect', color: '#00ff00', x1: 0, y1: 0, x2: 1, y2: 1, size: 0.02 },
+        ],
+      };
+      const invalid = { ...valid, markup: valid.markup.map(item => ({ ...item, [field]: value })) };
+      const problems = validateAgainst(description, invalid);
+
+      expect(problems.map(problem => problem.path)).toEqual(['/markup/0']);
+      expect(validateAgainst(description, valid)).toEqual([]);
+    });
+  });
+
   describe('field drift', () => {
     /** Keys a def still accepts from older documents although save() no longer writes them. */
     const LEGACY_KEYS: Record<string, string[]> = {
@@ -460,23 +589,32 @@ describe('blokDocumentSchema', () => {
       Object.values(props.adjust?.properties ?? {}).forEach(p => expect(p).toMatchObject({ minimum: -100, maximum: 100 }));
     });
 
-    it('image: each markup item branch declares exactly what a saved item of that type carries', () => {
+    it('image: each markup branch declares exactly the fields its saved items carry', () => {
       type Branch = JsonSchema & { properties: Record<string, { const?: string; enum?: string[] }> };
       const markup = (defs.image.properties?.markup ?? {}) as JsonSchema & { items?: { anyOf?: Branch[] } };
       const branches = markup.items?.anyOf ?? [];
       const saved = (savedData.image.markup ?? []) as Array<Record<string, unknown> & { type: string }>;
 
-      expect(saved).toHaveLength(3);
+      expect(saved).toHaveLength(14);
       saved.forEach((item) => {
         const branch = branches.find(b => b.properties.type.enum?.includes(item.type));
 
         expect(branch, `no branch for "${item.type}"`).toBeDefined();
         expect(branch?.additionalProperties).toBe(false);
-        expect(Object.keys(branch?.properties ?? {}).sort()).toEqual(Object.keys(item).sort());
+        Object.keys(item).forEach(key => expect(Object.keys(branch?.properties ?? {})).toContain(key));
         (branch?.required ?? []).forEach(key => expect(item).toHaveProperty(key));
       });
-      expect(branches.flatMap(b => b.properties.type.enum ?? []).sort())
-        .toEqual(['arrow', 'ellipse', 'highlighter', 'line', 'pen', 'rect', 'text']);
+      branches.forEach((branch) => {
+        const actualKeys = [...new Set(saved
+          .filter(item => branch.properties.type.enum?.includes(item.type))
+          .flatMap(item => Object.keys(item)))];
+
+        expect(Object.keys(branch.properties).sort()).toEqual(actualKeys.sort());
+      });
+      const savedKinds = [...new Set(saved.map(item => item.type))].sort();
+
+      expect(savedKinds).toEqual(['arrow', 'bubble', 'ellipse', 'highlighter', 'line', 'magnifier', 'pen', 'polygon', 'rect', 'rounded-rect', 'spotlight', 'star', 'text']);
+      expect(branches.flatMap(b => b.properties.type.enum ?? []).sort()).toEqual(savedKinds);
     });
 
     it.each(BUILT_IN_BLOCK_TOOLS)('%s: every required field is actually saved', (name) => {

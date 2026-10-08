@@ -29,7 +29,7 @@ import { describeFile } from '../shared/tool-descriptions/file';
 import { describeHeader } from '../shared/tool-descriptions/header';
 import { describeImage } from '../shared/tool-descriptions/image';
 import { describeList } from '../shared/tool-descriptions/list';
-import { describePage } from '../shared/tool-descriptions/page';
+import { describePage, PAGE_ICON_SCHEMA } from '../shared/tool-descriptions/page';
 import { describePageLink } from '../shared/tool-descriptions/page-link';
 import { describeParagraph } from '../shared/tool-descriptions/paragraph';
 import { describeQuote } from '../shared/tool-descriptions/quote';
@@ -68,28 +68,7 @@ export const blokDocumentSchema = {
       minLength: 1,
       description: 'The page title. Absent when empty.',
     },
-    icon: {
-      description:
-        'The page icon. Absent when none. The editor ignores a malformed icon when it loads one; this schema rejects it. Extra keys are allowed, because the editor keeps them.',
-      oneOf: [
-        {
-          type: 'object',
-          required: ['type', 'value'],
-          properties: {
-            type: { const: 'emoji' },
-            value: { type: 'string' },
-          },
-        },
-        {
-          type: 'object',
-          required: ['type', 'url'],
-          properties: {
-            type: { const: 'image' },
-            url: { type: 'string' },
-          },
-        },
-      ],
-    },
+    icon: PAGE_ICON_SCHEMA,
     blocks: {
       type: 'array',
       description: 'Every block in the document, in reading order.',

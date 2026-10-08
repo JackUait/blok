@@ -1,5 +1,28 @@
 import type { BlockToolDescription } from '../../../types/tools/tool-description';
 
+export const PAGE_ICON_SCHEMA = {
+  description:
+    'The page icon. Absent when none. The editor ignores a malformed icon when it loads one; this schema rejects it. Extra keys are allowed, because the editor keeps them.',
+  oneOf: [
+    {
+      type: 'object',
+      required: ['type', 'value'],
+      properties: {
+        type: { const: 'emoji' },
+        value: { type: 'string' },
+      },
+    },
+    {
+      type: 'object',
+      required: ['type', 'url'],
+      properties: {
+        type: { const: 'image' },
+        url: { type: 'string' },
+      },
+    },
+  ],
+} as const;
+
 export const PAGE_DATA = {
   type: 'object',
   description: 'A link to a sub-page. The page body lives in a separate document named by `pageId`, not in this one, so the block has no children.',

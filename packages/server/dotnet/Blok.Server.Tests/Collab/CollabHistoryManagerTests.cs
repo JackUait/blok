@@ -214,7 +214,9 @@ public sealed class CollabHistoryManagerTests
     var old = JsonNode.Parse((await manager.ReadVersionAsync(DocId, Lineage(), 1)).Json)!.AsObject();
     var baseline = JsonNode.Parse((await manager.ReadVersionAsync(DocId, Lineage(), 0)).Json)!.AsObject();
 
-    Assert.Equal("""{"title":"Old"}""", old["page"]!.ToJsonString());
+    // The title is read once, at the top level, so a page map holding only it adds no page object.
+    Assert.Equal("Old", old["title"]?.GetValue<string>());
+    Assert.False(old.ContainsKey("page"));
     Assert.False(old.ContainsKey("values"));
     Assert.False(baseline.ContainsKey("page"));
     Assert.False(baseline.ContainsKey("values"));

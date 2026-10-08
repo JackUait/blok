@@ -508,11 +508,24 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       output.Remove("time");
     }
 
-    // A host reads its own page fields from here after a restore.
+    // A host reads its own page fields from here after a restore. The title
+    // and icon are already top-level (the export writes them), so the page
+    // object leaves them out, and is left out when nothing else remains.
     if (point.Doc is { } doc)
     {
       foreach (var (name, map) in YDocConverter.PlainPageMaps(doc))
       {
+        if (name == "page")
+        {
+          map.Remove("title");
+          map.Remove("icon");
+
+          if (map.Count == 0)
+          {
+            continue;
+          }
+        }
+
         output[name] = map;
       }
     }

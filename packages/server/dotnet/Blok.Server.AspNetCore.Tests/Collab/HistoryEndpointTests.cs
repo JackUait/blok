@@ -134,35 +134,82 @@ public sealed class HistoryEndpointTests
     Assert.False(body.AsObject().ContainsKey("values"));
   }
 
-  /// <summary>Only plain JSON keys: a nested shared type or undefined has no copy, as in a restore.</summary>
+  /// <summary>
+  /// Only plain JSON keys: a nested shared type or undefined has no copy, as in a restore.
+  /// The title and icon are read once, at the top level, so <c>page</c> leaves them out.
+  /// </summary>
   [Fact]
   public async Task AReadCarriesThePlainKeysOfThePageAndValuesMaps()
   {
     await using var history = await HistoryApp.StartAsync();
     var lineage = await history.OpenAsync();
     await using var member = await history.App.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var mirror = await JoinAsync(member);
+    var icon = new AnyObject();
+
+    icon.Add("type", "emoji");
+    icon.Add("value", "🚀");
+
+    await SendAsync(history, member, mirror, transaction =>
+    {
+      mirror.GetMap("page").Set(transaction, "title", "Plan");
+      mirror.GetMap("page").Set(transaction, "icon", icon);
+      mirror.GetMap("page").Set(transaction, "cover", "blue");
+      mirror.GetMap("values").Set(transaction, "title", "Old title");
+      mirror.GetMap("values").Set(transaction, "nested", new YMap());
+      mirror.GetMap("values").Set(transaction, "gone", YUndefined.Instance);
+    });
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+    Assert.Equal("Plan", body["title"]?.GetValue<string>());
+    Assert.True(
+        JsonNode.DeepEquals(JsonNode.Parse("""{"type":"emoji","value":"🚀"}"""), body["icon"]),
+        $"{body["icon"]}");
+    Assert.Equal("""{"cover":"blue"}""", body["page"]!.ToJsonString());
+    Assert.Equal("""{"title":"Old title"}""", body["values"]!.ToJsonString());
+  }
+
+  /// <summary>A page map holding only the title and icon leaves no <c>page</c> object behind.</summary>
+  [Fact]
+  public async Task AReadWithOnlyATitleHasNoPageObject()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await using var member = await history.App.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var mirror = await JoinAsync(member);
+
+    await SendAsync(history, member, mirror, transaction =>
+        mirror.GetMap("page").Set(transaction, "title", "Plan"));
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+    Assert.Equal("Plan", body["title"]?.GetValue<string>());
+    Assert.False(body.AsObject().ContainsKey("page"), body.ToJsonString());
+  }
+
+  /// <summary>A client doc synced with the room through <paramref name="member"/>.</summary>
+  private static async Task<YDoc> JoinAsync(SyncClient member)
+  {
     await member.ReceiveAsync<BlokControlFrame>();
     var mirror = YDocs.NewClient();
     await member.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
     YDocs.Apply(mirror, (await member.ReceiveAsync<SyncStep2Frame>()).Update);
     await member.ReceiveAsync<SyncStep1Frame>();
 
-    var update = mirror.Transact(transaction =>
-    {
-      mirror.GetMap("page").Set(transaction, "title", "Plan");
-      mirror.GetMap("values").Set(transaction, "title", "Old title");
-      mirror.GetMap("values").Set(transaction, "nested", new YMap());
-      mirror.GetMap("values").Set(transaction, "gone", YUndefined.Instance);
-    })!;
+    return mirror;
+  }
+
+  private static async Task SendAsync(
+      HistoryApp history, SyncClient member, YDoc mirror, Action<YTransaction> write)
+  {
+    var update = mirror.Transact(write)!;
     await member.SendAsync(new SyncUpdateFrame(update));
     await history.WaitForSequenceAsync(1);
-
-    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1");
-
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
-    Assert.Equal("""{"title":"Plan"}""", body["page"]!.ToJsonString());
-    Assert.Equal("""{"title":"Old title"}""", body["values"]!.ToJsonString());
   }
 
   /// <summary>Not Blok-Doc-*: those name the live head. A browser host still has to read them.</summary>

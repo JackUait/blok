@@ -217,6 +217,8 @@ docker run \
 
 `--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app that the service loads a document from and writes it back to. `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call. It has to be a single line: a value carrying a carriage return or newline refuses to start rather than losing the header on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives. It holds document content, so it must not be publicly readable, and it may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()`.
 
+A document also carries its page title and icon as top-level `title` and `icon` keys, for example `{"blocks": [...], "title": "Plan", "icon": {"type": "emoji", "value": "🚀"}}`. The service seeds a room from them, and writes them back on every PUT and on `GET /sync/{doc}/state`. A key is left out when the page has none. A malformed value is dropped, not refused: a title must be a non-empty string, and an icon `{"type": "emoji", "value": "…"}` or `{"type": "image", "url": "…"}`. A reset reseeds from your record, so a title change newer than the last PUT is lost, the same as a block edit.
+
 Documents written to your endpoint carry rich text fields as segments, the shape the editor's `save()` returns. A document your endpoint returns may hold HTML strings or segments. A custom block tool's rich fields go in `--rich-text-fields` (or `BLOK_RICH_TEXT_FIELDS`; the flag wins), as JSON keyed by block type: `--rich-text-fields '{"callout":["title"]}'`. In-process, the same list is `options.RichTextFields`. List exactly the fields the tool declares in `static richTextFields` on the client, or the two write the field in different shapes. The built-in paragraph, header, quote, toggle and list `text` fields need no entry. See [Rich text is segments](#rich-text-is-segments).
 
 Collaboration rooms are stored in format 2. Upgrade the service and the editor together. An older editor reads the format 2 room and ends its own session with `unsupported-format`. A room stored in format 1 is converted the first time it opens, and offline edits made in format 1 are not replayed.
@@ -345,7 +347,7 @@ A version is a point, the pair `(lineage, sequence)`. A lineage is one unbroken 
 | Route | Access | Answer |
 | --- | --- | --- |
 | `GET /sync/{doc}/history` | read | `200 { lineages, versions }` |
-| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200 { time?, blocks, page?, values? }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
+| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200 { time?, blocks, title?, icon?, page?, values? }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
 | `GET /sync/{doc}/history/{lineage}/{sequence}/changes?since=` | read | `200 { changes, truncated? }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As `edit`: `204` with the new `Blok-Doc-Lineage` and `Blok-Doc-Sequence` |
 | `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`; `404` for an unknown lineage; `409` for the current one |
@@ -364,7 +366,8 @@ The list looks like this:
 - `?group=1`, `?group=15` or `?group=60` sets both limits to that many minutes. A new group then starts after a gap of more than that window, or once a group spans it. Any other value answers 400, and so do an empty, signed or repeated `group`. The JSON shape does not change.
 - Versions come newest first.
 - Times are Unix milliseconds. An unknown time is `null`, and the point read leaves `time` out.
-- The point read also sends the point's `page` and `values` maps as plain objects. Only plain JSON keys are listed, the same keys a restore copies. An empty map is left out.
+- The point read sends the point's page title and icon as top-level `title` and `icon`, as your document endpoint gets them. Each is left out when the point has none.
+- It also sends the point's `page` and `values` maps as plain objects. Only plain JSON keys are listed, the same keys a restore copies. The `page` object never repeats `title` or `icon`. An empty map is left out.
 
 The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read and the changes read send no `ETag`. Both add `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. On the changes read they name the point in the path. Every answer from the history handlers sends `Cache-Control: no-store`. Guard refusals, 405 answers and preflights come from the route shell all routes share.
 

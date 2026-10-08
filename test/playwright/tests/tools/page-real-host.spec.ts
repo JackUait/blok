@@ -313,3 +313,46 @@ test('a reload shows the host record to both users', async ({ browser }) => {
     await bob.close();
   }
 });
+
+test('a title typed before the host answers is saved once, and Undo never sends a pre-host title to the host', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const { alice, bob } = await users(browser);
+
+  try {
+    // Every read of the page is held, so the editor boots with an empty title before the host answers.
+    await fault({ user: ALICE, pageId: PAGE, delayAllowedGetsMs: 3_000 });
+
+    const page = await alice.newPage();
+    const query = new URLSearchParams({ host: 'remote', collab: 'off', name: 'Alice', hostUrl: host.url });
+
+    await page.goto(viteUrl + '/editor/page/' + PAGE + '?' + query.toString());
+    await titleOf(page).click();
+    // Two typing runs make two undo steps whose values the host never had: '' and 'Early '.
+    await page.keyboard.type('Early ');
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- a pause ends the typing run, so the next keys are a new undo step
+    await page.waitForTimeout(1_200);
+    await page.keyboard.type('bird');
+    expect(await page.evaluate(() => document.documentElement.getAttribute('data-page-host-wired'))).toBeNull();
+
+    await fault({ user: ALICE, pageId: PAGE, delayAllowedGetsMs: 0 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-page-host-wired')), { timeout: 15_000 }).toBe(PAGE);
+    await expect.poll(async () => (await hostRecord()).title).toBe('Early bird');
+    expect((await hostRecord()).version).toBe(2);
+
+    await titleOf(page).click();
+    for (let i = 0; i < 3; i += 1) {
+      await page.keyboard.press('ControlOrMeta+z');
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Blok drops a second identical key within 50ms
+      await page.waitForTimeout(60);
+    }
+
+    await expect(titleOf(page)).toHaveText(SEED_TITLE);
+    await expect.poll(async () => (await hostRecord()).version).toBe(3);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- a wrong Undo would save after this point
+    await page.waitForTimeout(1_000);
+    expect(await hostRecord()).toMatchObject({ title: SEED_TITLE, version: 3 });
+  } finally {
+    await alice.close();
+    await bob.close();
+  }
+});

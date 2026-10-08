@@ -1,4 +1,5 @@
 import type { OutputBlockData } from '../../types';
+import type { History } from '../../types/api/history';
 import type { Title, TitleChange } from '../../types/api/title';
 import type { PageInfo } from '../../types/tools/page';
 import type { PageRecord, PageRegistry } from './page-host';
@@ -259,6 +260,11 @@ export interface WiredTitleEditor {
   title: Pick<Title, 'get' | 'set'>;
 }
 
+/** What `remotePagePlayground().wire` needs from the editor. */
+export interface HostedPageEditor extends WiredTitleEditor {
+  history: Pick<History, 'clear'>;
+}
+
 /** What `wireTitle` needs from the host. */
 export type TitleHost = Pick<RemotePageHost, 'loadPage' | 'saveTitle' | 'subscribe' | 'notify'>;
 
@@ -513,7 +519,7 @@ export const remotePagePlayground = (options: {
   host: RemotePageHost;
   pages: PageRegistry;
   pageTool(parentId: string | null): ReturnType<typeof remotePageTool>;
-  wire(pageId: string | null, editor: WiredTitleEditor): Promise<void>;
+  wire(pageId: string | null, editor: HostedPageEditor): Promise<void>;
   /** Call it from pageTitle.onChange, with the page id the editor was built for. */
   titleChanged(pageId: string | null, title: string, change: TitleChange): void;
 } => {
@@ -582,9 +588,14 @@ export const remotePagePlayground = (options: {
       wiring.current = { pageId, change: wired.change, stop: wired.stop };
       // Tests wait on it.
       document.documentElement.setAttribute(WIRED_ATTRIBUTE, pageId);
-      // Typed before the host answered: back on screen as one undo step over the host title, saved through change.
-      if (typed !== undefined && typed !== editor.title.get()) {
-        editor.title.set(typed);
+      if (typed !== undefined) {
+        // Steps typed before the host answered undo to titles the host never had, like the empty boot
+        // title, and an undo is saved. A record:false write does not cancel them all (measured).
+        editor.history.clear();
+        // Back on screen as one undo step over the host title, saved through change.
+        if (typed !== editor.title.get()) {
+          editor.title.set(typed);
+        }
       }
     },
   };

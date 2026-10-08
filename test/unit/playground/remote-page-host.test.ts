@@ -11,6 +11,7 @@ import {
   remotePageTool,
   wireTitle,
   type EventStreamLike,
+  type HostedPageEditor,
   type WiredTitleEditor,
 } from '../../../src/playground/remote-page-host';
 
@@ -85,8 +86,10 @@ const makeHost = (store: Store, user = 'alice', hold?: Parameters<typeof hostFet
 
 /** The editor's built-in title as wireTitle sees it, with user input driven by the test. */
 const fakeTitle = (): {
-  editor: WiredTitleEditor;
+  editor: HostedPageEditor;
   sets: Array<{ value: string; record: boolean }>;
+  /** Title writes and history clears, in order. */
+  order: string[];
   listen(onChange: (title: string, change: TitleChange) => void): void;
   type(value: string): void;
   undoTo(value: string): void;
@@ -96,6 +99,7 @@ const fakeTitle = (): {
   let value = '';
   let callback: ((title: string, change: TitleChange) => void) | undefined;
   const sets: Array<{ value: string; record: boolean }> = [];
+  const order: string[] = [];
   const fire = (next: string, change: TitleChange): void => {
     value = next;
     callback?.(next, change);
@@ -108,13 +112,20 @@ const fakeTitle = (): {
         // Like core: an equal value writes nothing and fires nothing.
         set: (next, options) => {
           sets.push({ value: next, record: options?.record !== false });
+          order.push(options?.record === false ? `set ${next} (no undo)` : `set ${next}`);
           if (next !== value) {
             fire(next, options?.record === false ? { source: 'api', record: false } : { source: 'api' });
           }
         },
       },
+      history: {
+        clear: () => {
+          order.push('clear');
+        },
+      },
     },
     sets,
+    order,
     listen(onChange) {
       callback = onChange;
     },
@@ -593,11 +604,13 @@ describe('remotePagePlayground', () => {
 
     expect(store.pages.get('plan')).toMatchObject({ title: 'Typed early', version: 2 });
     expect(title.value()).toBe('Typed early');
-    // The host title goes in first with no undo step, then the typed one as a step: undo returns to the host's.
-    expect(title.sets).toEqual([
-      { value: 'Plan', record: false },
-      { value: 'Typed early', record: true },
-      { value: 'Typed early', record: false },
+    // The steps typed before the host answered undo to values the host never had (''), so they go.
+    // Then the typed title is one step over the host's: one undo returns to it, and no further.
+    expect(title.order).toEqual([
+      'set Plan (no undo)',
+      'clear',
+      'set Typed early',
+      'set Typed early (no undo)',
     ]);
   });
 

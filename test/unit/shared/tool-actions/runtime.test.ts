@@ -252,12 +252,18 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(Object.keys(builtInEditorTools())).toEqual([...BLOCK_KEYS, ...INLINE_KEYS]);
   });
 
-  it('has no unreviewed table normalization or invented action handlers', () => {
-    expect(BUILT_IN_RUNTIME_PARTS).toEqual({});
+  it('registers only the table normalizer without actions or child seeds', () => {
+    const normalize = BUILT_IN_RUNTIME_PARTS.table?.normalize;
+
+    expect(typeof normalize).toBe('function');
+    expect(BUILT_IN_RUNTIME_PARTS).toEqual({ table: { normalize } });
+    expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);
 
     for (const runtime of BUILT_IN_TOOL_RUNTIMES.values()) {
       expect(runtime.actions, runtime.name).toEqual({});
-      expect(runtime, runtime.name).not.toHaveProperty('normalize');
+      if (runtime.name !== 'table') {
+        expect(runtime, runtime.name).not.toHaveProperty('normalize');
+      }
       expect(runtime, runtime.name).not.toHaveProperty('defaultChildren');
     }
   });

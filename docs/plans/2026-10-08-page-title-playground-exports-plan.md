@@ -314,9 +314,16 @@ The plain importers return block arrays: `markdownToBlocks` returns `Promise<Out
 - [ ] **Step 2–4:** Run (FAIL), implement, run (PASS). Regenerate the runtime with `scripts/build-server-runtime.mjs` and run `build-server-runtime.test.ts`.
 - [ ] **Step 5: C# (D13, confirm with the user first).**
   - `IBlokDocumentConverter` is public and shipped in v1.16.1. Adding an abstract member breaks third-party implementations; 4934b48a was labelled BREAKING for exactly that.
-  - Default: add NEW overloads `ToMarkdownAsync(string json, DocumentExportOptions options, CancellationToken ct = default)` and `ToHtmlAsync(...)` as **default interface members**. With `Title = false` they call the existing method; with `Title = true` they throw `NotSupportedException`. `BlokDocumentConverter` overrides both and sends the wrapped op input. Not BREAKING.
-  - Do not insert a `bool` before the existing `CancellationToken` parameters (`:43`, `:310`).
-  - C# test first: a document with a title and `Title = true` renders the heading; without it, the output is unchanged; a fake implementer that does not override still compiles.
+  - Facts (v1.16.1 interface): there is no options type. The members take positional parameters: `ToMarkdownAsync` `:125`, `:148`; `ToHtmlAsync(string, CancellationToken = default)` `:296`; `ToHtmlAsync(string, IReadOnlyDictionary<string, BlokPageInfo?>, Func<string,string>? = null, CancellationToken = default)` `:325`; `ToPlainTextAsync` `:353`. The project targets `net10.0` (`Blok.Server.csproj:3`), so default interface members compile.
+  - Default: add NEW METHOD NAMES, not overloads, as **default interface members**, for example `ToHtmlWithTitleAsync`, `ToMarkdownWithTitleAsync` and `ToPlainTextWithTitleAsync` (the user may rename them). They mirror the existing parameter lists.
+    - An overload would not work. `ToHtmlAsync(string, SomeOptions, CancellationToken = default)` next to `ToHtmlAsync(string, CancellationToken = default)` makes an existing call `ToHtmlAsync(json, default)` ambiguous, and that is a source break.
+    - The default bodies throw `NotSupportedException`. `BlokDocumentConverter` overrides them and sends the wrapped `{ document, title: true }` op input.
+    - Trade-off for the user: a third-party implementer that does not override them still compiles, but fails at runtime when a caller asks for the title.
+  - Do not insert a `bool` before the existing `CancellationToken` parameters (`BlokDocumentConverter.cs:43`, `:310`).
+  - C# test first:
+    - `ToHtmlWithTitleAsync` / `ToMarkdownWithTitleAsync` on a document with a title render the heading;
+    - the existing methods' output is unchanged;
+    - a fake implementer that does not override the new methods still compiles, and gets `NotSupportedException` when one is called.
   - Run `dotnet test … --filter FullyQualifiedName~BlokDocumentConverter`.
 - [ ] **Step 6: Commit** `feat(view): server runtime and translation can carry the page title`.
 

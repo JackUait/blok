@@ -212,12 +212,20 @@ export function mintFailureMessage(error) {
 }
 
 /**
+ * The root document's default title. A copy of ROOT_LABEL in
+ * src/playground/page-host.ts, which this .mjs file cannot import;
+ * test/unit/playground/page-host.test.ts keeps the two equal.
+ */
+export const PLAYGROUND_ROOT_TITLE = 'Blok';
+
+/**
  * The first content of each collaboration room: the showcase for the root
- * document, a demo page's own blocks, and nothing for a page the user made.
+ * document, a demo page's own blocks, title and icon, and nothing for a page
+ * the user made.
  *
  * @param {object} options
- * @param {unknown} options.showcase The root document.
- * @param {Record<string, { blocks: unknown[] }>} options.pages Demo pages, by page id.
+ * @param {{ blocks: unknown[] }} options.showcase The root document.
+ * @param {Record<string, { blocks: unknown[], title?: string, icon?: string }>} options.pages Demo pages, by page id.
  * @returns {(id: string) => unknown}
  */
 export function playgroundSeedFor({ showcase, pages }) {
@@ -225,10 +233,21 @@ export function playgroundSeedFor({ showcase, pages }) {
     const at = id.indexOf(PAGE_ROOM);
 
     if (at === -1) {
-      return showcase;
+      return { ...showcase, title: PLAYGROUND_ROOT_TITLE };
     }
 
-    return { blocks: pages[id.slice(at + PAGE_ROOM.length)]?.blocks ?? [] };
+    const page = pages[id.slice(at + PAGE_ROOM.length)];
+
+    if (page === undefined) {
+      return { blocks: [] };
+    }
+
+    return {
+      blocks: page.blocks ?? [],
+      ...(typeof page.title === 'string' && page.title !== '' && { title: page.title }),
+      // The pages file stores a bare emoji; the room reads a bare string as no icon.
+      ...(typeof page.icon === 'string' && page.icon !== '' && { icon: { type: 'emoji', value: page.icon } }),
+    };
   };
 }
 

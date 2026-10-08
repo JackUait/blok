@@ -92,12 +92,13 @@ describe('isBuildStale', () => {
 describe('playgroundSeedFor', () => {
   const showcase = { blocks: [{ id: 's', type: 'paragraph', data: { text: 'showcase' } }] };
   const pages = {
-    'getting-started': { blocks: [{ id: 'g', type: 'paragraph', data: { text: 'guide' } }] },
+    'getting-started': { title: 'Getting started', icon: '🚀', blocks: [{ id: 'g', type: 'paragraph', data: { text: 'guide' } }] },
+    'no-icon': { title: 'Plain', blocks: [] },
   };
   const seedFor = playgroundSeedFor({ showcase, pages });
 
-  it('seeds the root document with the showcase', () => {
-    expect(seedFor('playground')).toEqual(showcase);
+  it('seeds the root document with the showcase and the default root title', () => {
+    expect(seedFor('playground')).toEqual({ ...showcase, title: 'Blok' });
   });
 
   // Each page is its own room; a page the user just made must open empty.
@@ -105,8 +106,17 @@ describe('playgroundSeedFor', () => {
     expect(seedFor('playground--page--AChzQBnLop')).toEqual({ blocks: [] });
   });
 
-  it('seeds a demo page with its own blocks', () => {
-    expect(seedFor('playground--page--getting-started')).toEqual({ blocks: pages['getting-started'].blocks });
+  // playground-pages.json stores a bare emoji; the server drops a bare string as malformed.
+  it('seeds a demo page with its own blocks, title and emoji icon', () => {
+    expect(seedFor('playground--page--getting-started')).toEqual({
+      blocks: pages['getting-started'].blocks,
+      title: 'Getting started',
+      icon: { type: 'emoji', value: '🚀' },
+    });
+  });
+
+  it('seeds a demo page without an icon with no icon key', () => {
+    expect(seedFor('playground--page--no-icon')).toEqual({ blocks: [], title: 'Plain' });
   });
 });
 

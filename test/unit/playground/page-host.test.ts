@@ -21,6 +21,7 @@ import {
   pagePath,
   type PageMap,
 } from '../../../src/playground/page-host';
+import { PLAYGROUND_ROOT_TITLE } from '../../../scripts/dev.mjs';
 
 const seed = (): PageMap => ({
   guide: { title: 'Guide', icon: '📘', parentId: null, blocks: [{ id: 'g1', type: 'paragraph', data: { text: 'Hi' } }] },
@@ -69,6 +70,11 @@ describe('PageRegistry', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+  });
+
+  // scripts/dev.mjs cannot import this .ts file, so it keeps its own copy of the root title.
+  it('defaults the root title to the one the dev server seeds the root room with', () => {
+    expect(new PageRegistry(seed()).root().title).toBe(PLAYGROUND_ROOT_TITLE);
   });
 
   it('starts from the seed and resolves a page to its title and emoji icon', () => {

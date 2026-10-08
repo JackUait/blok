@@ -265,7 +265,8 @@ export class TableOfContentsTool implements BlockTool {
     const next = signature(headings);
 
     if (next !== this.outline) {
-      this.renderEntries(headings, this.outline === '');
+      // An outline with no entries yet is still a first paint: on boot the headings below mount after this block.
+      this.renderEntries(headings, this.outline === '' || this.outline === signature([]));
       this.outline = next;
     }
     // Holders are replaced when a block is re-rendered, so look them up again on every change.

@@ -173,6 +173,18 @@ describe('TableOfContentsTool', () => {
     expect(Array.from(root.querySelectorAll('li')).map((li) => li.hasAttribute('data-entering'))).toEqual([false, true]);
   });
 
+  it('reveals the entries of a page that renders after the outline, without the new-heading wash', () => {
+    const { root, redactor, handlers } = setup([]);
+
+    redactor.append(heading('a', 1, 'Intro'), heading('b', 2, 'Details'));
+    emit(handlers, 'block changed');
+
+    const rows = Array.from(root.querySelectorAll('li'));
+
+    expect(rows.map((li) => li.hasAttribute('data-entering'))).toEqual([false, false]);
+    expect(rows.map((li) => li.hasAttribute('data-revealing'))).toEqual([true, true]);
+  });
+
   it('jumps to the heading on click without letting the browser follow the fragment', () => {
     const { root, scrollToBlock } = setup([ heading('a', 1, 'Intro') ]);
     const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });

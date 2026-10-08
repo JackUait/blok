@@ -1,11 +1,5 @@
-import type { I18n, OutputBlockData } from '../../types';
+import type { OutputBlockData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
-import { IconEmojiSmile } from '../components/icons';
-import { EmojiPicker } from '../tools/callout/emoji-picker';
-import { DATA_ATTR } from '../components/constants/data-attributes';
-import { findOwn } from '../components/utils/own-element';
-import { getCaretXPosition, isCaretAtFirstLine, isCaretAtLastLine, setCaretAtXPosition } from '../components/utils/caret';
-import { loadEmojiGrid } from '../components/utils/emoji/emoji-data';
 import seedPages from '../../playground-pages.json';
 
 /**
@@ -504,139 +498,6 @@ export const pointerBlock = (pageId: string): OutputBlockData => ({
   data: { pageId },
 });
 
-/** What `firstBlockKeydown` needs from the editor. */
-export interface FirstBlockEditor {
-  blocks: {
-    getBlockByIndex(index: number): { id: string; holder: HTMLElement; isEmpty: boolean } | undefined;
-    getChildren(parentId: string): unknown[];
-    delete(index: number, setCaret: boolean): Promise<void>;
-  };
-}
-
-const placeCaret = (node: Node, offset: number): void => {
-  window.getSelection()?.setPosition(node, offset);
-};
-
-const caretToTitleEnd = (title: HTMLElement): void => {
-  placeCaret(title, title.childNodes.length);
-};
-
-/**
- * Backspace at the very start of the first block, or ArrowUp on its first
- * line, goes up into the title, as in Notion. Backspace also pulls the block's
- * text into the title and removes the block, unless the block has children or
- * more than one field (an image caption, a table). Returns whether it handled
- * the key.
- */
-export const firstBlockKeydown = (event: KeyboardEvent, editor: FirstBlockEditor): boolean => {
-  const title = document.querySelector<HTMLElement>(PAGE_TITLE_SELECTOR);
-  const first = editor.blocks.getBlockByIndex(0);
-  const selection = window.getSelection();
-  const node = selection?.anchorNode ?? null;
-
-  if ((event.key !== 'Backspace' && event.key !== 'ArrowUp')
-    || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
-    || title === null || title.contentEditable !== 'true' || first === undefined
-    || selection === null || node === null || !selection.isCollapsed) {
-    return false;
-  }
-
-  const field = (node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>('[contenteditable="true"]') ?? null;
-
-  // A block nested in the first one has its own holder in between.
-  if (field === null || field.closest(`[${DATA_ATTR.element}]`) !== first.holder) {
-    return false;
-  }
-
-  if (event.key === 'ArrowUp') {
-    if (!isCaretAtFirstLine(field)) {
-      return false;
-    }
-
-    const x = getCaretXPosition();
-
-    event.preventDefault();
-    event.stopPropagation();
-    title.focus();
-    if (x === null) {
-      caretToTitleEnd(title);
-    } else {
-      setCaretAtXPosition(title, x, false);
-    }
-
-    return true;
-  }
-
-  // Measured from the caret's own field: a list marker before it is not text.
-  const before = document.createRange();
-
-  before.setStart(field, 0);
-  before.setEnd(node, selection.anchorOffset);
-  if (before.toString() !== '') {
-    return false;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  const movable = editor.blocks.getChildren(first.id).length === 0
-    && first.holder.querySelectorAll('[contenteditable="true"]:not([data-blok-mutation-free])').length === 1;
-
-  if (!movable) {
-    title.focus();
-    caretToTitleEnd(title);
-
-    return true;
-  }
-
-  const join = (title.textContent ?? '').length;
-
-  // Written before the title takes focus: the undo step then starts with the
-  // caret in this block, and undo puts it back here.
-  title.append(field.textContent ?? '');
-  title.normalize();
-  title.dispatchEvent(new Event('input'));
-  void editor.blocks.delete(0, false);
-  title.focus();
-  placeCaret(title.firstChild ?? title, title.firstChild === null ? 0 : join);
-
-  return true;
-};
-
-/**
- * Puts a peer's title into the title element without moving focus. A caret
- * in the title keeps its offset, clamped to the new text.
- */
-export const replaceTitleText = (title: HTMLElement, text: string): void => {
-  const selection = window.getSelection();
-  const node = selection?.anchorNode ?? null;
-  const caret = selection !== null && node !== null && title.contains(node) ? selection.anchorOffset : null;
-
-  // No empty text node: the placeholder shows only on :empty.
-  title.replaceChildren(...(text === '' ? [] : [text]));
-  if (caret !== null && title.firstChild !== null) {
-    placeCaret(title.firstChild, Math.min(caret, text.length));
-  }
-};
-
-/** ArrowDown out of the title: the first block's first line, at `x` when known. */
-export const caretToFirstBlock = (
-  editor: {
-    blocks: { getBlockByIndex(index: number): { holder: HTMLElement } | undefined };
-    caret: { setToFirstBlock(position: 'start'): boolean };
-  },
-  x: number | null
-): void => {
-  editor.caret.setToFirstBlock('start');
-
-  const holder = editor.blocks.getBlockByIndex(0)?.holder;
-  const field = holder === undefined ? null : findOwn(holder, '[contenteditable="true"]:not([data-blok-mutation-free])');
-
-  if (x !== null && field instanceof HTMLElement) {
-    setCaretAtXPosition(field, x, true);
-  }
-};
-
 /* ---------------------------------------------------------------- header */
 
 export interface PageHeaderOptions {
@@ -646,27 +507,11 @@ export interface PageHeaderOptions {
   readOnly: boolean;
   /** Plain click on a breadcrumb. `link` is the crumb: the page opens from it. */
   navigate(pageId: string | null, link: HTMLElement): void;
-  /** Enter in the title: open a new first block holding `html`, the title's text after the caret. */
-  splitTitle(html: string): void;
-  /** ArrowDown on the title's last line; `x` is the caret's, when known. */
-  toFirstBlock(x: number | null): void;
-  /** The title changed by the user: `typing` continues an undo step, otherwise it is one of its own. */
-  recordTitle(text: string, typing: boolean): void;
-  /** Cmd+Z in the title. */
-  undo(): void;
-  /** Cmd+Shift+Z or Ctrl+Y in the title. */
-  redo(): void;
-  /** The current editor's i18n and locale, for the emoji picker's strings. */
-  i18n(): { i18n: I18n; locale: string };
-  /** Title or icon changed. */
-  changed(): void;
   /** "Restore page" on the Trash banner, for the trashed page. */
   restore(pageId: string): void;
   /** "Permanently delete" on the Trash banner, for the trashed page. */
   purge(pageId: string): void;
 }
-
-export const PAGE_TITLE_SELECTOR = '#pg-page-title';
 
 const pageLinks = (pageId: string): string[] => {
   const path = CSS.escape(`/editor/page/${encodeURIComponent(pageId)}`);
@@ -681,7 +526,7 @@ export const pageLinkSelector = (pageId: string, part = 'page-title'): string =>
 /**
  * Blok's radius roles are declared only on [data-blok-interface] elements, so
  * each rounded header control carries the attribute itself. Never the whole
- * header: the editor's preflight would then restyle the title h1.
+ * header: the editor's preflight would then restyle it.
  */
 const takeRadiusRoles = (el: HTMLElement): void => el.setAttribute('data-blok-interface', 'page-header');
 
@@ -716,13 +561,13 @@ const crumb = (label: string, icon: string | undefined, href: string | null): HT
   return el;
 };
 
-/** Draws the header of the page being shown, the root document included. Hidden for an unknown page. */
+/**
+ * Draws the breadcrumbs and Trash banner of the page being shown. Hidden for
+ * an unknown page. Blok's pageTitle draws the title and icon.
+ */
 export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions): void => {
   const { pageId, pages, search } = options;
   const page = pageId === null ? pages.root() : pages.get(pageId);
-  const currentIcon = (): string | undefined => (pageId === null ? pages.root() : pages.get(pageId))?.icon;
-
-  closeIconPicker();
 
   if (page === undefined) {
     host.toggleAttribute('hidden', true);
@@ -774,158 +619,6 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   });
   nav.append(list);
 
-  const current = items[items.length - 1].el;
-  const currentText = current.querySelector('.pg-crumb-text');
-
-  const iconRow = document.createElement('div');
-
-  iconRow.className = 'pg-page-icon-row';
-
-  const iconButton = document.createElement('button');
-
-  iconButton.type = 'button';
-  takeRadiusRoles(iconButton);
-  iconButton.disabled = options.readOnly;
-
-  const drawIcon = (): void => {
-    const icon = currentIcon();
-
-    iconButton.className = icon === undefined ? 'pg-page-add-icon' : 'pg-page-icon';
-    iconButton.setAttribute('aria-label', icon === undefined ? 'Add icon' : 'Change icon');
-    if (icon === undefined) {
-      // A trusted constant from the icon module, not user input.
-      iconButton.innerHTML = `${IconEmojiSmile}<span>Add icon</span>`;
-    } else {
-      iconButton.textContent = icon;
-    }
-    iconRow.classList.toggle('has-icon', icon !== undefined);
-
-    const crumbIcon = current.querySelector('.pg-crumb-icon');
-
-    if (icon === undefined) {
-      crumbIcon?.remove();
-    } else if (crumbIcon === null) {
-      current.prepend(Object.assign(document.createElement('span'), { className: 'pg-crumb-icon', textContent: icon }));
-    } else {
-      crumbIcon.textContent = icon;
-    }
-  };
-
-  const setIcon = (icon: string | undefined): void => {
-    pages.setIcon(pageId, icon);
-    drawIcon();
-    options.changed();
-  };
-
-  const openPicker = (): void => {
-    const { i18n, locale } = options.i18n();
-
-    openIconPicker(iconButton, i18n, locale, (native) => setIcon(native), () => setIcon(undefined));
-  };
-
-  iconButton.addEventListener('click', () => {
-    if (currentIcon() !== undefined) {
-      openPicker();
-
-      return;
-    }
-    void randomIcon().then((icon) => {
-      setIcon(icon);
-      openPicker();
-    }, openPicker);
-  });
-  drawIcon();
-  if (currentIcon() === undefined) {
-    // Loaded now so the click's random pick resolves at once.
-    void loadEmojiGrid().catch(() => undefined);
-  }
-  iconRow.append(iconButton);
-
-  const title = document.createElement('h1');
-
-  title.id = PAGE_TITLE_SELECTOR.slice(1);
-  title.className = 'pg-page-title';
-  title.textContent = page.title;
-  title.setAttribute('data-placeholder', 'New page');
-  title.setAttribute('role', 'textbox');
-  title.setAttribute('aria-label', 'Page title');
-  title.spellcheck = false;
-  title.contentEditable = options.readOnly ? 'false' : 'true';
-
-  // Keystrokes arrive as InputEvents; our own writes (paste, Enter, Backspace
-  // from the first block) dispatch a plain Event, so each is an undo step.
-  title.addEventListener('input', (event) => {
-    const text = (title.textContent ?? '').replace(/\n/g, ' ');
-
-    // A stray <br> left by the browser would hide the placeholder.
-    if (text === '') {
-      title.replaceChildren();
-    }
-    pages.setTitle(pageId, text);
-    options.recordTitle(text, event instanceof InputEvent);
-    if (currentText !== null) {
-      currentText.textContent = untitled(text);
-    }
-    options.changed();
-  });
-  title.addEventListener('paste', (event) => {
-    event.preventDefault();
-
-    const range = window.getSelection()?.getRangeAt(0);
-    const text = document.createTextNode((event.clipboardData?.getData('text/plain') ?? '').replace(/\s*\n\s*/g, ' '));
-
-    if (range === undefined || !title.contains(range.commonAncestorContainer)) {
-      return;
-    }
-    range.deleteContents();
-    range.insertNode(text);
-    range.setStartAfter(text);
-    range.collapse(true);
-    title.normalize();
-    title.dispatchEvent(new Event('input'));
-  });
-  title.addEventListener('keydown', (event) => {
-    const letter = event.key.toLowerCase();
-    const redo = ((event.metaKey || event.ctrlKey) && event.shiftKey && letter === 'z')
-      || (event.ctrlKey && !event.shiftKey && letter === 'y');
-
-    if (redo || ((event.metaKey || event.ctrlKey) && !event.shiftKey && letter === 'z')) {
-      event.preventDefault();
-      if (redo) {
-        options.redo();
-      } else {
-        options.undo();
-      }
-
-      return;
-    }
-    if (event.key === 'ArrowDown' && !event.isComposing && !event.shiftKey && isCaretAtLastLine(title)) {
-      event.preventDefault();
-      options.toFirstBlock(getCaretXPosition());
-
-      return;
-    }
-    if (event.key !== 'Enter' || event.isComposing) {
-      return;
-    }
-    event.preventDefault();
-
-    const range = window.getSelection()?.getRangeAt(0);
-
-    if (range === undefined || !title.contains(range.commonAncestorContainer)) {
-      return;
-    }
-    range.deleteContents();
-    range.setEnd(title, title.childNodes.length);
-
-    const rest = document.createElement('div');
-
-    rest.append(range.extractContents());
-    title.normalize();
-    title.dispatchEvent(new Event('input'));
-    options.splitTitle(rest.innerHTML);
-  });
-
   const trashed = pageId === null ? null : pages.trashedIn(pageId);
   const banner = pageId === null || trashed === null ? [] : [trashBanner(trashed, pageId, options)];
 
@@ -967,65 +660,6 @@ const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, optio
   return banner;
 };
 
-/* ----------------------------------------------------------- icon picker */
-
-const randomIcon = async (): Promise<string> => {
-  const emojis = await loadEmojiGrid();
-  const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-
-  if (emoji === undefined) {
-    throw new Error('No emojis to pick from');
-  }
-
-  return emoji.native;
-};
-
-const pickerSlot: { current: { instance: EmojiPicker; i18n: I18n; locale: string } | null } = { current: null };
-
-const openIconPicker = (
-  anchor: HTMLElement,
-  i18n: I18n,
-  locale: string,
-  onSelect: (native: string) => void,
-  onRemove: () => void
-): void => {
-  // Each editor has its own i18n; a picker built for a destroyed one is dropped.
-  if (pickerSlot.current === null || pickerSlot.current.i18n !== i18n || pickerSlot.current.locale !== locale) {
-    disposeIconPicker();
-    pickerSlot.current = { instance: new EmojiPicker({ onSelect, onRemove, i18n, locale, curated: false, startInset: 0 }), i18n, locale };
-  }
-
-  const element = pickerSlot.current.instance.getElement();
-
-  if (!element.isConnected) {
-    document.body.append(element);
-  }
-
-  // The picker has no close callback; it hides its root on close.
-  const watch = new MutationObserver(() => {
-    if (element.hidden) {
-      anchor.setAttribute('aria-expanded', 'false');
-      watch.disconnect();
-    }
-  });
-
-  anchor.setAttribute('aria-expanded', 'true');
-  watch.observe(element, { attributes: true, attributeFilter: ['hidden'] });
-  void pickerSlot.current.instance.open(anchor, undefined, { onSelect, onRemove });
-};
-
-const closeIconPicker = (): void => {
-  if (pickerSlot.current?.instance.isOpen() === true) {
-    pickerSlot.current.instance.close();
-  }
-};
-
-const disposeIconPicker = (): void => {
-  closeIconPicker();
-  pickerSlot.current?.instance.getElement().remove();
-  pickerSlot.current = null;
-};
-
 /* ------------------------------------------------------------ transition */
 
 /** The elements of one page end that morph into the other end's. */
@@ -1034,7 +668,11 @@ export interface PageMorph {
   icon: string;
 }
 
-export const PAGE_HEADER_MORPH: PageMorph = { title: PAGE_TITLE_SELECTOR, icon: '.pg-page-icon' };
+/** Blok's header. Never `page-header-add-icon`: a page with no icon morphs no icon. */
+export const PAGE_HEADER_MORPH: PageMorph = {
+  title: '[data-blok-testid="page-header-title"]',
+  icon: '[data-blok-testid="page-header-icon"]',
+};
 
 /** The page block for `pageId`, as the parent page renders it. */
 export const pageLinkMorph = (pageId: string): PageMorph => ({

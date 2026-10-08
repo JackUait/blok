@@ -24,8 +24,7 @@
 @source '../../index.html';
 
 /*
-  Page header: breadcrumbs, icon and title above the editor when a page is
-  open. Plain rules, not utilities: utilities here would be emitted unscoped
+  Page header: breadcrumbs and the Trash banner above Blok's own title. Plain rules, not utilities: utilities here would be emitted unscoped
   and could shadow the editor's own (see the @source note above).
 */
 .pg-page-header {
@@ -112,73 +111,7 @@ html[data-pg-modality="keyboard"] .pg-trash-action:focus-visible { outline: 2px 
 .pg-crumb-icon { font-size: 15px; line-height: 1; }
 a.pg-crumb:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); }
 .pg-crumb[aria-current="page"] { color: var(--pg-page-ink); font-weight: 500; }
-html[data-pg-modality="keyboard"] .pg-crumb:focus-visible,
-html[data-pg-modality="keyboard"] .pg-page-icon:focus-visible,
-html[data-pg-modality="keyboard"] .pg-page-add-icon:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 1px; }
-
-.pg-page-icon-row { display: flex; align-items: flex-end; min-height: 28px; margin-bottom: 4px; }
-.pg-page-icon-row.has-icon { min-height: 0; margin-bottom: 8px; }
-.pg-page-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 92px;
-  height: 92px;
-  margin-left: -7px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--blok-radius-control-lg);
-  background: transparent;
-  font-size: 78px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-.pg-page-icon:disabled { color: inherit; cursor: default; }
-.pg-page-icon:hover:not(:disabled),
-.pg-page-icon[aria-expanded="true"] { background: var(--pg-page-hover); }
-.pg-page-add-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: -6px;
-  padding: 4px 8px 4px 6px;
-  border: 0;
-  border-radius: var(--blok-radius-control);
-  background: transparent;
-  color: var(--pg-page-muted);
-  font-family: var(--pg-font);
-  font-size: 14px;
-  line-height: 20px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 160ms ease, background-color 120ms ease, color 120ms ease;
-}
-.pg-page-add-icon svg { width: 16px; height: 16px; }
-.pg-page-header:hover .pg-page-add-icon,
-html[data-pg-modality="keyboard"] .pg-page-add-icon:focus-visible { opacity: 1; }
-.pg-page-add-icon:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); }
-.pg-page-add-icon:disabled { display: none; }
-@media (hover: none) { .pg-page-add-icon { opacity: 1; } }
-
-.pg-page-title {
-  margin: 0;
-  padding: 3px 0;
-  color: var(--pg-page-ink);
-  font-size: 40px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-  outline: none;
-  cursor: text;
-  caret-color: currentColor;
-}
-.pg-page-title:empty::before {
-  content: attr(data-placeholder);
-  color: var(--pg-page-faint);
-  pointer-events: none;
-}
+html[data-pg-modality="keyboard"] .pg-crumb:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 1px; }
 
 /* Page navigation: the body slides, the title and icon morph (page-host.ts runPageTransition). */
 html.pg-page-nav {

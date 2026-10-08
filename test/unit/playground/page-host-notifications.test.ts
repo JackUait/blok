@@ -1,8 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as Y from 'yjs';
 import type { OutputBlockData } from '../../../types';
 import {
   PageRegistry,
@@ -10,6 +6,7 @@ import {
   type PageMap,
 } from '../../../src/playground/page-host';
 import { buildPageTree, findPageLink } from '../../../src/playground/page-tree';
+import { titleCallbacks } from '../../../src/playground/page-title-wiring';
 
 const seed = (): PageMap => ({
   guide: { title: 'Guide', icon: '📘', parentId: null, blocks: [] },
@@ -190,353 +187,53 @@ describe('playground page metadata notifications', () => {
     expect(redrawHeader).toHaveBeenCalledTimes(1);
   });
 
-  it('does not echo a stale profile title into shared history on connect or remote update', () => {
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
+  it('a peer\'s title reaches the registry, so links, crumbs and the tree follow', () => {
     const pages = new PageRegistry(seed());
-    const shared = new Y.Doc().getMap<string>('values');
-    shared.set('title', 'Peer title');
-    let changed: ((value: string, change: { source: string }) => void) | undefined;
-    let connected: ((event: { status: string }) => void) | undefined;
-    const editor = {
-      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
-        changed = callback;
-
-        return { get: () => shared.get('title'), set: (value: string) => shared.set('title', value) };
-      } },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
-
-    runInNewContext(`${source}; wireTitleHistory(editor)`, {
-      editor,
-      pages,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      document,
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-      renderHeader: vi.fn(),
-      updateDocumentTitle: vi.fn(),
-    });
-    connected?.({ status: 'connected' });
-
-    expect(shared.get('title')).toBe('Peer title');
-    expect(pages.info('guide')?.title).toBe('Guide');
-
-    shared.set('title', 'Peer renamed again');
-    changed?.('Peer renamed again', { source: 'remote' });
-
-    expect(shared.get('title')).toBe('Peer renamed again');
-    expect(pages.info('guide')?.title).toBe('Guide');
-  });
-
-  it('undoes a local title edit to the local host title after a peer history value', () => {
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
-    const pages = new PageRegistry(seed());
-    const doc = new Y.Doc();
-    const shared = doc.getMap<string>('values');
-    shared.set('title', 'Peer title');
-    const undo = new Y.UndoManager(shared);
-    const host = { recordTitle: (_value: string): void => undefined };
-    let changed: ((value: string, change: { source: string }) => void) | undefined;
-    let connected: ((event: { status: string }) => void) | undefined;
-    const editor = {
-      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
-        changed = callback;
-
-        return {
-          get: () => shared.get('title'),
-          set: (value: string, options?: { record?: boolean }) => {
-            if (options?.record === false) doc.transact(() => shared.set('title', value), 'without-capture');
-            else shared.set('title', value);
-          },
-        };
-      } },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
-
-    runInNewContext(`${source}; wireTitleHistory(editor); host.recordTitle = (value) => titleHistory?.set(value)`, {
-      editor,
-      host,
-      pages,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      document,
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-      renderHeader: vi.fn(),
-    });
-    connected?.({ status: 'connected' });
-    pages.setTitle('guide', 'Local edit');
-    host.recordTitle('Local edit');
-    undo.undo();
-    changed?.(shared.get('title') ?? '', { source: 'undo' });
-
-    expect(pages.info('guide')?.title).toBe('Guide');
-    expect(shared.get('title')).toBe('Guide');
-  });
-
-  it('keeps the local host title without seeding shared history at collaboration boot', () => {
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
-    const pages = new PageRegistry(seed());
-    const set = vi.fn();
-    let connected: ((event: { status: string }) => void) | undefined;
-    const editor = {
-      history: { track: () => ({ get: () => 'Peer title', set }) },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
-
-    runInNewContext(`${source}; wireTitleHistory(editor)`, {
-      editor,
-      pages,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-    });
-    connected?.({ status: 'connected' });
-
-    expect(pages.info('guide')?.title).toBe('Guide');
-    expect(set).not.toHaveBeenCalled();
-  });
-
-  it('reloads the host record at collaboration connect without promoting the history mirror', () => {
-    const pages = new PageRegistry(seed());
-    const otherTab = new PageRegistry(seed());
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
-    const set = vi.fn();
     const notify = vi.fn();
-    const renderHeader = vi.fn();
-    let connected: ((event: { status: string }) => void) | undefined;
-    const editor = {
-      history: { track: () => ({ get: () => 'Stale mirror', set }) },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
+    const changed = vi.fn();
+    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed });
 
     pages.subscribe('guide', notify);
-    otherTab.setTitle('guide', 'Persisted newer');
+    onChange('Peer title', { source: 'remote' });
 
-    runInNewContext(`${source}; wireTitleHistory(editor)`, {
-      editor,
-      pages,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      renderHeader,
-      document: { activeElement: null },
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-    });
-    connected?.({ status: 'connected' });
-
-    expect(pages.info('guide')?.title).toBe('Persisted newer');
+    expect(pages.info('guide')?.title).toBe('Peer title');
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(renderHeader).toHaveBeenCalledTimes(1);
-    expect(set).not.toHaveBeenCalled();
+    expect(changed).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves stale shared history untouched after loading a newer host title', () => {
+  it('an undo of a local edit writes the old title back to the registry', () => {
     const pages = new PageRegistry(seed());
-    const otherTab = new PageRegistry(seed());
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
-    const set = vi.fn();
-    let connected: ((event: { status: string }) => void) | undefined;
-    const editor = {
-      history: { track: () => ({ get: () => 'Stale mirror', set }) },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
+    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
 
-    otherTab.setTitle('guide', 'Persisted newer');
-    runInNewContext(`${source}; wireTitleHistory(editor)`, {
-      editor,
-      pages,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      renderHeader: vi.fn(),
-      document: { activeElement: null },
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-    });
-    connected?.({ status: 'connected' });
+    onChange('Local edit', { source: 'user' });
+    onChange('Guide', { source: 'undo' });
 
-    expect(set).not.toHaveBeenCalled();
-    expect(pages.info('guide')?.title).toBe('Persisted newer');
+    expect(pages.info('guide')?.title).toBe('Guide');
+    expect(new PageRegistry(seed()).info('guide')?.title).toBe('Guide');
   });
 
-  it('does not promote a stale remote history event over the host title', () => {
+  it('a restored version\'s title arrives as a remote change and becomes the registry title', () => {
     const pages = new PageRegistry(seed());
-    const otherTab = new PageRegistry(seed());
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
-    const set = vi.fn();
-    const replaceTitleText = vi.fn();
-    const updateDocumentTitle = vi.fn();
-    const title = {};
-    let changed: ((value: string, change: { source: string }) => void) | undefined;
-    let connected: ((event: { status: string }) => void) | undefined;
-    const editor = {
-      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
-        changed = callback;
+    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
 
-        return { get: () => 'Stale mirror', set };
-      } },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
-
-    runInNewContext(`${source}; wireTitleHistory(editor)`, {
-      editor,
-      pages,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      document: { activeElement: null, querySelector: () => title },
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-      renderHeader: vi.fn(),
-      replaceTitleText,
-      updateDocumentTitle,
-    });
-    connected?.({ status: 'connected' });
-    otherTab.setTitle('guide', 'Persisted newer');
-    changed?.('Stale mirror', { source: 'remote' });
-
-    expect(pages.info('guide')?.title).toBe('Persisted newer');
-    expect(replaceTitleText).toHaveBeenCalledWith(title, 'Persisted newer');
-    expect(updateDocumentTitle).toHaveBeenCalledTimes(1);
-    expect(set).not.toHaveBeenCalled();
-  });
-
-  it('shows a restored title in the page list and the header, and a later edit keeps it as the undo base', () => {
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
-    const pages = new PageRegistry(seed());
-    const doc = new Y.Doc();
-    const shared = doc.getMap<string>('values');
-    const writes: string[] = [];
-    const renderHeader = vi.fn();
-    const world: {
-      adoptRestoredTitle?: (values: unknown) => void;
-      changed?: (value: string, change: { source: string }) => void;
-      history?: () => { set(value: string): void } | null;
-    } = {};
-    let connected: ((event: { status: string }) => void) | undefined;
-
-    shared.set('title', 'Guide');
-    shared.observe(() => writes.push(shared.get('title') ?? ''));
-
-    const editor = {
-      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
-        world.changed = callback;
-
-        return {
-          get: () => shared.get('title'),
-          set: (value: string) => shared.set('title', value),
-        };
-      } },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
-
-    runInNewContext(`${source}; wireTitleHistory(editor); world.adoptRestoredTitle = adoptRestoredTitle; world.history = () => titleHistory`, {
-      editor,
-      world,
-      pages,
-      remotePages: null,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      document: { activeElement: null, querySelector: () => ({}) },
-      window: { getSelection: () => null },
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-      renderHeader,
-      replaceTitleText: vi.fn(),
-      updateDocumentTitle: vi.fn(),
-    });
-    connected?.({ status: 'connected' });
-    // The server's restore record reaches this tab before the 204 does.
-    shared.set('title', 'Old title');
-    world.changed?.('Old title', { source: 'remote' });
-    renderHeader.mockClear();
-    writes.length = 0;
-
-    world.adoptRestoredTitle?.({ title: 'Old title' });
-
+    onChange('Old title', { source: 'remote' });
     expect(pages.info('guide')?.title).toBe('Old title');
-    expect(renderHeader).toHaveBeenCalledTimes(1);
-    expect(writes).toEqual([]);
 
-    pages.setTitle('guide', 'Old title!');
-    world.history?.()?.set('Old title!');
-
-    // No rebase back to the title from before the restore.
-    expect(writes).toEqual(['Old title!']);
+    // A point with no title: the restore removed the key, so the page is untitled again.
+    onChange('', { source: 'remote' });
+    expect(pages.info('guide')?.title).toBe('');
   });
 
-  it('takes an empty title when the restored point has none, as the server removed the key', () => {
-    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const start = html.indexOf('let titleHistory = null;');
-    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
+  it('a value pushed from the registry is not written back to it', () => {
     const pages = new PageRegistry(seed());
-    const doc = new Y.Doc();
-    const shared = doc.getMap<string>('values');
-    const writes: string[] = [];
-    const renderHeader = vi.fn();
-    const world: {
-      adoptRestoredTitle?: (values: unknown) => void;
-      changed?: (value: string, change: { source: string }) => void;
-      history?: () => { set(value: string): void } | null;
-    } = {};
-    let connected: ((event: { status: string }) => void) | undefined;
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const { onChange, onIconChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
 
-    shared.set('title', 'Guide');
-    shared.observe(() => writes.push(shared.get('title') ?? ''));
+    onChange('From another tab', { source: 'api', record: false });
+    onIconChange(null, { source: 'api', record: false });
 
-    const editor = {
-      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
-        world.changed = callback;
-
-        return {
-          get: () => shared.get('title'),
-          set: (value: string) => shared.set('title', value),
-        };
-      } },
-      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
-    };
-
-    runInNewContext(`${source}; wireTitleHistory(editor); world.adoptRestoredTitle = adoptRestoredTitle; world.history = () => titleHistory`, {
-      editor,
-      world,
-      pages,
-      remotePages: null,
-      currentPageId: 'guide',
-      editorPageId: 'guide',
-      collaborationConfig: () => ({ doc: 'shared' }),
-      document: { activeElement: null, querySelector: () => ({}) },
-      window: { getSelection: () => null },
-      PAGE_TITLE_SELECTOR: '#pg-page-title',
-      renderHeader,
-      replaceTitleText: vi.fn(),
-      updateDocumentTitle: vi.fn(),
-    });
-    connected?.({ status: 'connected' });
-    shared.delete('title');
-    renderHeader.mockClear();
-
-    world.adoptRestoredTitle?.(undefined);
-
-    expect(pages.info('guide')?.title).toBe('');
-    expect(renderHeader).toHaveBeenCalledTimes(1);
-
-    world.adoptRestoredTitle?.({ other: 1 });
-
-    expect(pages.info('guide')?.title).toBe('');
+    expect(setItem).not.toHaveBeenCalled();
+    expect(pages.info('guide')?.title).toBe('Guide');
   });
 
   it('restored pointers carry only their page id', () => {

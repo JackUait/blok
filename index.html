@@ -1819,7 +1819,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
+    import { PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
     import { pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
@@ -2238,16 +2238,6 @@
         search: window.location.search,
         readOnly: state.readOnly,
         navigate: (id, link) => goToPage(id, { from: link }),
-        splitTitle: (html) => {
-          blok.blocks.insert('paragraph', { text: html }, {}, 0, false);
-          blok.caret.setToFirstBlock('start');
-        },
-        toFirstBlock: (x) => caretToFirstBlock(blok, x),
-        recordTitle: (text, typing) => titleHistory?.set(text, { typing }),
-        undo: () => blok.history.undo(),
-        redo: () => blok.history.redo(),
-        i18n: () => ({ i18n: blok.i18n, locale: state.locale }),
-        changed: () => updateDocumentTitle(),
         restore: (id) => restorePage(id),
         purge: (id) => goToPage(pages.purge(id)),
       });
@@ -2274,8 +2264,6 @@
         if (record !== undefined) pushRecord(blok, record);
       }
     });
-    // Capture: runs before the editor's own Backspace and ArrowUp handling.
-    document.getElementById('blok').addEventListener('keydown', (event) => firstBlockKeydown(event, blok), true);
 
     /** Takes a page out of Trash and puts its block back in its parent. */
     function restorePage(id) {
@@ -2304,87 +2292,12 @@
       pageTree?.refresh();
     }
 
-    /** The open page's title in the editor's undo history. */
-    let titleHistory = null;
-
-    function wireTitleHistory(editor) {
-      const shared = collaborationConfig(editorPageId) !== null;
-      let hostTitle = '';
-      const tracked = editor.history.track('title', (value, { source }) => {
-        if (source === 'remote') {
-          pages.reload();
-          const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
-          const canonical = page?.title ?? '';
-          hostTitle = canonical;
-          const title = document.querySelector(PAGE_TITLE_SELECTOR);
-          // Keep the caret while restoring the host title after a peer update.
-          if (title !== null) replaceTitleText(title, canonical);
-          updateDocumentTitle();
-          return;
-        }
-        hostTitle = value ?? '';
-        pages.setTitle(currentPageId, hostTitle);
-        renderHeader();
-        const fresh = document.querySelector(PAGE_TITLE_SELECTOR);
-        if (fresh === null) return;
-        fresh.focus();
-        window.getSelection()?.selectAllChildren(fresh);
-        window.getSelection()?.collapseToEnd();
-      });
-      const seed = () => {
-        if (titleHistory !== null) return;
-        const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
-        hostTitle = page?.title ?? '';
-        // The host record is not shared by the playground's page registry.
-        if (!shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
-        titleHistory = {
-          /** The page list took a title from outside, such as a restore: it is the new undo base. */
-          adopt(value) {
-            hostTitle = value;
-          },
-          set(value, options) {
-            // Rebase only for a local edit, so its undo returns to this host title.
-            if (shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
-            tracked.set(value, options);
-            hostTitle = value;
-          },
-        };
-      };
-      // A shared history value cannot be seeded from this profile's local title.
-      if (!shared) {
-        seed();
-      } else {
-        editor.on('collaboration:status', ({ status }) => {
-          if (status !== 'connected') return;
-          const before = JSON.stringify(currentPageId === null ? pages.root() : pages.info(currentPageId));
-          pages.reload();
-          seed();
-          const after = JSON.stringify(currentPageId === null ? pages.root() : pages.info(currentPageId));
-          if (before !== after) {
-            if (document.activeElement?.matches(PAGE_TITLE_SELECTOR) === true) updateDocumentTitle();
-            else renderHeader();
-          }
-        });
-      }
-    }
-
-    /** A restore brings back values.title; the page list owns the title, so it takes it here. */
-    function adoptRestoredTitle(values) {
-      if (remotePages !== null) return;
-      // No title at the point: the restore removed the key, so the page is untitled again.
-      const title = typeof values?.title === 'string' ? values.title : '';
-      pages.setTitle(currentPageId, title);
-      titleHistory?.adopt?.(title);
-      renderHeader();
-    }
-
     /** Destroys the live editor and builds one for currentPageId. */
     async function swapEditor(overrides = {}) {
       clearTimeout(persistTimer);
       persistPending = false;
       historyDrawer?.close({ refresh: false });
       blok.destroy();
-      titleHistory = null;
       const editor = new Blok({ ...buildConfig(), ...overrides });
       blok = editor;
       window.blok = editor;
@@ -2393,8 +2306,7 @@
       void historyDrawer?.refresh();
       try {
         await editor.isReady;
-        if (remotePages === null) wireTitleHistory(editor);
-        else void remotePages.wire(editorPageId, editor);
+        void remotePages?.wire(editorPageId, editor);
         refreshBlokView();
         wireCollaborationPresence(editor);
         syncLoadedPointers(editor);
@@ -2479,7 +2391,6 @@
         doc: () => collaborationConfig(editorPageId)?.doc ?? null,
         self: () => userConfig(),
         notify: (message) => blok.notifier.show({ message, style: 'success' }),
-        onRestored: ({ values }) => adoptRestoredTitle(values),
         pageHost: new URLSearchParams(window.location.search).get('hostUrl') ?? import.meta.env.VITE_BLOK_PAGE_HOST_URL ?? null,
         titleOf: (id) => {
           const page = (id ?? editorPageId) === null ? pages.root() : pages.get(id ?? editorPageId);
@@ -2491,8 +2402,7 @@
     document.getElementById('pg-history-button').hidden = historyDrawer === null;
     void historyDrawer?.refresh();
     blok.isReady.then(() => {
-      if (remotePages === null) wireTitleHistory(blok);
-      else void remotePages.wire(editorPageId, blok);
+      void remotePages?.wire(editorPageId, blok);
       wireCollaborationPresence(blok);
       syncLoadedPointers(blok);
       alignPageHeader(pageHeader, document.getElementById('blok'));

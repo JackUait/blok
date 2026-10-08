@@ -138,7 +138,7 @@ export const blockName = (type: string): string => {
   return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
 };
 
-/** The playground keeps its page title in the values map, through `history.track('title')`. */
+/** Legacy: older records kept the page title in the values map, through `history.track('title')`. */
 const VALUES_TITLE = 'values.title';
 
 /**

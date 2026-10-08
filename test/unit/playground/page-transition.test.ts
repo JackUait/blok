@@ -180,7 +180,25 @@ describe('runPageTransition', () => {
 
   const row = (pageId: string): string =>
     `<a data-blok-testid="page-link" href="/editor/page/${pageId}"><span data-blok-testid="page-icon">🚀</span><span data-blok-testid="page-title">Go</span></a>`;
-  const header = '<button class="pg-page-icon">🚀</button><h1 id="pg-page-title">Go</h1>';
+  const header = '<button data-blok-testid="page-header-icon">🚀</button><h1 data-blok-testid="page-header-title">Go</h1>';
+
+  it('morphs into Blok\'s own page header, never its Add icon button', () => {
+    expect(PAGE_HEADER_MORPH).toEqual({
+      title: '[data-blok-testid="page-header-title"]',
+      icon: '[data-blok-testid="page-header-icon"]',
+    });
+  });
+
+  it('names no icon on a page with no icon, where Blok shows Add icon', async () => {
+    document.body.innerHTML = row('go');
+
+    await runPageTransition(async () => {
+      document.body.innerHTML = '<button data-blok-testid="page-header-add-icon"></button><h1 data-blok-testid="page-header-title">Go</h1>';
+    }, { direction: 'forward', from: pageLinkMorph('go'), to: PAGE_HEADER_MORPH });
+
+    expect(sheets[1]).toContain('view-transition-name: pg-page-title');
+    expect(sheets[1]).not.toContain('view-transition-name: pg-page-icon');
+  });
 
   it('morphs the row icon into the page icon along with the title', async () => {
     document.body.innerHTML = row('go');

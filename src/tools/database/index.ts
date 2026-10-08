@@ -3,6 +3,7 @@ import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
+import { newRowValues } from './database-query';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
@@ -1130,13 +1131,8 @@ export class DatabaseTool implements BlockTool {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
 
-    const properties: Record<string, PropertyValue> = { [titlePropId]: '' };
-
-    if (groupByPropId !== undefined && optionId !== null && optionId !== NO_VALUE_GROUP_KEY) {
-      properties[groupByPropId] = this.groupValueFor(groupByPropId, optionId);
-    }
-
-    const rowData = this.model.createRowData(properties);
+    const groupProp = optionId === null ? undefined : groupByPropId;
+    const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupProp, optionId ?? NO_VALUE_GROUP_KEY));
     this.api.blocks.insertAt(
       'database-row',
       { properties: rowData.properties, position: rowData.position, title: '' },
@@ -1158,6 +1154,16 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
+  /** The clicked group's value wins over a filter on the same property. */
+  private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string): Record<string, PropertyValue> {
+    const filters = (this.model.getView(this.activeViewId)?.filters ?? []).filter((f) => f.propertyId !== groupByPropId);
+    const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema()), [titlePropId]: '' };
+
+    return groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY
+      ? properties
+      : { ...properties, [groupByPropId]: this.groupValueFor(groupByPropId, optionId) };
+  }
+
   private groupValueFor(groupByPropId: string, optionId: string): PropertyValue {
     return this.model.getProperty(groupByPropId)?.type === 'multiSelect' ? [optionId] : optionId;
   }
@@ -1172,9 +1178,7 @@ export class DatabaseTool implements BlockTool {
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
-    const rowData = this.model.createRowData(optionId === NO_VALUE_GROUP_KEY
-      ? { [titlePropId]: '' }
-      : { [titlePropId]: '', [groupByPropId]: this.groupValueFor(groupByPropId, optionId) });
+    const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupByPropId, optionId));
 
     this.api.blocks.insertAt(
       'database-row',

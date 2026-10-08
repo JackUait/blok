@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   FILTER_OPERATORS,
+  newRowValues,
   queryGroups,
   queryRows,
   rowMatchesFilters,
@@ -435,6 +436,31 @@ describe('database-query', () => {
         { key: 'k1', count: 4 },
         { key: 'k2', count: 4 },
       ]);
+    });
+  });
+
+  describe('newRowValues', () => {
+    it('gives a new row the value of each equals filter it can hold, and the row then passes', () => {
+      const filters: FilterConfig[] = [
+        { propertyId: 'status', operator: 'equals', value: ['opt-mid', 'opt-late'] },
+        { propertyId: 'done', operator: 'equals', value: true },
+        { propertyId: 'text', operator: 'equals', value: 'Draft' },
+        { propertyId: 'num', operator: 'equals', value: '3' },
+      ];
+      const values = newRowValues(filters, schema);
+
+      expect(values).toEqual({ status: 'opt-mid', done: true, text: 'Draft', num: 3 });
+      expect(rowMatchesFilters(row('new', 'a0', values), filters, schema)).toBe(true);
+    });
+
+    it('takes nothing from other operators, the title, or a filter with no usable value', () => {
+      expect(newRowValues([
+        { propertyId: 'status', operator: 'does_not_equal', value: 'opt-mid' },
+        { propertyId: 'title', operator: 'equals', value: 'Name' },
+        { propertyId: 'num', operator: 'equals', value: 'abc' },
+        { propertyId: 'text', operator: 'equals', value: '' },
+        { propertyId: 'gone', operator: 'equals', value: 'x' },
+      ], schema)).toEqual({});
     });
   });
 });

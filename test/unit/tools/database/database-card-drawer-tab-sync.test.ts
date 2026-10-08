@@ -16,6 +16,8 @@ describe('DatabaseCardDrawer — nested editor and tab sync', () => {
   });
 
   // The card body is part of the host's document, not a document of its own.
+  // The timeout covers the drawer's cold import of the whole editor (~1.7s alone,
+  // 3.0-3.9s in a full folder run); the default 5s cut it off under load.
   it('the nested card editor opens no tab-sync channel', async () => {
     const rawChannel = vi.spyOn(browserTabPlatform, 'rawChannel');
     const lock = vi.spyOn(browserTabPlatform, 'lock');
@@ -44,5 +46,5 @@ describe('DatabaseCardDrawer — nested editor and tab sync', () => {
     expect(rawChannel).not.toHaveBeenCalledWith(SETTINGS_CHANNEL);
     expect(lock).not.toHaveBeenCalled();
     drawer.destroy();
-  });
+  }, 20000);
 });

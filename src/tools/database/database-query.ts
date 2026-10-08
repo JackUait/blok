@@ -279,6 +279,36 @@ export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: Prope
   });
 };
 
+/** The value an `equals` filter asks for, or `undefined` when a new row cannot take it. */
+const filterTargetValue = (type: PropertyType | undefined, target: PropertyValue): PropertyValue | undefined => {
+  switch (type) {
+    case 'select': return toIdList(target)[0];
+    case 'checkbox': return typeof target === 'boolean' ? target : undefined;
+    case 'text': return typeof target === 'string' && target !== '' ? target : undefined;
+    case 'number': return toNumber(target);
+    case 'title':
+    case 'url':
+    case 'richText':
+    case 'multiSelect':
+    case 'date':
+    case undefined:
+      return undefined;
+  }
+};
+
+/**
+ * Values a new row takes from the view's `equals` filters, as Notion does,
+ * so the filter does not hide the row on the next redraw.
+ */
+export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[]): Record<string, PropertyValue> =>
+  Object.fromEntries(filters.flatMap((filter) => {
+    const value = filter.operator === 'equals'
+      ? filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.value)
+      : undefined;
+
+    return value === undefined ? [] : [[filter.propertyId, value]];
+  }));
+
 const filteredRows = (source: QuerySource, view: DatabaseViewConfig): DatabaseRow[] =>
   source.rows.filter((row) => rowMatchesFilters(row, view.filters, source.schema));
 

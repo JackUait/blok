@@ -3791,4 +3791,151 @@ describe('DatabaseTool', () => {
       expect((unsorted as unknown as { listRowDrag: unknown }).listRowDrag).not.toBeNull();
     });
   });
+
+  describe('a row added in a filtered view', () => {
+    /** Makes insertAt add the child the way the editor does, so later reads see it. */
+    const insertingChildren = (options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>, childBlocks: BlockAPI[]): void => {
+      vi.mocked(options.api.blocks.insertAt).mockImplementation((_type, data, placement) => {
+        const row = data as DatabaseRowData;
+        const id = (placement as { id: string }).id;
+
+        childBlocks.push(createMockRowBlock({ id, properties: row.properties, position: row.position }));
+
+        return { id } as BlockAPI;
+      });
+    };
+
+    /** Redraws the view the way a peer edit to another row does. */
+    const redrawForPeerMove = async (tool: DatabaseTool, block: BlockAPI): Promise<void> => {
+      const api = (tool as unknown as { api: API }).api;
+      const call = vi.mocked(api.events.on).mock.calls.find(([name]) => name === 'block changed');
+
+      Object.assign(block.preservedData as DatabaseRowData, { position: 'a9' });
+      (call?.[1] as (payload: unknown) => void)({ event: { type: 'block-changed', detail: { target: block } } });
+      await Promise.resolve();
+    };
+
+    it('keeps the new list row visible after a redraw by taking the filter value', async () => {
+      const childBlocks = [createMockRowBlock({ id: 'row-done', properties: { 'prop-title': 'Done one', 'prop-status': 'opt-done' }, position: 'a0' })];
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], visibleProperties: [],
+          filters: [{ propertyId: 'prop-status', operator: 'equals', value: 'opt-done' }] }],
+        activeViewId: 'view-list',
+      }, {}, { childBlocks });
+
+      insertingChildren(options, childBlocks);
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      queryByData(element, 'data-blok-database-add-row')?.click();
+      const newId = (vi.mocked(options.api.blocks.insertAt).mock.calls[0][2] as { id: string }).id;
+
+      await redrawForPeerMove(tool, childBlocks[0]);
+
+      expect(queryAllByData(element, 'data-row-id', newId)).not.toHaveLength(0);
+      expect(vi.mocked(options.api.blocks.insertAt).mock.calls[0][1]).toMatchObject({ properties: { 'prop-status': 'opt-done' } });
+
+      tool.destroy();
+    });
+
+    it('lets the column a card is added to win over a filter on another value', () => {
+      const childBlocks: BlockAPI[] = [];
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
+          filters: [{ propertyId: 'prop-status', operator: 'equals', value: 'opt-done' }] }],
+      }, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      queryAllByData(element, 'data-blok-database-add-card')
+        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')
+        ?.click();
+
+      expect(vi.mocked(options.api.blocks.insertAt).mock.calls[0][1]).toMatchObject({ properties: { 'prop-status': 'opt-todo' } });
+
+      tool.destroy();
+    });
+  });
+
+  describe('a peer change during a drag on a sorted board', () => {
+    /** A row whose saved data follows its updateProperties/updatePosition calls. */
+    const writableRow = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
+      const block = createMockRowBlock({ id, properties, position });
+      const data = block.preservedData as DatabaseRowData;
+
+      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
+        if (method === 'updateProperties') Object.assign(data.properties, params);
+      });
+
+      return block;
+    };
+
+    /** jsdom has no layout: give column i the x range [i*100, i*100+99]. */
+    const layOutColumns = (element: HTMLElement): void => {
+      queryAllByData(element, 'data-blok-database-column').forEach((column, i) => {
+        vi.spyOn(column, 'getBoundingClientRect').mockReturnValue(new DOMRect(i * 100, 0, 99, 500));
+      });
+    };
+
+    const columnCards = (element: HTMLElement, optionId: string): string[] => {
+      const column = queryAllByData(element, 'data-option-id', optionId).find((el) => el.hasAttribute('data-blok-database-column'));
+
+      return column === undefined ? [] : queryAllByData(column, 'data-blok-database-card').map((el) => el.getAttribute('data-row-id') ?? '');
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('keeps the dragged card in place until the drop, then writes the drop column', async () => {
+      const childBlocks = [
+        writableRow('row-a', { 'prop-title': 'A', 'prop-status': 'opt-todo' }, 'a0'),
+        writableRow('row-b', { 'prop-title': 'B', 'prop-status': 'opt-todo' }, 'a1'),
+        writableRow('row-x', { 'prop-title': 'X', 'prop-status': 'opt-todo' }, 'a2'),
+      ];
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
+          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
+      }, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+      layOutColumns(element);
+
+      const cardDrag = (tool as unknown as { cardDrag: DatabaseCardDrag }).cardDrag;
+      const sourceCard = queryAllByData(element, 'data-row-id', 'row-x').find((el) => el.hasAttribute('data-blok-database-card'));
+
+      cardDrag.beginTracking('row-x', 0, 0);
+      document.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, clientY: 50 }));
+
+      // A peer renames A to Z and moves it: the sort now puts it after X.
+      const rowA = childBlocks[0].preservedData as DatabaseRowData;
+
+      rowA.properties['prop-title'] = 'Z';
+      rowA.position = 'a3';
+      const api = (tool as unknown as { api: API }).api;
+      const listener = vi.mocked(api.events.on).mock.calls.find(([name]) => name === 'block changed')?.[1] as (payload: unknown) => void;
+
+      listener({ event: { type: 'block-changed', detail: { target: childBlocks[0] } } });
+      await Promise.resolve();
+
+      expect(sourceCard?.isConnected).toBe(true);
+      expect(columnCards(element, 'opt-todo')).toEqual(['row-a', 'row-b', 'row-x']);
+
+      // Doing is the third column: no-value, Todo, Doing.
+      document.dispatchEvent(new MouseEvent('pointerup', { clientX: 250, clientY: 50 }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(vi.mocked(childBlocks[2].call).mock.calls.filter(([method]) => method === 'updateProperties'))
+        .toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
+      expect(columnCards(element, 'opt-doing')).toEqual(['row-x']);
+      expect(columnCards(element, 'opt-todo')).toEqual(['row-b', 'row-a']);
+
+      tool.destroy();
+    });
+  });
 });

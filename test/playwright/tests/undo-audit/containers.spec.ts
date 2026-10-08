@@ -252,11 +252,16 @@ const DB_DOC: OutputData = {
   ],
 };
 
-/** Card ids and titles the board shows, per column, in DOM order. */
-const boardCards = async (page: Page): Promise<string[][]> => page.evaluate(() =>
-  Array.from(document.querySelectorAll('[data-blok-database-column]')).map(col =>
+/**
+ * Card ids and titles per column, keyed by the column's option id, in DOM order.
+ * Keyed, not positional: the no-value column renders first, even when empty.
+ */
+const boardCards = async (page: Page): Promise<Record<string, string[]>> => page.evaluate(() =>
+  Object.fromEntries(Array.from(document.querySelectorAll('[data-blok-database-column]')).map(col => [
+    col.getAttribute('data-option-id') ?? '',
     Array.from(col.querySelectorAll('[data-blok-database-card]')).map(c =>
-      `${c.getAttribute('data-row-id') ?? ''}:${(c.querySelector('[data-blok-database-card-title]')?.textContent ?? '').trim()}`)));
+      `${c.getAttribute('data-row-id') ?? ''}:${(c.querySelector('[data-blok-database-card-title]')?.textContent ?? '').trim()}`),
+  ])));
 
 test.describe.configure({ retries: 0 });
 
@@ -504,7 +509,7 @@ test.describe('CON database', () => {
 
     await undo(page);
 
-    await expect.poll(async () => (await boardCards(page))[0], { message: 'Todo column after undo', timeout: 2000 }).toEqual(['row-1:Card one']);
+    await expect.poll(async () => (await boardCards(page))['opt-todo'], { message: 'Todo column after undo', timeout: 2000 }).toEqual(['row-1:Card one']);
     expect((await save(page)).find(b => b.id === 'row-1')?.data.properties).toEqual({ 'prop-title': 'Card one', 'prop-status': 'opt-todo' });
   });
 
@@ -516,7 +521,7 @@ test.describe('CON database', () => {
     await gap(page);
     const afterAdd = await boardCards(page);
 
-    expect(afterAdd[0]).toHaveLength(2);
+    expect(afterAdd['opt-todo']).toHaveLength(2);
 
     await undo(page);
     await redo(page);
@@ -540,6 +545,6 @@ test.describe('CON database', () => {
     await redo(page);
 
     expect((await save(page)).some(b => b.id === 'row-1')).toBe(false);
-    await expect.poll(async () => (await boardCards(page))[0], { message: 'Todo column after redo', timeout: 2000 }).toEqual([]);
+    await expect.poll(async () => (await boardCards(page))['opt-todo'], { message: 'Todo column after redo', timeout: 2000 }).toEqual([]);
   });
 });

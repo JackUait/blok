@@ -442,7 +442,7 @@ test.describe('GES database board', () => {
     await createBlok(page, DB_BOARD);
     await gap(page);
     const s = await page.locator('[data-blok-database-card][data-row-id="row-1"]').boundingBox();
-    const t = await page.locator('[data-blok-database-column]').nth(1).boundingBox();
+    const t = await page.locator('[data-blok-database-column][data-option-id="opt-done"]').boundingBox();
 
     if (s === null || t === null) {
       throw new Error('no box');
@@ -454,12 +454,12 @@ test.describe('GES database board', () => {
     await gap(page);
     const cardsAfter = await boardCards(page);
 
-    // Dropped below row-2, so row-1 gets a position after row-2's.
-    expect(cardsAfter).toEqual([[], ['row-2:Card two', 'row-1:Card one']]);
+    // Columns: no-value (always first), Todo, Done. Dropped below row-2, so row-1 sorts after it.
+    expect(cardsAfter).toEqual([[], [], ['row-2:Card two', 'row-1:Card one']]);
 
     await park(page);
     await undo(page);
-    await expect.poll(async () => boardCards(page)).toEqual([['row-1:Card one'], ['row-2:Card two']]);
+    await expect.poll(async () => boardCards(page)).toEqual([[], ['row-1:Card one'], ['row-2:Card two']]);
     await redo(page);
 
     await expect.poll(async () => boardCards(page), { message: 'board after redo', timeout: 2000 }).toEqual(cardsAfter);

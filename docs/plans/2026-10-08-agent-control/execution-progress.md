@@ -9,9 +9,9 @@ This file records reviewed implementation, not planned work. All implementation 
 
 - Preflight reports exist for all five plans. Checks not established by the scan remain explicit task-local prerequisites.
 - Initial command/manifest types, schema validator, placement, and capability scanner have approved independent reviews, passing scoped tests/lint, and a clean full compiler gate. Their explicit-path commits are recorded below. No public agent runtime is wired yet.
-- Next independent work is the schema byte pin (02/1), sanitizer extraction (02/8), and agent marker layer (03/15).
+- The schema byte pin and shared sanitizer/schema extractions are committed. The tool manifest (02/5), shared deep-sanitize walk (01/18), and marker gate recovery (03/15) are active.
 - Independent implementers own disjoint files. Only the controller stages and commits. Shared memory-heavy checks run sequentially.
-- Five foundational tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
+- Eight foundational tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
 - Per-task evidence and independent-review verdicts live under `.superpowers/sdd/<plan-name>/progress.md` during execution.
 - Build sequence: reconciliation ledger section 14 (W0–W6). The user's later instruction to use parallel subagents supersedes the single-implementer restriction.
 
@@ -31,5 +31,8 @@ This file records reviewed implementation, not planned work. All implementation 
 | 02/3 | Tool description and manifest types | `36fa93eb` | Semantic RED/GREEN; 12 fixture + 122 law tests; scoped lint; full compiler; independent review. |
 | 05/1 | Capability scanner foundations | `c0446f6d` | Behavioral RED/GREEN; 16 scoped tests; scoped lint; full compiler; independent review. |
 | 03/14 | Agent cursor placement foundation | `0684c621` | Resolver regressions RED/GREEN; 53 tests; scoped lint; full compiler; independent re-review. |
+| 02/1 | Published schema byte pin | `185e8e80` | Controlled mutation RED; restored 69 tests GREEN; scoped lint; independent review. |
+| 02/8 | Shared inline/block-color sanitizer rules | `ff92a7f2` | 109 scoped tests; lint and full compiler; independent review; fresh built browser import/save/export. |
+| 02/4 | Shared rich-text schema helpers | `e55eecd0` | 73 scoped tests; lint and full compiler; independent review; built schema byte hash unchanged. |
 
 Final full-project tests/lint, integrated runtime verification, broad review, and synchronized push remain pending.

@@ -121,7 +121,7 @@ The playground's dev server seeds rooms through `playgroundSeedFor` (`scripts/de
 
 - [ ] **Step 1: Failing test.** `playgroundSeedFor(...)('page:<demo id>')` returns `title` and `icon` from `playground-pages.json`.
   - That file stores icons as bare strings (`"icon":"🚀"`). Map them to `{ type: 'emoji', value }`, because a bare string is malformed and would read as absent.
-  - The root (`playground-document.json`, a bare block array) gets no title from the seed. Its `'Blok'` label lives only in `page-host.ts:37` and stays the playground's job (plan 4 Task 5).
+  - The root (`playground-document.json`, a bare block array) has no title of its own. Seed it with the playground's default root title `'Blok'` (`page-host.ts:37-41`). `scripts/dev.mjs` is plain `.mjs` and cannot import the `.ts` constant, so copy the value and add a test asserting the two are equal. Without this, a collab root page has no title, because plan 4 Task 6 seeds only pages the profile just created. A root the user renamed is local-only and is not seeded.
 - [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
 - [ ] **Step 5: Commit** `feat(playground): the dev server seeds page titles`.
 
@@ -133,7 +133,7 @@ The playground's dev server seeds rooms through `playgroundSeedFor` (`scripts/de
 - [ ] **Step 2: Run** `dotnet test packages/server/dotnet/Blok.Server.AspNetCore.Tests --filter FullyQualifiedName~HistoryEndpoint -p:SkipBlokServerRuntimeBuild=true`. Expect FAIL.
 - [ ] **Step 3: Implement.** Skip `title`/`icon` when copying the `page` map in the loop at `:512-518`. If the `page` object is then empty, leave it out.
   - Then check the client consumers: `grep -rn "onRestored\|adoptRestoredTitle\|restored\.page" src index.html`. Today `history-drawer.ts:1337` forwards `restored.page`/`restored.values`, and `index.html:2474` adopts the title from `values`.
-  - Nothing reads `page.title` at planning time. Plan 4 Task 4 deletes `adoptRestoredTitle`, because a restore now reaches Blok as a `remote` page-map change.
+  - Nothing reads `page.title` at planning time. Plan 4 Task 5 deletes `adoptRestoredTitle`, because a restore now reaches Blok as a `remote` page-map change.
 - [ ] **Step 4:** Update the protocol doc, README and `server-data.ts` (Prose rules: `docs/CLAUDE.md`). Run `node docs/scripts/update-lastmod-ledger.mjs`.
 - [ ] **Step 5: Commit** `feat(server): version reads carry the title once, at the top level`.
 

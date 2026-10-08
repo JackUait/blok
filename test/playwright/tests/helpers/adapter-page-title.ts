@@ -50,9 +50,15 @@ export const definePageTitleTests = (url: string, editorTestId: string): void =>
     await page.getByTestId('toggle-title').click();
 
     await expect(page.getByTestId('title-host')).toHaveCount(0);
-    await expect(
-      page.getByTestId(editorTestId).locator('[data-blok-editor] > [data-blok-page-header] + [data-blok-redactor]')
-    ).toHaveCount(1);
+    const header = page.getByTestId(editorTestId).locator('[data-blok-page-header]');
+
+    await expect(header).toHaveCount(1);
+    expect(
+      await header.evaluate((element) => ({
+        inWrapper: element.parentElement?.hasAttribute('data-blok-editor') === true,
+        beforeRedactor: element.nextElementSibling?.hasAttribute('data-blok-redactor') === true,
+      }))
+    ).toEqual({ inWrapper: true, beforeRedactor: true });
     await expect(page.getByTestId(editorTestId).getByTestId('page-header-title')).toBeVisible();
 
     // The title is connected again, so Backspace at the start of the first block joins into it.

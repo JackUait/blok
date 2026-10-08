@@ -1,4 +1,5 @@
 import type { PropertyDefinition, PropertyValue } from '../types';
+import { openDateEditor } from './date-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
@@ -36,7 +37,7 @@ export const openCellEditor = (
     case 'multiSelect':
       return openSelectEditor(property, value, anchor, ctx);
     case 'date':
-      return CLOSED;
+      return openDateEditor(property, value, anchor, ctx);
     case 'title':
     case 'text':
     case 'number':

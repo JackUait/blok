@@ -127,7 +127,8 @@ function comparableBlocks(
 }
 
 /**
- * Structural equality for saved documents. Compares the `blocks` arrays
+ * Structural equality for saved documents. Compares the page `title` and
+ * `icon` (absent, `''` and `null` all mean none) and the `blocks` arrays
  * deeply; the volatile `time` and `version` envelope fields are ignored, so a
  * document round-tripped through `save()` compares equal to its echo. Block
  * ids are compared only when both sides carry one — the editor mints fresh
@@ -148,7 +149,10 @@ export function equalsOutputData(a: AnyOutputData, b: AnyOutputData, options?: E
   const blocksA = comparableBlocks(a, options);
   const blocksB = comparableBlocks(b, options);
 
-  return blocksA.length === blocksB.length && blocksA.every((block, index) => equalsOutputBlock(block, blocksB[index]));
+  return (a?.title || undefined) === (b?.title || undefined) &&
+    deepEqual(a?.icon ?? undefined, b?.icon ?? undefined) &&
+    blocksA.length === blocksB.length &&
+    blocksA.every((block, index) => equalsOutputBlock(block, blocksB[index]));
 }
 
 /**

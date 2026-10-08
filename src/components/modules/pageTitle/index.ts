@@ -7,7 +7,7 @@ import type { TitleChange } from '../../../../types/api/title';
 import type { PageIcon } from '../../../../types/tools/page';
 import { normalizeTitleConfig, type ResolvedTitleConfig } from '../../utils/title-config';
 import { setCaretAtXPosition } from '../../utils/caret';
-import { buildHeader, type HeaderNodes } from './header-dom';
+import { buildHeader, findHolder, holderProblem, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
 import { createIconControl } from './icon-control';
 
@@ -20,6 +20,22 @@ const WRAPPER_LAYOUT_ATTRIBUTES = [
   DATA_ATTR.controlsHidden,
   DATA_ATTR.rtl,
 ];
+
+/** The caret's character offset in the title, or null when the caret is elsewhere. */
+const caretOffsetIn = (title: HTMLElement): number | null => {
+  const selection = window.getSelection();
+  const node = selection?.anchorNode ?? null;
+
+  if (selection === null || node === null || !title.contains(node)) {
+    return null;
+  }
+  const before = document.createRange();
+
+  before.setStart(title, 0);
+  before.setEnd(node, selection.anchorOffset);
+
+  return before.toString().length;
+};
 
 export class PageTitle extends Module {
   private resolved: ResolvedTitleConfig | null = null;
@@ -48,7 +64,7 @@ export class PageTitle extends Module {
     }
     const { I18n, UI, YjsManager, ReadOnly } = this.Blok;
 
-    this.dom = buildHeader({
+    const dom = buildHeader({
       placeholder: this.resolved.placeholder ?? I18n.t('title.placeholder'),
       ariaLabel: I18n.t('title.ariaLabel'),
     });
@@ -56,9 +72,11 @@ export class PageTitle extends Module {
 
     // UI's font-token rule is scoped by this id.
     if (instance !== null) {
-      this.dom.header.setAttribute(DATA_ATTR.instance, instance);
+      dom.header.setAttribute(DATA_ATTR.instance, instance);
     }
-    this.placeInitially(this.resolved.holder);
+    // Set only once placed: isEnabled reads it, and a detached title must never take a Backspace join.
+    this.placeInitially(dom.header, this.resolved.holder);
+    this.dom = dom;
     this.renderText();
     this.syncWidth(UI.getWidthMode());
     this.syncDirection();
@@ -96,7 +114,9 @@ export class PageTitle extends Module {
   }
 
   public setText(text: string, source: 'api'): void {
-    this.Blok.YjsManager.setPageField('title', text);
+    if (!this.writeField('title', text)) {
+      return;
+    }
     this.renderText();
     this.notifyTitle({ source });
   }
@@ -106,7 +126,9 @@ export class PageTitle extends Module {
   }
 
   public setIcon(icon: PageIcon | null, source: 'user' | 'api'): void {
-    this.Blok.YjsManager.setPageField('icon', icon);
+    if (!this.writeField('icon', icon)) {
+      return;
+    }
     this.iconControl?.redraw();
     this.resolved?.onIconChange?.(this.getIcon(), { source });
   }
@@ -124,7 +146,14 @@ export class PageTitle extends Module {
       return;
     }
     title.focus();
-    window.getSelection()?.setPosition(title, position === 'start' ? 0 : title.childNodes.length);
+    // On the text node: renderText reads the anchor offset as a character offset.
+    const text = title.firstChild;
+
+    if (text === null) {
+      window.getSelection()?.setPosition(title, 0);
+    } else {
+      window.getSelection()?.setPosition(text, position === 'start' ? 0 : (text.textContent ?? '').length);
+    }
   }
 
   public focusAtX(x: number | null): void {
@@ -159,10 +188,10 @@ export class PageTitle extends Module {
   }
 
   public mount(holder: HTMLElement | string): void {
-    const target = typeof holder === 'string' ? document.querySelector<HTMLElement>(holder) : holder;
+    const target = findHolder(holder);
 
     if (target === null) {
-      throw new Error(`blok.title.mount: no element matches "${typeof holder === 'string' ? holder : ''}"`);
+      throw new Error(`blok.title.mount: ${holderProblem(typeof holder === 'string' ? holder : '')}`);
     }
     if (this.dom !== null) {
       target.appendChild(this.dom.header);
@@ -223,23 +252,20 @@ export class PageTitle extends Module {
     this.dom = null;
   }
 
-  private placeInitially(holder: HTMLElement | string | null): void {
-    if (this.dom === null) {
-      return;
-    }
-    const target = typeof holder === 'string' ? document.querySelector<HTMLElement>(holder) : holder;
+  private placeInitially(header: HTMLElement, holder: HTMLElement | string | null): void {
+    const target = holder === null ? null : findHolder(holder);
 
     if (typeof holder === 'string' && target === null) {
-      logLabeled(`title.holder "${holder}" matches no element; the title is drawn above the first block`, 'error');
+      logLabeled(`title.holder: ${holderProblem(holder)}; the title is drawn above the first block`, 'error');
     }
     if (target !== null) {
-      target.appendChild(this.dom.header);
+      target.appendChild(header);
 
       return;
     }
     const { wrapper, redactor } = this.Blok.UI.nodes;
 
-    wrapper.insertBefore(this.dom.header, redactor);
+    wrapper.insertBefore(header, redactor);
   }
 
   private readonly onInput = (event: Event): void => {
@@ -256,27 +282,37 @@ export class PageTitle extends Module {
     } else if (title.childNodes.length !== 1 || !(title.firstChild instanceof Text)) {
       this.flattenToText(title, text);
     }
-    this.Blok.YjsManager.setPageField('title', text, { typing: event instanceof InputEvent });
+    if (!this.writeField('title', text, { typing: event instanceof InputEvent })) {
+      return;
+    }
     this.renderText();
     this.notifyTitle({ source: 'user' });
   };
 
+  /**
+   * Writes one page field and marks the document unsaved.
+   * @returns false when the value was already there: setPageField then writes nothing
+   */
+  private writeField(key: 'title' | 'icon', value: string | PageIcon | null, options?: { typing: boolean }): boolean {
+    const { YjsManager, ModificationsObserver } = this.Blok;
+    const before = JSON.stringify(YjsManager.getPageFields()[key] ?? null);
+
+    YjsManager.setPageField(key, value, options);
+    if (JSON.stringify(YjsManager.getPageFields()[key] ?? null) === before) {
+      return false;
+    }
+    ModificationsObserver.markPageEdited();
+
+    return true;
+  }
+
   /** Drops elements a native format key or a drop put in. Keeps the caret offset, clamped. */
   private flattenToText(title: HTMLElement, text: string): void {
-    const selection = window.getSelection();
-    const node = selection?.anchorNode ?? null;
-    const inTitle = selection !== null && node !== null && title.contains(node);
-    const before = document.createRange();
-
-    if (inTitle) {
-      before.setStart(title, 0);
-      before.setEnd(node, selection.anchorOffset);
-    }
-    const caret = before.toString().length;
+    const caret = caretOffsetIn(title);
 
     title.replaceChildren(text);
-    if (inTitle && title.firstChild !== null) {
-      selection.setPosition(title.firstChild, Math.min(caret, text.length));
+    if (caret !== null && title.firstChild !== null) {
+      window.getSelection()?.setPosition(title.firstChild, Math.min(caret, text.length));
     }
   }
 
@@ -298,16 +334,20 @@ export class PageTitle extends Module {
   };
 
   private onPageChange(key: 'title' | 'icon', source: 'undo' | 'redo' | 'remote'): void {
+    // A peer saved its own write; another tab's write is marked by TabSync.
+    if (source !== 'remote') {
+      this.Blok.ModificationsObserver.markPageEdited();
+    }
     if (key === 'title') {
       this.renderText();
       this.notifyTitle({ source });
-      if (source !== 'remote') {
-        this.focus('end');
-      }
     }
     if (key === 'icon') {
       this.iconControl?.redraw();
       this.resolved?.onIconChange?.(this.getIcon(), { source });
+    }
+    if (source !== 'remote') {
+      this.focus('end');
     }
   }
 
@@ -323,13 +363,11 @@ export class PageTitle extends Module {
     if ((title.textContent ?? '') === text) {
       return;
     }
-    const selection = window.getSelection();
-    const node = selection?.anchorNode ?? null;
-    const caret = selection !== null && node !== null && title.contains(node) ? selection.anchorOffset : null;
+    const caret = caretOffsetIn(title);
 
     title.replaceChildren(...(text === '' ? [] : [text]));
     if (caret !== null && title.firstChild !== null) {
-      selection?.setPosition(title.firstChild, Math.min(caret, text.length));
+      window.getSelection()?.setPosition(title.firstChild, Math.min(caret, text.length));
     }
   }
 

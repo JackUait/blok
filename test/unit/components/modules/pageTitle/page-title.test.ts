@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as Y from 'yjs';
 
 import { Core } from '../../../../../src/components/core';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
@@ -62,6 +63,36 @@ describe('PageTitle module', () => {
 
     expect(titleIn(holder)).not.toBeNull();
     expect(error).toHaveBeenCalled();
+  });
+
+  it('an invalid holder selector falls back above the first block and Backspace still joins into it', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const core = await boot({
+      pageTitle: { holder: '##bad' },
+      data: { title: 'Plans', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }, { id: 'p2', type: 'paragraph', data: { text: 'yo' } }] },
+    });
+    const { BlockManager, PageTitle } = core.moduleInstances;
+    const header = holder.querySelector(`[${DATA_ATTR.pageHeader}]`);
+
+    expect(header?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
+    expect(PageTitle.titleElement?.isConnected).toBe(true);
+    expect(error.mock.calls.some((args) => args.some((arg) => String(arg).includes('not a valid selector')))).toBe(true);
+
+    const first = BlockManager.getBlockByIndex(0);
+    const input = first?.holder.querySelector('[data-blok-element-content] > *');
+
+    if (first === undefined || !(input instanceof HTMLElement) || input.firstChild === null) {
+      throw new Error('no block');
+    }
+    // jsdom does not reflect contentEditable, so the block would find no input.
+    input.setAttribute('contenteditable', 'true');
+    BlockManager.currentBlock = first;
+    input.focus();
+    window.getSelection()?.setPosition(input.firstChild, 0);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', code: 'Backspace', keyCode: 8, bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(titleIn(holder)?.textContent).toBe('Planshi');
   });
 
   it('shows the loaded title and the i18n placeholder', async () => {
@@ -270,8 +301,44 @@ describe('PageTitle module', () => {
     core.moduleInstances.PageTitle.focusAtX(null);
 
     expect(title).toHaveFocus();
-    expect(window.getSelection()?.anchorNode).toBe(title);
-    expect(window.getSelection()?.anchorOffset).toBe(title?.childNodes.length);
+    expect(window.getSelection()?.anchorNode).toBe(title?.firstChild);
+    expect(window.getSelection()?.anchorOffset).toBe(5);
+  });
+
+  const applyPeerTitle = (core: Core, text: string): void => {
+    const yjs = core.moduleInstances.YjsManager;
+    const peer = new Y.Doc();
+
+    Y.applyUpdate(peer, yjs.encodeStateAsUpdate());
+    peer.getMap('page').set('title', text);
+    yjs.applyRemoteUpdate(Y.encodeStateAsUpdate(peer), { source: 'peer' });
+  };
+
+  it.each([
+    ['grows', 'Hello world!!', 11],
+    ['shrinks', 'Hello', 5],
+  ])('a remote title that %s keeps a caret focused at the end where it was, clamped', async (_, next, offset) => {
+    const core = await boot({ pageTitle: true, data: { title: 'Hello world', blocks: [] } });
+    const title = titleIn(holder);
+
+    core.moduleInstances.PageTitle.focus('end');
+    applyPeerTitle(core, next);
+
+    expect(title?.textContent).toBe(next);
+    expect(window.getSelection()?.anchorNode).toBe(title?.firstChild);
+    expect(window.getSelection()?.anchorOffset).toBe(offset);
+  });
+
+  it('a remote title keeps a caret anchored on the title element at its character offset', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Hello world', blocks: [] } });
+    const title = titleIn(holder);
+
+    title?.focus();
+    window.getSelection()?.setPosition(title, title?.childNodes.length ?? 0);
+    applyPeerTitle(core, 'Hello world!!');
+
+    expect(window.getSelection()?.anchorNode).toBe(title?.firstChild);
+    expect(window.getSelection()?.anchorOffset).toBe(11);
   });
   it('focusing the title clears block selection, so Backspace there keeps the block', async () => {
     const core = await boot({ pageTitle: true, data: { title: 'Plans', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
@@ -367,6 +434,7 @@ describe('PageTitle module', () => {
     expect(onIconChange).toHaveBeenNthCalledWith(1, { type: 'emoji', value: '🚀' }, { source: 'user' });
     expect(onIconChange).toHaveBeenNthCalledWith(2, null, { source: 'undo' });
     expect(onIconChange).toHaveBeenCalledTimes(2);
+    expect(core.moduleInstances.PageTitle.titleElement).toHaveFocus();
   });
 
   it('draws Add icon by default', async () => {

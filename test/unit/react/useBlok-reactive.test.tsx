@@ -221,6 +221,19 @@ describe('useBlok reactive data', () => {
     expect(instances[0].render).toHaveBeenCalledWith({ blocks: [] });
   });
 
+  it('renders a controlled rename whose blocks did not change', async () => {
+    const blocks = [{ id: '1', type: 'paragraph', data: { text: 'x' } }];
+    const renamed = { title: 'B', blocks };
+
+    const { rerender } = render(<Harness config={{ data: { title: 'A', blocks } }} />);
+    await act(async () => { await flush(); });
+
+    rerender(<Harness config={{ data: renamed }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).toHaveBeenCalledWith(renamed);
+  });
+
   it('does not render when a new data reference has identical content (deep-equal dedup)', async () => {
     const { rerender } = render(
       <Harness config={{ data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] } }} />

@@ -129,6 +129,14 @@ describe('blok.title API', () => {
     expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.getAttribute('dir')).toBe('rtl');
   });
 
+  it('title.mount after ready with an invalid selector throws a clear error and leaves the header placed', async () => {
+    blok = create({ holder, pageTitle: true });
+    await blok.isReady;
+
+    expect(() => blok?.title.mount('##bad')).toThrow('"##bad" is not a valid selector');
+    expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.isConnected).toBe(true);
+  });
+
   it('title.mount before ready moves the header once ready', async () => {
     target = document.createElement('div');
     document.body.appendChild(target);
@@ -201,7 +209,7 @@ describe('blok.title API', () => {
       blok.title.mount('##bad');
       await expect(blok.isReady).resolves.toBeDefined();
 
-      expect(error.mock.calls.some((args) => args.some((arg) => String(arg).includes('##bad')))).toBe(true);
+      expect(error.mock.calls.some((args) => args.some((arg) => String(arg).includes('"##bad" is not a valid selector')))).toBe(true);
     });
 
     it('title.icon.set lands after ready', async () => {

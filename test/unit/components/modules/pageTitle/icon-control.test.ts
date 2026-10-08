@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
 import { createIconControl, type IconControlHost } from '../../../../../src/components/modules/pageTitle/icon-control';
+import { loadEmojiGrid } from '../../../../../src/components/utils/emoji/emoji-data';
 import type { PageIcon } from '../../../../../types/tools/page';
 
 const open = vi.fn(async (_anchor: HTMLElement) => undefined);
@@ -186,5 +187,25 @@ describe('createIconControl', () => {
 
     expect(close).toHaveBeenCalled();
     expect(iconButton(row)?.disabled).toBe(true);
+  });
+
+  it.each([
+    ['resolves', (settle: { resolve(): void; reject(): void }) => settle.resolve()],
+    ['fails', (settle: { resolve(): void; reject(): void }) => settle.reject()],
+  ])('Add icon writes nothing and opens no picker when read-only engages before the pick %s', async (_, finish) => {
+    const { row, host, state } = setup(null);
+    const settle = { resolve: (): void => undefined, reject: (): void => undefined };
+
+    vi.mocked(loadEmojiGrid).mockImplementationOnce(() => new Promise((resolve, reject) => {
+      settle.resolve = () => resolve([{ native: '🚀' }] as Awaited<ReturnType<typeof loadEmojiGrid>>);
+      settle.reject = () => reject(new Error('offline'));
+    }));
+    row.querySelector<HTMLButtonElement>(`[${DATA_ATTR.pageAddIcon}]`)?.click();
+    state.readOnly = true;
+    finish(settle);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(host.setIcon).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
   });
 });

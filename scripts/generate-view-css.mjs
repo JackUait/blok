@@ -323,6 +323,19 @@ const dropUnusedKeyframes = (root) => {
 };
 
 /**
+ * main.css's page header gutter rule sets only custom properties, so the
+ * pruner keeps it as a token carrier. A view has no page header.
+ * @param root - the pruned postcss root
+ */
+const dropPageTitleRules = (root) => {
+  root.walkRules((rule) => {
+    if (/\[data-blok-interface=["']?page-title["']?\]/.test(rule.selector)) {
+      rule.remove();
+    }
+  });
+};
+
+/**
  * Relocate the Tailwind-v4 border-colour compat rules into `@layer base`.
  *
  * main.css authors these UNLAYERED (`:where([data-blok-interface]) * {
@@ -526,12 +539,17 @@ const main = async () => {
    *
    * `loading.css` too: its token block reads as a carrier, and a view never
    * shows the loading skeleton.
+   *
+   * `page-title.css` too: the page header is editor UI that blocksToHtml never
+   * emits. Its gutter rule lives in main.css itself, so dropPageTitleRules
+   * removes that one after the prune.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
     .replace(/^@import '\.\/presence\.css';$/m, '')
     .replace(/^@import '\.\/block-preview\.css';$/m, '')
-    .replace(/^@import '\.\/loading\.css';$/m, '');
+    .replace(/^@import '\.\/loading\.css';$/m, '')
+    .replace(/^@import '\.\/page-title\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),
@@ -542,6 +560,7 @@ const main = async () => {
 
   prune(parsed, root);
   dropUnusedKeyframes(parsed);
+  dropPageTitleRules(parsed);
   layerizeBorderCompat(parsed);
 
   writeFileSync(OUTPUT, `${HEADER}${LAYER_ORDER}${parsed.toString().trim()}\n${LEGACY_BASELINE}${LIST_MARKERS}`);

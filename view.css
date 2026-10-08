@@ -218,9 +218,8 @@
     border-left-style: var(--tw-border-style);
     border-left-width: 0px;
   }
-  .border-solid {
-    --tw-border-style: solid;
-    border-style: solid;
+  .\[border-bottom-style\:solid\] {
+    border-bottom-style: solid;
   }
   .\[border-color\:var\(--blok-border-primary\)\] {
     border-color: var(--blok-border-primary);

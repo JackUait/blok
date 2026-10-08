@@ -157,6 +157,26 @@ describe('view baseline stylesheet law', () => {
       expect(readFileSync(join(repoRoot, 'view.css'), 'utf-8')).not.toContain('presence');
     });
 
+    it('ships no page title chrome — a view never draws the page header', () => {
+      /**
+       * Header rules are attribute-keyed and some only carry custom
+       * properties, so the pruner keeps them like theme tokens. The header is
+       * editor UI and blocksToHtml never emits it.
+       */
+      const sheet = readFileSync(join(repoRoot, 'view.css'), 'utf-8');
+
+      for (const hook of [
+        'data-blok-page-header',
+        'data-blok-page-title',
+        'data-blok-page-icon-row',
+        'data-blok-page-icon',
+        'data-blok-page-add-icon',
+        'data-blok-interface=page-title',
+      ]) {
+        expect(sheet, hook).not.toContain(hook);
+      }
+    });
+
     it('ships no webfonts — a view inherits the host typography', () => {
       /**
        * fonts.css alone is ~226 KB of base64. Bundling it would quintuple the

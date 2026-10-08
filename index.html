@@ -2321,6 +2321,10 @@
         // The host record is not shared by the playground's page registry.
         if (!shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
         titleHistory = {
+          /** The page list took a title from outside, such as a restore: it is the new undo base. */
+          adopt(value) {
+            hostTitle = value;
+          },
           set(value, options) {
             // Rebase only for a local edit, so its undo returns to this host title.
             if (shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
@@ -2345,6 +2349,15 @@
           }
         });
       }
+    }
+
+    /** A restore brings back values.title; the page list owns the title, so it takes it here. */
+    function adoptRestoredTitle(values) {
+      const title = values?.title;
+      if (typeof title !== 'string' || remotePages !== null) return;
+      pages.setTitle(currentPageId, title);
+      titleHistory?.adopt?.(title);
+      renderHeader();
     }
 
     /** Destroys the live editor and builds one for currentPageId. */
@@ -2457,6 +2470,7 @@
         doc: () => collaborationConfig(editorPageId)?.doc ?? null,
         self: () => userConfig(),
         notify: (message) => blok.notifier.show({ message, style: 'success' }),
+        onRestored: ({ values }) => adoptRestoredTitle(values),
         pageHost: new URLSearchParams(window.location.search).get('hostUrl') ?? import.meta.env.VITE_BLOK_PAGE_HOST_URL ?? null,
         titleOf: (id) => {
           const page = (id ?? editorPageId) === null ? pages.root() : pages.get(id ?? editorPageId);

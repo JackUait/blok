@@ -21,7 +21,7 @@ import {
   subPagesOf,
   toggleBookmark,
 } from '../../../src/playground/history-drawer';
-import type { HistoryBookmark, HistoryList } from '../../../src/playground/history-drawer';
+import type { HistoryBookmark, HistoryDrawerOptions, HistoryList } from '../../../src/playground/history-drawer';
 import type { LooseOutputBlockData } from '../../../types';
 
 const SELF = { id: 'playground-anna', name: 'Anna' };
@@ -435,7 +435,10 @@ describe('mountHistoryDrawer', () => {
     return answers.list();
   };
 
-  const setup = (doc: () => string | null = () => 'playground'): { drawer: ReturnType<typeof mountHistoryDrawer>; button: HTMLButtonElement; editor: HTMLElement; notify: ReturnType<typeof vi.fn> } => {
+  const setup = (
+    doc: () => string | null = () => 'playground',
+    extra: Partial<HistoryDrawerOptions> = {}
+  ): { drawer: ReturnType<typeof mountHistoryDrawer>; button: HTMLButtonElement; editor: HTMLElement; notify: ReturnType<typeof vi.fn> } => {
     const button = document.createElement('button');
     const editor = document.createElement('div');
     const notify = vi.fn();
@@ -456,6 +459,7 @@ describe('mountHistoryDrawer', () => {
       idempotencyKey: () => 'key-1',
       pageHost: HOST,
       titleOf: (pageId) => (pageId === null ? 'Demo Page' : `Title of ${pageId}`),
+      ...extra,
     });
 
     return { drawer, button, editor, notify };
@@ -2003,6 +2007,42 @@ describe('mountHistoryDrawer', () => {
 
     expect(marked()).toEqual({ b: 'added' });
     expect(scrolled.map((call) => call.id)).toEqual(['b']);
+  });
+
+  it('hands the host the restored point\'s page fields after a restore', async () => {
+    POINTS['5'] = { ...POINTS['5'], values: { title: 'Old title' }, page: { icon: 'x' } } as typeof POINTS['5'];
+
+    const onRestored = vi.fn();
+    const { button } = setup(undefined, { onRestored });
+
+    button.click();
+    await settle();
+
+    expect(onRestored).not.toHaveBeenCalled();
+
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    buttonNamed(dialog(), 'Restore this version').click();
+    await settle();
+
+    expect(onRestored).toHaveBeenCalledTimes(1);
+    expect(onRestored).toHaveBeenCalledWith({ values: { title: 'Old title' }, page: { icon: 'x' } });
+  });
+
+  it('does not hand over page fields when the restore fails', async () => {
+    answers.restore = () => new Response('Nope', { status: 412 });
+
+    const onRestored = vi.fn();
+    const { button } = setup(undefined, { onRestored });
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    buttonNamed(dialog(), 'Restore this version').click();
+    await settle();
+
+    expect(onRestored).not.toHaveBeenCalled();
   });
 
   it('can close without refreshing the Edited link, for a page switch', async () => {

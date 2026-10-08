@@ -413,6 +413,72 @@ describe('playground page metadata notifications', () => {
     expect(set).not.toHaveBeenCalled();
   });
 
+  it('shows a restored title in the page list and the header, and a later edit keeps it as the undo base', () => {
+    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+    const start = html.indexOf('let titleHistory = null;');
+    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
+    const pages = new PageRegistry(seed());
+    const doc = new Y.Doc();
+    const shared = doc.getMap<string>('values');
+    const writes: string[] = [];
+    const renderHeader = vi.fn();
+    const world: {
+      adoptRestoredTitle?: (values: unknown) => void;
+      changed?: (value: string, change: { source: string }) => void;
+      history?: () => { set(value: string): void } | null;
+    } = {};
+    let connected: ((event: { status: string }) => void) | undefined;
+
+    shared.set('title', 'Guide');
+    shared.observe(() => writes.push(shared.get('title') ?? ''));
+
+    const editor = {
+      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
+        world.changed = callback;
+
+        return {
+          get: () => shared.get('title'),
+          set: (value: string) => shared.set('title', value),
+        };
+      } },
+      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
+    };
+
+    runInNewContext(`${source}; wireTitleHistory(editor); world.adoptRestoredTitle = adoptRestoredTitle; world.history = () => titleHistory`, {
+      editor,
+      world,
+      pages,
+      remotePages: null,
+      currentPageId: 'guide',
+      editorPageId: 'guide',
+      collaborationConfig: () => ({ doc: 'shared' }),
+      document: { activeElement: null, querySelector: () => ({}) },
+      window: { getSelection: () => null },
+      PAGE_TITLE_SELECTOR: '#pg-page-title',
+      renderHeader,
+      replaceTitleText: vi.fn(),
+      updateDocumentTitle: vi.fn(),
+    });
+    connected?.({ status: 'connected' });
+    // The server's restore record reaches this tab before the 204 does.
+    shared.set('title', 'Old title');
+    world.changed?.('Old title', { source: 'remote' });
+    renderHeader.mockClear();
+    writes.length = 0;
+
+    world.adoptRestoredTitle?.({ title: 'Old title' });
+
+    expect(pages.info('guide')?.title).toBe('Old title');
+    expect(renderHeader).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([]);
+
+    pages.setTitle('guide', 'Old title!');
+    world.history?.()?.set('Old title!');
+
+    // No rebase back to the title from before the restore.
+    expect(writes).toEqual(['Old title!']);
+  });
+
   it('restored pointers carry only their page id', () => {
     expect(pointerBlock('guide').data).toEqual({ pageId: 'guide' });
   });

@@ -467,8 +467,16 @@ export interface HistoryDrawerOptions {
   pageHost?: string | null;
   /** A page's title from the playground's records; null asks for the open page. */
   titleOf?: (pageId: string | null) => string;
+  /** After a restore: the restored point's page and values maps, for a host that keeps its own page record. */
+  onRestored?: (fields: PointFields) => void;
   now?: () => Date;
   idempotencyKey?: () => string;
+}
+
+/** A point's `page` and `values` maps, as the version read sends them. */
+export interface PointFields {
+  page?: Record<string, unknown>;
+  values?: Record<string, unknown>;
 }
 
 export interface HistoryDrawer {
@@ -552,6 +560,9 @@ const saveGrouping = (value: HistoryGrouping): void => {
 
 const isBookmarkList = (value: unknown): value is HistoryBookmark[] => Array.isArray(value);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 /**
  * Mounts the drawer and its preview pane. The drawer resolves the document
  * each time it opens, so it never holds an editor or a doc id.
@@ -563,7 +574,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   const titleOf = options.titleOf ?? ((pageId: string | null): string => pageId ?? 'this page');
   const host = options.pageHost ?? null;
   const sources = new Map<string, TicketSource>();
-  const points = new Map<string, LooseOutputData>();
+  const points = new Map<string, LooseOutputData & PointFields>();
   const savedGrouping = readGrouping(host !== null);
   const state = {
     mode: 'list' as HistoryDrawerMode,
@@ -724,7 +735,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   const messageOf = (error: unknown): string =>
     error instanceof HistoryRequestError ? error.message : historyErrorMessage(0, '');
 
-  const readPoint = async (doc: string, point: HistoryPoint): Promise<LooseOutputData> => {
+  const readPoint = async (doc: string, point: HistoryPoint): Promise<LooseOutputData & PointFields> => {
     const key = `${doc}\n${point.lineage}:${point.sequence}`;
     const cached = points.get(key);
 
@@ -733,8 +744,16 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
 
     const response = await send(doc, `${base(doc)}/${encodeURIComponent(point.lineage)}/${point.sequence}`);
-    const body = await response.json() as { blocks?: LooseOutputBlockData[] };
-    const data = { blocks: Array.isArray(body.blocks) ? body.blocks : [] };
+    const body: unknown = await response.json();
+    const field = (key: string): Record<string, unknown> | undefined => {
+      const value = isRecord(body) ? body[key] : undefined;
+
+      return isRecord(value) ? value : undefined;
+    };
+    const blocks = isRecord(body) && Array.isArray(body.blocks) ? body.blocks as LooseOutputBlockData[] : [];
+    const page = field('page');
+    const values = field('values');
+    const data = { blocks, ...(page === undefined ? {} : { page }), ...(values === undefined ? {} : { values }) };
 
     points.set(key, data);
 
@@ -1303,6 +1322,20 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     card.querySelector<HTMLButtonElement>('.pg-history-dialog__primary')?.focus();
   };
 
+  /** The live doc now holds the point's page fields; a host that keeps its own page record follows. */
+  const handOver = async (doc: string, row: VersionRow): Promise<void> => {
+    const restored = options.onRestored === undefined ? null : await readPoint(doc, row).catch(() => null);
+
+    if (restored === null) {
+      return;
+    }
+
+    options.onRestored?.({
+      ...(restored.page === undefined ? {} : { page: restored.page }),
+      ...(restored.values === undefined ? {} : { values: restored.values }),
+    });
+  };
+
   const restore = async (row: VersionRow): Promise<void> => {
     const doc = state.doc;
 
@@ -1330,6 +1363,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
       (current ?? options.button).focus();
       void refresh();
+      await handOver(doc, row);
       options.notify(`Restored ${row.time}. It is now the newest version.`);
     } catch (error) {
       state.busy = false;

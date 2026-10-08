@@ -46,6 +46,9 @@ export interface History {
    * gone. Keep the value in your own record, and set it again once the
    * collaboration status is `connected`.
    *
+   * The page title and icon are different. The server saves them in your
+   * record as `title` and `icon`, so they survive a reset.
+   *
    * @param key - names the value; tracking a key again replaces its callback
    * @param onChange - called when undo, redo or a peer changes the value; not
    *   for the host's own `set`. `change.source` says which: move focus to the

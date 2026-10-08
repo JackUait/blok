@@ -306,8 +306,13 @@ const titleSlots = (envelope: unknown, options: DocumentTextsOptions): TextSlot[
 
   const holder = envelope;
 
+  // The schema's title has minLength 1, so a blank translation means no title.
   return [{ value: envelope.title, write: (text: string): void => {
-    Reflect.set(holder, 'title', text);
+    if (text.trim() === '') {
+      Reflect.deleteProperty(holder, 'title');
+    } else {
+      Reflect.set(holder, 'title', text);
+    }
   } }];
 };
 

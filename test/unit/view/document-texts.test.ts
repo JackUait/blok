@@ -647,6 +647,13 @@ describe('extractTexts / injectTexts with title: true', () => {
     expect(injectTexts({ ...titled, title: '  ' }, ['Тело'], { title: true })).toMatchObject({ title: '  ' });
   });
 
+  it('drops the title key when its translation is empty or blank, since a saved title is never empty', () => {
+    const blocks = [{ type: 'paragraph', data: { text: 'Тело' } }];
+
+    expect(injectTexts(titled, ['', 'Тело'], { title: true })).toEqual({ icon: titled.icon, blocks });
+    expect(injectTexts(titled, ['  ', 'Тело'], { title: true })).toEqual({ icon: titled.icon, blocks });
+  });
+
   it('leaves the list and the indices unchanged without the option', () => {
     expect(extractTexts(titled)).toEqual(['Body']);
     expect(injectTexts(titled, ['Тело'])).toEqual({ ...titled, blocks: [{ type: 'paragraph', data: { text: 'Тело' } }] });

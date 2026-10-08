@@ -1415,7 +1415,13 @@ const firstContent = (nodes: P5ChildNode[]): P5ChildNode | undefined =>
  * @param body - the parsed body, changed in place
  * @returns the title and icon, or nothing when there is no such heading
  */
-const liftTitle = (body: P5Element): { title?: string; icon?: PageIcon } => {
+const TITLE_MARKS_DROPPED: MarkdownDegradation = {
+  construct: 'heading',
+  action: 'degraded',
+  detail: 'The page title is plain text, so the formatting in the leading heading is dropped',
+};
+
+const liftTitle = (body: P5Element): { title?: string; icon?: PageIcon; marked?: true } => {
   const outer = firstContent(body.childNodes);
   const wrapped = outer !== undefined && isElement(outer) && outer.tagName === 'div'
     && attr(outer, 'data-blok-interface') !== undefined;
@@ -1437,7 +1443,16 @@ const liftTitle = (body: P5Element): { title?: string; icon?: PageIcon } => {
 
   container.childNodes.splice(container.childNodes.indexOf(heading), 1);
 
-  return src === null || lifted.icon !== undefined ? lifted : { ...lifted, icon: { type: 'image', url: src } };
+  const page = src === null || lifted.icon !== undefined ? lifted : { ...lifted, icon: { type: 'image' as const, url: src } };
+  // The icon element blocksToHtml writes (an aria-hidden emoji span or the image) is not formatting.
+  const iconElement = lead !== undefined && isElement(lead)
+    && ((lead.tagName === 'img' && page.icon?.type === 'image')
+      || (lead.tagName === 'span' && attr(lead, 'aria-hidden') === 'true' && page.icon?.type === 'emoji'))
+    ? lead
+    : undefined;
+  const marked = heading.childNodes.some((child) => isElement(child) && child !== iconElement);
+
+  return marked ? { ...page, marked: true } : page;
 };
 
 /**
@@ -1466,7 +1481,12 @@ export const htmlToBlocksWithReport = (html: string, options: HtmlImportOptions 
 
   reportTitle(ctx, head);
 
-  const page = options.title === true && body !== undefined ? liftTitle(body) : {};
+  const { marked, ...page } = options.title === true && body !== undefined ? liftTitle(body) : {};
+
+  // The heading came first, so its warning does too.
+  if (marked === true) {
+    ctx.warnings.push({ ...TITLE_MARKS_DROPPED });
+  }
 
   if (body !== undefined) {
     convertNodes(ctx, body.childNodes);

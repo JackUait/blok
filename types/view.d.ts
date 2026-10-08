@@ -744,7 +744,12 @@ export interface HtmlImportOptions {
   /**
    * Lift a leading `<h1>` out of the blocks as the page title (default
    * `false`). Looks inside the `data-blok-interface` wrapper that
-   * `blocksToHtml` writes with `root: true`. Marks in the heading are dropped.
+   * `blocksToHtml` writes with `root: true`. A leading emoji and a space in
+   * it become the icon, and so does a leading image with a safe `src`.
+   *
+   * `htmlToBlocksWithReport` returns them as `title` and `icon`, with a
+   * `heading` warning when formatting in the heading is dropped;
+   * `htmlToBlocks` only drops the heading.
    */
   title?: boolean;
 }
@@ -763,8 +768,11 @@ export interface HtmlImportOptions {
  * Reach for {@link htmlToBlocksWithReport} when the caller has to be told what
  * the HTML could not carry.
  *
+ * With `title: true` it drops a leading `<h1>` and returns the blocks only;
+ * {@link htmlToBlocksWithReport} also returns that heading as `title` and `icon`.
+ *
  * @param html - the HTML source
- * @param options - `title: true` lifts a leading `<h1>` as the page title
+ * @param options - `title: true` drops a leading `<h1>`
  * @returns blocks ready for `render()`, `insertMany()`, or storage
  */
 export declare function htmlToBlocks(html: string, options?: HtmlImportOptions): OutputBlockData[];

@@ -1136,6 +1136,15 @@ describe('htmlToBlocks with title: true', () => {
     expect(result.blocks.map((block) => block.type)).toEqual(['paragraph']);
   });
 
+  it('lifts a leading emoji and a space in plain heading text as the icon, and only that', () => {
+    expect(htmlToSegmentBlocksWithReport('<h1>🚀 Plan</h1>', { title: true })).toMatchObject({ title: 'Plan', icon: { type: 'emoji', value: '🚀' } });
+
+    const glued = htmlToSegmentBlocksWithReport('<h1>🚀Plan</h1>', { title: true });
+
+    expect(glued.title).toBe('🚀Plan');
+    expect(glued).not.toHaveProperty('icon');
+  });
+
   it('lifts an image icon with a safe src', () => {
     const safe = htmlToSegmentBlocksWithReport('<h1><img alt="" src="https://x.com/i.png"> Plan</h1>', { title: true });
     const unsafe = htmlToSegmentBlocksWithReport('<h1><img alt="" src="javascript:alert(1)"> Plan</h1>', { title: true });
@@ -1143,6 +1152,37 @@ describe('htmlToBlocks with title: true', () => {
     expect(safe).toMatchObject({ title: 'Plan', icon: { type: 'image', url: 'https://x.com/i.png' } });
     expect(unsafe).toMatchObject({ title: 'Plan' });
     expect(unsafe).not.toHaveProperty('icon');
+  });
+
+  it('reports the formatting a lifted title loses, as the Markdown import does', () => {
+    const marked = htmlToSegmentBlocksWithReport('<h1><b>Plan</b> now</h1><p>Body</p>', { title: true });
+
+    expect(marked.title).toBe('Plan now');
+    expect(marked.warnings).toEqual([{
+      construct: 'heading',
+      action: 'degraded',
+      detail: 'The page title is plain text, so the formatting in the leading heading is dropped',
+    }]);
+  });
+
+  it('does not count the icon blocksToHtml writes as lost formatting', () => {
+    const emoji = htmlToSegmentBlocksWithReport('<h1><span aria-hidden="true">🚀</span> Plan</h1>', { title: true });
+    const image = htmlToSegmentBlocksWithReport('<h1><img alt="" src="https://x.com/i.png"> Plan</h1>', { title: true });
+    const plain = htmlToSegmentBlocksWithReport('<h1>Plan</h1>', { title: true });
+
+    expect(emoji.warnings).toEqual([]);
+    expect(image.warnings).toEqual([]);
+    expect(plain.warnings).toEqual([]);
+  });
+
+  it('reports an image it could not keep as the icon', () => {
+    const unsafe = htmlToSegmentBlocksWithReport('<h1><img alt="" src="javascript:alert(1)"> Plan</h1>', { title: true });
+
+    const besideEmoji = htmlToSegmentBlocksWithReport('<h1><img alt="" src="https://x.com/i.png"> 🚀 Plan</h1>', { title: true });
+
+    expect(unsafe.warnings.map((warning) => warning.construct)).toEqual(['heading']);
+    expect(besideEmoji).toMatchObject({ title: 'Plan', icon: { type: 'emoji', value: '🚀' } });
+    expect(besideEmoji.warnings.map((warning) => warning.construct)).toEqual(['heading']);
   });
 
   it('lifts the h1 from inside the view root wrapper, after whitespace', () => {
@@ -1185,5 +1225,18 @@ describe('htmlToBlocks with title: true', () => {
 
     expect(result).toMatchObject({ title: 'Plan <&>', icon: { type: 'emoji', value: '🚀' } });
     expect(result.blocks).toHaveLength(1);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('round-trips an image icon through blocksToHtml with no warning', () => {
+    const data: OutputData = {
+      title: 'Plan',
+      icon: { type: 'image', url: 'https://x.com/i.png' },
+      blocks: [{ type: 'paragraph', data: { text: 'Body' } }],
+    };
+    const result = htmlToSegmentBlocksWithReport(blocksToHtml(data, { title: true, root: true }), { title: true });
+
+    expect(result.warnings).toEqual([]);
+    expect(result).toMatchObject({ title: 'Plan', icon: { type: 'image', url: 'https://x.com/i.png' } });
   });
 });

@@ -1,5 +1,4 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, toRaw, watch, type PropType } from 'vue';
-import { getHolder } from './holder-map';
 import type { Blok } from '@/types';
 
 /**
@@ -25,9 +24,11 @@ export const BlokTitle = defineComponent({
     };
 
     const release = (editor: Blok | null): void => {
-      // A destroyed editor has no title; useBlok drops the holder before every destroy.
-      if (editor !== null && getHolder(toRaw(editor)) !== undefined) {
-        toRaw(editor).title.mount(null);
+      // A destroyed editor has no title: destroy deletes its fields.
+      const title = editor === null ? undefined : (toRaw(editor) as { title?: Partial<Blok['title']> }).title;
+
+      if (typeof title?.mount === 'function') {
+        title.mount(null);
       }
     };
 

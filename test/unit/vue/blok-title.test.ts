@@ -5,6 +5,7 @@ import { defineComponent, h, ref, type PropType } from 'vue';
 import { BlokEditor } from '../../../packages/vue/src/BlokEditor';
 import { BlokTitle } from '../../../packages/vue/src/BlokTitle';
 import { Paragraph } from '../../../src/tools/paragraph';
+import RawBlok from '../../../src/blok';
 import type { Blok } from '@/types';
 
 const TOOLS = { paragraph: { class: Paragraph } };
@@ -174,6 +175,27 @@ describe('Vue BlokTitle', () => {
 
     expect(wrapper.element.className).toBe('page-title');
     expect(wrapper.element.id).toBe('title');
+  });
+
+  it('gives the title back to an editor the adapter did not create', async () => {
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+    // The src class gets its module APIs by a prototype swap at boot; the published type lists them.
+    const editor = new RawBlok({ holder, tools: TOOLS, pageTitle: true }) as unknown as Blok;
+
+    await editor.isReady;
+    const wrapper = mount(BlokTitle, { props: { editor }, attachTo: document.body });
+
+    expect(wrapper.element.querySelector(HEADER)).not.toBeNull();
+    wrapper.unmount();
+
+    const header = holder.querySelector(HEADER);
+    const editorWrapper = holder.querySelector('[data-blok-editor]');
+
+    expect(header?.parentElement).toBe(editorWrapper);
+    expect(header?.nextElementSibling).toBe(editorWrapper?.querySelector('[data-blok-redactor]'));
+    editor.destroy();
   });
 
   it('renders no slot content', () => {

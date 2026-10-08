@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, forwardRef } from 'react';
-import { getHolder } from './holder-map';
+import type { Blok } from '@/types';
 import type { BlokTitleProps } from './types';
 
 /**
@@ -32,9 +32,11 @@ export const BlokTitle = forwardRef<HTMLDivElement, BlokTitleProps>(
       editor.title.mount(host);
 
       return (): void => {
-        // A destroyed editor has no title; useBlok drops the holder before every destroy.
-        if (getHolder(editor) !== undefined) {
-          editor.title.mount(null);
+        // A destroyed editor has no title: destroy deletes its fields.
+        const title = (editor as { title?: Partial<Blok['title']> }).title;
+
+        if (typeof title?.mount === 'function') {
+          title.mount(null);
         }
       };
     }, [editor]);

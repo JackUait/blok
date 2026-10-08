@@ -5,6 +5,7 @@ import React, { StrictMode, useState } from 'react';
 import { BlokEditor } from '../../../packages/react/src/BlokEditor';
 import { BlokTitle } from '../../../packages/react/src/BlokTitle';
 import { Paragraph } from '../../../src/tools/paragraph';
+import RawBlok from '../../../src/blok';
 import type { Blok } from '@/types';
 
 const TOOLS = { paragraph: { class: Paragraph } };
@@ -176,6 +177,27 @@ describe('BlokTitle', () => {
 
     expect(titleHost().className).toBe('page-title');
     expect(titleHost().id).toBe('title');
+  });
+
+  it('gives the title back to an editor the adapter did not create', async () => {
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+    // The src class gets its module APIs by a prototype swap at boot; the published type lists them.
+    const editor = new RawBlok({ holder, tools: TOOLS, pageTitle: true }) as unknown as Blok;
+
+    await editor.isReady;
+    const { unmount } = render(<BlokTitle editor={editor} data-testid="title-host" />);
+
+    expect(titleHost().querySelector(HEADER)).not.toBeNull();
+    unmount();
+
+    const header = holder.querySelector(HEADER);
+    const wrapper = holder.querySelector('[data-blok-editor]');
+
+    expect(header?.parentElement).toBe(wrapper);
+    expect(header?.nextElementSibling).toBe(wrapper?.querySelector('[data-blok-redactor]'));
+    editor.destroy();
   });
 
   it('renders no children', () => {

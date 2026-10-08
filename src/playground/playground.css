@@ -24,8 +24,9 @@
 @source '../../index.html';
 
 /*
-  Page header: breadcrumbs and the Trash banner above Blok's own title. Plain rules, not utilities: utilities here would be emitted unscoped
-  and could shadow the editor's own (see the @source note above).
+  Page header: breadcrumbs and the Trash banner above Blok's own title.
+  Plain rules, not utilities: utilities here would be emitted unscoped and
+  could shadow the editor's own (see the @source note above).
 */
 .pg-page-header {
   --pg-page-ink: #191919;

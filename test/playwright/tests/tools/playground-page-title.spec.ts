@@ -160,6 +160,7 @@ const KEY_GAP_MS = 60;
 
 const firstBlock = (page: Page): ReturnType<Page['getByTestId']> => page.getByTestId('block-wrapper').first();
 
+// No role or testid on a paragraph's editable field: the block wrapper's testid, then its field.
 const firstField = (page: Page): ReturnType<Page['locator']> => firstBlock(page).locator('[contenteditable="true"]').first();
 
 /** A click at the field's left edge puts the caret at its start. Not Home: on macOS Home scrolls. */
@@ -191,6 +192,7 @@ test.describe('playground page icon undo', () => {
     }, withoutIcon);
     await page.goto(url('/editor/page/getting-started'));
 
+    // The current crumb is a span with no role; aria-current is its accessible marker.
     const current = crumbs(page).locator('[aria-current="page"]');
     const icon = page.getByTestId('page-header-icon');
 
@@ -203,12 +205,15 @@ test.describe('playground page icon undo', () => {
     const random = (await icon.textContent()) ?? '';
 
     await expect(current).toHaveText(`${random}Getting started`);
-    await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
-    await page.locator('[data-blok-emoji-picker]').evaluate((picker) => picker.getAnimations().forEach((animation) => animation.finish()));
+    const picker = page.getByRole('dialog', { name: 'Edit icon' });
 
-    const other = random === '👉' ? '👈' : '👉';
+    await expect(picker).toBeVisible();
+    // Settle the opening animation so the click lands on a still grid.
+    await picker.evaluate((element) => element.getAnimations().forEach((animation) => animation.finish()));
 
-    await page.locator(`[data-emoji-native="${other}"]`).click();
+    const [other, otherName] = random === '👉' ? ['👈', 'backhand index pointing left'] : ['👉', 'backhand index pointing right'];
+
+    await picker.getByRole('button', { name: otherName, exact: true }).click();
     await expect(icon).toHaveText(other);
     await expect(current).toHaveText(`${other}Getting started`);
 

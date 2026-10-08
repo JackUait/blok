@@ -2040,7 +2040,6 @@
       const collaboration = collaborationConfig(pageId);
       // ?slowLoad=<ms> holds the document back to show the boot skeleton.
       const slowLoadMs = Number(new URLSearchParams(location.search).get('slowLoad'));
-      // The title rides in the load result too: core loads `data.title`, so a blocks-only result clears it.
       // Built now, with this editor's page: see titleCallbacks.
       const callbacks = titleCallbacks({
         pages,
@@ -2048,6 +2047,7 @@
         changed: () => renderHeader(),
         routed: (id, title, change) => remotePages?.titleChanged(id, title, change),
       });
+      // The title rides in the load result too: core loads `data.title`, so a blocks-only result clears it.
       const documentData = () => ({ ...titleData(pages, pageId), blocks: blocksFor(pageId) });
       const documentSource = slowLoadMs > 0
         ? { persistence: { load: () => new Promise(r => setTimeout(() => r(documentData()), slowLoadMs)), save: async () => {} } }
@@ -2152,7 +2152,9 @@
     let livePointers = null;
     // Pages this tab created. Only these may seed their collaboration room with the local title.
     const createdHere = new Set();
-    // Each editor's last collaboration status. Blok has no status getter; onReady is the earliest listener.
+    // Each editor's last collaboration status, recorded from onReady. Blok has no status getter.
+    // A seed wired later still hears the room: core replays the current status once, in a task
+    // after isReady (collaboration/index.ts, readyReplay).
     const collabStatus = new WeakMap();
     // Root edits live for the tab only, so a reload still starts pristine.
     let rootBlocks = null;

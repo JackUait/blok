@@ -568,7 +568,7 @@ export const remotePagePlayground = (options: {
 
       const paint = (title: string): void => {
         hosted.display(pageId, title);
-        // Guarded: a record:false write during typing would cut the user's undo step.
+        // Only skips a no-op call: core already ignores a set to the value it has (yjs setPageField).
         if (editor.title.get() !== title) {
           editor.title.set(title, { record: false });
         }

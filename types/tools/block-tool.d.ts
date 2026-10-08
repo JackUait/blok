@@ -2,7 +2,7 @@ import { ConversionConfig, PasteConfig, ToolSanitizerConfig } from '../configs';
 import { BlockToolData } from './block-tool-data';
 import { BaseTool, BaseToolConstructable, BaseToolConstructorOptions } from './tool';
 import { ToolConfig } from './tool-config';
-import type { BlockToolDescription } from './tool-description';
+import type { BlockToolDescription, ToolActionImpl } from './tool-description';
 import { API, BlockAPI, ToolboxConfig } from '../index';
 import { PasteEvent } from './paste-events';
 import { MoveEvent } from './hook-events';
@@ -452,6 +452,9 @@ export interface BlockToolConstructable extends BaseToolConstructable {
 
   /** Pure and synchronous; config may only narrow the schema. */
   describe?(config: ToolConfig): BlockToolDescription;
+
+  /** Handlers keyed by declared action name. Host tools are browser-only in v1. */
+  actionHandlers?: { readonly [actionName: string]: ToolActionImpl };
 
   /**
    * @constructor

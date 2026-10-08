@@ -83,6 +83,8 @@ export {
   InlineToolDescription,
   BlockTuneDescription,
   ToolActionDeclaration,
+  ToolActionImpl,
+  ToolActionContext,
   BlokSchema,
   HostService,
   PasteEvent,

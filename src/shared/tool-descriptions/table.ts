@@ -61,6 +61,7 @@ export const describeTable = (_config: Record<string, unknown> = {}): BlockToolD
   summary: 'A grid. Each cell holds child blocks; content maps cells to those block ids.',
   guidance: 'Create tables with table.create, never block.insert. Change rows, columns, merges and cell styles with the table.* actions; content cannot be written directly. To edit text in a cell, edit the cell\'s child block.',
   data: TABLE_DATA,
+  inputFields: [],
   summaryFields: ['withHeadings', 'withHeadingColumn'],
   guardedFields: { content: 'table.*' },
 });

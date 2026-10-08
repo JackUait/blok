@@ -35,3 +35,25 @@ export const splitPageTitle = (text: string): { title: string; icon?: PageIcon }
 
   return { title: trimmed.slice(match[0].length), icon: { type: 'emoji', value: match[1] } };
 };
+
+const withoutNul = (text: string): string => text.replaceAll('\u0000', '');
+
+/** The server drops page metadata that still contains U+0000. */
+export function cleanPageField(value: string): string;
+export function cleanPageField(value: PageIcon): PageIcon;
+export function cleanPageField(value: null): null;
+export function cleanPageField(value: undefined): undefined;
+export function cleanPageField(value: string | PageIcon | null | undefined): string | PageIcon | null | undefined;
+export function cleanPageField(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return withoutNul(value);
+  }
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([name, field]): [string, unknown] =>
+      [name, typeof field === 'string' ? withoutNul(field) : field])
+  );
+}

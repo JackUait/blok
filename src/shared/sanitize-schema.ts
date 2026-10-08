@@ -10,27 +10,13 @@
 import { INLINE_TOOL_ORDER } from '../components/constants/inline-tool-order';
 import { deepMerge } from '../components/utils/object';
 import { isFunction, isObject } from '../components/utils/type-guards';
+import { composeBaseSanitizeConfig } from './sanitize-composition';
 
 import type { SanitizerConfig } from '../../types';
 import type { BlokConfig } from '../../types/configs';
 import type { ToolConstructable, ToolSettings } from '../../types/tools';
 
-/**
- * Composes a base sanitizer config from a list of per-tool configs using the
- * exact merge semantics of `BlockToolAdapter.baseSanitizeConfig`: a plain
- * later-wins `Object.assign` fold (inline tools first, then tunes). Function
- * rules are carried by reference; rules for the same tag are replaced, never
- * deep-merged.
- * @param configs - sanitize configs in composition order
- * @returns composed base sanitizer config
- */
-export function composeBaseSanitizeConfig(configs: SanitizerConfig[]): SanitizerConfig {
-  const baseConfig = {} as SanitizerConfig;
-
-  configs.forEach((config) => Object.assign(baseConfig, config));
-
-  return baseConfig;
-}
+export { composeBaseSanitizeConfig } from './sanitize-composition';
 
 /**
  * Config accepted by `defineBlokSchema`. Only `tools`, `inlineToolbar` and

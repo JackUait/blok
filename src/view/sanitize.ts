@@ -216,15 +216,11 @@ const parseStyleText = (styleText: string): StyleProperty[] => {
 };
 
 /**
- * Minimal CSSStyleDeclaration facade over a parse5 element's style attribute.
- * Supports exactly what `preserveColorStyles` uses: `length`, `item()`,
- * `removeProperty()` (plus `getPropertyValue()` for symmetry). Mutations are
- * written back to the style attribute in CSSOM serialization form
- * ("prop: value;") — the same normalization the DOM path produces when a
- * property is removed. Untouched style attributes stay byte-identical.
+ * Minimal style facade for built-in color rules.
+ * Mutations normalize the style attribute; untouched attributes stay byte-identical.
  * @param node - parse5 element backing the facade
  */
-const createStyleFacade = (node: P5Element): Pick<CSSStyleDeclaration, 'length' | 'item' | 'removeProperty' | 'getPropertyValue'> => {
+const createStyleFacade = (node: P5Element): Pick<CSSStyleDeclaration, 'length' | 'item' | 'removeProperty' | 'getPropertyValue' | 'setProperty'> => {
   const properties = parseStyleText(getAttr(node, 'style') ?? '');
 
   const writeBack = (): void => {
@@ -246,6 +242,18 @@ const createStyleFacade = (node: P5Element): Pick<CSSStyleDeclaration, 'length' 
     },
     getPropertyValue(property: string): string {
       return properties.find((candidate) => candidate.property === property.toLowerCase())?.value ?? '';
+    },
+    setProperty(property: string, value: string): void {
+      const name = property.toLowerCase();
+      const existing = properties.find((candidate) => candidate.property === name);
+
+      if (existing) {
+        existing.value = value;
+      } else {
+        properties.push({ property: name, value });
+      }
+
+      writeBack();
     },
     removeProperty(property: string): string {
       const index = properties.findIndex((candidate) => candidate.property === property.toLowerCase());

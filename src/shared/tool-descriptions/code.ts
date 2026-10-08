@@ -17,6 +17,7 @@ export const describeCode = (_config: Record<string, unknown> = {}): BlockToolDe
   summary: 'A code block with a language and an optional file name.',
   guidance: '`code` is raw text, never HTML and never a Markdown fence. language is a lowercase name such as "javascript" or "plain text".',
   data: CODE_DATA,
+  inputFields: [],
   defaultData: { code: '', language: 'plain text' },
   examples: [{ code: 'const a = 1;', language: 'javascript', filename: 'a.js' }],
   summaryFields: ['language', 'filename'],

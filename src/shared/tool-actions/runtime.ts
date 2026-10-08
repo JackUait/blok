@@ -1,5 +1,5 @@
-import { isObject } from '../../components/utils/type-guards';
-import { composeBaseSanitizeConfig } from '../sanitize-schema';
+import { isObject } from '../type-guards';
+import { composeBaseSanitizeConfig } from '../sanitize-composition';
 
 import type { SanitizerConfig } from '../../../types';
 import type { InsertSpec } from '../../../types/agent';

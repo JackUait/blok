@@ -1,6 +1,6 @@
 import { AgentFailure, failure } from './errors';
 import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdate, reserveBatchInsertIds } from './plan-block';
-import { planFind, planRead } from './plan-doc';
+import { planFind, planMarkdownExport, planMarkdownInsert, planRead, planSetIcon, planSetTitle } from './plan-doc';
 import { PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
 
@@ -14,6 +14,10 @@ export type CommandHandler = (state: PlanState, args: Record<string, unknown>) =
 export const HANDLERS: Record<string, CommandHandler> = {
   'doc.read': planRead,
   'doc.find': planFind,
+  'doc.setTitle': planSetTitle,
+  'doc.setIcon': planSetIcon,
+  'markdown.insert': planMarkdownInsert,
+  'markdown.export': planMarkdownExport,
   'block.insert': planInsert,
   'block.update': planUpdate,
   'block.delete': planDelete,

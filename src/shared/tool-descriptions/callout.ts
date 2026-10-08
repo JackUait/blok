@@ -17,6 +17,7 @@ export const describeCallout = (_config: Record<string, unknown> = {}): BlockToo
   summary: 'A highlighted panel with an emoji. Its body is child blocks.',
   guidance: `The panel holds no text itself: insert the body as child blocks. emoji is one emoji or "" to hide it. textColor and backgroundColor take a preset name (${COLOR_PRESET_NAMES}) or null.`,
   data: CALLOUT_DATA,
+  inputFields: [],
   defaultData: { emoji: '💡' },
   summaryFields: ['emoji'],
 });

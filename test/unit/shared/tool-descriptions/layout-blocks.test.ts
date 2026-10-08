@@ -73,6 +73,7 @@ const LAYOUT_DESCRIPTIONS: Array<{
     expected: {
       summary: 'A row of columns. The columns are its children.',
       guidance: 'Create one with column_list.create, which makes the columns too. Move an existing block into a column with block.move. The toolbox columnCount value is not saved data; never write it.',
+      inputFields: [],
       defaultData: {},
     },
   },
@@ -84,6 +85,7 @@ const LAYOUT_DESCRIPTIONS: Array<{
     expected: {
       summary: 'One column of a column_list. Its content is its children.',
       guidance: 'Change widths with column_list.setWidths on the list, not by writing widthRatio on one column.',
+      inputFields: [],
       defaultData: {},
       summaryFields: ['widthRatio'],
     },
@@ -96,6 +98,7 @@ const LAYOUT_DESCRIPTIONS: Array<{
     expected: {
       summary: 'A set of tabs. Each tab is a child tab block.',
       guidance: 'Create one with tabs.create. Add and delete tabs with tabs.addTab and tabs.deleteTab. Which tab is open is per person and never saved.',
+      inputFields: [],
       defaultData: {},
     },
   },
@@ -107,6 +110,7 @@ const LAYOUT_DESCRIPTIONS: Array<{
     expected: {
       summary: 'One tab of a tabs block. Its content is its children.',
       guidance: 'title is plain text, not HTML. icon is one emoji, or omit it.',
+      inputFields: [],
       defaultData: { title: '' },
       summaryFields: ['title', 'icon'],
     },

@@ -4,23 +4,13 @@
 
 import { keyCodes } from './constants';
 
+export { isObject } from '../../shared/type-guards';
+
 /**
  * Check if passed variable is a function
  */
 export const isFunction = (fn: unknown): fn is (...args: unknown[]) => unknown => {
   return typeof fn === 'function';
-};
-
-/**
- * Checks if passed argument is a plain object (created by {} or Object constructor)
- */
-export const isObject = (v: unknown): v is Record<string, unknown> => {
-  if (v === null || typeof v !== 'object') {
-    return false;
-  }
-  const proto = Object.getPrototypeOf(v) as Record<string, unknown> | null;
-
-  return proto === null || proto === Object.prototype;
 };
 
 /**

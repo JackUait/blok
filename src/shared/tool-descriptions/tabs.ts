@@ -11,5 +11,6 @@ export const describeTabs = (_config: Record<string, unknown> = {}): BlockToolDe
   summary: 'A set of tabs. Each tab is a child tab block.',
   guidance: 'Create one with tabs.create. Add and delete tabs with tabs.addTab and tabs.deleteTab. Which tab is open is per person and never saved.',
   data: TABS_DATA,
+  inputFields: [],
   defaultData: {},
 });

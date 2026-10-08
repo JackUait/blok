@@ -15,6 +15,7 @@ export const describeTab = (_config: Record<string, unknown> = {}): BlockToolDes
   summary: 'One tab of a tabs block. Its content is its children.',
   guidance: 'title is plain text, not HTML. icon is one emoji, or omit it.',
   data: TAB_DATA,
+  inputFields: [],
   defaultData: { title: '' },
   summaryFields: ['title', 'icon'],
 });

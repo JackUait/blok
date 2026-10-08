@@ -13,6 +13,7 @@ export const describeColumn = (_config: Record<string, unknown> = {}): BlockTool
   summary: 'One column of a column_list. Its content is its children.',
   guidance: 'Change widths with column_list.setWidths on the list, not by writing widthRatio on one column.',
   data: COLUMN_DATA,
+  inputFields: [],
   defaultData: {},
   summaryFields: ['widthRatio'],
 });

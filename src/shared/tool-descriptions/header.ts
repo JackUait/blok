@@ -37,6 +37,7 @@ export const describeHeader = (config: Record<string, unknown> = {}): BlockToolD
     defaultData: { text: [], level },
     examples: [{ text: [{ text: 'Roadmap' }], level }],
     summaryFields: ['level', 'isToggleable'],
+    inputFields: ['text'],
     viewState: ['isOpen'],
     guardedFields: { isToggleable: 'block.convert' },
   };

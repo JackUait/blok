@@ -194,11 +194,14 @@ describe('link self-description metadata and saved schemas', () => {
   });
 
   it.each(LINK_DESCRIPTIONS)('$name describes exactly the approved fields and plain guidance', ({
-    describeTool, dataSchema, summary, guidance, summaryFields,
+    name, describeTool, dataSchema, summary, guidance, summaryFields,
   }) => {
     const description = describeTool();
 
-    expect(description).toEqual({ summary, guidance, data: dataSchema, summaryFields });
+    expect(description).toEqual({
+      summary, guidance, data: dataSchema, summaryFields,
+      ...(name === 'page' ? { inputFields: [] } : {}),
+    });
     expect(description.guidance).not.toMatch(/<[^>]+>|\x60\x60\x60/);
   });
 

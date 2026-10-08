@@ -1,4 +1,4 @@
-import { INLINE_TOOL_ORDER } from '../../components/constants/inline-tool-order';
+import { INLINE_TOOL_ORDER } from '../inline-tool-order';
 import { BUILT_IN_BLOCK_SANITIZE } from '../tool-descriptions/sanitize/blocks';
 import { BUILT_IN_INLINE_SANITIZE } from '../tool-descriptions/sanitize/inline';
 import { buildToolRuntimes } from './runtime';

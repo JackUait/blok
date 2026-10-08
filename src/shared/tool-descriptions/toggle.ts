@@ -17,6 +17,7 @@ export const describeToggle = (_config: Record<string, unknown> = {}): BlockTool
   summary: 'A collapsible line. Its body is the blocks nested under it.',
   guidance: `${RICH_TEXT_GUIDANCE} Put the body in child blocks. Open or closed is per person and never saved.`,
   data: TOGGLE_DATA,
+  inputFields: ['text'],
   defaultData: { text: [] },
   viewState: ['isOpen'],
 });

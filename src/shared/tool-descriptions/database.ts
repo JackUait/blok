@@ -97,6 +97,7 @@ export const describeDatabase = (_config: Record<string, unknown> = {}): BlockTo
   summary: 'A database: a schema of properties and saved views. Rows are child database-row blocks.',
   guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change views, properties and select options with the database.* actions; schema and views cannot be written directly.',
   data: DATABASE_DATA,
+  inputFields: ['title'],
   summaryFields: ['title', 'activeViewId'],
   guardedFields: { schema: 'database.*', views: 'database.*' },
 });

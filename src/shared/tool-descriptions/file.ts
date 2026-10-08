@@ -19,5 +19,6 @@ export const describeFile = (_config: Record<string, unknown> = {}): BlockToolDe
   summary: 'A downloadable file card.',
   guidance: 'Set the file with file.setSource. fileName and caption are plain text.',
   data: FILE_DATA,
+  inputFields: ['fileName', 'caption'],
   summaryFields: ['fileName', 'mimeType'],
 });

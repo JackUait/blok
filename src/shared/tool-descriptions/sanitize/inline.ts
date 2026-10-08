@@ -1,5 +1,5 @@
 import type { SanitizerConfig } from '../../../../types';
-import { isInvisibleBackground } from '../../../components/utils/default-page-colors';
+import { isInvisibleBackground } from '../../default-page-colors';
 import { EQUATION_SOURCE_ATTR as EQUATION_ATTR } from '../../equation-mark';
 import { preservePageReferenceAnchor } from '../../page-reference';
 

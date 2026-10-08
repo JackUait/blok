@@ -1044,11 +1044,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
       this.toolRenderer.toolRenderedElement = result.newToolRoot;
     }
 
+    this.inputManager.dropCache();
+
     if (!result.shouldFireUpdate) {
       return;
     }
 
-    this.inputManager.dropCache();
     this.inputManager.updateCurrentInput();
     this.toggleInputsEmptyMark();
     this.syncContentDirection();

@@ -39,5 +39,6 @@ export const describePage = (_config: Record<string, unknown> = {}): BlockToolDe
   summary: 'A sub-page. Its body is a separate document named by pageId.',
   guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle.',
   data: PAGE_DATA,
+  inputFields: [],
   summaryFields: ['pageId'],
 });

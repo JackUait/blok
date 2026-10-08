@@ -26,5 +26,6 @@ export const describeAudio = (_config: Record<string, unknown> = {}): BlockToolD
   summary: 'An audio player with optional title, artist and cover.',
   guidance: 'Set the source with audio.setSource and the cover with audio.setCover. Remove the cover by writing coverUrl as "". caption, title and artist are plain text.',
   data: AUDIO_DATA,
+  inputFields: ['title', 'artist', 'caption'],
   summaryFields: ['title', 'artist', 'alignment'],
 });

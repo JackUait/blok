@@ -2029,6 +2029,7 @@ describe('mountHistoryDrawer', () => {
     const { Blok } = await import('../../../src/blok');
     const { List, Embed } = await import('../../../src/tools');
     // The blocks the browser check saw rewritten: a checklist item with no `checked`, and an embed.
+    // The class declares its API members at runtime only, so name the ones this test calls.
     const blok = new Blok({
       holder,
       tools: { paragraph: Paragraph, list: List, embed: Embed },
@@ -2038,7 +2039,7 @@ describe('mountHistoryDrawer', () => {
         { id: 'p-1', type: 'paragraph', data: { text: 'live text' } },
       ] },
       onChange,
-    });
+    }) as unknown as { isReady: Promise<unknown>; save(): Promise<{ blocks: LooseOutputBlockData[] }>; blocks: { update(id: string, data: Record<string, unknown>): Promise<unknown> }; destroy(): void };
 
     try {
       await blok.isReady;

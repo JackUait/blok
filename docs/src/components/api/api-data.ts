@@ -2930,7 +2930,7 @@ const saved = await editor.save();
         name: "title.set(text, options?)",
         returnType: "void",
         description:
-          "Replaces the title. It makes one undo step and calls `onChange` with source `api`. Setting the text the title already has does nothing.\n\nPass `{ record: false }` for a value undo should not touch, such as a rename that came from your own backend. Peers still get the write, and `onChange` gets `{ source: 'api', record: false }`.\n\n- A recorded title step made before it no longer changes the title on undo.\n- A typing run that goes on after it stays one undo step. Undo goes back to the value you wrote, not to the value before the run.",
+          "Replaces the title. It makes one undo step and calls `onChange` with source `api`. Setting the text the title already has does nothing.\n\nPass `{ record: false }` for a write that should add no undo step, such as a rename that came from your own backend. Peers still get the write, and `onChange` gets `{ source: 'api', record: false }`.\n\n- Undo does not go past this value until the next recorded title change. After that, undo can bring back a title from before it.\n- To make the value a floor, call `history.clear()` right after the write.\n- A typing run that goes on after it stays one undo step. Undo goes back to the value you wrote, not to the value before the run.",
         example: `editor.title.set('Roadmap 2027');
 
 // A rename from your backend: no undo step

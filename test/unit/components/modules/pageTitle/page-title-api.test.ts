@@ -320,6 +320,120 @@ describe('blok.title API', () => {
       expect(blok.history.canUndo()).toBe(false);
     });
 
+    it('a recorded title change after it brings the older steps back, so undo walks past the host value', async () => {
+      blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+
+      blok.title.set('A');
+      await nextTask();
+      blok.title.set('KS', { record: false });
+      await nextTask();
+
+      expect(blok.history.canUndo()).toBe(false);
+
+      blok.title.set('C');
+      await nextTask();
+
+      const seen: string[] = [];
+
+      while (blok.history.canUndo()) {
+        blok.history.undo();
+        seen.push(blok.title.get());
+      }
+
+      expect(seen).toEqual(['KS', 'Doc']);
+    });
+
+    it('with several steps on both sides, undo walks back through the host value to the first', async () => {
+      blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+
+      for (const text of ['A', 'B', 'C2']) {
+        blok.title.set(text);
+        await nextTask();
+      }
+      blok.title.set('KS', { record: false });
+      await nextTask();
+      blok.title.set('D');
+      await nextTask();
+
+      const seen: string[] = [];
+
+      while (blok.history.canUndo()) {
+        blok.history.undo();
+        seen.push(blok.title.get());
+      }
+
+      expect(seen).toEqual(['KS', 'B', 'A', 'Doc']);
+    });
+
+    it('a recorded icon change does not bring back the title steps before a title host value', async () => {
+      blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+
+      blok.title.set('A');
+      await nextTask();
+      blok.title.set('KS', { record: false });
+      await nextTask();
+      blok.title.icon.set({ type: 'emoji', value: 'x' });
+      await nextTask();
+      blok.history.undo();
+
+      expect(blok.title.get()).toBe('KS');
+      expect(blok.title.icon.get()).toBeNull();
+      expect(blok.history.canUndo()).toBe(false);
+    });
+
+    it('history.clear right after it makes the host value a floor', async () => {
+      blok = create({ holder, pageTitle: true, data: { title: 'Doc', blocks: [] } });
+      await blok.isReady;
+
+      blok.title.set('A');
+      await nextTask();
+      blok.title.set('KS', { record: false });
+      blok.history.clear();
+      await nextTask();
+      blok.title.set('C');
+      await nextTask();
+
+      const seen: string[] = [];
+
+      while (blok.history.canUndo()) {
+        blok.history.undo();
+        seen.push(blok.title.get());
+      }
+
+      expect(seen).toEqual(['KS']);
+    });
+
+    it('a recorded icon change after it brings the older icon steps back', async () => {
+      blok = create({ holder, pageTitle: true });
+      await blok.isReady;
+
+      for (const value of ['1', '2']) {
+        blok.title.icon.set({ type: 'emoji', value });
+        await nextTask();
+      }
+      blok.title.icon.set({ type: 'emoji', value: 'H' }, { record: false });
+      await nextTask();
+
+      expect(blok.history.canUndo()).toBe(false);
+
+      blok.title.icon.set({ type: 'emoji', value: '3' });
+      await nextTask();
+
+      const seen: Array<string | null> = [];
+
+      while (blok.history.canUndo()) {
+        blok.history.undo();
+        const icon = blok.title.icon.get();
+
+        seen.push(icon?.type === 'emoji' ? icon.value : null);
+      }
+
+      expect(seen).toEqual(['H', '1', null]);
+    });
+
     it('title.icon.set adds no undo step', async () => {
       blok = create({ holder, pageTitle: true });
       await blok.isReady;
@@ -398,4 +512,5 @@ describe('blok.title API', () => {
     expect(blok.title.get()).toBe('Early');
     expect(holder.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent).toBe('Early');
   });
+
 });

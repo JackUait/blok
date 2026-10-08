@@ -10,7 +10,9 @@ export interface TitleChange {
 export interface TitleSetOptions {
   /**
    * False: no undo step. Peers still get the write.
-   * A recorded title step made before it no longer changes the title on undo.
+   * Undo does not go past this value until the next recorded change to the same field.
+   * After that, undo can bring back a value from before it.
+   * To make the value a floor, call `history.clear()` right after the write.
    * A typing run that goes on after it stays one step, and undo goes back to this value, not to the one before the run.
    */
   record?: boolean;

@@ -590,7 +590,8 @@ export const remotePagePlayground = (options: {
       document.documentElement.setAttribute(WIRED_ATTRIBUTE, pageId);
       if (typed !== undefined) {
         // Steps typed before the host answered undo to titles the host never had, like the empty boot
-        // title, and an undo is saved. A record:false write does not cancel them all (measured).
+        // title, and an undo is saved. The record:false write hides them only until the next recorded
+        // title change, then undo reaches them again.
         editor.history.clear();
         // Back on screen as one undo step over the host title, saved through change.
         if (typed !== editor.title.get()) {

@@ -43,7 +43,7 @@ Facts checked:
   - `StoreApplier` (new, over a `DocumentStore`). Used for **live rooms** from Node. It writes with origin `'local'` inside `DocumentStore.transact`.
 - ~~v1 runs headless only in Node; Jint deferred.~~ **Superseded by D1 (DECIDED): Node and C# Jint both ship in v1.** Section 7 is the Jint design. The planner must stay pure and Jint-safe.
 - No change to the public C# `/edit` wire in v1. Live rooms are reached by a Node socket member (04) and, after D1, by the C# room path with internal ops only (section 7.4).
-- Stored mode uses `JsonApplier`, not a socketless `DocumentStore`. Reason: the dry-run output already is the result, and a Y.Doc adds nothing for a document with no peers. (Round 3: the old reason "the saved format has no page fields" is stale; section 10.1 adds `OutputData.page`, which `JsonApplier` writes directly.)
+- Stored mode uses `JsonApplier`, not a socketless `DocumentStore`. Reason: the dry-run output already is the result, and a Y.Doc adds nothing for a document with no peers. (Round 3: the old reason "the saved format has no page fields" is stale. Round 4: the saved page fields are the flat `OutputData.title` / `OutputData.icon`, which `JsonApplier` writes directly; see section 10.1 A and section 13.)
 - Parity (05) runs the appliers: `EditorApplier` (jsdom/browser), `JsonApplier` (Node and Jint), `StoreApplier`, and the C# `RoomEditTranslator` (section 7).
 
 **Reason.** Node reuses the exact Yjs code browsers run. Moves keep their Yjs identity. 01's `Edit` list maps onto `DocumentStore` methods, though not one-to-one (R2-01-1), so 01's planner survives intact.
@@ -462,10 +462,12 @@ interface ToolActionImpl<Args = unknown, Prepared = unknown, Result = unknown> {
 }
 
 interface ToolActionContext {
+  /** Round 4: the registry key the action runs under. A `create` action inserts `type: ctx.tool`. */
+  tool: string;
   block?: { id: string; type: string; data: Readonly<Record<string, unknown>>; children: readonly string[] };
   read(id: string): { id: string; type: string; data: unknown; parentId: string | null; children: readonly string[] } | null;
   insert(input: { type: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[] }): string;
-  update(id: string, patch: Record<string, unknown>): void;
+  update(id: string, patch: Record<string, unknown>): void;   // round 4: a key set to undefined or null is removed
   setRichText(id: string, field: string, value: RichText): void;
   move(id: string, to: { parentId?: string | null; position: BlockPosition }): void;
   remove(id: string, opts?: { withChildren?: boolean }): void;
@@ -684,7 +686,7 @@ No new core subpath. `buildToolManifest` and `validateAgainst` export from `@blo
 - Run count per full run (round 3): 15 tasks × 3 trials = 45 runs, plus a one-off 78 runs for the envelope-vs-full comparison (05 §3.3.7). Per-run and per-dispatch token caps stay.
 
 **D4. DECIDED 2026-10-08: approved. Ship with a release note listing the new surface.** New public surface (additive, not breaking): `editor.agent`; `BlockMutationEventDetail.agent`; config key `BlokConfig.agent.overrides`; statics `describe` and `actionHandlers`; exports `buildToolManifest`, `validateAgainst`. Round 2 adds: `CollaborationParticipant.agent?` (optional field on a type shipped in `v1.16.1`, `types/events/editor-events.ts:56`; R2-03-5); published `InsertSpec`, `RichTextHelpers`, `BlokCustomToolsFile` types (R2-02-5, R2-04-17); and on NuGet `Blok.Server`, a new public interface `IBlokAgentExecutor` (section 7.3). One edge: a consumer who hand-implements the full `API` interface gets a TS error for missing `agent`, as with `media`, `viewState`, `marks`.
-- The release note lists every item above, plus section 10's additions: `doc.setTitle` / `doc.setIcon` commands, the optional saved `page` field on `OutputData`, and the awareness field `agentCursor`.
+- The release note lists every item above, plus section 10's additions: `doc.setTitle` / `doc.setIcon` commands, the optional saved top-level `title` / `icon` on `OutputData` (round 4; already on `main` since `8d86c376`, unreleased), and the awareness field `agentCursor`.
 
 **D5. DECIDED 2026-10-08: fix public `blocks.convert()` too, labelled BREAKING.**
 - Confirmed breaking. `git tag --sort=-v:refname | head -1` → `v1.16.1`. `git log v1.16.1..HEAD -- src/components/modules/api/blocks.ts` lists `bb1f557f` and `474c8334`; neither diff mentions `convert`. At the tag, the same unsanitized call is at `src/components/modules/api/blocks.ts:748` and the raw spread at `block-mutation.ts:1740` (`git show v1.16.1:...`). So the gap shipped.
@@ -976,7 +978,7 @@ There are two different things here. They get two different commands.
 - New `Edit` op: `{ op: 'setPageField'; key: 'title' | 'icon'; value: string | PageIcon | null }`.
 - Browser (`EditorApplier`): `YjsManager.setPageField` (`yjs/index.ts:963-974`). It is already one undo step, so it joins the batch's group.
 - Node live (`StoreApplier`): `writePageField(store.page, key, value)` in the batch's `transact`.
-- Stored (Node `JsonApplier` and Jint): needs a saved slot. Add an optional top-level field `page?: { title?: string; icon?: PageIcon }` to `OutputData`. It is additive, and absent when empty. `DocumentStore` load and save carry it through `pageFromJSON` / `readPageFields`. `blokDocumentSchema` gains the property, so 02's "byte-identical" pin is updated once, on purpose. Listed in D4.
+- Stored (Node `JsonApplier` and Jint): needs a saved slot. ~~Add `OutputData.page?: { title?, icon? }`.~~ **Round 4:** `OutputData` already has flat `title?: string` and `icon?: PageIcon` (`types/data-formats/output-data.d.ts:128-132`), added by `8d86c376`, which is after the last tag `v1.16.1` (`git merge-base --is-ancestor v1.16.1 8d86c376` succeeds), so no consumer has them yet. The saver writes them from the Yjs page map. Every plan uses these two flat fields; there is no `page` object. `DocumentStore` load and save carry them through `pageFromJSON` / `readPageFields`. `blokDocumentSchema` gains top-level `title` and `icon` (02 Task 23), so 02's "byte-identical" pin is updated once for it, on purpose. Listed in D4.
 - C# live (7.4): a new internal op `SetPageField`, and `SeedAsync` / `ExportAsync` must read and write the `page` root. Today they do not. Lockstep fixtures against `page-fields.ts`.
 - The document view (`doc.read`) returns `page: { title?, icon? }` at the top.
 - Core has an internal `YjsManager.onPageChange` (`yjs/index.ts:976`). **No public page-change API in v1** (round 3, R3-8): the agent does not need it and it is not in D4's approved list. A host can ask for it later as new surface.
@@ -1031,7 +1033,7 @@ These add to section 9. Counts in parentheses are the new totals.
 ### 01 (16)
 
 12. Add `doc.setTitle`, `doc.setIcon` and the `setPageField` edit; map it in all appliers and the C# translator (10.1 A).
-13. `doc.read` returns `page`. `OutputData.page` load/save in `JsonApplier` and `DocumentStore` paths.
+13. `doc.read` returns `page`. `OutputData.title` / `OutputData.icon` (round 4, flat) load/save in `JsonApplier` and `DocumentStore` paths.
 14. Cross-document execution for headless `page.rename` / `page.setIcon`: a session hook to open a target document (10.1 B).
 15. `history.undo` in any live room (Node or C#) → `COMMAND_UNAVAILABLE` (D6).
 16. Media commands take URLs only; no byte input anywhere (D6).
@@ -1040,7 +1042,7 @@ These add to section 9. Counts in parentheses are the new totals.
 
 8. `inputFields?: string[]` on `BlockToolDescription`, declared for every multi-input built-in, with a jsdom order test (10.2).
 9. `page.rename` / `page.setIcon`: headless form = cross-document `doc.set*`, opt-in via `pageTitles: 'page-map'` (10.1 B).
-10. `blokDocumentSchema` gains the optional `page` property; re-pin the byte snapshot once (10.1 A).
+10. `blokDocumentSchema` gains the optional top-level `title` and `icon` properties (round 4); re-pin the byte snapshot once (10.1 A).
 11. `setSource` actions are URL-only; drop any byte path (D6).
 
 ### 03 (12)
@@ -1053,7 +1055,7 @@ These add to section 9. Counts in parentheses are the new totals.
 ### 04 (13)
 
 9. Publish `agentCursor` in live mode; clear on close/expiry (10.2). Remove "no caret in v1" and "caret presence" from out-of-scope.
-10. Page fields in both modes: live via `DocumentStore.page`, stored via `OutputData.page` (10.1 A). Remove the C15 cut.
+10. Page fields in both modes: live via `DocumentStore.page`, stored via `OutputData.title` / `OutputData.icon` (10.1 A, round 4). Remove the C15 cut.
 11. Headless `page.rename` / `page.setIcon` with `--page-titles page-map` (10.1 B); the target opens under the same principal and mode rules.
 12. Docker image and custom handlers: mark "cut, user can revisit".
 13. Note the C# path is in v1 as a service API, stored first then live (D1a).
@@ -1157,3 +1159,94 @@ Recorded under D3 (section 5): root `devDependencies` for a model SDK and an MCP
 | 05 #3 eval devDependencies | R3-10 | issue removed |
 
 Still open: none. Remaining items are implementation tests already labelled unverified (R3-6; section 7.1 bundle growth and Jint feature support; section 10.2 input order; section 10.1 B whether hosts read titles from the page map).
+
+---
+
+## 13. Round 4: cross-plan integration (implementation plans)
+
+The five implementation plans in `plans/` were written in parallel. This round fixed every cross-plan name to its producer and settled the open asks between plans. Section 3 is updated in place where a shared shape changed (3.4). Each plan's "Cross-plan dependencies" section names the producing task.
+
+Changes to the contract:
+
+- **Page fields are flat (supersedes 10.1 A's `OutputData.page`).** `OutputData.title?` / `OutputData.icon?` exist since `8d86c376`, after `v1.16.1` (verified with `git merge-base --is-ancestor v1.16.1 8d86c376` and `git log v1.16.1..HEAD -- types/data-formats/output-data.d.ts`). A second `page` object would be two shapes for one thing. 01 (deviation D-1), 02 (Task 23: top-level `title` and `icon` on `blokDocumentSchema`), 04 and 05 use the flat fields. `DocumentView.page` keeps its shape: it is a view type.
+- **`ToolActionContext.tool: string`** (3.4). The registry key the action runs under. 02's `create` handlers insert `type: ctx.tool`, so a host that registers the table tool as `grid` gets `grid` blocks (B7). 01 Task 14 fills it.
+- **One removal rule.** `ctx.update(id, { k: undefined })` and `block.update { data: { k: null } }` both remove `k`. The recorded `setData` edit carries `null` (it survives JSON into Jint), every applier deletes a `null` key, and post-write validation skips it (01 Tasks 9, 14, 15).
+
+Owners settled (one producer each):
+
+| Thing | Owner | Consumers fixed |
+|---|---|---|
+| `RESERVED_NAMESPACES` | 02 Task 5 (`src/shared/tool-manifest.ts`) | 01 Task 2 re-exports it |
+| `ToolCommandName`, `CommandName` | 01 Task 1 (`types/agent.d.ts`) | 02 Task 3 imports them (both files are `export *`-ed from `types/index.d.ts`) |
+| `mintId` | 02 Task 14 (`src/shared/mint-id.ts`) | 01 Task 19 |
+| `PageBackendService` (block id in) | 02 Task 12 (`src/shared/tool-actions/services.ts`, types only) | 01 Task 17 `createPageMapBackend(open, actor, readBlock)` (Node); 03 Task 9a (browser) |
+| Browser service objects (`pageBackend`, `linkMetadata`, `uploader`) | 03 Task 9a | 01 Task 28a carries them into the planner |
+| Node tool setup | 01 Task 21 `createHeadlessAgentSetup` over 02's `buildBuiltInSnapshot`, `snapshotWithCustomTools`, `runtimesWithCustomTools` | 04 Task 5 (no `buildNodeToolSetup`), 05 Task 7 |
+| Editor contract | 01 Task 28 `liveContractSource(Blok, { services, overrides })` over 02's `snapshotFromTools`, `runtimesFromTools` | 03 Task 9 (no `buildEditorAgentContract`; `InternalEditorHandle = BlokModules`) |
+| Jint `manifest` op | 02 Task 50 | 01 Task 37 adds only `agentExecute` |
+| `BlockMutationEventDetail.agent` | 01 Task 24 | 03 Task 12 tests it only |
+| Parity corpus, normalizer, goldens, `json` / `store` / Playwright `editor` / `jint` / `room` runners | 05 Tasks 6–8, 11–13 | 01 Task 21 adds `01-*` cases; 01 Task 32 keeps the jsdom runner; 01 Tasks 36, 39 moved to 05; 01 Task 46 keeps only the concurrent-move test |
+| Names of the 24 unnamed menu items | 02 Task 53 | 05 Task 2 only asserts. Count re-measured at `30c77599` over all of `src/`: 90 `onActivate` literals, 24 unnamed (all under `src/tools/`), 1 spread that inherits its `name` (`src/components/modules/toolbar/inline/index.ts:637`). 05's "25" counted the spread. |
+| MCP client devDependency | 04 Task 1 (`@modelcontextprotocol/client` 2.3.1) | 05 drops `@modelcontextprotocol/sdk`; 2.3.1 has `./stdio` `StdioClientTransport` and `Client.connect/listTools/callTool` (packed `.d.mts`, read 2026-10-08) |
+| `--manifest` file validation | 02 Task 29 `readCustomToolsFile` | 04 Task 5 wraps it |
+
+Open asks closed:
+
+- **Bare table insert** (02): 01 Task 8 Step 7. `block.insert` of a type that owns its children (`ownsChildren`, so a table registered as `grid` is caught; `selfPlacesChildren` is name-keyed, B7), has no `defaultChildren`, and whose contract lists `<type>.create` fails `INVALID_ARGS` with `details.use`. `column_list` and `tabs` (they seed children) and `markdown.insert` / `block.duplicate` are not affected.
+- **Concurrent convert → `CONFLICT`** (01's uncovered item): 01 Task 27a. The three "being edited by someone else" throws in `block-mutation.ts` (`:1700`, `:1829`, `:1879`, read at `30c77599`) become an internal `ConvertConflictError` with the same message; `EditorApplier` maps it to retryable `CONFLICT`.
+- **01 D-3** (`history.undo` / `redo` alone in a batch): 03 sends undo through `editor.history`, not `execute`; 04 and 05 already send it alone. Recorded in their constraints.
+- **Image markup schema** (02): verified a pure widening. At `v1.16.1`, `types/tools/image.d.ts:84-115` and the editor (`src/tools/image/markup/model.ts:50`, `:115-138`) save 10 shape types, stroke `cut`, shape `rotation`, `tx`, `ty`; `$defs.image.markup` lists 4 shapes and none of those keys, with `additionalProperties: false` (`src/view/document-schema.ts:527-579`, same at the tag). The fix adds enum values and optional keys to existing `anyOf` branches and rejects nothing that passed before, so it is a bug fix, not breaking: 02 Task 24a, failing test first.
+
+---
+
+## 14. Execution order
+
+Task numbers are each plan's own. "→" means "must be on `main` before". A wave can start when every task it waits on is on `main`; tasks of different plans inside a wave run in parallel, and tasks of one plan inside a wave keep that plan's order. A task listed in an earlier wave than its plan's phase is a run-ahead exception; each plan's Phases section names its exceptions (01: Task 22; 02: Tasks 8–11, 14, 15, 30, 40, 53; 03: Tasks 2–5, 14, 15, 21; 04: Tasks 15–17, 24).
+
+**Wave 0 — no cross-plan input (start now).**
+- 01: Task 1 (published contract types), Task 18 (sanitize walk), Task 22 (D5 `blocks.convert` BREAKING fix, its own commit).
+- 02: Tasks 1, 2 (byte pin, `validateAgainst`), 4, 8–11 (moved sanitize rules), 14 (`mintId`, table ids), 15's pure `normalizeTable` (its runtime registration waits for Task 13), 30 (`TableModel` move), 40 (database pieces), 53 (menu names).
+- 03: Tasks 14, 15, 21 (placement math, marker layer, remote-field gates).
+- 04: Tasks 1, 3, 4, 15, 16, 17, 24 (package, stdout guard, config, `ws` socket, tracking outbox, headless room, JWKS verifier).
+- 05: Tasks 1–6 (enumerators, ledger with `pending` rows, corpus format and normalizer). Task 2's "items have names" `it` is `it.fails` until 02 Task 53, then flips.
+
+**Wave 1 — after 01 Task 1.**
+- 02: Task 3 (`ToolCommandName` from 01 Task 1) → Tasks 5, 6, 7; Task 12 (`InsertSpec`, `RichTextHelpers` from 01 Task 1; creates `services.ts`).
+
+**Wave 2 — after 02 Tasks 2, 3, 5, 6, 12.**
+- 01: Tasks 2–16, 19, 20 (Task 2 needs `RESERVED_NAMESPACES`, 02 Task 5; Task 3 needs `validateAgainst`, 02 Task 2; Task 19 needs `mintId`, 02 Task 14).
+- 02: Task 13 → Tasks 16–29 (descriptions, snapshots, custom tools file), 24a after 20 (or earlier against `document-schema.ts`, see 02 Task 24a), 26 → 27 → 29; Phase 4 actions, Tasks 31–49 (on the fake ctx).
+- 03: Tasks 2–5 (renderer; needs `AgentContract`, `CommandEntry`, 02 Task 3). Task 6 waits for 03 Task 1 (wave 3).
+
+**Wave 3 — after 01 Tasks 3, 16 and 02 Tasks 13, 27, 29.**
+- 01: Task 17 (needs 02 Tasks 3, 12, 13) → Task 21 (needs 02 Tasks 5, 6, 13, 27, 29 and 05 Task 6; its test asserts only core commands and built-in tool entries, so it does not wait for 02's actions).
+- 02: Task 50 (Jint `manifest`; needs `COMMANDS`, 01 Task 3), 51, 52.
+- 03: Task 1 (needs `AgentSession`, 01 Task 17) → 6, 7, 8.
+- 04: Task 2 (needs `ContractSlice`, 01 Task 17) → 5 (needs 01 Task 21, 02 Task 29), 6 (needs 03 Task 5), 7–14.
+- 05: Task 7 (needs 01 Task 21) → 9; Task 14 (needs 03 Task 5); Tasks 17–20.
+
+**Wave 4 — editor and live room.**
+- 01: Tasks 23–28 (Task 28 needs 02 Task 26), 27a, 28a (its `page.rename` case needs 02 Task 49), 29, 30 (needs 02 Task 38), 31; 32 (needs 05 Task 7); 34, 35 (its table case waits for 02 Task 15's registration).
+- 02: Task 54 (`mirrors`; needs 02 Task 53 and 05 Task 2 green), 55, 56.
+- 03: Task 9 (needs 01 Tasks 28, 28a, 29) → 9a (needs 02 Task 12) → 10–13 (13 pins 01 Task 29) → 16–26.
+- 01: Task 33 (needs 03 Task 9).
+- 04: Tasks 18–21 (need 01 Task 35), 22, 23, 25, 26 (needs 01 Task 17's page backend).
+- 05: Task 8 (needs 01 Task 35), 11 (needs 03 Task 9), 15 (needs 02 Task 54).
+
+**Wave 5 — C#.**
+- 01: Task 37 (needs 02 Task 50) → 38 → 40; 41–45 → 46.
+- 05: Task 10 (bundle budget; needs 01 Task 37, 02 Task 50), 12 (needs 01 Task 38), 13 (needs 01 Task 45).
+- 03: Tasks 27–30. 04: Tasks 27, 28, 29 (needs 03 Tasks 23, 24).
+
+**Wave 6 — gates and evals.**
+- 05: Task 16 (zero `pending` rows, every command in a parity case; it closes "01 and 02 are done"), then 21–26 (Task 22 needs 04's bin and 03 Task 5; 23 needs 03 Task 9; 24 needs 04 Tasks 18–21 and 03 Task 24), then Task 27 (first manual run; picks the default `RenderOptions.schema` for 03 and 04).
+
+**No cycle.** At plan level the graph loops (01 ↔ 02, 01 ↔ 03, 01 ↔ 05), but at task level every edge above points from an earlier wave to a later one, or forward inside one wave along a listed "→" / "needs" (for example 01 Task 21 → 04 Task 5 and 05 Task 7 in wave 3; 01 Task 28a → 03 Task 9 → 01 Task 33 in wave 4). The tightest loops, checked one by one: 01 T1 → 02 T3 → 02 T5 → 01 T2; 02 T12 → 02 T13 → 01 T17 → 01 T21 → 05 T7 → 01 T32; 01 T3 → 02 T50 → 01 T37; 02 T53 → 05 T2 → 02 T54 → 05 T15; 01 T28/28a/29 → 03 T9 → 01 T33. None returns to its start.
+
+**Shippable early, on their own.**
+- 02 Task 15's `normalizeTable` (live-mode blocker, 06 C17) as a pure function; registration follows Task 13.
+- 02 Task 24a, the image markup schema bug fix.
+- 02 Task 53, the menu names (additive `data-blok-item-name`).
+- 05 Tasks 1–6: the coverage law with its `pending` rows and the corpus format. The law is green from day one because `pending` rows count as routed until 05 Task 16.
+- 01 Task 22 (D5): needs a release note, labelled `BREAKING`.
+- 04 Tasks 15–17: the Node socket, tracking outbox and headless room member are core modules with their own tests.

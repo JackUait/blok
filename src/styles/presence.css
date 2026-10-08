@@ -51,7 +51,8 @@
    on it: the resting pulse animates the caret's opacity, and a name breathing
    with the line would be unreadable. The text is an attribute this rule paints,
    because the flag hangs off the holder and a copied block keeps text nodes. */
-[data-blok-presence-caret-label] {
+[data-blok-presence-caret-label],
+[data-blok-agent-marker-label] {
   position: absolute;
   z-index: 2;
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
@@ -74,7 +75,8 @@
   content: attr(data-blok-presence-caret-label);
 }
 
-[data-blok-presence-caret-shown] {
+[data-blok-presence-caret-shown],
+[data-blok-agent-marker-shown] {
   opacity: 1;
 }
 
@@ -86,6 +88,29 @@
 @keyframes blok-presence-caret-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+[data-blok-agent-marker] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--blok-radius-control);
+  box-shadow: inset 0 0 0 var(--blok-presence-caret-width) var(--blok-presence-color);
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-blok-agent-marker-label] {
+  inset-block-start: 0;
+  inset-inline-start: 0;
+}
+
+[data-blok-agent-marker-label]::after {
+  content: attr(data-blok-agent-marker-label);
+}
+
+[data-blok-presence-face][data-blok-presence-agent] {
+  border-radius: var(--blok-radius-control-sm);
 }
 
 /* The line still settles; only the animation goes. */
@@ -100,7 +125,8 @@
   }
 
   /* The name still comes and goes; it just does not fade. */
-  [data-blok-presence-caret-label] {
+  [data-blok-presence-caret-label],
+  [data-blok-agent-marker-label] {
     transition: none;
   }
 }

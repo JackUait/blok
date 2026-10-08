@@ -14906,7 +14906,7 @@ span[data-blok-slash-search] {
   pointer-events: none;
 }
 
-[data-blok-presence-caret-label] {
+[data-blok-presence-caret-label], [data-blok-agent-marker-label] {
   position: absolute;
   z-index: 2;
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
@@ -14928,12 +14928,35 @@ span[data-blok-slash-search] {
   content: attr(data-blok-presence-caret-label);
 }
 
-[data-blok-presence-caret-shown] {
+[data-blok-presence-caret-shown], [data-blok-agent-marker-shown] {
   opacity: 1;
 }
 
 [data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
+}
+
+[data-blok-agent-marker] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--blok-radius-control);
+  box-shadow: inset 0 0 0 var(--blok-presence-caret-width) var(--blok-presence-color);
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-blok-agent-marker-label] {
+  inset-block-start: 0;
+  inset-inline-start: 0;
+}
+
+[data-blok-agent-marker-label]::after {
+  content: attr(data-blok-agent-marker-label);
+}
+
+[data-blok-presence-face][data-blok-presence-agent] {
+  border-radius: var(--blok-radius-control-sm);
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-idle] {
@@ -14944,7 +14967,7 @@ span[data-blok-slash-search] {
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-label] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-label], [data-blok-agent-marker-label] {
   transition: none;
 }
 

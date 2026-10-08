@@ -297,3 +297,124 @@ describe('presence stylesheet', () => {
     });
   });
 });
+
+describe('agent marker and agent face styles', () => {
+  let style: HTMLStyleElement;
+  let holder: HTMLElement;
+
+  const ruleText = (selector: string): string => {
+    const sheet = style.sheet;
+
+    if (sheet === null) {
+      throw new Error('stylesheet did not parse');
+    }
+
+    return Array.from(sheet.cssRules)
+      .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule
+        && rule.selectorText.split(',').some((part) => part.trim() === selector))
+      .map((rule) => rule.cssText)
+      .join('\n');
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    style = document.createElement('style');
+    style.textContent = STYLESHEET;
+    document.head.appendChild(style);
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    holder.remove();
+    style.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the outline out of layout and lets the pointer pass through', () => {
+    const outline = document.createElement('div');
+
+    outline.setAttribute('data-blok-agent-marker', '');
+    holder.appendChild(outline);
+
+    const computed = getComputedStyle(outline);
+    const rule = ruleText('[data-blok-agent-marker]');
+
+    expect(computed.position).toBe('absolute');
+    expect(computed.pointerEvents).toBe('none');
+    expect(computed.userSelect).toBe('none');
+    expect(rule).toContain('inset: 0');
+    expect(rule).toContain('var(--blok-presence-color)');
+    expect(rule).not.toMatch(/background(?:-color)?:/);
+  });
+
+  it('places the hidden name flag with logical properties only', () => {
+    const flag = document.createElement('div');
+
+    flag.setAttribute('data-blok-agent-marker-label', 'Bot');
+    holder.appendChild(flag);
+
+    const computed = getComputedStyle(flag);
+    const rule = ruleText('[data-blok-agent-marker-label]');
+
+    expect(computed.opacity).toBe('0');
+    expect(computed.pointerEvents).toBe('none');
+    expect(computed.position).toBe('absolute');
+    expect(rule).toContain('inset-inline-start');
+    expect(rule).toContain('inset-block-start');
+    expect(rule).not.toMatch(/(?:^|[;\s])(?:left|right|top|bottom):/);
+  });
+
+  it('paints the name from its attribute and shows it only when marked', () => {
+    const flag = document.createElement('div');
+
+    flag.setAttribute('data-blok-agent-marker-label', 'Bot');
+    flag.setAttribute('data-blok-agent-marker-shown', '');
+    holder.appendChild(flag);
+
+    expect(getComputedStyle(flag).opacity).toBe('1');
+    expect(STYLESHEET).toContain('content: attr(data-blok-agent-marker-label)');
+    expect(flag.textContent).toBe('');
+
+    const sheet = style.sheet;
+
+    if (sheet === null) {
+      throw new Error('stylesheet did not parse');
+    }
+
+    const selectors = styleRules(sheet)
+      .filter((rule) => rule.selectorText.includes('[data-blok-agent-marker'))
+      .map((rule) => rule.selectorText);
+
+    expect(selectors.some((selector) => /:focus|:hover/.test(selector))).toBe(false);
+  });
+
+  it('disables the name fade inside the reduced-motion media rule', () => {
+    const sheet = style.sheet;
+
+    if (sheet === null) {
+      throw new Error('stylesheet did not parse');
+    }
+
+    const media = Array.from(sheet.cssRules).find((rule): rule is CSSMediaRule =>
+      rule instanceof CSSMediaRule && rule.conditionText === '(prefers-reduced-motion: reduce)');
+    const flagRule = media === undefined ? undefined : Array.from(media.cssRules)
+      .find((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && rule.selectorText.includes('[data-blok-agent-marker-label]'));
+
+    expect(flagRule?.style.getPropertyValue('transition')).toBe('none');
+    expect(ruleText('[data-blok-agent-marker-label]')).toContain('transition: opacity 140ms ease');
+  });
+
+  it('makes an agent face a rounded square without changing a person face', () => {
+    const person = document.createElement('div');
+    const agent = document.createElement('div');
+
+    person.setAttribute('data-blok-presence-face', '');
+    agent.setAttribute('data-blok-presence-face', '');
+    agent.setAttribute('data-blok-presence-agent', '');
+    holder.append(person, agent);
+
+    expect(getComputedStyle(agent).borderRadius).toBe('var(--blok-radius-control-sm)');
+    expect(getComputedStyle(person).borderRadius).toBe('50%');
+  });
+});

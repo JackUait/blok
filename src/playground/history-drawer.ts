@@ -1322,11 +1322,14 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     card.querySelector<HTMLButtonElement>('.pg-history-dialog__primary')?.focus();
   };
 
-  /** The live doc now holds the point's page fields; a host that keeps its own page record follows. */
+  /**
+   * The live doc now holds the point's page fields; a host that keeps its own
+   * page record follows. Skipped once another page is open: the host writes to the open page.
+   */
   const handOver = async (doc: string, row: VersionRow): Promise<void> => {
     const restored = options.onRestored === undefined ? null : await readPoint(doc, row).catch(() => null);
 
-    if (restored === null) {
+    if (restored === null || options.doc() !== doc) {
       return;
     }
 
@@ -1334,6 +1337,17 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       ...(restored.page === undefined ? {} : { page: restored.page }),
       ...(restored.values === undefined ? {} : { values: restored.values }),
     });
+  };
+
+  /** The list after a restore, with focus on the new current row. */
+  const showRestored = async (): Promise<void> => {
+    await load();
+    state.selected = state.rows.find((candidate): candidate is VersionRow => candidate.kind === 'version' && candidate.current) ?? null;
+    drawRows();
+    // The dialog's button had focus and is gone.
+    const current = state.selected === null ? null : list.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(state.selected.key)}"]`);
+
+    (current ?? options.button).focus();
   };
 
   const restore = async (row: VersionRow): Promise<void> => {
@@ -1351,26 +1365,24 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
         method: 'POST',
         headers: { 'Blok-Idempotency-Key': idempotencyKey() },
       });
-      state.busy = false;
-      closeDialog();
-      state.selected = null;
-      showEditor();
-      await load();
-      state.selected = state.rows.find((candidate): candidate is VersionRow => candidate.kind === 'version' && candidate.current) ?? null;
-      drawRows();
-      // The dialog's button had focus and is gone.
-      const current = state.selected === null ? null : list.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(state.selected.key)}"]`);
-
-      (current ?? options.button).focus();
-      void refresh();
-      await handOver(doc, row);
-      options.notify(`Restored ${row.time}. It is now the newest version.`);
     } catch (error) {
       state.busy = false;
       state.error = messageOf(error);
       drawBanner();
       closeDialog(true);
+
+      return;
     }
+
+    state.busy = false;
+    closeDialog();
+    state.selected = null;
+    showEditor();
+    await handOver(doc, row);
+    // The restore is done; a list that fails to reload must not read as a failed restore.
+    await showRestored().catch(() => undefined);
+    void refresh();
+    options.notify(`Restored ${row.time}. It is now the newest version.`);
   };
 
   const showPanel = (): void => {

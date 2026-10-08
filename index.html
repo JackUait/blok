@@ -2353,8 +2353,9 @@
 
     /** A restore brings back values.title; the page list owns the title, so it takes it here. */
     function adoptRestoredTitle(values) {
-      const title = values?.title;
-      if (typeof title !== 'string' || remotePages !== null) return;
+      if (remotePages !== null) return;
+      // No title at the point: the restore removed the key, so the page is untitled again.
+      const title = typeof values?.title === 'string' ? values.title : '';
       pages.setTitle(currentPageId, title);
       titleHistory?.adopt?.(title);
       renderHeader();

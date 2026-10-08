@@ -2009,6 +2009,87 @@ describe('mountHistoryDrawer', () => {
     expect(scrolled.map((call) => call.id)).toEqual(['b']);
   });
 
+  it('hands over the restored title before anything can switch the open page', async () => {
+    POINTS['5'] = { ...POINTS['5'], values: { title: 'Old title' } } as typeof POINTS['5'];
+
+    const open = { doc: 'playground' };
+    const pending: { release: () => void } = { release: () => undefined };
+    const held = { on: false };
+    const seenOn: string[] = [];
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (held.on && url === LIST_URL) {
+        await new Promise<void>((resolve) => {
+          pending.release = resolve;
+        });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button } = setup(() => open.doc, { onRestored: () => seenOn.push(open.doc) });
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    held.on = true;
+    buttonNamed(dialog(), 'Restore this version').click();
+    await settle();
+    // The person opens another page while the list reloads.
+    open.doc = 'other-page';
+    pending.release();
+    await settle();
+
+    expect(seenOn).toEqual(['playground']);
+  });
+
+  it('skips the hand-over when the open page changed before it', async () => {
+    const open = { doc: 'playground' };
+    const onRestored = vi.fn();
+    const { button } = setup(() => open.doc, { onRestored });
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    answers.restore = () => {
+      open.doc = 'other-page';
+
+      return new Response(null, { status: 204 });
+    };
+    buttonNamed(dialog(), 'Restore this version').click();
+    await settle();
+
+    expect(onRestored).not.toHaveBeenCalled();
+  });
+
+  it('still says the restore worked, and hands over the title, when the list fails to reload after it', async () => {
+    localStorage.setItem('pg-history-group', 'bookmarks');
+    bookmarkStore.push({ lineage: 'l2', sequence: 5, savedAt: at(7, 14, 32) });
+    POINTS['5'] = { ...POINTS['5'], values: { title: 'Old title' } } as typeof POINTS['5'];
+
+    const onRestored = vi.fn();
+    const { button, notify } = setup(undefined, { onRestored });
+
+    button.click();
+    await settle();
+    rowButtons()[0].click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    // A malformed bookmark list makes the reload throw.
+    bookmarkStore.push(null as unknown as HistoryBookmark);
+    buttonNamed(dialog(), 'Restore this version').click();
+    await settle();
+
+    expect(notify).toHaveBeenCalledWith('Restored Today, 14:32. It is now the newest version.');
+    expect(onRestored).toHaveBeenCalledWith({ values: { title: 'Old title' } });
+    expect(document.querySelector('.pg-history-banner__error:not([hidden])')).toBeNull();
+  });
+
   it('hands the host the restored point\'s page fields after a restore', async () => {
     POINTS['5'] = { ...POINTS['5'], values: { title: 'Old title' }, page: { icon: 'x' } } as typeof POINTS['5'];
 

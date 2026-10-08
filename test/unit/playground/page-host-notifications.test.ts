@@ -479,6 +479,66 @@ describe('playground page metadata notifications', () => {
     expect(writes).toEqual(['Old title!']);
   });
 
+  it('takes an empty title when the restored point has none, as the server removed the key', () => {
+    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+    const start = html.indexOf('let titleHistory = null;');
+    const source = html.slice(start, html.indexOf('/** Destroys the live editor', start));
+    const pages = new PageRegistry(seed());
+    const doc = new Y.Doc();
+    const shared = doc.getMap<string>('values');
+    const writes: string[] = [];
+    const renderHeader = vi.fn();
+    const world: {
+      adoptRestoredTitle?: (values: unknown) => void;
+      changed?: (value: string, change: { source: string }) => void;
+      history?: () => { set(value: string): void } | null;
+    } = {};
+    let connected: ((event: { status: string }) => void) | undefined;
+
+    shared.set('title', 'Guide');
+    shared.observe(() => writes.push(shared.get('title') ?? ''));
+
+    const editor = {
+      history: { track: (_key: string, callback: (value: string, change: { source: string }) => void) => {
+        world.changed = callback;
+
+        return {
+          get: () => shared.get('title'),
+          set: (value: string) => shared.set('title', value),
+        };
+      } },
+      on: (_name: string, listener: (event: { status: string }) => void) => { connected = listener; },
+    };
+
+    runInNewContext(`${source}; wireTitleHistory(editor); world.adoptRestoredTitle = adoptRestoredTitle; world.history = () => titleHistory`, {
+      editor,
+      world,
+      pages,
+      remotePages: null,
+      currentPageId: 'guide',
+      editorPageId: 'guide',
+      collaborationConfig: () => ({ doc: 'shared' }),
+      document: { activeElement: null, querySelector: () => ({}) },
+      window: { getSelection: () => null },
+      PAGE_TITLE_SELECTOR: '#pg-page-title',
+      renderHeader,
+      replaceTitleText: vi.fn(),
+      updateDocumentTitle: vi.fn(),
+    });
+    connected?.({ status: 'connected' });
+    shared.delete('title');
+    renderHeader.mockClear();
+
+    world.adoptRestoredTitle?.(undefined);
+
+    expect(pages.info('guide')?.title).toBe('');
+    expect(renderHeader).toHaveBeenCalledTimes(1);
+
+    world.adoptRestoredTitle?.({ other: 1 });
+
+    expect(pages.info('guide')?.title).toBe('');
+  });
+
   it('restored pointers carry only their page id', () => {
     expect(pointerBlock('guide').data).toEqual({ pageId: 'guide' });
   });

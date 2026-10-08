@@ -396,6 +396,107 @@ public interface IBlokDocumentConverter
       CancellationToken cancellationToken = default);
 
   /// <summary>
+  /// <see cref="ToHtmlAsync(string, CancellationToken)"/>, with the document's
+  /// <c>title</c> written first as an <c>&lt;h1&gt;</c>.
+  /// </summary>
+  /// <remarks>
+  /// An emoji icon leads the heading as <c>&lt;span aria-hidden="true"&gt;</c>, an
+  /// image icon as <c>&lt;img alt=""&gt;</c>. A document with no title gets no
+  /// heading. These title methods have default bodies so an implementation
+  /// written before them still compiles; such an implementation throws
+  /// <see cref="NotSupportedException"/> until it overrides them.
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"title":"…","blocks":[…]}</c>.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="NotSupportedException">The implementation does not override this method.</exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says why.
+  /// </exception>
+  ValueTask<string> ToHtmlWithTitleAsync(string documentJson, CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException($"{GetType().Name} does not implement {nameof(ToHtmlWithTitleAsync)}.");
+
+  /// <summary>
+  /// <see cref="ToHtmlAsync(string, IReadOnlyDictionary{string, BlokPageInfo}, Func{string, string}, CancellationToken)"/>,
+  /// with the document's <c>title</c> written first, as in
+  /// <see cref="ToHtmlWithTitleAsync(string, CancellationToken)"/>.
+  /// </summary>
+  /// <param name="documentJson">A saved document: <c>{"title":"…","blocks":[…]}</c>.</param>
+  /// <param name="pages">What the reader may see about each page, by page id.</param>
+  /// <param name="pageHref">Builds the link for an allowed page. <c>null</c>: no links.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="NotSupportedException">The implementation does not override this method.</exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says why.
+  /// </exception>
+  ValueTask<string> ToHtmlWithTitleAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException($"{GetType().Name} does not implement {nameof(ToHtmlWithTitleAsync)}.");
+
+  /// <summary>
+  /// <see cref="ToMarkdownAsync(string, CancellationToken)"/>, with the document's
+  /// <c>title</c> written first as a <c>#</c> heading.
+  /// </summary>
+  /// <remarks>
+  /// An emoji icon leads the heading. An image icon has no Markdown form and is
+  /// left out. A document with no title gets no heading.
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"title":"…","blocks":[…]}</c>.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="NotSupportedException">The implementation does not override this method.</exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says why.
+  /// </exception>
+  ValueTask<BlokMarkdownConversion> ToMarkdownWithTitleAsync(
+      string documentJson,
+      CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException($"{GetType().Name} does not implement {nameof(ToMarkdownWithTitleAsync)}.");
+
+  /// <summary>
+  /// <see cref="ToMarkdownAsync(string, IReadOnlyDictionary{string, BlokPageInfo}, Func{string, string}, CancellationToken)"/>,
+  /// with the document's <c>title</c> written first, as in
+  /// <see cref="ToMarkdownWithTitleAsync(string, CancellationToken)"/>.
+  /// </summary>
+  /// <param name="documentJson">A saved document: <c>{"title":"…","blocks":[…]}</c>.</param>
+  /// <param name="pages">What the reader may see about each page, by page id.</param>
+  /// <param name="pageHref">Builds the link for an allowed page. <c>null</c>: no links.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="NotSupportedException">The implementation does not override this method.</exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says why.
+  /// </exception>
+  ValueTask<BlokMarkdownConversion> ToMarkdownWithTitleAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException($"{GetType().Name} does not implement {nameof(ToMarkdownWithTitleAsync)}.");
+
+  /// <summary>
+  /// <see cref="ToPlainTextAsync"/>, with the document's <c>title</c> as the
+  /// first line. A document with no title gets no extra line.
+  /// </summary>
+  /// <param name="documentJson">A saved document: <c>{"title":"…","blocks":[…]}</c>.</param>
+  /// <param name="includeHiddenText">As in <see cref="ToPlainTextAsync"/>.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="NotSupportedException">The implementation does not override this method.</exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says why.
+  /// </exception>
+  ValueTask<string> ToPlainTextWithTitleAsync(
+      string documentJson,
+      bool includeHiddenText = false,
+      CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException($"{GetType().Name} does not implement {nameof(ToPlainTextWithTitleAsync)}.");
+
+  /// <summary>
   /// Answers, without throwing, whether an input is a Blok document, whether it
   /// holds any text, and which of its blocks this build of Blok could not read.
   /// </summary>

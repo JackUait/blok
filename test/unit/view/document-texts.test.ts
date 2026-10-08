@@ -617,3 +617,42 @@ describe('extractTexts / injectTexts', () => {
     });
   });
 });
+
+describe('extractTexts / injectTexts with title: true', () => {
+  const titled = { title: 'Plan', icon: { type: 'emoji', value: '🚀' }, blocks: [{ type: 'paragraph', data: { text: 'Body' } }] };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('puts the title first', () => {
+    expect(extractTexts(titled, { title: true })).toEqual(['Plan', 'Body']);
+  });
+
+  it('writes the title back and keeps the icon', () => {
+    expect(injectTexts(titled, ['План', 'Тело'], { title: true })).toEqual({
+      title: 'План',
+      icon: { type: 'emoji', value: '🚀' },
+      blocks: [{ type: 'paragraph', data: { text: 'Тело' } }],
+    });
+  });
+
+  it('skips a missing or blank title, as it skips a blank field', () => {
+    expect(extractTexts({ blocks: titled.blocks }, { title: true })).toEqual(['Body']);
+    expect(extractTexts({ ...titled, title: '  ' }, { title: true })).toEqual(['Body']);
+    expect(injectTexts({ ...titled, title: '  ' }, ['Тело'], { title: true })).toMatchObject({ title: '  ' });
+  });
+
+  it('leaves the list and the indices unchanged without the option', () => {
+    expect(extractTexts(titled)).toEqual(['Body']);
+    expect(injectTexts(titled, ['Тело'])).toEqual({ ...titled, blocks: [{ type: 'paragraph', data: { text: 'Тело' } }] });
+  });
+
+  it('counts the title when it checks the translation count', () => {
+    expect(() => injectTexts(titled, ['Тело'], { title: true })).toThrow(RangeError);
+  });
+});

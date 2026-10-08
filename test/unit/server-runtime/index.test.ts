@@ -764,3 +764,78 @@ describe('server runtime boundary', () => {
     });
   });
 });
+
+describe('server runtime page title', () => {
+  const titled = {
+    title: 'Plan',
+    icon: { type: 'emoji', value: '🚀' },
+    blocks: [{ type: 'paragraph', data: { text: 'Body' } }],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('leaves a bare titled document exactly as before', async () => {
+    const bare = JSON.stringify(titled);
+
+    expect(await invoke('blocksToHtml', bare)).toBe('<p>Body</p>');
+    expect(JSON.parse(await invoke('blocksToMarkdown', bare))).toEqual({ markdown: 'Body', warnings: [] });
+    expect(await invoke('blocksToPlainText', bare)).toBe('Body');
+  });
+
+  it('writes the title when the wrapped request asks for it', async () => {
+    const wrapped = JSON.stringify({ document: titled, title: true });
+
+    expect(await invoke('blocksToHtml', wrapped)).toBe('<h1><span aria-hidden="true">🚀</span> Plan</h1><p>Body</p>');
+    expect(JSON.parse(await invoke('blocksToMarkdown', wrapped))).toEqual({ markdown: '# 🚀 Plan\n\nBody', warnings: [] });
+    expect(await invoke('blocksToPlainText', wrapped)).toBe('Plan\n\nBody');
+    expect(JSON.parse(await invoke('blocksToPlainTextWithReport', wrapped))).toEqual({ text: 'Plan\n\nBody', warnings: [] });
+  });
+
+  it('reads a wrapped request with title: false as no title', async () => {
+    const wrapped = JSON.stringify({ document: titled, title: false });
+
+    expect(await invoke('blocksToHtml', wrapped)).toBe('<p>Body</p>');
+    expect(JSON.parse(await invoke('blocksToMarkdown', wrapped))).toEqual({ markdown: 'Body', warnings: [] });
+    expect(await invoke('blocksToPlainText', wrapped)).toBe('Body');
+  });
+
+  it('keeps counting malformed blocks in a wrapped Markdown request', async () => {
+    const output = JSON.parse(await invoke('blocksToMarkdown', JSON.stringify({
+      document: { ...titled, blocks: [...titled.blocks, { nope: 1 }] },
+      title: true,
+    }))) as unknown;
+
+    expect(output).toMatchObject({ markdown: '# 🚀 Plan\n\nBody', warnings: [{ construct: 'block', action: 'dropped' }] });
+  });
+
+  it('writes the title in the page-aware exports when asked', async () => {
+    const request = (title: boolean): string => JSON.stringify({ document: titled, pages: {}, title });
+
+    expect(await invoke('blocksToHtmlWithPages', request(true))).toBe('<h1><span aria-hidden="true">🚀</span> Plan</h1><p>Body</p>');
+    expect(await invoke('blocksToHtmlWithPages', request(false))).toBe('<p>Body</p>');
+    expect(JSON.parse(await invoke('blocksToMarkdownWithPages', request(true)))).toEqual({ markdown: '# 🚀 Plan\n\nBody', warnings: [] });
+    expect(JSON.parse(await invoke('blocksToMarkdownWithPages', request(false)))).toEqual({ markdown: 'Body', warnings: [] });
+  });
+
+  it('carries an image icon through to the HTML', async () => {
+    const document = { ...titled, icon: { type: 'image', url: 'https://x.com/i.png' } };
+
+    expect(await invoke('blocksToHtml', JSON.stringify({ document, title: true })))
+      .toBe('<h1><img alt="" src="https://x.com/i.png"> Plan</h1><p>Body</p>');
+  });
+
+  it('puts the title first in the translation list when asked', async () => {
+    expect(JSON.parse(await invoke('extractTexts', JSON.stringify({ document: titled, title: true })))).toEqual(['Plan', 'Body']);
+    expect(JSON.parse(await invoke('extractTexts', JSON.stringify({ document: titled })))).toEqual(['Body']);
+
+    const injected = JSON.parse(await invoke('injectTexts', JSON.stringify({ document: titled, texts: ['План', 'Тело'], title: true }))) as unknown;
+
+    expect(injected).toMatchObject({ document: { title: 'План', blocks: [{ data: { text: 'Тело' } }] } });
+  });
+});

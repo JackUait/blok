@@ -348,6 +348,11 @@ export interface DocumentTextsOptions {
    * translator handed it will "fix" it.
    */
   includeCode?: boolean;
+  /**
+   * Put the document's `title` first in the list, and write it back from there.
+   * Default `false`: turning it on shifts every index by one.
+   */
+  title?: boolean;
 }
 
 /**

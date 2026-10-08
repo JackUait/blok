@@ -215,12 +215,34 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   /// the runtime reads either shape — the bare document every caller sent
   /// before the option existed, or this envelope.
   /// </summary>
-  private static string PlainTextRequest(string documentJson, bool includeHiddenText)
+  private static string PlainTextRequest(string documentJson, bool includeHiddenText, bool title = false)
   {
-    return new JsonObject
+    var request = new JsonObject
     {
       ["document"] = ParseDocument(documentJson),
       ["includeHiddenText"] = includeHiddenText,
+    };
+
+    if (title)
+    {
+      request["title"] = true;
+    }
+
+    return request.ToJsonString();
+  }
+
+  /// <summary>
+  /// The runtime reads the title flag only from a wrapper: on a bare document,
+  /// <c>title</c> is the title string itself.
+  /// </summary>
+  private static string TitleRequest(string documentJson)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+
+    return new JsonObject
+    {
+      ["document"] = ParseDocument(documentJson),
+      ["title"] = true,
     }.ToJsonString();
   }
 
@@ -233,7 +255,8 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   private static string PagesRequest(
       string documentJson,
       IReadOnlyDictionary<string, BlokPageInfo?> pages,
-      Func<string, string>? pageHref)
+      Func<string, string>? pageHref,
+      bool title = false)
   {
     ArgumentNullException.ThrowIfNull(documentJson);
     ArgumentNullException.ThrowIfNull(pages);
@@ -245,11 +268,18 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       entries[pageId] = PageEntry(pageId, info, pageHref);
     }
 
-    return new JsonObject
+    var request = new JsonObject
     {
       ["document"] = ParseDocument(documentJson),
       ["pages"] = entries,
-    }.ToJsonString();
+    };
+
+    if (title)
+    {
+      request["title"] = true;
+    }
+
+    return request.ToJsonString();
   }
 
   private static JsonObject? PageEntry(string pageId, BlokPageInfo? info, Func<string, string>? pageHref)
@@ -336,6 +366,61 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     return runtime.InvokeAsync(
         "blocksToPlainText",
         PlainTextRequest(documentJson, includeHiddenText),
+        cancellationToken: cancellationToken);
+  }
+
+  public ValueTask<string> ToHtmlWithTitleAsync(string documentJson, CancellationToken cancellationToken = default)
+  {
+    return runtime.InvokeAsync("blocksToHtml", TitleRequest(documentJson), cancellationToken: cancellationToken);
+  }
+
+  public ValueTask<string> ToHtmlWithTitleAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default)
+  {
+    return runtime.InvokeAsync(
+        "blocksToHtmlWithPages",
+        PagesRequest(documentJson, pages, pageHref, title: true),
+        cancellationToken: cancellationToken);
+  }
+
+  public async ValueTask<BlokMarkdownConversion> ToMarkdownWithTitleAsync(
+      string documentJson,
+      CancellationToken cancellationToken = default)
+  {
+    var output = await runtime.InvokeAsync("blocksToMarkdown", TitleRequest(documentJson), cancellationToken: cancellationToken);
+
+    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+  }
+
+  public async ValueTask<BlokMarkdownConversion> ToMarkdownWithTitleAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default)
+  {
+    var output = await runtime.InvokeAsync(
+        "blocksToMarkdownWithPages",
+        PagesRequest(documentJson, pages, pageHref, title: true),
+        cancellationToken: cancellationToken);
+
+    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+  }
+
+  public ValueTask<string> ToPlainTextWithTitleAsync(
+      string documentJson,
+      bool includeHiddenText = false,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+
+    return runtime.InvokeAsync(
+        "blocksToPlainText",
+        PlainTextRequest(documentJson, includeHiddenText, title: true),
         cancellationToken: cancellationToken);
   }
 

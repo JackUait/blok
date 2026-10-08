@@ -26,6 +26,8 @@ import { htmlToSegmentsNode } from './rich-text-parse5';
 export interface DocumentTextsOptions {
   /** Include code blocks' source. Default false — code is not prose. */
   includeCode?: boolean;
+  /** Put the document's `title` first. Default false — it would shift every stored index. */
+  title?: boolean;
 }
 
 /**
@@ -293,6 +295,23 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
 const blocksOf = (data: unknown): unknown[] => (isRecord(data) && Array.isArray(data.blocks) ? data.blocks : []);
 
 /**
+ * The title's slot, ahead of every block's. Plain text, so it goes in and out as is.
+ * @param envelope - candidate document; inject passes its own copy
+ * @param options - extraction options
+ */
+const titleSlots = (envelope: unknown, options: DocumentTextsOptions): TextSlot[] => {
+  if (options.title !== true || !isRecord(envelope) || typeof envelope.title !== 'string' || envelope.title.trim() === '') {
+    return [];
+  }
+
+  const holder = envelope;
+
+  return [{ value: envelope.title, write: (text: string): void => {
+    Reflect.set(holder, 'title', text);
+  } }];
+};
+
+/**
  * Every translatable string of a saved document, in document order.
  * Empty and whitespace-only values are skipped.
  * @param data - saved document (anything else yields no texts)
@@ -300,7 +319,7 @@ const blocksOf = (data: unknown): unknown[] => (isRecord(data) && Array.isArray(
  * @returns raw field values, inline HTML included
  */
 export const extractTexts = (data: unknown, options: DocumentTextsOptions = {}): string[] =>
-  collectSlots(blocksOf(data), options).map((slot) => slot.value);
+  [...titleSlots(data, options), ...collectSlots(blocksOf(data), options)].map((slot) => slot.value);
 
 /**
  * Put translated strings back where `extractTexts` found them.
@@ -313,7 +332,7 @@ export const extractTexts = (data: unknown, options: DocumentTextsOptions = {}):
 export const injectTexts = (data: unknown, texts: readonly string[], options: DocumentTextsOptions = {}): OutputData => {
   const envelope = isRecord(data) ? cloneJson(data) as Record<string, unknown> : {};
   const blocks = blocksOf(envelope);
-  const slots = collectSlots(blocks, options);
+  const slots = [...titleSlots(envelope, options), ...collectSlots(blocks, options)];
 
   if (slots.length !== texts.length) {
     throw new RangeError(`injectTexts expected ${slots.length} texts for this document, received ${texts.length}.`);

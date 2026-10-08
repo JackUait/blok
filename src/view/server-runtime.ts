@@ -120,14 +120,41 @@ const readDocument = (input: Record<string, unknown>): ParsedDocument => {
     .map(readBlock)
     .filter((block): block is LooseOutputBlockData => block !== undefined);
 
-  return { document: { blocks }, skipped: input.blocks.length - blocks.length };
+  const icon = readPageIcon(input.icon);
+
+  return {
+    document: {
+      ...(typeof input.title === 'string' ? { title: input.title } : {}),
+      ...(icon === undefined ? {} : { icon }),
+      blocks,
+    },
+    skipped: input.blocks.length - blocks.length,
+  };
 };
 
 /**
- * Parse a document envelope.
- * @param inputJson - the serialized envelope
+ * Read an export request: the BARE document, or `{ document, title }`. A saved
+ * document always has a `blocks` key and a wrapper never does. The flag is read
+ * only from a wrapper: a bare document's `title` is the title string itself.
+ * @param inputJson - the serialized request
+ * @param anyWrapper - plain text took a wrapper before the flag existed. The
+ *   HTML and Markdown ops take one only when it carries the boolean flag, so a
+ *   `{ document, pages }` sent there is still refused.
  */
-const parseDocument = (inputJson: string): ParsedDocument => readDocument(parseRecord(inputJson));
+const parseExportRequest = (
+  inputJson: string,
+  anyWrapper = false
+): ParsedDocument & { input: Record<string, unknown>; title: boolean } => {
+  const input = parseRecord(inputJson);
+  const flagged = anyWrapper || typeof input.title === 'boolean';
+  const inner = flagged && !Array.isArray(input.blocks) && isRecord(input.document) ? input.document : undefined;
+
+  return {
+    ...readDocument(inner ?? input),
+    input,
+    title: inner !== undefined && input.title === true,
+  };
+};
 
 /**
  * Describe skipped blocks as one degradation, so a report never grows with the
@@ -143,7 +170,7 @@ const skippedBlockWarning = (skipped: number): MarkdownDegradation => ({
 /**
  * The translation operations carry options and a translation list beside the
  * document, so their input wraps it rather than being it. Deliberately NOT
- * routed through `parseDocument`: it drops a block it cannot read, and
+ * routed through `readDocument`: it drops a block it cannot read, and
  * `injectTexts` returns the document that gets STORED.
  * @param inputJson - the serialized request
  */
@@ -162,7 +189,7 @@ const parseTextsRequest = (inputJson: string): {
   return {
     document: input.document,
     texts: texts as string[],
-    options: { includeCode: input.includeCode === true },
+    options: { includeCode: input.includeCode === true, title: input.title === true },
   };
 };
 
@@ -178,15 +205,13 @@ const parsePlainTextRequest = (inputJson: string): {
   skipped: number;
   options: BlocksToPlainTextOptions;
 } => {
-  const input = parseRecord(inputJson);
-  const wrapped = !Array.isArray(input.blocks) && isRecord(input.document) ? input.document : input;
   /** Still through `readDocument`: a read-only operation drops a block it cannot read. */
-  const { document, skipped } = readDocument(wrapped);
+  const { document, skipped, input, title } = parseExportRequest(inputJson, true);
 
   return {
     document,
     skipped,
-    options: { includeHiddenText: input.includeHiddenText === true },
+    options: { includeHiddenText: input.includeHiddenText === true, title },
   };
 };
 
@@ -237,6 +262,7 @@ const readPageInfo = (entry: unknown): PageInfo | null | undefined => {
 const parsePagesRequest = (inputJson: string): ParsedDocument & {
   pageInfo: (pageId: string) => PageInfo | null | undefined;
   pageHref: (pageId: string) => string;
+  title: boolean;
 } => {
   const input = parseRecord(inputJson);
 
@@ -250,6 +276,7 @@ const parsePagesRequest = (inputJson: string): ParsedDocument & {
 
   return {
     ...readDocument(input.document),
+    title: input.title === true,
     pageInfo: (pageId) => readPageInfo(entry(pageId)),
     pageHref: (pageId) => {
       const raw = entry(pageId);
@@ -383,16 +410,19 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
      */
     case 'htmlToBlocks':
       return JSON.stringify(htmlToBlocksWithReport(parseHtml(inputJson)));
-    case 'blocksToHtml':
-      return blocksToHtml(parseDocument(inputJson).document);
+    case 'blocksToHtml': {
+      const { document, title } = parseExportRequest(inputJson);
+
+      return blocksToHtml(document, { title });
+    }
     /**
      * Returns JSON rather than a bare string: a consumer handing Markdown to
      * something that cannot ask a follow-up question needs to know which
      * constructs degraded on the way out.
      */
     case 'blocksToMarkdown': {
-      const { document, skipped } = parseDocument(inputJson);
-      const report = blocksToMarkdownWithReport(document);
+      const { document, skipped, title } = parseExportRequest(inputJson);
+      const report = blocksToMarkdownWithReport(document, { title });
 
       if (skipped > 0) {
         report.warnings.push(skippedBlockWarning(skipped));
@@ -401,13 +431,13 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       return JSON.stringify(report);
     }
     case 'blocksToHtmlWithPages': {
-      const { document, pageInfo, pageHref } = parsePagesRequest(inputJson);
+      const { document, pageInfo, pageHref, title } = parsePagesRequest(inputJson);
 
-      return blocksToHtml(document, { pageInfo, pageHref });
+      return blocksToHtml(document, { pageInfo, pageHref, title });
     }
     case 'blocksToMarkdownWithPages': {
-      const { document, skipped, pageInfo, pageHref } = parsePagesRequest(inputJson);
-      const report = blocksToMarkdownWithReport(document, { pageInfo, pageHref });
+      const { document, skipped, pageInfo, pageHref, title } = parsePagesRequest(inputJson);
+      const report = blocksToMarkdownWithReport(document, { pageInfo, pageHref, title });
 
       if (skipped > 0) {
         report.warnings.push(skippedBlockWarning(skipped));

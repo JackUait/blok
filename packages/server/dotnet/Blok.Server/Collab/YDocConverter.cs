@@ -221,9 +221,30 @@ internal static class YDocConverter
         value.GetValue<string>() is { Length: > 0 } text
       ? NoNul(text, "a page title")
       : null;
-    var icon = page["icon"] is JsonObject raw ? InputWriter.Atomic(raw, 1) : null;
+    // Shape first: a malformed icon is dropped before Atomic, whose NUL and
+    // depth guards would otherwise refuse the whole seed.
+    var icon = page["icon"] is JsonObject raw && IsPageIconJson(raw) ? InputWriter.Atomic(raw, 1) : null;
 
     return [("title", title), ("icon", IsPageIcon(icon) ? icon : null)];
+  }
+
+  /// <summary><see cref="IsPageIcon"/> on the JSON a host record holds.</summary>
+  private static bool IsPageIconJson(JsonObject icon)
+  {
+    static bool IsString(JsonNode? node) =>
+        node is JsonValue value && value.GetValueKind() == JsonValueKind.String;
+
+    if (!IsString(icon["type"]))
+    {
+      return false;
+    }
+
+    return icon["type"]!.GetValue<string>() switch
+    {
+      "emoji" => IsString(icon["value"]),
+      "image" => IsString(icon["url"]),
+      _ => false,
+    };
   }
 
   /// <summary>
@@ -599,13 +620,17 @@ internal static class YDocConverter
   /// <summary>
   /// The page maps as JSON objects for a version read: only the plain keys a
   /// restore can copy (<see cref="IsPlainMapValue"/>), and no empty map.
+  /// <paramref name="skipPageKeys"/> are left out of the <c>page</c> map before
+  /// conversion, so a value that is not JSON there cannot fail the read.
   /// </summary>
-  internal static IReadOnlyList<(string Name, JsonObject Map)> PlainPageMaps(YDoc doc)
+  internal static IReadOnlyList<(string Name, JsonObject Map)> PlainPageMaps(
+      YDoc doc, IReadOnlyCollection<string>? skipPageKeys = null)
   {
     return ReadPageMaps(doc).Maps
         .Select(map => (
             map.Key,
             new JsonObject(map.Value
+                .Where(entry => map.Key != PageRoot || skipPageKeys?.Contains(entry.Key) != true)
                 .Where(entry => IsPlainMapValue(entry.Value))
                 .Select(entry => KeyValuePair.Create(entry.Key, RichText.ToJsonNode(entry.Value))))))
         .Where(map => map.Item2.Count > 0)

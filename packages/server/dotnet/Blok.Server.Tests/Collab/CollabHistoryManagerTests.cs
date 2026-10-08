@@ -222,6 +222,33 @@ public sealed class CollabHistoryManagerTests
     Assert.False(baseline.ContainsKey("values"));
   }
 
+  /// <summary>
+  /// A peer can put bytes inside an icon. The read leaves that icon out
+  /// instead of failing, the same as the export does.
+  /// </summary>
+  [Fact]
+  public async Task AVersionReadSkipsAnIconThatIsNotJson()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    var writer = await TitleWriterAsync(manager);
+    var icon = new AnyObject();
+
+    icon.Add("type", "emoji");
+    icon.Add("value", "x");
+    icon.Add("raw", new byte[] { 1, 2 });
+    await writer.WriteAsync("Plan");
+    await writer.WriteAsync("icon", icon);
+
+    var read = await manager.ReadVersionAsync(DocId, Lineage(), 2);
+
+    Assert.Equal(CollabHistoryStatus.Ready, read.Status);
+    var body = JsonNode.Parse(read.Json)!.AsObject();
+    Assert.Equal("Plan", body["title"]?.GetValue<string>());
+    Assert.False(body.ContainsKey("icon"));
+    Assert.False(body.ContainsKey("page"));
+  }
+
   [Fact]
   public async Task AnUnknownPointIsNotFound()
   {
@@ -683,9 +710,14 @@ public sealed class CollabHistoryManagerTests
 
   private sealed record TitleWriter(CollabMembership Membership, FakeMember Member, YDoc Client)
   {
-    internal async Task WriteAsync(string title)
+    internal Task WriteAsync(string title)
     {
-      var update = Client.Transact(transaction => Client.GetMap("page").Set(transaction, "title", title))!;
+      return WriteAsync("title", title);
+    }
+
+    internal async Task WriteAsync(string key, object? value)
+    {
+      var update = Client.Transact(transaction => Client.GetMap("page").Set(transaction, key, value))!;
       var committed = Member.Received.OfType<AcknowledgementFrame>().Count();
 
       await Membership.ReceiveAsync(

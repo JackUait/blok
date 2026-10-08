@@ -705,6 +705,8 @@ public sealed class YDocConverterHardeningTests
   [InlineData("""{"title":null,"icon":{"type":"image","url":5}}""")]
   [InlineData("""{"title":true,"icon":{"type":"sticker","value":"x"}}""")]
   [InlineData("""{"title":["a"],"icon":null}""")]
+  [InlineData("""{"icon":{"type":"sticker","value":"a\u0000b"}}""")]
+  [InlineData("""{"icon":{"type":"emoji","note":"a\u0000b"}}""")]
   public void SeedDropsAMalformedTitleOrIcon(string page)
   {
     var doc = new YDoc();
@@ -784,5 +786,24 @@ public sealed class YDocConverterHardeningTests
     });
 
     Assert.Equal("""{"title":"Plan"}""", ExportedPage(doc));
+  }
+
+  /// <summary>A malformed icon is dropped before conversion, so its depth cannot refuse the seed.</summary>
+  [Fact]
+  public void SeedDropsAMalformedIconNestedPastTheDepthCap()
+  {
+    var nested = new JsonObject { ["leaf"] = 1 };
+
+    for (var level = 0; level < 300; level++)
+    {
+      nested = new JsonObject { ["n"] = nested };
+    }
+
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn),
+        new JsonObject { ["icon"] = new JsonObject { ["type"] = "sticker", ["deep"] = nested } });
+
+    Assert.Equal("{}", ExportedPage(doc));
   }
 }

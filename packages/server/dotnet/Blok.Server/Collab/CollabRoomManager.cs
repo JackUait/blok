@@ -513,19 +513,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     // object leaves them out, and is left out when nothing else remains.
     if (point.Doc is { } doc)
     {
-      foreach (var (name, map) in YDocConverter.PlainPageMaps(doc))
+      foreach (var (name, map) in YDocConverter.PlainPageMaps(doc, ["title", "icon"]))
       {
-        if (name == "page")
-        {
-          map.Remove("title");
-          map.Remove("icon");
-
-          if (map.Count == 0)
-          {
-            continue;
-          }
-        }
-
         output[name] = map;
       }
     }

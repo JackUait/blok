@@ -34,39 +34,26 @@ import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sani
 import type { SavedData } from '../../../types/data-formats';
 import { protectPageReferenceAnchor } from '../../shared/page-reference';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
+import {
+  cloneSanitizerConfig,
+  cloneTagConfig,
+  getEffectiveRuleForString,
+  isPlaintextRule,
+  isRule,
+  MAX_SANITIZE_DEPTH,
+  walkSanitize,
+  type DeepData,
+  type DeepSanitizerRule,
+} from '../../shared/sanitize-walk';
 import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 import { normalizeInlineMarkupHtml, renameLegacyBoldHtml } from './inline-normalization';
-
-type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
 /**
  * Re-exported from the pure shared module so existing imports keep working;
  * see {@link module:src/shared/sanitize-rules} for the definitions.
  */
 export { isSafeAttribute, PLAINTEXT };
-
-/**
- * Whether a resolved rule declares its field as plaintext.
- * @param rule - sanitizer rule to test
- */
-const isPlaintextRule = (rule: DeepSanitizerRule): boolean => {
-  return rule === PLAINTEXT;
-};
-
-/**
- * Recursive type for data that can contain nested arrays
- */
-type DeepData = string | Record<string, unknown> | Array<DeepData> | null;
-
-/**
- * Nesting past this many levels reads back as `null`. Block data comes off a
- * shared document that any peer can write, and the two recursive walks
- * below (tag allowlisting, URL-scheme pass) have no other bound. The same
- * cap governs the doc serializer and the server export, so all three agree
- * on what a too-deep value becomes.
- */
-const MAX_SANITIZE_DEPTH = 256;
 
 /**
  * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
@@ -104,7 +91,7 @@ export const sanitizeBlocks = (
 
     return {
       ...block,
-      data: deepSanitize(block.data, rules, globalSanitizer) as BlockToolData,
+      data: walkSanitize(block.data, rules, globalSanitizer, cleanOneItem) as BlockToolData,
     };
   });
 };
@@ -150,109 +137,6 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
 };
 
 /**
- * Method recursively reduces Block's data and cleans with passed rules
- * @param {BlockToolData|object|*} dataToSanitize - taint string or object/array that contains taint string
- * @param {SanitizerConfig} rules - object with sanitizer rules
- * @param {SanitizerConfig} globalRules - global sanitizer config
- */
-const deepSanitize = (
-  dataToSanitize: DeepData,
-  rules: DeepSanitizerRule,
-  globalRules: SanitizerConfig,
-  depth = 0
-): DeepData => {
-  if (depth > MAX_SANITIZE_DEPTH) {
-    return null;
-  }
-
-  /**
-   * BlockData It may contain 3 types:
-   *  - Array
-   *  - Object
-   *  - Primitive
-   */
-  if (Array.isArray(dataToSanitize)) {
-    /**
-     * Array: call sanitize for each item
-     */
-    return cleanArray(dataToSanitize, rules, globalRules, depth);
-  }
-
-  if (isObject(dataToSanitize)) {
-    /**
-     * Objects: just clean object deeper.
-     */
-    return cleanObject(dataToSanitize, rules, globalRules, depth);
-  }
-
-  /**
-   * Primitives (number|string|boolean): clean this item
-   *
-   * Clean only strings
-   */
-  if (isString(dataToSanitize)) {
-    return cleanOneItem(dataToSanitize, rules, globalRules);
-  }
-
-  return dataToSanitize;
-};
-
-/**
- * Clean array
- * @param {Array} array - [1, 2, {}, []]
- * @param {SanitizerConfig} ruleForItem - sanitizer config for array
- * @param {SanitizerConfig} globalRules - global sanitizer config
- */
-const cleanArray = (
-  array: Array<DeepData>,
-  ruleForItem: DeepSanitizerRule,
-  globalRules: SanitizerConfig,
-  depth: number
-): Array<DeepData> => {
-  return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules, depth + 1));
-};
-
-/**
- * Clean object
- * @param {object} object  - {level: 0, text: 'adada', items: [1,2,3]}}
- * @param {object} rules - { b: true } or true|false
- * @param {SanitizerConfig} globalRules - global sanitizer config
- * @returns {object}
- */
-const cleanObject = (
-  object: Record<string, unknown>,
-  rules: DeepSanitizerRule | Record<string, DeepSanitizerRule>,
-  globalRules: SanitizerConfig,
-  depth: number
-): Record<string, unknown> => {
-  const cleanData: Record<string, DeepData> = {};
-  const objectRecord = object;
-
-  for (const fieldName in object) {
-    if (!Object.prototype.hasOwnProperty.call(object, fieldName)) {
-      continue;
-    }
-
-    const currentIterationItem = objectRecord[fieldName];
-
-    /**
-     *  Get object from config by field name
-     *   - if it is a HTML Janitor rule, call with this rule
-     *   - otherwise, call with parent's config
-     */
-    const rulesRecord = isObject(rules) ? (rules as Record<string, DeepSanitizerRule>) : undefined;
-    const ruleCandidate = rulesRecord?.[fieldName];
-    const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate)
-      ? ruleCandidate
-      : rules;
-
-    cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules, depth + 1);
-  }
-
-  return cleanData;
-};
-
-/**
  * Whether a tag config keeps the tag at all.
  * @param config - tag allowlist
  */
@@ -294,16 +178,6 @@ const cleanOneItem = (
   }
 
   return normalizeInlineMarkupHtml(stripUnsafeUrls(taintString));
-};
-
-/**
- * Check if passed item is a HTML Janitor rule:
- * { a : true }, {}, false, true, function(){} — correct rules
- * undefined, null, 0, 1, 2 — not a rules
- * @param {SanitizerConfig} config - config to check
- */
-const isRule = (config: DeepSanitizerRule): boolean => {
-  return isObject(config) || isBoolean(config) || isFunction(config) || isPlaintextRule(config);
 };
 
 /**
@@ -404,187 +278,6 @@ const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule, de
   }
 
   return value;
-};
-
-/**
- *
- * @param {SanitizerConfig} config - sanitizer config to clone
- */
-const cloneSanitizerConfig = (config: SanitizerConfig): SanitizerConfig => {
-  if (isEmpty(config)) {
-    return {};
-  }
-
-  const cloned: SanitizerConfig = {};
-
-  for (const tag in config) {
-    if (!Object.prototype.hasOwnProperty.call(config, tag)) {
-      continue;
-    }
-
-    cloned[tag] = cloneTagConfig(config[tag]);
-  }
-
-  return cloned;
-};
-
-/**
- *
- * @param {SanitizerRule} rule - tag rule to clone
- */
-type SanitizerFunctionRule = (el: Element) => TagConfig;
-
-const wrapFunctionRule = (rule: SanitizerFunctionRule): SanitizerFunctionRule => {
-  return function wrappedRule(this: unknown, element: Element): TagConfig {
-    const result = rule.call(this, element);
-
-    if (result == null) {
-      return {};
-    }
-
-    return result;
-  };
-};
-
-const preserveExistingAttributesRule: SanitizerFunctionRule = (element) => {
-  const preserved: TagConfig = {};
-
-  Array.from(element.attributes).forEach((attribute) => {
-    if (!isSafeAttribute(attribute.name)) {
-      return;
-    }
-
-    preserved[attribute.name] = true;
-  });
-
-  return preserved;
-};
-
-const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
-  if (rule === true) {
-    return wrapFunctionRule(preserveExistingAttributesRule);
-  }
-
-  if (rule === false) {
-    return false;
-  }
-
-  if (isFunction(rule)) {
-    return wrapFunctionRule(rule as SanitizerFunctionRule);
-  }
-
-  if (isString(rule)) {
-    return rule;
-  }
-
-  if (isObject(rule)) {
-    return deepMerge({}, rule as Record<string, unknown>);
-  }
-
-  return rule;
-};
-
-/**
- *
- * @param {SanitizerConfig} globalRules - global sanitizer config
- * @param {SanitizerConfig} fieldRules - field-specific sanitizer config
- */
-const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig): SanitizerConfig => {
-  if (isEmpty(globalRules)) {
-    return cloneSanitizerConfig(fieldRules);
-  }
-
-  const merged: SanitizerConfig = {};
-
-  for (const tag in globalRules) {
-    if (!Object.prototype.hasOwnProperty.call(globalRules, tag)) {
-      continue;
-    }
-
-    const globalValue = globalRules[tag];
-    const fieldValue = fieldRules ? fieldRules[tag] : undefined;
-
-    /**
-     * A tool's field FUNCTION rule only beats the global rule when the global
-     * rule is itself a function (the field rule is the more specific one). When
-     * the user's global config provides an explicit non-function rule for the
-     * tag (e.g. `span: true`), that deliberate override must win — otherwise a
-     * tool's narrow function (e.g. equation-span) would silently strip what the
-     * user allowed globally.
-     */
-    if (isFunction(fieldValue) && isFunction(globalValue)) {
-      merged[tag] = cloneTagConfig(fieldValue);
-
-      continue;
-    }
-
-    if (isFunction(globalValue)) {
-      merged[tag] = cloneTagConfig(globalValue);
-
-      continue;
-    }
-
-    if (isObject(globalValue) && isObject(fieldValue)) {
-      merged[tag] = deepMerge({}, fieldValue as SanitizerConfig, globalValue as SanitizerConfig);
-
-      continue;
-    }
-
-    if (fieldValue !== undefined && !isFunction(fieldValue)) {
-      merged[tag] = cloneTagConfig(fieldValue);
-
-      continue;
-    }
-
-    merged[tag] = cloneTagConfig(globalValue);
-  }
-
-  /**
-   * Include tags from field rules that are not present in global rules.
-   * Tool-specific sanitize configs should be able to allow tags
-   * beyond what the global config defines.
-   */
-  if (!fieldRules) {
-    return merged;
-  }
-
-  for (const tag in fieldRules) {
-    if (!Object.prototype.hasOwnProperty.call(fieldRules, tag)) {
-      continue;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(merged, tag)) {
-      continue;
-    }
-
-    merged[tag] = cloneTagConfig(fieldRules[tag]);
-  }
-
-  return merged;
-};
-
-/**
- *
- * @param {DeepSanitizerRule} rule - sanitizer rule to evaluate
- * @param {SanitizerConfig} globalRules - global sanitizer config
- */
-const getEffectiveRuleForString = (
-  rule: DeepSanitizerRule,
-  globalRules: SanitizerConfig
-): SanitizerConfig | null => {
-  if (isObject(rule) && !isFunction(rule)) {
-    return mergeTagRules(globalRules, rule as SanitizerConfig);
-  }
-
-  if (rule === false) {
-    return {};
-  }
-
-  if (isEmpty(globalRules)) {
-    return null;
-  }
-
-  return cloneSanitizerConfig(globalRules);
 };
 
 /**

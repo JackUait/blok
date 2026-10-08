@@ -9,9 +9,9 @@ This file records reviewed implementation, not planned work. All implementation 
 
 - Preflight reports exist for all five plans. Checks not established by the scan remain explicit task-local prerequisites.
 - Initial command/manifest types, schema validator, placement, and capability scanner have approved independent reviews, passing scoped tests/lint, and a clean full compiler gate. Their explicit-path commits are recorded below. No public agent runtime is wired yet.
-- The schema pin, shared sanitizer/schema extractions, deep-sanitize walk, marker layer, manifest, canonical action context, command names/errors, built-in sanitizer factories, effective contract, public manifest exports, shared runtime, and shared IDs are committed. The EOF-only shared-ID follow-up is committed. The public conversion sanitation regression (01/22) is reviewed, verified, and committed with its BREAKING migration note. The core command envelope and paragraph description are reviewed and committed. ID-only headless table normalization is reviewed and committed; full browser/store parity remains deferred. The pure document snapshot is reviewed and committed. Provider renderers and further tool descriptions remain in test-first execution.
+- The schema pin, shared sanitizer/schema extractions, deep-sanitize walk, marker layer, manifest, canonical action context, command names/errors, built-in sanitizer factories, effective contract, public manifest exports, shared runtime, and shared IDs are committed. The EOF-only shared-ID follow-up is committed. The public conversion sanitation regression (01/22) is reviewed, verified, and committed with its BREAKING migration note. The core command envelope and paragraph description are reviewed and committed. ID-only headless table normalization is reviewed and committed; full browser/store parity remains deferred. The pure document snapshot is reviewed and committed. Provider renderers, shared placement, rich-text operations, JSON edit application, and Header/List descriptions are reviewed and committed. Further descriptions and planner/runtime work remain in test-first execution.
 - Independent implementers own disjoint files. Only the controller stages and commits. Shared memory-heavy checks run sequentially.
-- Twenty-five tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
+- Thirty-three tasks are reviewed and committed. Other tasks remain active or pending; final full-project lint/tests and integrated API verification have not run.
 - Per-task evidence and independent-review verdicts live under `.superpowers/sdd/<plan-name>/progress.md` during execution.
 - Build sequence: reconciliation ledger section 14 (W0–W6). The user's later instruction to use parallel subagents supersedes the single-implementer restriction.
 
@@ -49,9 +49,22 @@ This file records reviewed implementation, not planned work. All implementation 
 | 02/16 | Paragraph self-description and schema scaffolding | `61315ad6` | Behavioral RED; 151 related tests, exact schema byte pin; lint/compiler; independent review; fresh built Node-view 6/browser-class 11 checks. |
 | 02/15 | ID-only headless table normalization | `11dfc71b` | Behavioral RED/GREEN; ragged idempotence regression; 17 normalization +19 runtime tests; lint/compiler; independent re-review; fresh built preservation checks. Full browser/store parity is not claimed. |
 | 01/4 | Pure document snapshot | `700370e4` | Behavioral RED/GREEN; nested icon isolation regression; final 59 tests and 207 related tests; scoped lint/full compiler; independent re-review; fresh built Node6/browser11 preservation checks. No public runtime/Jint integration is claimed. |
+| 02/17 | Header/List descriptions | `0d222cc9` | Behavioral RED/GREEN; 46 tests and related schema gates; lint/compiler; independent final review; fresh built 17 checks. Saved schema unchanged. |
+| 03/2–5 | Provider tool renderer | `05c56c2d` | Phased behavioral RED/GREEN, including reference collision and own-key regressions; 59 + Node 3 tests; Ajv 34 actual-output checks; lint/compiler; independent final review. No authenticated-provider claim. |
+| 01/6 | Rich-text range operations | `cd8a55ec` | Behavioral RED/GREEN; 49 new + 151 supporting tests; lint/compiler; independent final review. Public/Jint integration deferred. |
+| 01/5 | Shared placement rules | `393fa802` | Behavioral RED/GREEN; 82 + 49 new and 749 additional referring tests; lint/compiler; independent final review; fresh built public placement 22 checks. |
+| 01/7 | JSON edit applier | `aed1c89c` | Behavioral RED/GREEN; 49 tests; pair and checkpoint lint/full compiler; independent final review. Planner/executor integration deferred. |
 
 ## Release obligation
 
 The approved `blocks.convert` change sanitizes supplied overrides with the target tool's effective rules before writing them. Hosts that relied on preserving unlisted markup must declare permitted markup in that tool's sanitizer. Do not rely on conversion to store executable HTML. This needs a BREAKING release note; the user chooses the version bump.
 
 Final full-project tests/lint, integrated runtime verification, broad review, and synchronized push remain pending.
+
+Controller current-checkpoint gates: bm42y22me terminal compiler exit0, renderer59+Node3GREEN, actual-output Ajv34pass and22-path scopedlint0. bii13n667 built public editor placement22checks pass/exit0, no source imports. Supporting rich-text/snapshot queue bii2as3gs passed all 151 tests. All five checkpoint groups have final independent signoffs and exact-path commits. Checkpoint push remains pending; no overall completion.
+
+Checkpoint commit: Plan02Task17 0d222cc9 reviewed/verified; seven exact paths, default/schema/native-preservation scope. Current full compiler and owned lint pass; push pending other checkpoint groups.
+
+Checkpoint commit: Plan03Tasks2–5 05c56c2d reviewed/verified; six exact paths. No public AgentAPI wiring or authenticated-provider claim; overall plan and push pending.
+
+Checkpoint commit: Plan01Task6 cd8a55ec reviewed/verified; two exact paths. UTF-16/mark/embed helper scope; public/Jint integration not claimed.

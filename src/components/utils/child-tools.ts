@@ -1,4 +1,5 @@
 import type { ChildToolRestrictions } from '../../../types/tools';
+import { satisfiesChildTools } from '../../shared/agent/placement-rules';
 import type { Block } from '../block';
 
 /**
@@ -53,21 +54,7 @@ export const getChildToolRestrictions = (
 export const satisfiesChildToolRestrictions = (
   restrictions: ChildToolRestrictions | undefined,
   toolName: string
-): boolean => {
-  if (restrictions === undefined) {
-    return true;
-  }
-
-  if (restrictions.deny?.includes(toolName) === true) {
-    return false;
-  }
-
-  if (Array.isArray(restrictions.allow) && restrictions.allow.length > 0) {
-    return restrictions.allow.includes(toolName);
-  }
-
-  return true;
-};
+): boolean => restrictions === undefined || satisfiesChildTools(restrictions.allow, restrictions.deny, toolName);
 
 /**
  * Whether `parent` may have children at all. Root always may.

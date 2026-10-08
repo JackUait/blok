@@ -1,7 +1,8 @@
 import type { BlockPosition } from '../../../../types/api';
-import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
+import { checkMove, type PlacementTree } from '../../../shared/agent/placement-rules';
+import { isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { Block } from '../../block';
-import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
+import { acceptsChildren, getChildToolRestrictions } from '../../utils/child-tools';
 import { subtreeEnd } from '../../utils/tree-order';
 
 /**
@@ -141,16 +142,28 @@ export const resolvePlacement = (
   return { parentId, afterId: lastChildBefore(tree, parentId, end), index: end };
 };
 
-const isColumnPart = (block: Block | undefined): boolean =>
-  block?.name === 'column' || block?.name === 'column_list';
+const blockPlacementTree = (tree: BlockTree): PlacementTree => ({
+  parentOf: id => tree.getBlockById(id)?.parentId ?? null,
+  typeOf: id => tree.getBlockById(id)?.name ?? '',
+  cellOf: (id, asParent) => {
+    const block = tree.getBlockById(id);
 
-/**
- * The table cell a block sits in, or null.
- * @param block - the block
- * @param asParent - true when `block` is a prospective parent: its children sit in its own cell too
- */
-const cellOf = (block: Block, asParent = false): Element | null =>
-  (asParent ? block.holder : block.holder.parentElement)?.closest('[data-blok-table-cell-blocks]') ?? null;
+    return block === undefined ? null
+      : (asParent ? block.holder : block.holder.parentElement)?.closest('[data-blok-table-cell-blocks]') ?? null;
+  },
+  containerFacts: id => {
+    const block = tree.getBlockById(id);
+    const restrictions = getChildToolRestrictions(block);
+
+    return {
+      accepts: acceptsChildren(block),
+      allow: restrictions?.allow,
+      deny: restrictions?.deny,
+      ownedByTool: block?.tool.ownsChildren === true,
+    };
+  },
+  restrictedInCell: isRestrictedInTableCell,
+});
 
 /**
  * Throws when `block` may not move under `parentId`. A move group skips the
@@ -163,50 +176,22 @@ const cellOf = (block: Block, asParent = false): Element | null =>
  * @param parentId - its new parent
  * @param refId - the `before`/`after` sibling, if any
  */
-export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: string | null, refId?: string): void => {
-  const parent = parentId === null ? undefined : findBlock(tree, parentId, 'parent block');
-
-  if (parent !== undefined && (parent === block || isUnder(tree, parent, block.id))) {
-    throw new BlockPlacementError(`cannot move "${block.id}" inside its own subtree`);
+export const assertCanMoveUnder = (
+  tree: BlockTree,
+  block: Block,
+  parentId: string | null,
+  refId?: string,
+  options: { allowColumnMoves?: boolean } = {}
+): void => {
+  if (parentId !== null) {
+    findBlock(tree, parentId, 'parent block');
   }
 
-  // Before the same-parent return: the cells of one table share the table as
-  // parent. A table parent with no sibling names no cell at all.
-  const ref = refId === undefined ? undefined : tree.getBlockById(refId);
-  const parentCell = parent === undefined ? null : cellOf(parent, true);
-  const targetCell = ref === undefined ? parentCell : cellOf(ref);
+  // Unknown references fall back to the prospective parent's cell.
+  const referenceId = refId !== undefined && tree.getBlockById(refId) !== undefined ? refId : undefined;
+  const refusal = checkMove(blockPlacementTree(tree), block.id, parentId, referenceId, options);
 
-  if (cellOf(block) !== targetCell) {
-    throw new BlockPlacementError(`cannot move "${block.id}" into, out of or between table cells`);
-  }
-
-  if (parentId === block.parentId) {
-    return;
-  }
-
-  const oldParent = block.parentId === null ? undefined : tree.getBlockById(block.parentId);
-
-  if (!acceptsChildren(parent)) {
-    throw new BlockPlacementError(`${nameOf(parentId)} takes no children`);
-  }
-
-  if (parent?.tool.ownsChildren === true) {
-    throw new BlockPlacementError(`${nameOf(parentId)} owns its children`);
-  }
-
-  if (oldParent?.tool.ownsChildren === true) {
-    throw new BlockPlacementError(`"${oldParent.id}" owns its children; "${block.id}" cannot leave it`);
-  }
-
-  if (isColumnPart(oldParent) || isColumnPart(parent)) {
-    throw new BlockPlacementError(`cannot move "${block.id}" into or out of a column`);
-  }
-
-  if (!isChildToolAllowed(parent, block.name)) {
-    throw new BlockPlacementError(`${nameOf(parentId)} does not allow "${block.name}" children`);
-  }
-
-  if (parent !== undefined && isInsideTableCell(parent) && isRestrictedInTableCell(block.name)) {
-    throw new BlockPlacementError(`"${block.name}" is not allowed inside a table cell`);
+  if (refusal !== null) {
+    throw new BlockPlacementError(refusal.message);
   }
 };

@@ -21,6 +21,22 @@ const WRAPPER_LAYOUT_ATTRIBUTES = [
   DATA_ATTR.rtl,
 ];
 
+/** The caret's character offset in the title, or null when the caret is elsewhere. */
+const caretOffsetIn = (title: HTMLElement): number | null => {
+  const selection = window.getSelection();
+  const node = selection?.anchorNode ?? null;
+
+  if (selection === null || node === null || !title.contains(node)) {
+    return null;
+  }
+  const before = document.createRange();
+
+  before.setStart(title, 0);
+  before.setEnd(node, selection.anchorOffset);
+
+  return before.toString().length;
+};
+
 export class PageTitle extends Module {
   private resolved: ResolvedTitleConfig | null = null;
   private dom: HeaderNodes | null = null;
@@ -124,7 +140,14 @@ export class PageTitle extends Module {
       return;
     }
     title.focus();
-    window.getSelection()?.setPosition(title, position === 'start' ? 0 : title.childNodes.length);
+    // On the text node: renderText reads the anchor offset as a character offset.
+    const text = title.firstChild;
+
+    if (text === null) {
+      window.getSelection()?.setPosition(title, 0);
+    } else {
+      window.getSelection()?.setPosition(text, position === 'start' ? 0 : (text.textContent ?? '').length);
+    }
   }
 
   public focusAtX(x: number | null): void {
@@ -263,20 +286,11 @@ export class PageTitle extends Module {
 
   /** Drops elements a native format key or a drop put in. Keeps the caret offset, clamped. */
   private flattenToText(title: HTMLElement, text: string): void {
-    const selection = window.getSelection();
-    const node = selection?.anchorNode ?? null;
-    const inTitle = selection !== null && node !== null && title.contains(node);
-    const before = document.createRange();
-
-    if (inTitle) {
-      before.setStart(title, 0);
-      before.setEnd(node, selection.anchorOffset);
-    }
-    const caret = before.toString().length;
+    const caret = caretOffsetIn(title);
 
     title.replaceChildren(text);
-    if (inTitle && title.firstChild !== null) {
-      selection.setPosition(title.firstChild, Math.min(caret, text.length));
+    if (caret !== null && title.firstChild !== null) {
+      window.getSelection()?.setPosition(title.firstChild, Math.min(caret, text.length));
     }
   }
 
@@ -323,13 +337,11 @@ export class PageTitle extends Module {
     if ((title.textContent ?? '') === text) {
       return;
     }
-    const selection = window.getSelection();
-    const node = selection?.anchorNode ?? null;
-    const caret = selection !== null && node !== null && title.contains(node) ? selection.anchorOffset : null;
+    const caret = caretOffsetIn(title);
 
     title.replaceChildren(...(text === '' ? [] : [text]));
     if (caret !== null && title.firstChild !== null) {
-      selection?.setPosition(title.firstChild, Math.min(caret, text.length));
+      window.getSelection()?.setPosition(title.firstChild, Math.min(caret, text.length));
     }
   }
 

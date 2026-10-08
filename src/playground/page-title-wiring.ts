@@ -26,31 +26,38 @@ export const titleData = (pages: Pick<PageRegistry, 'get' | 'root'>, pageId: str
 export const isUnrecordedSet = (change: TitleChange): boolean => change.source === 'api' && change.record === false;
 
 /**
- * `pageTitle.onChange` / `onIconChange` for one editor. `pageId` is fixed at
- * build time: a late undo or remote change from a dying editor must not land
- * on the page the playground moved to.
+ * `pageTitle.onChange` / `onIconChange` for one editor, built when the editor
+ * is. The page id is read once, here: `goToPage` moves the current page before
+ * the old editor dies, and its late undo or remote change must not land on the next page.
  */
-export const titleCallbacks = ({ pages, pageId, changed }: {
+export const titleCallbacks = ({ pages, currentPageId, changed, routed }: {
   pages: Pick<PageRegistry, 'setTitle' | 'setIcon'>;
-  pageId: string | null;
+  currentPageId(): string | null;
   changed(): void;
+  /** Every title change, with this editor's page id (remote mode passes it to the host). */
+  routed?(pageId: string | null, title: string, change: TitleChange): void;
 }): {
   onChange(title: string, change: TitleChange): void;
   onIconChange(icon: PageIcon | null, change: TitleChange): void;
-} => ({
-  onChange: (title, change) => {
-    if (!isUnrecordedSet(change)) {
-      pages.setTitle(pageId, title);
-    }
-    changed();
-  },
-  onIconChange: (icon, change) => {
-    if (!isUnrecordedSet(change)) {
-      pages.setIcon(pageId, fromPageIcon(icon));
-    }
-    changed();
-  },
-});
+} => {
+  const pageId = currentPageId();
+
+  return {
+    onChange: (title, change) => {
+      if (!isUnrecordedSet(change)) {
+        pages.setTitle(pageId, title);
+      }
+      changed();
+      routed?.(pageId, title, change);
+    },
+    onIconChange: (icon, change) => {
+      if (!isUnrecordedSet(change)) {
+        pages.setIcon(pageId, fromPageIcon(icon));
+      }
+      changed();
+    },
+  };
+};
 
 /** What `pushRecord` needs from the editor. */
 export interface TitleEditor {

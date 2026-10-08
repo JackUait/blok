@@ -81,7 +81,7 @@ describe('titleCallbacks', () => {
   it('writes every title change to the page it was built for, and redraws', () => {
     const pages = new PageRegistry(seed());
     const changed = vi.fn();
-    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed });
+    const { onChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed });
 
     onChange('Typed', { source: 'user' });
     expect(pages.get('guide')?.title).toBe('Typed');
@@ -99,7 +99,7 @@ describe('titleCallbacks', () => {
     const changed = vi.fn();
     const setTitle = vi.spyOn(pages, 'setTitle');
     const setIcon = vi.spyOn(pages, 'setIcon');
-    const { onChange, onIconChange } = titleCallbacks({ pages, pageId: 'guide', changed });
+    const { onChange, onIconChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed });
 
     onChange('Pushed', { source: 'api', record: false });
     onIconChange({ type: 'emoji', value: '🌿' }, { source: 'api', record: false });
@@ -109,21 +109,27 @@ describe('titleCallbacks', () => {
     expect(changed).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps writing to its own page after the playground moved to another', () => {
+  it('a late remote or undo change from a page left behind writes only that page', () => {
     const pages = new PageRegistry(seed());
-    const current = { pageId: 'guide' };
-    const { onChange } = titleCallbacks({ pages, pageId: current.pageId, changed: vi.fn() });
+    const current: { pageId: string | null } = { pageId: 'guide' };
+    const routed = vi.fn();
+    const { onChange, onIconChange } = titleCallbacks({ pages, currentPageId: () => current.pageId, changed: vi.fn(), routed });
 
     current.pageId = 'keys';
+    onChange('Peer title', { source: 'remote' });
+    onIconChange({ type: 'emoji', value: '🌿' }, { source: 'remote' });
     onChange('Late undo', { source: 'undo' });
+    onIconChange(null, { source: 'undo' });
 
+    expect(pages.get('keys')).toEqual(seed().keys);
     expect(pages.get('guide')?.title).toBe('Late undo');
-    expect(pages.get('keys')?.title).toBe('Keys');
+    expect(pages.get('guide')).not.toHaveProperty('icon');
+    expect(routed.mock.calls.map(([pageId]: unknown[]) => pageId)).toEqual(['guide', 'guide']);
   });
 
   it('writes the root record for the root document', () => {
     const pages = new PageRegistry(seed());
-    const { onChange, onIconChange } = titleCallbacks({ pages, pageId: null, changed: vi.fn() });
+    const { onChange, onIconChange } = titleCallbacks({ pages, currentPageId: () => null, changed: vi.fn() });
 
     onChange('Home', { source: 'user' });
     onIconChange({ type: 'emoji', value: '🏠' }, { source: 'user' });
@@ -133,7 +139,7 @@ describe('titleCallbacks', () => {
 
   it('stores an emoji icon as its string and a removed or image icon as none', () => {
     const pages = new PageRegistry(seed());
-    const { onIconChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
+    const { onIconChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed: vi.fn() });
 
     onIconChange({ type: 'emoji', value: '🌿' }, { source: 'user' });
     expect(pages.get('guide')?.icon).toBe('🌿');

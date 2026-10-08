@@ -2041,7 +2041,13 @@
       // ?slowLoad=<ms> holds the document back to show the boot skeleton.
       const slowLoadMs = Number(new URLSearchParams(location.search).get('slowLoad'));
       // The title rides in the load result too: core loads `data.title`, so a blocks-only result clears it.
-      const callbacks = titleCallbacks({ pages, pageId, changed: () => renderHeader() });
+      // Built now, with this editor's page: see titleCallbacks.
+      const callbacks = titleCallbacks({
+        pages,
+        currentPageId: () => currentPageId,
+        changed: () => renderHeader(),
+        routed: (id, title, change) => remotePages?.titleChanged(id, title, change),
+      });
       const documentData = () => ({ ...titleData(pages, pageId), blocks: blocksFor(pageId) });
       const documentSource = slowLoadMs > 0
         ? { persistence: { load: () => new Promise(r => setTimeout(() => r(documentData()), slowLoadMs)), save: async () => {} } }
@@ -2051,14 +2057,7 @@
         readOnly: state.readOnly,
         holder: 'blok',
         // The slot must exist before `new Blok`: core resolves the holder in prepare().
-        pageTitle: {
-          holder: '#page-title-slot',
-          ...callbacks,
-          onChange: (title, change) => {
-            callbacks.onChange(title, change);
-            remotePages?.titleChanged(pageId, title, change);
-          },
-        },
+        pageTitle: { holder: '#page-title-slot', ...callbacks },
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,

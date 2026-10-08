@@ -194,7 +194,7 @@ describe('playground page metadata notifications', () => {
     const pages = new PageRegistry(seed());
     const notify = vi.fn();
     const changed = vi.fn();
-    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed });
+    const { onChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed });
 
     pages.subscribe('guide', notify);
     onChange('Peer title', { source: 'remote' });
@@ -206,7 +206,7 @@ describe('playground page metadata notifications', () => {
 
   it('an undo of a local edit writes the old title back to the registry', () => {
     const pages = new PageRegistry(seed());
-    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
+    const { onChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed: vi.fn() });
 
     onChange('Local edit', { source: 'user' });
     onChange('Guide', { source: 'undo' });
@@ -217,7 +217,7 @@ describe('playground page metadata notifications', () => {
 
   it('a restored version\'s title arrives as a remote change and becomes the registry title', () => {
     const pages = new PageRegistry(seed());
-    const { onChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
+    const { onChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed: vi.fn() });
 
     onChange('Old title', { source: 'remote' });
     expect(pages.info('guide')?.title).toBe('Old title');
@@ -230,7 +230,7 @@ describe('playground page metadata notifications', () => {
   it('a value pushed from the registry is not written back to it', () => {
     const pages = new PageRegistry(seed());
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
-    const { onChange, onIconChange } = titleCallbacks({ pages, pageId: 'guide', changed: vi.fn() });
+    const { onChange, onIconChange } = titleCallbacks({ pages, currentPageId: () => 'guide', changed: vi.fn() });
 
     onChange('From another tab', { source: 'api', record: false });
     onIconChange(null, { source: 'api', record: false });

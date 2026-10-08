@@ -28,7 +28,7 @@ Plans 2 and 3 do not touch each other's files and can run in parallel.
 Every surface these plans change shipped after `v1.16.1`, with one exception. Checked:
 
 - `git log v1.16.1 -- types/api/title.d.ts` is empty. Its first commit is 8d86c376, which is after the tag.
-- The C# converters are `internal`.
+- The C# Yjs converters (`YDocConverter`, `CollabDocConverter`) are `internal`. `IBlokDocumentConverter` is NOT: it is public and shipped in v1.16.1, so plan 4 Task 10 extends it only through default interface members (D13).
 - `blokDocumentSchema` shipped in v1.16.1, but plan 1b only adds optional properties to it. That is additive.
 
 The exception is the shipped exporters, importers and text helpers (`blocksToHtml`, `blocksToMarkdown`, `blocksToPlainText`, `blocks.exportMarkdown`, `markdownToBlocks`/`htmlToBlocks`, `extractTexts`/`injectTexts`). They shipped before the tag and accept any record. Turning title output on by default would change their output for a host that already stores its own `{ title, blocks }`. That counts as "changing a default", so plan 4 makes all of it opt-in (decisions D1, D2, D12).
@@ -67,6 +67,7 @@ Each decision has a recommended default. The plan task named in the last column 
 | D10 | Version read shape | Title and icon at the top level only (the export shape). The `page` object stops carrying them. | One place for one fact. `page` was added after the tag (fe33660d), so dropping keys from it is not breaking. | 2, Task 5 |
 | D11 | Backspace join from a heading or list | Keep core's rule: it becomes a paragraph first, then joins | Matches how a block joins into the block above it | 4 (note only) |
 | D12 | Does translation (`extractTexts`/`injectTexts`) cover the title? | Yes, opt-in: `{ title: true }` in `DocumentTextsOptions` puts the title first in the list | Both functions shipped in v1.16.1 (955c2a5b is in the tag). Adding the title by default would shift every index a consumer stored. `injectTexts` already keeps the envelope. | 4, Task 10 |
+| D13 | How does the C# export API get the title option? | New overloads as default interface members on the public `IBlokDocumentConverter`; the built-in converter overrides them | Adding an abstract member is BREAKING (see 4934b48a). Default members keep third-party implementations compiling. | 4, Task 10 |
 
 ## Known limits, recorded rather than fixed
 

@@ -21,97 +21,104 @@ const ALIASES: Record<string, string> = { '!==': '!=', '===': '==' };
 const PUNCT = new Set(['(', ')', '[', ']', ',', '.']);
 const ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r' };
 
-const NUMBER = /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/;
-const IDENT = /^[\p{L}_$][\p{L}\p{N}_$]*/u;
-const PROP_REF = /^\{\{property:([^}]+)\}\}/;
+const PATTERNS: Array<{ type: TokenType; re: RegExp }> = [
+  { type: 'propRef', re: /^\{\{property:([^}]+)\}\}/ },
+  { type: 'number', re: /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/ },
+  { type: 'ident', re: /^[\p{L}_$][\p{L}\p{N}_$]*/u },
+];
 
-const fail = (message: string, start: number, end: number): TokenizeResult => ({ ok: false, error: { message, start, end } });
+class TokenizeError extends Error {
+  constructor(message: string, readonly start: number, readonly end: number) {
+    super(message);
+  }
+}
 
-export const tokenize = (source: string): TokenizeResult => {
-  const tokens: Token[] = [];
-  let i = 0;
+class Scanner {
+  private pos = 0;
+  readonly tokens: Token[] = [];
 
-  while (i < source.length) {
-    const ch = source[i];
-    const rest = source.slice(i);
+  constructor(private readonly source: string) {}
 
-    if (/\s/.test(ch)) {
-      i++;
-      continue;
+  run(): Token[] {
+    while (this.pos < this.source.length) {
+      this.step();
     }
+    this.tokens.push({ type: 'eof', value: '', start: this.source.length, end: this.source.length });
 
-    if (rest.startsWith('/*')) {
-      const close = source.indexOf('*/', i + 2);
+    return this.tokens;
+  }
 
-      if (close === -1) return fail('Unterminated comment', i, source.length);
-      i = close + 2;
-      continue;
+  private push(type: TokenType, value: string, length: number): void {
+    this.tokens.push({ type, value, start: this.pos, end: this.pos + length });
+    this.pos += length;
+  }
+
+  private step(): void {
+    const rest = this.source.slice(this.pos);
+
+    if (/^\s/.test(rest)) {
+      this.pos++;
+
+      return;
     }
+    if (rest.startsWith('/*')) return this.skipComment();
+    if (rest.startsWith('"')) return this.readString();
 
-    const ref = PROP_REF.exec(rest);
+    for (const { type, re } of PATTERNS) {
+      const match = re.exec(rest);
 
-    if (ref !== null) {
-      tokens.push({ type: 'propRef', value: ref[1], start: i, end: i + ref[0].length });
-      i += ref[0].length;
-      continue;
-    }
-
-    if (ch === '"') {
-      const start = i;
-      let value = '';
-
-      i++;
-      while (i < source.length && source[i] !== '"') {
-        if (source[i] === '\\' && i + 1 < source.length) {
-          const next = source[i + 1];
-
-          value += ESCAPES[next] ?? next;
-          i += 2;
-        } else {
-          value += source[i];
-          i++;
-        }
-      }
-      if (i >= source.length) return fail('Unterminated string', start, source.length);
-      i++;
-      tokens.push({ type: 'string', value, start, end: i });
-      continue;
-    }
-
-    const num = NUMBER.exec(rest);
-
-    if (num !== null) {
-      tokens.push({ type: 'number', value: num[0], start: i, end: i + num[0].length });
-      i += num[0].length;
-      continue;
-    }
-
-    const ident = IDENT.exec(rest);
-
-    if (ident !== null) {
-      tokens.push({ type: 'ident', value: ident[0], start: i, end: i + ident[0].length });
-      i += ident[0].length;
-      continue;
+      if (match !== null) return this.push(type, match[1] ?? match[0], match[0].length);
     }
 
     const op = OPERATORS.find((candidate) => rest.startsWith(candidate));
 
-    if (op !== undefined) {
-      tokens.push({ type: 'op', value: ALIASES[op] ?? op, start: i, end: i + op.length });
-      i += op.length;
-      continue;
-    }
+    if (op !== undefined) return this.push('op', ALIASES[op] ?? op, op.length);
+    if (PUNCT.has(rest[0])) return this.push('punct', rest[0], 1);
 
-    if (PUNCT.has(ch)) {
-      tokens.push({ type: 'punct', value: ch, start: i, end: i + 1 });
-      i++;
-      continue;
-    }
-
-    return fail(`Unexpected character "${ch}"`, i, i + 1);
+    throw new TokenizeError(`Unexpected character "${rest[0]}"`, this.pos, this.pos + 1);
   }
 
-  tokens.push({ type: 'eof', value: '', start: source.length, end: source.length });
+  private skipComment(): void {
+    const close = this.source.indexOf('*/', this.pos + 2);
 
-  return { ok: true, tokens };
+    if (close === -1) throw new TokenizeError('Unterminated comment', this.pos, this.source.length);
+    this.pos = close + 2;
+  }
+
+  private readString(): void {
+    const start = this.pos;
+    const parts: string[] = [];
+
+    this.pos++;
+    while (this.pos < this.source.length && this.source[this.pos] !== '"') {
+      parts.push(this.readChar());
+    }
+    if (this.pos >= this.source.length) throw new TokenizeError('Unterminated string', start, this.source.length);
+    this.pos++;
+    this.tokens.push({ type: 'string', value: parts.join(''), start, end: this.pos });
+  }
+
+  private readChar(): string {
+    const ch = this.source[this.pos];
+
+    if (ch !== '\\' || this.pos + 1 >= this.source.length) {
+      this.pos++;
+
+      return ch;
+    }
+    const next = this.source[this.pos + 1];
+
+    this.pos += 2;
+
+    return ESCAPES[next] ?? next;
+  }
+}
+
+export const tokenize = (source: string): TokenizeResult => {
+  try {
+    return { ok: true, tokens: new Scanner(source).run() };
+  } catch (error) {
+    if (error instanceof TokenizeError) return { ok: false, error: { message: error.message, start: error.start, end: error.end } };
+    throw error;
+  }
 };

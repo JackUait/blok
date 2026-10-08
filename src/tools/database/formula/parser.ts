@@ -109,16 +109,18 @@ class Parser {
 
   private parseBinary(level: number): FormulaNode {
     if (level >= BINARY_LEVELS.length) return this.parseUnary();
-    let left = this.parseBinary(level + 1);
 
-    for (let op = this.binaryOpAt(level); op !== undefined; op = this.binaryOpAt(level)) {
-      this.advance();
-      const right = this.parseBinary(level + 1);
+    return this.continueBinary(level, this.parseBinary(level + 1));
+  }
 
-      left = { type: 'binary', op, left, right, start: left.start, end: right.end };
-    }
+  private continueBinary(level: number, left: FormulaNode): FormulaNode {
+    const op = this.binaryOpAt(level);
 
-    return left;
+    if (op === undefined) return left;
+    this.advance();
+    const right = this.parseBinary(level + 1);
+
+    return this.continueBinary(level, { type: 'binary', op, left, right, start: left.start, end: right.end });
   }
 
   private parseUnary(): FormulaNode {
@@ -147,23 +149,22 @@ class Parser {
   }
 
   private parsePostfix(): FormulaNode {
-    let node = this.parsePrimary();
+    return this.continuePostfix(this.parsePrimary());
+  }
 
-    while (this.isPunct('.')) {
-      this.advance();
-      const name = this.peek();
+  private continuePostfix(node: FormulaNode): FormulaNode {
+    if (!this.isPunct('.')) return node;
+    this.advance();
+    const name = this.peek();
 
-      if (name.type !== 'ident') throw new ParseError('Expected a function name after "."', name.start, name.end);
-      this.advance();
-      const args = this.isPunct('(') ? this.parseArgs() : { items: [], end: name.end };
+    if (name.type !== 'ident') throw new ParseError('Expected a function name after "."', name.start, name.end);
+    this.advance();
+    const args = this.isPunct('(') ? this.parseArgs() : { items: [], end: name.end };
 
-      node = {
-        type: 'call', name: name.value, args: [node, ...args.items], method: true,
-        nameStart: name.start, nameEnd: name.end, start: node.start, end: args.end,
-      };
-    }
-
-    return node;
+    return this.continuePostfix({
+      type: 'call', name: name.value, args: [node, ...args.items], method: true,
+      nameStart: name.start, nameEnd: name.end, start: node.start, end: args.end,
+    });
   }
 
   private parseArgs(): { items: FormulaNode[]; end: number } {

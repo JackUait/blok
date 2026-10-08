@@ -1809,6 +1809,199 @@ describe('mountHistoryDrawer', () => {
 
     expect(editedLink().textContent).toBe('Edited 20 minutes ago');
   });
+
+  /* Final fix pass */
+
+  const escapeOnBody = (): void => {
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  };
+
+  it('closes only the Group by menu on an Escape aimed at the page body', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    groupButton().click();
+    (document.activeElement as HTMLElement | null)?.blur();
+    escapeOnBody();
+
+    expect(groupButton().getAttribute('aria-expanded')).toBe('false');
+    expect(panel().hidden).toBe(false);
+
+    escapeOnBody();
+
+    expect(panel().hidden).toBe(true);
+  });
+
+  it('puts focus on the new current row after a restore', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    buttonNamed(dialog(), 'Restore this version').click();
+    await settle();
+
+    expect(rowButtons()[0]).toHaveFocus();
+    expect(rowButtons()[0].getAttribute('aria-current')).toBe('true');
+  });
+
+  it('says what the page host answered when a bookmark is not saved', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url.startsWith(`${HOST}/bookmarks/`) && init?.method === 'PUT') {
+        return new Response('', { status: 413 });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    bookmarkButton('l2:5').click();
+    await settle();
+
+    expect(panel().querySelector('[role="status"]')?.textContent).toBe('The page host refused the bookmark (413).');
+  });
+
+  it('shows the page host\'s own words when it refuses a bookmark with a body', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url.startsWith(`${HOST}/bookmarks/`) && init?.method === 'PUT') {
+        return new Response('Bad bookmark list', { status: 400 });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    bookmarkButton('l2:5').click();
+    await settle();
+
+    expect(panel().querySelector('[role="status"]')?.textContent).toBe('Bad bookmark list (400)');
+  });
+
+  it('opens an update\'s version in the grouping the feed read before falling back to 1 minute', async () => {
+    localStorage.setItem('pg-history-group', 'bookmarks');
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    tab('Updates').click();
+    await settle();
+    calls.length = 0;
+    cards()[1].querySelector<HTMLButtonElement>('[data-pg-update-open]')?.click();
+    await settle();
+
+    expect(calls.some((call) => call.url === LIST_URL)).toBe(true);
+    expect(calls.some((call) => call.url.endsWith('/history?group=1'))).toBe(false);
+    expect(groupButton().textContent).toContain('15 minutes');
+    expect(rowButtons().find((row) => row.getAttribute('aria-current') === 'true')?.dataset.key).toBe('l2:5');
+  });
+
+  it('tries the person\'s grouping again on the next jump after a 1-minute fallback', async () => {
+    const { drawer } = setup();
+
+    await drawer.openOn('l2', 7);
+    await settle();
+    calls.length = 0;
+    await drawer.openOn('l2', 5);
+    await settle();
+
+    expect(calls.some((call) => call.url === LIST_URL)).toBe(true);
+    expect(groupButton().textContent).toContain('15 minutes');
+  });
+
+  it('leaves the edits list when the History tab is picked', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    tab('History').click();
+    await settle();
+
+    expect(entries()).toHaveLength(0);
+    expect(listShown()).toBe(true);
+  });
+
+  it('waits for a preview that is still loading before it paints a picked edit', async () => {
+    const pending: { release: () => void } = { release: () => undefined };
+    const held = { on: false };
+
+    answers.list = () => Response.json({
+      ...LIST,
+      versions: [{ lineage: 'l2', sequence: 12, startedAt: null, savedAt: at(7, 14, 50), actors: ['playground-anna'] }, ...LIST.versions],
+    });
+    POINTS['12'] = POINTS['9'];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (held.on && url.endsWith('/history/l2/0')) {
+        await new Promise<void>((resolve) => {
+          pending.release = resolve;
+        });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button } = setup();
+    const showChanges = (): HTMLInputElement => {
+      const found = preview().querySelector<HTMLInputElement>('input[type="checkbox"]');
+
+      if (found === null) {
+        throw new Error('no Show changes toggle');
+      }
+
+      return found;
+    };
+
+    button.click();
+    await settle();
+    showChanges().click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    held.on = true;
+    showChanges().click();
+    await settle();
+    scrolled.length = 0;
+    entries()[1].click();
+    await settle();
+
+    expect(marked()).toEqual({});
+    expect(scrolled).toEqual([]);
+
+    pending.release();
+    await settle();
+
+    expect(marked()).toEqual({ b: 'added' });
+    expect(scrolled.map((call) => call.id)).toEqual(['b']);
+  });
+
+  it('can close without refreshing the Edited link, for a page switch', async () => {
+    const { drawer, button } = setup();
+
+    button.click();
+    await settle();
+    calls.length = 0;
+    drawer.close({ refresh: false });
+    await settle();
+
+    expect(panel().hidden).toBe(true);
+    expect(calls.some((call) => call.url === `${SERVER}/sync/playground/history`)).toBe(false);
+  });
 });
 
 describe('history drawer selected row', () => {

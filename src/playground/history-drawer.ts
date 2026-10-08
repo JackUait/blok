@@ -478,7 +478,8 @@ export interface HistoryDrawer {
    * row for it, switches to 1-minute groups for this visit only.
    */
   openOn(lineage: string, sequence: number): Promise<void>;
-  close(): void;
+  /** `refresh: false` skips the Edited link update: a page switch refreshes for the new page itself. */
+  close(options?: { refresh?: boolean }): void;
   /** Re-reads the open document's newest version for the "Edited …" link. */
   refresh(): Promise<void>;
 }
@@ -589,6 +590,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     picked: undefined as RecordPaint | null | undefined,
     // The version whose edits are listed.
     changesRow: null as VersionRow | null,
+    // A preview is on its way: a picked edit waits for it rather than painting the old one.
+    previewLoading: false,
   };
   const mounted = {
     changes: null as VersionChangesPanel | null,
@@ -740,22 +743,36 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
   const bookmarksUrl = (doc: string): string | null => host === null ? null : `${host}/bookmarks/${encodeURIComponent(doc)}`;
 
-  /** The host's bookmarks, or null when there is no host or it did not answer. */
-  const readBookmarks = async (doc: string, init?: RequestInit): Promise<HistoryBookmark[] | null> => {
+  /** The host's bookmarks, or what went wrong: no host, no answer, or the host's refusal. */
+  const askBookmarks = async (doc: string, init?: RequestInit): Promise<HistoryBookmark[] | string> => {
     const url = bookmarksUrl(doc);
 
     if (url === null) {
-      return null;
+      return 'There is no page host.';
     }
 
     try {
       const response = await fetch(url, init);
-      const body: unknown = response.ok ? await response.json() : null;
 
-      return isBookmarkList(body) ? body : null;
+      if (!response.ok) {
+        const text = (await response.text()).trim();
+
+        return text === '' ? `The page host refused the bookmark (${response.status}).` : `${text} (${response.status})`;
+      }
+
+      const body: unknown = await response.json();
+
+      return isBookmarkList(body) ? body : 'The page host sent a list it could not read.';
     } catch {
-      return null;
+      return 'The page host did not answer.';
     }
+  };
+
+  /** The host's bookmarks, or null when there is no host or it did not answer. */
+  const readBookmarks = async (doc: string): Promise<HistoryBookmark[] | null> => {
+    const answer = await askBookmarks(doc);
+
+    return typeof answer === 'string' ? null : answer;
   };
 
   const { editorArea } = options;
@@ -982,6 +999,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       return;
     }
 
+    state.previewLoading = true;
+
     try {
       const data = await readPoint(doc, row);
       const before = state.showChanges && row.below !== null ? await readPoint(doc, row.below) : null;
@@ -989,6 +1008,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       if (request !== state.request) {
         return;
       }
+
+      state.previewLoading = false;
 
       const preview = before === null
         ? { blocks: data.blocks, marks: {} }
@@ -1011,6 +1032,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       }
     } catch (error) {
       if (request === state.request) {
+        state.previewLoading = false;
         state.error = messageOf(error);
         drawBanner();
       }
@@ -1154,14 +1176,18 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
     // Another tab may have changed the list since this one loaded it.
     const fresh = await readBookmarks(doc) ?? state.bookmarks;
-    const saved = await readBookmarks(doc, {
+    const saved = await askBookmarks(doc, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(toggleBookmark(fresh, { lineage: row.lineage, sequence: row.sequence, savedAt: row.at })),
     });
 
-    if (saved === null || state.doc !== doc) {
-      status.textContent = saved === null ? 'The page host did not answer.' : status.textContent;
+    if (state.doc !== doc) {
+      return;
+    }
+
+    if (typeof saved === 'string') {
+      status.textContent = saved;
 
       return;
     }
@@ -1299,6 +1325,10 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       await load();
       state.selected = state.rows.find((candidate): candidate is VersionRow => candidate.kind === 'version' && candidate.current) ?? null;
       drawRows();
+      // The dialog's button had focus and is gone.
+      const current = state.selected === null ? null : list.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(state.selected.key)}"]`);
+
+      (current ?? options.button).focus();
       void refresh();
       options.notify(`Restored ${row.time}. It is now the newest version.`);
     } catch (error) {
@@ -1339,8 +1369,11 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     await selectFirst();
   };
 
-  /** `focus` moves focus to the version's row: the Updates card that asked is gone. */
-  const showVersion = async (lineage: string, sequence: number, focus: boolean): Promise<void> => {
+  /**
+   * `focus` moves focus to the version's row: the Updates card that asked is gone.
+   * `first` is the grouping to try before the 1-minute fallback; the person's by default.
+   */
+  const showVersion = async (lineage: string, sequence: number, focus: boolean, first: HistoryGrouping = state.chosen): Promise<void> => {
     const doc = options.doc();
     const request = ++state.request;
     const key = `${lineage}:${sequence}`;
@@ -1349,6 +1382,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     const stale = (): boolean => panel.hidden !== false || state.doc !== doc || state.request !== request;
 
     state.doc = doc;
+    // An earlier jump's 1-minute fallback must not stick.
+    state.group = first;
     setMode('list');
 
     if (doc === null) {
@@ -1401,7 +1436,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
   const openOn = (lineage: string, sequence: number): Promise<void> => showVersion(lineage, sequence, false);
 
-  const close = (): void => {
+  const close = ({ refresh: update = true }: { refresh?: boolean } = {}): void => {
     const wasOpen = !panel.hidden;
 
     state.request++;
@@ -1415,7 +1450,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     options.button.setAttribute('aria-expanded', 'false');
     showEditor();
 
-    if (wasOpen) {
+    if (wasOpen && update) {
       void refresh();
     }
   };
@@ -1474,8 +1509,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       onSelectRecord: (_record, paint) => {
         state.picked = paint;
 
-        // An empty preview is still loading; drawPreview paints the pick when it lands.
-        if (render.childElementCount > 0) {
+        // drawPreview paints the pick when the preview lands.
+        if (!state.previewLoading) {
           paintPicked();
         }
       },
@@ -1499,6 +1534,12 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   };
 
   const showHistory = async (): Promise<void> => {
+    if (state.mode === 'changes') {
+      leaveChanges();
+
+      return;
+    }
+
     if (state.mode !== 'updates') {
       return;
     }
@@ -1545,12 +1586,14 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     closeMenu();
     showEditor();
     setMode('updates');
+    const feedGroup = state.group === 'bookmarks' ? DEFAULT_GROUPING : state.group;
+
     mounted.feed = mountUpdatesFeed(updatesPanel, {
       load: async () => loadUpdates(
         (url) => send(doc, url),
         options.server,
         doc,
-        await readList(doc, state.group === 'bookmarks' ? DEFAULT_GROUPING : state.group),
+        await readList(doc, feedGroup),
         now()
       ),
       nameOf,
@@ -1558,7 +1601,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       plainText: options.view.blocksToPlainText,
       now,
       onOpenVersion: (lineage, sequence) => {
-        void showVersion(lineage, sequence, true);
+        void showVersion(lineage, sequence, true, feedGroup);
       },
       onScrollToBlock: scrollToBlock,
     });
@@ -1658,7 +1701,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       return;
     }
 
-    if (!menu.hidden && target instanceof Node && groupBar.contains(target)) {
+    if (!menu.hidden && (isBody || (target instanceof Node && groupBar.contains(target)))) {
       take(event, () => closeMenu(true));
 
       return;

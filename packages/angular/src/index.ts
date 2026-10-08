@@ -1,5 +1,6 @@
 export { BlokEditorComponent } from './blok-editor.component';
 export { BlokContentDirective } from './blok-content.directive';
+export { BlokTitleComponent } from './blok-title.component';
 export { provideBlok, BLOK_DEFAULT_CONFIG } from './provide-blok';
 export { createAngularBlock } from './createAngularBlock';
 export { injectBlocks } from './useBlocks';

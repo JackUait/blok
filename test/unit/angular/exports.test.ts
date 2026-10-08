@@ -20,4 +20,8 @@ describe('@bloklabs/angular exports', () => {
     expect(typeof AngularApi.injectBlokInstance).toBe('function');
     expect(AngularApi.BLOK_EDITOR_INSTANCE).toBeDefined();
   });
+
+  it('exports BlokTitleComponent (places the page title)', () => {
+    expect(AngularApi.BlokTitleComponent).toBeDefined();
+  });
 });

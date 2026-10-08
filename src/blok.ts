@@ -20,6 +20,7 @@ import {
 } from './components/utils/ready-registry';
 import { decodeHashFragment, resolveHashTarget } from './components/utils/hash-target';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
+import { findHolder, holderProblem } from './components/modules/pageTitle/header-dom';
 import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
@@ -438,13 +439,14 @@ class Blok {
 
     // A bad selector must not reject isReady; only a direct call after ready throws.
     const replayTitleMount = (pageTitle: BlokModules['PageTitle'], holder: HTMLElement | string): void => {
-      try {
-        pageTitle.mount(holder);
-      } catch {
-        const name = typeof holder === 'string' ? holder : holder.tagName;
+      const target = findHolder(holder);
 
-        logLabeled(`title.mount "${name}" found no element; the title stays where it is`, 'error');
+      if (target === null) {
+        logLabeled(`title.mount: ${holderProblem(typeof holder === 'string' ? holder : '')}; the title stays where it is`, 'error');
+
+        return;
       }
+      pageTitle.mount(target);
     };
 
     (this as Record<string, unknown>).title = {

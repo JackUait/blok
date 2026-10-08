@@ -33,3 +33,26 @@ export const buildHeader = (labels: { placeholder: string; ariaLabel: string }):
 
   return { header, iconRow, title };
 };
+
+/** What {@link findHolder} could not resolve, in words a log or an error can carry. */
+export const holderProblem = (holder: string): string => {
+  try {
+    document.querySelector(holder);
+  } catch {
+    return `"${holder}" is not a valid selector`;
+  }
+
+  return `no element matches "${holder}"`;
+};
+
+/** querySelector throws on a bad selector; this returns null for it instead. */
+export const findHolder = (holder: HTMLElement | string): HTMLElement | null => {
+  if (typeof holder !== 'string') {
+    return holder;
+  }
+  try {
+    return document.querySelector<HTMLElement>(holder);
+  } catch {
+    return null;
+  }
+};

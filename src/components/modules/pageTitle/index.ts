@@ -7,7 +7,7 @@ import type { TitleChange } from '../../../../types/api/title';
 import type { PageIcon } from '../../../../types/tools/page';
 import { normalizeTitleConfig, type ResolvedTitleConfig } from '../../utils/title-config';
 import { setCaretAtXPosition } from '../../utils/caret';
-import { buildHeader, type HeaderNodes } from './header-dom';
+import { buildHeader, findHolder, holderProblem, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
 import { createIconControl } from './icon-control';
 
@@ -64,7 +64,7 @@ export class PageTitle extends Module {
     }
     const { I18n, UI, YjsManager, ReadOnly } = this.Blok;
 
-    this.dom = buildHeader({
+    const dom = buildHeader({
       placeholder: this.resolved.placeholder ?? I18n.t('title.placeholder'),
       ariaLabel: I18n.t('title.ariaLabel'),
     });
@@ -72,9 +72,11 @@ export class PageTitle extends Module {
 
     // UI's font-token rule is scoped by this id.
     if (instance !== null) {
-      this.dom.header.setAttribute(DATA_ATTR.instance, instance);
+      dom.header.setAttribute(DATA_ATTR.instance, instance);
     }
-    this.placeInitially(this.resolved.holder);
+    // Set only once placed: isEnabled reads it, and a detached title must never take a Backspace join.
+    this.placeInitially(dom.header, this.resolved.holder);
+    this.dom = dom;
     this.renderText();
     this.syncWidth(UI.getWidthMode());
     this.syncDirection();
@@ -182,10 +184,10 @@ export class PageTitle extends Module {
   }
 
   public mount(holder: HTMLElement | string): void {
-    const target = typeof holder === 'string' ? document.querySelector<HTMLElement>(holder) : holder;
+    const target = findHolder(holder);
 
     if (target === null) {
-      throw new Error(`blok.title.mount: no element matches "${typeof holder === 'string' ? holder : ''}"`);
+      throw new Error(`blok.title.mount: ${holderProblem(typeof holder === 'string' ? holder : '')}`);
     }
     if (this.dom !== null) {
       target.appendChild(this.dom.header);
@@ -246,23 +248,20 @@ export class PageTitle extends Module {
     this.dom = null;
   }
 
-  private placeInitially(holder: HTMLElement | string | null): void {
-    if (this.dom === null) {
-      return;
-    }
-    const target = typeof holder === 'string' ? document.querySelector<HTMLElement>(holder) : holder;
+  private placeInitially(header: HTMLElement, holder: HTMLElement | string | null): void {
+    const target = holder === null ? null : findHolder(holder);
 
     if (typeof holder === 'string' && target === null) {
-      logLabeled(`title.holder "${holder}" matches no element; the title is drawn above the first block`, 'error');
+      logLabeled(`title.holder: ${holderProblem(holder)}; the title is drawn above the first block`, 'error');
     }
     if (target !== null) {
-      target.appendChild(this.dom.header);
+      target.appendChild(header);
 
       return;
     }
     const { wrapper, redactor } = this.Blok.UI.nodes;
 
-    wrapper.insertBefore(this.dom.header, redactor);
+    wrapper.insertBefore(header, redactor);
   }
 
   private readonly onInput = (event: Event): void => {

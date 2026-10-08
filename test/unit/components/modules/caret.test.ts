@@ -664,6 +664,36 @@ describe('Caret module', () => {
     });
   });
 
+  describe('navigateVerticalPrevious from the first block with a page title', () => {
+    const setupFirstBlock = (readOnly: boolean): { caret: Caret; focusAtX: ReturnType<typeof vi.fn> } => {
+      const focusAtX = vi.fn();
+      const { caret, blockManager } = createCaret({
+        PageTitle: { isEnabled: true, focusAtX } as unknown as BlokModules['PageTitle'],
+        ReadOnly: { isEnabled: readOnly } as unknown as BlokModules['ReadOnly'],
+      });
+
+      blockManager.currentBlock = createBlock({ inputs: { current: createContentEditable('text') } });
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      return { caret, focusAtX };
+    };
+
+    it('moves the caret into the title at the same x', () => {
+      const { caret, focusAtX } = setupFirstBlock(false);
+
+      expect(caret.navigateVerticalPrevious()).toBe(true);
+      expect(focusAtX).toHaveBeenCalledWith(100);
+    });
+
+    it('stays put in read-only mode', () => {
+      const { caret, focusAtX } = setupFirstBlock(true);
+
+      expect(caret.navigateVerticalPrevious()).toBe(false);
+      expect(focusAtX).not.toHaveBeenCalled();
+    });
+  });
+
   describe('navigateVerticalNext navigates within same cell container', () => {
     it('navigates to the next block in the same cell instead of exiting the table', () => {
       const { caret, blockManager } = createCaret();

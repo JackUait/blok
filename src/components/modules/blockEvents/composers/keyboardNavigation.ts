@@ -119,6 +119,24 @@ export class KeyboardNavigation extends BlockEventComposer {
    * toolbar should be dismissed — unlike arrow navigation where
    * hideBlockActions() is preferred to allow reopening.
    */
+  private joinIntoTitle(block: Block): void {
+    const { PageTitle, BlockManager } = this.Blok;
+
+    if (!PageTitle?.isEnabled) {
+      return;
+    }
+    const inputs = block.holder.querySelectorAll('[contenteditable="true"]:not([data-blok-mutation-free])');
+    const movable = block.contentIds.length === 0 && inputs.length === 1;
+
+    if (!movable) {
+      PageTitle.focus('end');
+
+      return;
+    }
+    PageTitle.appendAndFocus(block.currentInput?.textContent ?? '');
+    void BlockManager.removeBlock(block);
+  }
+
   private closeToolbarIfNotInTableCell(): void {
     if (this.isCurrentBlockInsideTableCell) {
       return;
@@ -886,10 +904,10 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
-    /**
-     * Backspace at the start of the first Block should do nothing
-     */
+    /** Backspace at the start of the first Block: into the page title when there is one. */
     if (previousBlock === null) {
+      this.joinIntoTitle(currentBlock);
+
       return;
     }
 

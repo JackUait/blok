@@ -1031,7 +1031,7 @@ export class Caret extends Module {
       }
 
       // No block before container — we're at the top of the document.
-      return false;
+      return this.toPageTitle(caretX);
     }
 
     /**
@@ -1043,7 +1043,17 @@ export class Caret extends Module {
       return true;
     }
 
-    return false;
+    return this.toPageTitle(caretX);
+  }
+
+  /** ArrowUp past the first block lands in the page title, when there is one. */
+  private toPageTitle(caretX: number | null): boolean {
+    if (!this.Blok.PageTitle?.isEnabled || this.Blok.ReadOnly.isEnabled) {
+      return false;
+    }
+    this.Blok.PageTitle.focusAtX(caretX);
+
+    return true;
   }
 
   /**

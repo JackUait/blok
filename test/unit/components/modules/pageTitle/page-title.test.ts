@@ -197,4 +197,79 @@ describe('PageTitle module', () => {
     expect(titleIn(target)).toBe(before);
     target.remove();
   });
+  it('input rewrites browser formatting back to plain text', async () => {
+    const core = await boot({ pageTitle: true });
+    const title = titleIn(holder);
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    title.innerHTML = 'a<b>b</b>';
+    title.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+    expect(title.childNodes.length).toBe(1);
+    expect(title.firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    expect(title.textContent).toBe('ab');
+    expect(core.moduleInstances.PageTitle.getText()).toBe('ab');
+  });
+
+  it('Enter in the title moves the text after the caret into a new first block', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Hello world', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+    const title = titleIn(holder);
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    title.focus();
+    window.getSelection()?.setPosition(title.firstChild, 5);
+    title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    const { BlockManager } = core.moduleInstances;
+
+    expect(core.moduleInstances.PageTitle.getText()).toBe('Hello');
+    expect(BlockManager.blocks.length).toBe(2);
+    expect(BlockManager.getBlockByIndex(0)?.holder.textContent).toBe(' world');
+  });
+
+  it('one undo reverts an Enter split in the title', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Hello world', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+    const title = titleIn(holder);
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    title.focus();
+    window.getSelection()?.setPosition(title.firstChild, 5);
+    title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    core.moduleInstances.YjsManager.stopCapturing();
+    core.moduleInstances.YjsManager.undo();
+
+    expect(core.moduleInstances.PageTitle.getText()).toBe('Hello world');
+    expect(core.moduleInstances.BlockManager.blocks.length).toBe(1);
+  });
+
+  it('appendAndFocus joins text onto the title with the caret at the seam', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Plans', blocks: [] } });
+    const title = titleIn(holder);
+
+    core.moduleInstances.PageTitle.appendAndFocus(' ahead');
+
+    const selection = window.getSelection();
+
+    expect(title?.textContent).toBe('Plans ahead');
+    expect(core.moduleInstances.PageTitle.getText()).toBe('Plans ahead');
+    expect(selection?.anchorNode).toBe(title?.firstChild);
+    expect(selection?.anchorOffset).toBe(5);
+  });
+
+  it('focusAtX(null) puts the caret at the end of the title', async () => {
+    const core = await boot({ pageTitle: true, data: { title: 'Plans', blocks: [] } });
+    const title = titleIn(holder);
+
+    core.moduleInstances.PageTitle.focusAtX(null);
+
+    expect(title).toHaveFocus();
+    expect(window.getSelection()?.anchorNode).toBe(title);
+    expect(window.getSelection()?.anchorOffset).toBe(title?.childNodes.length);
+  });
 });

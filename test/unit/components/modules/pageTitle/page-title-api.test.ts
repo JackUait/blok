@@ -89,6 +89,17 @@ describe('blok.title API', () => {
       expect(header()?.getAttribute(DATA_ATTR.toolbarPosition)).toBe('right');
     });
 
+    it('follows toolbar.setHidden both ways', async () => {
+      blok = create({ holder, pageTitle: true });
+
+      await blok.isReady;
+      blok.toolbar.setHidden(true);
+      expect(header()?.hasAttribute(DATA_ATTR.toolbarHidden)).toBe(true);
+
+      blok.toolbar.setHidden(false);
+      expect(header()?.hasAttribute(DATA_ATTR.toolbarHidden)).toBe(false);
+    });
+
     it('follows chromeless read-only on and off', async () => {
       blok = create({ holder, pageTitle: true, readOnly: { hideControls: true } });
 

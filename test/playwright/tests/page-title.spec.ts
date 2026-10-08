@@ -124,6 +124,13 @@ test.describe('page title alignment', () => {
     expect(await titleOffsetFromFirstBlock(page)).toBeLessThanOrEqual(1);
   });
 
+  test('stays aligned in a host holder after toolbar.setHidden(true)', async ({ page }) => {
+    await createBlok(page, { titleHost: true, pageTitle: { holder: `#${TITLE_HOST_ID}` } });
+    await page.evaluate(() => window.blokInstance?.toolbar.setHidden(true));
+
+    expect(await titleOffsetFromFirstBlock(page)).toBeLessThanOrEqual(1);
+  });
+
   test('stays aligned in read-only with hidden controls', async ({ page }) => {
     await createBlok(page, { readOnly: { hideControls: true } });
 

@@ -497,6 +497,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (editorWrapper instanceof HTMLElement) {
       editorWrapper.toggleAttribute(DATA_ATTR.toolbarHidden, hidden);
     }
+    this.Blok.PageTitle?.syncLayoutAttributes();
 
     if (hidden && this.opened) {
       this.close();

@@ -22,6 +22,9 @@ export type { PageIndex, PageOwnerEdge, PageReference, PageTextEntry } from './p
 export { projectPageTree } from './page-tree';
 export type { HostPageEdge, PageTreeNode, PageTreeDiagnostic, PageTreeProjection } from './page-tree';
 export { blokDocumentSchema } from './document-schema';
+export { buildToolManifest } from '../shared/tool-manifest';
+export { validateAgainst } from '../shared/schema/validate';
+export type { SchemaProblem } from '../shared/schema/validate';
 export { extractTexts, injectTexts } from './document-texts';
 export type { DocumentTextsOptions } from './document-texts';
 export { blocksToMarkdown, blocksToMarkdownWithReport } from './blocks-to-markdown';

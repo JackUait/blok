@@ -1,7 +1,17 @@
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from './data-formats/output-data';
 import type { PlaintextRule, SanitizerConfig } from './configs/sanitizer-config';
-import type { BlokViewSchema } from './index';
+import type { BlokSchema, BlokToolManifest, BlokViewSchema, ManifestOverrides, SchemaProblem, ToolRegistrySnapshot } from './index';
 import type { PageIcon, PageInfo } from './tools/page';
+
+export type { SchemaProblem } from './index';
+
+export declare function buildToolManifest(
+  snapshot: ToolRegistrySnapshot,
+  overrides?: ManifestOverrides,
+  options?: { onWarning?(message: string): void }
+): BlokToolManifest;
+
+export declare function validateAgainst(schema: BlokSchema, value: unknown): SchemaProblem[];
 
 /**
  * Hand-authored declarations for the `@bloklabs/core/view` subpath — the

@@ -52,6 +52,8 @@ export { BLOK_FONT_SIZE_TOKENS } from './components/utils/font-size-tokens';
 export { inspectOfflineScope, forgetOfflineScope } from './components/modules/collaboration/offline-scope';
 export { listOfflinePages, forgetOfflinePage } from './components/modules/collaboration/offline-pages';
 export { downloadOfflinePage } from './components/modules/collaboration/headless-offline-page';
+export { buildToolManifest } from './shared/tool-manifest';
+export { validateAgainst } from './shared/schema/validate';
 
 /**
  * Full teardown of an instance: modules and their listeners, the save queue's

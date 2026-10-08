@@ -13,7 +13,8 @@ import {
   ToolNameMessageKey,
   SanitizerConfig,
 } from './configs';
-import { InlineToolConstructable, InlineToolConstructorOptions, ToolConstructable, ToolSettings } from './tools';
+import { BlokSchema, InlineToolConstructable, InlineToolConstructorOptions, ToolConstructable, ToolSettings } from './tools';
+import type { ToolRegistrySnapshot, ManifestOverrides, BlokToolManifest } from './tool-manifest';
 
 import {
   Blocks,
@@ -296,6 +297,20 @@ export { BLOK_FONT_SIZE_TOKENS, BlokFontSizeTokens };
  * Blok version string
  */
 export const version: string;
+
+export declare function buildToolManifest(
+  snapshot: ToolRegistrySnapshot,
+  overrides?: ManifestOverrides,
+  options?: { onWarning?(message: string): void }
+): BlokToolManifest;
+
+/** `path` is a JSON pointer into the value. */
+export interface SchemaProblem {
+  path: string;
+  message: string;
+}
+
+export declare function validateAgainst(schema: BlokSchema, value: unknown): SchemaProblem[];
 
 /**
  * Options for {@link equalsOutputData}.

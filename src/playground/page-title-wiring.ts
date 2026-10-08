@@ -117,3 +117,23 @@ export const createdPageSeed = (
     }
   };
 };
+
+/**
+ * Attaches {@link createdPageSeed}. Blok has no public collaboration status
+ * getter, so `isConnected` is the host's own record of the last status it
+ * heard. Core also replays the current status once, in a task after
+ * `isReady` (collaboration/index.ts, `readyReplay`): a listener attached
+ * later than that would miss it, which the immediate check covers.
+ */
+export const attachCreatedPageSeed = (
+  editor: TitleEditor & { on(name: 'collaboration:status', listener: (event: { status: string }) => void): void },
+  options: Parameters<typeof createdPageSeed>[1],
+  isConnected: () => boolean
+): void => {
+  const onStatus = createdPageSeed(editor, options);
+
+  if (isConnected()) {
+    onStatus({ status: 'connected' });
+  }
+  editor.on('collaboration:status', onStatus);
+};

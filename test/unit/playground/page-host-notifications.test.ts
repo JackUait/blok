@@ -9,7 +9,7 @@ import {
   type PageMap,
 } from '../../../src/playground/page-host';
 import { buildPageTree, findPageLink } from '../../../src/playground/page-tree';
-import { createdPageSeed, titleCallbacks } from '../../../src/playground/page-title-wiring';
+import { attachCreatedPageSeed, titleCallbacks } from '../../../src/playground/page-title-wiring';
 
 const seed = (): PageMap => ({
   guide: { title: 'Guide', icon: '📘', parentId: null, blocks: [] },
@@ -269,7 +269,7 @@ describe('playground collaboration title seed', () => {
     localStorage.clear();
   });
 
-  const wire = (collab: boolean, created: string[]): {
+  const wire = (collab: boolean, created: string[], lastStatus?: string): {
     on: ReturnType<typeof vi.fn>;
     set: ReturnType<typeof vi.fn>;
     connect(): void;
@@ -286,7 +286,8 @@ describe('playground collaboration title seed', () => {
       editor,
       pages,
       createdHere: new Set(created),
-      createdPageSeed,
+      attachCreatedPageSeed,
+      collabStatus: new WeakMap(lastStatus === undefined ? [] : [[editor, lastStatus]]),
       collaborationConfig: () => (collab ? { doc: 'shared' } : null),
     });
 
@@ -300,6 +301,10 @@ describe('playground collaboration title seed', () => {
 
     expect(tab.on).toHaveBeenCalledWith('collaboration:status', expect.any(Function));
     expect(tab.set).toHaveBeenCalledWith('Named here', { record: false });
+  });
+
+  it('seeds at once when the room connected before the seed was wired', () => {
+    expect(wire(true, ['fresh'], 'connected').set).toHaveBeenCalledWith('Named here', { record: false });
   });
 
   it('never seeds a page this tab did not create', () => {

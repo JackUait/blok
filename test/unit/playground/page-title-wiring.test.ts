@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PageRegistry, ROOT_STORAGE_KEY, type PageMap } from '../../../src/playground/page-host';
 import type { PageIcon } from '../../../types/tools/page';
 import {
+  attachCreatedPageSeed,
   createdPageSeed,
   fromPageIcon,
   pushRecord,
@@ -285,3 +286,60 @@ describe('createdPageSeed', () => {
     expect(setTitle).not.toHaveBeenCalled();
   });
 });
+
+describe('attachCreatedPageSeed', () => {
+  const seededEditor = (): {
+    editor: TitleEditor & { on(name: string, listener: (event: { status: string }) => void): void };
+    setTitle: ReturnType<typeof vi.fn>;
+    emit(status: string): void;
+  } => {
+    const shown = { title: '' };
+    const listeners: Array<(event: { status: string }) => void> = [];
+    const setTitle = vi.fn((value: string) => {
+      shown.title = value;
+    });
+
+    return {
+      editor: {
+        title: { get: () => shown.title, set: setTitle, icon: { get: () => null, set: vi.fn() } },
+        on: (_name, listener) => {
+          listeners.push(listener);
+        },
+      },
+      setTitle,
+      emit: (status) => listeners.forEach((listener) => listener({ status })),
+    };
+  };
+  const options = { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'Named here' }) };
+
+  it('seeds at once when the room connected before the listener was attached', () => {
+    const { editor, setTitle } = seededEditor();
+
+    attachCreatedPageSeed(editor, options, () => true);
+
+    expect(setTitle).toHaveBeenCalledWith('Named here', { record: false });
+  });
+
+  it('waits for connected when the room has not connected yet', () => {
+    const { editor, setTitle, emit } = seededEditor();
+
+    attachCreatedPageSeed(editor, options, () => false);
+    expect(setTitle).not.toHaveBeenCalled();
+
+    emit('connecting');
+    expect(setTitle).not.toHaveBeenCalled();
+
+    emit('connected');
+    expect(setTitle).toHaveBeenCalledWith('Named here', { record: false });
+  });
+
+  it('seeds once when it was already connected and the replayed status arrives too', () => {
+    const { editor, setTitle, emit } = seededEditor();
+
+    attachCreatedPageSeed(editor, options, () => true);
+    emit('connected');
+
+    expect(setTitle).toHaveBeenCalledTimes(1);
+  });
+});
+

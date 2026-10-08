@@ -1822,7 +1822,7 @@
     import { PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
-    import { createdPageSeed, pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
+    import { attachCreatedPageSeed, pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
     import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
@@ -2074,6 +2074,9 @@
         ...(collaboration === null
           ? documentSource
           : { server: DEV_SERVER_URL, collaboration, ...(DEV_TICKET_URL !== null && { ticket: playgroundTicketUrl(DEV_TICKET_URL, collaboration.user?.name ?? null) }) }),
+        ...(collaboration !== null && {
+          onReady: (editor) => editor.on('collaboration:status', ({ status }) => collabStatus.set(editor, status)),
+        }),
         onChange(api, event) {
           console.log('something changed', event);
           refreshBlokView();
@@ -2149,6 +2152,8 @@
     let livePointers = null;
     // Pages this tab created. Only these may seed their collaboration room with the local title.
     const createdHere = new Set();
+    // Each editor's last collaboration status. Blok has no status getter; onReady is the earliest listener.
+    const collabStatus = new WeakMap();
     // Root edits live for the tab only, so a reload still starts pristine.
     let rootBlocks = null;
     const scrollByPage = new Map();
@@ -2323,7 +2328,11 @@
     /** A shared room's title comes from Yjs; only a page created here seeds its empty room. */
     function wireCollaborationTitleSeed(editor, pageId) {
       if (collaborationConfig(pageId) === null) return;
-      editor.on('collaboration:status', createdPageSeed(editor, { pageId, created: createdHere, record: () => pages.get(pageId) }));
+      attachCreatedPageSeed(
+        editor,
+        { pageId, created: createdHere, record: () => pages.get(pageId) },
+        () => collabStatus.get(editor) === 'connected'
+      );
     }
 
     // Navigation, tool toggles and reset all rebuild the editor; one queue keeps

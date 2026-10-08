@@ -1,0 +1,8 @@
+{
+  "title": "Extra",
+  "icon": {
+    "type": "image",
+    "url": "https://example.com/i.png",
+    "alt": "logo"
+  }
+}

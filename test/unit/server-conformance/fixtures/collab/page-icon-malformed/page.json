@@ -1,0 +1,7 @@
+{
+  "title": "Bad icon",
+  "icon": {
+    "type": "emoji",
+    "url": "https://example.com/x.png"
+  }
+}

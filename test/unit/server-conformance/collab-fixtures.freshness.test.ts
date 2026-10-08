@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
+import { readPageFields, type PageFields } from '../../../src/components/modules/yjs/page-fields';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
 import { outputBlocksToSegments } from '../../../src/shared/rich-text/block-data';
@@ -36,8 +37,21 @@ interface CollabFixtureCase {
   canonicalSegments: OutputBlockData[];
   input: OutputBlockData[];
   name: string;
+  /** page.json and page-canonical.json; only the page cases have them. */
+  page?: { canonical: PageFields; input: PageFields };
   update: Uint8Array;
 }
+
+/** The cases that pin the page map, which the C# seed and export mirror too. */
+const PAGE_CASES = [
+  'page-title-emoji',
+  'page-title-image-icon',
+  'page-title-empty-string',
+  'page-title-null',
+  'page-title-non-string',
+  'page-icon-malformed',
+  'page-icon-extra-key',
+];
 
 function isObjectArray(value: unknown): value is Record<string, unknown>[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'object' && entry !== null);
@@ -92,6 +106,27 @@ function listCaseDirectories(): string[] {
     .sort();
 }
 
+function readObject(path: string): PageFields {
+  const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${path} must hold a JSON object`);
+  }
+
+  // page.json carries malformed values on purpose; pageFromJSON stores them as given.
+  return parsed;
+}
+
+function readPage(directory: string): CollabFixtureCase['page'] {
+  const input = join(directory, 'page.json');
+
+  if (!existsSync(input)) {
+    return undefined;
+  }
+
+  return { input: readObject(input), canonical: readObject(join(directory, 'page-canonical.json')) };
+}
+
 function readCase(name: string): CollabFixtureCase {
   const directory = join(FIXTURE_ROOT, name);
   const base64 = readFileSync(join(directory, 'update.b64'), 'utf8').replace(/\s+/g, '');
@@ -101,6 +136,7 @@ function readCase(name: string): CollabFixtureCase {
     input: readBlocks(join(directory, 'input.json'), false),
     canonical: readBlocks(join(directory, 'canonical.json'), true),
     canonicalSegments: readBlocks(join(directory, 'canonical.segments.json'), true),
+    page: readPage(directory),
     update: new Uint8Array(Buffer.from(base64, 'base64')),
   };
 }
@@ -128,6 +164,11 @@ describe('collab lockstep fixtures', () => {
     expect(manifest.cases.map((entry) => entry.name).sort()).toEqual(caseNames);
   });
 
+  it.each(PAGE_CASES)('has page.json and page-canonical.json for %s', (name) => {
+    expect(caseNames).toContain(name);
+    expect(readCase(name).page).toBeDefined();
+  });
+
   describe.each(caseNames)('%s', (name) => {
     const fixture = readCase(name);
 
@@ -153,6 +194,23 @@ describe('collab lockstep fixtures', () => {
       store.applyRemoteUpdate(fixture.update);
 
       expect(hostSegments(store.toJSON())).toEqual(fixture.canonicalSegments);
+    });
+
+    it.runIf(fixture.page !== undefined)('reads page-canonical.json from pageFromJSON(page.json)', () => {
+      const store = createStore();
+
+      store.fromJSON(fixture.input);
+      store.pageFromJSON(fixture.page?.input ?? {});
+
+      expect(readPageFields(store.page)).toEqual(fixture.page?.canonical);
+    });
+
+    it.runIf(fixture.page !== undefined)('reads page-canonical.json from the page map in update.b64', () => {
+      const store = createStore();
+
+      store.applyRemoteUpdate(fixture.update);
+
+      expect(readPageFields(store.page)).toEqual(fixture.page?.canonical);
     });
 
     it('round-trips canonical.json through fromJSON/toJSON unchanged', () => {

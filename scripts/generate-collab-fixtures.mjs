@@ -6,6 +6,8 @@
  *   canonical.json — `DocumentStore.toJSON()` of the seeded doc (rich fields as HTML)
  *   canonical.segments.json — the same in host shape: rich fields as segments
  *   update.b64     — `encodeStateAsUpdate()` of the seeded doc, base64
+ *   page.json / page-canonical.json — only for a case with a `page`: what
+ *                    `pageFromJSON` receives, and `readPageFields` of the result
  *
  * plus `manifest.json` (case names + one-line descriptions). The folder is
  * shared: this script owns ONLY the case directories it lists (current and
@@ -77,6 +79,7 @@ async function loadClient() {
     stdin: {
       contents:
         `export { DocumentStore } from ${modulePath('document-store.ts')};\n` +
+        `export { readPageFields } from ${modulePath('page-fields.ts')};\n` +
         `export { YBlockSerializer, GRID_ORDER_KEY, GRID_ROWS_KEY } from ${modulePath('serializer.ts')};\n` +
         `export { htmlToSegmentsNode } from ${JSON.stringify(join(REPO_ROOT, 'src', 'view', 'rich-text-parse5.ts'))};\n` +
         `export { outputBlocksToSegments } from ${JSON.stringify(join(REPO_ROOT, 'src', 'shared', 'rich-text', 'block-data.ts'))};\n` +
@@ -100,7 +103,9 @@ const paragraph = (id, text, extra = {}) => ({ id, type: 'paragraph', data: { te
 /**
  * One entry per fixture directory. `input` is what fromJSON receives; an
  * optional `mutate(store, client)` runs afterwards inside a transaction and
- * makes the case doc-only (see the header).
+ * makes the case doc-only (see the header). An optional `page` goes through
+ * `pageFromJSON`, which stores any non-empty value, so a malformed one rides
+ * in update.b64 too.
  */
 const CASES = [
   {
@@ -520,6 +525,48 @@ const CASES = [
       current.set('leaf', 'past the cap');
     },
   },
+  {
+    name: 'page-title-emoji',
+    description: 'a non-empty title and an emoji icon are kept',
+    input: [paragraph('pt1', 'body')],
+    page: { title: 'Plan', icon: { type: 'emoji', value: '🚀' } },
+  },
+  {
+    name: 'page-title-image-icon',
+    description: 'an image icon is kept with its url',
+    input: [paragraph('pt2', 'body')],
+    page: { title: 'Roadmap', icon: { type: 'image', url: 'https://example.com/icon.png' } },
+  },
+  {
+    name: 'page-title-empty-string',
+    description: 'an empty title is absent',
+    input: [paragraph('pt3', 'body')],
+    page: { title: '', icon: { type: 'emoji', value: '📄' } },
+  },
+  {
+    name: 'page-title-null',
+    description: 'a null title and a null icon are absent',
+    input: [paragraph('pt4', 'body')],
+    page: { title: null, icon: null },
+  },
+  {
+    name: 'page-title-non-string',
+    description: 'a title that is not a string is stored but reads as absent',
+    input: [paragraph('pt5', 'body')],
+    page: { title: 42, icon: { type: 'emoji', value: '🧭' } },
+  },
+  {
+    name: 'page-icon-malformed',
+    description: 'an emoji icon with a url instead of a value reads as absent; the title is kept',
+    input: [paragraph('pt6', 'body')],
+    page: { title: 'Bad icon', icon: { type: 'emoji', url: 'https://example.com/x.png' } },
+  },
+  {
+    name: 'page-icon-extra-key',
+    description: 'an icon with an extra key is kept with that key',
+    input: [paragraph('pt7', 'body')],
+    page: { title: 'Extra', icon: { type: 'image', url: 'https://example.com/i.png', alt: 'logo' } },
+  },
 ];
 
 const deepEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -571,6 +618,10 @@ async function main() {
 
     store.fromJSON(testCase.input);
 
+    if (testCase.page !== undefined) {
+      store.pageFromJSON(testCase.page);
+    }
+
     if (testCase.mutate !== undefined) {
       store.transact(() => testCase.mutate(store, client, serializer), 'local');
     }
@@ -597,6 +648,12 @@ async function main() {
       throw new Error(`generate-collab-fixtures: "${testCase.name}" does not round-trip through fromJSON/toJSON`);
     }
 
+    const pageCanonical = client.readPageFields(store.page);
+
+    if (testCase.page !== undefined && !deepEqual(client.readPageFields(replayed.page), pageCanonical)) {
+      throw new Error(`generate-collab-fixtures: "${testCase.name}" does not replay its page fields`);
+    }
+
     const directory = join(FIXTURE_ROOT, testCase.name);
 
     mkdirSync(directory);
@@ -604,6 +661,11 @@ async function main() {
     writeJson(join(directory, 'canonical.json'), canonical);
     writeJson(join(directory, 'canonical.segments.json'), hostSegments(client, canonical));
     writeFileSync(join(directory, 'update.b64'), toBase64Lines(update), 'utf8');
+
+    if (testCase.page !== undefined) {
+      writeJson(join(directory, 'page.json'), testCase.page);
+      writeJson(join(directory, 'page-canonical.json'), pageCanonical);
+    }
   }
 
   writeJson(join(FIXTURE_ROOT, 'manifest.json'), {

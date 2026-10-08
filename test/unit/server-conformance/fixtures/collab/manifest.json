@@ -96,6 +96,34 @@
     {
       "name": "malformed-doc-blocks",
       "description": "doc-only: a block whose id or type is not a string, or whose data is not a map, is skipped on export (its order slot with it); a value nested past 256 levels exports as null"
+    },
+    {
+      "name": "page-title-emoji",
+      "description": "a non-empty title and an emoji icon are kept"
+    },
+    {
+      "name": "page-title-image-icon",
+      "description": "an image icon is kept with its url"
+    },
+    {
+      "name": "page-title-empty-string",
+      "description": "an empty title is absent"
+    },
+    {
+      "name": "page-title-null",
+      "description": "a null title and a null icon are absent"
+    },
+    {
+      "name": "page-title-non-string",
+      "description": "a title that is not a string is stored but reads as absent"
+    },
+    {
+      "name": "page-icon-malformed",
+      "description": "an emoji icon with a url instead of a value reads as absent; the title is kept"
+    },
+    {
+      "name": "page-icon-extra-key",
+      "description": "an icon with an extra key is kept with that key"
     }
   ]
 }

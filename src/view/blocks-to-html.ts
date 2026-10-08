@@ -7,7 +7,7 @@
  * ./sanitize, and the pure `INLINE_TEXT_SANITIZE` map). Never import the
  * `src/components/utils` barrel, editor modules, or tool classes.
  */
-import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
+import { INLINE_TEXT_SANITIZE } from '../shared/inline-text-sanitize';
 import type { BlokViewSchema } from '../shared/sanitize-schema';
 import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-scaffolding';
 import { classesFor } from '../shared/tool-classes';

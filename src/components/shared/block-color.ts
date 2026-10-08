@@ -15,6 +15,8 @@ import { IconPaintRoller } from '../icons';
 import { createColorPicker, formatSwatchLabel, getActivePresets } from './color-picker';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from './color-presets';
 
+export { BLOCK_COLOR_SANITIZE } from '../../shared/block-color-sanitize';
+
 /**
  * Block-level color stored on a tool's data. Values are preset names.
  */
@@ -24,16 +26,6 @@ export interface BlockColorData {
   /** Preset name for the block's background color. Absent = none. */
   backgroundColor?: string;
 }
-
-/**
- * Sanitize entries for the block-color data fields. They hold plain preset
- * names, not HTML, so they are passed through untouched. Spread into a tool's
- * static `sanitize` config alongside its `text` field.
- */
-export const BLOCK_COLOR_SANITIZE = {
-  textColor: false,
-  backgroundColor: false,
-} as const;
 
 /**
  * Apply (or clear) block-level text/background color on a rendered element.

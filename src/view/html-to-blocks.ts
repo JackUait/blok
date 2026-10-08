@@ -22,7 +22,7 @@ import type { DefaultTreeAdapterMap } from 'parse5';
 
 import type { OutputBlockData } from '../../types';
 import type { ImageAlignment } from '../../types/tools/image';
-import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
+import { INLINE_TEXT_SANITIZE } from '../shared/inline-text-sanitize';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { isInvisibleBackground, isNearBlackText } from '../components/utils/default-page-colors';
 import { isSafeCssColor } from '../shared/css-color';

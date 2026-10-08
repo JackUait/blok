@@ -8,6 +8,7 @@ import type {
   ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
+import { describeList } from '../../shared/tool-descriptions/list';
 import type { MoveEvent } from '../../../types/tools/hook-events';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { setupPlaceholder } from '../../components/utils/placeholder';
@@ -49,6 +50,8 @@ import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from '.
 type IndexMoveEvent = MoveEvent & { [INDEX_MOVE_NEIGHBOURS]?: IndexMoveNeighbours };
 
 export class ListItem implements BlockTool {
+  public static describe = describeList;
+
   private api: API;
   private readOnly: boolean;
   private _settings: ListItemConfig;

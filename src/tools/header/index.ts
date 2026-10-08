@@ -1,3 +1,4 @@
+import { describeHeader } from '../../shared/tool-descriptions/header';
 import { headerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 /**
  * Header Tool for the Blok Editor
@@ -173,6 +174,8 @@ interface Level {
  * @version 2.0.0
  */
 export class Header implements BlockTool {
+  public static describe = describeHeader;
+
   /**
    * Editor API
    */

@@ -15,6 +15,8 @@
  * directions.
  */
 
+import { describeHeader } from '../shared/tool-descriptions/header';
+import { describeList } from '../shared/tool-descriptions/list';
 import { describeParagraph } from '../shared/tool-descriptions/paragraph';
 import { ALIGNMENT, richText } from '../shared/tool-descriptions/rich-text';
 
@@ -117,35 +119,9 @@ export const blokDocumentSchema = {
   $defs: {
     paragraph: describeParagraph().data,
 
-    header: {
-      type: 'object',
-      description: 'A heading. Toggle headings own the blocks that reference them as `parent`.',
-      required: ['text', 'level'],
-      additionalProperties: false,
-      properties: {
-        text: richText('Rich text of the heading.'),
-        level: { type: 'integer', minimum: 1, maximum: 6 },
-        isToggleable: { type: 'boolean', description: 'Heading collapses/expands its children.' },
-        isOpen: { type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' },
-        textColor: { type: 'string' },
-        backgroundColor: { type: 'string' },
-        anchor: { type: 'string', description: 'Anchor id rendered as the heading element\'s `id`.' },
-      },
-    },
+    header: describeHeader().data,
 
-    list: {
-      type: 'object',
-      description: 'One list item. A list is a run of sibling `list` blocks, not a single block.',
-      required: ['text', 'style'],
-      additionalProperties: false,
-      properties: {
-        text: richText('Rich text of the item.'),
-        style: { type: 'string', enum: ['unordered', 'ordered', 'checklist'] },
-        checked: { type: 'boolean', description: 'Checklist state. Only emitted for style "checklist".' },
-        start: { type: 'integer', description: 'Starting number of an ordered run. Omitted when 1.' },
-        depth: { type: 'integer', minimum: 1, description: 'Nesting level. Omitted at root.' },
-      },
-    },
+    list: describeList().data,
 
     table: {
       type: 'object',

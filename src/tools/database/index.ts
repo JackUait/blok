@@ -453,7 +453,7 @@ export class DatabaseTool implements BlockTool {
       }
     }
 
-    if (retitled === null) {
+    if (retitled === null || (retitled.length > 0 && this.activeViewQueries(this.titlePropertyId()))) {
       this.redrawWhenIdle();
 
       return;
@@ -502,6 +502,13 @@ export class DatabaseTool implements BlockTool {
     }
 
     return retitled;
+  }
+
+  /** True when the active view sorts or filters by the property, so a new value can move or hide a row. */
+  private activeViewQueries(propertyId: string): boolean {
+    const view = this.model.getView(this.activeViewId);
+
+    return view !== undefined && [...view.sorts, ...view.filters].some((rule) => rule.propertyId === propertyId);
   }
 
   /** True while an inline rename in the board or a drag is in progress. */

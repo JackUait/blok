@@ -3638,6 +3638,93 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('a peer retitle in a view that sorts or filters by title', () => {
+    /** Sets a row's title the way a peer or undo does, then lets the redraw run. */
+    const peerRetitle = async (tool: DatabaseTool, block: BlockAPI, title: string): Promise<void> => {
+      const api = (tool as unknown as { api: API }).api;
+      const listener = vi.mocked(api.events.on).mock.calls.find(([name]) => name === 'block changed')?.[1] as (payload: unknown) => void;
+
+      const row = block.preservedData as DatabaseRowData;
+
+      row.properties['prop-title'] = title;
+      listener({ event: { type: 'block-changed', detail: { target: block } } });
+      await Promise.resolve();
+    };
+
+    const cardIds = (element: HTMLElement): string[] =>
+      queryAllByData(element, 'data-blok-database-card').map((el) => el.getAttribute('data-row-id') ?? '');
+
+    it('re-sorts the board when a peer changes a title the view sorts by', async () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-status': 'opt-todo' }, position: 'a1' }),
+      ];
+      const tool = new DatabaseTool(createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
+          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
+      }, {}, { childBlocks }));
+      const element = tool.render();
+
+      tool.rendered();
+      await peerRetitle(tool, childBlocks[0], 'Z');
+
+      expect(cardIds(element)).toEqual(['row-b', 'row-a']);
+
+      tool.destroy();
+    });
+
+    it('hides a list row when a peer retitles it out of a title filter', async () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Keep one' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Keep two' }, position: 'a1' }),
+      ];
+      const tool = new DatabaseTool(createDatabaseOptions({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], visibleProperties: [],
+          filters: [{ propertyId: 'prop-title', operator: 'contains', value: 'keep' }] }],
+        activeViewId: 'view-list',
+      }, {}, { childBlocks }));
+      const element = tool.render();
+
+      tool.rendered();
+      await peerRetitle(tool, childBlocks[0], 'Gone');
+
+      expect(queryAllByData(element, 'data-blok-database-list-row-title').map((el) => el.textContent)).toEqual(['Keep two']);
+
+      tool.destroy();
+    });
+
+    it('waits for an open card title edit to end before re-sorting', async () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-status': 'opt-todo' }, position: 'a1' }),
+      ];
+      const tool = new DatabaseTool(createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
+          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
+      }, {}, { childBlocks }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+      queryAllByData(element, 'data-row-id', 'row-b').find((el) => el.hasAttribute('data-blok-database-edit-card'))?.click();
+      const input = queryByData(element, 'data-blok-database-card-title-input') as HTMLInputElement;
+
+      await peerRetitle(tool, childBlocks[0], 'Z');
+
+      expect(element.contains(input)).toBe(true);
+      expect(cardIds(element)).toEqual(['row-a', 'row-b']);
+
+      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.keyUp(document.body, { key: 'Enter' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(cardIds(element)).toEqual(['row-b', 'row-a']);
+
+      tool.destroy();
+      document.body.innerHTML = '';
+    });
+  });
+
   describe('drag in a sorted view (GATED ON D7)', () => {
     const sortedBoard = (): { tool: DatabaseTool; childBlocks: BlockAPI[] } => {
       // Sort order (A, B) is the reverse of position order (B at a0, A at a1).

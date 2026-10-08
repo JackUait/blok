@@ -268,6 +268,14 @@ describe('blokDocumentSchema', () => {
     expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'id', 'time', 'version']);
   });
 
+  describe('published bytes', () => {
+    // Re-pin only in the commit that adds `page` (S6). Any other diff here is a published change.
+    it('serializes exactly as the pinned snapshot', async () => {
+      await expect(JSON.stringify(blokDocumentSchema, null, 2))
+        .toMatchFileSnapshot('./__snapshots__/document-schema.json');
+    });
+  });
+
   describe('coverage', () => {
     /**
      * The comparison is bidirectional: a new tool without a def AND a def left

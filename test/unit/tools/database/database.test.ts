@@ -5,6 +5,7 @@ import type { DatabaseAdapter, DatabaseData, DatabaseConfig, DatabaseRow, Databa
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
+import { DataPersistenceManager } from '../../../../src/components/block/data-persistence-manager';
 import type { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
@@ -4128,6 +4129,257 @@ describe('DatabaseTool', () => {
         .toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
       expect(columnCards(element, 'opt-doing')).toEqual(['row-x']);
       expect(columnCards(element, 'opt-todo')).toEqual(['row-b', 'row-a']);
+
+      tool.destroy();
+    });
+  });
+
+  describe('table view foundations', () => {
+    const tableView: DatabaseViewConfig = { id: 'view-table', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+    const twoRows = (): BlockAPI[] => [
+      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'First' }, position: 'a0' }),
+      createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Second' }, position: 'a1' }),
+    ];
+
+    it('seeds a table from the Database toolbox entry and leaves the Board entry a board', () => {
+      const [database, board] = DatabaseTool.toolbox as Array<{ data?: Record<string, unknown> }>;
+
+      expect(database.data).toEqual({ initialView: 'table' });
+      expect(board.data).toBeUndefined();
+    });
+
+    it('starts a database inserted from the Database entry with a table view, and saves no seed key', () => {
+      const options = createDatabaseOptions();
+
+      options.data = { initialView: 'table' } as unknown as DatabaseData;
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+      const saved = tool.save(element);
+
+      expect(saved.views).toHaveLength(1);
+      expect(saved.views[0].type).toBe('table');
+      expect(saved.views[0].groupBy).toBeUndefined();
+      expect(saved).not.toHaveProperty('initialView');
+      expect(tool.validate(saved)).toBe(true);
+    });
+
+    it('accepts a table view without groupBy', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      expect(tool.validate(makeDefaultData({ views: [tableView], activeViewId: 'view-table' }))).toBe(true);
+    });
+
+    it('renders a table view as a list of row titles, not as a board', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [tableView], activeViewId: 'view-table' }, {}, { childBlocks: twoRows() }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      const table = queryByData(element, 'data-blok-database-table');
+
+      expect(table).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).toBeNull();
+      expect(queryAllByData(element, 'data-blok-database-table-row').map((row) => row.textContent)).toEqual(['First', 'Second']);
+
+      tool.destroy();
+    });
+
+    it('wires no board drag onto a table view', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [tableView], activeViewId: 'view-table' }, {}, { childBlocks: twoRows() }));
+
+      tool.render();
+      tool.rendered();
+
+      const internals = tool as unknown as { cardDrag: unknown; columnDrag: unknown; listRowDrag: unknown };
+
+      expect(internals.cardDrag).toBeNull();
+      expect(internals.columnDrag).toBeNull();
+      expect(internals.listRowDrag).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('names a new table view Table and gives it no group', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      tool.addView('table');
+
+      const added = tool.save(element).views[1];
+
+      expect(added).toMatchObject({ name: 'Table', type: 'table' });
+      expect(added.groupBy).toBeUndefined();
+
+      tool.destroy();
+    });
+
+    it('carries every view setting into a duplicate and to the backend', () => {
+      const adapter = {
+        loadDatabase: vi.fn().mockResolvedValue(undefined),
+        createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
+        createView: vi.fn().mockResolvedValue(undefined), updateView: vi.fn(), deleteView: vi.fn(),
+      } satisfies DatabaseAdapter;
+      const source: DatabaseViewConfig = {
+        ...tableView,
+        sorts: [{ propertyId: 'prop-title', direction: 'asc' }],
+        filters: [{ propertyId: 'prop-status', operator: 'is', value: 'opt-todo' }],
+        properties: [{ id: 'prop-status', visible: true, width: 180, wrap: true }, { id: 'prop-title', visible: true }],
+        visibleProperties: ['prop-status'],
+        wrapCells: true,
+        frozenColumnCount: 1,
+        showVerticalLines: false,
+        loadLimit: 25,
+        calculations: [{ id: 'prop-status', fn: 'count_values' }],
+        openPagesIn: 'center',
+      };
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [source], activeViewId: 'view-table' }, { adapter }));
+      const element = tool.render();
+
+      tool.duplicateView('view-table');
+
+      const { id: _sourceId, position: _sourcePosition, ...settings } = source;
+      const copy = tool.save(element).views[1];
+
+      expect(copy).toMatchObject(settings);
+      expect(adapter.createView).toHaveBeenCalledWith(expect.objectContaining({ ...settings, id: copy.id, position: copy.position }));
+
+      tool.destroy();
+    });
+
+    it('shows on a list row the properties chosen in properties, over the legacy list', () => {
+      const listView: DatabaseViewConfig = {
+        id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [],
+        visibleProperties: [],
+        properties: [{ id: 'prop-title', visible: true }, { id: 'prop-status', visible: true }],
+      };
+      const rows = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'First', 'prop-status': 'opt-todo' }, position: 'a0' })];
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [listView], activeViewId: 'view-list' }, {}, { childBlocks: rows }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      expect(queryAllByData(element, 'data-blok-database-list-row-property')).toHaveLength(1);
+
+      tool.destroy();
+    });
+  });
+
+  describe('setData()', () => {
+    const renamed = (data: DatabaseData, name: string): DatabaseData => ({
+      ...data,
+      views: data.views.map((view) => ({ ...view, name })),
+    });
+
+    it('applies a peer view rename in place, keeping the block element', () => {
+      const options = createDatabaseOptions({}, {}, { childBlocks: [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One' }, position: 'a0' })] });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      const applied = tool.setData(renamed(tool.save(element), 'Renamed'));
+
+      expect(applied).not.toBe(false);
+      expect(queryByData(element, 'data-blok-database-tab-name')?.textContent).toBe('Renamed');
+      expect(tool.save(element).views[0].name).toBe('Renamed');
+      expect(queryByData(element, 'data-row-id', 'row-1')).not.toBeNull();
+
+      tool.destroy();
+    });
+
+    it('keeps an open card page open', () => {
+      const options = createDatabaseOptions({}, {}, { childBlocks: [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One' }, position: 'a0' })] });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      queryByData(element, 'data-row-id', 'row-1')?.click();
+
+      const drawer = (): DatabaseCardDrawer | null => (tool as unknown as { cardDrawer: DatabaseCardDrawer | null }).cardDrawer;
+
+      expect(drawer()?.isOpen).toBe(true);
+
+      tool.setData(renamed(tool.save(element), 'Renamed'));
+
+      expect(drawer()?.isOpen).toBe(true);
+      expect(drawer()?.openRowId).toBe('row-1');
+
+      tool.destroy();
+    });
+
+    it('follows the active view the data names', () => {
+      const views: DatabaseViewConfig[] = [
+        { id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] },
+        { id: 'view-2', name: 'Table', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: [] },
+      ];
+      const tool = new DatabaseTool(createDatabaseOptions({ views, activeViewId: 'view-1' }));
+      const element = tool.render();
+
+      tool.setData({ ...tool.save(element), activeViewId: 'view-2' });
+
+      expect(tool.save(element).activeViewId).toBe('view-2');
+      expect(queryByData(element, 'data-blok-database-table')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('keeps a top-level key a newer peer wrote', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      tool.setData({ ...tool.save(element), fromTheFuture: { a: 1 } });
+
+      expect(tool.save(element)).toMatchObject({ fromTheFuture: { a: 1 } });
+
+      tool.destroy();
+    });
+
+    it('takes the peer title and leaves an unchanged title node alone', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title: 'Tasks' }));
+      const element = tool.render();
+      const titleEl = queryByData(element, 'data-blok-database-title');
+      const observer = new MutationObserver(() => undefined);
+
+      if (titleEl !== null) {
+        observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+      }
+
+      tool.setData({ ...tool.save(element), title: 'Tasks' });
+
+      expect(observer.takeRecords()).toHaveLength(0);
+      observer.disconnect();
+
+      tool.setData({ ...tool.save(element), title: 'Projects' });
+
+      expect(titleEl?.textContent).toBe('Projects');
+      expect(tool.save(element).title).toBe('Projects');
+
+      tool.destroy();
+    });
+
+    it('asks for a full render when the data has no schema or views', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      tool.render();
+
+      expect(tool.setData({ ...makeDefaultData(), views: [] })).toBe(false);
+      expect(tool.setData({ ...makeDefaultData(), schema: [] })).toBe(false);
+
+      tool.destroy();
+    });
+
+    it('updates in place through the block data lifecycle', async () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const manager = new DataPersistenceManager(
+        tool, () => element, {} as never, 'database', () => false, { dropCache: vi.fn() } as never, vi.fn(), vi.fn(),
+        tool.save(element), {}
+      );
+
+      await expect(manager.setData(renamed(tool.save(element), 'Peer name'))).resolves.toBe(true);
+      expect(tool.save(element).views[0].name).toBe('Peer name');
 
       tool.destroy();
     });

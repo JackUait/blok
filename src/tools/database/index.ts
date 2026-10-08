@@ -6,6 +6,8 @@ import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues } from './database-query';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
+import { DatabaseTableView } from './database-table-view';
+import { visibleRowPropertyIds } from './view-settings';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { firstStrongDirection } from '../../shared/text-direction';
 import { equalsOutputData } from '../../shared/output-data';
@@ -47,7 +49,13 @@ const changedBlock = (payload: unknown): ChangedBlock | undefined =>
 /** Events that can end an inline edit or a drag. */
 const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId']);
+/**
+ * Insert-time hint from the toolbox: the layout of the first view. Read once
+ * by the constructor and never saved.
+ */
+const INITIAL_VIEW_KEY = 'initialView';
+
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', INITIAL_VIEW_KEY]);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -72,7 +80,7 @@ export class DatabaseTool implements BlockTool {
   private readonly config: DatabaseConfig;
 
   private title: string;
-  private readonly unknown: Record<string, unknown>;
+  private unknown: Record<string, unknown>;
   private activeViewId: string;
   private model: DatabaseModel;
   private view!: DatabaseViewRenderer;
@@ -111,7 +119,9 @@ export class DatabaseTool implements BlockTool {
 
     this.title = (data as DatabaseData | undefined)?.title ?? '';
     this.unknown = unknownKeys(data);
-    this.model = new DatabaseModel(data);
+    const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
+
+    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table' } : {});
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
@@ -128,6 +138,8 @@ export class DatabaseTool implements BlockTool {
         searchTerms: ['database', 'kanban', 'board', 'cards', 'columns'],
         section: 'database',
         preview: { render: renderDatabasePreview, descriptionKey: 'toolbox.preview.database' },
+        // Notion starts a new database as a table.
+        data: { [INITIAL_VIEW_KEY]: 'table' },
       },
       {
         icon: IconBoard,
@@ -204,18 +216,7 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';
 
-    // Own dir from its text, so core skips it and an RTL title does not flip
-    // the grid. No dir when there is no letter: `dir="auto"` would resolve an
-    // empty title to LTR and push the placeholder out of an RTL column.
-    const syncTitleDirection = (): void => {
-      const direction = firstStrongDirection(titleEl.textContent ?? '');
-
-      if (direction === null) {
-        titleEl.removeAttribute('dir');
-      } else {
-        titleEl.setAttribute('dir', direction);
-      }
-    };
+    const syncTitleDirection = (): void => DatabaseTool.syncTitleDirection(titleEl);
 
     syncTitleDirection();
     titleEl.addEventListener('input', syncTitleDirection);
@@ -239,6 +240,21 @@ export class DatabaseTool implements BlockTool {
     });
 
     return titleEl;
+  }
+
+  /**
+   * Own dir from its text, so core skips it and an RTL title does not flip
+   * the grid. No dir when there is no letter: `dir="auto"` would resolve an
+   * empty title to LTR and push the placeholder out of an RTL column.
+   */
+  private static syncTitleDirection(titleEl: HTMLElement): void {
+    const direction = firstStrongDirection(titleEl.textContent ?? '');
+
+    if (direction === null) {
+      titleEl.removeAttribute('dir');
+    } else {
+      titleEl.setAttribute('dir', direction);
+    }
   }
 
   rendered(): void {
@@ -345,6 +361,44 @@ export class DatabaseTool implements BlockTool {
     this.syncTitleRowAddBtn();
 
     this.rerenderView();
+  }
+
+  /**
+   * Applies data from the document (undo, redo or a peer) without rebuilding
+   * the block, so the holder and an open card page survive. Returns false
+   * when the data cannot be shown in place; core then re-renders the block.
+   * Must not dispatch a change: core holds its write-back window open
+   * around this call.
+   */
+  setData(data: DatabaseData): boolean {
+    if (!Array.isArray(data.schema) || data.schema.length === 0 || !Array.isArray(data.views) || data.views.length === 0) {
+      return false;
+    }
+
+    this.unknown = unknownKeys(data);
+    this.title = typeof data.title === 'string' ? data.title : '';
+
+    if (this.titleElement !== null && this.titleElement.textContent !== this.title) {
+      this.titleElement.textContent = this.title;
+      DatabaseTool.syncTitleDirection(this.titleElement);
+    }
+
+    this.model.replaceDefinition(data);
+
+    const views = this.model.getViews();
+    const activeViewId = [data.activeViewId, this.activeViewId].find((id) => views.some((view) => view.id === id)) ?? views[0].id;
+
+    if (activeViewId !== this.activeViewId) {
+      this.sync.flushPendingUpdates();
+      this.sync.flushPendingPropertyUpdates();
+      this.activeViewId = activeViewId;
+    }
+
+    this.rebuildTabBar();
+    this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    this.redrawWhenIdle();
+
+    return true;
   }
 
   /**
@@ -461,7 +515,8 @@ export class DatabaseTool implements BlockTool {
     }
 
     const currentView = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]')
-      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-list]');
+      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-list]')
+      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-table]');
     const titlePropId = this.titlePropertyId();
 
     if (currentView === null) {
@@ -773,13 +828,14 @@ export class DatabaseTool implements BlockTool {
 
   addView(type: ViewType): void {
     const statusProp = this.model.getSchema().find((p) => p.type === 'select');
-    const defaultName = type === 'list'
-      ? DATABASE_DEFAULT_TEXT.viewTypeList
-      : DATABASE_DEFAULT_TEXT.viewTypeBoard;
-    const newView = this.model.addView(defaultName, type, {
+    const defaultNames: Partial<Record<ViewType, string>> = {
+      list: DATABASE_DEFAULT_TEXT.viewTypeList,
+      table: DATABASE_DEFAULT_TEXT.viewTypeTable,
+    };
+    const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
       groupBy: type === 'board' ? statusProp?.id : undefined,
     });
-    void this.sync.syncCreateView({ id: newView.id, name: newView.name, type: newView.type, position: newView.position, groupBy: newView.groupBy });
+    void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);
   }
 
@@ -795,13 +851,10 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const newView = this.model.addView(sourceView.name, sourceView.type, {
-      groupBy: sourceView.groupBy,
-      sorts: [...sourceView.sorts],
-      filters: [...sourceView.filters],
-      visibleProperties: [...sourceView.visibleProperties],
-    });
-    void this.sync.syncCreateView({ id: newView.id, name: newView.name, type: newView.type, position: newView.position, groupBy: newView.groupBy });
+    const { id: _id, name, type, position: _position, ...settings } = sourceView;
+    const newView = this.model.addView(name, type, settings);
+
+    void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);
   }
 
@@ -920,6 +973,10 @@ export class DatabaseTool implements BlockTool {
       return this.renderListView(titlePropId, groupByPropId, viewConfig);
     }
 
+    if (viewConfig?.type === 'table') {
+      return this.renderTableView(titlePropId, viewConfig);
+    }
+
     return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
   }
 
@@ -965,6 +1022,19 @@ export class DatabaseTool implements BlockTool {
     return this.view.createView();
   }
 
+  private renderTableView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    this.view = new DatabaseTableView({
+      readOnly: this.readOnly,
+      i18n: this.api.i18n,
+      view: viewConfig,
+      schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      rows: this.model.queryRows({ view: viewConfig }).rows,
+      titlePropertyId: titlePropId,
+    });
+
+    return this.view.createView();
+  }
+
   private renderListView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig): HTMLDivElement {
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
 
@@ -978,7 +1048,7 @@ export class DatabaseTool implements BlockTool {
         rows: [],
         titlePropertyId: titlePropId,
         schema,
-        visiblePropertyIds: viewConfig.visibleProperties,
+        visiblePropertyIds: visibleRowPropertyIds(viewConfig, this.model.getSchema()),
         options,
         getRows: (optionId) => groups.get(optionId) ?? [],
       });
@@ -989,7 +1059,7 @@ export class DatabaseTool implements BlockTool {
         rows: this.model.queryRows({ view: viewConfig }).rows,
         titlePropertyId: titlePropId,
         schema,
-        visiblePropertyIds: viewConfig.visibleProperties,
+        visiblePropertyIds: visibleRowPropertyIds(viewConfig, this.model.getSchema()),
       });
     }
 
@@ -1252,6 +1322,7 @@ export class DatabaseTool implements BlockTool {
 
     const viewConfig = this.model.getView(this.activeViewId);
     const isList = viewConfig?.type === 'list';
+    const isBoard = !isList && viewConfig?.type !== 'table';
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
@@ -1264,7 +1335,7 @@ export class DatabaseTool implements BlockTool {
         wrapper: boardEl,
         onDrop: (result) => this.handleListRowDrop(result),
       });
-    } else if (!isList) {
+    } else if (isBoard) {
       this.cardDrag = new DatabaseCardDrag({
         wrapper: boardEl,
         onDrop: (result) => this.handleRowDrop(result),
@@ -1313,7 +1384,8 @@ export class DatabaseTool implements BlockTool {
         onTitleChange: (rowId, title) => {
           this.updateRowTitleBlock(rowId, titlePropId, title);
           const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]');
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]')
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-table]');
 
           if (currentView !== null && currentView !== undefined) {
             this.view.updateRowTitle(currentView, rowId, title);

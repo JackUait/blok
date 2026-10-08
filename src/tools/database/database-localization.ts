@@ -11,6 +11,7 @@ const DEFAULT_KEYS = {
   viewBoard: 'tools.database.defaultViewBoard',
   viewTypeBoard: 'tools.database.viewTypeBoard',
   viewTypeList: 'tools.database.viewTypeList',
+  viewTypeTable: 'tools.database.viewTypeTable',
 } as const;
 
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
@@ -27,6 +28,7 @@ export const DATABASE_DEFAULT_TEXT = {
   viewBoard: englishDefault(DEFAULT_KEYS.viewBoard),
   viewTypeBoard: englishDefault(DEFAULT_KEYS.viewTypeBoard),
   viewTypeList: englishDefault(DEFAULT_KEYS.viewTypeList),
+  viewTypeTable: englishDefault(DEFAULT_KEYS.viewTypeTable),
 } as const;
 
 const localizeCanonicalValue = (
@@ -108,6 +110,15 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
       view.name,
       DATABASE_DEFAULT_TEXT.viewTypeList,
       DEFAULT_KEYS.viewTypeList,
+      i18n
+    );
+  }
+
+  if (view.type === 'table') {
+    return localizeCanonicalValue(
+      view.name,
+      DATABASE_DEFAULT_TEXT.viewTypeTable,
+      DEFAULT_KEYS.viewTypeTable,
       i18n
     );
   }

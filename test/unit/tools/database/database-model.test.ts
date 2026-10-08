@@ -374,6 +374,79 @@ describe('DatabaseModel', () => {
     });
   });
 
+  describe('view settings', () => {
+    const schema = (): PropertyDefinition[] => [
+      makeProperty({ id: 'p-title', type: 'title', position: 'a0' }),
+      makeProperty({ id: 'p-status', type: 'select', position: 'a1', config: { options: [] } }),
+      makeProperty({ id: 'p-due', type: 'date', position: 'a2' }),
+    ];
+
+    it('births a new view with a property entry per column and an empty calculation list', () => {
+      const model = new DatabaseModel(makeData({ schema: schema(), views: [makeView({ id: 'v1' })] }));
+      const view = model.addView('Table', 'table');
+
+      expect(view.properties).toEqual([
+        { id: 'p-title', visible: true },
+        { id: 'p-status', visible: true },
+        { id: 'p-due', visible: true },
+      ]);
+      expect(view.calculations).toEqual([]);
+    });
+
+    it('births the default view with the same keys', () => {
+      const view = new DatabaseModel().getViews()[0];
+
+      expect(view.properties?.length).toBe(2);
+      expect(view.calculations).toEqual([]);
+    });
+
+    it('can start with a table as its default view', () => {
+      const model = new DatabaseModel(undefined, { defaultViewType: 'table' });
+      const [view] = model.getViews();
+
+      expect(view.type).toBe('table');
+      expect(view.groupBy).toBeUndefined();
+      expect(view.properties?.every((p) => p.visible === true)).toBe(true);
+    });
+
+    it('keeps visibleProperties in step when properties change, for v1.16.1 readers', () => {
+      const model = new DatabaseModel(makeData({ schema: schema(), views: [makeView({ id: 'v1', type: 'list' })] }));
+
+      model.updateView('v1', { properties: [{ id: 'p-due', visible: true }, { id: 'p-title', visible: true }, { id: 'p-status', visible: false }] });
+
+      expect(model.getView('v1')?.visibleProperties).toEqual(['p-due']);
+    });
+
+    it('does not share nested view arrays with the data it was built from', () => {
+      const data = makeData({ schema: schema(), views: [makeView({ id: 'v1', properties: [{ id: 'p-due', width: 100 }], calculations: [{ id: 'p-due', fn: 'count' }] })] });
+      const model = new DatabaseModel(data);
+      const [view] = model.getViews();
+
+      expect(view.properties).not.toBe(data.views[0].properties);
+      expect(view.properties?.[0]).not.toBe(data.views[0].properties?.[0]);
+      expect(view.calculations).not.toBe(data.views[0].calculations);
+    });
+
+    it('accepts every new setting through addView and updateView', () => {
+      const model = new DatabaseModel(makeData({ schema: schema(), views: [makeView({ id: 'v1' })] }));
+      const settings = {
+        wrapCells: true,
+        frozenColumnCount: 1,
+        showVerticalLines: false,
+        loadLimit: 25,
+        calculations: [{ id: 'p-due', fn: 'earliest_date' }],
+        openPagesIn: 'center',
+      } as const;
+      const added = model.addView('T', 'table', { ...settings, calculations: [...settings.calculations] });
+
+      expect(added).toMatchObject(settings);
+
+      model.updateView('v1', { loadLimit: 100, openPagesIn: 'full' });
+
+      expect(model.getView('v1')).toMatchObject({ loadLimit: 100, openPagesIn: 'full' });
+    });
+  });
+
   describe('snapshot', () => {
     it('returns deep copy of schema and views', () => {
       const model = new DatabaseModel();

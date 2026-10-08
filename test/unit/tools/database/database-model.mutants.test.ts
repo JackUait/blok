@@ -83,6 +83,8 @@ describe('DatabaseModel — mutation coverage', () => {
           sorts: [],
           filters: [],
           visibleProperties: [],
+          properties: expect.any(Array),
+          calculations: [],
         },
       ]);
     });
@@ -308,7 +310,9 @@ describe('DatabaseModel — mutation coverage', () => {
         groupBy: undefined,
         sorts: [],
         filters: [],
-        visibleProperties: [],
+        visibleProperties: expect.any(Array),
+        properties: expect.any(Array),
+        calculations: [],
       });
     });
 
@@ -333,6 +337,8 @@ describe('DatabaseModel — mutation coverage', () => {
           sorts: [],
           filters: [],
           visibleProperties: [],
+          properties: expect.any(Array),
+          calculations: [],
         },
       ]);
     });

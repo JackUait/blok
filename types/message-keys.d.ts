@@ -433,6 +433,7 @@ export type BlokMessageKey =
   | 'tools.database.viewTypeBoardDescription'
   | 'tools.database.viewTypeList'
   | 'tools.database.viewTypeListDescription'
+  | 'tools.database.viewTypeTable'
   | 'tools.embed.captionPlaceholder'
   | 'tools.embed.empty'
   | 'tools.embed.invalidUrl'

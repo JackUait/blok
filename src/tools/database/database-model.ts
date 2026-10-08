@@ -4,6 +4,7 @@ import type {
   DatabaseData,
   DatabaseRow,
   DatabaseViewConfig,
+  DatabaseViewSettingKey,
   PropertyConfig,
   PropertyDefinition,
   PropertyType,
@@ -14,6 +15,18 @@ import type {
 import { DATABASE_DEFAULT_TEXT } from './database-localization';
 import { queryGroups, queryRows } from './database-query';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
+import { resolveViewProperties, visibleRowPropertyIds } from './view-settings';
+
+export type ViewCreateConfig = Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey>>;
+
+export type ViewChanges = Partial<Pick<DatabaseViewConfig,
+  'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey
+>>;
+
+export interface DatabaseModelOptions {
+  /** Layout of the view a database without views starts with. */
+  defaultViewType?: ViewType;
+}
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
 const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
@@ -32,7 +45,7 @@ export class DatabaseModel {
   /** Ids minted here but not yet seen in a backend snapshot. */
   private readonly locallyAdded = new Set<string>();
 
-  constructor(data?: Partial<DatabaseData>) {
+  constructor(data?: Partial<DatabaseData>, options: DatabaseModelOptions = {}) {
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
@@ -40,10 +53,9 @@ export class DatabaseModel {
     }
 
     if (data?.views !== undefined && data.views.length > 0) {
-      this.views = data.views.map((v) => ({ ...v, sorts: [...v.sorts], filters: [...v.filters], visibleProperties: [...v.visibleProperties] }));
+      this.views = structuredClone(data.views);
     } else {
-      const statusProp = this.schema.find((p) => p.type === 'select');
-      this.views = [DatabaseModel.createDefaultView(statusProp?.id)];
+      this.views = [this.createDefaultView(options.defaultViewType ?? 'board')];
     }
 
     this.activeViewId = data?.activeViewId || (this.views.length > 0 ? this.views[0].id : '');
@@ -180,28 +192,28 @@ export class DatabaseModel {
     return this.views.find((v) => v.id === viewId);
   }
 
-  addView(name: string, type: ViewType, config: Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'>> = {}): DatabaseViewConfig {
+  addView(name: string, type: ViewType, config: ViewCreateConfig = {}): DatabaseViewConfig {
     const sorted = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
     const lastPosition = sorted.length > 0 ? sorted[sorted.length - 1].position : null;
-    const view: DatabaseViewConfig = {
+    const view = this.newView({
+      ...structuredClone(config),
       id: nanoid(),
       name,
       type,
       position: DatabaseModel.positionBetween(lastPosition, null),
-      groupBy: config.groupBy,
-      sorts: config.sorts ?? [],
-      filters: config.filters ?? [],
-      visibleProperties: config.visibleProperties ?? [],
-    };
+    });
     this.views.push(view);
     this.locallyAdded.add(view.id);
     return view;
   }
 
-  updateView(viewId: string, changes: Partial<Pick<DatabaseViewConfig, 'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'>>): void {
+  updateView(viewId: string, changes: ViewChanges): void {
     const view = this.views.find((v) => v.id === viewId);
     if (view === undefined) return;
-    Object.assign(view, changes);
+    Object.assign(view, structuredClone(changes));
+    if (changes.properties !== undefined) {
+      view.visibleProperties = visibleRowPropertyIds(view, this.schema);
+    }
   }
 
   deleteView(viewId: string): void {
@@ -237,6 +249,16 @@ export class DatabaseModel {
     }
 
     return [...merged.values()].sort((a, b) => (a.position < b.position ? -1 : 1));
+  }
+
+  /**
+   * Takes schema and views from the document, as undo or a peer left them.
+   * Rows stay: they are child blocks and re-sync on their own.
+   */
+  replaceDefinition(data: Pick<DatabaseData, 'schema' | 'views'>): void {
+    this.schema = structuredClone(data.schema);
+    this.views = structuredClone(data.views);
+    this.locallyAdded.clear();
   }
 
   // ─── Snapshot ───
@@ -350,16 +372,38 @@ export class DatabaseModel {
     ];
   }
 
-  private static createDefaultView(groupByPropertyId?: string): DatabaseViewConfig {
-    return {
+  private createDefaultView(type: ViewType): DatabaseViewConfig {
+    const statusProp = this.schema.find((p) => p.type === 'select');
+
+    return this.newView({
       id: nanoid(),
-      name: DATABASE_DEFAULT_TEXT.viewBoard,
-      type: 'board',
+      name: type === 'table' ? DATABASE_DEFAULT_TEXT.viewTypeTable : DATABASE_DEFAULT_TEXT.viewBoard,
+      type,
       position: 'a0',
-      groupBy: groupByPropertyId,
-      sorts: [],
-      filters: [],
-      visibleProperties: [],
+      ...(type === 'board' ? { groupBy: statusProp?.id } : {}),
+    });
+  }
+
+  /**
+   * A view as it is first written. `properties` and `calculations` exist from
+   * birth so two peers' first edits merge: a key both peers create at once is
+   * last-writer-wins. `properties` is never empty (there is always a title),
+   * so the CRDT keys its entries by id; `calculations` relies on the eager
+   * array rule in yjs/serializer.ts.
+   */
+  private newView(
+    seed: Pick<DatabaseViewConfig, 'id' | 'name' | 'type' | 'position'> & ViewCreateConfig
+  ): DatabaseViewConfig {
+    const base: DatabaseViewConfig = {
+      ...seed,
+      groupBy: seed.groupBy,
+      sorts: seed.sorts ?? [],
+      filters: seed.filters ?? [],
+      visibleProperties: seed.visibleProperties ?? [],
+      calculations: seed.calculations ?? [],
     };
+    const properties = seed.properties ?? resolveViewProperties(base, this.schema).map(({ id, visible }) => ({ id, visible }));
+
+    return { ...base, properties, visibleProperties: visibleRowPropertyIds({ ...base, properties }, this.schema) };
   }
 }

@@ -640,6 +640,7 @@
   "tools.database.addView": "Add view",
   "tools.database.viewTypeBoard": "Board",
   "tools.database.viewTypeList": "List",
+  "tools.database.viewTypeTable": "Table",
   "tools.database.viewTypeBoardDescription": "Show items in columns",
   "tools.database.viewTypeListDescription": "Show items in a simple list",
   "tools.database.propertyTypeHeading": "Property type",

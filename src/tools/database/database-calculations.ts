@@ -40,9 +40,9 @@ const isEmpty = (value: PropertyValue | undefined): boolean => {
 
 /** One entry per value: a multi-select cell gives one per option. */
 const itemsOf = (value: PropertyValue | undefined): Array<string | number | boolean> => {
-  if (isEmpty(value)) return [];
+  if (value === undefined || value === null || isEmpty(value)) return [];
   if (Array.isArray(value)) return value;
-  if (value !== null && typeof value === 'object') return [JSON.stringify(value)];
+  if (typeof value === 'object') return [JSON.stringify(value)];
 
   return [value];
 };

@@ -1,9 +1,12 @@
 import type {
+  AgentContract,
   BlockToolDescription,
   BlockToolManifestEntry,
   BlockTuneDescription,
   BlokSchema,
   BlokToolManifest,
+  CommandEntry,
+  HostService,
   InlineToolDescription,
   InlineToolManifestEntry,
   ManifestAction,
@@ -274,5 +277,165 @@ export const buildToolManifest = (
     formatVersion: 1,
     ...body,
     revision: canonicalHash({ body, services: snapshot.services, overrides }),
+  };
+};
+
+export type CoreCommandTable = Readonly<Record<string, {
+  argsSchema: BlokSchema;
+  resultSchema?: BlokSchema;
+  readOnly: boolean;
+  runtime: 'any' | 'editor';
+  summary: string;
+  guidance?: string;
+}>>;
+
+export interface ContractWhere {
+  runtime: 'editor' | 'node' | 'jint' | 'node-live' | 'csharp-live';
+  services: HostService[];
+}
+
+export const BLOCK_POSITION_SCHEMA: BlokSchema = {
+  description: 'Where the new block goes among its siblings. Default: the end.',
+  oneOf: [
+    { enum: ['start', 'end'] },
+    { type: 'object', required: ['before'], additionalProperties: false, properties: { before: { type: 'string' } } },
+    { type: 'object', required: ['after'], additionalProperties: false, properties: { after: { type: 'string' } } },
+  ],
+};
+
+// Jint calls and live rooms have no session-local undo history.
+const UNDO_COMMANDS = new Set(['history.undo', 'history.redo']);
+const UNDO_RUNNERS = new Set<ContractWhere['runtime']>(['editor', 'node']);
+
+const isToolCommandName = (name: string): name is ToolCommandName => name.includes('.');
+
+const withTarget = (action: ManifestAction): BlokSchema => {
+  const properties = isRecord(action.args.properties) ? action.args.properties : {};
+
+  if (action.target === 'block') {
+    const required = isStringArray(action.args.required) ? action.args.required : [];
+
+    return {
+      ...action.args,
+      properties: { ...properties, id: { type: 'string', description: 'Id of the block to act on.' } },
+      required: ['id', ...required.filter(name => name !== 'id')],
+    };
+  }
+
+  return {
+    ...action.args,
+    properties: {
+      ...properties,
+      parentId: { type: ['string', 'null'], description: 'Parent block id. Omit or null for the document root.' },
+      position: BLOCK_POSITION_SCHEMA,
+    },
+  };
+};
+
+const toolAvailability = (
+  action: ManifestAction,
+  readOnly: boolean,
+  where: ContractWhere
+): Pick<CommandEntry, 'available' | 'unavailableReason'> => {
+  if (readOnly) {
+    return { available: false };
+  }
+
+  if (!action.available || (action.runtime === 'editor' && where.runtime !== 'editor')) {
+    return { available: false, unavailableReason: 'runtime' };
+  }
+
+  if ((action.requires ?? []).some(service => !where.services.includes(service))) {
+    return { available: false, unavailableReason: 'service' };
+  }
+
+  return { available: true };
+};
+
+export const buildAgentContract = (
+  manifest: BlokToolManifest,
+  core: CoreCommandTable,
+  where: ContractWhere,
+  general = ''
+): AgentContract => {
+  const coreCommands = Object.entries(core).map<CommandEntry>(([name, command]) => {
+    if (!isToolCommandName(name)) {
+      throw new Error(`Core command names must contain a dot: ${name}.`);
+    }
+
+    const readOnlyBlocked = manifest.readOnly && !command.readOnly;
+    const runtimeBlocked = (command.runtime === 'editor' && where.runtime !== 'editor')
+      || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime));
+
+    return {
+      name,
+      summary: command.summary,
+      ...(command.guidance === undefined ? {} : { guidance: command.guidance }),
+      args: command.argsSchema,
+      ...(command.resultSchema === undefined ? {} : { result: command.resultSchema }),
+      readOnly: command.readOnly,
+      runtime: command.runtime,
+      source: 'core',
+      available: !readOnlyBlocked && !runtimeBlocked,
+      ...(runtimeBlocked && !readOnlyBlocked ? { unavailableReason: 'runtime' } : {}),
+    };
+  });
+
+  const tools = manifest.blocks.map(block => {
+    const actions = block.actions.map(action => {
+      const command: CommandEntry = {
+        name: action.command,
+        summary: action.summary,
+        ...(action.guidance === undefined ? {} : { guidance: action.guidance }),
+        args: withTarget(action),
+        ...(action.result === undefined ? {} : { result: action.result }),
+        readOnly: false,
+        runtime: action.runtime ?? 'any',
+        source: { tool: block.name, target: action.target },
+        ...(action.requires === undefined ? {} : { requires: action.requires }),
+        ...(action.effects === undefined ? {} : { effects: action.effects }),
+        ...toolAvailability(action, manifest.readOnly, where),
+      };
+
+      return { manifest: { ...action, available: command.available }, command };
+    });
+
+    return {
+      manifest: { ...block, actions: actions.map(action => action.manifest) },
+      commands: actions.map(action => action.command),
+    };
+  });
+
+  const commandGuidance: Array<[string, string]> = [
+    ...coreCommands.flatMap<[string, string]>(command => (
+      command.guidance === undefined || command.guidance === '' ? [] : [[command.name, command.guidance]]
+    )),
+    ...manifest.blocks.flatMap(block => block.actions).flatMap<[string, string]>(action => {
+      const lines = [action.guidance, ...(action.preconditions ?? []).map(line => `- ${line}`)]
+        .filter((line): line is string => typeof line === 'string' && line !== '');
+
+      return lines.length === 0 ? [] : [[action.command, lines.join('\n')]];
+    }),
+  ];
+
+  return {
+    formatVersion: 1,
+    revision: canonicalHash({ manifest: manifest.revision, core, where, general }),
+    commands: [...coreCommands, ...tools.flatMap(tool => tool.commands)]
+      .sort((a, b) => {
+        if (a.name === b.name) {
+          return 0;
+        }
+
+        return a.name < b.name ? -1 : 1;
+      }),
+    manifest: { ...manifest, blocks: tools.map(tool => tool.manifest) },
+    guidance: {
+      general,
+      commands: Object.fromEntries(commandGuidance),
+      tools: Object.fromEntries(manifest.blocks.flatMap<[string, string]>(block => (
+        block.guidance === undefined ? [] : [[block.name, block.guidance]]
+      ))),
+    },
   };
 };

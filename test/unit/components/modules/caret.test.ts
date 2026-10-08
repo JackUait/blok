@@ -693,6 +693,21 @@ describe('Caret module', () => {
       expect(focusAtX).not.toHaveBeenCalled();
     });
 
+    it('stays put when the title is not enabled', () => {
+      const focusAtX = vi.fn();
+      const { caret, blockManager } = createCaret({
+        PageTitle: { isEnabled: false, focusAtX } as unknown as BlokModules['PageTitle'],
+        ReadOnly: { isEnabled: false } as unknown as BlokModules['ReadOnly'],
+      });
+
+      blockManager.currentBlock = createBlock({ inputs: { current: createContentEditable('text') } });
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      expect(caret.navigateVerticalPrevious()).toBe(false);
+      expect(focusAtX).not.toHaveBeenCalled();
+    });
+
     it('moves into the title from an empty first block', () => {
       const focusAtX = vi.fn();
       const { caret, blockManager } = createCaret({

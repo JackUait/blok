@@ -35,8 +35,8 @@ export interface Title {
   /** One undo step, unless `record` is false. Fires `onChange` with source `api`. */
   set(text: string, options?: TitleSetOptions): void;
   focus(position?: 'start' | 'end'): void;
-  /** Moves the title into `holder`. Focus and caret are kept. */
-  mount(holder: HTMLElement | string): void;
+  /** Moves the title into `holder`. Focus and caret are kept. `null`: back above the first block. */
+  mount(holder: HTMLElement | string | null): void;
   readonly icon: {
     get(): PageIcon | null;
     /** One undo step, unless `record` is false. Fires `onIconChange` with source `api`. */

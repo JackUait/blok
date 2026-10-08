@@ -162,6 +162,41 @@ describe('blok.title API', () => {
     expect(header?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
   });
 
+  it('title.mount(null) after the outside holder left the page puts the header back above the blocks', async () => {
+    target = document.createElement('div');
+    document.body.appendChild(target);
+    blok = create({ holder, pageTitle: { holder: target } });
+    await blok.isReady;
+
+    target.remove();
+    blok.title.mount(null);
+    const header = holder.querySelector(`[${DATA_ATTR.pageHeader}]`);
+
+    expect(header?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
+  });
+
+  it('title.mount(el) then title.mount(null) before ready puts the header above the blocks', async () => {
+    target = document.createElement('div');
+    target.id = 'x';
+    document.body.appendChild(target);
+    const configured = document.createElement('div');
+
+    document.body.appendChild(configured);
+    // An outside config holder: with the default spot, a lost null would still look right.
+    blok = create({ holder, pageTitle: { holder: configured } });
+
+    blok.title.mount('#x');
+    blok.title.mount(null);
+    await blok.isReady;
+    const inConfigured = configured.querySelector(`[${DATA_ATTR.pageHeader}]`);
+
+    configured.remove();
+
+    expect(inConfigured).toBeNull();
+    expect(target.querySelector(`[${DATA_ATTR.pageHeader}]`)).toBeNull();
+    expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
+  });
+
   describe('after Core exists but before ready', () => {
     // One microtask lets Core.init construct the modules; prepare has not run yet.
     const afterInit = (): Promise<void> => Promise.resolve();

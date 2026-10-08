@@ -437,13 +437,19 @@ class Blok {
       textOptions: {} as TitleSetOptions,
       icon: undefined as PageIcon | null | undefined,
       iconOptions: {} as TitleSetOptions,
-      holder: null as HTMLElement | string | null,
+      // undefined: nothing buffered. null is a real call: back above the first block.
+      holder: undefined as HTMLElement | string | null | undefined,
     };
     const getPageTitle = (): BlokModules['PageTitle'] | undefined =>
       titleBuffer.ready ? (blok.moduleInstances as Partial<BlokModules>).PageTitle : undefined;
 
     // A bad selector must not reject isReady; only a direct call after ready throws.
-    const replayTitleMount = (pageTitle: BlokModules['PageTitle'], holder: HTMLElement | string): void => {
+    const replayTitleMount = (pageTitle: BlokModules['PageTitle'], holder: HTMLElement | string | null): void => {
+      if (holder === null) {
+        pageTitle.mount(null);
+
+        return;
+      }
       const target = findHolder(holder);
 
       if (target === null) {
@@ -468,7 +474,7 @@ class Blok {
         pageTitle.setText(text, 'api', options);
       },
       focus: (position?: 'start' | 'end'): void => getPageTitle()?.focus(position),
-      mount: (holder: HTMLElement | string): void => {
+      mount: (holder: HTMLElement | string | null): void => {
         const pageTitle = getPageTitle();
 
         if (pageTitle === undefined) {
@@ -625,7 +631,7 @@ class Blok {
       const bufferedHolder = titleBuffer.holder;
 
       if (pageTitle !== undefined) {
-        if (bufferedHolder !== null) {
+        if (bufferedHolder !== undefined) {
           replayTitleMount(pageTitle, bufferedHolder);
         }
         if (titleBuffer.text !== null) {
@@ -635,7 +641,7 @@ class Blok {
           pageTitle.setIcon(titleBuffer.icon, 'api', titleBuffer.iconOptions);
         }
       }
-      titleBuffer.holder = null;
+      titleBuffer.holder = undefined;
       titleBuffer.text = null;
       titleBuffer.textOptions = {};
       titleBuffer.icon = undefined;

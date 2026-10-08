@@ -49,8 +49,9 @@ export class PageTitle extends Module {
   private readOnly = false;
   private iconControl: { redraw(): void; destroy(): void } | null = null;
 
+  // Off once the app removes an outside holder: a detached title must take no keyboard joins.
   public get isEnabled(): boolean {
-    return this.dom !== null;
+    return this.dom !== null && this.dom.header.isConnected;
   }
 
   public get titleElement(): HTMLElement | null {
@@ -191,7 +192,15 @@ export class PageTitle extends Module {
     window.getSelection()?.setPosition(title.firstChild ?? title, title.firstChild === null ? 0 : join);
   }
 
-  public mount(holder: HTMLElement | string): void {
+  /** null: back above the first block. */
+  public mount(holder: HTMLElement | string | null): void {
+    if (holder === null) {
+      if (this.dom !== null) {
+        this.placeInitially(this.dom.header, null);
+      }
+
+      return;
+    }
     const target = findHolder(holder);
 
     if (target === null) {

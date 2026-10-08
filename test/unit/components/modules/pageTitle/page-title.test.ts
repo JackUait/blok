@@ -446,4 +446,75 @@ describe('PageTitle module', () => {
     await boot({ pageTitle: { icon: false } });
     expect(holder.querySelector(`[${DATA_ATTR.pageAddIcon}]`)).toBeNull();
   });
+
+  describe('a title whose holder left the page', () => {
+    let outside: HTMLElement;
+
+    beforeEach(() => {
+      outside = document.createElement('section');
+      document.body.appendChild(outside);
+    });
+
+    afterEach(() => {
+      outside.remove();
+    });
+
+    const bootOutside = (): Promise<Core> => boot({
+      pageTitle: { holder: outside },
+      data: { title: 'T', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Body' } }, { id: 'p2', type: 'paragraph', data: { text: 'yo' } }] },
+    });
+
+    const backspaceAtFirstBlockStart = async (core: Core): Promise<void> => {
+      const { BlockManager } = core.moduleInstances;
+      const first = BlockManager.getBlockByIndex(0);
+      const input = first?.holder.querySelector('[data-blok-element-content] > *');
+
+      if (first === undefined || !(input instanceof HTMLElement) || input.firstChild === null) {
+        throw new Error('no block');
+      }
+      // jsdom does not reflect contentEditable, so the block would find no input.
+      input.setAttribute('contenteditable', 'true');
+      BlockManager.currentBlock = first;
+      input.focus();
+      window.getSelection()?.setPosition(input.firstChild, 0);
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', code: 'Backspace', keyCode: 8, bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+
+    it('takes no Backspace join', async () => {
+      const core = await bootOutside();
+      const { BlockManager, PageTitle } = core.moduleInstances;
+
+      outside.remove();
+      await backspaceAtFirstBlockStart(core);
+
+      expect(PageTitle.getText()).toBe('T');
+      expect(BlockManager.getBlockById('p1')).toBeDefined();
+      expect(BlockManager.blocks).toHaveLength(2);
+    });
+
+    it('is not enabled', async () => {
+      const core = await bootOutside();
+
+      outside.remove();
+
+      expect(core.moduleInstances.PageTitle.isEnabled).toBe(false);
+    });
+
+    it('mount(null) puts it back above the first block, and Backspace joins into it again', async () => {
+      const core = await bootOutside();
+      const { BlockManager, PageTitle } = core.moduleInstances;
+
+      outside.remove();
+      PageTitle.mount(null);
+
+      expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
+      expect(PageTitle.isEnabled).toBe(true);
+
+      await backspaceAtFirstBlockStart(core);
+
+      expect(PageTitle.getText()).toBe('TBody');
+      expect(BlockManager.blocks).toHaveLength(1);
+    });
+  });
 });

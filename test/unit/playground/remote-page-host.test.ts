@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { History } from '@bloklabs/core';
-import type { HistoryValue, HistoryValueChange } from '../../../types/api/history';
+import type { Title, TitleChange } from '../../../types/api/title';
 
 import { createPageStore, handlePageHostRequest } from '../../../scripts/dev-page-host.mjs';
 import { PAGES_STORAGE_KEY, PageRegistry, type PageMap } from '../../../src/playground/page-host';
@@ -8,10 +7,11 @@ import {
   PageHostError,
   RemotePageHost,
   hostedPages,
+  remotePagePlayground,
   remotePageTool,
   wireTitle,
   type EventStreamLike,
-  type TitleHistory,
+  type WiredTitleEditor,
 } from '../../../src/playground/remote-page-host';
 
 type Store = ReturnType<typeof createPageStore>;
@@ -83,39 +83,61 @@ const makeHost = (store: Store, user = 'alice', hold?: Parameters<typeof hostFet
   openEvents: (url) => new FakeEvents(url),
 });
 
-/** The part of the editor's History that wireTitle uses, with undo driven by the test. */
-const fakeHistory = (): {
-  history: { track(key: string, onChange: (value: string | undefined, change: HistoryValueChange) => void): HistoryValue<string> };
+/** The editor's built-in title as wireTitle sees it, with user input driven by the test. */
+const fakeTitle = (): {
+  editor: WiredTitleEditor;
+  sets: Array<{ value: string; record: boolean }>;
+  listen(onChange: (title: string, change: TitleChange) => void): void;
+  type(value: string): void;
   undoTo(value: string): void;
   remote(value: string): void;
-  value(): string | undefined;
+  value(): string;
 } => {
-  let value: string | undefined;
-  let callback: ((value: string | undefined, change: HistoryValueChange) => void) | undefined;
+  let value = '';
+  let callback: ((title: string, change: TitleChange) => void) | undefined;
+  const sets: Array<{ value: string; record: boolean }> = [];
+  const fire = (next: string, change: TitleChange): void => {
+    value = next;
+    callback?.(next, change);
+  };
 
   return {
-    history: {
-      track(_key, onChange) {
-        callback = onChange;
-
-        return {
-          get: () => value,
-          set: (next) => {
-            value = next;
-          },
-        };
+    editor: {
+      title: {
+        get: () => value,
+        // Like core: an equal value writes nothing and fires nothing.
+        set: (next, options) => {
+          sets.push({ value: next, record: options?.record !== false });
+          if (next !== value) {
+            fire(next, options?.record === false ? { source: 'api', record: false } : { source: 'api' });
+          }
+        },
       },
     },
-    undoTo(next) {
-      value = next;
-      callback?.(next, { source: 'undo' });
+    sets,
+    listen(onChange) {
+      callback = onChange;
     },
-    remote(next) {
-      value = next;
-      callback?.(next, { source: 'remote' });
-    },
+    type: (next) => fire(next, { source: 'user' }),
+    undoTo: (next) => fire(next, { source: 'undo' }),
+    remote: (next) => fire(next, { source: 'remote' }),
     value: () => value,
   };
+};
+
+/** wireTitle with the editor's onChange routed to it, as the playground does. */
+const wireTo = async (
+  store: Store,
+  title = fakeTitle(),
+  paint: (value: string) => void = vi.fn(),
+  showError: () => void = vi.fn(),
+  host: RemotePageHost = makeHost(store)
+): Promise<{ title: ReturnType<typeof fakeTitle>; wired: Awaited<ReturnType<typeof wireTitle>> }> => {
+  const wired = await wireTitle('plan', host, title.editor, paint, showError);
+
+  title.listen((value, change) => wired.change(value, change));
+
+  return { title, wired };
 };
 
 beforeEach(() => {
@@ -269,20 +291,27 @@ describe('RemotePageHost', () => {
 });
 
 describe('wireTitle', () => {
-  it('takes the editor\'s History as it is', () => {
-    // tsc fails here if the real History stops fitting what wireTitle needs.
-    const narrow = (history: History): TitleHistory => history;
+  it('takes the editor\'s built-in title as it is', () => {
+    // tsc fails here if the real Title stops fitting what wireTitle needs.
+    const narrow = (title: Title): WiredTitleEditor['title'] => title;
 
     expect(narrow).toBeTypeOf('function');
+  });
+
+  it('shows the host title in the editor at once, with no undo step', async () => {
+    const { title } = await wireTo(seedStore());
+
+    expect(title.value()).toBe('Plan');
+    expect(title.sets).toEqual([{ value: 'Plan', record: false }]);
   });
 
   it('saves a typed title and paints the accepted one', async () => {
     const store = seedStore();
     const paint = vi.fn();
     const showError = vi.fn();
-    const wired = await wireTitle('plan', makeHost(store), fakeHistory().history, paint, showError);
+    const { title } = await wireTo(store, fakeTitle(), paint, showError);
 
-    wired.input('Renamed', false);
+    title.type('Renamed');
     await settle();
 
     expect(store.pages.get('plan')).toMatchObject({ title: 'Renamed', version: 2 });
@@ -294,14 +323,16 @@ describe('wireTitle', () => {
     const store = seedStore();
     const paint = vi.fn();
     const showError = vi.fn();
-    const wired = await wireTitle('plan', makeHost(store), fakeHistory().history, paint, showError);
+    const { title } = await wireTo(store, fakeTitle(), paint, showError);
 
     // Another user's save lands first; this tab still holds version 1.
     handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/title', body: JSON.stringify({ title: 'Theirs', expectedVersion: 1 }) });
-    wired.input('Mine', false);
+    title.type('Mine');
     await settle();
 
     expect(paint).toHaveBeenLastCalledWith('Theirs');
+    expect(title.value()).toBe('Theirs');
+    expect(title.sets.at(-1)).toEqual({ value: 'Theirs', record: false });
     expect(showError).toHaveBeenCalledTimes(1);
     expect(store.pages.get('plan')).toMatchObject({ title: 'Theirs', version: 2 });
   });
@@ -310,51 +341,158 @@ describe('wireTitle', () => {
     const store = seedStore();
     const paint = vi.fn();
     const showError = vi.fn();
-    const wired = await wireTitle('plan', makeHost(store), fakeHistory().history, paint, showError);
+    const { title } = await wireTo(store, fakeTitle(), paint, showError);
 
     handlePageHostRequest({ store, user: null, method: 'POST', path: '/__faults', body: JSON.stringify({ user: 'alice', failNextSave: true }) });
-    wired.input('Doomed', false);
+    title.type('Doomed');
     await settle();
 
     expect(paint).toHaveBeenLastCalledWith('Plan');
+    expect(title.value()).toBe('Plan');
     expect(showError).toHaveBeenCalledTimes(1);
     expect(store.pages.get('plan')).toMatchObject({ title: 'Plan', version: 1 });
   });
 
   it('writes an Undo to the host as a new version', async () => {
     const store = seedStore();
-    const history = fakeHistory();
     const paint = vi.fn();
-    const wired = await wireTitle('plan', makeHost(store), history.history, paint, vi.fn());
+    const { title } = await wireTo(store, fakeTitle(), paint);
 
-    wired.input('Renamed', false);
+    title.type('Renamed');
     await settle();
-    history.undoTo('Plan');
+    title.undoTo('Plan');
     await settle();
 
     expect(store.pages.get('plan')).toMatchObject({ title: 'Plan', version: 3 });
     expect(paint).toHaveBeenLastCalledWith('Plan');
   });
 
-  it('shows the host\'s title, not the mirror value, on a remote mirror change', async () => {
+  it('sends rapid edits in order, each on the latest accepted version', async () => {
     const store = seedStore();
-    const history = fakeHistory();
-    const paint = vi.fn();
+    const { title } = await wireTo(store);
 
-    await wireTitle('plan', makeHost(store), history.history, paint, vi.fn());
+    title.type('R');
+    title.type('Re');
+    title.type('Ren');
+    await settle();
+
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Ren', version: 4 });
+    expect(title.value()).toBe('Ren');
+  });
+
+  it('shows only the latest write\'s verdict: an older answer never overwrites newer typing', async () => {
+    const store = seedStore();
+    const first = deferred();
+    let saves = 0;
+    const host = makeHost(store, 'alice', (path) => {
+      if (path.endsWith('/title')) {
+        saves += 1;
+
+        return saves === 1 ? first.promise : undefined;
+      }
+
+      return undefined;
+    });
+    const { title } = await wireTo(store, fakeTitle(), vi.fn(), vi.fn(), host);
+
+    title.type('Re');
+    await settle();
+    title.type('Ren');
+    const before = title.sets.length;
+
+    first.release();
+    await settle();
+
+    // The answer for 'Re' came back while 'Ren' was queued: no record:false write of 'Re'.
+    expect(title.sets.slice(before).some((set) => set.value === 'Re')).toBe(false);
+    expect(title.value()).toBe('Ren');
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Ren', version: 3 });
+  });
+
+  it('holds a host refresh while saves are in flight', async () => {
+    const store = seedStore();
+    const save = deferred();
+    const host = makeHost(store, 'alice', (path, user) => (path.endsWith('/title') && user === 'alice' ? save.promise : undefined));
+    const { title } = await wireTo(store, fakeTitle(), vi.fn(), vi.fn(), host);
+
+    title.type('Mine');
+    await settle();
+    FakeEvents.opened[0].emit('plan');
+    await settle();
+
+    // The refresh read the host's old 'Plan' while 'Mine' was in flight; it must not show it.
+    expect(title.value()).toBe('Mine');
+
+    save.release();
+    await settle();
+
+    expect(title.value()).toBe('Mine');
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Mine', version: 2 });
+  });
+
+  it('lets only the latest host read decide what the title shows', async () => {
+    const store = seedStore();
+    const firstRead = deferred();
+    let reads = 0;
+    const host = makeHost(store, 'alice', (path) => {
+      if (path === '/pages/plan') {
+        reads += 1;
+
+        // Read 1 is the load in wireTitle; read 2 is the first refresh.
+        return reads === 2 ? firstRead.promise : undefined;
+      }
+
+      return undefined;
+    });
+    const { title } = await wireTo(store, fakeTitle(), vi.fn(), vi.fn(), host);
+
+    FakeEvents.opened[0].emit('plan');
+    await settle();
+    handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/title', body: JSON.stringify({ title: 'Newer', expectedVersion: 1 }) });
+    FakeEvents.opened[0].emit('plan');
+    await settle();
+    firstRead.release();
+    await settle();
+
+    expect(title.value()).toBe('Newer');
+  });
+
+  it('shows the host\'s title, not the mirror value, on a remote change, and never saves it', async () => {
+    const store = seedStore();
+    const paint = vi.fn();
+    const host = makeHost(store);
+    const save = vi.spyOn(host, 'saveTitle');
+    const { title } = await wireTo(store, fakeTitle(), paint, vi.fn(), host);
+
     handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/title', body: JSON.stringify({ title: 'From Bob', expectedVersion: 1 }) });
-    history.remote('From Bob');
+    title.remote('A stale mirror');
     await settle();
 
     expect(paint).toHaveBeenLastCalledWith('From Bob');
+    expect(title.value()).toBe('From Bob');
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('does not save its own record:false write back to the host', async () => {
+    const store = seedStore();
+    const host = makeHost(store);
+    const save = vi.spyOn(host, 'saveTitle');
+    const { title } = await wireTo(store, fakeTitle(), vi.fn(), vi.fn(), host);
+
+    handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/title', body: JSON.stringify({ title: 'From Bob', expectedVersion: 1 }) });
+    FakeEvents.opened[0].emit('plan');
+    await settle();
+
+    expect(title.value()).toBe('From Bob');
+    expect(title.sets.at(-1)).toEqual({ value: 'From Bob', record: false });
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('clears the title and stops on access loss', async () => {
     const store = seedStore();
     const paint = vi.fn();
-    const host = makeHost(store);
+    const { title } = await wireTo(store, fakeTitle(), paint);
 
-    await wireTitle('plan', host, fakeHistory().history, paint, vi.fn());
     handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/acl', body: JSON.stringify({ user: 'alice', access: null }) });
     FakeEvents.opened[0].emit('plan');
     await settle();
@@ -363,8 +501,149 @@ describe('wireTitle', () => {
 
     paint.mockClear();
     FakeEvents.opened[0].emit('plan');
+    title.type('After the loss');
     await settle();
     expect(paint).not.toHaveBeenCalled();
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Plan', version: 1 });
+  });
+
+  it('clears the title, stops and reports when a failed save cannot reload the page', async () => {
+    const store = seedStore();
+    const paint = vi.fn();
+    const showError = vi.fn();
+    const save = deferred();
+    const host = makeHost(store, 'alice', (path) => (path.endsWith('/title') ? save.promise : undefined));
+    const { title } = await wireTo(store, fakeTitle(), paint, showError, host);
+
+    handlePageHostRequest({ store, user: null, method: 'POST', path: '/__faults', body: JSON.stringify({ user: 'alice', failNextSave: true }) });
+    title.type('Doomed');
+    // The save's own notify refreshes first, while access still holds; then access goes.
+    await settle();
+    handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/acl', body: JSON.stringify({ user: 'alice', access: null }) });
+    save.release();
+    await settle();
+
+    expect(paint).toHaveBeenLastCalledWith('');
+    expect(showError).toHaveBeenCalledTimes(1);
+
+    paint.mockClear();
+    FakeEvents.opened[0].emit('plan');
+    await settle();
+    expect(paint).not.toHaveBeenCalled();
+  });
+});
+
+describe('remotePagePlayground', () => {
+  const localSeed = (): PageMap => ({
+    plan: { title: 'Local plan', parentId: null, blocks: [] },
+    other: { title: 'Other', parentId: null, blocks: [] },
+  });
+
+  const playground = (store: Store, hold?: Parameters<typeof hostFetch>[1]): ReturnType<typeof remotePagePlayground> => remotePagePlayground({
+    baseUrl: BASE,
+    user: 'alice',
+    local: new PageRegistry(localSeed()),
+    rerender: vi.fn(),
+    fetch: hostFetch(store, hold),
+    openEvents: (url) => new FakeEvents(url),
+  });
+
+  /** A fake title whose onChange goes through the playground, as buildConfig wires it. */
+  const editorFor = (remote: ReturnType<typeof remotePagePlayground>, pageId: string | null): ReturnType<typeof fakeTitle> => {
+    const title = fakeTitle();
+
+    title.listen((value, change) => remote.titleChanged(pageId, value, change));
+
+    return title;
+  };
+
+  afterEach(() => {
+    document.documentElement.removeAttribute('data-page-host-wired');
+    document.body.replaceChildren();
+  });
+
+  it('marks the page wired once the host answered, and routes typing to the host', async () => {
+    const store = seedStore();
+    const remote = playground(store);
+    const title = editorFor(remote, 'plan');
+
+    await remote.wire('plan', title.editor);
+
+    expect(document.documentElement.getAttribute('data-page-host-wired')).toBe('plan');
+    expect(title.value()).toBe('Plan');
+
+    title.type('Renamed');
+    await settle();
+
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Renamed', version: 2 });
+    expect(remote.pages.get('plan')?.title).toBe('Renamed');
+  });
+
+  it('saves a title typed before the host answered, once, and keeps it on screen', async () => {
+    const store = seedStore();
+    const load = deferred();
+    const remote = playground(store, (path) => (path === '/pages/plan' ? load.promise : undefined));
+    const title = editorFor(remote, 'plan');
+    const wiring = remote.wire('plan', title.editor);
+
+    title.type('Typed early');
+    load.release();
+    await wiring;
+    await settle();
+
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Typed early', version: 2 });
+    expect(title.value()).toBe('Typed early');
+    // The host title goes in first with no undo step, then the typed one as a step: undo returns to the host's.
+    expect(title.sets).toEqual([
+      { value: 'Plan', record: false },
+      { value: 'Typed early', record: true },
+      { value: 'Typed early', record: false },
+    ]);
+  });
+
+  it('drops a title typed before the host answered when another page is wired first', async () => {
+    const store = seedStore();
+    const load = deferred();
+    const remote = playground(store, (path) => (path === '/pages/plan' ? load.promise : undefined));
+    const first = editorFor(remote, 'plan');
+    const wiring = remote.wire('plan', first.editor);
+
+    first.type('Typed early');
+    await remote.wire(null, editorFor(remote, null).editor);
+    load.release();
+    await wiring;
+    await settle();
+
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Plan', version: 1 });
+    expect(document.documentElement.getAttribute('data-page-host-wired')).toBeNull();
+  });
+
+  it('ignores a late change from an editor whose page is no longer wired', async () => {
+    const store = seedStore();
+    const remote = playground(store);
+    const first = editorFor(remote, 'plan');
+
+    await remote.wire('plan', first.editor);
+    await remote.wire(null, editorFor(remote, null).editor);
+
+    first.undoTo('Late undo');
+    await settle();
+
+    expect(store.pages.get('plan')).toMatchObject({ title: 'Plan', version: 1 });
+  });
+
+  it('clears the editor\'s title when access is lost', async () => {
+    const store = seedStore();
+    const remote = playground(store);
+    const title = editorFor(remote, 'plan');
+
+    await remote.wire('plan', title.editor);
+    handlePageHostRequest({ store, user: 'bob', method: 'PUT', path: '/pages/plan/acl', body: JSON.stringify({ user: 'alice', access: null }) });
+    FakeEvents.opened.forEach((events) => events.emit('plan'));
+    await settle();
+
+    expect(title.value()).toBe('');
+    expect(title.sets.at(-1)).toEqual({ value: '', record: false });
   });
 });
 

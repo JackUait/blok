@@ -1,7 +1,8 @@
 import type { OutputBlockData } from '../../types';
-import type { HistoryValue, HistoryValueChange } from '../../types/api/history';
+import type { Title, TitleChange } from '../../types/api/title';
 import type { PageInfo } from '../../types/tools/page';
-import { PAGE_TITLE_SELECTOR, replaceTitleText, type PageRecord, type PageRegistry } from './page-host';
+import type { PageRecord, PageRegistry } from './page-host';
+import { isUnrecordedSet } from './page-title-wiring';
 
 /**
  * The playground's client for the reference page host (scripts/dev-page-host.mjs),
@@ -253,9 +254,9 @@ export class RemotePageHost {
   }
 }
 
-/** What `wireTitle` needs from the editor's `History`. */
-export interface TitleHistory {
-  track(key: string, onChange: (value: string | undefined, change: HistoryValueChange) => void): HistoryValue<string>;
+/** What `wireTitle` needs from the editor: its built-in title. */
+export interface WiredTitleEditor {
+  title: Pick<Title, 'get' | 'set'>;
 }
 
 /** What `wireTitle` needs from the host. */
@@ -264,15 +265,15 @@ export type TitleHost = Pick<RemotePageHost, 'loadPage' | 'saveTitle' | 'subscri
 /**
  * The `wireTitle` sample from docs/maintainers/page-host-integration.md, so
  * the sample is compiled and run against a real host. Divergences from the
- * doc: `history` is narrowed to `TitleHistory`, and `host` to `TitleHost`.
+ * doc: `editor` is narrowed to `WiredTitleEditor`, and `host` to `TitleHost`.
  */
 export async function wireTitle(
   pageId: string,
   host: TitleHost,
-  history: TitleHistory,
+  editor: WiredTitleEditor,
   paint: (title: string) => void,
   showError: () => void
-): Promise<{ input: (title: string, typing: boolean) => void; stop: () => void }> {
+): Promise<{ change: (title: string, change: TitleChange) => void; stop: () => void }> {
   /* eslint-disable no-restricted-syntax, max-depth -- the doc's sample, kept
      line for line so the two can be compared; change both together. */
   let accepted = await host.loadPage(pageId);
@@ -283,20 +284,13 @@ export async function wireTitle(
   let stopped = false;
   let queue: Promise<void> = Promise.resolve();
 
-  const tracked = history.track('title', (value, { source }) => {
-    if (source === 'remote') {
-      refreshFromHost();
-      return;
-    }
-    changeTitle(value ?? '');
-  });
-  tracked.set(accepted.title, { record: false });
+  editor.title.set(accepted.title, { record: false });
   paint(accepted.title);
 
   function showAccepted(): void {
     if (stopped) return;
     displayed = accepted.title;
-    tracked.set(displayed, { record: false });
+    editor.title.set(displayed, { record: false });
     paint(displayed);
     host.notify(pageId);
   }
@@ -347,7 +341,7 @@ export async function wireTitle(
       if (stopped || order !== latestRead) return;
       const newer = record.version > accepted.version;
       if (newer) accepted = record;
-      if (pending === 0 && (newer || tracked.get() !== accepted.title || displayed !== accepted.title)) {
+      if (pending === 0 && (newer || editor.title.get() !== accepted.title || displayed !== accepted.title)) {
         showAccepted();
       }
     }).catch(() => {
@@ -367,8 +361,14 @@ export async function wireTitle(
   }
 
   return {
-    input: (title, typing) => {
-      tracked.set(title, { typing });
+    // Call it from pageTitle.onChange.
+    change: (title, { source, record }) => {
+      // Our own record:false write: the value came from the host.
+      if (source === 'api' && record === false) return;
+      if (source === 'remote') {
+        refreshFromHost();
+        return;
+      }
       changeTitle(title);
     },
     stop,
@@ -502,15 +502,30 @@ const showSaveError = (): void => {
  * Everything index.html needs for `?host=remote`: the overlaid registry, the
  * page tool's callbacks, and title wiring for the open page.
  */
-export const remotePagePlayground = (options: { baseUrl: string; user: string; local: PageRegistry; rerender(): void }): {
+export const remotePagePlayground = (options: {
+  baseUrl: string;
+  user: string;
+  local: PageRegistry;
+  rerender(): void;
+  fetch?: Fetch;
+  openEvents?(url: string): EventStreamLike;
+}): {
   host: RemotePageHost;
   pages: PageRegistry;
   pageTool(parentId: string | null): ReturnType<typeof remotePageTool>;
-  wire(pageId: string | null, history: TitleHistory): Promise<{ set(value: string, options?: { typing?: boolean }): void } | null>;
+  wire(pageId: string | null, editor: WiredTitleEditor): Promise<void>;
+  /** Call it from pageTitle.onChange, with the page id the editor was built for. */
+  titleChanged(pageId: string | null, title: string, change: TitleChange): void;
 } => {
-  const host = new RemotePageHost({ baseUrl: options.baseUrl, user: options.user });
+  const { baseUrl, user, fetch, openEvents } = options;
+  const host = new RemotePageHost({ baseUrl, user, fetch, openEvents });
   const hosted = hostedPages(options.local, host);
-  const wiring: { current: { pageId: string; stop(): void } | null; generation: number } = { current: null, generation: 0 };
+  const wiring: {
+    current: { pageId: string; change(title: string, change: TitleChange): void; stop(): void } | null;
+    // A page being wired, and the latest title typed into it before the host answered.
+    early: { pageId: string; typed?: string } | null;
+    generation: number;
+  } = { current: null, early: null, generation: 0 };
 
   host.onVerdict(() => options.rerender());
 
@@ -518,7 +533,18 @@ export const remotePagePlayground = (options: { baseUrl: string; user: string; l
     host,
     pages: hosted.pages,
     pageTool: (parentId) => remotePageTool({ host, local: options.local, parentId }),
-    wire: async (pageId, history) => {
+    titleChanged: (pageId, title, change) => {
+      // Checked first: wireTitle's own first write fires before `current` is set.
+      if (pageId === null || isUnrecordedSet(change)) {
+        return;
+      }
+      if (wiring.current?.pageId === pageId) {
+        wiring.current.change(title, change);
+      } else if (wiring.early?.pageId === pageId && change.source !== 'remote') {
+        wiring.early.typed = title;
+      }
+    },
+    wire: async (pageId, editor) => {
       wiring.generation += 1;
 
       const mine = wiring.generation;
@@ -529,33 +555,37 @@ export const remotePagePlayground = (options: { baseUrl: string; user: string; l
         wiring.current = null;
         document.documentElement.removeAttribute(WIRED_ATTRIBUTE);
       }
+      wiring.early = pageId === null ? null : { pageId };
       if (pageId === null) {
-        return null;
+        return;
       }
 
       const paint = (title: string): void => {
         hosted.display(pageId, title);
-
-        const element = document.querySelector(PAGE_TITLE_SELECTOR);
-
-        // Keeps the caret, unlike a rebuilt header.
-        if (element instanceof HTMLElement && element.textContent !== title) {
-          replaceTitleText(element, title);
+        // Guarded: a record:false write during typing would cut the user's undo step.
+        if (editor.title.get() !== title) {
+          editor.title.set(title, { record: false });
         }
         options.rerender();
       };
-      const wired = await wireTitle(pageId, host, history, paint, showSaveError).catch(() => null);
+      const wired = await wireTitle(pageId, host, editor, paint, showSaveError).catch(() => null);
 
       if (wired === null || mine !== wiring.generation) {
         wired?.stop();
 
-        return null;
+        return;
       }
-      wiring.current = { pageId, stop: wired.stop };
-      // Tests wait on it: a title typed before this point is not saved.
-      document.documentElement.setAttribute(WIRED_ATTRIBUTE, pageId);
 
-      return { set: (value, { typing = false } = {}) => wired.input(value, typing) };
+      const typed = wiring.early?.typed;
+
+      wiring.early = null;
+      wiring.current = { pageId, change: wired.change, stop: wired.stop };
+      // Tests wait on it.
+      document.documentElement.setAttribute(WIRED_ATTRIBUTE, pageId);
+      // Typed before the host answered: back on screen as one undo step over the host title, saved through change.
+      if (typed !== undefined && typed !== editor.title.get()) {
+        editor.title.set(typed);
+      }
     },
   };
 };

@@ -2038,6 +2038,7 @@
       // ?slowLoad=<ms> holds the document back to show the boot skeleton.
       const slowLoadMs = Number(new URLSearchParams(location.search).get('slowLoad'));
       // The title rides in the load result too: core loads `data.title`, so a blocks-only result clears it.
+      const callbacks = titleCallbacks({ pages, pageId, changed: () => renderHeader() });
       const documentData = () => ({ ...titleData(pages, pageId), blocks: blocksFor(pageId) });
       const documentSource = slowLoadMs > 0
         ? { persistence: { load: () => new Promise(r => setTimeout(() => r(documentData()), slowLoadMs)), save: async () => {} } }
@@ -2047,7 +2048,14 @@
         readOnly: state.readOnly,
         holder: 'blok',
         // The slot must exist before `new Blok`: core resolves the holder in prepare().
-        pageTitle: { holder: '#page-title-slot', ...titleCallbacks({ pages, pageId, changed: () => renderHeader() }) },
+        pageTitle: {
+          holder: '#page-title-slot',
+          ...callbacks,
+          onChange: (title, change) => {
+            callbacks.onChange(title, change);
+            remotePages?.titleChanged(pageId, title, change);
+          },
+        },
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
@@ -2120,10 +2128,7 @@
         baseUrl,
         user: userConfig().id,
         local: localPages,
-        rerender: () => {
-          if (document.activeElement?.matches(PAGE_TITLE_SELECTOR) === true) updateDocumentTitle();
-          else renderHeader();
-        },
+        rerender: () => renderHeader(),
       });
     })();
     const pages = remotePages?.pages ?? localPages;
@@ -2388,23 +2393,14 @@
       void historyDrawer?.refresh();
       try {
         await editor.isReady;
-        wirePageTitle(editor);
+        if (remotePages === null) wireTitleHistory(editor);
+        else void remotePages.wire(editorPageId, editor);
         refreshBlokView();
         wireCollaborationPresence(editor);
         syncLoadedPointers(editor);
       } catch (error) {
         console.error('Editor failed to start', error);
       }
-    }
-
-    /** Under `?host=remote` a page's title is the host's; the root document's stays local. */
-    function wirePageTitle(editor) {
-      if (remotePages === null) return wireTitleHistory(editor);
-      // The host is canonical: a peer's mirror change reloads it, never local storage.
-      void remotePages.wire(editorPageId, editor.history).then((wired) => {
-        if (wired !== null && blok === editor) titleHistory = wired;
-      });
-      if (editorPageId === null) wireTitleHistory(editor);
     }
 
     // Navigation, tool toggles and reset all rebuild the editor; one queue keeps
@@ -2495,7 +2491,8 @@
     document.getElementById('pg-history-button').hidden = historyDrawer === null;
     void historyDrawer?.refresh();
     blok.isReady.then(() => {
-      wirePageTitle(blok);
+      if (remotePages === null) wireTitleHistory(blok);
+      else void remotePages.wire(editorPageId, blok);
       wireCollaborationPresence(blok);
       syncLoadedPointers(blok);
       alignPageHeader(pageHeader, document.getElementById('blok'));

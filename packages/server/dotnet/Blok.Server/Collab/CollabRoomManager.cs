@@ -508,6 +508,15 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       output.Remove("time");
     }
 
+    // A host reads its own page fields from here after a restore.
+    if (point.Doc is { } doc)
+    {
+      foreach (var (name, map) in YDocConverter.PlainPageMaps(doc))
+      {
+        output[name] = map;
+      }
+    }
+
     return new CollabHistoryReadResult(
         CollabHistoryStatus.Ready,
         DocEndpointClient.Serialize(output),

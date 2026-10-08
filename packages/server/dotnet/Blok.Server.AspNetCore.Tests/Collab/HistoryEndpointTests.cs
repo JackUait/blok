@@ -130,6 +130,39 @@ public sealed class HistoryEndpointTests
     var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
     Assert.True(JsonNode.DeepEquals(atZero, body["blocks"]), $"{body["blocks"]}");
     AssertUnixMilliseconds(body["time"]);
+    Assert.False(body.AsObject().ContainsKey("page"));
+    Assert.False(body.AsObject().ContainsKey("values"));
+  }
+
+  /// <summary>Only plain JSON keys: a nested shared type or undefined has no copy, as in a restore.</summary>
+  [Fact]
+  public async Task AReadCarriesThePlainKeysOfThePageAndValuesMaps()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await using var member = await history.App.ConnectAsync(protocols: [SyncApp.Protocol]);
+    await member.ReceiveAsync<BlokControlFrame>();
+    var mirror = YDocs.NewClient();
+    await member.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
+    YDocs.Apply(mirror, (await member.ReceiveAsync<SyncStep2Frame>()).Update);
+    await member.ReceiveAsync<SyncStep1Frame>();
+
+    var update = mirror.Transact(transaction =>
+    {
+      mirror.GetMap("page").Set(transaction, "title", "Plan");
+      mirror.GetMap("values").Set(transaction, "title", "Old title");
+      mirror.GetMap("values").Set(transaction, "nested", new YMap());
+      mirror.GetMap("values").Set(transaction, "gone", YUndefined.Instance);
+    })!;
+    await member.SendAsync(new SyncUpdateFrame(update));
+    await history.WaitForSequenceAsync(1);
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+    Assert.Equal("""{"title":"Plan"}""", body["page"]!.ToJsonString());
+    Assert.Equal("""{"title":"Old title"}""", body["values"]!.ToJsonString());
   }
 
   /// <summary>Not Blok-Doc-*: those name the live head. A browser host still has to read them.</summary>

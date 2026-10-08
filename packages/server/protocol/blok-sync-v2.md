@@ -942,7 +942,7 @@ points.
 | Route | Access | Answer |
 | --- | --- | --- |
 | `GET /sync/{doc}/history` | read | `200` with `{ lineages, versions }`. |
-| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200` with `{ time?, blocks }`, `Blok-History-Lineage` and `Blok-History-Sequence`. No `ETag`. |
+| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200` with `{ time?, blocks, page?, values? }`, `Blok-History-Lineage` and `Blok-History-Sequence`. No `ETag`. |
 | `GET /sync/{doc}/history/{lineage}/{sequence}/changes` | read | `200` with `{ changes, truncated? }`, `Blok-History-Lineage` and `Blok-History-Sequence`. No `ETag`. |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As the edit route (12.1, 12.2). |
 | `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`, or `404` for an unknown lineage, or `409` for the current lineage. |
@@ -975,6 +975,10 @@ The body has the same shape either way.
 Times are Unix milliseconds. An unknown time is `null`. The point read sends the
 point's own time, record N's commit time or the lineage's `createdAt` for 0, and
 omits `time` when it is unknown.
+
+The point read also sends the point's `page` and `values` maps as JSON objects.
+They hold only plain JSON keys, the same keys a restore copies: a nested shared
+type or an undefined value is left out. A map with no such key is omitted.
 
 `Blok-History-Lineage` and `Blok-History-Sequence` name the point in the path
 of the point read or the changes read.

@@ -203,6 +203,24 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task AVersionReadCarriesThePageMapsAndOmitsEmptyOnes()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    var titles = await TitleWriterAsync(manager);
+    await titles.WriteAsync("Old");
+    await titles.WriteAsync("New");
+
+    var old = JsonNode.Parse((await manager.ReadVersionAsync(DocId, Lineage(), 1)).Json)!.AsObject();
+    var baseline = JsonNode.Parse((await manager.ReadVersionAsync(DocId, Lineage(), 0)).Json)!.AsObject();
+
+    Assert.Equal("""{"title":"Old"}""", old["page"]!.ToJsonString());
+    Assert.False(old.ContainsKey("values"));
+    Assert.False(baseline.ContainsKey("page"));
+    Assert.False(baseline.ContainsKey("values"));
+  }
+
+  [Fact]
   public async Task AnUnknownPointIsNotFound()
   {
     var manager = CreateManager();

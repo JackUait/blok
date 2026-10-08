@@ -497,6 +497,22 @@ internal static class YDocConverter
   }
 
   /// <summary>
+  /// The page maps as JSON objects for a version read: only the plain keys a
+  /// restore can copy (<see cref="IsPlainMapValue"/>), and no empty map.
+  /// </summary>
+  internal static IReadOnlyList<(string Name, JsonObject Map)> PlainPageMaps(YDoc doc)
+  {
+    return ReadPageMaps(doc).Maps
+        .Select(map => (
+            map.Key,
+            new JsonObject(map.Value
+                .Where(entry => IsPlainMapValue(entry.Value))
+                .Select(entry => KeyValuePair.Create(entry.Key, RichText.ToJsonNode(entry.Value))))))
+        .Where(map => map.Item2.Count > 0)
+        .ToList();
+  }
+
+  /// <summary>
   /// What the client writes into the page maps (plain JSON) and
   /// <see cref="YMap.Set"/> accepts as one Any value.
   /// </summary>

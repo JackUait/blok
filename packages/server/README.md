@@ -345,7 +345,7 @@ A version is a point, the pair `(lineage, sequence)`. A lineage is one unbroken 
 | Route | Access | Answer |
 | --- | --- | --- |
 | `GET /sync/{doc}/history` | read | `200 { lineages, versions }` |
-| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200 { time?, blocks }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
+| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200 { time?, blocks, page?, values? }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
 | `GET /sync/{doc}/history/{lineage}/{sequence}/changes?since=` | read | `200 { changes, truncated? }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As `edit`: `204` with the new `Blok-Doc-Lineage` and `Blok-Doc-Sequence` |
 | `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`; `404` for an unknown lineage; `409` for the current one |
@@ -364,6 +364,7 @@ The list looks like this:
 - `?group=1`, `?group=15` or `?group=60` sets both limits to that many minutes. A new group then starts after a gap of more than that window, or once a group spans it. Any other value answers 400, and so do an empty, signed or repeated `group`. The JSON shape does not change.
 - Versions come newest first.
 - Times are Unix milliseconds. An unknown time is `null`, and the point read leaves `time` out.
+- The point read also sends the point's `page` and `values` maps as plain objects. Only plain JSON keys are listed, the same keys a restore copies. An empty map is left out.
 
 The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read and the changes read send no `ETag`. Both add `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. On the changes read they name the point in the path. Every answer from the history handlers sends `Cache-Control: no-store`. Guard refusals, 405 answers and preflights come from the route shell all routes share.
 

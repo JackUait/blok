@@ -76,4 +76,3 @@ export const ensureTableIdsWith = (grid: CellContent[][], mint: () => string): C
     row.map((cell, col) => ({ ...cell, id: columnIds[col], rowId: rowIds[rowIndex] }))
   );
 };
-

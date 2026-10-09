@@ -60,6 +60,8 @@ const WORD_LABELS: Readonly<Record<string, string>> = {
   after: `${OP}after`,
   on_or_before: `${OP}onOrBefore`,
   on_or_after: `${OP}onOrAfter`,
+  ...Object.fromEntries(RELATIVE_DATE_OPERATORS.map((operator) => [operator, `${OP}isWithin`])),
+  relative_to_today: `${OP}isRelativeToToday`,
 };
 
 /** Number filters read as symbols in Notion's menu (research/08): =, ≠, >, <, ≥, ≤. */
@@ -553,7 +555,15 @@ const searchText = (property: PropertyDefinition, value: PropertyValue | undefin
     case 'number':
     case 'uniqueId':
       return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
-    default:
+    // People are ids here (names live with the host); checkbox, dates and documents have no text.
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'checkbox':
+    case 'date':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'richText':
       return '';
   }
 };

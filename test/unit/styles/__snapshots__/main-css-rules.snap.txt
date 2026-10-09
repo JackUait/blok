@@ -6667,7 +6667,7 @@ span[data-blok-slash-search] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-table-header-icon);
+  color: var(--blok-text-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.1s ease-in-out;
@@ -6728,7 +6728,7 @@ span[data-blok-slash-search] {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-text-secondary);
   font-size: 14px;
   line-height: 24px;
   white-space: nowrap;
@@ -6751,7 +6751,7 @@ span[data-blok-slash-search] {
   border: none;
   border-radius: var(--blok-radius-pill);
   background: transparent;
-  color: var(--blok-database-table-muted-text);
+  color: var(--blok-text-secondary);
   font-size: 14px;
   cursor: pointer;
 }
@@ -6777,7 +6777,7 @@ span[data-blok-slash-search] {
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-text-secondary);
   font-size: 14px;
   cursor: pointer;
 }
@@ -6795,7 +6795,7 @@ span[data-blok-slash-search] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-table-muted-text);
+  color: var(--blok-text-secondary);
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
@@ -6895,7 +6895,7 @@ span[data-blok-slash-search] {
 
 [data-blok-database-panel-value] {
   flex: 0 1 auto;
-  color: var(--blok-database-table-muted-text);
+  color: var(--blok-text-secondary);
   white-space: nowrap;
 }
 
@@ -6917,7 +6917,7 @@ span[data-blok-slash-search] {
 [data-blok-database-panel-section] {
   padding-block: var(--blok-space-1-5) var(--blok-space-0-5);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-text-secondary);
   font-size: 12px;
   font-weight: 500;
   line-height: 14.4px;
@@ -6926,7 +6926,7 @@ span[data-blok-slash-search] {
 [data-blok-database-panel-note] {
   padding-block: 0 var(--blok-space-1);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-text-secondary);
   font-size: 12px;
   line-height: 16px;
 }

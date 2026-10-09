@@ -10,6 +10,8 @@ import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues, sortRows } from './database-query';
 import { openDatabaseConfirm } from './database-confirm-dialog';
+import { groupMenuItems } from './database-group-menu';
+import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
@@ -33,7 +35,7 @@ import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash, IconCheck } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -128,6 +130,7 @@ export class DatabaseTool implements BlockTool {
   private cardMenuPopover: PopoverDesktop | null = null;
   /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
   private readonly tableStates = new Map<string, TableState>();
+  private groupMenuPopover: PopoverDesktop | null = null;
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -355,6 +358,7 @@ export class DatabaseTool implements BlockTool {
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
     this.destroyTableView();
+    this.groupMenuPopover?.destroy();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -1110,7 +1114,9 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderBoardView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
-    const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId, viewConfig) : [];
+    const allOptions = groupByPropId !== undefined ? this.groupOptions(groupByPropId, viewConfig) : [];
+    const hidden = new Set((viewConfig?.hiddenGroups ?? []).map((group) => group.id));
+    const options = allOptions.filter((option) => !hidden.has(option.id));
     const groups = viewConfig !== undefined && groupByPropId !== undefined
       ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
       : new Map<string, DatabaseRow[]>();
@@ -1121,6 +1127,8 @@ export class DatabaseTool implements BlockTool {
       options,
       getRows: (optionId) => groups.get(optionId) ?? [],
       titlePropertyId: titlePropId,
+      hideCounts: viewConfig?.hideGroupAggregation === true,
+      hiddenGroupCount: allOptions.length - options.length,
       onTitleEdit: (rowId, newTitle) => {
         const titlePropId = this.titlePropertyId();
         this.updateRowTitleBlock(rowId, titlePropId, newTitle);
@@ -1402,6 +1410,40 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      const headerNewPage = target.closest('[data-blok-database-column-new-page]');
+
+      if (headerNewPage !== null) {
+        const optionId = headerNewPage.getAttribute('data-option-id');
+
+        if (optionId !== null) {
+          this.handleAddRow(optionId, boardEl);
+        }
+
+        return;
+      }
+
+      const groupMenuBtn = target.closest<HTMLElement>('[data-blok-database-column-menu]');
+
+      if (groupMenuBtn !== null) {
+        const optionId = groupMenuBtn.getAttribute('data-option-id');
+
+        if (optionId !== null) {
+          event.stopPropagation();
+          this.openGroupMenu(groupMenuBtn, optionId);
+        }
+
+        return;
+      }
+
+      const hiddenGroupsBtn = target.closest<HTMLElement>('[data-blok-database-hidden-groups]');
+
+      if (hiddenGroupsBtn !== null) {
+        event.stopPropagation();
+        this.openHiddenGroupsMenu(hiddenGroupsBtn);
+
+        return;
+      }
+
       const addColumnBtn = target.closest('[data-blok-database-add-column]');
 
       if (addColumnBtn !== null) {
@@ -1506,6 +1548,128 @@ export class DatabaseTool implements BlockTool {
     });
 
     this.cardMenuPopover.show();
+  }
+
+  /** Every group of the active board, hidden ones included, in board order. */
+  private boardGroups(): Array<{ id: string; label: string; hidden: boolean; color: OptionColor | undefined }> {
+    const view = this.model.getView(this.activeViewId);
+
+    if (view?.groupBy === undefined) {
+      return [];
+    }
+    const hidden = new Set((view.hiddenGroups ?? []).map((group) => group.id));
+
+    return this.groupOptions(view.groupBy, view).map((option) => ({
+      id: option.id,
+      label: option.label,
+      hidden: hidden.has(option.id),
+      color: option.id === NO_VALUE_GROUP_KEY ? undefined : optionColorOf(option),
+    }));
+  }
+
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>): void {
+    this.groupMenuPopover?.destroy();
+
+    const popover = new PopoverDesktop({ trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
+
+    popover.on(PopoverEvent.Closed, () => {
+      if (this.groupMenuPopover === popover) {
+        this.groupMenuPopover = null;
+        popover.destroy();
+      }
+    });
+    this.groupMenuPopover = popover;
+    popover.show();
+  }
+
+  private openGroupMenu(anchor: HTMLElement, groupId: string): void {
+    const view = this.model.getView(this.activeViewId);
+    const groups = this.boardGroups();
+    const group = groups.find((g) => g.id === groupId);
+
+    if (view === undefined || group === undefined) {
+      return;
+    }
+
+    this.showGroupPopover(anchor, groupMenuItems({
+      i18n: this.api.i18n,
+      isNoValue: groupId === NO_VALUE_GROUP_KEY,
+      color: group.color,
+      aggregationHidden: view.hideGroupAggregation === true,
+      groups,
+      onToggleGroup: (id) => this.toggleGroupHidden(id),
+      onToggleAggregation: () => this.updateActiveView({ hideGroupAggregation: view.hideGroupAggregation !== true }),
+      onHide: () => this.toggleGroupHidden(groupId),
+      onTrash: () => this.trashGroup(groupId),
+      onRecolor: (color) => this.recolorGroup(groupId, color),
+    }));
+  }
+
+  /** Lists every group with a check mark on the shown ones; a pick shows or hides it. */
+  private openHiddenGroupsMenu(anchor: HTMLElement): void {
+    this.showGroupPopover(anchor, this.boardGroups().map((group) => ({
+      name: `group-${group.id}`,
+      title: group.label,
+      trailingIcon: group.hidden ? undefined : IconCheck,
+      closeOnActivate: true,
+      onActivate: () => this.toggleGroupHidden(group.id),
+    })));
+  }
+
+  private toggleGroupHidden(groupId: string): void {
+    const current = this.model.getView(this.activeViewId)?.hiddenGroups ?? [];
+    const hiddenGroups = current.some((group) => group.id === groupId)
+      ? current.filter((group) => group.id !== groupId)
+      : [...current, { id: groupId }];
+
+    this.updateActiveView({ hiddenGroups });
+  }
+
+  private recolorGroup(optionId: string, color: OptionColor): void {
+    const groupBy = this.model.getView(this.activeViewId)?.groupBy;
+    const options = groupBy === undefined ? undefined : this.model.getProperty(groupBy)?.config?.options;
+
+    if (this.readOnly || groupBy === undefined || options === undefined) {
+      return;
+    }
+    const next = options.map((option) => (option.id === optionId ? { ...option, color } : option));
+
+    this.model.updateProperty(groupBy, { config: { options: next } });
+    this.block.dispatchChange();
+    this.rerenderView({ keepDrawer: true });
+    void this.sync.syncUpdateProperty({ propertyId: groupBy, changes: { config: { options: next } } });
+  }
+
+  /** "Move to Trash" on a group deletes the rows the view shows in it, after a confirm (research/08). */
+  private trashGroup(groupId: string): void {
+    const viewId = this.activeViewId;
+
+    void openDatabaseConfirm({
+      title: this.api.i18n.t('tools.database.groupTrashConfirm'),
+      confirmLabel: this.api.i18n.t('tools.database.groupMoveToTrash'),
+      cancelLabel: this.api.i18n.t('tools.database.optionDeleteCancel'),
+      destructive: true,
+      directionSource: this.element,
+    }).then((trash) => {
+      const view = this.model.getView(viewId);
+
+      if (!trash || this.destroyed || this.readOnly || view === undefined) {
+        return;
+      }
+      // Read at confirm time: a peer may have changed the group while the dialog was open.
+      const rows = this.queryGroupRows(view, [groupId]).get(groupId) ?? [];
+      const remove = (): void => rows.forEach((row) => this.deleteRowBlock(row.id));
+
+      if (this.api.blocks.transact !== undefined) {
+        this.api.blocks.transact(remove);
+      } else {
+        remove();
+      }
+      this.rerenderView({ keepDrawer: true });
+      rows.forEach((row) => {
+        void this.sync.syncDeleteRow({ rowId: row.id });
+      });
+    });
   }
 
   private handleAddListRow(optionId: string | null, viewEl: HTMLDivElement): void {
@@ -1668,7 +1832,19 @@ export class DatabaseTool implements BlockTool {
       this.columnControls = new DatabaseColumnControls({
         i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-        onDelete: (optionId) => this.handleOptionDelete(optionId),
+        onDelete: (optionId) => {
+          void openDatabaseConfirm({
+            title: this.api.i18n.t('tools.database.optionDeleteConfirm'),
+            confirmLabel: this.api.i18n.t('tools.database.optionDelete'),
+            cancelLabel: this.api.i18n.t('tools.database.optionDeleteCancel'),
+            destructive: true,
+            directionSource: this.element,
+          }).then((confirmed) => {
+            if (confirmed && !this.destroyed && !this.readOnly) {
+              this.handleOptionDelete(optionId);
+            }
+          });
+        },
         onRenameInput: (optionId, label) => {
           // Instant local save — update the model immediately so save() captures latest value
           this.handleOptionRename(optionId, label);
@@ -1817,7 +1993,8 @@ export class DatabaseTool implements BlockTool {
 
       if (columnHeader !== null) {
         // Do not start drag when the click originates from the pill (title element or its input)
-        const isPillTarget = target.closest('[data-blok-database-column-pill]') !== null;
+        // or from a header button.
+        const isPillTarget = target.closest('[data-blok-database-column-pill], [data-blok-database-column-actions]') !== null;
         if (isPillTarget) return;
 
         const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');

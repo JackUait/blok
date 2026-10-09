@@ -12,6 +12,10 @@ interface DatabaseBoardViewOptions {
   getRows: (optionId: string) => DatabaseRow[];
   titlePropertyId: string;
   onTitleEdit?: (rowId: string, newTitle: string) => void;
+  /** The view hides each group's row count ("Hide aggregation"). */
+  hideCounts?: boolean;
+  /** How many groups the view hides; above zero, a button after the columns shows them again. */
+  hiddenGroupCount?: number;
 }
 
 /**
@@ -26,14 +30,18 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly getRows: (optionId: string) => DatabaseRow[];
   private readonly titlePropertyId: string;
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
+  private readonly hideCounts: boolean;
+  private readonly hiddenGroupCount: number;
 
-  constructor({ readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit }: DatabaseBoardViewOptions) {
+  constructor({ readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount }: DatabaseBoardViewOptions) {
     this.readOnly = readOnly;
     this.i18n = i18n;
     this.options = options;
     this.getRows = getRows;
     this.titlePropertyId = titlePropertyId;
     this.onTitleEdit = onTitleEdit;
+    this.hideCounts = hideCounts ?? false;
+    this.hiddenGroupCount = hiddenGroupCount ?? 0;
   }
 
   /**
@@ -62,6 +70,16 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       const columnEl = this.createColumnElement(option, this.getRows(option.id), this.titlePropertyId);
 
       boardArea.appendChild(columnEl);
+    }
+
+    if (this.hiddenGroupCount > 0) {
+      const hiddenBtn = document.createElement('button');
+
+      hiddenBtn.type = 'button';
+      hiddenBtn.setAttribute('data-blok-database-hidden-groups', '');
+      hiddenBtn.setAttribute('aria-haspopup', 'menu');
+      hiddenBtn.textContent = this.i18n.t('tools.database.hiddenGroups');
+      boardArea.appendChild(hiddenBtn);
     }
 
     if (!this.readOnly) {
@@ -216,7 +234,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       countEl.style.color = `var(--blok-color-${option.color}-text)`;
     }
 
+    countEl.hidden = this.hideCounts;
     header.appendChild(countEl);
+
+    if (!this.readOnly) {
+      header.appendChild(this.createHeaderActions(option.id));
+    }
 
     columnEl.appendChild(header);
 
@@ -267,6 +290,34 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     return columnEl;
+  }
+
+  /** The "New page" (+) and "More group options" (⋯) buttons, shown on header hover. */
+  private createHeaderActions(optionId: string): HTMLElement {
+    const actions = document.createElement('div');
+
+    actions.setAttribute('data-blok-database-column-actions', '');
+
+    const newPage = document.createElement('button');
+
+    newPage.type = 'button';
+    newPage.setAttribute('data-blok-database-column-new-page', '');
+    newPage.setAttribute('data-option-id', optionId);
+    newPage.setAttribute('aria-label', this.i18n.t('tools.database.newPage'));
+    newPage.innerHTML = IconPlus;
+
+    const menu = document.createElement('button');
+
+    menu.type = 'button';
+    menu.setAttribute('data-blok-database-column-menu', '');
+    menu.setAttribute('data-option-id', optionId);
+    menu.setAttribute('aria-label', this.i18n.t('tools.database.groupMenuLabel'));
+    menu.setAttribute('aria-haspopup', 'menu');
+    menu.innerHTML = IconDotsHorizontal;
+
+    actions.append(newPage, menu);
+
+    return actions;
   }
 
   /**

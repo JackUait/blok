@@ -432,6 +432,64 @@
 }
 
 /**
+ * Column header "New page" (+) and "More group options" (⋯), 24px, shown on
+ * header hover (research/08).
+ */
+[data-blok-database-column-actions] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  margin-inline-start: auto;
+  opacity: 0;
+  transition: opacity 100ms ease-in-out;
+}
+
+[data-blok-database-column-header]:hover [data-blok-database-column-actions],
+[data-blok-database-column-actions]:focus-within {
+  opacity: 1;
+}
+
+[data-blok-database-column-actions] button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: var(--blok-database-add-text);
+  cursor: pointer;
+}
+
+[data-blok-database-column-actions] button:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-column-actions] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-hidden-groups] {
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-blok-database-hidden-groups]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/**
  * Column header pill — rounded badge containing dot + title.
  * When the column has a color, the pill gets a colored background (set inline via JS).
  * Sized to content only — never stretches to fill available space.
@@ -1441,7 +1499,8 @@
   }
 
   [data-blok-database-drawer],
-  [data-blok-database-drop-line] {
+  [data-blok-database-drop-line],
+  [data-blok-database-column-actions] {
     transition: none;
   }
 

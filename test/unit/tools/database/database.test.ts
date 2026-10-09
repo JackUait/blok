@@ -3784,13 +3784,38 @@ describe('DatabaseTool', () => {
       return block;
     };
 
-    const clickDelete = (element: HTMLElement, optionId: string): void => {
+    const clickDelete = async (element: HTMLElement, optionId: string): Promise<void> => {
       queryAllByData(element, 'data-blok-database-delete-column')
         .find((el) => el.getAttribute('data-option-id') === optionId)
         ?.click();
+      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
     };
 
-    it('keeps the rows and moves them to the no-value group', () => {
+    it('asks "Are you sure you want to delete this option?" and deletes nothing on Cancel', async () => {
+      const childBlocks = [liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0')];
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      queryAllByData(element, 'data-blok-database-delete-column')
+        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')
+        ?.click();
+
+      expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.optionDeleteConfirm');
+      expect(childBlocks[0].call).not.toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
+
+      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="cancel"]')?.click();
+      await Promise.resolve();
+
+      expect(childBlocks[0].call).not.toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
+      expect(queryAllByData(element, 'data-blok-database-column').some((el) => el.getAttribute('data-option-id') === 'opt-todo')).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('keeps the rows and moves them to the no-value group', async () => {
       const childBlocks = [
         liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0'),
         liveRowBlock('row-2', { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, 'a1'),
@@ -3800,7 +3825,7 @@ describe('DatabaseTool', () => {
       const element = tool.render();
 
       tool.rendered();
-      clickDelete(element, 'opt-todo');
+      await clickDelete(element, 'opt-todo');
 
       expect(options.api.blocks.delete).not.toHaveBeenCalled();
       expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
@@ -3815,7 +3840,7 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    it('removes only the deleted option from a multiSelect row', () => {
+    it('removes only the deleted option from a multiSelect row', async () => {
       const row = liveRowBlock('row-1', { 'prop-title': 'Task', 'prop-tags': ['opt-a', 'opt-b'] }, 'a0');
       const options = createDatabaseOptions({
         schema: [
@@ -3833,10 +3858,173 @@ describe('DatabaseTool', () => {
       const element = tool.render();
 
       tool.rendered();
-      clickDelete(element, 'opt-a');
+      await clickDelete(element, 'opt-a');
 
       expect(options.api.blocks.delete).not.toHaveBeenCalled();
       expect(row.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
+
+      tool.destroy();
+    });
+  });
+
+  describe('the board column "More group options" menu', () => {
+    const groupRow = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
+      const block = createMockRowBlock({ id, properties, position });
+      const data = block.preservedData as DatabaseRowData;
+
+      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
+        if (method === 'updateProperties') Object.assign(data.properties, params);
+      });
+
+      return block;
+    };
+
+    const board = (readOnly = false): {
+      tool: DatabaseTool;
+      element: HTMLElement;
+      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
+      transact: ReturnType<typeof vi.fn>;
+    } => {
+      const childBlocks = [
+        groupRow('row-1', { 'prop-title': 'One', 'prop-status': 'opt-todo' }, 'a0'),
+        groupRow('row-2', { 'prop-title': 'Two', 'prop-status': 'opt-todo' }, 'a1'),
+        groupRow('row-3', { 'prop-title': 'Three', 'prop-status': 'opt-done' }, 'a2'),
+      ];
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const transact = vi.fn((fn: () => void) => fn());
+
+      options.readOnly = readOnly;
+      Object.assign(options.api.blocks, { transact });
+      vi.mocked(options.api.blocks.getBlockIndex).mockImplementation((id: string) => ['row-1', 'row-2', 'row-3'].indexOf(id) + 1);
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      return { tool, element, options, transact };
+    };
+
+    const openMenu = (element: HTMLElement, optionId: string): void => {
+      queryAllByData(element, 'data-blok-database-column-menu').find((el) => el.getAttribute('data-option-id') === optionId)?.click();
+    };
+
+    const pick = (title: string): void => {
+      queryByData(document.body, 'data-mock-popover-action', title.toLowerCase())?.click();
+    };
+
+    const columnIds = (element: HTMLElement): Array<string | null> =>
+      queryAllByData(element, 'data-blok-database-column').map((col) => col.getAttribute('data-option-id'));
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('hides a group and keeps it hidden after a reload', () => {
+      const { tool, element } = board();
+
+      openMenu(element, 'opt-todo');
+      pick('tools.database.groupHide');
+
+      expect(columnIds(element)).not.toContain('opt-todo');
+      expect(tool.save(element).views[0].hiddenGroups).toEqual([{ id: 'opt-todo' }]);
+
+      tool.destroy();
+    });
+
+    it('shows a hidden group again from the hidden-groups button', () => {
+      const { tool, element } = board();
+
+      openMenu(element, 'opt-todo');
+      pick('tools.database.groupHide');
+      queryByData(element, 'data-blok-database-hidden-groups')?.click();
+      pick('Todo');
+
+      expect(columnIds(element)).toContain('opt-todo');
+      expect(tool.save(element).views[0].hiddenGroups).toEqual([]);
+
+      tool.destroy();
+    });
+
+    it('hides every count with "Hide aggregation" and saves it on the view', () => {
+      const { tool, element } = board();
+
+      openMenu(element, 'opt-todo');
+      pick('tools.database.groupHideAggregation');
+
+      expect(queryAllByData(element, 'data-blok-database-column-count').every((el) => el.hidden)).toBe(true);
+      expect(tool.save(element).views[0].hideGroupAggregation).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('recolors the group\'s option', () => {
+      const { tool, element } = board();
+
+      openMenu(element, 'opt-todo');
+      pick('tools.colorPicker.color.pink');
+
+      const status = tool.save(element).schema.find((p) => p.id === 'prop-status');
+
+      expect(status?.config?.options.find((o) => o.id === 'opt-todo')?.color).toBe('pink');
+
+      tool.destroy();
+    });
+
+    it('asks before moving the group\'s pages to Trash, then deletes them in one step', async () => {
+      const { tool, element, options, transact } = board();
+
+      openMenu(element, 'opt-todo');
+      pick('tools.database.groupMoveToTrash');
+
+      expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.groupTrashConfirm');
+      expect(options.api.blocks.delete).not.toHaveBeenCalled();
+
+      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+
+      expect(transact).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(options.api.blocks.getBlockIndex).mock.calls.map(([id]) => id).sort()).toEqual(['row-1', 'row-2']);
+      expect(options.api.blocks.delete).toHaveBeenCalledTimes(2);
+
+      tool.destroy();
+    });
+
+    it('keeps the pages when Move to Trash is cancelled', async () => {
+      const { tool, element, options } = board();
+
+      openMenu(element, 'opt-todo');
+      pick('tools.database.groupMoveToTrash');
+      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="cancel"]')?.click();
+      await Promise.resolve();
+
+      expect(options.api.blocks.delete).not.toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('adds a page to the group from the header "+"', () => {
+      const { tool, element, options } = board();
+
+      queryAllByData(element, 'data-blok-database-column-new-page').find((el) => el.getAttribute('data-option-id') === 'opt-done')?.click();
+
+      const data = vi.mocked(options.api.blocks.insertAt).mock.calls[0]?.[1] as DatabaseRowData | undefined;
+
+      expect(data?.properties['prop-status']).toBe('opt-done');
+
+      tool.destroy();
+    });
+
+    it('never starts a column drag from a header button', () => {
+      const { tool, element } = board();
+      const columnDrag = (tool as unknown as { columnDrag: DatabaseColumnDrag }).columnDrag;
+      const begin = vi.spyOn(columnDrag, 'beginTracking');
+      const menu = queryAllByData(element, 'data-blok-database-column-menu')[0];
+
+      fireEvent.pointerDown(menu, { clientX: 0, clientY: 0 });
+
+      expect(begin).not.toHaveBeenCalled();
 
       tool.destroy();
     });
@@ -3885,7 +4073,7 @@ describe('DatabaseTool', () => {
       expect(titlesIn(element, 'data-blok-database-list-row-title')).toEqual(['Apple', 'Banana', 'Cherry']);
     });
 
-    it('still clears the group of a row a filter hides when its column is deleted', () => {
+    it('still clears the group of a row a filter hides when its column is deleted', async () => {
       const childBlocks = [
         createMockRowBlock({ id: 'row-shown', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-todo' }, position: 'a0' }),
         createMockRowBlock({ id: 'row-hidden', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-todo' }, position: 'a1' }),
@@ -3902,6 +4090,8 @@ describe('DatabaseTool', () => {
       queryAllByData(element, 'data-blok-database-delete-column')
         .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!
         .click();
+      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
 
       expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
       expect(options.api.blocks.delete).not.toHaveBeenCalled();

@@ -30,6 +30,57 @@ describe('DatabaseBoardView', () => {
     vi.restoreAllMocks();
   });
 
+  describe('the column header actions', () => {
+    const header = (board: HTMLElement, optionId: string): HTMLElement | null =>
+      board.querySelector<HTMLElement>(`[data-blok-database-column][data-option-id="${optionId}"] [data-blok-database-column-header]`);
+
+    it('puts a "New page" and a "More group options" button at the end of each header', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
+      const head = header(view.createView(), 'opt-1');
+      const newPage = head?.querySelector('[data-blok-database-column-new-page]');
+      const menu = head?.querySelector('[data-blok-database-column-menu]');
+
+      expect(newPage?.getAttribute('aria-label')).toBe('tools.database.newPage');
+      expect(newPage?.getAttribute('data-option-id')).toBe('opt-1');
+      expect(menu?.getAttribute('aria-label')).toBe('tools.database.groupMenuLabel');
+      expect(menu?.getAttribute('data-option-id')).toBe('opt-1');
+      expect(menu?.getAttribute('aria-haspopup')).toBe('menu');
+    });
+
+    it('has no header actions in read-only mode', () => {
+      const view = new DatabaseBoardView({ readOnly: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
+      const head = header(view.createView(), 'opt-1');
+
+      expect(head?.querySelector('[data-blok-database-column-new-page]')).toBeNull();
+      expect(head?.querySelector('[data-blok-database-column-menu]')).toBeNull();
+    });
+
+    it('hides every count when the view hides aggregation', () => {
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [makeRow()], titlePropertyId: 'title', hideCounts: true,
+      });
+
+      expect(view.createView().querySelector('[data-blok-database-column-count]')?.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('offers the hidden groups after the last column so they can be shown again', () => {
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 2,
+      });
+      const board = view.createView();
+      const button = board.querySelector('[data-blok-database-hidden-groups]');
+
+      expect(button?.textContent).toBe('tools.database.hiddenGroups');
+      expect(button?.nextElementSibling?.hasAttribute('data-blok-database-add-column')).toBe(true);
+    });
+
+    it('offers no hidden-groups button when nothing is hidden', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
+
+      expect(view.createView().querySelector('[data-blok-database-hidden-groups]')).toBeNull();
+    });
+  });
+
   describe('createView', () => {
     it('renders wrapper with data-blok-tool="database" attribute', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });

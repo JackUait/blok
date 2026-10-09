@@ -310,6 +310,7 @@ const GESTURES: Gesture[] = [
 
     await col.hover();
     await col.locator('[data-blok-database-delete-column]').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
   } },
   { id: 'W4D-C4', name: 'dragging a board column before another', run: async (page) => {
     const s = await page.locator('[data-blok-database-column][data-option-id="opt-done"] [data-blok-database-column-count]').boundingBox();
@@ -384,6 +385,7 @@ test.describe('W4D column delete keeps rows', () => {
 
     await col.hover();
     await col.locator('[data-blok-database-delete-column]').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
     await gap(page);
 
     const options = async (): Promise<string[]> => {

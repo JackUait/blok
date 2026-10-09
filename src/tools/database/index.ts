@@ -1,13 +1,17 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyType, PropertyValue } from './types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues } from './database-query';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
-import { DatabaseTableView } from './database-table-view';
-import { visibleRowPropertyIds } from './view-settings';
+import { DatabaseTableView, createTableState } from './database-table-view';
+import type { TableGroup, TableHandlers, TableState } from './database-table-view';
+import type { TableRowDropResult } from './database-table-row-drag';
+import { DatabasePropertyTypePopover } from './database-property-type-popover';
+import type { ViewChanges } from './database-model';
+import { resolveViewProperties, visibleRowPropertyIds, withPropertyOrder } from './view-settings';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { firstStrongDirection } from '../../shared/text-direction';
 import { equalsOutputData } from '../../shared/output-data';
@@ -106,6 +110,9 @@ export class DatabaseTool implements BlockTool {
   private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
+  /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
+  private readonly tableStates = new Map<string, TableState>();
+  private propertyTypePopover: DatabasePropertyTypePopover | null = null;
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -327,6 +334,8 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.handleBlockChanged);
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
+    this.propertyTypePopover?.close();
+    this.destroyTableView();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -587,7 +596,18 @@ export class DatabaseTool implements BlockTool {
       return true;
     }
 
+    if (this.view instanceof DatabaseTableView && this.view.interacting) {
+      return true;
+    }
+
     return this.cardDrag?.active === true || this.columnDrag?.active === true || this.listRowDrag?.active === true;
+  }
+
+  /** Detach the table's listeners before its DOM goes, so its focus and editor do not fire into the next one. */
+  private destroyTableView(): void {
+    if (this.view instanceof DatabaseTableView) {
+      this.view.destroy();
+    }
   }
 
   /**
@@ -818,6 +838,7 @@ export class DatabaseTool implements BlockTool {
     this.columnControls = null;
     this.listRowDrag = null;
     this.keyboard = null;
+    this.destroyTableView();
 
     this.sync.flushPendingUpdates();
     this.sync.flushPendingPropertyUpdates();
@@ -1035,16 +1056,265 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderTableView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const groupBy = viewConfig.groupBy;
+    const groupType = groupBy === undefined ? undefined : this.model.getProperty(groupBy)?.type;
+    const groups = groupBy !== undefined && (groupType === 'select' || groupType === 'multiSelect')
+      ? this.tableGroups(groupBy, viewConfig)
+      : undefined;
+
     this.view = new DatabaseTableView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
       view: viewConfig,
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
-      rows: this.model.queryRows({ view: viewConfig }).rows,
+      rows: groups === undefined ? this.model.queryRows({ view: viewConfig }).rows : [],
+      ...(groups !== undefined ? { groups } : {}),
       titlePropertyId: titlePropId,
+      state: this.tableState(viewConfig.id),
+      ...(this.readOnly ? {} : { handlers: this.tableHandlers() }),
     });
 
     return this.view.createView();
+  }
+
+  private tableState(viewId: string): TableState {
+    const existing = this.tableStates.get(viewId);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+    const state = createTableState();
+
+    this.tableStates.set(viewId, state);
+
+    return state;
+  }
+
+  /** Notion lists the no-value group last in a table (research/08). */
+  private tableGroups(groupBy: string, viewConfig: DatabaseViewConfig): TableGroup[] {
+    const [noValue, ...options] = this.groupOptions(groupBy);
+    const ordered = [...options, noValue];
+    const rows = this.queryGroupRows(viewConfig, ordered.map((o) => o.id));
+
+    return ordered.map((option) => ({
+      key: option.id,
+      label: option.label,
+      ...(option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
+      rows: rows.get(option.id) ?? [],
+    }));
+  }
+
+  /** What the table view asks of the tool. Each write goes through the row block or the view, then the backend. */
+  private tableHandlers(): TableHandlers {
+    return {
+      commitCell: (rowId, propertyId, value) => this.commitTableCell(rowId, propertyId, value),
+      editEnded: () => this.redrawWhenIdle(),
+      addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId),
+      deleteRows: (rowIds) => this.deleteTableRows(rowIds),
+      duplicateRow: (rowId) => this.duplicateTableRow(rowId),
+      openRow: (rowId) => this.handleRowClick(rowId),
+      copyRowLink: (rowId) => this.copyRowLink(rowId),
+      editRowIcon: () => undefined,
+      updateView: (changes) => this.updateActiveView(changes),
+      openPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
+      addProperty: (anchor, placement) => this.openAddProperty(anchor, placement),
+      viewAction: (action, propertyId, anchor) => this.onTableViewAction(action, propertyId, anchor),
+      moveRow: (result) => this.handleTableRowDrop(result),
+      sortedRowDrop: (result) => this.onSortedRowDrop(result),
+      bulkEdit: () => undefined,
+      editFilters: () => undefined,
+      rerender: () => this.rerenderView({ keepDrawer: true }),
+      optionsChange: (propertyId, options) => this.handleTableOptionsChange(propertyId, options),
+    };
+  }
+
+  /**
+   * Opens a column's header menu. The property menu (rename, type, delete)
+   * replaces this and shows `DatabaseTableView.headerItems` after its own rows.
+   */
+  protected openPropertyMenu(propertyId: string, anchor: HTMLElement): void {
+    if (this.view instanceof DatabaseTableView) {
+      this.view.openHeaderMenu(propertyId, anchor);
+    }
+  }
+
+  /** Filter, Sort and Group from a column header. Phase 3 owns their panels. */
+  protected onTableViewAction(_action: 'filter' | 'sort' | 'group', _propertyId: string, _anchor: HTMLElement): void {
+    // Hook only.
+  }
+
+  /**
+   * A row dropped in a sorted table. Notion asks "Would you like to remove
+   * sorting?" (D7); that prompt lives outside the table. Nothing moves.
+   */
+  protected onSortedRowDrop(_result: TableRowDropResult): void {
+    // Hook only.
+  }
+
+  private commitTableCell(rowId: string, propertyId: string, value: PropertyValue): void {
+    if (this.readOnly || this.destroyed) return;
+    if (JSON.stringify(this.model.getRow(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
+    const titlePropId = this.titlePropertyId();
+
+    if (propertyId === titlePropId) {
+      this.updateRowTitleBlock(rowId, titlePropId, typeof value === 'string' ? value : '');
+    } else {
+      this.updateRowBlock(rowId, { [propertyId]: value });
+    }
+    this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
+    if (this.cardDrawer?.openRowId === rowId) {
+      this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+    }
+  }
+
+  /** Inserts a row block at the end, or right after `afterRowId`. */
+  private addTableRow(groupKey: string | null, afterRowId?: string): string | null {
+    if (this.readOnly) return null;
+    const titlePropId = this.titlePropertyId();
+    const groupBy = groupKey === null ? undefined : this.model.getView(this.activeViewId)?.groupBy;
+    const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupBy, groupKey ?? NO_VALUE_GROUP_KEY));
+    const ordered = this.model.getOrderedRows();
+    const afterIndex = afterRowId === undefined ? -1 : ordered.findIndex((row) => row.id === afterRowId);
+    const position = afterIndex === -1
+      ? rowData.position
+      : DatabaseModel.positionBetween(ordered[afterIndex].position, ordered[afterIndex + 1]?.position ?? null);
+
+    this.api.blocks.insertAt(
+      'database-row',
+      { properties: rowData.properties, position, title: '' },
+      { parentId: this.block.id, position: 'end', id: rowData.id },
+    );
+    void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position });
+    this.rerenderView({ keepDrawer: true });
+
+    return rowData.id;
+  }
+
+  private deleteTableRows(rowIds: string[]): void {
+    if (this.readOnly) return;
+    for (const rowId of rowIds) {
+      if (this.cardDrawer?.openRowId === rowId) {
+        this.cardDrawer.close();
+      }
+      this.deleteRowBlock(rowId);
+      void this.sync.syncDeleteRow({ rowId });
+    }
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  private duplicateTableRow(rowId: string): void {
+    const row = this.model.getRow(rowId);
+
+    if (row === undefined || this.readOnly) return;
+    const ordered = this.model.getOrderedRows();
+    const index = ordered.findIndex((r) => r.id === rowId);
+    const position = DatabaseModel.positionBetween(row.position, ordered[index + 1]?.position ?? null);
+    const titlePropId = this.titlePropertyId();
+    const title = row.properties[titlePropId];
+    const id = nanoid();
+    const properties = structuredClone(row.properties);
+
+    this.api.blocks.insertAt(
+      'database-row',
+      { properties, position, title: typeof title === 'string' ? title : '' },
+      { parentId: this.block.id, position: 'end', id },
+    );
+    void this.sync.syncCreateRow({ id, properties, position });
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** Rows have no addressable URL yet: copies the page URL with the row id as its fragment. */
+  private copyRowLink(rowId: string): void {
+    const url = `${window.location.href.split('#')[0]}#${rowId}`;
+
+    void navigator.clipboard?.writeText(url).then(
+      () => this.api.notifier.show({ message: this.api.i18n.t('tools.database.tableLinkCopied') }),
+      () => undefined
+    );
+  }
+
+  private updateActiveView(changes: ViewChanges): void {
+    if (this.readOnly) return;
+    this.model.updateView(this.activeViewId, changes);
+    this.block.dispatchChange();
+    void this.sync.syncUpdateView({ viewId: this.activeViewId, changes: structuredClone(changes) });
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /**
+   * "+" in the header, or Insert left/right. The property menu branch
+   * replaces this with its own add-property flow.
+   */
+  protected openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }): void {
+    this.propertyTypePopover?.close();
+    this.propertyTypePopover = new DatabasePropertyTypePopover({
+      i18n: this.api.i18n,
+      onSelect: (type) => this.addTableProperty(type, placement),
+    });
+    this.propertyTypePopover.open(anchor);
+  }
+
+  private addTableProperty(type: PropertyType, placement?: { propertyId: string; side: 'left' | 'right' }): void {
+    const prop = this.model.addProperty(this.api.i18n.t('tools.database.tableNewProperty'), type);
+
+    void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position });
+    this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    const view = this.model.getView(this.activeViewId);
+
+    if (placement === undefined || view === undefined) {
+      this.block.dispatchChange();
+      this.rerenderView({ keepDrawer: true });
+
+      return;
+    }
+    const schema = this.model.getSchema();
+    const order = resolveViewProperties(view, schema).map((p) => p.id).filter((id) => id !== prop.id);
+    const at = order.indexOf(placement.propertyId);
+    const beforeId = placement.side === 'left' ? placement.propertyId : order[at + 1] ?? null;
+
+    this.updateActiveView({ properties: withPropertyOrder(view, schema, prop.id, beforeId) });
+  }
+
+  private handleTableRowDrop(result: TableRowDropResult): void {
+    const { rowId, beforeRowId, afterRowId, groupKey, fromGroupKey } = result;
+    const groupBy = this.model.getView(this.activeViewId)?.groupBy;
+
+    if (this.readOnly) return;
+    if (groupBy !== undefined && groupKey !== fromGroupKey) {
+      this.cardDragFromOptionId = fromGroupKey;
+      const value = this.droppedGroupValue(groupBy, rowId, groupKey);
+
+      this.updateRowBlock(rowId, { [groupBy]: value });
+      this.sync.syncUpdateRow({ rowId, properties: { [groupBy]: value } });
+    }
+    const before = beforeRowId === null ? undefined : this.model.getRow(beforeRowId);
+    const after = afterRowId === null ? undefined : this.model.getRow(afterRowId);
+    const position = DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null);
+
+    this.moveRowBlock(rowId, position);
+    void this.sync.syncMoveRow({ rowId, position });
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** Same as the drawer: a label the user kept goes back as the saved (unlocalized) one. */
+  private handleTableOptionsChange(propertyId: string, options: SelectOption[]): void {
+    if (this.readOnly || this.destroyed) return;
+    const saved = this.model.getProperty(propertyId)?.config?.options ?? [];
+    const shown = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId)?.config?.options ?? [];
+    const next = options.map((option) => {
+      const before = shown.find((o) => o.id === option.id);
+      const savedOption = saved.find((o) => o.id === option.id);
+
+      return before !== undefined && savedOption !== undefined && before.label === option.label
+        ? { ...option, label: savedOption.label }
+        : option;
+    });
+
+    this.clearRemovedOptions(propertyId, next);
+    this.model.updateProperty(propertyId, { config: { options: next } });
+    this.block.dispatchChange();
+    this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options: next } } });
   }
 
   private renderListView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig): HTMLDivElement {
@@ -1956,6 +2226,7 @@ export class DatabaseTool implements BlockTool {
     this.listRowDrag?.destroy();
     this.listRowDrag = null;
     this.keyboard?.destroy();
+    this.destroyTableView();
 
     // The drawer hangs off the outer wrapper, not the board, so it can stay.
     if (options.keepDrawer !== true) {

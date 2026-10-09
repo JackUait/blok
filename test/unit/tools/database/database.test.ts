@@ -4169,17 +4169,19 @@ describe('DatabaseTool', () => {
       expect(tool.validate(makeDefaultData({ views: [tableView], activeViewId: 'view-table' }))).toBe(true);
     });
 
-    it('renders a table view as a list of row titles, not as a board', () => {
+    it('renders a table view as a grid of rows, not as a board', () => {
       const tool = new DatabaseTool(createDatabaseOptions({ views: [tableView], activeViewId: 'view-table' }, {}, { childBlocks: twoRows() }));
       const element = tool.render();
 
       tool.rendered();
 
       const table = queryByData(element, 'data-blok-database-table');
+      const titleOf = (row: HTMLElement): string | null | undefined =>
+        queryAllByData(row, 'data-blok-database-cell', 'title')[0]?.textContent;
 
       expect(table).not.toBeNull();
       expect(queryByData(element, 'data-blok-database-board')).toBeNull();
-      expect(queryAllByData(element, 'data-blok-database-table-row').map((row) => row.textContent)).toEqual(['First', 'Second']);
+      expect(queryAllByData(element, 'data-blok-database-table-row').map(titleOf)).toEqual(['First', 'Second']);
 
       tool.destroy();
     });
@@ -4260,6 +4262,184 @@ describe('DatabaseTool', () => {
       tool.rendered();
 
       expect(queryAllByData(element, 'data-blok-database-list-row-property')).toHaveLength(1);
+
+      tool.destroy();
+    });
+  });
+
+  describe('table view wiring', () => {
+    const tableView: DatabaseViewConfig = { id: 'view-table', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+    const textSchema: PropertyDefinition[] = [
+      { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+      { id: 'prop-notes', name: 'Notes', type: 'text', position: 'a1' },
+      { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a2', config: { options: [
+        { id: 'opt-a', label: 'A', position: 'a0' }, { id: 'opt-b', label: 'B', position: 'a1' },
+      ] } },
+    ];
+    const writable = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
+      const block = createMockRowBlock({ id, properties, position });
+      const data = block.preservedData as DatabaseRowData;
+
+      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
+        if (method === 'updateProperties') Object.assign(data.properties, params);
+        if (method === 'updateTitle') {
+          const { title, titlePropertyId } = params as { title: string; titlePropertyId: string };
+
+          data.title = title;
+          data.properties[titlePropertyId] = title;
+        }
+      });
+
+      return block;
+    };
+    const setup = (adapter?: DatabaseAdapter): { tool: DatabaseTool; element: HTMLElement; rows: BlockAPI[]; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> } => {
+      const rows = [
+        writable('row-1', { 'prop-title': 'First', 'prop-notes': 'n1' }, 'a0'),
+        writable('row-2', { 'prop-title': 'Second' }, 'a1'),
+      ];
+      const options = createDatabaseOptions({ schema: textSchema, views: [tableView], activeViewId: 'view-table' }, adapter !== undefined ? { adapter } : {}, { childBlocks: rows });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      return { tool, element, rows, options };
+    };
+    const gridCell = (element: HTMLElement, rowId: string, propertyId: string): HTMLElement => {
+      const row = queryAllByData(element, 'data-blok-database-table-row').find((el) => el.getAttribute('data-row-id') === rowId);
+      const cellEl = row === undefined ? undefined : queryAllByData(row, 'data-property-id', propertyId).find((el) => el.getAttribute('role') === 'gridcell');
+
+      if (cellEl === undefined) {
+        throw new Error(`no cell ${rowId}/${propertyId}`);
+      }
+
+      return cellEl;
+    };
+    const field = (): HTMLInputElement | HTMLTextAreaElement => {
+      const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>('[data-blok-database-cell-input]');
+
+      if (el === null) {
+        throw new Error('no editor field');
+      }
+
+      return el;
+    };
+    const enter = (target: EventTarget): void => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    };
+    const adapterMock = (): DatabaseAdapter => ({
+      loadDatabase: vi.fn().mockResolvedValue(undefined),
+      createRow: vi.fn().mockResolvedValue(undefined), updateRow: vi.fn().mockResolvedValue(undefined),
+      moveRow: vi.fn().mockResolvedValue(undefined), deleteRow: vi.fn().mockResolvedValue(undefined),
+      createProperty: vi.fn().mockResolvedValue(undefined), updateProperty: vi.fn().mockResolvedValue(undefined),
+      deleteProperty: vi.fn().mockResolvedValue(undefined), createView: vi.fn().mockResolvedValue(undefined),
+      updateView: vi.fn().mockResolvedValue(undefined), deleteView: vi.fn().mockResolvedValue(undefined),
+    });
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('writes a title cell through the row title, not only the properties mirror', () => {
+      const { tool, element, rows } = setup();
+
+      gridCell(element, 'row-1', 'prop-title').click();
+      field().value = 'Renamed';
+      enter(field());
+
+      expect(rows[0].call).toHaveBeenCalledWith('updateTitle', { title: 'Renamed', titlePropertyId: 'prop-title' });
+      expect(rows[0].dispatchChange).toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('writes a text cell through the row block and the backend', () => {
+      const adapter = adapterMock();
+      const { tool, element, rows } = setup(adapter);
+
+      gridCell(element, 'row-1', 'prop-notes').click();
+      field().value = 'changed';
+      enter(field());
+      (tool as unknown as { sync: { flushPendingUpdates: () => void } }).sync.flushPendingUpdates();
+
+      expect(rows[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-notes': 'changed' });
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'row-1', properties: { 'prop-notes': 'changed' } });
+      expect(gridCell(element, 'row-1', 'prop-notes').textContent).toContain('changed');
+
+      tool.destroy();
+    });
+
+    it('keeps an open cell editor when a peer changes a row, and redraws once it closes', async () => {
+      const { tool, element, rows } = setup();
+
+      gridCell(element, 'row-1', 'prop-notes').click();
+      const openField = field();
+
+      (rows[1].preservedData as DatabaseRowData).properties['prop-notes'] = 'peer';
+      const api = (tool as unknown as { api: API }).api;
+      const listener = vi.mocked(api.events.on).mock.calls.find(([name]) => name === 'block changed')?.[1] as (payload: unknown) => void;
+
+      listener({ event: { type: 'block-changed', detail: { target: rows[1] } } });
+      await Promise.resolve();
+      tool.setData(tool.save(element));
+      await Promise.resolve();
+
+      expect(openField.isConnected).toBe(true);
+      expect(gridCell(element, 'row-1', 'prop-notes').isConnected).toBe(true);
+      expect(gridCell(element, 'row-2', 'prop-notes').textContent).not.toContain('peer');
+
+      openField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape' }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(gridCell(element, 'row-2', 'prop-notes').textContent).toContain('peer');
+
+      tool.destroy();
+    });
+
+    it('keeps a live multi-select editor open across its commits', () => {
+      const { tool, element, rows } = setup();
+
+      gridCell(element, 'row-1', 'prop-tags').click();
+      const editorRoot = document.querySelector<HTMLElement>('[data-blok-database-select-editor]');
+
+      document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"]')?.click();
+
+      expect(rows[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-a'] });
+      expect(editorRoot?.isConnected).toBe(true);
+      expect(gridCell(element, 'row-1', 'prop-tags').textContent).toContain('A');
+
+      tool.destroy();
+    });
+
+    it('writes a resized width into the view and records an undo step', () => {
+      const { tool, element, options } = setup();
+      const header = queryAllByData(element, 'data-property-id', 'prop-notes').find((el) => el.getAttribute('role') === 'columnheader');
+      const handle = header === undefined ? null : queryByData(header, 'data-blok-database-table-resize');
+
+      handle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 100, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 150 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 150 }));
+
+      const saved = tool.save(element).views[0];
+
+      expect(saved.properties?.find((p) => p.id === 'prop-notes')?.width).toBe(250);
+      expect(options.block.dispatchChange).toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('+ New page inserts a row block under the database and opens its title', async () => {
+      const { tool, element, options } = setup();
+
+      queryByData(element, 'data-blok-database-table-add-row')?.click();
+
+      expect(options.api.blocks.insertAt).toHaveBeenCalledWith(
+        'database-row',
+        expect.objectContaining({ title: '' }),
+        expect.objectContaining({ parentId: 'test-block-id' })
+      );
 
       tool.destroy();
     });

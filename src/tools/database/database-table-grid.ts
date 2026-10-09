@@ -102,6 +102,7 @@ export class DatabaseTableGrid {
   private readonly titlePropertyId: string;
   private readonly callbacks: GridCallbacks;
   private editor: CellEditorHandle | null = null;
+  private destroyed = false;
   /** The key being handled while an editor closes: tells Enter and Escape from an outside press. */
   private keyInFlight: string | null = null;
 
@@ -121,6 +122,7 @@ export class DatabaseTableGrid {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.root.removeEventListener('keydown', this.handleKeydown);
     this.root.removeEventListener('focusin', this.handleFocus);
     this.root.removeEventListener('focusout', this.handleFocus);
@@ -221,6 +223,9 @@ export class DatabaseTableGrid {
     this.editor = null;
     this.state.editing = false;
     window.removeEventListener('keydown', this.recordKey, true);
+    if (this.destroyed) {
+      return;
+    }
 
     if (key === 'Escape' && ref.rowId === this.state.freshRowId && this.isBlankRow(ref.rowId)) {
       this.state.freshRowId = undefined;
@@ -402,7 +407,7 @@ export class DatabaseTableGrid {
   private repaintCell(ref: CellRef): void {
     const cellEl = this.cellEl(ref);
 
-    cellEl?.dispatchEvent(new CustomEvent('blok-database-table-repaint', { detail: this.rows.get(ref.rowId) }));
+    cellEl?.dispatchEvent(new CustomEvent('blok-database-table-repaint', { bubbles: true }));
   }
 
   // ─── Keys ───

@@ -1016,6 +1016,7 @@
   "tools.database.calendarMonth": "Month",
   "tools.database.calendarWeek": "Week",
   "tools.database.calendarShowWeekends": "Show weekends",
+  "tools.database.calendarNoDate": "No date ({count})",
   "tools.database.viewTypeTimeline": "Timeline",
   "tools.database.viewTypeTimelineDescription": "Show items on a timeline",
   "tools.database.timelineLabel": "Timeline",

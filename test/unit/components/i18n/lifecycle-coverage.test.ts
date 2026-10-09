@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 831 + 117 + 257 + 4 closure for all 1209 keys', () => {
+  it('rebuilds a disjoint 832 + 117 + 257 + 4 closure for all 1210 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1209);
+    expect(lifecycle.size).toBe(1210);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -329,7 +329,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +37: the database view settings call their filterOperator.isWithin/isRelativeToToday, filterDate*, sort*, group* and filterMe keys by literal.
       // +29: the gallery and calendar views call their tools.database.gallery*, calendar* and viewType* keys by literal.
       // +23: the timeline view calls its tools.database.timeline* and viewTypeTimeline* keys by literal.
-      'executable-literal': 831,
+      // +1: the calendar's "No date (N)" button calls tools.database.calendarNoDate by literal.
+      'executable-literal': 832,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

@@ -446,4 +446,57 @@ describe('DatabaseCalendarView', () => {
       expect(view.interacting).toBe(false);
     });
   });
+  describe('"No date" list', () => {
+    const noDate = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-calendar-no-date]');
+    const items = (root: HTMLElement): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('[data-blok-database-calendar-no-date-item]')];
+
+    it('counts the rows without a date in the toolbar', () => {
+      const { root } = mount();
+
+      expect(noDate(root)?.getAttribute('data-count')).toBe('1');
+      expect(noDate(root)?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('has no button when every row has a date', () => {
+      const { root } = mount({ rows: [row('r1', 'Launch', '2026-10-09')] });
+
+      expect(noDate(root)).toBeNull();
+    });
+
+    it('lists the undated rows and opens one on click', () => {
+      const { root, handlers } = mount();
+
+      noDate(root)?.click();
+      expect(noDate(root)?.getAttribute('aria-expanded')).toBe('true');
+      expect(items(root).map((el) => el.textContent)).toEqual(['Someday']);
+      items(root)[0].click();
+      expect(handlers.openRow).toHaveBeenCalledWith('r3');
+    });
+
+    it('dates a row dragged from the list onto a day', () => {
+      const { root, handlers } = mount();
+
+      noDate(root)?.click();
+      layOut(root);
+      pointer('pointerdown', items(root)[0], 900, 10);
+      pointer('pointermove', document, 350, 210);
+      expect(day(root, '2026-10-14').getAttribute('data-drop')).toBe('');
+      pointer('pointerup', document, 350, 210);
+
+      expect(handlers.setDate).toHaveBeenCalledWith('r3', '2026-10-14');
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('cannot drag from the list when read-only', () => {
+      const { root, handlers } = mount({ readOnly: true });
+
+      noDate(root)?.click();
+      layOut(root);
+      pointer('pointerdown', items(root)[0], 900, 10);
+      pointer('pointermove', document, 350, 210);
+      pointer('pointerup', document, 350, 210);
+
+      expect(handlers.setDate).not.toHaveBeenCalled();
+    });
+  });
 });

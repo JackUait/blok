@@ -399,6 +399,7 @@ export type BlokMessageKey =
   | 'tools.database.calendarNewOnDay'
   | 'tools.database.calendarNextMonth'
   | 'tools.database.calendarNextWeek'
+  | 'tools.database.calendarNoDate'
   | 'tools.database.calendarNoDateProperty'
   | 'tools.database.calendarPreviousMonth'
   | 'tools.database.calendarPreviousWeek'

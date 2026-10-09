@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { buildChartData } from '../../../../src/tools/database/chart-data';
+import { buildChartData, foldChartData } from '../../../../src/tools/database/chart-data';
 import type { ChartGroupInput } from '../../../../src/tools/database/chart-data';
 import type { ResolvedChartMeasure } from '../../../../src/tools/database/chart-settings';
 import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -155,5 +155,31 @@ describe('buildChartData', () => {
     const data = buildChartData({ ...base, groups: groups(), measure: SUM });
 
     expect(data.total).toBe(17);
+  });
+
+  describe('foldChartData', () => {
+    const series = Array.from({ length: 10 }, (_, i) => ({ key: `s${i}`, label: `S${i}`, rowIds: new Set([`r${i}`]) }));
+    const rows = Array.from({ length: 10 }, (_, i) => row(`r${i}`, i + 1));
+
+    it('folds series past the eighth into one Other series, summing a stack', () => {
+      const data = foldChartData(buildChartData({ ...base, measure: COUNT, series, groups: [{ key: 'g', label: 'G', sortKey: 'G', rows }] }), { max: 8, otherLabel: 'Other', slices: false });
+
+      expect(data.series.map((s) => s.key)).toEqual(['s0', 's1', 's2', 's3', 's4', 's5', 's6', '__blok-chart-other__']);
+      expect(data.points[0].values['__blok-chart-other__']).toBe(3);
+    });
+
+    it('folds donut slices past the eighth into one Other slice with their rows', () => {
+      const groupsIn = rows.map((r, i): ChartGroupInput => ({ key: `g${i}`, label: `G${i}`, sortKey: `G${i}`, rows: [r] }));
+      const data = foldChartData(buildChartData({ ...base, measure: SUM, groups: groupsIn }), { max: 8, otherLabel: 'Other', slices: true });
+
+      expect(data.points).toHaveLength(8);
+      expect(data.points[7]).toMatchObject({ key: '__blok-chart-other__', label: 'Other', value: 8 + 9 + 10, rowIds: ['r7', 'r8', 'r9'] });
+    });
+
+    it('leaves a chart with eight or fewer entries alone', () => {
+      const data = buildChartData({ ...base, measure: COUNT, groups: groups() });
+
+      expect(foldChartData(data, { max: 8, otherLabel: 'Other', slices: true })).toEqual(data);
+    });
   });
 });

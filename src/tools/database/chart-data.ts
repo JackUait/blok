@@ -163,3 +163,48 @@ export const buildChartData = (input: ChartDataInput): ChartData => {
     truncated: kept.length > CHART_MAX_GROUPS || allSeries.length > CHART_MAX_SUB_GROUPS,
   };
 };
+
+export const CHART_OTHER_KEY = '__blok-chart-other__';
+
+/**
+ * Folds entries past `max` into one "Other", so no entry needs a ninth color
+ * (dataviz: a ninth hue is never generated). `slices` folds the points (a
+ * donut); otherwise the series fold, summed only when the bars stack.
+ */
+export const foldChartData = (data: ChartData, options: { max: number; otherLabel: string; slices: boolean }): ChartData => {
+  const { max, otherLabel } = options;
+
+  if (options.slices) {
+    if (data.points.length <= max) return data;
+    const rest = data.points.slice(max - 1);
+    const other: ChartPoint = {
+      key: CHART_OTHER_KEY,
+      label: otherLabel,
+      value: rest.reduce((sum, point) => sum + point.value, 0),
+      values: {},
+      rowIds: rest.flatMap((point) => point.rowIds),
+      hidden: rest.every((point) => point.hidden),
+    };
+
+    return { ...data, points: [...data.points.slice(0, max - 1), other] };
+  }
+  if (data.series.length <= max) return data;
+  const kept = data.series.slice(0, max - 1);
+  const folded = data.series.slice(max - 1);
+
+  if (!data.stacked) {
+    return { ...data, series: data.series.slice(0, max), truncated: true };
+  }
+
+  return {
+    ...data,
+    series: [...kept, { key: CHART_OTHER_KEY, label: otherLabel, hidden: folded.every((s) => s.hidden) }],
+    points: data.points.map((point) => ({
+      ...point,
+      values: {
+        ...Object.fromEntries(kept.map((s) => [s.key, point.values[s.key] ?? 0])),
+        [CHART_OTHER_KEY]: folded.filter((s) => !s.hidden).reduce((sum, s) => sum + (point.values[s.key] ?? 0), 0),
+      },
+    })),
+  };
+};

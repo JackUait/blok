@@ -118,16 +118,6 @@ const editorField = (): HTMLInputElement | HTMLTextAreaElement => {
   return el;
 };
 
-const selectedCells = (root: HTMLElement): string[] =>
-  [...root.querySelectorAll<HTMLElement>('[role="gridcell"][aria-selected="true"]')]
-    .map((el) => `${el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? ''}/${el.getAttribute('data-property-id') ?? ''}`);
-
-const anchorCell = (root: HTMLElement): string | null => {
-  const el = root.querySelector<HTMLElement>('[data-blok-database-table-cell-anchor]');
-
-  return el === null ? null : `${el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? ''}/${el.getAttribute('data-property-id') ?? ''}`;
-};
-
 /** Select a cell without opening its editor: click opens, Escape closes back to the cell. */
 const selectCell = (root: HTMLElement, rowId: string, propertyId: string): void => {
   cell(root, rowId, propertyId).click();

@@ -80,7 +80,11 @@ const saved = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async (
 const textOf = (block: SavedBlock): string => {
   const text = block.data.text;
 
-  return Array.isArray(text) ? text.map((segment: { text?: string }) => segment.text ?? '').join('') : String(text ?? '');
+  if (Array.isArray(text)) {
+    return text.map((segment: { text?: string }) => segment.text ?? '').join('');
+  }
+
+  return typeof text === 'string' ? text : '';
 };
 
 const openRow = async (page: Page, rowId: string): Promise<void> => {
@@ -160,7 +164,8 @@ test.describe('page body as child blocks', () => {
     await mount(page, blocks());
     await openRow(page, 'r1');
     await expect(body(page).getByText('Alpha body')).toBeVisible();
-    await page.waitForTimeout(300);
+    // The open slide must end first, so the close starts from rest.
+    await expect(peek(page)).toHaveCSS('transform', 'none');
 
     const midSlide = await page.evaluate(async () => {
       document.querySelector<HTMLElement>('[data-blok-database-drawer-close]')?.click();

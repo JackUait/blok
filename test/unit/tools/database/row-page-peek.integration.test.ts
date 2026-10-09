@@ -334,7 +334,7 @@ describe('row page peek modes', () => {
         ],
       };
       [1, 2, 3].forEach((i) => {
-        blocks[i] = { ...blocks[i], data: { ...blocks[i].data, properties: { ...(blocks[i].data as { properties: object }).properties, s: 'o1' } } };
+        blocks[i] = { ...blocks[i], data: { ...blocks[i].data, properties: { ...(blocks[i].data as { properties: Record<string, unknown> }).properties, s: 'o1' } } };
       });
 
       return blocks;
@@ -345,7 +345,9 @@ describe('row page peek modes', () => {
       await quiet();
     };
     const savedRows = async (): Promise<Array<{ id?: string; data: { properties: Record<string, unknown> } }>> =>
-      ((await editor?.save())?.blocks ?? []).filter((block) => block.type === 'database-row') as Array<{ id?: string; data: { properties: Record<string, unknown> } }>;
+      ((await editor?.save())?.blocks ?? [])
+        .filter((block) => block.type === 'database-row')
+        .map((block) => ({ id: block.id, data: { properties: (block.data.properties ?? {}) as Record<string, unknown> } }));
 
     it.each(['board', 'list'] as const)('in a %s, Cmd/Ctrl-click and Shift-click select rows gray, with the bar, and never open them', async (type) => {
       await make(boardDoc(type));

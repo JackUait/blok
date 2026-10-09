@@ -553,32 +553,28 @@ export class DatabaseTableGrid {
     const height = single ? bounds.r1 - bounds.r0 + 1 : grid.length;
     const width = single ? bounds.c1 - bounds.c0 + 1 : Math.max(...grid.map((line) => line.length));
 
-    for (let i = 0; i < height; i++) {
+    const cellValue = (i: number, j: number): [string, PropertyValue] | null => {
+      const property = this.columns[bounds.c0 + j];
+      const text = single ? grid[0][0] : grid[i][j];
+
+      if (property === undefined || text === undefined || isReadOnlyType(property.type)) {
+        return null;
+      }
+      const value = valueFromText(property, text);
+
+      return value === undefined ? null : [property.id, value];
+    };
+
+    Array.from({ length: height }, (_, i) => i).forEach((i) => {
       const rowId = rowIds[bounds.r0 + i];
-      const fresh: Record<string, PropertyValue> = {};
+      const values = Array.from({ length: width }, (_, j) => cellValue(i, j)).filter((entry): entry is [string, PropertyValue] => entry !== null);
 
-      for (let j = 0; j < width; j++) {
-        const property = this.columns[bounds.c0 + j];
-        const text = single ? grid[0][0] : grid[i][j];
-
-        if (property === undefined || text === undefined || isReadOnlyType(property.type)) {
-          continue;
-        }
-        const value = valueFromText(property, text);
-
-        if (value === undefined) {
-          continue;
-        }
-        if (rowId === undefined) {
-          fresh[property.id] = value;
-        } else {
-          changes.push({ rowId, propertyId: property.id, value });
-        }
+      if (rowId !== undefined) {
+        values.forEach(([propertyId, value]) => changes.push({ rowId, propertyId, value }));
+      } else if (values.length > 0) {
+        newRows.push(Object.fromEntries(values));
       }
-      if (rowId === undefined && Object.keys(fresh).length > 0) {
-        newRows.push(fresh);
-      }
-    }
+    });
     this.callbacks.commitCells(changes, newRows);
   };
 

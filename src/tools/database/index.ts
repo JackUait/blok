@@ -31,7 +31,7 @@ import type { TimelineGroup } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
 import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
-import { pageContentSourceBlocks } from './row-body';
+import { legacyBodyInserts, pageContentSourceBlocks, rowDescription } from './row-body';
 import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
 import type { TableGroup, TableHandlers, TableState } from './database-table-view';
 import type { CellChange } from './database-table-grid';
@@ -74,7 +74,6 @@ import { nanoid } from 'nanoid';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks } from '../nested-blocks';
 import { moveElementToEnd } from '../../components/utils/html';
-import { legacyBodyInserts, rowDescription } from './row-body';
 import { showsPageIcon } from './page-icon';
 import {
   DATABASE_DEFAULT_TEXT,

@@ -2,7 +2,7 @@ import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
-import { renderCellValue, createOptionPill } from './cells';
+import { renderCellValue, createOptionPill, openCellEditor } from './cells';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { formatDateText, resolveLocale } from './cells/date-format';
@@ -20,7 +20,6 @@ import {
 } from './view-settings';
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import type { CellChange, TableState } from './database-table-grid';
-import { openCellEditor } from './cells';
 import type { CellEditorHandle } from './cells';
 import { isReadOnlyType } from './property-values';
 import { pageIconElement, showsPageIcon } from './page-icon';

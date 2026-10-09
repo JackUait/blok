@@ -44,6 +44,19 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
       return Array.isArray(value)
         ? value.flatMap((file) => (typeof file === 'object' && file !== null && 'url' in file ? [String(file.url)] : [])).join(', ')
         : '';
+    case 'checkbox':
+    case 'title':
+    case 'text':
+    case 'url':
+    case 'email':
+    case 'phone':
+    case 'date':
+    case 'richText':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'uniqueId':
     default:
       return typeof value === 'string' ? value : '';
   }
@@ -58,38 +71,43 @@ export const gridToClipboard = (grid: string[][]): { text: string; html: string 
 /** Splits TSV text into rows of fields, honouring quoted fields. */
 const parseTsv = (text: string): string[][] => {
   const rows: string[][] = [[]];
-  const state = { field: '', quoted: false };
+  const state = { field: '', quoted: false, skip: false };
   const pushField = (): void => {
     rows[rows.length - 1].push(state.field);
     state.field = '';
   };
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-
-    if (state.quoted) {
-      if (char === '"' && text[i + 1] === '"') {
-        state.field += '"';
-        i++;
-      } else if (char === '"') {
-        state.quoted = false;
-      } else {
-        state.field += char;
-      }
-    } else if (char === '"' && state.field === '') {
+  const quotedChar = (char: string, next: string | undefined): void => {
+    if (char === '"' && next === '"') {
+      state.field += '"';
+      state.skip = true;
+    } else if (char === '"') {
+      state.quoted = false;
+    } else {
+      state.field += char;
+    }
+  };
+  const plainChar = (char: string, next: string | undefined): void => {
+    if (char === '"' && state.field === '') {
       state.quoted = true;
     } else if (char === '\t') {
       pushField();
     } else if (char === '\n' || char === '\r') {
-      if (char === '\r' && text[i + 1] === '\n') {
-        i++;
-      }
+      state.skip = char === '\r' && next === '\n';
       pushField();
       rows.push([]);
     } else {
       state.field += char;
     }
-  }
+  };
+
+  [...text].forEach((char, index, chars) => {
+    if (state.skip) {
+      state.skip = false;
+
+      return;
+    }
+    (state.quoted ? quotedChar : plainChar)(char, chars[index + 1]);
+  });
   pushField();
 
   // A trailing line break ends the last row, it does not start a new one.
@@ -103,18 +121,15 @@ const parseTsv = (text: string): string[][] => {
  * loads or runs and no markup reaches a cell.
  */
 export const parseClipboard = (data: { html?: string; text?: string }): string[][] => {
-  if (data.html !== undefined && data.html !== '') {
-    const table = parseUntrustedHtml(data.html).querySelector('table');
+  const table = data.html === undefined || data.html === '' ? null : parseUntrustedHtml(data.html).querySelector('table');
+  const rows = table === null
+    ? []
+    : [...table.querySelectorAll('tr')]
+      .map((tr) => [...tr.querySelectorAll('td, th')].map((cell) => (cell.textContent ?? '').trim()))
+      .filter((row) => row.length > 0);
 
-    if (table !== null) {
-      const rows = [...table.querySelectorAll('tr')]
-        .map((tr) => [...tr.querySelectorAll('td, th')].map((cell) => (cell.textContent ?? '').trim()))
-        .filter((row) => row.length > 0);
-
-      if (rows.length > 0) {
-        return rows;
-      }
-    }
+  if (rows.length > 0) {
+    return rows;
   }
 
   return data.text === undefined || data.text === '' ? [] : parseTsv(data.text);
@@ -159,6 +174,14 @@ export const valueFromText = (property: PropertyDefinition, text: string): Prope
     }
     case 'date':
       return parseDateValue(trimmed) === null ? undefined : trimmed;
+    case 'richText':
+    case 'person':
+    case 'files':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'uniqueId':
     default:
       return undefined;
   }

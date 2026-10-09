@@ -74,10 +74,15 @@ const mount = async (page: Page): Promise<void> => {
 
 const properties = async (page: Page): Promise<Record<string, Record<string, unknown>>> => page.evaluate(async () => {
   const output = await window.blokInstance?.save();
+  const rows: Record<string, Record<string, unknown>> = {};
 
-  return Object.fromEntries((output?.blocks ?? [])
+  (output?.blocks ?? [])
     .filter((block) => block.type === 'database-row')
-    .map((block) => [block.id, (block.data as { properties: Record<string, unknown> }).properties]));
+    .forEach((block) => {
+      rows[block.id ?? ''] = (block.data as { properties: Record<string, unknown> }).properties;
+    });
+
+  return rows;
 });
 
 const row = (page: Page, rowId: string): Locator => page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`);

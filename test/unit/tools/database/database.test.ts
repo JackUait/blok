@@ -5308,7 +5308,10 @@ describe('DatabaseTool', () => {
 
       expect(tool.save(element).views[0].cardSize).toBe('large');
       expect(queryByData(element, 'data-blok-database-gallery')?.getAttribute('data-card-size')).toBe('large');
-      expect(new DatabaseTool(createDatabaseOptions()).layoutItems()).toEqual([]);
+      expect(new DatabaseTool(createDatabaseOptions({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'view-list',
+      })).layoutItems()).toEqual([]);
 
       tool.destroy();
     });
@@ -5545,6 +5548,105 @@ describe('DatabaseTool', () => {
         expect(tool.validate(makeDefaultData({ schema: dateSchema, views: [timelineView], activeViewId: 'view-tl' }))).toBe(true);
       });
     });
+  });
+});
+
+describe('DatabaseTool — board card parity', () => {
+  const schema: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [
+      { id: 'opt-todo', label: 'Todo', position: 'a0' },
+      { id: 'opt-done', label: 'Done', position: 'a1' },
+    ] } },
+    { id: 'prop-done', name: 'Done', type: 'checkbox', position: 'a2' },
+    { id: 'prop-team', name: 'Team', type: 'select', position: 'a3', config: { options: [
+      { id: 'team-a', label: 'A', position: 'a0' },
+      { id: 'team-b', label: 'B', position: 'a1' },
+    ] } },
+  ];
+  const board: DatabaseViewConfig = {
+    id: 'view-board', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [],
+    properties: [{ id: 'prop-done', visible: true }],
+  };
+  const rows = (): BlockAPI[] => [
+    createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo', 'prop-done': false, 'prop-team': 'team-a' }, position: 'a0' }),
+    createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-status': 'opt-todo', 'prop-done': true, 'prop-team': 'team-b' }, position: 'a1' }),
+  ];
+  const mount = (view: Partial<DatabaseViewConfig> = {}, children: BlockAPI[] = rows()): { tool: DatabaseTool; element: HTMLElement } => {
+    const tool = new DatabaseTool(createDatabaseOptions({ schema, views: [{ ...board, ...view }], activeViewId: 'view-board' }, {}, { childBlocks: children }));
+    const element = tool.render();
+
+    document.body.appendChild(element);
+    tool.rendered();
+
+    return { tool, element };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('shows the view\'s visible properties on board cards', () => {
+    const { tool, element } = mount();
+    const card = queryAllByData(element, 'data-blok-database-card').find((c) => c.getAttribute('data-row-id') === 'row-2');
+
+    expect(card?.querySelector('[data-blok-database-card-property][data-property-id="prop-done"]')).not.toBeNull();
+
+    tool.destroy();
+  });
+
+  it('edits a card property in place without opening the row', () => {
+    const children = rows();
+    const { tool, element } = mount({}, children);
+    const card = queryAllByData(element, 'data-blok-database-card').find((c) => c.getAttribute('data-row-id') === 'row-2');
+    const internals = tool as unknown as { cardDrawer: { openRowId: string | null } | null };
+
+    card?.querySelector<HTMLElement>('[data-blok-database-card-property]')?.click();
+
+    expect(vi.mocked(children[1].call).mock.calls.filter(([method]) => method === 'updateProperties'))
+      .toEqual([['updateProperties', { 'prop-done': false }]]);
+    expect(internals.cardDrawer?.openRowId ?? null).toBeNull();
+
+    tool.destroy();
+  });
+
+  it('offers the card layout rows for a board', () => {
+    const { tool } = mount();
+    const titles = tool.layoutItems().map((item) => (item as { title?: string }).title);
+
+    expect(titles).toEqual(['tools.database.galleryCardSize', 'tools.database.galleryCardPreview', 'tools.database.galleryFitImage']);
+
+    tool.destroy();
+  });
+
+  it('draws sub-groups as lanes, each with every column and only its own cards', () => {
+    const { tool, element } = mount({ subGroupBy: 'prop-team' });
+    const lanes = queryAllByData(element, 'data-blok-database-board-lane');
+
+    expect(lanes.map((lane) => lane.getAttribute('data-sub-group'))).toEqual(['team-a', 'team-b', expect.any(String)]);
+    expect(lanes[0].querySelectorAll('[data-blok-database-column]')).toHaveLength(lanes[1].querySelectorAll('[data-blok-database-column]').length);
+    expect([...lanes[0].querySelectorAll('[data-blok-database-card]')].map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
+    expect([...lanes[1].querySelectorAll('[data-blok-database-card]')].map((c) => c.getAttribute('data-row-id'))).toEqual(['row-2']);
+
+    tool.destroy();
+  });
+
+  it('moves a card to another lane by writing its sub-group value too', () => {
+    const children = rows();
+    const { tool } = mount({ subGroupBy: 'prop-team' }, children);
+    const internals = tool as unknown as { handleRowDrop: (result: { rowId: string; toOptionId: string; toSubGroup?: string; beforeRowId: null; afterRowId: null }) => void };
+
+    internals.handleRowDrop({ rowId: 'row-1', toOptionId: 'opt-done', toSubGroup: 'team-b', beforeRowId: null, afterRowId: null });
+
+    expect(vi.mocked(children[0].call).mock.calls.filter(([method]) => method === 'updateProperties'))
+      .toEqual([['updateProperties', { 'prop-status': 'opt-done', 'prop-team': 'team-b' }]]);
+
+    tool.destroy();
   });
 });
 

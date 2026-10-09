@@ -9,6 +9,8 @@ const HALF_GAP = 4;
 export interface CardDragResult {
   rowId: string;
   toOptionId: string;
+  /** The sub-group lane dropped in, on a sub-grouped board. */
+  toSubGroup?: string;
   beforeRowId: string | null;
   afterRowId: string | null;
 }
@@ -196,7 +198,7 @@ export class DatabaseCardDrag {
   }
 
   private updateDropIndicator(e: PointerEvent): void {
-    const targetColumn = this.findTargetColumn(e.clientX);
+    const targetColumn = this.findTargetColumn(e.clientX, e.clientY);
 
     if (!targetColumn) {
       this.dropLine.hide();
@@ -241,18 +243,20 @@ export class DatabaseCardDrag {
     this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top + 2, width: rect.width });
   }
 
-  private findTargetColumn(clientX: number): HTMLElement | null {
-    const columns = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]'));
+  /** The column under the pointer. Sub-group lanes stack columns, so the row of the pointer picks among them. */
+  private findTargetColumn(clientX: number, clientY: number): HTMLElement | null {
+    const columns = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]'))
+      .filter((col) => {
+        const rect = col.getBoundingClientRect();
 
-    for (const col of columns) {
+        return clientX >= rect.left && clientX <= rect.right;
+      });
+
+    return columns.find((col) => {
       const rect = col.getBoundingClientRect();
 
-      if (clientX >= rect.left && clientX <= rect.right) {
-        return col;
-      }
-    }
-
-    return null;
+      return clientY >= rect.top && clientY <= rect.bottom;
+    }) ?? columns[0] ?? null;
   }
 
   private getDropPosition(column: HTMLElement, clientY: number): { beforeEl: Element | null } {
@@ -284,7 +288,7 @@ export class DatabaseCardDrag {
   }
 
   private commitDrop(e: PointerEvent): void {
-    const targetColumn = this.findTargetColumn(e.clientX);
+    const targetColumn = this.findTargetColumn(e.clientX, e.clientY);
 
     if (!targetColumn) {
       return;
@@ -303,6 +307,8 @@ export class DatabaseCardDrag {
 
     const afterRowId = this.resolveAfterRowId(position.beforeEl, cards, beforeIndex);
 
-    this.onDrop({ rowId: this.rowId, toOptionId, beforeRowId, afterRowId });
+    const toSubGroup = targetColumn.getAttribute('data-sub-group');
+
+    this.onDrop({ rowId: this.rowId, toOptionId, ...(toSubGroup !== null ? { toSubGroup } : {}), beforeRowId, afterRowId });
   }
 }

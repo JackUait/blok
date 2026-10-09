@@ -4,7 +4,8 @@ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData,
 import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, statusGroupsOf } from './property-values';
 import { planTypeChange } from './property-conversion';
-import type { CellContext } from './cells';
+import { openCellEditor } from './cells';
+import type { CellContext, CellEditorHandle } from './cells';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
@@ -21,7 +22,7 @@ import { DatabaseCalendarView } from './database-calendar-view';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
-import { calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
+import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { pageContentSourceBlocks } from './row-body';
 import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
@@ -157,6 +158,8 @@ export class DatabaseTool implements BlockTool {
   private cardDrag: DatabaseCardDrag | null = null;
   /** Group of the card the pointer pressed; a multiSelect drop replaces this option. */
   private cardDragFromOptionId: string | null = null;
+  private cardDragFromSubGroup: string | null = null;
+  private cardCellEditor: CellEditorHandle | null = null;
   private columnDrag: DatabaseColumnDrag | null = null;
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
@@ -440,6 +443,7 @@ export class DatabaseTool implements BlockTool {
     this.cardMenuPopover?.destroy();
     this.destroyView();
     this.groupMenuPopover?.destroy();
+    this.cardCellEditor?.cancel();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -1289,7 +1293,7 @@ export class DatabaseTool implements BlockTool {
     return row === undefined ? [] : pageContentSourceBlocks(row, this.model.getSchema(), descriptionId);
   }
 
-  /** The active view's gallery or calendar layout rows, for the view settings panel. Empty for other layouts. */
+  /** The active view's own layout rows (board, gallery, timeline, calendar), for the view settings panel. */
   layoutItems(): PopoverItemParams[] {
     const view = this.model.getView(this.activeViewId);
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
@@ -1301,6 +1305,10 @@ export class DatabaseTool implements BlockTool {
 
     if (view?.type === 'timeline') {
       return timelineLayoutItems(view, schema, this.api.i18n, update);
+    }
+
+    if (view?.type === 'board') {
+      return boardLayoutItems(view, schema, this.api.i18n, update);
     }
 
     return view?.type === 'calendar' ? calendarLayoutItems(view, schema, this.api.i18n, update) : [];
@@ -1719,15 +1727,27 @@ export class DatabaseTool implements BlockTool {
     const groups = viewConfig !== undefined && groupByPropId !== undefined
       ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
       : new Map<string, DatabaseRow[]>();
+    const lanes = viewConfig === undefined ? null : this.boardLanes(viewConfig);
+    const descriptionId = this.model.getSchema().find((p) => p.type === 'richText')?.id;
 
     this.view = new DatabaseBoardView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
       options,
-      getRows: (optionId) => groups.get(optionId) ?? [],
+      getRows: (optionId, subKey) => {
+        const rows = groups.get(optionId) ?? [];
+
+        return subKey === undefined || lanes === null ? rows : rows.filter((row) => lanes.keysOf(row).includes(subKey));
+      },
       titlePropertyId: titlePropId,
       hideCounts: viewConfig?.hideGroupAggregation === true,
       hiddenGroupCount: allOptions.length - shown.length,
+      ...(viewConfig !== undefined ? { view: viewConfig } : {}),
+      schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
+      locale: resolveLocale(undefined),
+      onPropertyEdit: (rowId, propertyId, anchor) => this.editCardProperty(rowId, propertyId, anchor),
+      ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
       onTitleEdit: (rowId, newTitle) => {
         const titlePropId = this.titlePropertyId();
         this.updateRowTitleBlock(rowId, titlePropId, newTitle);
@@ -1765,6 +1785,51 @@ export class DatabaseTool implements BlockTool {
     });
 
     return button;
+  }
+
+  /** Board sub-groups (Phase 3 `subGroupBy`): the lanes in order and each row's lane keys. */
+  private boardLanes(view: DatabaseViewConfig): { lanes: Array<{ key: string; label: string; option?: SelectOption }>; keysOf: (row: DatabaseRow) => string[] } | null {
+    const subGroupBy = view.subGroupBy;
+
+    if (subGroupBy === undefined || subGroupBy === view.groupBy || this.model.getProperty(subGroupBy) === undefined) {
+      return null;
+    }
+
+    const subView = { ...view, groupBy: subGroupBy, groupSettings: view.subGroupSettings };
+    const optionGroup = this.isOptionGroup(subGroupBy);
+
+    return {
+      lanes: this.groupOptions(subGroupBy, subView).map((option) => ({
+        key: option.id,
+        label: option.label,
+        ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
+      })),
+      keysOf: this.model.groupKeysOf(subGroupBy, { settings: view.subGroupSettings ?? {} }),
+    };
+  }
+
+  /** Inline edit of a board card property (Notion 2022-08-25): the cell editor, no page. */
+  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement): void {
+    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
+    const row = this.model.getRow(rowId);
+
+    if (this.readOnly || property === undefined || row === undefined) return;
+    this.cardCellEditor?.close();
+
+    const handle = openCellEditor(property, row.properties[propertyId], anchor, {
+      ...this.cellContext(),
+      i18n: this.api.i18n,
+      readOnly: false,
+      options: this.model.getProperty(propertyId)?.config?.options ?? [],
+      onOptionsChange: (options) => this.handleTableOptionsChange(propertyId, options),
+      onCommit: (value) => this.commitTableCell(rowId, propertyId, value),
+      onClose: () => {
+        this.cardCellEditor = null;
+        this.rerenderView({ keepDrawer: true });
+      },
+    });
+
+    this.cardCellEditor = handle.isOpen ? handle : null;
   }
 
   private renderTableView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
@@ -2712,6 +2777,11 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      // Board: a card property edits in place, so a press there is not a drag.
+      if (!this.readOnly && target.closest('[data-blok-database-card-property]') !== null) {
+        return;
+      }
+
       // Board: card drag
       const cardEl = target.closest<HTMLElement>('[data-blok-database-card]');
 
@@ -2722,6 +2792,7 @@ export class DatabaseTool implements BlockTool {
           e.preventDefault();
           e.stopPropagation();
           this.cardDragFromOptionId = cardEl.closest('[data-blok-database-column]')?.getAttribute('data-option-id') ?? null;
+          this.cardDragFromSubGroup = cardEl.closest('[data-blok-database-column]')?.getAttribute('data-sub-group') ?? null;
           this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY, cardEl);
         }
 
@@ -2817,12 +2888,19 @@ export class DatabaseTool implements BlockTool {
     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
 
     const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
+    const subGroupBy = viewConfig?.subGroupBy;
+    const changes: Record<string, PropertyValue> = {
+      [groupByPropId]: value,
+      ...(subGroupBy !== undefined && subGroupBy !== groupByPropId && result.toSubGroup !== undefined
+        ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
+        : {}),
+    };
 
-    this.updateRowBlock(rowId, { [groupByPropId]: value });
+    this.updateRowBlock(rowId, changes);
     this.moveRowBlock(rowId, position);
     this.rerenderView();
 
-    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: value } });
+    this.sync.syncUpdateRow({ rowId, properties: changes });
     void this.sync.syncMoveRow({ rowId, position });
   }
 
@@ -2899,6 +2977,26 @@ export class DatabaseTool implements BlockTool {
     moves.forEach((move) => {
       void this.sync.syncMoveRow(move);
     });
+  }
+
+  /** The sub-group property's value after a drop into the `toKey` lane. */
+  private droppedSubGroupValue(propertyId: string, rowId: string, toKey: string): PropertyValue {
+    const property = this.model.getProperty(propertyId);
+    const current = this.model.getRow(rowId)?.properties[propertyId];
+    const target = toKey === NO_VALUE_GROUP_KEY ? null : toKey;
+
+    if (property === undefined) return current ?? null;
+    if (!this.isOptionGroup(propertyId)) {
+      return groupValueForKey(property, toKey, this.model.getView(this.activeViewId)?.subGroupSettings ?? {}) ?? current ?? null;
+    }
+    if (property.type !== 'multiSelect') {
+      return target;
+    }
+
+    const from = this.cardDragFromSubGroup;
+    const kept = personIdsOf(current).filter((id) => id !== from && id !== target);
+
+    return target === null ? kept : [...kept, target];
   }
 
   private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {

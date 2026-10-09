@@ -2,7 +2,7 @@ import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
-import { renderCellValue } from './cells';
+import { createOptionPill, renderCellValue } from './cells';
 import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
@@ -14,7 +14,8 @@ interface DatabaseBoardViewOptions {
   readOnly: boolean;
   i18n: I18n;
   options: SelectOption[];
-  getRows: (optionId: string) => DatabaseRow[];
+  /** A column's rows; with sub-groups, only those in the `subKey` lane. */
+  getRows: (optionId: string, subKey?: string) => DatabaseRow[];
   titlePropertyId: string;
   onTitleEdit?: (rowId: string, newTitle: string) => void;
   /** The view hides each group's row count ("Hide aggregation"). */
@@ -30,6 +31,15 @@ interface DatabaseBoardViewOptions {
   locale?: string;
   /** A click on a card property: edit it in place. */
   onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
+  /** Sub-groups: one horizontal lane each, holding every column. */
+  subGroups?: BoardLane[];
+}
+
+export interface BoardLane {
+  key: string;
+  label: string;
+  /** Set for an option-like sub-group, so its label shows as a pill. */
+  option?: SelectOption;
 }
 
 /** Card widths per card size. Medium (260) is measured (research/07); small and large are unmeasured. */
@@ -46,12 +56,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly readOnly: boolean;
   private readonly i18n: I18n;
   private readonly options: SelectOption[];
-  private readonly getRows: (optionId: string) => DatabaseRow[];
+  private readonly getRows: (optionId: string, subKey?: string) => DatabaseRow[];
   private readonly titlePropertyId: string;
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
   private readonly hiddenGroupCount: number;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups'>;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, ...settings
@@ -94,10 +104,16 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.style.flex = '1';
     boardArea.style.minWidth = '0';
 
-    for (const option of this.options) {
-      const columnEl = this.createColumnElement(option, this.getRows(option.id), this.titlePropertyId);
+    const lanes = this.settings.subGroups ?? [];
 
-      boardArea.appendChild(columnEl);
+    if (lanes.length > 0) {
+      boardArea.setAttribute('data-sub-grouped', '');
+      boardArea.style.flexWrap = 'wrap';
+      lanes.forEach((lane) => boardArea.appendChild(this.createLane(lane)));
+    } else {
+      for (const option of this.options) {
+        boardArea.appendChild(this.createColumnElement(option, this.getRows(option.id), this.titlePropertyId));
+      }
     }
 
     if (this.hiddenGroupCount > 0) {
@@ -127,6 +143,43 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.addEventListener('keydown', this.onCardKeyDown);
 
     return wrapper;
+  }
+
+  /** One sub-group: its label and count, then a row of every column holding only its cards. */
+  private createLane(lane: BoardLane): HTMLElement {
+    const section = document.createElement('section');
+    const header = document.createElement('div');
+    const columns = document.createElement('div');
+    const columnEls = this.options.map((option) => {
+      const columnEl = this.createColumnElement(option, this.getRows(option.id, lane.key), this.titlePropertyId);
+
+      columnEl.setAttribute('data-sub-group', lane.key);
+
+      return columnEl;
+    });
+    const count = document.createElement('span');
+
+    section.setAttribute('data-blok-database-board-lane', '');
+    section.setAttribute('data-sub-group', lane.key);
+    section.setAttribute('aria-label', lane.label);
+    header.setAttribute('data-blok-database-board-lane-header', '');
+    if (lane.option !== undefined) {
+      header.appendChild(createOptionPill(lane.option));
+    } else {
+      const label = document.createElement('span');
+
+      label.textContent = lane.label;
+      header.appendChild(label);
+    }
+    count.setAttribute('data-blok-database-board-lane-count', '');
+    count.textContent = String(columnEls.reduce((sum, el) => sum + el.querySelectorAll('[data-blok-database-card]').length, 0));
+    count.hidden = this.hideCounts;
+    header.appendChild(count);
+    columns.setAttribute('data-blok-database-board-lane-columns', '');
+    columns.append(...columnEls);
+    section.append(header, columns);
+
+    return section;
   }
 
   private get cardSize(): CardSize {

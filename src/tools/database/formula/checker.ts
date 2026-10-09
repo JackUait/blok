@@ -53,7 +53,8 @@ export const resolveProps = (node: FormulaNode, schema: PropertyDefinition[], sp
       case 'unary': return { ...n, operand: walk(n.operand) };
       case 'binary': return { ...n, left: walk(n.left), right: walk(n.right) };
       case 'ternary': return { ...n, test: walk(n.test), then: walk(n.then), otherwise: walk(n.otherwise) };
-      case 'call': return { ...n, args: n.args.map(walk) };
+      // `page.prop("Name")` names a property of the related database: the checker resolves it.
+      case 'call': return { ...n, args: n.method && n.name === 'prop' ? [walk(n.args[0]), ...n.args.slice(1)] : n.args.map(walk) };
       case 'number':
       case 'string':
       case 'boolean':
@@ -78,8 +79,19 @@ const failArity = (name: string, min: number, max: number, got: number, node: { 
   return fail('argumentCountRange', { name, min, max, got }, `${name}() takes ${min} to ${plural(max)}, got ${got}`, node);
 };
 
+export interface CheckOptions {
+  /** The schema of a related database, for `current.prop("Name")` on its pages. */
+  related?: (databaseId: string) => PropertyDefinition[] | undefined;
+  /** The formula type of a formula or rollup property. Without it they cannot be used. */
+  typeOf?: (property: PropertyDefinition) => FormulaType | undefined;
+}
+
 export class Checker {
-  constructor(private readonly properties: ReadonlyMap<string, PropertyDefinition>) {}
+  constructor(
+    private readonly properties: ReadonlyMap<string, PropertyDefinition>,
+    private readonly options: CheckOptions = {},
+    private readonly spans: PropSpan[] = []
+  ) {}
 
   check(node: FormulaNode, scope: Scope<FormulaType>): FormulaType {
     switch (node.type) {
@@ -128,7 +140,7 @@ export class Checker {
   private checkProp(node: Extract<FormulaNode, { type: 'prop' }>): FormulaType {
     const id = node.ref.by === 'id' ? node.ref.id : '';
     const property = this.properties.get(id);
-    const type = property === undefined ? undefined : propertyFormulaType(property);
+    const type = property === undefined ? undefined : this.options.typeOf?.(property) ?? propertyFormulaType(property);
 
     if (property === undefined) return fail('unknownProperty', { name: id }, `Unknown property id "${id}"`, node);
     if (type === undefined) return fail('propertyNotUsable', { name: property.name }, `Property "${property.name}" cannot be used in a formula`, node);
@@ -188,7 +200,7 @@ export class Checker {
     const { name, args } = node;
 
     switch (name) {
-      case 'prop': return fail('unknownRelatedProperty', { name: '' }, 'prop() on a related page is not supported yet', node);
+      case 'prop': return this.checkRelatedProp(node, scope);
       case 'if':
         if (args.length !== 3) failArity('if', 3, 3, args.length, node);
         this.check(args[0], scope);
@@ -238,6 +250,34 @@ export class Checker {
     const result = typeof def.returns === 'function' ? def.returns(types) : def.returns;
 
     return 'error' in result ? fail(result.error.code, result.error.params, result.error.message, node) : result;
+  }
+
+  /** `page.prop("Name")`: a property of the related database the page is a row of. */
+  private checkRelatedProp(node: Extract<FormulaNode, { type: 'call' }>, scope: Scope<FormulaType>): FormulaType {
+    const { args } = node;
+
+    if (args.length !== 2) failArity('prop', 1, 1, Math.max(0, args.length - 1), node);
+    const receiver = this.check(args[0], scope);
+
+    if (receiver.kind !== 'page' && !isLoose(receiver)) {
+      fail('argumentType', { name: 'prop', index: 1, expected: 'Page', got: typeName(receiver) }, `prop() expects a Page, got ${typeName(receiver)}`, args[0]);
+    }
+    const ref = args[1];
+    if (ref.type !== 'string' && ref.type !== 'prop') fail('propNeedsName', {}, 'prop() takes a property name in quotes', ref);
+    const storedId = ref.type === 'prop' && ref.ref.by === 'id' ? ref.ref.id : '';
+    const name = ref.type === 'string' ? ref.value : storedId;
+    const databaseId = receiver.kind === 'page' ? receiver.databaseId : undefined;
+    const schema = databaseId === undefined ? undefined : this.options.related?.(databaseId);
+    const property = schema?.find((p) => (ref.type === 'string' ? p.name === name : p.id === name));
+    const type = property === undefined ? undefined : propertyFormulaType(property);
+
+    if (property === undefined) {
+      return fail('unknownRelatedProperty', { name }, `The related database has no property "${name}"`, ref);
+    }
+    if (type === undefined) return fail('propertyNotUsable', { name: property.name }, `Property "${property.name}" cannot be used in a formula`, ref);
+    this.spans.push({ start: ref.start, end: ref.end, id: property.id });
+
+    return type;
   }
 
   private checkLet(node: Extract<FormulaNode, { type: 'call' }>, scope: Scope<FormulaType>): FormulaType {

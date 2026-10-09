@@ -1,6 +1,6 @@
 import { Checker, SPECIAL_FORMS, resolveProps } from './checker';
 import { FormulaFailure } from './errors';
-import type { PropSpan } from './checker';
+import type { CheckOptions, PropSpan } from './checker';
 import { evaluate } from './evaluate';
 import { FUNCTIONS } from './functions';
 import { parse } from './parser';
@@ -8,7 +8,7 @@ import type { FormulaNode } from './parser';
 import { tokenize } from './tokenizer';
 import type { FormulaError } from './tokenizer';
 import type { FormulaType, FormulaValue } from './types';
-import type { DatabaseRow, PropertyDefinition } from '../types';
+import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../types';
 
 export type { FormulaError, FormulaErrorCode, FormulaErrorParams } from './errors';
 export { FORMULA_ERROR_CODES, formulaErrorKey } from './errors';
@@ -27,6 +27,8 @@ export type CompileResult =
   | { ok: true; formula: CompiledFormula; resultType: FormulaType }
   | { ok: false; error: FormulaError };
 
+export interface CompileOptions extends CheckOptions {}
+
 export interface FormulaContext {
   /** `now()` and `today()` read this, never the system clock. */
   now: Date;
@@ -35,6 +37,12 @@ export interface FormulaContext {
   schema: PropertyDefinition[];
   /** Names and emails for `name()`, `email()` and `format()` of a person. */
   people?: (id: string) => { name?: string; email?: string } | undefined;
+  /** A formula or rollup of the row, as the formula sees it. `undefined` reads the stored value. */
+  propValue?: (property: PropertyDefinition) => FormulaValue | undefined;
+  /** The schema of a related database, for `current.prop()`. */
+  related?: (databaseId: string) => PropertyDefinition[] | undefined;
+  /** A property value of a row of a related database. */
+  relatedValue?: (databaseId: string, rowId: string, property: PropertyDefinition) => PropertyValue | undefined;
 }
 
 /** Every name a formula can call, for the README drift test and an editor's autocomplete. */
@@ -43,7 +51,7 @@ export const FORMULA_FUNCTION_NAMES: readonly string[] = [...Object.keys(FUNCTIO
 const byId = (schema: PropertyDefinition[]): Map<string, PropertyDefinition> => new Map(schema.map((p) => [p.id, p]));
 
 /** Compiles a formula written with `prop("Name")` or with stored `{{property:id}}` references. */
-export const compileFormula = (source: string, schema: PropertyDefinition[]): CompileResult => {
+export const compileFormula = (source: string, schema: PropertyDefinition[], options: CompileOptions = {}): CompileResult => {
   const parsed = parse(source);
 
   if (!parsed.ok) return parsed;
@@ -51,7 +59,7 @@ export const compileFormula = (source: string, schema: PropertyDefinition[]): Co
   try {
     const propSpans: PropSpan[] = [];
     const node = resolveProps(parsed.node, schema, propSpans);
-    const resultType = new Checker(byId(schema)).check(node, { vars: new Map() });
+    const resultType = new Checker(byId(schema), options, propSpans).check(node, { vars: new Map() });
 
     return { ok: true, formula: { source, node, propSpans, resultType }, resultType };
   } catch (error) {
@@ -68,6 +76,9 @@ export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx
     timeZone: ctx.timeZone,
     rowId: row.id,
     people: ctx.people,
+    propValue: ctx.propValue,
+    related: ctx.related,
+    relatedValue: ctx.relatedValue,
   }, { vars: new Map() });
 
 /** The form to store: the source with every property named by id, so a rename keeps working. */
@@ -78,19 +89,26 @@ export const serializeFormula = (compiled: CompiledFormula): string =>
 
 const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
-/** The stored form with current property names, for the editor. Unknown ids stay as they are. */
-export const formatFormulaForDisplay = (stored: string, schema: PropertyDefinition[]): string => {
+/**
+ * The stored form with current property names, for the editor. Unknown ids
+ * stay as they are. `related` holds the schemas of related databases, for
+ * `current.prop({{property:id}})`.
+ */
+export const formatFormulaForDisplay = (stored: string, schema: PropertyDefinition[], related: PropertyDefinition[] = []): string => {
   const tokens = tokenize(stored);
 
   if (!tokens.ok) return stored;
   const properties = byId(schema);
+  const relatedProperties = byId(related);
 
-  return tokens.tokens
-    .filter((token) => token.type === 'propRef')
-    .reverse()
-    .reduce((text, token) => {
-      const property = properties.get(token.value);
+  return tokens.tokens.reduceRight((text, token, index) => {
+    if (token.type !== 'propRef') return text;
+    const before = tokens.tokens.slice(Math.max(0, index - 3), index).map((t) => t.value).join('');
+    const inRelatedProp = before === '.prop(';
+    const property = inRelatedProp ? relatedProperties.get(token.value) ?? properties.get(token.value) : properties.get(token.value);
 
-      return property === undefined ? text : `${text.slice(0, token.start)}prop(${quote(property.name)})${text.slice(token.end)}`;
-    }, stored);
+    if (property === undefined) return text;
+
+    return `${text.slice(0, token.start)}${inRelatedProp ? quote(property.name) : `prop(${quote(property.name)})`}${text.slice(token.end)}`;
+  }, stored);
 };

@@ -31,7 +31,13 @@ const PROPERTY_TYPES: Record<string, FormulaType> = {
   relation: listOf(T.page),
 };
 
-export const propertyFormulaType = (property: PropertyDefinition): FormulaType | undefined => PROPERTY_TYPES[String(property.type)];
+export const propertyFormulaType = (property: PropertyDefinition): FormulaType | undefined => {
+  const databaseId = property.relation?.targetDatabaseId;
+
+  if (property.type === 'relation' && databaseId !== undefined) return listOf({ kind: 'page', databaseId });
+
+  return PROPERTY_TYPES[String(property.type)];
+};
 
 const ids = (value: PropertyValue | undefined): string[] => personIdsOf(value);
 
@@ -66,7 +72,11 @@ export const propertyFormulaValue = (property: PropertyDefinition, value: Proper
 
       return typeof value === 'number' ? `${prefix !== undefined && prefix !== '' ? `${prefix}-` : ''}${value}` : '';
     }
-    case 'relation': return ids(value).map((id) => ({ kind: 'page', id }));
+    case 'relation': {
+      const databaseId = property.relation?.targetDatabaseId;
+
+      return ids(value).map((id) => (databaseId === undefined ? { kind: 'page', id } : { kind: 'page', id, databaseId }));
+    }
     default: return typeof value === 'string' ? value : '';
   }
 };

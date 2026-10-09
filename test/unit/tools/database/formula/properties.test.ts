@@ -119,8 +119,8 @@ describe('formula properties', () => {
       expect(compileFormula('prop("X")', odd)).toMatchObject({ ok: false, error: { message: 'Property "X" cannot be used in a formula' } });
     });
 
-    it('rejects prop() on a related page for now', () => {
-      expect(compileError('prop("Tasks").map(current.prop("Status"))')).toBe('prop() on a related page is not supported yet');
+    it('rejects prop() on a related page when the relation names no database', () => {
+      expect(compileError('prop("Tasks").map(current.prop("Status"))')).toBe('The related database has no property "Status"');
     });
   });
 

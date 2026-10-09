@@ -4,7 +4,8 @@ import type { BlockToolData, OutputData } from '../../../types';
 
 export type PropertyType =
   | 'title' | 'text' | 'number' | 'select' | 'multiSelect' | 'date' | 'checkbox' | 'url' | 'richText'
-  | PropertyTypeV2;
+  | PropertyTypeV2
+  | ComputedPropertyType;
 
 export interface SelectOption {
   id: string;
@@ -35,7 +36,7 @@ export interface PropertyDefinition extends PropertySettingsV2 {
   databaseLocked?: boolean;
 }
 
-export type PropertyValue = string | number | boolean | string[] | OutputData | PersonValue[] | FileValue[] | null;
+export type PropertyValue = string | number | boolean | string[] | OutputData | PersonValue[] | FileValue[] | RelationValue[] | null;
 
 // ─── Property system (Phase 2) ───
 // Kept in one block so it merges cleanly beside view-level changes.
@@ -115,6 +116,68 @@ export interface PropertySettingsV2 {
   date?: DateDisplay;
   status?: StatusSettings;
   uniqueId?: { prefix?: string };
+  formula?: FormulaSettings;
+  relation?: RelationSettings;
+  rollup?: RollupSettings;
+}
+
+// ─── Computed properties (Phase 6) ───
+
+/** Relation stores row ids; formula and rollup are computed and never stored in `properties`. */
+export type ComputedPropertyType = 'relation' | 'rollup' | 'formula';
+
+export interface FormulaSettings {
+  /** The stored form: `prop("Name")` is saved as `{{property:<id>}}`, so a rename keeps working. */
+  expression: string;
+}
+
+export interface RelationSettings {
+  /** The related database block, in this document. The database's own id makes a self-relation. */
+  targetDatabaseId: string;
+  /**
+   * A database in another document. Blok cannot read it; the host's
+   * `config.relations.resolve` lever shows its rows.
+   */
+  targetDocumentId?: string;
+  /** `1` keeps one related row. Absent or null means no limit. */
+  limit?: 1 | null;
+  /** Two-way: the target database has a property that mirrors this one. */
+  twoWay?: boolean;
+  /** Two-way: the id of the mirroring property on the target database. */
+  syncedPropertyId?: string;
+}
+
+/** Notion API rollup function names (24). */
+export type RollupFunction =
+  | 'show_original' | 'show_unique'
+  | 'count' | 'count_values' | 'unique' | 'empty' | 'not_empty' | 'percent_empty' | 'percent_not_empty'
+  | 'sum' | 'average' | 'median' | 'min' | 'max' | 'range'
+  | 'earliest_date' | 'latest_date' | 'date_range'
+  | 'checked' | 'unchecked' | 'percent_checked' | 'percent_unchecked'
+  | 'count_per_group' | 'percent_per_group';
+
+export interface RollupSettings {
+  /** A relation property of this database. */
+  relationPropertyId: string;
+  /** A property of the related database. */
+  targetPropertyId: string;
+  function: RollupFunction;
+}
+
+/** One related row. An object, not a bare id, so two peers' adds merge. */
+export interface RelationValue {
+  id: string;
+}
+
+/** A row of a database in another document, as the host resolves it. */
+export interface ResolvedRelationRow {
+  id: string;
+  title: string;
+}
+
+/** Host lever for relations to a database in another document. */
+export interface DatabaseRelations {
+  resolve(input: { documentId: string; databaseId: string; rowIds: string[] }): Promise<ResolvedRelationRow[]>;
 }
 
 /**
@@ -177,6 +240,11 @@ export interface DatabaseRow {
   pageId?: string;
   /** Row block metadata, for the read-only time and person properties. */
   meta?: DatabaseRowMeta;
+  /**
+   * Formula and rollup values, by property id, in the stored shape of their
+   * result type. In memory only: never written to the row block.
+   */
+  computed?: Record<string, PropertyValue>;
 }
 
 export interface DatabaseRowData extends BlockToolData {
@@ -541,4 +609,6 @@ export interface DatabaseConfig {
   viewState?: DatabaseViewStateStore;
   /** First day of the calendar week, 0 = Sunday … 6 = Saturday. Defaults to the locale's. */
   weekStart?: number;
+  /** Rows of related databases in other documents. Without it, those relations show ids only. */
+  relations?: DatabaseRelations;
 }

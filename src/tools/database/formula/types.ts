@@ -1,5 +1,7 @@
 export type FormulaType =
-  | { kind: 'number' | 'text' | 'boolean' | 'date' | 'person' | 'page' | 'empty' | 'any' }
+  | { kind: 'number' | 'text' | 'boolean' | 'date' | 'person' | 'empty' | 'any' }
+  /** `databaseId`: the database the page is a row of, when known. `current.prop()` reads its schema. */
+  | { kind: 'page'; databaseId?: string }
   | { kind: 'list'; of: FormulaType };
 
 /** A date or a range. Times are epoch ms; `hasTime: false` means a whole day starting at local midnight. */
@@ -10,10 +12,11 @@ export interface FormulaDate {
   hasTime: boolean;
 }
 
-/** A person or a page, known only by its id. */
+/** A person or a page, known only by its id. A page from a relation also knows its database. */
 export interface FormulaRef {
   kind: 'person' | 'page';
   id: string;
+  databaseId?: string;
 }
 
 export interface StyledRun {

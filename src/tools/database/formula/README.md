@@ -94,7 +94,7 @@ Every name the engine accepts. `readme.test.ts` fails if this table and `FORMULA
 
 | Function | Signature | Source | Notes |
 | --- | --- | --- | --- |
-| `prop` | `prop("Name")` → property type | https://www.notion.com/help/formula-syntax | `current.prop(...)` on a related page is not supported yet |
+| `prop` | `prop("Name")` → property type; `page.prop("Name")` → a property of a related page | https://www.notion.com/help/formula-syntax | H-fxs: `prop("Tasks").filter(current.prop("Status") !== "Done")`. The related name is stored as `.prop({{property:<id>}})`. A formula or rollup on the related database cannot be read this way (**unverified** gap) |
 | `if` | `if(cond, a, b)` | https://www.notion.com/help/formula-syntax | lazy |
 | `ifs` | `ifs(c1, v1, c2, v2, ..., fallback)` | https://www.notion.com/help/formula-syntax | fallback required (**unverified**) |
 | `and` | `and(a, b, ...)` → Boolean | https://www.notion.com/help/formula-syntax | more than 2 arguments **unverified** |
@@ -194,7 +194,7 @@ Removed in 2.0 and rejected as unknown functions (H-2.0): `larger`, `largerEq`, 
 
 ## Error messages
 
-Notion's pages do not quote their editor's error text, so every message here is Blok's own wording (**unverified**). Each error carries the `start`/`end` offsets of the offending source.
+Notion's pages do not quote their editor's error text, so every message here is Blok's own wording (**unverified**). Each error carries the `start`/`end` offsets of the offending source, an English `message`, and a `code` with `params`. Show `code` through i18n: the key is `tools.database.formula.error.<code>` (`formulaErrorKey`), and `params` fill its `{placeholders}`. `FORMULA_ERROR_CODES` lists every code; `errors.test.ts` fails when one has no English string.
 
 ## Conflicts in the sources
 
@@ -204,7 +204,6 @@ Notion's pages do not quote their editor's error text, so every message here is 
 
 ## Not done yet
 
-- `x.Property` dot access and `current.prop("Status")` on related pages (needs relation data).
-- Rollups, Created/Edited time and by, Status, Email/Phone, Unique ID, Files: no Blok property types yet.
-- The 15-layer formula-on-formula depth limit (H-err) applies once formula properties can reference each other.
-- Person/Page values come back as ids; display needs a host resolver (`ctx.people`; pages have none yet).
+- `x.Property` dot access: no fetched source shows it (**unverified**), so it is not supported. `current.prop("Status")` is.
+- Formula and rollup properties are wired in `../computed-properties.ts`, which passes `typeOf` and `propValue` and enforces the 15-layer formula-on-formula limit (H-err) and cycles.
+- Person values come back as ids; display needs a host resolver (`ctx.people`). Pages print their title through `pageTitle`.

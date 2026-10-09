@@ -5,13 +5,19 @@ import { bindingIndexes, isLambda } from './checker';
 import type { LambdaFunction, Scope } from './checker';
 import { propertyFormulaValue } from './properties';
 import { readPropertyValue } from '../property-values';
+import { isRef } from './types';
 import type { FormulaText, FormulaValue } from './types';
 import { compareValues, concatText, formulaValueToText, isText, num, truthy, valuesEqual } from './values';
-import type { DatabaseRow, PropertyDefinition } from '../types';
+import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../types';
 
 export interface EvalEnv extends RunContext {
   row: DatabaseRow;
   properties: ReadonlyMap<string, PropertyDefinition>;
+  /** A formula or rollup of this row, as the formula sees it. `undefined` reads the stored value. */
+  propValue?: (property: PropertyDefinition) => FormulaValue | undefined;
+  related?: (databaseId: string) => PropertyDefinition[] | undefined;
+  /** A property value of a row of a related database. */
+  relatedValue?: (databaseId: string, rowId: string, property: PropertyDefinition) => PropertyValue | undefined;
 }
 
 const ordered = (a: FormulaValue, b: FormulaValue): boolean => a !== null && b !== null;
@@ -46,7 +52,9 @@ export const evaluate = (node: FormulaNode, env: EvalEnv, scope: Scope<FormulaVa
       const id = node.ref.by === 'id' ? node.ref.id : '';
       const property = env.properties.get(id);
 
-      return property === undefined ? null : propertyFormulaValue(property, readPropertyValue(env.row, property), env.timeZone);
+      if (property === undefined) return null;
+
+      return env.propValue?.(property) ?? propertyFormulaValue(property, readPropertyValue(env.row, property), env.timeZone);
     }
     case 'unary': {
       const operand = ev(node.operand);
@@ -105,6 +113,7 @@ const evaluateCall = (
   const { name, args } = node;
 
   switch (name) {
+    case 'prop': return relatedProp(node, env, ev);
     case 'if': return truthy(ev(args[0])) ? ev(args[1]) : ev(args[2]);
     case 'ifs': {
       const hit = bindingIndexes(args.length).find((i) => truthy(ev(args[i])));
@@ -136,6 +145,25 @@ const evaluateCall = (
   if (!def.keepEmpty && values.some((value) => value === null)) return null;
 
   return def.run(values, env);
+};
+
+const relatedProp = (
+  node: Extract<FormulaNode, { type: 'call' }>,
+  env: EvalEnv,
+  ev: (child: FormulaNode) => FormulaValue
+): FormulaValue => {
+  const page = ev(node.args[0]);
+  const ref = node.args[1];
+
+  if (!isRef(page) || page.kind !== 'page' || page.databaseId === undefined || ref === undefined) return null;
+  const schema = env.related?.(page.databaseId) ?? [];
+  const property = ref.type === 'string'
+    ? schema.find((p) => p.name === ref.value)
+    : schema.find((p) => ref.type === 'prop' && ref.ref.by === 'id' && p.id === ref.ref.id);
+
+  if (property === undefined) return null;
+
+  return propertyFormulaValue(property, env.relatedValue?.(page.databaseId, page.id, property), env.timeZone);
 };
 
 const evaluateLambda = (

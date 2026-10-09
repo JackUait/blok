@@ -5,6 +5,8 @@ import type { FormulaRichText, FormulaText, FormulaValue, StyledRun } from './ty
 export interface TextContext {
   timeZone?: string;
   people?: (id: string) => { name?: string; email?: string } | undefined;
+  /** A related page's title, for `format()`. Without it a page prints its id. */
+  pageTitle?: (id: string) => string | undefined;
 }
 
 /** -0 prints as "0" and NaN or ±Infinity become empty. */
@@ -65,7 +67,9 @@ export const formulaValueToText = (value: FormulaValue, context: TextContext = {
   if (isRichText(value)) return plainText(value);
   if (isDate(value)) return formatDateValue(value, context.timeZone);
 
-  return (value.kind === 'person' ? context.people?.(value.id)?.name : undefined) ?? value.id;
+  const name = value.kind === 'person' ? context.people?.(value.id)?.name : context.pageTitle?.(value.id);
+
+  return name ?? value.id;
 };
 
 const runsOf = (value: FormulaText): StyledRun[] => (typeof value === 'string' ? [{ text: value, styles: [] }] : value.runs);

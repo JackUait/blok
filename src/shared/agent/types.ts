@@ -1,5 +1,5 @@
 import type {
-  AgentBatch, AgentWarning, ChangedSet, Edit, InsertSpec, RichTextHelpers, TextRangeRef,
+  AgentActor, AgentBatch, AgentSession, AgentWarning, ChangedSet, Edit, InsertSpec, RichTextHelpers, TextRangeRef,
 } from '../../../types/agent';
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
 import type { RichText } from '../../../types/rich-text';
@@ -50,6 +50,7 @@ export interface AgentPorts {
   markdownToBlocks(md: string): Promise<{ blocks: OutputBlockData[]; warnings: AgentWarning[] }>;
   blocksToMarkdown(doc: OutputData): { markdown: string; warnings: AgentWarning[] };
   newId(): string;
+  openPageDocument?(pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }>;
 }
 
 export interface PlannerContext {

@@ -1,6 +1,7 @@
 import type { BlockPosition } from './api/blocks';
 import type { OutputBlockData } from './data-formats/output-data';
 import type { RichText, RichTextMarks } from './rich-text';
+import type { AgentContract, BlockToolManifestEntry, CommandEntry } from './tool-manifest';
 import type { PageIcon } from './tools/page';
 
 export type CoreCommandName =
@@ -194,4 +195,19 @@ export interface RichTextHelpers {
   remove(value: RichText, start: number, end: number): RichText;
   format(value: RichText, start: number, end: number, set?: RichTextMarks, unset?: string[]): RichText;
   canonicalize(value: RichText): RichText;
+}
+
+export type ContractSlice =
+  | { index: { tools: { name: string; summary: string }[]; commands: { name: CommandName; summary: string }[]; guidance: string } }
+  | { tool: BlockToolManifestEntry; commands: CommandEntry[] }
+  | { command: CommandEntry };
+
+export interface AgentSession {
+  readonly id: string;
+  readonly actor: AgentActor;
+  read(args?: ViewArgs): Promise<DocumentView>;
+  describe(query?: { tool?: string; command?: string }): AgentContract | ContractSlice;
+  execute(batch: AgentBatch, options?: { signal?: AbortSignal }): Promise<AgentResult>;
+  log(): readonly CommandLogEntry[];
+  close(): void;
 }

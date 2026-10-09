@@ -1,0 +1,10 @@
+export { COMMANDS } from './commands';
+export { createDocumentAgentSession, createPageMapBackend } from './document-session';
+export { plannerContextFrom } from './context';
+export { runBatch, type AgentApplier } from './executor';
+export { DocSnapshot } from './snapshot';
+export { applyEdits } from './json-applier';
+export { contentRevision, canonicalJson } from './revision';
+export { richTextHelpers } from './rich-text-ops';
+export { describeContract } from './describe';
+export type { AgentPorts, PlannerContext, Plan } from './types';

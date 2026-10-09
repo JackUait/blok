@@ -241,6 +241,60 @@ public sealed class YDocConverterConcurrentLossTests
         BlockNamed(YDocConverter.Export(doc), "p")["data"]?["align"]?.GetValue<string>());
   }
 
+  private const string Row =
+      """
+      { "id": "r", "type": "database-row", "data": { "position": "a0", "title": "One", "properties": { "t": "One" } } }
+      """;
+
+  /// <summary>
+  /// A row page icon an /edit picks while a peer retitles the row. The server
+  /// must write the icon as a plain leaf, as the client does: a Y.Text would
+  /// merge two concurrent picks into a mix of both. The peer's title stays.
+  /// </summary>
+  [Fact]
+  public void ARowIconWrittenByTheServerIsAPlainValueAndKeepsAConcurrentTitle()
+  {
+    var doc = SeededDoc("""{ "id": "r", "type": "database-row", "data": { "position": "a0", "icon": "🌱", "properties": { "t": "One" } } }""");
+
+    Assert.IsType<string>(Get(Data(doc, "r"), "icon"));
+
+    var peer = Fork(doc);
+    var before = doc.EncodeStateVector();
+
+    peer.Transact(transaction => Data(peer, "r").Set(transaction, "position", "a5"));
+
+    Apply(doc, """{ "op": "update", "id": "r", "data": { "position": "a0", "icon": "🚀", "properties": { "t": "One" } } }""");
+
+    doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
+
+    Assert.IsType<string>(Get(Data(doc, "r"), "icon"));
+    Assert.Equal("🚀", BlockNamed(YDocConverter.Export(doc), "r")["data"]?["icon"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// The marker a client sets when it turns a legacy body into child blocks,
+  /// written while an /edit changes the row's values. Losing it would let the
+  /// next opener convert the blob again over the edited body.
+  /// </summary>
+  [Fact]
+  public void ARowBodyBlocksMarkerSetConcurrentlySurvivesAServerUpdate()
+  {
+    var doc = SeededDoc(Row);
+    var peer = Fork(doc);
+    var before = doc.EncodeStateVector();
+
+    peer.Transact(transaction => Data(peer, "r").Set(transaction, "bodyBlocks", true));
+
+    Apply(doc, """{ "op": "update", "id": "r", "data": { "position": "a0", "title": "One", "properties": { "t": "One", "n": "note" } } }""");
+
+    doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
+
+    var row = BlockNamed(YDocConverter.Export(doc), "r")["data"];
+
+    Assert.True(row?["bodyBlocks"]?.GetValue<bool>());
+    Assert.Equal("note", row?["properties"]?["n"]?.GetValue<string>());
+  }
+
   /// <summary>
   /// The other half of the contract the in-place write must not lose: an
   /// update states the whole value of the key it names, so a NESTED key the

@@ -56,6 +56,11 @@
   --blok-database-table-cell-ring: rgba(55, 53, 47, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+  --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
+  --blok-database-confirm-bg: #ffffff;
+  --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-confirm-destructive-text: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
 }
 
@@ -108,6 +113,12 @@
     --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
     --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
     --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+    /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
+    --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
+    --blok-database-confirm-bg: rgb(37, 37, 37);
+    --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+    --blok-database-confirm-destructive-text: rgb(229, 100, 88);
+    --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   }
 }
 
@@ -158,6 +169,12 @@
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+  /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
+  --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
+  --blok-database-confirm-bg: rgb(37, 37, 37);
+  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-confirm-destructive-text: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
 }
 
 /**
@@ -1353,8 +1370,76 @@
   height: 14px;
 }
 
+/**
+ * Confirm dialog, measured in research/08 ("Would you like to remove sorting?").
+ * The close is instant: Notion's close motion was not measured.
+ */
+[data-blok-database-confirm] {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--blok-database-confirm-backdrop);
+  animation: blok-database-confirm-fade 200ms ease both;
+}
+
+[data-blok-database-confirm-dialog] {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 324px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  border-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-database-confirm-bg);
+  box-shadow: var(--blok-database-confirm-shadow);
+  animation: blok-database-confirm-in 200ms ease both;
+}
+
+[data-blok-database-confirm-title] {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-confirm-action] {
+  width: 100%;
+  height: 32px;
+  margin-top: 8px;
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-control);
+  background-color: transparent;
+  color: var(--blok-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-confirm-action]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/* preflight.css hides outline rings after a pointer press. */
+[data-blok-database-confirm-action]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-database-confirm-action][data-destructive] {
+  color: var(--blok-database-confirm-destructive-text);
+  border-color: var(--blok-database-confirm-destructive-border);
+}
+
 /* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
 @media (prefers-reduced-motion: reduce) {
+  [data-blok-database-confirm],
+  [data-blok-database-confirm-dialog] {
+    animation: none;
+  }
+
   [data-blok-database-drawer],
   [data-blok-database-drop-line] {
     transition: none;

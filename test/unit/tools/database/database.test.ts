@@ -3995,24 +3995,53 @@ describe('DatabaseTool', () => {
     });
   });
 
-  describe('drag in a sorted view (GATED ON D7)', () => {
-    const sortedBoard = (): { tool: DatabaseTool; childBlocks: BlockAPI[] } => {
-      // Sort order (A, B) is the reverse of position order (B at a0, A at a1).
+  describe('drag in a sorted view asks to remove sorting (D7)', () => {
+    const positionRow = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
+      const block = createMockRowBlock({ id, properties, position });
+      const data = block.preservedData as DatabaseRowData;
+
+      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
+        if (method === 'updateProperties') Object.assign(data.properties, params);
+        if (method === 'updatePosition' && typeof params === 'object' && params !== null && 'position' in params) {
+          data.position = String(params.position);
+        }
+      });
+
+      return block;
+    };
+
+    const sortedTool = (type: 'board' | 'list'): {
+      tool: DatabaseTool;
+      element: HTMLElement;
+      childBlocks: BlockAPI[];
+      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
+      transact: ReturnType<typeof vi.fn>;
+    } => {
+      // Sort order (A, B, X, empty) differs from position order (B, A, empty, X).
       const childBlocks = [
-        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-status': 'opt-todo' }, position: 'a0' }),
-        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-status': 'opt-todo' }, position: 'a1' }),
-        createMockRowBlock({ id: 'row-x', properties: { 'prop-title': 'X', 'prop-status': 'opt-todo' }, position: 'a2' }),
+        positionRow('row-b', { 'prop-title': 'B', 'prop-status': 'opt-todo' }, 'a0'),
+        positionRow('row-a', { 'prop-title': 'A', 'prop-status': 'opt-todo' }, 'a1'),
+        positionRow('row-e', { 'prop-title': '', 'prop-status': 'opt-todo' }, 'a2'),
+        positionRow('row-x', { 'prop-title': 'X', 'prop-status': 'opt-todo' }, 'a3'),
       ];
       const data = makeDefaultData({
-        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
-          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
+        views: [{
+          id: 'view-1', name: 'View', type, position: 'a0', groupBy: type === 'board' ? 'prop-status' : undefined,
+          filters: [], visibleProperties: [], sorts: [{ propertyId: 'prop-title', direction: 'asc' }],
+        }],
       });
-      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
+      const options = createDatabaseOptions(data, {}, { childBlocks });
+      const transact = vi.fn((fn: () => void) => fn());
 
-      tool.render();
+      Object.assign(options.api.blocks, { transact });
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
       tool.rendered();
 
-      return { tool, childBlocks };
+      return { tool, element, childBlocks, options, transact };
     };
 
     const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
@@ -4021,44 +4050,163 @@ describe('DatabaseTool', () => {
       (cardDrag as unknown as { onDrop: (r: CardDragResult) => void }).onDrop(result);
     };
 
+    const dropListRow = (tool: DatabaseTool, result: { rowId: string; beforeRowId: string | null; afterRowId: string | null }): void => {
+      const listRowDrag = (tool as unknown as { listRowDrag: { onDrop: (r: typeof result) => void } | null }).listRowDrag;
+
+      if (listRowDrag === null) throw new Error('a sorted list must still let rows be dragged');
+      listRowDrag.onDrop(result);
+    };
+
     const callsNamed = (block: BlockAPI, name: string): unknown[][] =>
       (block.call as ReturnType<typeof vi.fn>).mock.calls.filter((args) => args[0] === name);
 
-    it('ignores a reorder inside the same column', () => {
-      const { tool, childBlocks } = sortedBoard();
-      const rowX = childBlocks[2];
+    const confirmTitle = (): string | null | undefined =>
+      document.querySelector('[data-blok-database-confirm-title]')?.textContent;
 
-      // Neighbours arrive in sort order (A then B), so their keys are out of order.
-      expect(() => dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' })).not.toThrow();
-      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
+    const answer = (name: 'confirm' | 'cancel'): void => {
+      document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`)?.click();
+    };
+
+    /** Rows in manual (position) order, read back from the row blocks. */
+    const manualOrder = (childBlocks: BlockAPI[]): string[] => [...childBlocks]
+      .sort((a, b) => ((a.preservedData as DatabaseRowData).position < (b.preservedData as DatabaseRowData).position ? -1 : 1))
+      .map((block) => block.id);
+
+    afterEach(() => {
+      document.body.innerHTML = '';
     });
 
-    it('moves a card to another column by its group value only', () => {
-      const { tool, childBlocks } = sortedBoard();
-      const rowX = childBlocks[2];
+    it('asks "Would you like to remove sorting?" on a reorder inside a column, and writes nothing yet', () => {
+      const { tool, childBlocks } = sortedTool('board');
+
+      // Neighbours arrive in sort order: X dropped between A and B.
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+
+      expect(confirmTitle()).toBe('tools.database.removeSortingTitle');
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+
+      tool.destroy();
+    });
+
+    it('"Don\'t remove" discards the drop: order and sort stay', () => {
+      const { tool, element, childBlocks } = sortedTool('board');
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      answer('cancel');
+
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+      expect(tool.save(element).views[0].sorts).toEqual([{ propertyId: 'prop-title', direction: 'asc' }]);
+      expect(confirmTitle()).toBeUndefined();
+
+      tool.destroy();
+    });
+
+    it('"Remove" deletes the sort, keeps the sorted order as the manual order, and lands the row where it was dropped', async () => {
+      const { tool, element, childBlocks, transact } = sortedTool('board');
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(tool.save(element).views[0].sorts).toEqual([]);
+      // Sorted order was A, B, X, empty (D8: empties last); X lands between A and B.
+      expect(manualOrder(childBlocks)).toEqual(['row-a', 'row-x', 'row-b', 'row-e']);
+      expect(transact).toHaveBeenCalledTimes(1);
+
+      tool.destroy();
+    });
+
+    it('writes every position inside one transaction, so one undo restores the sort and the order', async () => {
+      const { tool, childBlocks, transact } = sortedTool('board');
+      const inside: string[] = [];
+
+      transact.mockImplementation((fn: () => void) => {
+        inside.push('begin');
+        fn();
+        inside.push('end');
+      });
+      childBlocks.forEach((block) => {
+        const original = vi.mocked(block.call).getMockImplementation();
+
+        vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
+          if (method === 'updatePosition') inside.push(block.id);
+          original?.(method, params);
+        });
+      });
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(inside[0]).toBe('begin');
+      expect(inside.at(-1)).toBe('end');
+      expect(inside.filter((entry) => entry.startsWith('row-')).sort()).toEqual(['row-a', 'row-b', 'row-e', 'row-x']);
+
+      tool.destroy();
+    });
+
+    it('asks the same question when a row is dragged in a sorted list', async () => {
+      const { tool, element, childBlocks } = sortedTool('list');
+
+      dropListRow(tool, { rowId: 'row-a', beforeRowId: null, afterRowId: 'row-x' });
+
+      expect(confirmTitle()).toBe('tools.database.removeSortingTitle');
+
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(tool.save(element).views[0].sorts).toEqual([]);
+      expect(manualOrder(childBlocks)).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+
+      tool.destroy();
+    });
+
+    it('moves a card to another column by its group value only, without asking', () => {
+      const { tool, childBlocks } = sortedTool('board');
+      const rowX = childBlocks[3];
 
       dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-doing', beforeRowId: null, afterRowId: null });
 
+      expect(confirmTitle()).toBeUndefined();
       expect(callsNamed(rowX, 'updateProperties')).toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
       expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
+
+      tool.destroy();
     });
 
-    it('turns list row drag off while the list is sorted', () => {
-      const childBlocks = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One' }, position: 'a0' })];
-      const listView = (sorts: DatabaseViewConfig['sorts']): Partial<DatabaseData> => ({
-        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [], sorts }],
-        activeViewId: 'view-list',
-      });
-      const sorted = new DatabaseTool(createDatabaseOptions(listView([{ propertyId: 'prop-title', direction: 'asc' }]), {}, { childBlocks }));
-      const unsorted = new DatabaseTool(createDatabaseOptions(listView([]), {}, { childBlocks }));
+    it('closes only the dialog on Escape, leaving an open card page open', async () => {
+      const { tool, element } = sortedTool('board');
+      const drawer = (tool as unknown as { cardDrawer: DatabaseCardDrawer }).cardDrawer;
+      const model = (tool as unknown as { model: DatabaseModel }).model;
+      const row = model.getRow('row-a');
 
-      sorted.render();
-      sorted.rendered();
-      unsorted.render();
-      unsorted.rendered();
+      if (row === undefined) throw new Error('row-a is missing');
+      drawer.open(row);
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
 
-      expect((sorted as unknown as { listRowDrag: unknown }).listRowDrag).toBeNull();
-      expect((unsorted as unknown as { listRowDrag: unknown }).listRowDrag).not.toBeNull();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await Promise.resolve();
+
+      expect(confirmTitle()).toBeUndefined();
+      expect(drawer.isOpen).toBe(true);
+      expect(tool.save(element).views[0].sorts).toHaveLength(1);
+
+      tool.destroy();
+    });
+
+    it('drops the answer when the sort is already gone by the time the user confirms', async () => {
+      const { tool, element, childBlocks } = sortedTool('board');
+      const model = (tool as unknown as { model: DatabaseModel }).model;
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      model.updateView('view-1', { sorts: [] });
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+      expect(tool.save(element).views[0].sorts).toEqual([]);
+
+      tool.destroy();
     });
   });
 

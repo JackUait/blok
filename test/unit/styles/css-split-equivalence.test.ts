@@ -744,6 +744,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // file chips, the person/files editors, the property menu and status group
     // headings, and their tokens in all three themes.
     const DATABASE_PROPERTY_TYPES_BYTES = 8_045;
+    // database.css + keyframes.css: Notion board parity (research/08):
+    // the drop line, the confirm dialog and their light and dark tokens.
+    const DATABASE_BOARD_PARITY_BYTES = 3_300;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -801,7 +804,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_REDUCED_MOTION_BYTES
       + DATABASE_CELL_EDITORS_BYTES
       + DATABASE_TABLE_VIEW_BYTES
-      + DATABASE_PROPERTY_TYPES_BYTES;
+      + DATABASE_PROPERTY_TYPES_BYTES
+      + DATABASE_BOARD_PARITY_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

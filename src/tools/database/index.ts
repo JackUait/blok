@@ -8,7 +8,8 @@ import type { CellContext } from './cells';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
-import { newRowValues } from './database-query';
+import { newRowValues, sortRows } from './database-query';
+import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
@@ -1648,8 +1649,7 @@ export class DatabaseTool implements BlockTool {
     const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
     const descriptionPropId = descriptionProp?.id;
 
-    // GATED ON D7: a sorted view has no manual order to drag into.
-    if (isList && (viewConfig?.sorts.length ?? 0) === 0) {
+    if (isList) {
       this.listRowDrag = new DatabaseListRowDrag({
         wrapper: boardEl,
         onDrop: (result) => this.handleListRowDrop(result),
@@ -1884,6 +1884,12 @@ export class DatabaseTool implements BlockTool {
   private handleListRowDrop(result: ListRowDragResult): void {
     const { rowId, beforeRowId, afterRowId } = result;
 
+    if ((this.model.getView(this.activeViewId)?.sorts.length ?? 0) > 0) {
+      this.askToRemoveSorting(rowId, beforeRowId, afterRowId);
+
+      return;
+    }
+
     const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
@@ -1903,9 +1909,18 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    // GATED ON D7: neighbours arrive in sort order, not key order, so
-    // positionBetween would throw. Only the group value may change.
+    // Neighbours arrive in sort order, not key order, so positionBetween would
+    // throw. A reorder inside the group asks first (D7). A move to another
+    // group changes the value only: Notion's answer there is unmeasured.
     if (viewConfig !== undefined && viewConfig.sorts.length > 0) {
+      const row = this.model.getRow(rowId);
+
+      if (row !== undefined && this.model.groupKeysOf(groupByPropId)(row).includes(toOptionId)) {
+        this.askToRemoveSorting(rowId, beforeRowId, afterRowId);
+
+        return;
+      }
+
       const sortedValue = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
 
       if (JSON.stringify(this.model.getRow(rowId)?.properties[groupByPropId] ?? null) !== JSON.stringify(sortedValue)) {
@@ -1929,6 +1944,77 @@ export class DatabaseTool implements BlockTool {
 
     this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: value } });
     void this.sync.syncMoveRow({ rowId, position });
+  }
+
+  /**
+   * Notion's D7 flow (research/08): "Remove" deletes the sorts, keeps the sorted
+   * order as the manual order and lands the row where it was dropped.
+   * "Don't remove" discards the drop.
+   */
+  private askToRemoveSorting(rowId: string, beforeRowId: string | null, afterRowId: string | null): void {
+    const viewId = this.activeViewId;
+
+    void openDatabaseConfirm({
+      title: this.api.i18n.t('tools.database.removeSortingTitle'),
+      confirmLabel: this.api.i18n.t('tools.database.removeSortingConfirm'),
+      cancelLabel: this.api.i18n.t('tools.database.removeSortingCancel'),
+      destructive: true,
+      directionSource: this.element,
+    }).then((remove) => {
+      const view = this.model.getView(viewId);
+
+      // A peer may have dropped the sort or the row while the dialog was open.
+      if (!remove || this.destroyed || this.readOnly || view === undefined || view.sorts.length === 0
+        || this.model.getRow(rowId) === undefined) {
+        return;
+      }
+      this.removeSortingAndPlace(view, rowId, beforeRowId, afterRowId);
+    });
+  }
+
+  private removeSortingAndPlace(view: DatabaseViewConfig, rowId: string, beforeRowId: string | null, afterRowId: string | null): void {
+    // Every row, filtered out or not, so hidden rows keep their sorted place too.
+    const sorted = sortRows(this.model.getOrderedRows(), view.sorts, this.model.getSchema());
+    const dragged = sorted.find((row) => row.id === rowId);
+    const rest = sorted.filter((row) => row.id !== rowId);
+
+    if (dragged === undefined) {
+      return;
+    }
+
+    const afterIndex = afterRowId === null ? -1 : rest.findIndex((row) => row.id === afterRowId);
+    const beforeIndex = beforeRowId === null ? -1 : rest.findIndex((row) => row.id === beforeRowId);
+    const insertAt = afterIndex !== -1 ? afterIndex + 1 : beforeIndex !== -1 ? beforeIndex : rest.length;
+    const order = [...rest.slice(0, insertAt), dragged, ...rest.slice(insertAt)];
+    const moves: Array<{ rowId: string; position: string }> = [];
+
+    order.reduce<string | null>((previous, row) => {
+      const position = DatabaseModel.positionBetween(previous, null);
+
+      if (row.position !== position) {
+        moves.push({ rowId: row.id, position });
+      }
+
+      return position;
+    }, null);
+
+    const write = (): void => {
+      this.model.updateView(view.id, { sorts: [] });
+      this.block.dispatchChange();
+      moves.forEach((move) => this.moveRowBlock(move.rowId, move.position));
+    };
+
+    if (this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(write);
+    } else {
+      write();
+    }
+
+    this.rerenderView();
+    void this.sync.syncUpdateView({ viewId: view.id, changes: { sorts: [] } });
+    moves.forEach((move) => {
+      void this.sync.syncMoveRow(move);
+    });
   }
 
   private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {

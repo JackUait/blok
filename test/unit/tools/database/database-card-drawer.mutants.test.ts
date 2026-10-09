@@ -167,7 +167,6 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
         'data-blok-database-drawer-prop-label',
         'data-blok-database-drawer-prop-value',
         'data-blok-database-drawer-prop-pill',
-        'data-blok-database-drawer-prop-dot',
       ];
 
       for (const name of selectors) {
@@ -1004,7 +1003,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       expect(labels).toEqual(['X', 'Y']);
     });
 
-    it('paints a select pill with the option colour tokens', () => {
+    it('paints a select pill through its data-color, with no dot and no inline colour', () => {
       const options = createOptions({
         schema: [makeDef({ config: { options: [makeOption({ color: 'blue' })] } })],
       });
@@ -1013,14 +1012,14 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } }));
 
       const pill = query<HTMLElement>(options.wrapper, '[data-blok-database-drawer-prop-pill]');
-      const dot = query<HTMLElement>(options.wrapper, '[data-blok-database-drawer-prop-dot]');
 
-      expect(pill.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
-      expect(pill.style.color).toBe('var(--blok-color-blue-text)');
-      expect(dot.style.backgroundColor).toBe('var(--blok-color-blue-text)');
+      expect(pill.getAttribute('data-color')).toBe('blue');
+      expect(pill.querySelector('[data-blok-database-drawer-prop-dot]')).toBeNull();
+      expect(pill.style.backgroundColor).toBe('');
+      expect(pill.style.color).toBe('');
     });
 
-    it('leaves a colourless option without a dot or colour tokens', () => {
+    it('paints a colourless option as default, without a dot or colour tokens', () => {
       const options = createOptions({
         schema: [makeDef({ config: { options: [makeOption({ color: undefined })] } })],
       });
@@ -1032,6 +1031,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
 
       expect(pill.querySelector('[data-blok-database-drawer-prop-dot]')).toBeNull();
       expect(pill.style.backgroundColor).toBe('');
+      expect(pill.getAttribute('data-color')).toBe('default');
       expect(pill.textContent).toBe('In progress');
     });
 
@@ -1095,13 +1095,13 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       expect(options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]')).toBeNull();
     });
 
-    it('leaves the value blank when the row has no value for the property', () => {
+    it('shows Empty when the row has no value for the property', () => {
       const options = createOptions({ schema: [makeDef({ id: 'prop-notes', name: 'Notes', type: 'text' })] });
       const drawer = makeDrawer(options);
 
       drawer.open(makeRow());
 
-      expect(query(options.wrapper, '[data-blok-database-drawer-prop-value]').textContent).toBe('');
+      expect(query(options.wrapper, '[data-blok-database-drawer-prop-value]').textContent).toBe('tools.database.cellEmpty');
     });
   });
 

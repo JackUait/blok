@@ -250,10 +250,25 @@ describe('select cell editor', () => {
 
       openMenu('o1');
       q('[data-blok-database-option-delete]').click();
+      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
+      q('[data-blok-database-option-delete-confirm]').click();
 
       expect(lastOptions(ctx).map((o) => o.id).sort()).toEqual(['o2', 'o3']);
       expect(ctx.onCommit).toHaveBeenLastCalledWith(['o2']);
       expect(rowIds()).toEqual(['o2', 'o3']);
+    });
+
+    it('asks before deleting, as Notion does, and Cancel keeps the option', () => {
+      const ctx = openSelect(['o1']);
+
+      openMenu('o1');
+      q('[data-blok-database-option-delete]').click();
+      expect(q('[data-blok-database-option-delete-prompt]').textContent).toContain('tools.database.optionDeleteConfirm');
+      q('[data-blok-database-option-delete-cancel]').click();
+
+      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(editorRoot()?.querySelector('[data-blok-database-option-name]')).not.toBeNull();
     });
 
     it('Escape in the menu steps back to the list and keeps the editor open', () => {

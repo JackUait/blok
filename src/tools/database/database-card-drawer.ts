@@ -2,7 +2,9 @@ import type { I18n, OutputData } from '../../../types';
 import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
-import type { DatabaseRow, DatabaseRowPages, PropertyDefinition, PropertyType, PropertyValue } from './types';
+import type { DatabaseRow, DatabaseRowPages, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import { openCellEditor, renderCellValue } from './cells';
+import type { CellEditorHandle } from './cells';
 import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -55,6 +57,16 @@ export interface CardDrawerOptions {
   onDescriptionChange: (rowId: string, description: OutputData) => void;
   onClose: () => void;
   onAddProperty?: (type: PropertyType) => void;
+  /** A property value edited in the drawer. Without it, values stay read-only. */
+  onPropertyValueChange?: (rowId: string, propertyId: string, value: PropertyValue) => void;
+  /** The whole new option list of a select property, with saved labels. */
+  onOptionsChange?: (propertyId: string, options: SelectOption[]) => void;
+  /**
+   * The saved options of a property. `schema` holds localized labels; option
+   * edits put the saved label back on every option the user did not rename,
+   * so a translation never lands in saved data.
+   */
+  savedOptionsOf?: (propertyId: string) => SelectOption[] | undefined;
 }
 
 /**
@@ -113,6 +125,10 @@ export class DatabaseCardDrawer {
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
   private readonly onAddProperty: ((type: PropertyType) => void) | undefined;
+  private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
+  private readonly onOptionsChange: CardDrawerOptions['onOptionsChange'];
+  private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
+  private cellEditor: CellEditorHandle | null = null;
   private readonly events: Pick<Events, 'on' | 'off'> | undefined;
 
   private drawer: HTMLDivElement | null = null;
@@ -146,6 +162,9 @@ export class DatabaseCardDrawer {
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
     this.onAddProperty = options.onAddProperty;
+    this.onPropertyValueChange = options.onPropertyValueChange;
+    this.onOptionsChange = options.onOptionsChange;
+    this.savedOptionsOf = options.savedOptionsOf;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -645,36 +664,102 @@ export class DatabaseCardDrawer {
       });
   }
 
-  /**
-   * Creates a pill badge element for a select option.
-   */
-  private createSelectPill(option: { label: string; color?: string }): HTMLSpanElement {
-    const pill = document.createElement('span');
+  /** Replaces the schema without rebuilding the open properties, so an open cell editor keeps its anchor. */
+  setSchema(schema: PropertyDefinition[]): void {
+    this.schema = schema;
+  }
 
-    pill.setAttribute('data-blok-database-drawer-prop-pill', '');
+  private t(key: string): string {
+    return this.i18n?.t(key) ?? key;
+  }
 
-    if (option.color !== undefined) {
-      pill.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
-      pill.style.color = `var(--blok-color-${option.color}-text)`;
+  /** Draws a value into its slot. The drawer pill attribute shipped in v1.16.1, so it stays. */
+  private paintValue(slot: HTMLElement, def: PropertyDefinition, value: PropertyValue | undefined): void {
+    const cell = renderCellValue(def, value, { i18n: { t: (key) => this.t(key) }, readOnly: this.readOnly });
 
-      const dot = document.createElement('span');
-
-      dot.setAttribute('data-blok-database-drawer-prop-dot', '');
-      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
-      pill.appendChild(dot);
+    cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));
+    if (cell.hasAttribute('data-empty')) {
+      cell.textContent = this.t('tools.database.cellEmpty');
     }
+    slot.replaceChildren(cell);
+  }
 
-    const pillText = document.createElement('span');
+  /** Puts the saved label back on each option whose shown (localized) label the user kept. */
+  private withSavedLabels(propertyId: string, shown: SelectOption[], next: SelectOption[]): SelectOption[] {
+    const saved = this.savedOptionsOf?.(propertyId) ?? [];
 
-    pillText.textContent = option.label;
-    pill.appendChild(pillText);
+    return next.map((option) => {
+      const before = shown.find((o) => o.id === option.id);
+      const savedOption = saved.find((o) => o.id === option.id);
 
-    return pill;
+      return before !== undefined && savedOption !== undefined && before.label === option.label
+        ? { ...option, label: savedOption.label }
+        : option;
+    });
+  }
+
+  private openValueEditor(slot: HTMLElement, propertyId: string): void {
+    const def = this.schema.find((p) => p.id === propertyId);
+    const row = this.currentRow;
+
+    if (def === undefined || row === null || this.onPropertyValueChange === undefined) {
+      return;
+    }
+    this.closeCellEditor();
+    const rowId = row.id;
+    const shownOptions = { list: def.config?.options ?? [] };
+    const onOptionsChange = this.onOptionsChange;
+
+    this.cellEditor = openCellEditor(def, row.properties[propertyId], slot, {
+      i18n: { t: (key) => this.t(key) },
+      readOnly: this.readOnly,
+      options: shownOptions.list,
+      ...(onOptionsChange !== undefined
+        ? {
+          onOptionsChange: (next: SelectOption[]): void => {
+            const saved = this.withSavedLabels(propertyId, shownOptions.list, next);
+
+            shownOptions.list = next;
+            this.schema = this.schema.map((p) => (p.id === propertyId ? { ...p, config: { ...p.config, options: next } } : p));
+            onOptionsChange(propertyId, saved);
+          },
+        }
+        : {}),
+      onCommit: (value) => {
+        if (this.currentRow?.id === rowId) {
+          this.currentRow = { ...this.currentRow, properties: { ...this.currentRow.properties, [propertyId]: value } };
+        }
+        this.onPropertyValueChange?.(rowId, propertyId, value);
+        const current = this.schema.find((p) => p.id === propertyId);
+
+        if (slot.isConnected && current !== undefined) {
+          this.paintValue(slot, current, value);
+        }
+      },
+      onClose: () => {
+        this.cellEditor = null;
+        const current = this.schema.find((p) => p.id === propertyId);
+
+        if (slot.isConnected && current !== undefined && this.currentRow?.id === rowId) {
+          this.paintValue(slot, current, this.currentRow.properties[propertyId]);
+        }
+      },
+    });
+    if (!this.cellEditor.isOpen) {
+      this.cellEditor = null;
+    }
+  }
+
+  private closeCellEditor(): void {
+    const editor = this.cellEditor;
+
+    this.cellEditor = null;
+    editor?.close();
   }
 
   /**
-   * Creates a property row that dispatches on the property type to render
-   * the appropriate value representation.
+   * One label + value row. The value is a button that opens the cell editor
+   * for its type; read-only values are plain text.
    */
   private createPropertyRow(def: PropertyDefinition, value: PropertyValue): HTMLDivElement {
     const row = document.createElement('div');
@@ -687,28 +772,30 @@ export class DatabaseCardDrawer {
     label.textContent = def.name;
     row.appendChild(label);
 
-    const valueEl = document.createElement('span');
+    const valueEl = document.createElement('div');
 
     valueEl.setAttribute('data-blok-database-drawer-prop-value', '');
+    valueEl.setAttribute('data-property-id', def.id);
+    this.paintValue(valueEl, def, value);
 
-    if (def.type === 'select') {
-      const config = def.config;
-      const optionId = typeof value === 'string' ? value : null;
-      const option = config?.options.find((o) => o.id === optionId);
-
-      if (option !== undefined) {
-        valueEl.appendChild(this.createSelectPill(option));
-      }
-    } else if (def.type === 'multiSelect') {
-      const config = def.config;
-      const selectedIds = Array.isArray(value) ? value : [];
-
-      selectedIds
-        .map((id) => config?.options.find((o) => o.id === id))
-        .filter((opt): opt is NonNullable<typeof opt> => opt !== undefined)
-        .forEach((opt) => valueEl.appendChild(this.createSelectPill(opt)));
-    } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-      valueEl.textContent = String(value);
+    if (!this.readOnly && this.onPropertyValueChange !== undefined) {
+      valueEl.setAttribute('role', 'button');
+      valueEl.tabIndex = 0;
+      valueEl.setAttribute('aria-label', def.name);
+      valueEl.addEventListener('click', (event) => {
+        // Cmd/Ctrl-click on a url follows the link instead.
+        if (event.target instanceof Element && event.target.closest('a') !== null && (event.metaKey || event.ctrlKey)) {
+          return;
+        }
+        this.openValueEditor(valueEl, def.id);
+      });
+      valueEl.addEventListener('keydown', (event) => {
+        if (event.target !== valueEl || (event.key !== 'Enter' && event.key !== ' ')) {
+          return;
+        }
+        event.preventDefault();
+        this.openValueEditor(valueEl, def.id);
+      });
     }
 
     row.appendChild(valueEl);
@@ -746,6 +833,7 @@ export class DatabaseCardDrawer {
   }
 
   private cleanupEditor(): void {
+    this.closeCellEditor();
     this.pageMount?.destroy();
     this.pageMount = null;
     this.mountedPageId = undefined;

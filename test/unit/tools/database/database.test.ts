@@ -63,10 +63,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
 
   class MockPopoverDesktop {
     private container: HTMLElement | null = null;
-    private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string }>;
+    private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string; element?: HTMLElement }>;
     private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
 
-    constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string }>; [key: string]: unknown }) {
+    constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string; element?: HTMLElement }>; [key: string]: unknown }) {
       this.items = params.items ?? [];
     }
 
@@ -75,6 +75,9 @@ vi.mock('../../../../src/components/utils/popover', () => {
       this.container.setAttribute('data-mock-popover', '');
 
       for (const item of this.items) {
+        if (item.type === PopoverItemType.Html && item.element !== undefined) {
+          this.container.appendChild(item.element);
+        }
         if (item.type === PopoverItemType.Separator || !item.title) continue;
         const el = document.createElement('div');
         el.setAttribute('data-mock-popover-action', item.title.toLowerCase());
@@ -86,6 +89,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
       }
 
       document.body.appendChild(this.container);
+    }
+
+    hide(): void {
+      this.destroy();
     }
 
     destroy(): void {
@@ -413,6 +420,81 @@ describe('DatabaseTool', () => {
       expect(saved.views[0].name).toBe('Board');
 
       tool.destroy();
+    });
+
+    it('a value edited in the drawer goes through the row block and its change', () => {
+      const row = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task', 'prop-done': false }, position: 'a0' });
+      const options = createDatabaseOptions({
+        schema: [
+          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+          { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'opt-a', label: 'A', position: 'a0' }] } },
+          { id: 'prop-done', name: 'Done', type: 'checkbox', position: 'a2' },
+        ],
+      }, {}, { childBlocks: [row] });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+      queryByData(element, 'data-blok-database-card')?.click();
+      element.querySelector<HTMLElement>('[data-blok-database-drawer-prop-value][data-property-id="prop-done"]')?.click();
+
+      expect(row.call).toHaveBeenCalledWith('updateProperties', { 'prop-done': true });
+      expect(row.dispatchChange).toHaveBeenCalled();
+
+      tool.destroy();
+      element.remove();
+    });
+
+    it('an option created in the drawer saves the canonical labels, never the translated ones shown', () => {
+      const row = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task', 'prop-status': 'opt-progress' }, position: 'a0' });
+      const options = createDatabaseOptions({
+        schema: [
+          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+          {
+            id: 'prop-status',
+            name: 'Status',
+            type: 'select',
+            position: 'a1',
+            config: {
+              options: [
+                { id: 'opt-not-started', label: 'Not started', color: 'gray', position: 'a0' },
+                { id: 'opt-progress', label: 'In progress', color: 'blue', position: 'a1' },
+              ],
+            },
+          },
+        ],
+      }, {}, { childBlocks: [row] });
+      const translations: Record<string, string> = {
+        'tools.database.defaultStatusNotStarted': 'Nicht begonnen',
+        'tools.database.defaultStatusInProgress': 'In Arbeit',
+      };
+
+      options.api.i18n.t = (key: string): string => translations[key] ?? key;
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+      queryByData(element, 'data-blok-database-card')?.click();
+      element.querySelector<HTMLElement>('[data-blok-database-drawer-prop-value][data-property-id="prop-status"]')?.click();
+      const search = document.querySelector<HTMLInputElement>('[data-blok-database-select-search]');
+
+      if (search === null) {
+        throw new Error('select editor did not open');
+      }
+      search.value = 'Blocked';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      const labels = tool.save(document.createElement('div')).schema
+        .find((property) => property.id === 'prop-status')?.config?.options.map((option) => option.label);
+
+      expect(labels).toEqual(['Not started', 'In progress', 'Blocked']);
+      expect(options.block.dispatchChange).toHaveBeenCalled();
+
+      tool.destroy();
+      element.remove();
     });
 
     it('renders title before the tab bar', () => {

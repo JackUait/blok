@@ -1387,6 +1387,19 @@ export class DatabaseTool implements BlockTool {
             localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
           );
         },
+        onPropertyValueChange: (rowId, propertyId, value) => {
+          this.updateRowBlock(rowId, { [propertyId]: value });
+          this.rerenderView({ keepDrawer: true });
+          this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
+        },
+        onOptionsChange: (propertyId, options) => {
+          this.model.updateProperty(propertyId, { config: { options } });
+          this.block.dispatchChange();
+          this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+          this.rerenderView({ keepDrawer: true });
+          void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options } } });
+        },
+        savedOptionsOf: (propertyId) => this.model.getProperty(propertyId)?.config?.options,
       });
     }
 

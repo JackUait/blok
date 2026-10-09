@@ -397,7 +397,7 @@ describe('DatabaseCardDrawer', () => {
       expect(statusPill!.textContent).toBe('In progress');
     });
 
-    it('status pill has colored dot when option has color', () => {
+    it('select pill paints its color through data-color, with no dot', () => {
       const selectOption = makeOption({ id: 'opt-1', label: 'Done', color: 'green' });
       const statusDef = makePropertyDef({
         id: 'prop-status',
@@ -411,9 +411,10 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      const dot = options.wrapper.querySelector('[data-blok-database-drawer-prop-dot]');
+      const pill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
-      expect(dot).not.toBeNull();
+      expect(pill?.getAttribute('data-color')).toBe('green');
+      expect(options.wrapper.querySelector('[data-blok-database-drawer-prop-dot]')).toBeNull();
     });
 
     it('shows no property rows when schema has no renderable properties', () => {
@@ -481,7 +482,7 @@ describe('DatabaseCardDrawer', () => {
 
       expect(pill).not.toBeNull();
       expect(pill!.textContent).toBe('Done');
-      expect((pill as HTMLElement).style.backgroundColor).toBeTruthy();
+      expect(pill!.getAttribute('data-color')).toBe('green');
     });
 
     it('renders text property value as plain text', () => {
@@ -529,7 +530,7 @@ describe('DatabaseCardDrawer', () => {
       const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
 
       expect(propValue).not.toBeNull();
-      expect(propValue!.textContent).toBe('true');
+      expect(propValue!.querySelector('[data-blok-database-checkbox]')?.getAttribute('data-state')).toBe('checked');
     });
 
     it('shows properties section even when no groupBy option exists (list view scenario)', () => {
@@ -589,7 +590,7 @@ describe('DatabaseCardDrawer', () => {
       expect(propValue!.textContent).toBe('https://example.com');
     });
 
-    it('renders date property value as plain text', () => {
+    it('renders a date property value as a long date', () => {
       const schema: PropertyDefinition[] = [
         makePropertyDef({ id: 'prop-date', name: 'Due Date', type: 'date', position: 'a1' }),
       ];
@@ -602,7 +603,7 @@ describe('DatabaseCardDrawer', () => {
       const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
 
       expect(propValue).not.toBeNull();
-      expect(propValue!.textContent).toBe('2026-04-03');
+      expect(propValue!.textContent).toBe(new Intl.DateTimeFormat(navigator.language, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(2026, 3, 3)));
     });
 
     it('renders multiSelect property as multiple colored pills', () => {
@@ -624,7 +625,7 @@ describe('DatabaseCardDrawer', () => {
       expect(pills[1].textContent).toBe('Beta');
     });
 
-    it('renders nothing in the value area when multiSelect value is null', () => {
+    it('shows Empty in the value area when multiSelect value is null', () => {
       const schema: PropertyDefinition[] = [
         makePropertyDef({ id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: { options: [makeOption()] } }),
       ];
@@ -638,7 +639,7 @@ describe('DatabaseCardDrawer', () => {
       const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
 
       expect(pills).toHaveLength(0);
-      expect(propValue!.textContent).toBe('');
+      expect(propValue!.textContent).toBe('tools.database.cellEmpty');
     });
 
     it('renders properties in position order', () => {

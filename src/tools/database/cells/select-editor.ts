@@ -457,14 +457,7 @@ class SelectEditor {
     del.setAttribute('data-blok-database-option-delete', '');
     del.innerHTML = IconTrash;
     del.append(this.t('tools.database.optionDelete'));
-    del.addEventListener('click', () => {
-      this.setOptions(this.options.filter((o) => o.id !== option.id));
-      if (this.selected.includes(option.id)) {
-        this.selected = this.selected.filter((id) => id !== option.id);
-        this.commit();
-      }
-      this.closePanel();
-    });
+    del.addEventListener('click', () => this.confirmDelete(option.id));
 
     const heading = document.createElement('div');
 
@@ -508,6 +501,37 @@ class SelectEditor {
     panel.append(name, del, heading, colors);
     this.body.replaceChildren(panel);
     name.focus();
+  }
+
+  /** Notion asks before deleting an option (research/08); rows keep existing, the value is cleared. */
+  private confirmDelete(optionId: string): void {
+    const prompt = document.createElement('div');
+    const text = document.createElement('p');
+    const confirm = document.createElement('button');
+    const cancel = document.createElement('button');
+
+    prompt.setAttribute('data-blok-database-option-delete-prompt', '');
+    prompt.setAttribute('role', 'alertdialog');
+    text.textContent = this.t('tools.database.optionDeleteConfirm');
+    prompt.setAttribute('aria-label', text.textContent);
+    confirm.type = 'button';
+    confirm.setAttribute('data-blok-database-option-delete-confirm', '');
+    confirm.textContent = this.t('tools.database.optionDelete');
+    cancel.type = 'button';
+    cancel.setAttribute('data-blok-database-option-delete-cancel', '');
+    cancel.textContent = this.t('tools.database.optionDeleteCancel');
+    confirm.addEventListener('click', () => {
+      this.setOptions(this.options.filter((o) => o.id !== optionId));
+      if (this.selected.includes(optionId)) {
+        this.selected = this.selected.filter((id) => id !== optionId);
+        this.commit();
+      }
+      this.closePanel();
+    });
+    cancel.addEventListener('click', () => this.renderPanel());
+    prompt.append(text, confirm, cancel);
+    this.body.replaceChildren(prompt);
+    confirm.focus();
   }
 
   // ─── Drag to reorder ───

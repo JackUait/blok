@@ -208,6 +208,7 @@ const POPOVER_DESKTOP_CONSUMERS = [
   'components/modules/toolbar/blockSettings.ts',
   'components/ui/toolbox.ts',
   'tools/code/index.ts',
+  'tools/database/cells/cell-popover.ts',
   'tools/database/database-tab-bar.ts',
   'tools/database/database-view-popover.ts',
   'tools/database/index.ts',

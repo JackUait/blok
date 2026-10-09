@@ -629,6 +629,31 @@ for (const [locale, keys] of Object.entries(TABS_COGNATE_RETENTIONS)) {
   for (const key of keys) set.add(key);
 }
 
+/**
+ * Relation, rollup and formula cognates: the native word is spelled the same
+ * as English. Rollup functions reuse each locale's calc* value. Each entry
+ * needs a matching ledger retention row.
+ */
+const DATABASE_RELATION_ROLLUP_FORMULA_COGNATE_RETENTIONS: Record<string, string[]> = {
+  bs: ['tools.database.propertyTypeFormula', 'tools.database.formulaLabel'],
+  da: ['tools.database.propertyTypeRelation', 'tools.database.rollupRelation', 'tools.database.rollupFn.sum', 'tools.database.rollupFn.median'],
+  de: ['tools.database.rollupFn.median'],
+  fr: ['tools.database.propertyTypeRelation', 'tools.database.rollupRelation', 'tools.database.relationLimitOne'],
+  hr: ['tools.database.propertyTypeFormula', 'tools.database.formulaLabel'],
+  id: ['tools.database.rollupFn.median'],
+  it: ['tools.database.propertyTypeFormula', 'tools.database.formulaLabel'],
+  lv: ['tools.database.propertyTypeFormula', 'tools.database.formulaLabel'],
+  ms: ['tools.database.rollupFn.median'],
+  no: ['tools.database.rollupFn.sum', 'tools.database.rollupFn.median'],
+  sl: ['tools.database.propertyTypeFormula', 'tools.database.formulaLabel'],
+  sv: ['tools.database.rollupFn.median'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_RELATION_ROLLUP_FORMULA_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

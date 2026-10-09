@@ -1197,3 +1197,18 @@
   width: 14px;
   height: 14px;
 }
+
+/* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-drawer],
+  [data-blok-database-dragging] [data-blok-database-card],
+  [data-blok-database-dragging] [data-blok-database-cards],
+  [data-blok-database-column-reordering] [data-blok-database-column],
+  [data-blok-database-column-reordering] [data-blok-database-board] {
+    transition: none;
+  }
+
+  [data-blok-database-property-type-popover] {
+    animation: none;
+  }
+}

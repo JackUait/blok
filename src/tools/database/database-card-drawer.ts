@@ -12,6 +12,27 @@ import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
 
+/** Must stay longer than the drawer's `transition: width` in database.css. */
+const DRAWER_TRANSITION_FALLBACK_MS = 300;
+
+/**
+ * Runs `done` once, when the drawer's width transition ends. Reduced motion
+ * turns that transition off, and then no transitionend ever comes.
+ */
+const afterWidthTransition = (drawer: HTMLElement, done: () => void): void => {
+  const state = { finished: false };
+  const finish = (): void => {
+    if (state.finished) {
+      return;
+    }
+    state.finished = true;
+    done();
+  };
+
+  drawer.addEventListener('transitionend', finish, { once: true });
+  window.setTimeout(finish, DRAWER_TRANSITION_FALLBACK_MS);
+};
+
 interface BlokInstance {
   save(): Promise<OutputData>;
   destroy(): void;
@@ -295,13 +316,13 @@ export class DatabaseCardDrawer {
 
     requestAnimationFrame(() => {
       drawer.style.width = '45%';
-      drawer.addEventListener('transitionend', () => {
+      afterWidthTransition(drawer, () => {
         this.autoResizeTitle(titleInput);
 
         if (!title) {
           titleInput.focus();
         }
-      }, { once: true });
+      });
     });
 
     this.initNestedEditor(editorHolder, row);
@@ -419,9 +440,9 @@ export class DatabaseCardDrawer {
 
       this.drawer = null;
       drawer.style.width = '0px';
-      drawer.addEventListener('transitionend', () => {
+      afterWidthTransition(drawer, () => {
         drawer.remove();
-      }, { once: true });
+      });
     }
 
     this.currentRowId = null;

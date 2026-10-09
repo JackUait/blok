@@ -46,6 +46,16 @@ const changedBlock = (payload: unknown): ChangedBlock | undefined =>
 /** Events that can end an inline edit or a drag. */
 const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
 
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId']);
+
+/**
+ * Top-level keys this version does not know, kept as they came. A full save
+ * prunes every key it leaves out from the shared document, so dropping a
+ * newer version's key here would delete it for every client.
+ */
+const unknownKeys = (data: DatabaseData | undefined): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(data ?? {}).filter(([key]) => !KNOWN_KEYS.has(key)));
+
 /**
  * DatabaseTool — a multi-view Kanban board block tool for Blok.
  *
@@ -61,6 +71,7 @@ export class DatabaseTool implements BlockTool {
   private readonly config: DatabaseConfig;
 
   private title: string;
+  private readonly unknown: Record<string, unknown>;
   private activeViewId: string;
   private model: DatabaseModel;
   private view!: DatabaseViewRenderer;
@@ -96,6 +107,7 @@ export class DatabaseTool implements BlockTool {
     this.config = config ?? {};
 
     this.title = (data as DatabaseData | undefined)?.title ?? '';
+    this.unknown = unknownKeys(data);
     this.model = new DatabaseModel(data);
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
@@ -263,6 +275,7 @@ export class DatabaseTool implements BlockTool {
     const currentTitle = this.titleElement?.textContent ?? this.title;
 
     return {
+      ...structuredClone(this.unknown),
       ...this.model.snapshot(),
       title: currentTitle,
       activeViewId: this.activeViewId,

@@ -871,6 +871,36 @@ describe('DatabaseCardDrawer', () => {
       expect(titleInput.value).toBe('');
     });
 
+    it('focuses an empty title when no transitionend ever comes (reduced motion)', () => {
+      vi.useFakeTimers();
+
+      try {
+        const rafCallbacks: FrameRequestCallback[] = [];
+
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+          rafCallbacks.push(cb);
+
+          return 0;
+        });
+
+        const options = createOptions();
+        const drawer = new DatabaseCardDrawer(options);
+
+        drawer.open(makeRow({ id: 'row-1', properties: { 'prop-title': '' } }));
+
+        const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+        const focusSpy = vi.spyOn(titleInput, 'focus');
+
+        rafCallbacks.forEach((cb) => cb(0));
+        vi.advanceTimersByTime(1000);
+
+        expect(focusSpy).toHaveBeenCalledTimes(1);
+        drawer.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('does not call focus() on title input when card has a title', () => {
       const rafCallbacks: FrameRequestCallback[] = [];
 
@@ -1591,6 +1621,23 @@ describe('DatabaseCardDrawer', () => {
       el.dispatchEvent(new Event('transitionend'));
 
       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+    });
+
+    it('removes the closed drawer when no transitionend ever comes (reduced motion)', () => {
+      vi.useFakeTimers();
+
+      try {
+        const options = createOptions();
+        const drawer = new DatabaseCardDrawer(options);
+
+        drawer.open(makeRow());
+        drawer.close();
+        vi.advanceTimersByTime(1000);
+
+        expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('isOpen returns false immediately before animation ends', () => {

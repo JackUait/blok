@@ -4936,6 +4936,14 @@ span[data-blok-slash-search] {
   height: 14px;
 }
 
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-dragging] [data-blok-database-card], [data-blok-database-dragging] [data-blok-database-cards], [data-blok-database-column-reordering] [data-blok-database-column], [data-blok-database-column-reordering] [data-blok-database-board] {
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-property-type-popover] {
+  animation: none;
+}
+
 .blok-media-empty {
   display: flex;
   flex-direction: column;

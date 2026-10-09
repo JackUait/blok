@@ -69,7 +69,8 @@ export class DatabaseModel {
     const prop = this.schema.find((p) => p.id === propertyId);
     if (prop === undefined) return;
     if (changes.name !== undefined) prop.name = changes.name;
-    if (changes.config !== undefined) prop.config = changes.config;
+    // Merge, not replace: a newer client's key beside `options` must outlive every option edit.
+    if (changes.config !== undefined) prop.config = { ...prop.config, ...changes.config };
   }
 
   deleteProperty(propertyId: string): void {

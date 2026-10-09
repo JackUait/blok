@@ -134,6 +134,28 @@ describe('DatabaseModel', () => {
       expect(model.getProperty('p1')?.config?.options).toHaveLength(1);
     });
 
+    describe('a config key written by a newer client', () => {
+      const todo = makeSelectOption({ id: 'o1', label: 'Todo', position: 'a0' });
+      const done = makeSelectOption({ id: 'o2', label: 'Done', position: 'a1' });
+
+      it.each([
+        { action: 'option add', options: [todo, done, makeSelectOption({ id: 'o3', label: 'New', position: 'a2' })] },
+        { action: 'option rename', options: [{ ...todo, label: 'Later' }, done] },
+        { action: 'option delete', options: [done] },
+        { action: 'option reorder', options: [{ ...done, position: 'Zz' }, todo] },
+      ])('survives an $action', ({ options }) => {
+        const config = { options: [todo, done], futureConfigKey: { limit: 3 } };
+        const model = new DatabaseModel(makeData({
+          schema: [makeProperty({ id: 'p1', name: 'Status', type: 'select', config })],
+        }));
+
+        model.updateProperty('p1', { config: { options } });
+
+        expect(model.getProperty('p1')?.config).toHaveProperty('futureConfigKey', { limit: 3 });
+        expect(model.getProperty('p1')?.config?.options).toEqual(options);
+      });
+    });
+
     it('deleteProperty removes from schema', () => {
       const prop = makeProperty({ id: 'p1', name: 'Notes', type: 'text' });
       const titleProp = makeProperty({ id: 'pt', name: 'Title', type: 'title', position: 'a0' });

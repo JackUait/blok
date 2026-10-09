@@ -522,6 +522,61 @@ describe('DatabaseTool', () => {
 
       expect(saved.title).toBe('Updated title');
     });
+
+    it('keeps a top-level key written by a newer client', () => {
+      const futureKey = { layout: 'timeline', nested: { since: 'v2' } };
+      const tool = new DatabaseTool(createDatabaseOptions({ futureKey }));
+
+      tool.render();
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.futureKey).toEqual(futureKey);
+    });
+
+    it('lets its own known keys win over a stale value of the same name', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title: 'Stored', futureKey: 1 }));
+      const element = tool.render();
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+      titleEl.textContent = 'Typed';
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.title).toBe('Typed');
+      expect(saved.futureKey).toBe(1);
+      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'futureKey', 'schema', 'title', 'views']);
+    });
+
+    it('keeps a newer client key after the backend snapshot hydrates the model', async () => {
+      const mockAdapter = {
+        loadDatabase: vi.fn().mockResolvedValue({
+          schema: [{ id: 'p-backend', name: 'Backend Title', type: 'title', position: 'a0' }],
+          views: [{ id: 'v-backend', name: 'Backend Board', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        }),
+        createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
+        createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn(),
+      };
+      const tool = new DatabaseTool(createDatabaseOptions({ futureKey: 'kept' }, { adapter: mockAdapter }));
+      const container = document.createElement('div');
+
+      container.appendChild(tool.render());
+      document.body.appendChild(container);
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(tool.save(document.createElement('div')).schema[0].id).toBe('p-backend');
+      });
+
+      expect(tool.save(document.createElement('div')).futureKey).toBe('kept');
+
+      tool.destroy();
+      container.remove();
+    });
   });
 
   describe('validate()', () => {

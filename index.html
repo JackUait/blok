@@ -3334,16 +3334,16 @@
             { id: 'lnb-col-b-p', type: 'paragraph', data: { text: 'Column B' }, parent: 'lnb-col-b' },
             { id: 'lnb-db', type: 'database', data: {
               schema: [
-                { id: 'title', name: 'Title', type: 'text' },
-                { id: 'status', name: 'Status', type: 'select', options: [
-                  { id: 'todo', name: 'Todo', color: 'gray' },
-                  { id: 'done', name: 'Done', color: 'green' },
-                ] },
+                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
+                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                  { id: 'done', label: 'Done', color: 'green', position: 'a1' },
+                ] } },
               ],
-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
+              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: ['status'] }],
               activeViewId: 'v1',
             }, content: ['lnb-db-r1'], indent: 1 },
-            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' } }, parent: 'lnb-db' },
+            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' }, position: 'a0' }, parent: 'lnb-db' },
           ] },
           { label: 'Empty', blocks: [{ id: 'ul-empty', type: 'list', data: { style: 'unordered', text: '' } }] },
         ],
@@ -3585,40 +3585,40 @@
           { label: 'List view', blocks: [
             { id: 'db-list', type: 'database', data: {
               schema: [
-                { id: 'title', name: 'Title', type: 'text' },
-                { id: 'status', name: 'Status', type: 'select', options: [
-                  { id: 'todo', name: 'Todo', color: 'gray' },
-                  { id: 'doing', name: 'Doing', color: 'yellow' },
-                  { id: 'done', name: 'Done', color: 'green' },
-                ] },
+                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
+                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                  { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                  { id: 'done', label: 'Done', color: 'green', position: 'a2' },
+                ] } },
               ],
-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
+              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: ['status'] }],
               activeViewId: 'v1',
             }, content: ['db-list-r1', 'db-list-r2'] },
-            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' } }, parent: 'db-list' },
-            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' } }, parent: 'db-list' },
+            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' }, position: 'a0' }, parent: 'db-list' },
+            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' }, position: 'a1' }, parent: 'db-list' },
           ] },
           { label: 'Board view', blocks: [
             { id: 'db-board', type: 'database', data: {
               schema: [
-                { id: 'title', name: 'Title', type: 'text' },
-                { id: 'status', name: 'Status', type: 'select', options: [
-                  { id: 'todo', name: 'Todo', color: 'gray' },
-                  { id: 'doing', name: 'Doing', color: 'yellow' },
-                  { id: 'done', name: 'Done', color: 'green' },
-                ] },
+                { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+                { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [
+                  { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                  { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                  { id: 'done', label: 'Done', color: 'green', position: 'a2' },
+                ] } },
               ],
-              views: [{ id: 'v1', type: 'board', name: 'Board', groupBy: 'status', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
+              views: [{ id: 'v1', type: 'board', name: 'Board', position: 'a0', groupBy: 'status', sorts: [], filters: [], visibleProperties: [] }],
               activeViewId: 'v1',
             }, content: ['db-bd-r1', 'db-bd-r2', 'db-bd-r3'] },
-            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' } }, parent: 'db-board' },
-            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' } }, parent: 'db-board' },
-            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' } }, parent: 'db-board' },
+            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' }, position: 'a0' }, parent: 'db-board' },
+            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' }, position: 'a1' }, parent: 'db-board' },
+            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' }, position: 'a2' }, parent: 'db-board' },
           ] },
           { label: 'Empty database', blocks: [
             { id: 'db-empty', type: 'database', data: {
-              schema: [{ id: 'title', name: 'Title', type: 'text' }],
-              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title'] }],
+              schema: [{ id: 'title', name: 'Title', type: 'title', position: 'a0' }],
+              views: [{ id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
               activeViewId: 'v1',
             } },
           ] },

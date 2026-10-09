@@ -70,6 +70,12 @@ const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
   'tools.image.cropRatio16to9': '16:9',
   'tools.database.propertyTypeUrl': 'URL',
   'tools.image.altButton': 'Alt',
+  'tools.database.filterOperator.numberEquals': '=',
+  'tools.database.filterOperator.numberDoesNotEqual': '≠',
+  'tools.database.filterOperator.greaterThan': '>',
+  'tools.database.filterOperator.greaterThanOrEqual': '≥',
+  'tools.database.filterOperator.lessThan': '<',
+  'tools.database.filterOperator.lessThanOrEqual': '≤',
 };
 
 /**
@@ -498,6 +504,47 @@ const DATABASE_TABLE_COGNATE_RETENTIONS: Record<string, string[]> = {
 };
 
 for (const [locale, keys] of Object.entries(DATABASE_TABLE_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
+ * Database property system cognates and loanwords: the native word (or the
+ * CLDR currency name) is spelled the same as English in these locales. Each
+ * entry needs a matching ledger retention row.
+ */
+const DATABASE_PROPERTY_COGNATE_RETENTIONS: Record<string, string[]> = {
+  az: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.bitcoin'],
+  bs: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  cs: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  da: ['tools.database.propertyTypeStatus', 'tools.database.propertyTypePerson', 'tools.database.propertyTypeUniqueId', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  de: ['tools.database.propertyTypeStatus', 'tools.database.propertyTypePerson', 'tools.database.propertyTypeUniqueId', 'tools.database.showAs.ring', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  es: ['tools.database.numberColor', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  et: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  fi: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  fil: ['tools.database.propertyTypeEmail', 'tools.database.statusDisplayAs.checkbox', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  fr: ['tools.database.propertyTypeUniqueId', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  hr: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  hu: ['tools.database.numberFormat.bitcoin'],
+  id: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  it: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  ja: ['tools.database.propertyTypeUniqueId'],
+  ms: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  nl: ['tools.database.propertyTypeStatus', 'tools.database.showAs.ring', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  no: ['tools.database.propertyTypeStatus', 'tools.database.propertyTypePerson', 'tools.database.propertyTypeUniqueId', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  pl: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  pt: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  ro: ['tools.database.idPrefix', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.real', 'tools.database.numberFormat.forint', 'tools.database.numberFormat.bitcoin'],
+  sk: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  sl: ['tools.database.numberFormat.bitcoin'],
+  sq: ['tools.database.numberFormat.bitcoin'],
+  sv: ['tools.database.propertyTypeStatus', 'tools.database.propertyTypePerson', 'tools.database.propertyTypeUniqueId', 'tools.database.idPrefix', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  sw: ['tools.database.numberFormat.bitcoin'],
+  tr: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  vi: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_PROPERTY_COGNATE_RETENTIONS)) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);
 }

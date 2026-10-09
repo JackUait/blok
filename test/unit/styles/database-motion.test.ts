@@ -31,6 +31,11 @@ describe('database menus', () => {
     expect(body(outsideReducedMotion, `${MENU} [data-blok-popover-container]`)).toContain('transition: opacity 200ms ease, transform 200ms ease');
   });
 
+  it('stay in the top layer for the whole 200ms close', () => {
+    expect(body(outsideReducedMotion, "[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu']"))
+      .toContain('transition: display 200ms allow-discrete, overlay 200ms allow-discrete');
+  });
+
   it('start, and close back to, scale .96', () => {
     expect(body(outsideReducedMotion, `${MENU_CLOSED} [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
   });

@@ -4078,6 +4078,21 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    it('keeps the header buttons shown while the group menu is open', () => {
+      const { tool, element } = board();
+      const header = queryAllByData(element, 'data-blok-database-column')
+        .find((col) => col.getAttribute('data-option-id') === 'opt-todo')
+        ?.querySelector('[data-blok-database-column-header]');
+
+      openMenu(element, 'opt-todo');
+
+      expect(header?.hasAttribute('data-popover-open')).toBe(true);
+
+      tool.destroy();
+
+      expect(header?.hasAttribute('data-popover-open')).toBe(false);
+    });
+
     it('hides a group and keeps it hidden after a reload', () => {
       const { tool, element } = board();
 

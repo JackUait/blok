@@ -168,7 +168,7 @@
   --blok-database-card-colored-overlay: var(--blok-database-card-bg);
   --blok-database-card-colored-overlay-hover: var(--blok-database-card-bg-hover);
   --blok-database-card-colored-border: var(--blok-database-card-border);
-  --blok-database-column-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-column-bg: rgba(0, 0, 0, 0.04);
   --blok-database-add-text: #646a79;
   --blok-database-add-border: rgba(55, 53, 47, 0.25);
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
@@ -627,7 +627,7 @@
     --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
 
     /* Database / Kanban */
-    --blok-database-card-bg: rgb(32, 32, 32);
+    --blok-database-card-bg: #2d2d2c;
     --blok-database-card-bg-hover: #353534;
     --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
     --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
@@ -637,7 +637,7 @@
     --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
     --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
     --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
-    --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+    --blok-database-column-bg: rgba(255, 255, 255, 0.05);
     --blok-database-add-text: #a39e98;
     --blok-database-add-border: rgba(255, 255, 255, 0.2);
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
@@ -825,7 +825,7 @@
   --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
 
   /* Database / Kanban */
-  --blok-database-card-bg: rgb(32, 32, 32);
+  --blok-database-card-bg: #2d2d2c;
   --blok-database-card-bg-hover: #353534;
   --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
   --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
@@ -835,7 +835,7 @@
   --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
   --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
-  --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-column-bg: rgba(255, 255, 255, 0.03);
   --blok-database-add-text: #a39e98;
   --blok-database-add-border: rgba(255, 255, 255, 0.2);
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);

@@ -39,6 +39,8 @@
   --blok-database-checkbox-check: #ffffff;
   /* Measured on Notion's calendar view "today" (research/07); its date picker is unmeasured. */
   --blok-database-today: rgb(229, 100, 88);
+  /* Re-set here, not in colors.css, so view.css keeps the shipped values. Notion's measured tint (research/08). */
+  --blok-database-column-bg: rgba(66, 35, 3, 0.03);
   /* Table view (research/07 and 08). */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
@@ -107,6 +109,9 @@
     --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
     --blok-database-checkbox-check: #ffffff;
     --blok-database-today: rgb(229, 100, 88);
+    /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
+    --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+    --blok-database-card-bg: rgb(32, 32, 32);
     /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
     --blok-database-table-bg: var(--blok-bg-primary);
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
@@ -174,6 +179,9 @@
   --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
+  /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
+  --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-card-bg: rgb(32, 32, 32);
   /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
@@ -455,6 +463,7 @@
 }
 
 [data-blok-database-column-header]:hover [data-blok-database-column-actions],
+[data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions],
 [data-blok-database-column-actions]:has(:focus-visible) {
   opacity: 1;
 }
@@ -907,7 +916,12 @@
   background-color: var(--blok-database-tab-bg);
 }
 
-/* Database menus open from the anchor's corner (popover-animation.css sets the origin). */
+/* Database menus open from the anchor's corner (popover-animation.css sets the origin).
+   The root's display/overlay hold must match, or the close is cut at 120ms. */
+[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
   transition: opacity 200ms ease, transform 200ms ease;
 }

@@ -32,6 +32,7 @@ describe('board column header actions', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions]')).toContain('opacity: 0');
     expect(ruleBody(database, '[data-blok-database-column-header]:hover [data-blok-database-column-actions]')).toContain('opacity: 1');
     expect(ruleBody(database, '[data-blok-database-column-actions]:has(:focus-visible)')).toContain('opacity: 1');
+    expect(ruleBody(database, '[data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions]')).toContain('opacity: 1');
   });
 
   it('pushes them to the inline end of the header', () => {
@@ -39,10 +40,9 @@ describe('board column header actions', () => {
   });
 });
 
-// Tokens that shipped live in colors.css; new database tokens live at the top of database.css.
-const colors = `${read('colors.css')} ${database}`;
+// Board tokens live at the top of database.css, so view.css (built from colors.css) never carries them.
 const tokenValues = (name: string): string[] =>
-  [ ...colors.matchAll(new RegExp(`${name}: ([^;]+);`, 'g')) ].map((m) => m[1].trim());
+  [ ...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g')) ].map((m) => m[1].trim());
 
 describe('board column, card and header look (research/08)', () => {
   it('tints the column body, rounds it with the block radius and pads it 0 8px 8px', () => {
@@ -55,6 +55,7 @@ describe('board column, card and header look (research/08)', () => {
 
   it('uses the measured tints, rings and accents, light and dark', () => {
     expect(tokenValues('--blok-database-column-bg')).toEqual(['rgba(66, 35, 3, 0.03)', 'rgba(252, 252, 252, 0.03)', 'rgba(252, 252, 252, 0.03)']);
+    expect(tokenValues('--blok-database-card-bg')).toEqual(['rgb(32, 32, 32)', 'rgb(32, 32, 32)']);
     expect(tokenValues('--blok-database-column-yellow-bg')).toEqual(['rgba(207, 175, 0, 0.063)', 'rgba(255, 232, 48, 0.043)', 'rgba(255, 232, 48, 0.043)']);
     expect(tokenValues('--blok-database-column-brown-bg')[0]).toBe('rgba(115, 59, 3, 0.035)');
     expect(tokenValues('--blok-database-column-pink-bg').slice(-2)).toEqual(['rgba(255, 78, 149, 0.055)', 'rgba(255, 78, 149, 0.055)']);

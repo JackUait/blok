@@ -1595,12 +1595,15 @@ export class DatabaseTool implements BlockTool {
     }));
   }
 
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>): void {
+  /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement): void {
     this.groupMenuPopover?.destroy();
 
     const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
 
+    owner?.setAttribute('data-popover-open', '');
     popover.on(PopoverEvent.Closed, () => {
+      owner?.removeAttribute('data-popover-open');
       if (this.groupMenuPopover === popover) {
         this.groupMenuPopover = null;
         popover.destroy();
@@ -1630,7 +1633,7 @@ export class DatabaseTool implements BlockTool {
       onHide: () => this.toggleGroupHidden(groupId),
       onTrash: () => this.trashGroup(groupId),
       onRecolor: (color) => this.recolorGroup(groupId, color),
-    }));
+    }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined);
   }
 
   /** Lists every group with a check mark on the shown ones; a pick shows or hides it. */

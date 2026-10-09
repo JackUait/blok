@@ -486,8 +486,19 @@ test.describe('W4D board actions that write many rows', () => {
     expect(same(await save(page), before)).toBe(true);
   });
 
+  /** Two cards in Todo, so a stale block index after the first delete would hit the wrong block. */
+  const TRASH_DOC: OutputData['blocks'] = DB_DOC.flatMap(b => {
+    if (b.id === 'db-1') {
+      return [{ ...b, content: ['row-1', 'row-3', 'row-2'] }];
+    }
+
+    return b.id === 'row-1'
+      ? [b, { id: 'row-3', type: 'database-row', parent: 'db-1', data: { position: 'a0V', properties: { 'prop-title': 'Card three', 'prop-status': 'opt-todo' } } }]
+      : [b];
+  });
+
   test('W4D-T1: "Move to Trash" on a group asks first, deletes its pages, and one undo brings them back', async ({ page }) => {
-    await mount(page);
+    await mount(page, TRASH_DOC);
     await gap(page);
 
     const column = page.locator('[data-blok-database-column][data-option-id="opt-todo"]');
@@ -502,13 +513,17 @@ test.describe('W4D board actions that write many rows', () => {
     await dialog.getByRole('button', { name: 'Move to Trash' }).click();
     await gap(page);
 
-    expect(await ids(page)).not.toContain('row-1');
-    expect(await ids(page)).toContain('row-2');
+    const after = await ids(page);
+
+    expect(after).not.toContain('row-1');
+    expect(after).not.toContain('row-3');
+    expect(after).toEqual(expect.arrayContaining(['row-2', 'p-before', 'p-after', 'db-1']));
 
     await park(page);
     await undo(page);
 
-    expect(await ids(page)).toContain('row-1');
+    expect(await ids(page)).toEqual(expect.arrayContaining(['row-1', 'row-3', 'row-2']));
     await expect(page.locator('[data-blok-database-card][data-row-id="row-1"]')).toBeVisible();
+    await expect(page.locator('[data-blok-database-card][data-row-id="row-3"]')).toBeVisible();
   });
 });

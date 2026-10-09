@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
@@ -100,6 +101,7 @@ export const openMenu = (
   options: { searchable?: boolean; onClose?: () => void } = {}
 ): PopoverDesktop => {
   const popover = new PopoverDesktop({
+    class: DATABASE_MENU_CLASS,
     trigger: anchor,
     items,
     width: 'auto',

@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconTrash } from '../../../components/icons';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { DatabaseModel } from '../database-model';
-import { personIdsOf } from '../property-values';
+import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
@@ -66,7 +66,7 @@ class SelectEditor {
     private readonly ctx: CellEditorContext
   ) {
     this.multi = property.type === 'multiSelect';
-    this.options = byPosition(optionsFor(property, ctx));
+    this.options = this.sorted(optionsFor(property, ctx));
     this.selected = selectedIdsOf(value).filter((id) => this.options.some((option) => option.id === id));
 
     this.root.setAttribute('data-blok-database-select-editor', property.type);
@@ -172,8 +172,15 @@ class SelectEditor {
     this.ctx.onCommit(this.multi ? [...this.selected] : this.selected[0] ?? null);
   }
 
+  /** Status options go by group, then by position; the others by position. */
+  private sorted(options: SelectOption[]): SelectOption[] {
+    return this.property.type === 'status'
+      ? orderedStatusOptions({ ...this.property, config: { ...this.property.config, options } })
+      : byPosition(options);
+  }
+
   private setOptions(options: SelectOption[]): void {
-    this.options = byPosition(options);
+    this.options = this.sorted(options);
     this.ctx.onOptionsChange?.(options);
   }
 
@@ -327,7 +334,20 @@ class SelectEditor {
     const active = targets[this.activeIndex];
 
     this.search.removeAttribute('aria-activedescendant');
+    const lastGroup = { id: '' };
+
     for (const option of this.filtered()) {
+      const group = this.property.type === 'status' ? statusGroupOf(this.property, option.id) ?? statusGroupsOf(this.property)[0] : undefined;
+
+      if (group !== undefined && group.id !== lastGroup.id) {
+        const heading = document.createElement('div');
+
+        heading.setAttribute('data-blok-database-status-group-heading', group.id);
+        heading.setAttribute('role', 'presentation');
+        heading.textContent = group.name;
+        list.appendChild(heading);
+        lastGroup.id = group.id;
+      }
       const row = this.renderOptionRow(option);
 
       if (active?.kind === 'option' && active.id === option.id) {

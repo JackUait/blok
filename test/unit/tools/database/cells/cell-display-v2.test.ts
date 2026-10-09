@@ -216,3 +216,34 @@ describe('openCellEditor — read-only and unknown types', () => {
     handle.cancel();
   });
 });
+
+describe('status cell editor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('lists options under their group headings, in group order', () => {
+    const property: PropertyDefinition = {
+      ...statusProp,
+      config: {
+        options: [
+          { id: 's3', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' },
+          { id: 's1', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' },
+          { id: 's2', label: 'Doing', color: 'blue', position: 'a0', groupId: 'inProgress' },
+        ],
+      },
+    };
+
+    openCellEditor(property, 's1', makeAnchor(), makeEditorContext());
+    const list = document.querySelector('[data-blok-database-select-list]');
+    const sequence = [...(list?.children ?? [])].map((el) => el.getAttribute('data-blok-database-status-group-heading') ?? el.getAttribute('data-blok-database-select-option'));
+
+    expect(sequence).toEqual(['todo', 's1', 'inProgress', 's2', 'complete', 's3']);
+    expect(document.querySelector('[data-blok-database-status-group-heading="todo"]')?.textContent).toBe('To-do');
+  });
+});

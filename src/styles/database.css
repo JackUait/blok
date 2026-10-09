@@ -1743,6 +1743,7 @@
 }
 
 [data-blok-database-select-hint],
+[data-blok-database-status-group-heading],
 [data-blok-database-option-colors-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;

@@ -743,7 +743,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css + colors.css: status pill dot, number bar and ring, ID ink,
     // person and file chips, the person/files editors and property menu, and
     // their tokens in all three themes.
-    const DATABASE_PROPERTY_TYPES_BYTES = 7_866;
+    const DATABASE_PROPERTY_TYPES_BYTES = 7_909;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

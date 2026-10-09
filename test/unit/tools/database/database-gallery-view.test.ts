@@ -308,6 +308,19 @@ describe('DatabaseGalleryView', () => {
       expect(handlers.moveRow).not.toHaveBeenCalled();
     });
 
+    it('still opens the next clicked card after a drag that ended outside the gallery', async () => {
+      const { root, handlers } = mount({ groups: three() });
+      const [first, second] = layOut(root);
+
+      pointer('pointerdown', first, 10, 10);
+      pointer('pointermove', document, 900, 900);
+      pointer('pointerup', document, 900, 900);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      second.click();
+
+      expect(handlers.openRow).toHaveBeenCalledWith('r2');
+    });
+
     it('treats a press without movement as a click', () => {
       const { root, handlers } = mount({ groups: three() });
       const [first] = layOut(root);

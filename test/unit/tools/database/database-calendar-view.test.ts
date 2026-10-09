@@ -386,6 +386,20 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.setDate).toHaveBeenCalledWith('r1', '2026-10-06/2026-10-09');
     });
 
+    it('still opens the next clicked event after a drag that ended outside the calendar', async () => {
+      const { root, handlers } = mount();
+
+      layOut(root);
+      pointer('pointerdown', events(root, 'r1')[0], 550, 110);
+      pointer('pointermove', document, 350, 210);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      pointer('pointerup', document, 2000, 2000);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      events(root, 'r2')[0].click();
+
+      expect(handlers.openRow).toHaveBeenCalledWith('r2');
+    });
+
     it('has no resize handle on a cut end', () => {
       const { root } = mount({ rows: [row('r1', 'Long', '2026-10-09/2026-10-13')] });
       const [first, second] = events(root, 'r1');

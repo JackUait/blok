@@ -485,7 +485,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       return;
     }
 
-    this.suppressClick = true;
+    this.guardNextClick(true);
     if (target === null) {
       return;
     }
@@ -515,7 +515,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     const wasActive = this.drag?.active === true;
 
     this.endDrag();
-    this.suppressClick = wasActive;
+    this.guardNextClick(wasActive);
   };
 
   private endDrag(): void {
@@ -526,6 +526,20 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     document.removeEventListener('pointerup', this.onPointerUp);
     document.removeEventListener('pointercancel', this.cancelDrag);
     document.removeEventListener('keydown', this.onDragKeyDown);
+  }
+
+  /**
+   * Eats the click the browser fires right after a drag's pointerup. Cleared
+   * on the next task: a drag released outside the view sends that click
+   * elsewhere, and the guard must not eat the person's next real click.
+   */
+  private guardNextClick(on: boolean): void {
+    this.suppressClick = on;
+    if (on) {
+      setTimeout(() => {
+        this.suppressClick = false;
+      }, 0);
+    }
   }
 
   destroy(): void {

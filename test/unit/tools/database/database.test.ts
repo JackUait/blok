@@ -5676,6 +5676,171 @@ describe('DatabaseTool — board card parity', () => {
   });
 });
 
+describe('DatabaseTool — board sub-group lanes', () => {
+  const schema: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [
+      { id: 'opt-todo', label: 'Todo', position: 'a0' },
+      { id: 'opt-done', label: 'Done', position: 'a1' },
+    ] } },
+    { id: 'prop-team', name: 'Team', type: 'select', position: 'a2', config: { options: [
+      { id: 'team-a', label: 'A', position: 'a0' },
+      { id: 'team-b', label: 'B', position: 'a1' },
+    ] } },
+  ];
+  const board: DatabaseViewConfig = {
+    id: 'view-board', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', subGroupBy: 'prop-team',
+    sorts: [], filters: [], visibleProperties: [],
+  };
+  const sorted: Partial<DatabaseViewConfig> = { sorts: [{ propertyId: 'prop-title', direction: 'asc' }] };
+  const rows = (): BlockAPI[] => [
+    createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo', 'prop-team': 'team-a' }, position: 'a0' }),
+    createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-status': 'opt-todo', 'prop-team': 'team-b' }, position: 'a1' }),
+  ];
+  const mount = (view: Partial<DatabaseViewConfig> = {}, children: BlockAPI[] = rows()): {
+    tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
+  } => {
+    const options = createDatabaseOptions({ schema, views: [{ ...board, ...view }], activeViewId: 'view-board' }, {}, { childBlocks: children });
+    const tool = new DatabaseTool(options);
+    const element = tool.render();
+
+    document.body.appendChild(element);
+    tool.rendered();
+
+    return { tool, element, options };
+  };
+  const lane = (element: HTMLElement, key: string): HTMLElement | undefined =>
+    queryAllByData(element, 'data-blok-database-board-lane').find((el) => el.getAttribute('data-sub-group') === key);
+  const drop = (tool: DatabaseTool, result: { rowId: string; toOptionId: string; toSubGroup?: string; beforeRowId: string | null; afterRowId: string | null }): void => {
+    (tool as unknown as { handleRowDrop: (r: typeof result) => void }).handleRowDrop(result);
+  };
+  const updates = (block: BlockAPI): unknown[] =>
+    vi.mocked(block.call).mock.calls.filter(([method]) => method === 'updateProperties').map(([, params]) => params);
+  const answer = (name: 'confirm' | 'cancel'): void => {
+    document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`)?.click();
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('shows the column headers once, above the lanes', () => {
+    const { tool, element } = mount();
+    const heads = queryByData(element, 'data-blok-database-board-heads');
+    const lanes = queryAllByData(element, 'data-blok-database-board-lane');
+
+    expect(lanes.every((el) => el.querySelector('[data-blok-database-column-header]') === null)).toBe(true);
+    expect(heads?.querySelectorAll('[data-blok-database-column-header]')).toHaveLength(lanes[0].querySelectorAll('[data-blok-database-column]').length);
+    expect(heads !== null && (heads.compareDocumentPosition(lanes[0]) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).toBe(true);
+
+    tool.destroy();
+  });
+
+  it('counts every lane\'s cards in the one column header', () => {
+    const { tool, element } = mount();
+    const todo = element.querySelector('[data-blok-database-board-heads] [data-option-id="opt-todo"] [data-blok-database-column-count]');
+
+    expect(todo?.textContent).toBe('2');
+
+    tool.destroy();
+  });
+
+  it('puts the add-group button after the columns, not below the lanes', () => {
+    const { tool, element } = mount();
+    const heads = queryByData(element, 'data-blok-database-board-heads');
+
+    expect(heads?.lastElementChild?.hasAttribute('data-blok-database-add-column')).toBe(true);
+    expect(queryAllByData(element, 'data-blok-database-add-column')).toHaveLength(1);
+
+    tool.destroy();
+  });
+
+  it('starts a column drag from its one header', () => {
+    const { tool, element } = mount();
+    const header = element.querySelector<HTMLElement>('[data-blok-database-board-heads] [data-option-id="opt-done"] [data-blok-database-column-header]');
+    const beginTracking = vi.spyOn((tool as unknown as { columnDrag: { beginTracking: (id: string, x: number, y: number) => void } }).columnDrag, 'beginTracking');
+
+    header?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 1, clientY: 1 }));
+
+    expect(beginTracking).toHaveBeenCalledWith('opt-done', 1, 1);
+
+    tool.destroy();
+  });
+
+  it('"+ New page" in a lane sets the group and the sub-group, and the card lands in that lane', () => {
+    const children = rows();
+    const { tool, element, options } = mount({}, children);
+
+    vi.mocked(options.api.blocks.insertAt).mockImplementation((_type, data, placement) => {
+      const row = data as DatabaseRowData;
+      const id = (placement as { id: string }).id;
+
+      children.push(createMockRowBlock({ id, properties: row.properties, position: row.position }));
+
+      return { id } as unknown as BlockAPI;
+    });
+    lane(element, 'team-b')?.querySelector<HTMLElement>('[data-option-id="opt-done"] [data-blok-database-add-card]')?.click();
+
+    const inserted = vi.mocked(options.api.blocks.insertAt).mock.calls[0]?.[1] as DatabaseRowData | undefined;
+    const newId = children.at(-1)?.id ?? '';
+
+    expect(inserted?.properties).toMatchObject({ 'prop-status': 'opt-done', 'prop-team': 'team-b' });
+    expect(lane(element, 'team-b')?.querySelector(`[data-option-id="opt-done"] [data-row-id="${newId}"]`)).not.toBeNull();
+    expect(lane(element, 'team-a')?.querySelector(`[data-row-id="${newId}"]`)).toBeNull();
+
+    tool.destroy();
+  });
+
+  it('a sorted drop into another lane of the same column asks, and "Remove" keeps the sub-group change', async () => {
+    const children = rows();
+    const { tool, element } = mount(sorted, children);
+
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-b', beforeRowId: null, afterRowId: 'row-2' });
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.removeSortingTitle');
+    expect(updates(children[0])).toEqual([]);
+
+    answer('confirm');
+    await Promise.resolve();
+
+    expect(updates(children[0])).toContainEqual({ 'prop-team': 'team-b' });
+    expect(tool.save(element).views[0].sorts).toEqual([]);
+
+    tool.destroy();
+  });
+
+  it('a sorted drop into another lane keeps the sub-group change on "Don\'t remove", and the sort stays', async () => {
+    const children = rows();
+    const { tool, element } = mount(sorted, children);
+
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-b', beforeRowId: null, afterRowId: 'row-2' });
+    answer('cancel');
+    await Promise.resolve();
+
+    expect(updates(children[0])).toEqual([{ 'prop-team': 'team-b' }]);
+    expect(children.flatMap((block) => vi.mocked(block.call).mock.calls.filter(([method]) => method === 'updatePosition'))).toEqual([]);
+    expect(tool.save(element).views[0].sorts).toEqual(sorted.sorts);
+
+    tool.destroy();
+  });
+
+  it('a sorted drop into another column and lane writes both values without asking', () => {
+    const children = rows();
+    const { tool } = mount(sorted, children);
+
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-done', toSubGroup: 'team-b', beforeRowId: null, afterRowId: null });
+
+    expect(document.querySelector('[data-blok-database-confirm-title]')).toBeNull();
+    expect(updates(children[0])).toEqual([{ 'prop-status': 'opt-done', 'prop-team': 'team-b' }]);
+
+    tool.destroy();
+  });
+});
+
 describe('DatabaseTool — row metadata and unique IDs', () => {
   beforeEach(() => {
     vi.clearAllMocks();

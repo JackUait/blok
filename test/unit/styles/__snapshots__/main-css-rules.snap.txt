@@ -8130,6 +8130,24 @@ span[data-blok-slash-search] {
   gap: var(--blok-space-3);
 }
 
+[data-blok-database-board-heads] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-3);
+  background-color: var(--blok-database-table-bg);
+}
+
+[data-blok-database-board-column-head] {
+  box-sizing: border-box;
+  padding-inline: var(--blok-space-2);
+  background-color: var(--_blok-group-tint, var(--blok-database-column-bg));
+  border-start-start-radius: var(--blok-radius-block);
+  border-start-end-radius: var(--blok-radius-block);
+}
+
 [data-blok-database-calendar-nav] [data-blok-database-calendar-no-date] {
   block-size: 28px;
   padding: var(--blok-space-1-5);

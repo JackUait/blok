@@ -104,10 +104,13 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.style.minWidth = '0';
 
     const lanes = this.settings.subGroups ?? [];
+    // With lanes, the group buttons go after the one header row.
+    const buttonRow = lanes.length > 0 ? this.createHeads() : boardArea;
 
     if (lanes.length > 0) {
       boardArea.setAttribute('data-sub-grouped', '');
-      boardArea.style.flexWrap = 'wrap';
+      boardArea.style.flexDirection = 'column';
+      boardArea.appendChild(buttonRow);
       lanes.forEach((lane) => boardArea.appendChild(this.createLane(lane)));
     } else {
       for (const option of this.options) {
@@ -122,7 +125,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       hiddenBtn.setAttribute('data-blok-database-hidden-groups', '');
       hiddenBtn.setAttribute('aria-haspopup', 'menu');
       hiddenBtn.textContent = this.i18n.t('tools.database.hiddenGroups');
-      boardArea.appendChild(hiddenBtn);
+      buttonRow.appendChild(hiddenBtn);
     }
 
     if (!this.readOnly) {
@@ -133,7 +136,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.addColumn');
       addColumnBtn.style.minWidth = '260px';
       addColumnBtn.style.flex = '0 0 260px';
-      boardArea.appendChild(addColumnBtn);
+      buttonRow.appendChild(addColumnBtn);
     }
 
     wrapper.appendChild(boardArea);
@@ -144,13 +147,31 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     return wrapper;
   }
 
+  /** Sub-grouped boards show each column header once, above every lane. */
+  private createHeads(): HTMLElement {
+    const heads = document.createElement('div');
+
+    heads.setAttribute('data-blok-database-board-heads', '');
+    for (const option of this.options) {
+      const head = document.createElement('div');
+
+      head.setAttribute('data-blok-database-board-column-head', '');
+      head.setAttribute('data-option-id', option.id);
+      this.applyColumnLook(head, option);
+      head.appendChild(this.createColumnHeader(option, this.getRows(option.id).length));
+      heads.appendChild(head);
+    }
+
+    return heads;
+  }
+
   /** One sub-group: its label and count, then a row of every column holding only its cards. */
   private createLane(lane: BoardLane): HTMLElement {
     const section = document.createElement('section');
     const header = document.createElement('div');
     const columns = document.createElement('div');
     const columnEls = this.options.map((option) => {
-      const columnEl = this.createColumnElement(option, this.getRows(option.id, lane.key), this.titlePropertyId);
+      const columnEl = this.createColumnElement(option, this.getRows(option.id, lane.key), this.titlePropertyId, false);
 
       columnEl.setAttribute('data-sub-group', lane.key);
 
@@ -327,7 +348,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   /**
    * Creates a single column element with header, cards container, and optional add-card button.
    */
-  private createColumnElement(option: SelectOption, rows: DatabaseRow[], titlePropertyId: string): HTMLDivElement {
+  private createColumnElement(option: SelectOption, rows: DatabaseRow[], titlePropertyId: string, withHeader = true): HTMLDivElement {
     const columnEl = document.createElement('div');
 
     columnEl.setAttribute('data-blok-database-column', '');
@@ -341,68 +362,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     columnEl.setAttribute('aria-label', option.label);
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
-    const columnWidth = `${CARD_WIDTH[this.cardSize] + COLUMN_PADDING}px`;
+    this.applyColumnLook(columnEl, option);
 
-    columnEl.style.minWidth = columnWidth;
-    columnEl.style.flex = `0 0 ${columnWidth}`;
-
-    if (option.color !== undefined) {
-      const c = option.color;
-
-      // Only some hues were measured (colors.css); the rest derive from the option pill.
-      columnEl.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
-      columnEl.style.setProperty('--_blok-group-ring', `var(--blok-database-column-${c}-ring, color-mix(in srgb, var(--blok-database-option-${c}-bg) 49%, transparent))`);
-      // Unmeasured hues fall back to the pill text, which holds AA on the tint; the Marker text did not.
-      columnEl.style.setProperty('--_blok-group-accent', `var(--blok-database-column-${c}-accent, var(--blok-database-option-${c}-text))`);
-      columnEl.setAttribute('data-color', c);
+    if (withHeader) {
+      columnEl.appendChild(this.createColumnHeader(option, rows.length));
     }
-
-    const header = document.createElement('div');
-
-    header.setAttribute('data-blok-database-column-header', '');
-    header.style.display = 'flex';
-    header.style.alignItems = 'center';
-    header.style.padding = '0 0 6px 0';
-    header.style.gap = '6px';
-    header.style.cursor = 'grab';
-
-    const pill = document.createElement('div');
-
-    pill.setAttribute('data-blok-database-column-pill', '');
-
-    if (option.color !== undefined) {
-      pill.style.backgroundColor = `var(--blok-database-option-${option.color}-bg)`;
-      pill.style.color = `var(--blok-database-option-${option.color}-text)`;
-
-      const dot = document.createElement('span');
-
-      dot.setAttribute('data-blok-database-column-dot', '');
-      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
-      pill.appendChild(dot);
-    }
-
-    const titleEl = document.createElement('div');
-
-    // The no-value label is not a rename target: column controls and rename lookups find the first column-title.
-    titleEl.setAttribute(option.id === NO_VALUE_GROUP_KEY ? 'data-blok-database-no-value-label' : 'data-blok-database-column-title', '');
-    titleEl.textContent = option.label;
-    pill.appendChild(titleEl);
-
-    header.appendChild(pill);
-
-    const countEl = document.createElement('span');
-
-    countEl.setAttribute('data-blok-database-column-count', '');
-    countEl.textContent = String(rows.length);
-
-    countEl.hidden = this.hideCounts;
-    header.appendChild(countEl);
-
-    if (!this.readOnly) {
-      header.appendChild(this.createHeaderActions(option.id));
-    }
-
-    columnEl.appendChild(header);
 
     const cardsContainer = document.createElement('div');
 
@@ -444,6 +408,75 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     return columnEl;
+  }
+
+  /** The column width and its group tint, ring and accent. */
+  private applyColumnLook(el: HTMLElement, option: SelectOption): void {
+    const columnWidth = `${CARD_WIDTH[this.cardSize] + COLUMN_PADDING}px`;
+
+    el.style.setProperty('min-width', columnWidth);
+    el.style.setProperty('flex', `0 0 ${columnWidth}`);
+
+    if (option.color !== undefined) {
+      const c = option.color;
+
+      // Only some hues were measured (colors.css); the rest derive from the option pill.
+      el.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
+      el.style.setProperty('--_blok-group-ring', `var(--blok-database-column-${c}-ring, color-mix(in srgb, var(--blok-database-option-${c}-bg) 49%, transparent))`);
+      // Unmeasured hues fall back to the pill text, which holds AA on the tint; the Marker text did not.
+      el.style.setProperty('--_blok-group-accent', `var(--blok-database-column-${c}-accent, var(--blok-database-option-${c}-text))`);
+      el.setAttribute('data-color', c);
+    }
+  }
+
+  /** The pill, the row count and, when editable, the header buttons. */
+  private createColumnHeader(option: SelectOption, count: number): HTMLElement {
+    const header = document.createElement('div');
+
+    header.setAttribute('data-blok-database-column-header', '');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.padding = '0 0 6px 0';
+    header.style.gap = '6px';
+    header.style.cursor = 'grab';
+
+    const pill = document.createElement('div');
+
+    pill.setAttribute('data-blok-database-column-pill', '');
+
+    if (option.color !== undefined) {
+      pill.style.backgroundColor = `var(--blok-database-option-${option.color}-bg)`;
+      pill.style.color = `var(--blok-database-option-${option.color}-text)`;
+
+      const dot = document.createElement('span');
+
+      dot.setAttribute('data-blok-database-column-dot', '');
+      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
+      pill.appendChild(dot);
+    }
+
+    const titleEl = document.createElement('div');
+
+    // The no-value label is not a rename target: column controls and rename lookups find the first column-title.
+    titleEl.setAttribute(option.id === NO_VALUE_GROUP_KEY ? 'data-blok-database-no-value-label' : 'data-blok-database-column-title', '');
+    titleEl.textContent = option.label;
+    pill.appendChild(titleEl);
+
+    header.appendChild(pill);
+
+    const countEl = document.createElement('span');
+
+    countEl.setAttribute('data-blok-database-column-count', '');
+    countEl.textContent = String(count);
+
+    countEl.hidden = this.hideCounts;
+    header.appendChild(countEl);
+
+    if (!this.readOnly) {
+      header.appendChild(this.createHeaderActions(option.id));
+    }
+
+    return header;
   }
 
   /** The "New page" (+) and "More group options" (⋯) buttons, shown on header hover. */

@@ -1762,13 +1762,13 @@ export class DatabaseTool implements BlockTool {
 
     // "Color columns" off: columns lose their tint, pills keep their color.
     if (viewConfig?.groupSettings?.colorColumns === false) {
-      boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column][data-color]').forEach((column) => {
+      boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column][data-color], [data-blok-database-board-column-head][data-color]').forEach((column) => {
         column.style.removeProperty('background-color');
         column.removeAttribute('data-color');
       });
     }
     if (shown.length > options.length) {
-      boardEl.querySelector('[data-blok-database-board]')?.appendChild(this.loadMoreGroupsButton());
+      (boardEl.querySelector('[data-blok-database-board-heads]') ?? boardEl.querySelector('[data-blok-database-board]'))?.appendChild(this.loadMoreGroupsButton());
     }
 
     return boardEl;
@@ -2135,7 +2135,7 @@ export class DatabaseTool implements BlockTool {
         const optionId = addCardBtn.getAttribute('data-option-id');
 
         if (optionId !== null) {
-          this.handleAddRow(optionId, boardEl);
+          this.handleAddRow(optionId, boardEl, addCardBtn.closest('[data-blok-database-column]')?.getAttribute('data-sub-group') ?? undefined);
         }
 
         return;
@@ -2452,9 +2452,10 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** The clicked group's value wins over a filter on the same property. */
-  private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string): Record<string, PropertyValue> {
+  private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string, subGroupBy?: string): Record<string, PropertyValue> {
     const saved = this.model.getView(this.activeViewId);
-    const filters = (saved === undefined ? [] : this.controls.effective(saved).filters).filter((f) => f.propertyId !== groupByPropId);
+    const filters = (saved === undefined ? [] : this.controls.effective(saved).filters)
+      .filter((f) => f.propertyId !== groupByPropId && f.propertyId !== subGroupBy);
     const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema()), [titlePropId]: '' };
 
     const value = groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY ? undefined : this.groupValueFor(groupByPropId, optionId);
@@ -2474,7 +2475,8 @@ export class DatabaseTool implements BlockTool {
     return property === undefined ? optionId : groupValueForKey(property, optionId, view?.groupSettings ?? {}) ?? undefined;
   }
 
-  private handleAddRow(optionId: string, boardEl: HTMLDivElement): void {
+  /** `subKey` is the lane clicked in, on a sub-grouped board. */
+  private handleAddRow(optionId: string, boardEl: HTMLDivElement, subKey?: string): void {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
 
@@ -2484,7 +2486,13 @@ export class DatabaseTool implements BlockTool {
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
-    const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupByPropId, optionId));
+    const subGroupBy = subKey === undefined ? undefined : viewConfig?.subGroupBy;
+    const properties = this.newRowProperties(titlePropId, groupByPropId, optionId, subGroupBy);
+    const subProperty = subGroupBy === undefined ? undefined : this.model.getProperty(subGroupBy);
+    const subValue = subProperty === undefined || subKey === undefined || subKey === NO_VALUE_GROUP_KEY
+      ? undefined
+      : groupValueForKey(subProperty, subKey, viewConfig?.subGroupSettings ?? {});
+    const rowData = this.model.createRowData(subGroupBy === undefined || subValue === undefined ? properties : { ...properties, [subGroupBy]: subValue });
 
     this.api.blocks.insertAt(
       'database-row',
@@ -2492,6 +2500,14 @@ export class DatabaseTool implements BlockTool {
       { parentId: this.block.id, position: 'end', id: rowData.id },
     );
     this.syncRowsFromBlocks();
+
+    // Lane columns have no header count: a redraw keeps the header and lane counts right.
+    if (subKey !== undefined) {
+      this.rerenderView({ keepDrawer: true });
+      void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
+
+      return;
+    }
 
     const columnEl = boardEl.querySelector(`[data-option-id="${optionId}"][data-blok-database-column]`);
 
@@ -2549,7 +2565,11 @@ export class DatabaseTool implements BlockTool {
       config: { options: [...existingOptions, newOption] },
     });
 
-    this.view.appendGroup?.(boardEl, newOption);
+    if (boardEl.matches('[data-sub-grouped]') || boardEl.querySelector('[data-sub-grouped]') !== null) {
+      this.rerenderView({ keepDrawer: true });
+    } else {
+      this.view.appendGroup?.(boardEl, newOption);
+    }
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: [...existingOptions, newOption] } } });
   }
 
@@ -2768,8 +2788,8 @@ export class DatabaseTool implements BlockTool {
         const isPillTarget = target.closest('[data-blok-database-column-pill], [data-blok-database-column-actions]') !== null;
         if (isPillTarget) return;
 
-        const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
-        const optId = columnEl?.getAttribute('data-option-id') ?? null;
+        // A sub-grouped board keeps its headers in one row, outside the columns.
+        const optId = columnHeader.closest('[data-option-id]')?.getAttribute('data-option-id') ?? null;
 
         if (optId !== null && optId !== NO_VALUE_GROUP_KEY) {
           e.preventDefault();
@@ -2825,8 +2845,7 @@ export class DatabaseTool implements BlockTool {
     const headers = Array.from(boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column-header]'));
 
     for (const header of headers) {
-      const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
-      const optId = columnEl?.getAttribute('data-option-id');
+      const optId = header.closest('[data-option-id]')?.getAttribute('data-option-id');
 
       if (optId !== null && optId !== undefined && optId !== NO_VALUE_GROUP_KEY) {
         this.columnControls.makePillTitleEditable(header, optId);
@@ -2863,25 +2882,26 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    const subGroupBy = viewConfig?.subGroupBy;
+    const subChange: Record<string, PropertyValue> = subGroupBy !== undefined && subGroupBy !== groupByPropId && result.toSubGroup !== undefined
+      ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
+      : {};
+
     // Neighbours arrive in sort order, not key order, so positionBetween would
     // throw. A reorder inside the group asks first (D7). A move to another
     // group changes the value only: Notion's answer there is unmeasured.
     if (viewConfig !== undefined && this.controls.effective(viewConfig).sorts.length > 0) {
       const row = this.model.getRow(rowId);
+      const sortedChanges = { ...this.changedValues(rowId, subChange) };
 
       if (row !== undefined && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig.groupByStatus, settings: viewConfig.groupSettings })(row).includes(toOptionId)) {
-        this.askToRemoveSorting(rowId, beforeRowId, afterRowId);
+        this.askToRemoveSorting(rowId, beforeRowId, afterRowId, sortedChanges);
 
         return;
       }
 
-      const sortedValue = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
-
-      if (JSON.stringify(this.model.getRow(rowId)?.properties[groupByPropId] ?? null) !== JSON.stringify(sortedValue)) {
-        this.updateRowBlock(rowId, { [groupByPropId]: sortedValue });
-        this.rerenderView();
-        this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: sortedValue } });
-      }
+      Object.assign(sortedChanges, this.changedValues(rowId, { [groupByPropId]: this.droppedGroupValue(groupByPropId, rowId, toOptionId) }));
+      this.writeRowValues(rowId, sortedChanges);
 
       return;
     }
@@ -2891,13 +2911,7 @@ export class DatabaseTool implements BlockTool {
     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
 
     const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
-    const subGroupBy = viewConfig?.subGroupBy;
-    const changes: Record<string, PropertyValue> = {
-      [groupByPropId]: value,
-      ...(subGroupBy !== undefined && subGroupBy !== groupByPropId && result.toSubGroup !== undefined
-        ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
-        : {}),
-    };
+    const changes: Record<string, PropertyValue> = { [groupByPropId]: value, ...subChange };
 
     this.updateRowBlock(rowId, changes);
     this.moveRowBlock(rowId, position);
@@ -2907,12 +2921,29 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncMoveRow({ rowId, position });
   }
 
+  /** Only the values that differ from the row's. */
+  private changedValues(rowId: string, values: Record<string, PropertyValue>): Record<string, PropertyValue> {
+    const current = this.model.getRow(rowId)?.properties ?? {};
+
+    return Object.fromEntries(Object.entries(values).filter(([id, value]) => JSON.stringify(current[id] ?? null) !== JSON.stringify(value)));
+  }
+
+  private writeRowValues(rowId: string, changes: Record<string, PropertyValue>): void {
+    if (Object.keys(changes).length === 0 || this.model.getRow(rowId) === undefined) {
+      return;
+    }
+    this.updateRowBlock(rowId, changes);
+    this.rerenderView();
+    this.sync.syncUpdateRow({ rowId, properties: changes });
+  }
+
   /**
    * Notion's D7 flow (research/08): "Remove" deletes the sorts, keeps the sorted
    * order as the manual order and lands the row where it was dropped.
    * "Don't remove" discards the drop.
    */
-  private askToRemoveSorting(rowId: string, beforeRowId: string | null, afterRowId: string | null): void {
+  /** `changes` is a cross-lane drop's sub-group value: it is kept whatever the answer. */
+  private askToRemoveSorting(rowId: string, beforeRowId: string | null, afterRowId: string | null, changes: Record<string, PropertyValue> = {}): void {
     const viewId = this.activeViewId;
 
     void openDatabaseConfirm({
@@ -2924,16 +2955,22 @@ export class DatabaseTool implements BlockTool {
     }).then((remove) => {
       const view = this.model.getView(viewId);
 
-      // A peer may have dropped the sort or the row while the dialog was open.
-      if (!remove || this.destroyed || this.readOnly || view === undefined || view.sorts.length === 0
-        || this.model.getRow(rowId) === undefined) {
+      if (this.destroyed || this.readOnly) {
         return;
       }
-      this.removeSortingAndPlace(view, rowId, beforeRowId, afterRowId);
+      // A peer may have dropped the sort or the row while the dialog was open.
+      if (!remove || view === undefined || view.sorts.length === 0 || this.model.getRow(rowId) === undefined) {
+        this.writeRowValues(rowId, changes);
+
+        return;
+      }
+      this.removeSortingAndPlace(view, rowId, beforeRowId, afterRowId, changes);
     });
   }
 
-  private removeSortingAndPlace(view: DatabaseViewConfig, rowId: string, beforeRowId: string | null, afterRowId: string | null): void {
+  private removeSortingAndPlace(
+    view: DatabaseViewConfig, rowId: string, beforeRowId: string | null, afterRowId: string | null, changes: Record<string, PropertyValue> = {}
+  ): void {
     // Every row, filtered out or not, so hidden rows keep their sorted place too.
     const sorted = sortRows(this.model.getOrderedRows(), view.sorts, this.model.getSchema());
     const dragged = sorted.find((row) => row.id === rowId);
@@ -2963,9 +3000,13 @@ export class DatabaseTool implements BlockTool {
       return position;
     }, null);
 
+    const hasChanges = Object.keys(changes).length > 0;
     const write = (): void => {
       this.model.updateView(view.id, { sorts: [] });
       this.block.dispatchChange();
+      if (hasChanges) {
+        this.updateRowBlock(rowId, changes);
+      }
       moves.forEach((move) => this.moveRowBlock(move.rowId, move.position));
     };
 
@@ -2977,6 +3018,9 @@ export class DatabaseTool implements BlockTool {
 
     this.rerenderView();
     void this.sync.syncUpdateView({ viewId: view.id, changes: { sorts: [] } });
+    if (hasChanges) {
+      this.sync.syncUpdateRow({ rowId, properties: changes });
+    }
     moves.forEach((move) => {
       void this.sync.syncMoveRow(move);
     });

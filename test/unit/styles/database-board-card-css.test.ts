@@ -55,6 +55,13 @@ describe('database board card and calendar "No date" styles', () => {
     expect(css).not.toMatch(/\[data-blok-database-card\]:focus\s*\{/);
   });
 
+  it('keeps the one row of column headers on top of sub-group lanes', () => {
+    const body = ruleBody('[data-blok-database-board-heads]');
+
+    expect(body).toMatch(/position:\s*sticky/);
+    expect(body).toMatch(/inset-block-start:\s*0/);
+  });
+
   it('labels each sub-group lane', () => {
     expect(ruleBody('[data-blok-database-board-lane-header]')).toMatch(/display:\s*flex/);
     expect(ruleBody('[data-blok-database-board-lane-columns]')).toMatch(/display:\s*flex/);

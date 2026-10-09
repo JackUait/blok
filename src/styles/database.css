@@ -4593,6 +4593,26 @@
   gap: var(--blok-space-3);
 }
 
+/* Sticky inside the board's scroller only: it clips on both axes. */
+[data-blok-database-board-heads] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-3);
+  background-color: var(--blok-database-table-bg);
+}
+
+/* Measured (research/07): the header strip is 8px padded, tinted, rounded on top. */
+[data-blok-database-board-column-head] {
+  box-sizing: border-box;
+  padding-inline: var(--blok-space-2);
+  background-color: var(--_blok-group-tint, var(--blok-database-column-bg));
+  border-start-start-radius: var(--blok-radius-block);
+  border-start-end-radius: var(--blok-radius-block);
+}
+
 /* Measured (research/08): "No date (2)" is 28px, 6px padding, 6px radius, muted ink. The list is unmeasured. */
 [data-blok-database-calendar-nav] [data-blok-database-calendar-no-date] {
   block-size: 28px;

@@ -29,8 +29,19 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });
 
+  it('pads a card like Notion\'s title row, 8px 10px 6px (research/07)', () => {
+    expect(ruleBody('[data-blok-database-card]')).toContain('padding: var(--blok-space-2) var(--blok-space-2-5) var(--blok-space-1-5)');
+  });
+
+  it('keeps property rows 6px from the card edge and 8px from its bottom (research/07)', () => {
+    const body = ruleBody('[data-blok-database-card-properties]');
+
+    expect(body).toContain('margin-inline: calc(-1 * var(--blok-space-1))');
+    expect(body).toContain('margin-block-end: var(--blok-space-0-5)');
+  });
+
   it('bleeds the preview to the card edges and crops unless Fit image is on', () => {
-    expect(ruleBody('[data-blok-database-card-preview]')).toContain('margin: calc(-1 * var(--blok-space-2-5)) calc(-1 * var(--blok-space-3)) var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-card-preview]')).toContain('margin: calc(-1 * var(--blok-space-2)) calc(-1 * var(--blok-space-2-5)) var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-card-image]')).toMatch(/object-fit:\s*cover/);
     expect(ruleBody('[data-blok-database-board][data-fit-image] [data-blok-database-card-image]')).toMatch(/object-fit:\s*contain/);
   });

@@ -701,7 +701,7 @@ describe('DatabaseBoardView', () => {
       expect(container.style.gap).toBe('');
     });
 
-    it('card element has padding and pointer cursor', () => {
+    it('card element has a pointer cursor', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -709,7 +709,6 @@ describe('DatabaseBoardView', () => {
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
-      expect(card.style.padding).toBeTruthy();
       expect(card.style.cursor).toBe('pointer');
     });
 
@@ -783,7 +782,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.minWidth).toBe('276px');
     });
 
-    it('card element has updated padding of 10px 12px', () => {
+    it('leaves the card padding to database.css', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -791,7 +790,7 @@ describe('DatabaseBoardView', () => {
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
-      expect(card.style.padding).toBe('10px 12px');
+      expect(card.style.padding).toBe('');
     });
 
     it('leaves the card and column header radius to database.css', () => {

@@ -375,6 +375,7 @@
  */
 [data-blok-database-card] {
   margin-bottom: var(--blok-space-2);
+  padding: var(--blok-space-2) var(--blok-space-2-5) var(--blok-space-1-5);
   background-color: var(--blok-database-card-bg);
   box-shadow: var(--blok-database-card-lift), var(--_blok-group-ring, var(--blok-database-card-ring)) 0 0 0 1px;
   border: none;
@@ -4494,7 +4495,7 @@
 }
 
 [data-blok-database-card-preview] {
-  margin: calc(-1 * var(--blok-space-2-5)) calc(-1 * var(--blok-space-3)) var(--blok-space-2);
+  margin: calc(-1 * var(--blok-space-2)) calc(-1 * var(--blok-space-2-5)) var(--blok-space-2);
   block-size: var(--blok-database-card-preview-height);
   overflow: hidden;
   border-start-start-radius: inherit;
@@ -4532,7 +4533,9 @@
   display: flex;
   flex-direction: column;
   margin-block-start: var(--blok-space-1);
-  margin-inline: calc(-1 * var(--blok-space-1-5));
+  margin-block-end: var(--blok-space-0-5);
+  /* Follows the card's 10px inline padding: rows sit 6px from the edge. */
+  margin-inline: calc(-1 * var(--blok-space-1));
 }
 
 [data-blok-database-card-property] {

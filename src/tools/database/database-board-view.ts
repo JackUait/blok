@@ -485,7 +485,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.tabIndex = -1;
-    cardEl.style.padding = '10px 12px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
 

@@ -2,6 +2,97 @@
    Database / Kanban board
    ═══════════════════════════════════════════════════════ */
 
+/* Not in colors.css: view.css copies every token there. */
+:where([data-blok-interface]),
+:where([data-blok-popover]),
+:where([data-blok-top-layer]) {
+  /* Option pills: values measured in research/07; gray is unmeasured. */
+  --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
+  --blok-database-option-default-text: rgb(44, 44, 43);
+  --blok-database-option-gray-bg: var(--blok-color-gray-bg);
+  --blok-database-option-gray-text: var(--blok-color-gray-text);
+  --blok-database-option-brown-bg: rgba(127, 51, 0, 0.157);
+  --blok-database-option-brown-text: rgb(88, 68, 55);
+  --blok-database-option-orange-bg: rgba(196, 88, 0, 0.204);
+  --blok-database-option-orange-text: rgb(106, 66, 34);
+  --blok-database-option-yellow-bg: rgba(209, 156, 0, 0.282);
+  --blok-database-option-yellow-text: rgb(101, 81, 33);
+  --blok-database-option-green-bg: rgba(0, 96, 38, 0.157);
+  --blok-database-option-green-text: rgb(42, 83, 60);
+  --blok-database-option-blue-bg: rgba(0, 118, 217, 0.204);
+  --blok-database-option-blue-text: rgb(38, 74, 114);
+  --blok-database-option-purple-bg: rgba(92, 0, 163, 0.14);
+  --blok-database-option-purple-text: rgb(85, 59, 105);
+  --blok-database-option-pink-bg: rgba(183, 0, 78, 0.153);
+  --blok-database-option-pink-text: rgb(104, 53, 78);
+  --blok-database-option-red-bg: rgba(206, 24, 0, 0.165);
+  --blok-database-option-red-text: rgb(109, 53, 49);
+  /* Measured: Notion's table checkbox border (research/07). */
+  --blok-database-checkbox-border: rgba(27, 21, 0, 0.19);
+  --blok-database-checkbox-check: #ffffff;
+  /* Measured on Notion's calendar view "today" (research/07); its date picker is unmeasured. */
+  --blok-database-today: rgb(229, 100, 88);
+}
+
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-blok-theme="light"]) [data-blok-interface]),
+  :where(:root:not([data-blok-theme="light"]) [data-blok-popover]),
+  :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+    /* Option pills: dark values measured in research/07; gray, purple, pink and red are unmeasured. */
+    --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
+    --blok-database-option-default-text: rgb(240, 239, 237);
+    --blok-database-option-gray-bg: var(--blok-color-gray-bg);
+    --blok-database-option-gray-text: var(--blok-color-gray-text);
+    --blok-database-option-brown-bg: rgba(255, 184, 132, 0.365);
+    --blok-database-option-brown-text: rgb(245, 237, 233);
+    --blok-database-option-orange-bg: rgba(255, 143, 71, 0.482);
+    --blok-database-option-orange-text: rgb(251, 235, 222);
+    --blok-database-option-yellow-bg: rgba(255, 188, 53, 0.46);
+    --blok-database-option-yellow-text: rgb(249, 243, 220);
+    --blok-database-option-green-bg: rgba(113, 255, 175, 0.337);
+    --blok-database-option-green-text: rgb(232, 241, 236);
+    --blok-database-option-blue-bg: rgba(81, 166, 255, 0.494);
+    --blok-database-option-blue-text: rgb(229, 242, 252);
+    --blok-database-option-purple-bg: var(--blok-color-purple-bg);
+    --blok-database-option-purple-text: var(--blok-color-purple-text);
+    --blok-database-option-pink-bg: var(--blok-color-pink-bg);
+    --blok-database-option-pink-text: var(--blok-color-pink-text);
+    --blok-database-option-red-bg: var(--blok-color-red-bg);
+    --blok-database-option-red-text: var(--blok-color-red-text);
+    --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+    --blok-database-checkbox-check: #ffffff;
+    --blok-database-today: rgb(229, 100, 88);
+  }
+}
+
+:where([data-blok-theme="dark"] [data-blok-interface]),
+:where([data-blok-theme="dark"] [data-blok-popover]),
+:where([data-blok-theme="dark"] [data-blok-top-layer]) {
+  --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
+  --blok-database-option-default-text: rgb(240, 239, 237);
+  --blok-database-option-gray-bg: var(--blok-color-gray-bg);
+  --blok-database-option-gray-text: var(--blok-color-gray-text);
+  --blok-database-option-brown-bg: rgba(255, 184, 132, 0.365);
+  --blok-database-option-brown-text: rgb(245, 237, 233);
+  --blok-database-option-orange-bg: rgba(255, 143, 71, 0.482);
+  --blok-database-option-orange-text: rgb(251, 235, 222);
+  --blok-database-option-yellow-bg: rgba(255, 188, 53, 0.46);
+  --blok-database-option-yellow-text: rgb(249, 243, 220);
+  --blok-database-option-green-bg: rgba(113, 255, 175, 0.337);
+  --blok-database-option-green-text: rgb(232, 241, 236);
+  --blok-database-option-blue-bg: rgba(81, 166, 255, 0.494);
+  --blok-database-option-blue-text: rgb(229, 242, 252);
+  --blok-database-option-purple-bg: var(--blok-color-purple-bg);
+  --blok-database-option-purple-text: var(--blok-color-purple-text);
+  --blok-database-option-pink-bg: var(--blok-color-pink-bg);
+  --blok-database-option-pink-text: var(--blok-color-pink-text);
+  --blok-database-option-red-bg: var(--blok-color-red-bg);
+  --blok-database-option-red-text: var(--blok-color-red-text);
+  --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+  --blok-database-checkbox-check: #ffffff;
+  --blok-database-today: rgb(229, 100, 88);
+}
+
 /**
  * Board area — scrollable padding on both sides so columns can be
  * scrolled all the way to either edge of the editor.  The initial

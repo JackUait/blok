@@ -543,13 +543,18 @@ const main = async () => {
    * `page-title.css` too: the page header is editor UI that blocksToHtml never
    * emits. Its gutter rule lives in main.css itself, so dropPageTitleRules
    * removes that one after the prune.
+   *
+   * `database.css` too: the view renders database and database-row blocks
+   * bare (`childrenOnly` in src/view/emitters.ts), so none of its rules can
+   * match, and its cell tokens (pills, checkbox, date picker) read as carriers.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
     .replace(/^@import '\.\/presence\.css';$/m, '')
     .replace(/^@import '\.\/block-preview\.css';$/m, '')
     .replace(/^@import '\.\/loading\.css';$/m, '')
-    .replace(/^@import '\.\/page-title\.css';$/m, '');
+    .replace(/^@import '\.\/page-title\.css';$/m, '')
+    .replace(/^@import '\.\/database\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

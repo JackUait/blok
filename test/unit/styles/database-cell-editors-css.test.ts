@@ -40,14 +40,24 @@ describe('cell editor CSS', () => {
   it.each(['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'])(
     'defines the %s option tokens in the light and both dark blocks',
     (color) => {
-      expect([...colors.matchAll(new RegExp(`--blok-database-option-${color}-bg:`, 'g'))]).toHaveLength(3);
-      expect([...colors.matchAll(new RegExp(`--blok-database-option-${color}-text:`, 'g'))]).toHaveLength(3);
+      expect([...database.matchAll(new RegExp(`--blok-database-option-${color}-bg:`, 'g'))]).toHaveLength(3);
+      expect([...database.matchAll(new RegExp(`--blok-database-option-${color}-text:`, 'g'))]).toHaveLength(3);
     }
   );
 
+  it.each(['checkbox-border', 'checkbox-check', 'today'])('defines --blok-database-%s in the light and both dark blocks', (token) => {
+    expect([...database.matchAll(new RegExp(`--blok-database-${token}:`, 'g'))]).toHaveLength(3);
+  });
+
   it('uses the measured light values for a measured color', () => {
-    expect(colors).toContain('--blok-database-option-blue-bg: rgba(0, 118, 217, 0.204);');
-    expect(colors).toContain('--blok-database-option-blue-text: rgb(38, 74, 114);');
+    expect(database).toContain('--blok-database-option-blue-bg: rgba(0, 118, 217, 0.204);');
+    expect(database).toContain('--blok-database-option-blue-text: rgb(38, 74, 114);');
+  });
+
+  // view.css copies every token in colors.css and has a byte budget. The view
+  // renders a database bare, so these stay in database.css, which it skips.
+  it('keeps the cell tokens out of colors.css', () => {
+    expect(colors).not.toMatch(/--blok-database-(?:option-|checkbox-|today)/);
   });
 
   it('drops every editor transition under reduced motion', () => {

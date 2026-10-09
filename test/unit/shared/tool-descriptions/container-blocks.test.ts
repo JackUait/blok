@@ -260,6 +260,50 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'a view with an advanced filter tree, group settings, color rules and a lock',
+    data: {
+      activeViewId: 'view-board',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0', databaseLocked: true },
+        { id: 'due', name: 'Due', type: 'date', position: 'a1' },
+        { id: 'stage', name: 'Stage', type: 'select', position: 'a2', config: { options: [] } },
+      ],
+      views: [{
+        id: 'view-board',
+        name: 'Board',
+        type: 'board',
+        position: 'a0',
+        groupBy: 'stage',
+        sorts: [{ id: 's1', propertyId: 'due', direction: 'desc' }],
+        filters: [{ id: 'f1', propertyId: 'due', operator: 'past_week', value: null }],
+        visibleProperties: [],
+        filterTree: {
+          id: 'root',
+          conjunction: 'and',
+          filterRules: [
+            { id: 'r1', propertyId: 'name', operator: 'contains', value: 'a' },
+            {
+              id: 'g2',
+              conjunction: 'or',
+              filterRules: [{
+                id: 'g3',
+                conjunction: 'and',
+                filterRules: [{ id: 'r2', propertyId: 'due', operator: 'relative_to_today', value: 'next:2:week' }],
+              }],
+            },
+          ],
+        },
+        groupSettings: { sort: 'ascending', hideEmptyGroups: true, colorColumns: false },
+        subGroupBy: 'due',
+        subGroupSettings: { dateBy: 'week', weekStart: 1 },
+        groupStates: [{ id: 'stage-a', hidden: true }, { id: 'sub:week:2026-10-05', collapsed: true }],
+        colorRules: [{ id: 'c1', propertyId: 'due', operator: 'is_not_empty', value: null, color: 'green', applyTo: 'property' }],
+        showPageIcon: false,
+      }],
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'a legacy row with no top-level title or pageId',
     data: {
@@ -310,6 +354,36 @@ const INVALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data:
       withHeadings: false,
       withHeadingColumn: false,
       content: [[{ blocks: [], blockData: [{ tool: 'paragraph', data: { text: [] } }] }]],
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'an advanced filter nested four layers deep',
+    data: {
+      activeViewId: 'v',
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{
+        id: 'v', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [],
+        filterTree: {
+          id: 'g1', conjunction: 'and', filterRules: [{
+            id: 'g2', conjunction: 'and', filterRules: [{
+              id: 'g3', conjunction: 'and', filterRules: [{ id: 'g4', conjunction: 'and', filterRules: [] }],
+            }],
+          }],
+        },
+      }],
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a color rule without an id',
+    data: {
+      activeViewId: 'v',
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{
+        id: 'v', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [],
+        colorRules: [{ propertyId: 'name', operator: 'is_empty', value: null, color: 'red' }],
+      }],
     },
   },
   {
@@ -426,7 +500,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('081097cfd344e02f35a8247ad508a5d7c3735bf0c7675c1be6512c6931a318c5');
+      .toBe('15de45c08b8f23e13ab0eac5aec65efc7246d6aa1ff1222686c09df945ba74ac');
 
     const published: unknown = JSON.parse(snapshot);
 

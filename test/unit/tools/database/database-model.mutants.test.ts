@@ -87,6 +87,9 @@ describe('DatabaseModel — mutation coverage', () => {
           calculations: [],
           hiddenGroups: [],
           collapsedGroups: [],
+          filterTree: { id: expect.any(String), conjunction: 'and', filterRules: [] },
+          colorRules: [],
+          groupStates: [],
         },
       ]);
     });
@@ -317,6 +320,9 @@ describe('DatabaseModel — mutation coverage', () => {
         calculations: [],
         hiddenGroups: [],
         collapsedGroups: [],
+        filterTree: { id: expect.any(String), conjunction: 'and', filterRules: [] },
+        colorRules: [],
+        groupStates: [],
       });
     });
 
@@ -345,6 +351,9 @@ describe('DatabaseModel — mutation coverage', () => {
           calculations: [],
           hiddenGroups: [],
           collapsedGroups: [],
+          filterTree: { id: expect.any(String), conjunction: 'and', filterRules: [] },
+          colorRules: [],
+          groupStates: [],
         },
       ]);
     });

@@ -76,6 +76,51 @@ const GROUP_REFS = {
   },
 };
 
+const FILTER_RULE = {
+  type: 'object',
+  required: ['id', 'propertyId', 'operator', 'value'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string' },
+    propertyId: { type: 'string' },
+    operator: { type: 'string' },
+    value: { description: 'Any property value; shape follows the property type.' },
+  },
+};
+
+/** Notion nests advanced filters three layers deep; the schema spells out each layer. */
+const filterGroup = (layer: number): Record<string, unknown> => ({
+  type: 'object',
+  required: ['id', 'conjunction', 'filterRules'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string' },
+    conjunction: { type: 'string', enum: ['and', 'or'] },
+    filterRules: {
+      type: 'array',
+      items: layer < 3 ? { anyOf: [FILTER_RULE, filterGroup(layer + 1)] } : FILTER_RULE,
+    },
+  },
+});
+
+const GROUP_SETTINGS = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    sort: { type: 'string', enum: ['manual', 'ascending', 'descending'] },
+    dateBy: { type: 'string', enum: ['relative', 'day', 'week', 'month', 'year'] },
+    weekStart: { type: 'integer', enum: [0, 1], description: '0 is Sunday, 1 is Monday.' },
+    numberBy: { type: 'string', enum: ['unique', 'range'] },
+    rangeStart: { type: 'number' },
+    rangeEnd: { type: 'number' },
+    rangeSize: { type: 'number', minimum: 1 },
+    textBy: { type: 'string', enum: ['exact', 'alphabet'] },
+    statusBy: { type: 'string', enum: ['group', 'option'] },
+    hideEmptyGroups: { type: 'boolean' },
+    colorColumns: { type: 'boolean', description: 'Board only. Default true.' },
+  },
+};
+
 export const DATABASE_DATA = {
   type: 'object',
   description: 'Schema and view configuration only — rows are child `database-row` blocks.',
@@ -102,6 +147,7 @@ export const DATABASE_DATA = {
             ],
           },
           position: { type: 'string', description: 'Fractional-index sort key.' },
+          databaseLocked: { type: 'boolean', description: 'Read on the title property only: locks the schema and views. Data entry still works.' },
           config: {
             type: 'object',
             description: 'Type-specific options; select/multiSelect carry their choices here.',
@@ -150,6 +196,7 @@ export const DATABASE_DATA = {
               required: ['propertyId', 'direction'],
               additionalProperties: false,
               properties: {
+                id: { type: 'string' },
                 propertyId: { type: 'string' },
                 direction: { type: 'string', enum: ['asc', 'desc'] },
               },
@@ -162,8 +209,9 @@ export const DATABASE_DATA = {
               required: ['propertyId', 'operator', 'value'],
               additionalProperties: false,
               properties: {
+                id: { type: 'string' },
                 propertyId: { type: 'string' },
-                operator: { type: 'string' },
+                operator: { type: 'string', description: 'Notion API operator. Dates add past_week, next_month, this_week, relative_to_today and others.' },
                 value: { description: 'Any property value; shape follows the property type.' },
               },
             },
@@ -218,6 +266,42 @@ export const DATABASE_DATA = {
           hiddenGroups: GROUP_REFS,
           collapsedGroups: GROUP_REFS,
           hideGroupAggregation: { type: 'boolean' },
+          filterTree: { ...filterGroup(1), description: 'Advanced filter. Rows must match it and every simple filter. Older clients ignore it.' },
+          groupSettings: GROUP_SETTINGS,
+          subGroupBy: { type: 'string', description: 'Board only: property id of a second grouping inside each column.' },
+          subGroupSettings: GROUP_SETTINGS,
+          groupStates: {
+            type: 'array',
+            description: 'Hidden and collapsed groups. id is the group key; sub-group keys start with "sub:".',
+            items: {
+              type: 'object',
+              required: ['id'],
+              additionalProperties: false,
+              properties: {
+                id: { type: 'string' },
+                hidden: { type: 'boolean' },
+                collapsed: { type: 'boolean' },
+              },
+            },
+          },
+          colorRules: {
+            type: 'array',
+            description: 'Conditional color. The first matching rule colors a row.',
+            items: {
+              type: 'object',
+              required: ['id', 'propertyId', 'operator', 'value', 'color'],
+              additionalProperties: false,
+              properties: {
+                id: { type: 'string' },
+                propertyId: { type: 'string' },
+                operator: { type: 'string' },
+                value: { description: 'Any property value; shape follows the property type.' },
+                color: { type: 'string' },
+                applyTo: { type: 'string', enum: ['row', 'property'], description: 'Table only. Default row.' },
+              },
+            },
+          },
+          showPageIcon: { type: 'boolean', description: 'Default true.' },
         },
       },
     },

@@ -455,6 +455,53 @@ public sealed class YDocConverterConcurrentLossTests
     Assert.Equal(["rN", "r0", "r1"], RowKeys(doc));
   }
 
+  /// <summary>
+  /// Two people add a rule to the SAME advanced-filter group at once. The
+  /// group's `filterRules` list is born empty, so both sides must mint it as a
+  /// YArray: a whole-value write would keep one rule and drop the other.
+  /// </summary>
+  [Fact]
+  public void ConcurrentFilterRulesInOneGroupBothSurvive()
+  {
+    var doc = SeededDoc(FilterDatabase("[]"));
+    var peer = Fork(doc);
+    var before = doc.EncodeStateVector();
+
+    Apply(peer, FilterUpdate("""[{ "id": "ra", "propertyId": "t", "operator": "contains", "value": "a" }]"""));
+    Apply(doc, FilterUpdate("""[{ "id": "rb", "propertyId": "t", "operator": "contains", "value": "b" }]"""));
+
+    doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
+
+    var rules = BlockNamed(YDocConverter.Export(doc), "db")["data"]?["views"]?[0]?["filterTree"]?["filterRules"]?.AsArray()
+        .Select(rule => rule?["id"]?.GetValue<string>())
+        .ToArray();
+
+    Assert.Contains("ra", rules!);
+    Assert.Contains("rb", rules!);
+  }
+
+  private static string FilterData(string rules)
+  {
+    return $$"""
+        {
+            "schema": [{ "id": "t", "name": "Name", "type": "title", "position": "a0" }],
+            "activeViewId": "v1",
+            "views": [{ "id": "v1", "name": "Table", "type": "table", "position": "a0",
+                "sorts": [], "filters": [], "visibleProperties": [],
+                "filterTree": { "id": "v1-filters", "conjunction": "and", "filterRules": {{rules}} } }] }
+        """;
+  }
+
+  private static string FilterDatabase(string rules)
+  {
+    return $$"""{ "id": "db", "type": "database", "data": {{FilterData(rules)}} }""";
+  }
+
+  private static string FilterUpdate(string rules)
+  {
+    return $$"""{ "op": "update", "id": "db", "data": {{FilterData(rules)}} }""";
+  }
+
   private static YDoc SeededDoc(params string[] blockJson)
   {
     var doc = new YDoc(1);

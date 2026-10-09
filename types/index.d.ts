@@ -161,6 +161,15 @@ export {
   ViewType,
   SortConfig,
   FilterConfig,
+  FilterConjunction,
+  FilterRule,
+  FilterGroup,
+  FilterNode,
+  GroupSort,
+  DateGroupBy,
+  GroupSettings,
+  GroupState,
+  ColorRule,
   DatabaseViewConfig,
   DatabaseRowData,
   DatabaseData,
@@ -168,6 +177,8 @@ export {
   DatabaseRowPages,
   DatabaseRowPageReceipt,
   DatabaseConfig,
+  DatabaseViewStateStore,
+  PersonalViewPatch,
 } from './tools/database';
 export { BlockId } from './data-formats/block-id';
 export {

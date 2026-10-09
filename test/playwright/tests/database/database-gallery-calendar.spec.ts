@@ -134,7 +134,8 @@ test.describe('gallery', () => {
 
     await mount(page, blocks({ type: 'gallery', cardPreview: 'property:p-image', fitImage: true }, rows));
 
-    const image = card(page, 'r1').getByRole('img');
+    // alt="" makes the image decorative, so it has no img role.
+    const image = card(page, 'r1').locator('[data-blok-database-gallery-image]');
 
     await expect(image).toHaveCount(1);
     await expect(image).toHaveCSS('object-fit', 'contain');
@@ -278,6 +279,8 @@ test.describe('calendar', () => {
     await expect(page.locator('[data-blok-database-calendar-add]')).toHaveCount(0);
     await dragBetween(page, event(page, 'r1'), await center(day(page, '2026-10-15')));
 
-    expect((await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09');
+    // A read-only editor cannot save, so the check is that the event stayed put.
+    await expect(day(page, '2026-10-09').locator('[data-blok-database-calendar-event][data-row-id="r1"]')).toHaveCount(1);
+    await expect(day(page, '2026-10-15').locator('[data-blok-database-calendar-event]')).toHaveCount(0);
   });
 });

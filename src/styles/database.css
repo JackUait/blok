@@ -2318,7 +2318,8 @@
   height: 14px;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-toggle-thumb-on-bg);
-  transition: inset-inline-start 0.2s ease-out;
+  /* Measured in research/08: the knob moves 12px over 200ms ease-out. */
+  transition: transform 0.2s ease-out;
 }
 
 [aria-checked="true"] > [data-blok-database-switch-track] {
@@ -2326,7 +2327,11 @@
 }
 
 [aria-checked="true"] > [data-blok-database-switch-track] > span {
-  inset-inline-start: 14px;
+  transform: translateX(12px);
+}
+
+[dir="rtl"] [aria-checked="true"] > [data-blok-database-switch-track] > span {
+  transform: translateX(-12px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3021,6 +3026,425 @@
   [data-blok-database-table-column-header],
   [data-blok-database-table-open],
   [data-blok-database-table-add-property] {
+    transition: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   View toolbar, filter bar and settings panel (Phase 3)
+   Sizes are Notion's, measured in research/08. Active pills and chosen
+   rows are gray, not Notion's blue (D3).
+   ═══════════════════════════════════════════════════════ */
+
+[data-blok-database-view-bar] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-view-bar] > [data-blok-database-tab-bar] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+[data-blok-database-view-toolbar] {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: auto;
+}
+
+[data-blok-database-view-toolbar] > button,
+[data-blok-database-lock-badge] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+  padding-inline: var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-view-toolbar] > button:hover,
+[data-blok-database-view-toolbar] > button[data-popover-open] {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-view-toolbar] > button[data-active] {
+  color: var(--blok-icon-active-text);
+}
+
+[data-blok-database-view-toolbar] svg,
+[data-blok-database-lock-badge] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-lock-badge] {
+  cursor: default;
+}
+
+[data-blok-database-search-input] {
+  width: 160px;
+  height: 28px;
+  padding-block: 3px;
+  padding-inline: 6px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-header-hover-bg);
+  color: var(--blok-text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+[data-blok-database-filter-bar] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding-block: var(--blok-space-1);
+  border-block-start: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-filter-pills] {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+[data-blok-database-filter-pill] {
+  flex: 0 0 auto;
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-table-header-hover-bg);
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+  line-height: 24px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Notion paints a pill with a value blue; Blok's selected tokens keep it gray (D3). */
+[data-blok-database-filter-pill][data-active] {
+  background-color: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+[data-blok-database-filter-add] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding-block: 0;
+  padding-inline: 5px 9px;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background: transparent;
+  color: var(--blok-database-table-muted-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-filter-add] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-filter-add]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-filter-actions] {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-filter-actions] > button {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-filter-actions] > [data-blok-database-filter-save] {
+  color: var(--blok-text-primary);
+  font-weight: 500;
+}
+
+[data-blok-database-load-more-groups] {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-muted-text);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-blok-database-load-more-groups]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-panel] {
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 560px);
+  padding: var(--blok-space-1);
+  overflow-y: auto;
+  color: var(--blok-text-primary);
+  font-size: 14px;
+}
+
+[data-blok-database-panel-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  min-height: 28px;
+  padding: 0 8px;
+  font-weight: 600;
+  line-height: 21px;
+}
+
+[data-blok-database-panel-back] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-inline-start: -4px;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-panel-back] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[dir="rtl"] [data-blok-database-panel-back] svg,
+[dir="rtl"] [data-blok-database-panel-chevron] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-panel-row] {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 16.8px;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 0.02s ease-in;
+}
+
+[data-blok-database-panel-row]:hover:not(:disabled),
+[data-blok-database-panel-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-panel-row]:focus-visible {
+  outline: none;
+}
+
+[data-blok-database-panel-row]:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+[data-blok-database-panel-row][data-danger] {
+  color: var(--blok-color-danger);
+}
+
+[data-blok-database-panel-label] {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-panel-value] {
+  flex: 0 1 auto;
+  color: var(--blok-database-table-muted-text);
+  white-space: nowrap;
+}
+
+[data-blok-database-panel-icon],
+[data-blok-database-panel-chevron],
+[data-blok-database-panel-check] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--blok-database-table-header-icon);
+}
+
+/* A chosen row: a checkmark in primary ink, never a fill (no-blue law). */
+[data-blok-database-panel-check] {
+  color: var(--blok-icon-active-text);
+}
+
+[data-blok-database-panel-icon] svg,
+[data-blok-database-panel-chevron] svg,
+[data-blok-database-panel-check] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-panel-section] {
+  padding-block: 6px 2px;
+  padding-inline: 8px;
+  color: var(--blok-database-table-header-text);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14.4px;
+}
+
+[data-blok-database-panel-note] {
+  padding-block: 0 4px;
+  padding-inline: 8px;
+  color: var(--blok-database-table-header-text);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+[data-blok-database-panel-separator] {
+  height: 1px;
+  margin-block: 4px;
+  background-color: var(--blok-database-table-border);
+}
+
+/* Measured: 196x28, 3px 6px padding, 6px radius. Text fields never show a ring. */
+[data-blok-database-panel-input] {
+  width: calc(100% - 16px);
+  height: 28px;
+  margin-block: 4px;
+  margin-inline: 8px;
+  padding-block: 3px;
+  padding-inline: 6px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-header-hover-bg);
+  color: var(--blok-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+[data-blok-database-panel-switch] > [data-blok-database-switch-track] {
+  margin-inline-start: auto;
+}
+
+[data-blok-database-panel-list-item] {
+  display: flex;
+  align-items: center;
+}
+
+[data-blok-database-panel-list-item][data-dragging] {
+  opacity: 0.4;
+}
+
+[data-blok-database-panel-list-item] > :last-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+[data-blok-database-panel-handle] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-table-gutter-icon);
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-database-panel-handle] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-filter-group],
+[data-blok-database-color-rule] {
+  margin-block: 4px;
+  padding-block: 4px;
+  border: 1px solid var(--blok-database-table-border);
+  border-radius: var(--blok-radius-control-lg);
+}
+
+[data-blok-database-filter-rule],
+[data-blok-database-sort-row] {
+  display: flex;
+  align-items: center;
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-panel-note] {
+  flex: 0 0 48px;
+  padding-block: 0;
+  padding-inline: 8px 0;
+}
+
+[data-blok-database-sort-row] > [data-blok-database-panel-row] {
+  width: auto;
+}
+
+[data-blok-database-sort-row] > [data-blok-database-panel-row]:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Conditional color: unmeasured past green; option backgrounds stand in. */
+[data-blok-database-color="default"] { background-color: var(--blok-database-option-default-bg); }
+[data-blok-database-color="gray"] { background-color: var(--blok-database-option-gray-bg); }
+[data-blok-database-color="brown"] { background-color: var(--blok-database-option-brown-bg); }
+[data-blok-database-color="orange"] { background-color: var(--blok-database-option-orange-bg); }
+[data-blok-database-color="yellow"] { background-color: var(--blok-database-option-yellow-bg); }
+[data-blok-database-color="green"] { background-color: var(--blok-database-option-green-bg); }
+[data-blok-database-color="blue"] { background-color: var(--blok-database-option-blue-bg); }
+[data-blok-database-color="purple"] { background-color: var(--blok-database-option-purple-bg); }
+[data-blok-database-color="pink"] { background-color: var(--blok-database-option-pink-bg); }
+[data-blok-database-color="red"] { background-color: var(--blok-database-option-red-bg); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-view-toolbar] > button,
+  [data-blok-database-panel-row] {
     transition: none;
   }
 }

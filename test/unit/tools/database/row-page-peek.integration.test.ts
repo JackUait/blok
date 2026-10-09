@@ -321,6 +321,50 @@ describe('row page peek modes', () => {
     expect(iconIn()).toBeUndefined();
   });
 
+  describe('timeline', () => {
+    const timelineDoc = (): OutputBlockData[] => {
+      const blocks = doc({ type: 'timeline', timelineBy: 'due', showTimelineTable: true });
+      const today = new Date();
+      const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      (blocks[0].data as { schema: unknown[] }).schema.push({ id: 'due', name: 'Due', type: 'date', position: 'a1' });
+      [1, 2, 3].forEach((i) => {
+        blocks[i] = { ...blocks[i], data: { ...blocks[i].data, properties: { ...(blocks[i].data as { properties: Record<string, unknown> }).properties, due: day } } };
+      });
+
+      return blocks;
+    };
+    const bar = (rowId: string): HTMLElement | null => q(`[data-blok-database-timeline-row][data-row-id="${rowId}"] [data-blok-database-timeline-bar], [data-row-id="${rowId}"] [data-blok-database-timeline-bar], [data-blok-database-timeline-bar][data-row-id="${rowId}"]`);
+
+    it.each([false, true])('opens a row from its bar (read-only: %s)', async (readOnly) => {
+      editor = new Blok({
+        holder,
+        readOnly,
+        dataModel: 'hierarchical',
+        tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+        data: { blocks: timelineDoc() },
+      } as never) as unknown as TestEditor;
+      await editor.isReady;
+      await quiet();
+
+      expect(bar('r2')).not.toBeNull();
+      await click(bar('r2'));
+
+      expect(shownTitle()).toBe('Two');
+    });
+
+    it('Cmd/Ctrl-click on bars picks rows into the selection bar instead of opening them', async () => {
+      await make(timelineDoc());
+      bar('r1')?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+      await quiet();
+      bar('r2')?.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
+      await quiet();
+
+      expect(drawer()).toBeNull();
+      expect(q('[data-blok-database-table-selection-count]')?.textContent).toBe('2 selected');
+    });
+  });
+
   describe('board and list selection', () => {
     const boardDoc = (type: 'board' | 'list'): OutputBlockData[] => {
       const blocks = doc({ type, ...(type === 'board' ? { groupBy: 's' } : {}), visibleProperties: ['d'] });

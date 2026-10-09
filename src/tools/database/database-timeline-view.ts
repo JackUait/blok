@@ -38,6 +38,8 @@ export interface TimelineGroup {
 
 export interface TimelineHandlers {
   openRow: (rowId: string) => void;
+  /** Cmd/Ctrl- or Shift-click on a row: add it to the selection instead of opening it. */
+  pickRow?: (rowId: string, range: boolean) => void;
   /** Group key, or null when the timeline is not grouped. */
   addRow: (groupKey: string | null) => void;
   /** New stored values for the start and/or end property. */
@@ -719,7 +721,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       ['[data-blok-database-timeline-table-title], [data-blok-database-timeline-bar]', (el) => {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
 
-        if (rowId !== null && rowId !== undefined) {
+        if (rowId === null || rowId === undefined) {
+          return;
+        }
+        if ((event.metaKey || event.ctrlKey || event.shiftKey) && handlers.pickRow !== undefined) {
+          handlers.pickRow(rowId, event.shiftKey);
+        } else {
           handlers.openRow(rowId);
         }
       }],

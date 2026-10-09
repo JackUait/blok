@@ -1704,6 +1704,7 @@ export class DatabaseTool implements BlockTool {
       cellContext: this.cellContext(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
+        ...(this.readOnly ? {} : { pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range) }),
         addRow: (groupKey) => this.addTimelineRow(groupKey, startId, today),
         writeDates: (rowId, write) => this.writeTimelineDates(rowId, write, startId, endId),
         moveRow: (result) => this.handleTableRowDrop(result),
@@ -3731,7 +3732,7 @@ export class DatabaseTool implements BlockTool {
     const present = new Set(this.model.getOrderedRows().map((row) => row.id));
 
     [...this.rowSelection].filter((id) => !present.has(id)).forEach((id) => this.rowSelection.delete(id));
-    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card]').forEach((el) => {
+    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card], [data-blok-database-timeline-row], [data-blok-database-timeline-table-row]').forEach((el) => {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
       el.toggleAttribute('data-blok-database-row-selected', selected);

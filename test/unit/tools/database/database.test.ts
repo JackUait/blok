@@ -6,7 +6,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import { DataPersistenceManager } from '../../../../src/components/block/data-persistence-manager';
-import type { DatabaseModel } from '../../../../src/tools/database/database-model';
+import { NO_VALUE_GROUP_KEY, type DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
 
@@ -1010,7 +1010,7 @@ describe('DatabaseTool', () => {
         config: {},
         api: mockApi,
         readOnly: false,
-        block: { id: 'test-block-id' } as never,
+        block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
       };
 
       const tool = new DatabaseTool(options);
@@ -3464,7 +3464,7 @@ describe('DatabaseTool', () => {
     const noValueColumn = (element: HTMLElement): HTMLElement | null =>
       queryByData(element, 'data-blok-database-no-value-group');
 
-    it('shows a row with no group value on the board, in a first "No <property>" column', () => {
+    it('shows a row with no group value on the board, in a last "No <property>" column', () => {
       const { tool, element } = renderBoard([
         { id: 'row-empty', properties: { 'prop-title': 'Loose', 'prop-status': null } },
         { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
@@ -3478,10 +3478,85 @@ describe('DatabaseTool', () => {
 
       expect(column).not.toBeNull();
       expect(column?.contains(card ?? null)).toBe(true);
-      expect(queryAllByData(element, 'data-blok-database-column')[0]).toBe(column);
+      expect(queryAllByData(element, 'data-blok-database-column').at(-1)).toBe(column);
       expect(queryByData(column ?? element, 'data-blok-database-no-value-label')?.textContent).toBe('No Status');
-      // Only real options are rename targets; the first column-title on a board must be a renameable option.
+      // Only real options are rename targets; the no-value column has no column-title.
       expect(queryByData(column ?? element, 'data-blok-database-column-title')).toBeNull();
+
+      tool.destroy();
+    });
+
+    const columnIds = (element: HTMLElement): Array<string | null> =>
+      queryAllByData(element, 'data-blok-database-column').map((col) => col.getAttribute('data-option-id'));
+
+    it('puts the no-value column where the view stores it', () => {
+      const options = createDatabaseOptions({
+        views: [{
+          id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status',
+          sorts: [], filters: [], visibleProperties: [], noValueGroupPosition: 'a0V',
+        }],
+      });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      expect(columnIds(element)).toEqual(['opt-todo', NO_VALUE_GROUP_KEY, 'opt-doing', 'opt-done']);
+
+      tool.destroy();
+    });
+
+    it('places a group added from "New group" after the no-value column, and keeps it there', () => {
+      const { tool, element } = renderBoard([]);
+      const addColumn = queryByData(element, 'data-blok-database-add-column');
+
+      addColumn?.click();
+
+      const ids = columnIds(element);
+
+      expect(ids.slice(0, 4)).toEqual(['opt-todo', 'opt-doing', 'opt-done', NO_VALUE_GROUP_KEY]);
+      expect(ids).toHaveLength(5);
+
+      const saved = tool.save(element);
+      const reloaded = new DatabaseTool(createDatabaseOptions(saved));
+      const reloadedElement = reloaded.render();
+
+      reloaded.rendered();
+
+      expect(columnIds(reloadedElement)).toEqual(ids);
+
+      tool.destroy();
+      reloaded.destroy();
+    });
+
+    it('moves a column past the no-value column and keeps the no-value column in place', () => {
+      const { tool, element } = renderBoard([]);
+      const columnDrag = (tool as unknown as { columnDrag: { onDrop: (r: GroupDragResult) => void } }).columnDrag;
+
+      columnDrag.onDrop({ optionId: 'opt-todo', beforeOptionId: null, afterOptionId: NO_VALUE_GROUP_KEY });
+
+      expect(columnIds(element)).toEqual(['opt-doing', 'opt-done', NO_VALUE_GROUP_KEY, 'opt-todo']);
+
+      const saved = tool.save(element);
+      const reloaded = new DatabaseTool(createDatabaseOptions(saved));
+      const reloadedElement = reloaded.render();
+
+      reloaded.rendered();
+
+      expect(columnIds(reloadedElement)).toEqual(['opt-doing', 'opt-done', NO_VALUE_GROUP_KEY, 'opt-todo']);
+
+      tool.destroy();
+      reloaded.destroy();
+    });
+
+    it('moves the last column to just before the no-value column', () => {
+      const { tool, element } = renderBoard([]);
+      const columnDrag = (tool as unknown as { columnDrag: { onDrop: (r: GroupDragResult) => void } }).columnDrag;
+
+      columnDrag.onDrop({ optionId: 'opt-todo', beforeOptionId: NO_VALUE_GROUP_KEY, afterOptionId: 'opt-done' });
+
+      expect(columnIds(element)).toEqual(['opt-doing', 'opt-done', 'opt-todo', NO_VALUE_GROUP_KEY]);
+      expect(tool.save(element).views[0].noValueGroupPosition).toBeUndefined();
 
       tool.destroy();
     });
@@ -4121,8 +4196,8 @@ describe('DatabaseTool', () => {
       expect(sourceCard?.isConnected).toBe(true);
       expect(columnCards(element, 'opt-todo')).toEqual(['row-a', 'row-b', 'row-x']);
 
-      // Doing is the third column: no-value, Todo, Doing.
-      document.dispatchEvent(new MouseEvent('pointerup', { clientX: 250, clientY: 50 }));
+      // Doing is the second column: Todo, Doing, Done, no-value.
+      document.dispatchEvent(new MouseEvent('pointerup', { clientX: 150, clientY: 50 }));
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(vi.mocked(childBlocks[2].call).mock.calls.filter(([method]) => method === 'updateProperties'))

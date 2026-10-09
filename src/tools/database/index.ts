@@ -1060,25 +1060,47 @@ export class DatabaseTool implements BlockTool {
     return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
   }
 
-  /**
-   * The no-value option must stay first: column drag never drops before it,
-   * and handleGroupDrop reads a missing left neighbour as "first real option".
-   */
-  private groupOptions(groupByPropId: string): SelectOption[] {
+  /** Option groups in board order. The no-value group sits at the view's stored place, or last. */
+  private groupOptions(groupByPropId: string, view: DatabaseViewConfig | undefined): SelectOption[] {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupByPropId);
     const noValue: SelectOption = {
       id: NO_VALUE_GROUP_KEY,
       label: this.api.i18n.t('tools.database.noValueGroup', { property: property?.name ?? '' }),
       position: '',
     };
+    const statusBy = view?.groupByStatus;
+    const options = statusBy === 'group' && property?.type === 'status'
+      ? statusGroupsOf(property).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))
+      : localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId, { statusBy }), this.api.i18n);
+    const stored = view?.noValueGroupPosition;
+    const index = stored === undefined ? -1 : options.findIndex((option) => option.position > stored);
 
-    const statusBy = this.model.getView(this.activeViewId)?.groupByStatus;
+    return index === -1
+      ? [...options, noValue]
+      : [...options.slice(0, index), noValue, ...options.slice(index)];
+  }
 
-    if (statusBy === 'group' && property?.type === 'status') {
-      return [noValue, ...statusGroupsOf(property).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))];
+  /**
+   * The no-value group's position in the option key space. When the view stores
+   * none, it is just past the last option, ignoring `excludeId` (the option moving).
+   */
+  private noValuePosition(view: DatabaseViewConfig, options: SelectOption[], excludeId?: string): string {
+    if (view.noValueGroupPosition !== undefined) {
+      return view.noValueGroupPosition;
     }
+    const last = options.filter((option) => option.id !== excludeId).at(-1);
 
-    return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId, { statusBy }), this.api.i18n)];
+    return DatabaseModel.positionBetween(last?.position ?? null, null);
+  }
+
+  /** Stores the no-value group's place so options placed after it stay after it. */
+  private pinNoValuePosition(view: DatabaseViewConfig, position: string): void {
+    if (view.noValueGroupPosition === position) {
+      return;
+    }
+    this.model.updateView(view.id, { noValueGroupPosition: position });
+    this.block.dispatchChange();
+    void this.sync.syncUpdateView({ viewId: view.id, changes: { noValueGroupPosition: position } });
   }
 
   /** Each group's rows, queried once per render. */
@@ -1087,7 +1109,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderBoardView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
-    const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId) : [];
+    const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId, viewConfig) : [];
     const groups = viewConfig !== undefined && groupByPropId !== undefined
       ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
       : new Map<string, DatabaseRow[]>();
@@ -1143,10 +1165,9 @@ export class DatabaseTool implements BlockTool {
     return state;
   }
 
-  /** Notion lists the no-value group last in a table (research/08). */
+  /** Notion lists the no-value group last in a table too (research/08), unless the view placed it. */
   private tableGroups(groupBy: string, viewConfig: DatabaseViewConfig): TableGroup[] {
-    const [noValue, ...options] = this.groupOptions(groupBy);
-    const ordered = [...options, noValue];
+    const ordered = this.groupOptions(groupBy, viewConfig);
     const rows = this.queryGroupRows(viewConfig, ordered.map((o) => o.id));
 
     return ordered.map((option) => ({
@@ -1330,7 +1351,7 @@ export class DatabaseTool implements BlockTool {
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
 
     if (groupByPropId !== undefined) {
-      const options = this.groupOptions(groupByPropId);
+      const options = this.groupOptions(groupByPropId, viewConfig);
       const groups = this.queryGroupRows(viewConfig, options.map((o) => o.id));
 
       this.view = new DatabaseListView({
@@ -1587,10 +1608,17 @@ export class DatabaseTool implements BlockTool {
     // place, so the last array element is not necessarily the last column.
     const existingOptions = [...prop.config.options].sort((a, b) => (a.position < b.position ? -1 : 1));
     const lastPos = existingOptions.length > 0 ? existingOptions[existingOptions.length - 1].position : null;
+    // A new group goes after the no-value group, which keeps its place (research/08).
+    const noValuePos = viewConfig === undefined ? lastPos : this.noValuePosition(viewConfig, existingOptions);
+
+    if (viewConfig !== undefined && noValuePos !== null) {
+      this.pinNoValuePosition(viewConfig, noValuePos);
+    }
+
     const newOption: SelectOption = {
       id: nanoid(),
       label: this.api.i18n.t('tools.database.columnTitlePlaceholder'),
-      position: DatabaseModel.positionBetween(lastPos, null),
+      position: DatabaseModel.positionBetween(noValuePos !== null && (lastPos === null || noValuePos > lastPos) ? noValuePos : lastPos, null),
     };
 
     this.model.updateProperty(groupByPropId, {
@@ -1948,9 +1976,21 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const beforeOpt = beforeOptionId !== null ? options.find((o) => o.id === beforeOptionId) : undefined;
-    const afterOpt = afterOptionId !== null ? options.find((o) => o.id === afterOptionId) : undefined;
-    const newPosition = DatabaseModel.positionBetween(afterOpt?.position ?? null, beforeOpt?.position ?? null);
+    const positionOf = (id: string | null): string | null => {
+      if (id === NO_VALUE_GROUP_KEY && viewConfig !== undefined) {
+        return this.noValuePosition(viewConfig, options, optionId);
+      }
+
+      return id === null ? null : options.find((o) => o.id === id)?.position ?? null;
+    };
+
+    if (afterOptionId === NO_VALUE_GROUP_KEY && viewConfig !== undefined) {
+      this.pinNoValuePosition(viewConfig, this.noValuePosition(viewConfig, options, optionId));
+    }
+
+    const newPosition = beforeOptionId === NO_VALUE_GROUP_KEY && viewConfig?.noValueGroupPosition === undefined
+      ? DatabaseModel.positionBetween(positionOf(afterOptionId), null)
+      : DatabaseModel.positionBetween(positionOf(afterOptionId), positionOf(beforeOptionId));
 
     options[draggedIdx] = { ...options[draggedIdx], position: newPosition };
     options.sort((a, b) => (a.position < b.position ? -1 : 1));

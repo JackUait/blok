@@ -254,7 +254,7 @@ const DB_DOC: OutputData = {
 
 /**
  * Card ids and titles per column, keyed by the column's option id, in DOM order.
- * Keyed, not positional: the no-value column renders first, even when empty.
+ * Keyed, not positional: the no-value column always renders, even when empty.
  */
 const boardCards = async (page: Page): Promise<Record<string, string[]>> => page.evaluate(() =>
   Object.fromEntries(Array.from(document.querySelectorAll('[data-blok-database-column]')).map(col => [

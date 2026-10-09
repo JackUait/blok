@@ -454,12 +454,12 @@ test.describe('GES database board', () => {
     await gap(page);
     const cardsAfter = await boardCards(page);
 
-    // Columns: no-value (always first), Todo, Done. Dropped below row-2, so row-1 sorts after it.
-    expect(cardsAfter).toEqual([[], [], ['row-2:Card two', 'row-1:Card one']]);
+    // Columns: Todo, Done, then no-value last. Dropped below row-2, so row-1 sorts after it.
+    expect(cardsAfter).toEqual([[], ['row-2:Card two', 'row-1:Card one'], []]);
 
     await park(page);
     await undo(page);
-    await expect.poll(async () => boardCards(page)).toEqual([[], ['row-1:Card one'], ['row-2:Card two']]);
+    await expect.poll(async () => boardCards(page)).toEqual([['row-1:Card one'], ['row-2:Card two'], []]);
     await redo(page);
 
     await expect.poll(async () => boardCards(page), { message: 'board after redo', timeout: 2000 }).toEqual(cardsAfter);

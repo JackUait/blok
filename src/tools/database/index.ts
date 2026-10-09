@@ -68,6 +68,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { mountChildBlocks } from '../nested-blocks';
 import {
   DATABASE_DEFAULT_TEXT,
   localizeDatabaseSchema,
@@ -172,6 +173,8 @@ export class DatabaseTool implements BlockTool {
   private titleElement: HTMLElement | null = null;
   private titleRowElement: HTMLDivElement | null = null;
   private boardContainer: HTMLDivElement | null = null;
+  /** Hidden home of the row holders, so their page bodies never show at the editor root. */
+  private rowPool: HTMLDivElement | null = null;
   private tabBar: DatabaseTabBar | null = null;
 
   private cardDrag: DatabaseCardDrag | null = null;
@@ -289,6 +292,16 @@ export class DatabaseTool implements BlockTool {
     this.element = wrapper;
     this.loadPeople();
 
+    // First slot in the wrapper: core mounts a new row into a database's first slot.
+    const rowPool = document.createElement('div');
+
+    rowPool.setAttribute(DATA_ATTR.nestedBlocks, '');
+    rowPool.setAttribute('data-blok-database-row-pool', '');
+    rowPool.setAttribute(DATA_ATTR.mutationFree, 'true');
+    rowPool.hidden = true;
+    this.rowPool = rowPool;
+    wrapper.appendChild(rowPool);
+
     const titleEl = this.createTitleElement();
     this.titleElement = titleEl;
 
@@ -391,6 +404,7 @@ export class DatabaseTool implements BlockTool {
 
   rendered(): void {
     this.block.stretched = true;
+    this.mountRows();
 
     // The insert wrote the raw seed into the shared document; one save
     // replaces it with the real schema and views. Every client that renders
@@ -483,6 +497,7 @@ export class DatabaseTool implements BlockTool {
     this.sync.destroy();
     this.element = null;
     this.boardContainer = null;
+    this.rowPool = null;
     this.tabBar = null;
   }
 
@@ -715,6 +730,22 @@ export class DatabaseTool implements BlockTool {
    * A row of this database, or one it showed until now (moved out or removed).
    * An unreadable parent counts as ours: the compare after it drops no-ops.
    */
+  /**
+   * Puts every row holder in the hidden pool, except the row whose page is
+   * open: the peek holds that one. `hidden` on a holder is what keeps core's
+   * caret and navigation out of a closed row's body.
+   */
+  private mountRows(): void {
+    if (this.rowPool === null) {
+      return;
+    }
+    const openRowId = this.cardDrawer?.bodyRowId ?? null;
+    const rows = this.api.blocks.getChildren(this.block.id).filter((child) => child.name === 'database-row');
+
+    mountChildBlocks(this.rowPool, rows.filter((row) => row.id !== openRowId));
+    rows.forEach((row) => row.holder.classList.toggle('hidden', row.id !== openRowId));
+  }
+
   private isOwnRowChange(target: ChangedBlock | undefined): boolean {
     if (target?.name !== 'database-row') {
       return false;
@@ -754,6 +785,8 @@ export class DatabaseTool implements BlockTool {
     if (this.boardContainer === null) {
       return;
     }
+
+    this.mountRows();
 
     const before = this.model.getOrderedRows();
 

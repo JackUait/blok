@@ -1,7 +1,9 @@
 import { describeDatabaseRow } from '../../shared/tool-descriptions/database-row';
 import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
-import type { SanitizerConfig } from '../../../types';
+import type { API, BlockAPI, SanitizerConfig } from '../../../types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, PropertyValue } from '../database/types';
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId']);
@@ -49,10 +51,15 @@ export class DatabaseRowTool implements BlockTool {
 
   private _data: DatabaseRowData;
   private unknown: Record<string, unknown>;
+  private readonly api: API | undefined;
+  private readonly block: BlockAPI | undefined;
+  private bodySlot: HTMLElement | null = null;
 
-  constructor({ data }: BlockToolConstructorOptions<DatabaseRowData>) {
+  constructor({ data, api, block }: BlockToolConstructorOptions<DatabaseRowData>) {
     this._data = toRowData(data);
     this.unknown = unknownKeys(data);
+    this.api = api;
+    this.block = block;
   }
 
   public render(): HTMLDivElement {
@@ -60,7 +67,27 @@ export class DatabaseRowTool implements BlockTool {
 
     el.setAttribute('data-blok-tool', 'database-row');
 
+    const bodySlot = document.createElement('div');
+
+    bodySlot.setAttribute(DATA_ATTR.nestedBlocks, '');
+    bodySlot.setAttribute('data-blok-database-row-body', '');
+    // The slot holds only the page body; a write on a body holder is not a row edit.
+    bodySlot.setAttribute(DATA_ATTR.mutationFree, 'true');
+    el.appendChild(bodySlot);
+    this.bodySlot = bodySlot;
+
     return el;
+  }
+
+  public rendered(): void {
+    const api = this.api;
+    const id = this.block?.id;
+
+    if (this.bodySlot === null || api === undefined || id === undefined) {
+      return;
+    }
+
+    mountChildBlocks(this.bodySlot, withSlotlessDescendants(api.blocks.getChildren(id), (childId) => api.blocks.getChildren(childId)));
   }
 
   public save(_block: HTMLElement): DatabaseRowData {
@@ -184,6 +211,25 @@ export class DatabaseRowTool implements BlockTool {
 
   public static get isReadOnlySupported(): boolean {
     return true;
+  }
+
+  /** The row is where its page body sits: no toolbar or selection of its own, body not indented. */
+  public static get isLayout(): boolean {
+    return true;
+  }
+
+  /** Deleting a row deletes its page body. Promoting it would drop body blocks into the database. */
+  public static get deletesChildren(): boolean {
+    return true;
+  }
+
+  /** Enter on the last empty line of a page body adds a line there, never leaves the page. */
+  public static get keepsChildrenOnEnter(): boolean {
+    return true;
+  }
+
+  public static get childTools(): { deny: string[] } {
+    return { deny: ['database-row'] };
   }
 
   /**

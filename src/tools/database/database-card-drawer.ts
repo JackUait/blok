@@ -529,6 +529,11 @@ export class DatabaseCardDrawer {
     this.peekHost = null;
   }
 
+  /** Row whose holder the drawer shows as the page body, or null. */
+  get bodyRowId(): string | null {
+    return null;
+  }
+
   /** Id of the row the drawer shows, or null when closed. */
   get openRowId(): string | null {
     return this.drawer === null ? null : this.currentRowId;

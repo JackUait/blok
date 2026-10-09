@@ -124,7 +124,7 @@ export class DatabaseTool implements BlockTool {
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
 
     this.seeded = initialView !== undefined;
-    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table' } : {});
+    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id } : {});
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
@@ -264,8 +264,10 @@ export class DatabaseTool implements BlockTool {
     this.block.stretched = true;
 
     // The insert wrote the raw seed into the shared document; one save
-    // replaces it with the real schema and views.
-    if (this.seeded) {
+    // replaces it with the real schema and views. Every client that renders
+    // the seed does this, which is safe only because the ids derive from the
+    // block id (idSeed).
+    if (this.seeded && !this.readOnly) {
       this.seeded = false;
       this.block.dispatchChange();
     }

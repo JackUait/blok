@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
+import * as Y from 'yjs';
+
+import { DocumentStore, captureDataKeySnapshot } from '../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -136,5 +138,53 @@ describe('database view settings — two peers editing one view', () => {
     sync(storeA, storeB);
 
     expect(widths(storeA)).toMatchObject({ 'p-status': 180, 'p-due': 240 });
+  });
+
+  /**
+   * A toolbox insert leaves only `{ initialView }` in the document until the
+   * author's save lands, and every client that renders it saves its own
+   * default schema and view. Those must be the same, or the id-keyed lists
+   * merge into two title columns and two views.
+   */
+  it('gives every client that fills in a seeded insert the same schema and view', () => {
+    const storeA = createStore();
+    const storeB = createStore();
+
+    pinClientId(storeA, 1);
+    pinClientId(storeB, 2);
+    storeA.fromJSON([{ id: 'db1', type: 'database', data: { initialView: 'table' } }]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+
+    const fill = (): ReturnType<DatabaseModel['snapshot']> =>
+      new DatabaseModel({ initialView: 'table' }, { defaultViewType: 'table', idSeed: 'db1' }).snapshot();
+    const ydataOf = (store: DocumentStore): Y.Map<unknown> => {
+      const ydata = store.getBlockById('db1')?.get('data');
+
+      if (!(ydata instanceof Y.Map)) {
+        throw new Error('db1 has no data map');
+      }
+
+      return ydata;
+    };
+
+    // B starts its save while it still sees only the seed; A's save lands first.
+    const seenByB = captureDataKeySnapshot(ydataOf(storeB));
+    const fromA = fill();
+
+    storeA.updateBlockData('db1', 'schema', fromA.schema);
+    storeA.updateBlockData('db1', 'views', fromA.views);
+    sync(storeA, storeB);
+
+    const fromB = fill();
+
+    storeB.updateBlockData('db1', 'schema', fromB.schema, seenByB);
+    storeB.updateBlockData('db1', 'views', fromB.views, seenByB);
+    sync(storeA, storeB);
+
+    const data = storeA.toJSON().find((block) => block.id === 'db1')?.data as { schema: PropertyDefinition[]; views: DatabaseViewConfig[] };
+
+    expect(data.schema.filter((p) => p.type === 'title')).toHaveLength(1);
+    expect(data.views).toHaveLength(1);
+    expect(storeB.toJSON()).toEqual(storeA.toJSON());
   });
 });

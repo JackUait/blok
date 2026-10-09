@@ -26,6 +26,12 @@ export type ViewChanges = Partial<Pick<DatabaseViewConfig,
 export interface DatabaseModelOptions {
   /** Layout of the view a database without views starts with. */
   defaultViewType?: ViewType;
+  /**
+   * Makes the default schema and view ids derive from this string instead of
+   * being random. Every client that fills in the same seeded block then
+   * writes the same ids, so their saves merge into one schema, not two.
+   */
+  idSeed?: string;
 }
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
@@ -49,13 +55,13 @@ export class DatabaseModel {
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
-      this.schema = DatabaseModel.createDefaultSchema();
+      this.schema = DatabaseModel.createDefaultSchema(DatabaseModel.idMinter(options.idSeed));
     }
 
     if (data?.views !== undefined && data.views.length > 0) {
       this.views = structuredClone(data.views);
     } else {
-      this.views = [this.createDefaultView(options.defaultViewType ?? 'board')];
+      this.views = [this.createDefaultView(options.defaultViewType ?? 'board', DatabaseModel.idMinter(options.idSeed))];
     }
 
     this.activeViewId = data?.activeViewId || (this.views.length > 0 ? this.views[0].id : '');
@@ -333,35 +339,39 @@ export class DatabaseModel {
     return `${digit(0)}${digit(0)}${digit(0)}${digit(1)}`;
   }
 
-  private static createDefaultSchema(): PropertyDefinition[] {
+  private static idMinter(seed: string | undefined): (name: string) => string {
+    return seed === undefined ? () => nanoid() : (name) => `${seed}-${name}`;
+  }
+
+  private static createDefaultSchema(mintId: (name: string) => string): PropertyDefinition[] {
     return [
       {
-        id: nanoid(),
+        id: mintId('title'),
         name: DATABASE_DEFAULT_TEXT.titleProperty,
         type: 'title',
         position: 'a0',
       },
       {
-        id: nanoid(),
+        id: mintId('status'),
         name: DATABASE_DEFAULT_TEXT.statusProperty,
         type: 'select',
         position: 'a1',
         config: {
           options: [
             {
-              id: nanoid(),
+              id: mintId('not-started'),
               label: DATABASE_DEFAULT_TEXT.statusNotStarted,
               color: 'gray',
               position: 'a0',
             },
             {
-              id: nanoid(),
+              id: mintId('in-progress'),
               label: DATABASE_DEFAULT_TEXT.statusInProgress,
               color: 'blue',
               position: 'a1',
             },
             {
-              id: nanoid(),
+              id: mintId('done'),
               label: DATABASE_DEFAULT_TEXT.statusDone,
               color: 'green',
               position: 'a2',
@@ -372,11 +382,11 @@ export class DatabaseModel {
     ];
   }
 
-  private createDefaultView(type: ViewType): DatabaseViewConfig {
+  private createDefaultView(type: ViewType, mintId: (name: string) => string): DatabaseViewConfig {
     const statusProp = this.schema.find((p) => p.type === 'select');
 
     return this.newView({
-      id: nanoid(),
+      id: mintId('view'),
       name: type === 'table' ? DATABASE_DEFAULT_TEXT.viewTypeTable : DATABASE_DEFAULT_TEXT.viewBoard,
       type,
       position: 'a0',

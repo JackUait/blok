@@ -11,7 +11,7 @@ interface TestEditor {
   save: () => Promise<OutputData>;
   destroy: () => void;
   blocks: API['blocks'];
-  history: { undo: () => void };
+  history: { undo: () => void; redo: () => void };
   module: { yjsManager: { toJSON: () => OutputBlockData[] } };
 }
 
@@ -72,5 +72,12 @@ describe('database inserted with the toolbox table seed', () => {
     await quiet();
 
     expect(editor.module.yjsManager.toJSON().map((block) => block.id)).toEqual(['p1']);
+
+    editor.history.redo();
+    await quiet();
+
+    const redone = editor.module.yjsManager.toJSON().find((block) => block.id === inserted.id);
+
+    expect(redone?.data).toEqual(saved?.data);
   });
 });

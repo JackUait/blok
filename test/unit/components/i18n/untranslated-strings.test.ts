@@ -374,6 +374,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.link.webLink',
     // "OK" is the conventional compact confirmation label in Romanian UIs.
     'notifier.ok',
+    // "Calendar" is the native Romanian noun.
+    'tools.database.viewTypeCalendar',
+    'tools.database.calendarLabel',
   ]),
   // "OK" is the conventional compact confirmation label in Slovak UIs.
   sk: new Set([

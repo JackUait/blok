@@ -752,7 +752,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const POPOVER_CLOSE_MOTION_BYTES = 197;
     // database.css: the view toolbar, filter bar, filter pills, the paged
     // settings panel, conditional color fills and the switch knob motion.
-    const DATABASE_VIEW_SETTINGS_BYTES = 10_858;
+    const DATABASE_VIEW_SETTINGS_BYTES = 11_292;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

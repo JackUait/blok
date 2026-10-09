@@ -6653,7 +6653,7 @@ span[data-blok-slash-search] {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 2px;
+  gap: var(--blok-space-0-5);
   margin-inline-start: auto;
 }
 
@@ -6693,8 +6693,8 @@ span[data-blok-slash-search] {
 [data-blok-database-search-input] {
   width: 160px;
   height: 28px;
-  padding-block: 3px;
-  padding-inline: 6px;
+  padding-block: var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-header-hover-bg);
@@ -6724,7 +6724,7 @@ span[data-blok-slash-search] {
 [data-blok-database-filter-pill] {
   flex: 0 0 auto;
   height: 24px;
-  padding: 0 8px;
+  padding: 0 var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-table-header-hover-bg);
@@ -6744,10 +6744,10 @@ span[data-blok-slash-search] {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 2px;
+  gap: var(--blok-space-0-5);
   height: 24px;
   padding-block: 0;
-  padding-inline: 5px 9px;
+  padding-inline: var(--blok-space-1-25) var(--blok-space-2-25);
   border: none;
   border-radius: var(--blok-radius-pill);
   background: transparent;
@@ -6773,7 +6773,7 @@ span[data-blok-slash-search] {
 
 [data-blok-database-filter-actions] > button {
   height: 24px;
-  padding: 0 8px;
+  padding: 0 var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
@@ -6820,7 +6820,7 @@ span[data-blok-slash-search] {
   align-items: center;
   gap: var(--blok-space-1);
   min-height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--blok-space-2);
   font-weight: 600;
   line-height: 21px;
 }
@@ -6832,7 +6832,7 @@ span[data-blok-slash-search] {
   width: 20px;
   height: 20px;
   padding: 0;
-  margin-inline-start: -4px;
+  margin-inline-start: calc(-1 * var(--blok-space-1));
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
@@ -6853,10 +6853,10 @@ span[data-blok-slash-search] {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
+  gap: var(--blok-space-2);
   width: 100%;
   min-height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
@@ -6915,8 +6915,8 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-panel-section] {
-  padding-block: 6px 2px;
-  padding-inline: 8px;
+  padding-block: var(--blok-space-1-5) var(--blok-space-0-5);
+  padding-inline: var(--blok-space-2);
   color: var(--blok-database-table-header-text);
   font-size: 12px;
   font-weight: 500;
@@ -6924,8 +6924,8 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-panel-note] {
-  padding-block: 0 4px;
-  padding-inline: 8px;
+  padding-block: 0 var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
   color: var(--blok-database-table-header-text);
   font-size: 12px;
   line-height: 16px;
@@ -6933,17 +6933,17 @@ span[data-blok-slash-search] {
 
 [data-blok-database-panel-separator] {
   height: 1px;
-  margin-block: 4px;
+  margin-block: var(--blok-space-1);
   background-color: var(--blok-database-table-border);
 }
 
 [data-blok-database-panel-input] {
   width: calc(100% - 16px);
   height: 28px;
-  margin-block: 4px;
-  margin-inline: 8px;
-  padding-block: 3px;
-  padding-inline: 6px;
+  margin-block: var(--blok-space-1);
+  margin-inline: var(--blok-space-2);
+  padding-block: var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-header-hover-bg);
@@ -6992,8 +6992,8 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-filter-group], [data-blok-database-color-rule] {
-  margin-block: 4px;
-  padding-block: 4px;
+  margin-block: var(--blok-space-1);
+  padding-block: var(--blok-space-1);
   border: 1px solid var(--blok-database-table-border);
   border-radius: var(--blok-radius-control-lg);
 }
@@ -7006,7 +7006,7 @@ span[data-blok-slash-search] {
 [data-blok-database-filter-rule] > [data-blok-database-panel-note] {
   flex: 0 0 48px;
   padding-block: 0;
-  padding-inline: 8px 0;
+  padding-inline: var(--blok-space-2) 0;
 }
 
 [data-blok-database-sort-row] > [data-blok-database-panel-row] {

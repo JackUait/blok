@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconTrash } from '../../../components/icons';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { DatabaseModel } from '../database-model';
+import { personIdsOf } from '../property-values';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
@@ -14,13 +15,7 @@ const listIds = { next: 0 };
 const byPosition = (options: SelectOption[]): SelectOption[] =>
   [...options].sort((a, b) => (a.position < b.position ? -1 : 1));
 
-const selectedIdsOf = (value: PropertyValue | undefined): string[] => {
-  if (Array.isArray(value)) {
-    return [...value];
-  }
-
-  return typeof value === 'string' && value !== '' ? [value] : [];
-};
+const selectedIdsOf = (value: PropertyValue | undefined): string[] => personIdsOf(value);
 
 const iconButton = (attribute: string, icon: string, label: string): HTMLButtonElement => {
   const button = document.createElement('button');

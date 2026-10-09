@@ -35,6 +35,7 @@ export const openCellEditor = (
       return CLOSED;
     case 'select':
     case 'multiSelect':
+    case 'status':
       return openSelectEditor(property, value, anchor, ctx);
     case 'date':
       return openDateEditor(property, value, anchor, ctx);
@@ -43,6 +44,19 @@ export const openCellEditor = (
     case 'number':
     case 'url':
     case 'richText':
+    case 'email':
+    case 'phone':
       return openTextEditor(property, value, anchor, ctx);
+    case 'person':
+    case 'files':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'uniqueId':
+      return CLOSED;
+    default:
+      // A type from a newer client has no editor.
+      return CLOSED;
   }
 };

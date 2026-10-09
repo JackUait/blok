@@ -29,6 +29,13 @@
   --blok-database-option-red-text: rgb(109, 53, 49);
   /* Measured: Notion's table checkbox border (research/07). */
   --blok-database-checkbox-border: rgba(27, 21, 0, 0.19);
+  /* Measured: status dots and person avatar ring (research/08). */
+  --blok-database-status-dot-gray: rgb(142, 139, 134);
+  --blok-database-status-dot-blue: rgb(39, 131, 222);
+  --blok-database-status-dot-green: rgb(70, 161, 113);
+  --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
+  --blok-database-status-pill-pad-start: 7px;
+  --blok-database-status-pill-pad-end: 9px;
   --blok-database-checkbox-check: #ffffff;
   /* Measured on Notion's calendar view "today" (research/07); its date picker is unmeasured. */
   --blok-database-today: rgb(229, 100, 88);
@@ -77,6 +84,11 @@
     --blok-database-option-red-bg: var(--blok-color-red-bg);
     --blok-database-option-red-text: var(--blok-color-red-text);
     --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+    /* Status dots unmeasured in dark: kept from light. Avatar ring uses the measured dark cell border. */
+    --blok-database-status-dot-gray: rgb(142, 139, 134);
+    --blok-database-status-dot-blue: rgb(39, 131, 222);
+    --blok-database-status-dot-green: rgb(70, 161, 113);
+    --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
     --blok-database-checkbox-check: #ffffff;
     --blok-database-today: rgb(229, 100, 88);
     /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
@@ -122,6 +134,11 @@
   --blok-database-option-red-bg: var(--blok-color-red-bg);
   --blok-database-option-red-text: var(--blok-color-red-text);
   --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+  /* Status dots unmeasured in dark: kept from light. Avatar ring uses the measured dark cell border. */
+  --blok-database-status-dot-gray: rgb(142, 139, 134);
+  --blok-database-status-dot-blue: rgb(39, 131, 222);
+  --blok-database-status-dot-green: rgb(70, 161, 113);
+  --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
   /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
@@ -1449,6 +1466,122 @@
   color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--blok-text-tertiary);
+}
+
+/* Status pill: 20px, padding 0 9px 0 7px, radius 10px, 8px dot (research/08). */
+[data-blok-database-option-pill][data-status-group] {
+  gap: var(--blok-space-1);
+  padding-block: 0;
+  padding-inline: var(--blok-database-status-pill-pad-start) var(--blok-database-status-pill-pad-end);
+  border-radius: var(--blok-radius-pill);
+}
+
+[data-blok-database-option-pill][data-status-group]::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentcolor;
+}
+
+[data-blok-database-option-pill][data-status-group][data-color="gray"]::before { background-color: var(--blok-database-status-dot-gray); }
+[data-blok-database-option-pill][data-status-group][data-color="blue"]::before { background-color: var(--blok-database-status-dot-blue); }
+[data-blok-database-option-pill][data-status-group][data-color="green"]::before { background-color: var(--blok-database-status-dot-green); }
+
+/* Number: right-aligned as measured. Bar and ring look is unmeasured; colors reuse option ink. */
+[data-blok-database-cell="number"] {
+  justify-content: flex-end;
+  text-align: end;
+}
+
+[data-blok-database-number-bar],
+[data-blok-database-number-ring] {
+  --blok-database-number-ink: var(--blok-database-option-default-text);
+  /* Set inline per cell from the value. */
+  --blok-database-number-fill: 0%;
+  flex: none;
+}
+
+[data-blok-database-number-bar] {
+  width: 64px;
+  height: 4px;
+  border-radius: var(--blok-radius-pill);
+  background: linear-gradient(to right, var(--blok-database-number-ink) var(--blok-database-number-fill), var(--blok-database-option-default-bg) 0);
+}
+
+[dir="rtl"] [data-blok-database-number-bar] {
+  background: linear-gradient(to left, var(--blok-database-number-ink) var(--blok-database-number-fill), var(--blok-database-option-default-bg) 0);
+}
+
+[data-blok-database-number-ring] {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: conic-gradient(var(--blok-database-number-ink) var(--blok-database-number-fill), var(--blok-database-option-default-bg) 0);
+  mask: radial-gradient(circle, transparent 4px, currentcolor 4.5px);
+}
+
+[data-blok-database-number-bar][data-color="gray"], [data-blok-database-number-ring][data-color="gray"] { --blok-database-number-ink: var(--blok-database-option-gray-text); }
+[data-blok-database-number-bar][data-color="brown"], [data-blok-database-number-ring][data-color="brown"] { --blok-database-number-ink: var(--blok-database-option-brown-text); }
+[data-blok-database-number-bar][data-color="orange"], [data-blok-database-number-ring][data-color="orange"] { --blok-database-number-ink: var(--blok-database-option-orange-text); }
+[data-blok-database-number-bar][data-color="yellow"], [data-blok-database-number-ring][data-color="yellow"] { --blok-database-number-ink: var(--blok-database-option-yellow-text); }
+[data-blok-database-number-bar][data-color="green"], [data-blok-database-number-ring][data-color="green"] { --blok-database-number-ink: var(--blok-database-status-dot-green); }
+[data-blok-database-number-bar][data-color="blue"], [data-blok-database-number-ring][data-color="blue"] { --blok-database-number-ink: var(--blok-database-status-dot-blue); }
+[data-blok-database-number-bar][data-color="purple"], [data-blok-database-number-ring][data-color="purple"] { --blok-database-number-ink: var(--blok-database-option-purple-text); }
+[data-blok-database-number-bar][data-color="pink"], [data-blok-database-number-ring][data-color="pink"] { --blok-database-number-ink: var(--blok-database-option-pink-text); }
+[data-blok-database-number-bar][data-color="red"], [data-blok-database-number-ring][data-color="red"] { --blok-database-number-ink: var(--blok-database-option-red-text); }
+
+/* ID: tertiary ink (research/08). */
+[data-blok-database-cell="uniqueId"] {
+  color: var(--blok-text-tertiary);
+}
+
+/* Person chip: 20px round avatar with a 1px ring, 6px gap (research/08). */
+[data-blok-database-person-chip] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+[data-blok-database-person-avatar],
+[data-blok-database-person-initial] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  outline: 1px solid var(--blok-database-avatar-ring);
+  object-fit: cover;
+}
+
+[data-blok-database-person-initial] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background-color: var(--blok-database-option-default-bg);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-person-initial]::before {
+  content: attr(data-blok-database-person-initial);
+}
+
+/* File chip: 24px, padding 0 6px, radius 4px (research/08). */
+[data-blok-database-file-chip] {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-option-default-bg);
+  line-height: 24px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Drawer value: a button that opens the cell editor. */

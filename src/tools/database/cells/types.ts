@@ -1,5 +1,5 @@
 import type { I18n } from '../../../../types';
-import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
+import type { DatabasePerson, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
 /**
  * What every cell renderer and editor needs from its host: the table, a board
@@ -25,7 +25,7 @@ export interface CellContext {
   locale?: string;
   /** First day of the week, 0 = Sunday … 6 = Saturday. Defaults to the locale's. */
   weekStart?: number;
-  /** 12- or 24-hour time. Defaults to the locale's. */
+  /** 12- or 24-hour time. Defaults to the locale's. A property's own time format wins. */
   hourCycle?: 'h12' | 'h23';
   /**
    * Text that replaces the value when the editor opens: a key typed on a
@@ -33,6 +33,10 @@ export interface CellContext {
    * the search. The date editor ignores it.
    */
   initialText?: string;
+  /** The host's people, for names and avatars. Without it a person shows a placeholder. */
+  people?: DatabasePerson[];
+  /** Anchors the relative date format. Defaults to the current time. */
+  now?: Date;
 }
 
 /**

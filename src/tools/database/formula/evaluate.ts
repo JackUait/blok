@@ -4,6 +4,7 @@ import type { FormulaNode } from './parser';
 import { bindingIndexes, isLambda } from './checker';
 import type { LambdaFunction, Scope } from './checker';
 import { propertyFormulaValue } from './properties';
+import { readPropertyValue } from '../property-values';
 import type { FormulaText, FormulaValue } from './types';
 import { compareValues, concatText, formulaValueToText, isText, num, truthy, valuesEqual } from './values';
 import type { DatabaseRow, PropertyDefinition } from '../types';
@@ -45,7 +46,7 @@ export const evaluate = (node: FormulaNode, env: EvalEnv, scope: Scope<FormulaVa
       const id = node.ref.by === 'id' ? node.ref.id : '';
       const property = env.properties.get(id);
 
-      return property === undefined ? null : propertyFormulaValue(property, env.row.properties[id], env.timeZone);
+      return property === undefined ? null : propertyFormulaValue(property, readPropertyValue(env.row, property), env.timeZone);
     }
     case 'unary': {
       const operand = ev(node.operand);

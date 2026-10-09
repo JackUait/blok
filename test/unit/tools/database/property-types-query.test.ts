@@ -272,3 +272,62 @@ describe('property types — query', () => {
     });
   });
 });
+
+describe('property types — calculations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('counts unique people by id, not by object', async () => {
+    const { computeCalculation } = await import('../../../../src/tools/database/database-calculations');
+    const who = schema.find((p) => p.id === 'who') as PropertyDefinition;
+
+    expect(computeCalculation('unique', [[{ id: 'u1' }], [{ id: 'u1' }, { id: 'u2' }]], who)).toEqual({ kind: 'number', value: 2 });
+  });
+
+  it('offers the date calculations on created and last edited time', async () => {
+    const { CALCULATIONS_FOR_TYPE } = await import('../../../../src/tools/database/database-calculations');
+
+    expect(CALCULATIONS_FOR_TYPE.createdTime).toContain('earliest_date');
+    expect(CALCULATIONS_FOR_TYPE.status).not.toContain('sum');
+  });
+});
+
+describe('property types — formulas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const run = async (source: string, r: DatabaseRow): Promise<unknown> => {
+    const { compileFormula, evaluateFormula } = await import('../../../../src/tools/database/formula');
+    const compiled = compileFormula(source, schema);
+
+    if (!compiled.ok) throw new Error(compiled.error.message);
+
+    return evaluateFormula(compiled.formula, r, { now: new Date(OCT_12), schema, timeZone: 'UTC' });
+  };
+
+  it('reads a status as its label, an email as text and an ID with its prefix', async () => {
+    const r = row('r', 'a0', { st: 's-done', mail: 'a@b.io', uid: 7 });
+
+    expect(await run('prop("Progress")', r)).toBe('Done');
+    expect(await run('prop("Mail")', r)).toBe('a@b.io');
+    expect(await run('prop("Code")', r)).toBe('TASK-7');
+  });
+
+  it('reads people as person refs and created time from row metadata', async () => {
+    const r = row('r', 'a0', { who: [{ id: 'u1' }] }, { createdAt: OCT_9, createdBy: 'u3' });
+
+    expect(await run('prop("Owner")', r)).toEqual([{ kind: 'person', id: 'u1' }]);
+    expect(await run('prop("Creator")', r)).toEqual({ kind: 'person', id: 'u3' });
+    expect(await run('dateBetween(prop("Created"), prop("Created"), "days")', r)).toBe(0);
+  });
+});

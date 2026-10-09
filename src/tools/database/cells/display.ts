@@ -1,7 +1,9 @@
 import { IconCheck } from '../../../components/icons';
-import { safeHref } from '../../../components/utils/sanitize-url';
+import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
-import { formatDateText, resolveLocale } from './date-format';
+import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
+import { formatDateDisplay, resolveLocale } from './date-format';
+import { formatNumberValue, numberFill } from './number-format';
 import { optionColorOf } from './option-colors';
 import type { CellContext } from './types';
 
@@ -20,7 +22,10 @@ export const createOptionPill = (option: Pick<SelectOption, 'label' | 'color'>):
 };
 
 const renderCheckbox = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {
-  const checked = value === true;
+  renderCheckState(cell, value === true, ctx);
+};
+
+const renderCheckState = (cell: HTMLElement, checked: boolean, ctx: CellContext): void => {
   const box = document.createElement('span');
 
   box.setAttribute('data-blok-database-checkbox', '');
@@ -37,11 +42,24 @@ const renderCheckbox = (cell: HTMLElement, value: PropertyValue | undefined, ctx
   cell.append(box, state);
 };
 
-function renderUrl(cell: HTMLElement, url: string, ctx: CellContext): void {
-  const href = safeHref(url);
+const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
+  renderLink(cell, url, safeHref(url), ctx);
+};
 
+/** `?` and `&` are encoded, so an address cannot add `?bcc=` or other headers. */
+export const mailtoHref = (email: string): string | null =>
+  email.trim() === '' ? null : safeHref(`mailto:${encodeURIComponent(email.trim()).replace(/%40/g, '@')}`);
+
+/** Only dialable characters reach `tel:`. */
+export const telHref = (phone: string): string | null => {
+  const dialable = phone.replace(/[^\d+*#]/g, '');
+
+  return /\d/.test(dialable) ? safeHref(`tel:${dialable}`) : null;
+};
+
+const renderLink = (cell: HTMLElement, text: string, href: string | null, ctx: CellContext): void => {
   if (href === null) {
-    cell.append(url);
+    cell.append(text);
 
     return;
   }
@@ -51,7 +69,7 @@ function renderUrl(cell: HTMLElement, url: string, ctx: CellContext): void {
   link.href = href;
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
-  link.textContent = url;
+  link.textContent = text;
   link.setAttribute('data-blok-database-cell-link', '');
   // A plain click edits the cell; Cmd/Ctrl-click opens the link.
   link.addEventListener('click', (event) => {
@@ -60,7 +78,104 @@ function renderUrl(cell: HTMLElement, url: string, ctx: CellContext): void {
     }
   });
   cell.appendChild(link);
-}
+};
+
+const toNumber = (value: PropertyValue | undefined): number | undefined => {
+  const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+
+  return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
+};
+
+const renderNumber = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {
+  const n = toNumber(value);
+
+  if (n === undefined) {
+    cell.replaceChildren(typeof value === 'string' ? value : '');
+
+    return;
+  }
+
+  const display = property.number ?? {};
+  const text = document.createElement('span');
+
+  text.setAttribute('data-blok-database-number-text', '');
+  text.textContent = formatNumberValue(n, display, resolveLocale(ctx.locale));
+  cell.appendChild(text);
+
+  if (display.showAs !== 'bar' && display.showAs !== 'ring') {
+    return;
+  }
+
+  const gauge = document.createElement('span');
+
+  gauge.setAttribute(display.showAs === 'bar' ? 'data-blok-database-number-bar' : 'data-blok-database-number-ring', '');
+  gauge.setAttribute('data-color', optionColorOf({ color: display.color }));
+  gauge.setAttribute('aria-hidden', 'true');
+  gauge.style.setProperty('--blok-database-number-fill', `${Math.round(numberFill(n, display) * 100)}%`);
+  cell.appendChild(gauge);
+};
+
+const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {
+  const id = typeof value === 'string' ? value : '';
+  const group = id === '' ? undefined : statusGroupOf(property, id);
+
+  if (property.status?.showAs === 'checkbox') {
+    renderCheckState(cell, group?.kind === 'complete', ctx);
+
+    return;
+  }
+
+  const option = optionsFor(property, ctx).find((o) => o.id === id);
+
+  if (option === undefined) {
+    return;
+  }
+
+  const pill = createOptionPill(option);
+
+  pill.setAttribute('data-status-group', group?.kind ?? 'todo');
+  cell.appendChild(pill);
+};
+
+const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {
+  for (const id of personIdsOf(value)) {
+    const person = ctx.people?.find((p) => p.id === id);
+    const chip = document.createElement('span');
+    const name = person?.name ?? ctx.i18n.t('tools.database.personUnknown');
+    const avatar = person?.avatarUrl === undefined ? null : safeImageSrc(person.avatarUrl);
+
+    chip.setAttribute('data-blok-database-person-chip', '');
+    chip.setAttribute('data-person-id', id);
+    if (avatar !== null) {
+      const img = document.createElement('img');
+
+      img.src = avatar;
+      img.alt = '';
+      img.setAttribute('data-blok-database-person-avatar', '');
+      chip.appendChild(img);
+    } else {
+      const initial = document.createElement('span');
+
+      // Drawn by CSS from the attribute, so the chip's text stays the name alone.
+      initial.setAttribute('data-blok-database-person-initial', person === undefined ? '' : [...name][0] ?? '');
+      initial.setAttribute('aria-hidden', 'true');
+      chip.appendChild(initial);
+    }
+    chip.append(name);
+    cell.appendChild(chip);
+  }
+};
+
+const renderFiles = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {
+  for (const file of filesOf(value)) {
+    const chip = document.createElement('span');
+
+    chip.setAttribute('data-blok-database-file-chip', '');
+    chip.setAttribute('data-file-id', file.id);
+    renderLink(chip, file.name, safeHref(file.url), ctx);
+    cell.appendChild(chip);
+  }
+};
 
 const isEmpty = (value: PropertyValue | undefined): boolean =>
   value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
@@ -82,20 +197,23 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
     case 'select':
     case 'multiSelect': {
       const options = optionsFor(property, ctx);
-      const single = typeof value === 'string' && value !== '' ? [value] : [];
-      const ids = Array.isArray(value) ? value : single;
 
-      ids
+      personIdsOf(value ?? null)
         .map((id) => options.find((option) => option.id === id))
         .filter((option): option is SelectOption => option !== undefined)
         .forEach((option) => cell.appendChild(createOptionPill(option)));
       break;
     }
+    case 'status':
+      renderStatus(cell, property, value, ctx);
+      break;
     case 'checkbox':
       renderCheckbox(cell, value, ctx);
       break;
     case 'date':
-      cell.textContent = formatDateText(value, resolveLocale(ctx.locale), ctx.hourCycle)
+    case 'createdTime':
+    case 'lastEditedTime':
+      cell.textContent = formatDateDisplay(value, resolveLocale(ctx.locale), property.date, ctx.now, ctx.hourCycle)
         ?? (typeof value === 'string' ? value : '');
       break;
     case 'url':
@@ -103,11 +221,41 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
         renderUrl(cell, value, ctx);
       }
       break;
+    case 'email':
+      if (typeof value === 'string' && value !== '') {
+        renderLink(cell, value, mailtoHref(value), ctx);
+      }
+      break;
+    case 'phone':
+      if (typeof value === 'string' && value !== '') {
+        renderLink(cell, value, telHref(value), ctx);
+      }
+      break;
+    case 'number':
+      renderNumber(cell, property, value, ctx);
+      break;
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy':
+      renderPeople(cell, value, ctx);
+      break;
+    case 'files':
+      renderFiles(cell, value, ctx);
+      break;
+    case 'uniqueId': {
+      const n = toNumber(value);
+      const prefix = property.uniqueId?.prefix;
+
+      cell.textContent = n === undefined ? '' : `${prefix !== undefined && prefix !== '' ? `${prefix}-` : ''}${n}`;
+      break;
+    }
     case 'title':
     case 'text':
-    case 'number':
     case 'richText':
       cell.textContent = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+      break;
+    default:
+      // A type from a newer client shows empty.
       break;
   }
 

@@ -2032,7 +2032,7 @@ export class DatabaseTool implements BlockTool {
 
     for (const row of rowsInGroup) {
       const current = row.properties[groupByPropId];
-      const value = Array.isArray(current) ? current.filter((id) => id !== optionId) : null;
+      const value = Array.isArray(current) ? personIdsOf(current).filter((id) => id !== optionId) : null;
 
       this.updateRowBlock(row.id, { [groupByPropId]: value });
       this.sync.syncUpdateRow({ rowId: row.id, properties: { [groupByPropId]: value } });
@@ -2054,7 +2054,7 @@ export class DatabaseTool implements BlockTool {
 
     for (const row of this.model.getOrderedRows()) {
       const current = row.properties[propertyId];
-      const ids = Array.isArray(current) ? current : [];
+      const ids = Array.isArray(current) ? personIdsOf(current) : [];
       const value = Array.isArray(current) ? ids.filter((id) => !gone.has(id)) : null;
       const holdsRemoved = typeof current === 'string' ? gone.has(current) : ids.some((id) => gone.has(id));
 

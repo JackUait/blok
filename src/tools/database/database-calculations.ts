@@ -1,3 +1,4 @@
+import { personIdsOf } from './property-values';
 import type { CalculationFn, PropertyDefinition, PropertyType, PropertyValue } from './types';
 
 export type CalculationResult =
@@ -28,6 +29,16 @@ export const CALCULATIONS_FOR_TYPE: Readonly<Record<PropertyType, readonly Calcu
   number: [...GENERIC, 'sum', 'average', 'median', 'min', 'max', 'range'],
   date: [...GENERIC, 'earliest_date', 'latest_date', 'date_range'],
   checkbox: ['count', 'checked', 'unchecked', 'percent_checked', 'percent_unchecked'],
+  status: GENERIC,
+  email: GENERIC,
+  phone: GENERIC,
+  person: GENERIC,
+  files: GENERIC,
+  createdBy: GENERIC,
+  lastEditedBy: GENERIC,
+  uniqueId: GENERIC,
+  createdTime: [...GENERIC, 'earliest_date', 'latest_date', 'date_range'],
+  lastEditedTime: [...GENERIC, 'earliest_date', 'latest_date', 'date_range'],
 };
 
 const isEmpty = (value: PropertyValue | undefined): boolean => {
@@ -41,7 +52,8 @@ const isEmpty = (value: PropertyValue | undefined): boolean => {
 /** One entry per value: a multi-select cell gives one per option. */
 const itemsOf = (value: PropertyValue | undefined): Array<string | number | boolean> => {
   if (value === undefined || value === null || isEmpty(value)) return [];
-  if (Array.isArray(value)) return value;
+  // Person and file entries count by id, so two rows naming one person are one unique value.
+  if (Array.isArray(value)) return personIdsOf(value);
   if (typeof value === 'object') return [JSON.stringify(value)];
 
   return [value];

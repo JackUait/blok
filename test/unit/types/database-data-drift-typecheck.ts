@@ -9,6 +9,22 @@ import type { DatabaseData as PublishedDatabaseData } from '../../../types/tools
 import type { DatabaseData as SourceDatabaseData } from '../../../src/tools/database/types';
 import type { DatabaseAdapter as PublishedAdapter, DatabaseViewConfig as PublishedView } from '../../../types/tools/database';
 import type { DatabaseAdapter as SourceAdapter, DatabaseViewConfig as SourceView } from '../../../src/tools/database/types';
+import type {
+  PropertyDefinition as PublishedProperty,
+  PropertyValue as PublishedValue,
+  PropertyType as PublishedType,
+  DatabaseRow as PublishedRow,
+  DatabaseRowData as PublishedRowData,
+  DatabaseConfig as PublishedConfig,
+} from '../../../types/tools/database';
+import type {
+  PropertyDefinition as SourceProperty,
+  PropertyValue as SourceValue,
+  PropertyType as SourceType,
+  DatabaseRow as SourceRow,
+  DatabaseRowData as SourceRowData,
+  DatabaseConfig as SourceConfig,
+} from '../../../src/tools/database/types';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
 const assert = <T extends true>(): T | undefined => undefined;
@@ -23,3 +39,11 @@ assert<Equal<PublishedDatabaseData['title'], SourceDatabaseData['title']>>();
 assert<Equal<PublishedView, SourceView>>();
 assert<Equal<Parameters<PublishedAdapter['createView']>[0], Parameters<SourceAdapter['createView']>[0]>>();
 assert<Equal<Parameters<PublishedAdapter['updateView']>[0], Parameters<SourceAdapter['updateView']>[0]>>();
+
+// The property system: types, settings, values, row metadata and the people lever.
+assert<Equal<PublishedType, SourceType>>();
+assert<Equal<PublishedProperty, SourceProperty>>();
+assert<Equal<PublishedValue, SourceValue>>();
+assert<Equal<PublishedRow, SourceRow>>();
+assert<Equal<keyof Known<PublishedRowData>, keyof Known<SourceRowData>>>();
+assert<Equal<PublishedConfig, SourceConfig>>();

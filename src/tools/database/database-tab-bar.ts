@@ -1,6 +1,6 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import { IconBoard, IconList, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
+import { IconBoard, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -41,6 +41,7 @@ function activateOnEnterOrSpace(element: HTMLElement, action: () => void): void 
 const VIEW_ICONS: Record<string, string> = {
   board: IconBoard,
   list: IconList,
+  table: IconTable,
 };
 
 export interface TabBarOptions {

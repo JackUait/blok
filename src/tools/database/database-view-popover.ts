@@ -1,4 +1,4 @@
-import { IconBoard, IconList } from '../../components/icons';
+import { IconBoard, IconList, IconTable } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -13,6 +13,7 @@ interface ViewTypeOption {
 }
 
 const VIEW_TYPES: ViewTypeOption[] = [
+  { type: 'table', icon: IconTable, labelKey: 'tools.database.viewTypeTable', descriptionKey: 'tools.database.viewTypeTableDescription' },
   { type: 'board', icon: IconBoard, labelKey: 'tools.database.viewTypeBoard', descriptionKey: 'tools.database.viewTypeBoardDescription' },
   { type: 'list', icon: IconList, labelKey: 'tools.database.viewTypeList', descriptionKey: 'tools.database.viewTypeListDescription' },
 ];

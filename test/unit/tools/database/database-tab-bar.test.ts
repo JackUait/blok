@@ -122,6 +122,7 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 });
 
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
+import { IconTable } from '../../../../src/components/icons';
 import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
@@ -188,6 +189,17 @@ describe('DatabaseTabBar', () => {
   };
 
   describe('render()', () => {
+    it('gives a table view tab the table icon', () => {
+      const view = makeView({ type: 'table' });
+      const el = createTabBar([view], view.id).render();
+      const tab = el.querySelector('[data-blok-database-tab-name]')?.parentElement;
+
+      const expected = document.createElement('span');
+
+      expected.innerHTML = IconTable;
+      expect(tab?.firstElementChild?.innerHTML).toBe(expected.innerHTML);
+    });
+
     it('creates tab bar element with data-blok-database-tab-bar attribute', () => {
       const view = makeView();
       const bar = createTabBar([view], view.id);

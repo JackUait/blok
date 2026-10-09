@@ -123,14 +123,26 @@ describe('DatabaseViewPopover', () => {
       expect(boardEl!.style.cursor).not.toBe('not-allowed');
     });
 
-    it('renders Board and List options', () => {
+    it('renders Table, Board and List options, in Notion order', () => {
       popover.open(anchor);
       const items = getLastItems();
       const types = items
         .map((item) => item.element?.getAttribute('data-blok-database-view-option'))
         .filter(Boolean);
 
-      expect(types).toEqual(['board', 'list']);
+      expect(types).toEqual(['table', 'board', 'list']);
+    });
+
+    it('calls onSelect with "table" when Table option is clicked', () => {
+      popover.open(anchor);
+      const items = getLastItems();
+      const tableEl = items
+        .map((item) => item.element)
+        .find((el) => el?.getAttribute('data-blok-database-view-option') === 'table');
+
+      tableEl?.click();
+
+      expect(onSelect).toHaveBeenCalledWith('table');
     });
 
     it('renders List option as enabled', () => {

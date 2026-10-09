@@ -61,6 +61,7 @@ interface WeekInfo {
 }
 
 interface LocaleWithWeekInfo {
+  baseName?: string;
   getWeekInfo?: () => WeekInfo;
   weekInfo?: WeekInfo;
 }

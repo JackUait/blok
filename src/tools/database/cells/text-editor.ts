@@ -90,8 +90,8 @@ export const openTextEditor = (
   };
 
   field.addEventListener('input', () => field.removeAttribute('aria-invalid'));
-  field.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' || event.isComposing || (multiline && event.shiftKey)) {
+  field.addEventListener('keydown', (event: Event) => {
+    if (!(event instanceof KeyboardEvent) || event.key !== 'Enter' || event.isComposing || (multiline && event.shiftKey)) {
       return;
     }
     event.preventDefault();

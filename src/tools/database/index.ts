@@ -154,8 +154,8 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-delete-row]',
 ].join(', ');
 
-/** Saves a file through a same-origin object URL, where `download` is honored. */
-const downloadBlob = (blob: Blob, fileName: string): void => {
+/** Saves a file through a same-origin object URL, where `download` is honored. The anchor lives in `host` for the click. */
+const downloadBlob = (blob: Blob, fileName: string, host: HTMLElement): void => {
   const url = URL.createObjectURL(blob);
   const href = safeDownloadHref(url);
 
@@ -165,7 +165,8 @@ const downloadBlob = (blob: Blob, fileName: string): void => {
     a.href = href;
     a.download = fileName;
     a.rel = 'noopener';
-    document.body.appendChild(a);
+    a.hidden = true;
+    host.appendChild(a);
     a.click();
     a.remove();
   }
@@ -1842,7 +1843,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private downloadCsv(): void {
-    downloadBlob(new Blob([this.exportCsv()], { type: 'text/csv;charset=utf-8' }), `${this.fileBase()}.csv`);
+    if (this.element !== null) downloadBlob(new Blob([this.exportCsv()], { type: 'text/csv;charset=utf-8' }), `${this.fileBase()}.csv`, this.element);
   }
 
   private async saveChart(format: 'png' | 'svg'): Promise<void> {
@@ -1852,7 +1853,7 @@ export class DatabaseTool implements BlockTool {
     const svg = view.toSvgString();
     const blob = format === 'svg' ? new Blob([svg], { type: 'image/svg+xml' }) : await view.toPngBlob();
 
-    if (svg !== '' && blob !== null) downloadBlob(blob, `${this.fileBase()}.${format}`);
+    if (svg !== '' && blob !== null && this.element !== null) downloadBlob(blob, `${this.fileBase()}.${format}`, this.element);
   }
 
   /** A file picker for one CSV or TSV file. */
@@ -1870,7 +1871,7 @@ export class DatabaseTool implements BlockTool {
       input.remove();
       if (file !== undefined) void file.text().then((text) => then({ name: file.name, text }));
     });
-    document.body.appendChild(input);
+    this.element?.appendChild(input);
     input.click();
   }
 

@@ -5,6 +5,7 @@ import type { ResolvedChartSettings } from './chart-settings';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { ChartColorTheme } from './types';
 import { hide as hideHint, show as showHint } from '../../components/utils/tooltip';
+import { safeDownloadHref } from '../../components/utils/sanitize-url';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -290,14 +291,16 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     const width = Number(svg.getAttribute('width'));
     const height = Number(svg.getAttribute('height'));
     const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+    const src = safeDownloadHref(url);
 
     try {
+      if (src === null) return null;
       const image = new Image();
 
       await new Promise<void>((resolve, reject) => {
         image.onload = () => resolve();
         image.onerror = () => reject(new Error('chart image failed'));
-        image.src = url;
+        image.src = src;
       });
       const canvas = document.createElement('canvas');
 

@@ -128,6 +128,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/image/darkroom/markup-editor.ts': 'Markup selection box and text editor convert the camera plane rect into offsets local to the stage overlay they live in; refresh() re-places them on every camera paint and stage resize.',
   'tools/image/index.ts': 'Snap guides are placed at container percentages inside the block root; the container width is read only for the readout px, not to position a floating root.',
   'tools/image/tone-sampler.ts': 'Reads control and picture rects only to find which pixels sit under each control; it positions nothing.',
+  'tools/database/database-chart-view.ts': 'The hint anchor converts the hovered mark rect into offsets local to the chart root it lives in; it is placed again on every hover and never mounts on body.',
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',

@@ -26,6 +26,11 @@ export const DEFAULT_LOAD_LIMIT: LoadLimit = 50;
 /** Measured in research/08. */
 const BOARD_DEFAULT_LOAD_LIMIT: LoadLimit = 25;
 
+/** Measured on Notion's feed view (research/08). */
+const FEED_DEFAULT_LOAD_LIMIT: LoadLimit = 10;
+
+const LAYOUT_LOAD_LIMITS: Partial<Record<string, LoadLimit>> = { board: BOARD_DEFAULT_LOAD_LIMIT, feed: FEED_DEFAULT_LOAD_LIMIT };
+
 export interface ResolvedViewProperty {
   id: string;
   visible: boolean;
@@ -201,14 +206,14 @@ export const resolveFrozenColumnCount = (view: DatabaseViewConfig): number => {
 };
 
 export const resolveLoadLimit = (view: DatabaseViewConfig): LoadLimit =>
-  LOAD_LIMITS.find((limit) => limit === view.loadLimit) ?? (view.type === 'board' ? BOARD_DEFAULT_LOAD_LIMIT : DEFAULT_LOAD_LIMIT);
+  LOAD_LIMITS.find((limit) => limit === view.loadLimit) ?? LAYOUT_LOAD_LIMITS[view.type] ?? DEFAULT_LOAD_LIMIT;
 
 const OPEN_PAGES_IN: readonly OpenPagesIn[] = ['side', 'center', 'full'];
 
-/** Notion's per-layout defaults: gallery and calendar open in a center peek, the rest in a side peek. */
+/** Notion's per-layout defaults: gallery, calendar and feed open in a center peek, the rest in a side peek. */
 export const resolveOpenPagesIn = (view: DatabaseViewConfig): OpenPagesIn =>
   OPEN_PAGES_IN.find((mode) => mode === view.openPagesIn)
-  ?? (view.type === 'gallery' || view.type === 'calendar' ? 'center' : 'side');
+  ?? (view.type === 'gallery' || view.type === 'calendar' || view.type === 'feed' ? 'center' : 'side');
 
 const CARD_SIZES: readonly CardSize[] = ['small', 'medium', 'large'];
 

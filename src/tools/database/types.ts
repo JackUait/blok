@@ -681,4 +681,9 @@ export interface DatabaseConfig {
   weekStart?: number;
   /** Rows of related databases in other documents. Without it, those relations show ids only. */
   relations?: DatabaseRelations;
+  /**
+   * Feed view: a footer under each card, for comments and reactions (Tier 3,
+   * D6: Blok draws none). Return a cleanup; it runs when the view redraws.
+   */
+  feedFooter?: (context: { rowId: string; holder: HTMLElement }) => (() => void) | void;
 }

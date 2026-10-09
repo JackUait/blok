@@ -18,6 +18,8 @@ const DEFAULT_KEYS = {
   viewTypeGallery: 'tools.database.viewTypeGallery',
   viewTypeCalendar: 'tools.database.viewTypeCalendar',
   viewTypeTimeline: 'tools.database.viewTypeTimeline',
+  viewTypeChart: 'tools.database.viewTypeChart',
+  viewTypeFeed: 'tools.database.viewTypeFeed',
 } as const;
 
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
@@ -41,6 +43,8 @@ export const DATABASE_DEFAULT_TEXT = {
   viewTypeGallery: englishDefault(DEFAULT_KEYS.viewTypeGallery),
   viewTypeCalendar: englishDefault(DEFAULT_KEYS.viewTypeCalendar),
   viewTypeTimeline: englishDefault(DEFAULT_KEYS.viewTypeTimeline),
+  viewTypeChart: englishDefault(DEFAULT_KEYS.viewTypeChart),
+  viewTypeFeed: englishDefault(DEFAULT_KEYS.viewTypeFeed),
 } as const;
 
 const localizeCanonicalValue = (
@@ -159,6 +163,14 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
 
   if (view.type === 'timeline') {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeTimeline, DEFAULT_KEYS.viewTypeTimeline, i18n);
+  }
+
+  if (view.type === 'chart') {
+    return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeChart, DEFAULT_KEYS.viewTypeChart, i18n);
+  }
+
+  if (view.type === 'feed') {
+    return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeFeed, DEFAULT_KEYS.viewTypeFeed, i18n);
   }
 
   return view.name;

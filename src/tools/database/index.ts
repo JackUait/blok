@@ -66,7 +66,7 @@ import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconUpload } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -84,11 +84,21 @@ import {
 import { renderBoardPreview, renderDatabasePreview } from './preview';
 import { DatabaseViewControls } from './database-view-controls';
 import type { ViewControlsHost } from './database-view-controls';
-import type { ViewGroupEntry } from './database-view-settings-panel';
+import type { ViewGroupEntry, ViewSettingsAction } from './database-view-settings-panel';
 import { registerGroupToggle } from './database-group-toggle';
 import { GROUPABLE_TYPES, groupValueForKey } from './group-keys';
 import { resolveRowColors } from './view-data';
 import { groupLabel } from './database-group-labels';
+import { buildChartData, foldChartData } from './chart-data';
+import type { ChartGroupInput, ChartPoint, ChartSeriesInput } from './chart-data';
+import { resolveChartSettings } from './chart-settings';
+import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
+import { DatabaseChartView } from './database-chart-view';
+import { openChartDrilldown } from './database-chart-drilldown';
+import { DatabaseFeedView } from './database-feed-view';
+import { buildCsvImport, csvCellText, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
+import { formatNumberValue } from './cells/number-format';
+import { safeDownloadHref } from '../../components/utils/sanitize-url';
 
 interface ChangedBlock {
   id?: unknown;
@@ -125,7 +135,7 @@ const INITIAL_VIEW_KEY = 'initialView';
 const BOARD_GROUP_PAGE = 10;
 
 /** Layouts Blok draws; gallery is in the type but falls back to a board. */
-const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'timeline', 'calendar'];
+const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar'];
 
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
 const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
@@ -143,6 +153,24 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-add-row]',
   '[data-blok-database-delete-row]',
 ].join(', ');
+
+/** Saves a file through a same-origin object URL, where `download` is honored. */
+const downloadBlob = (blob: Blob, fileName: string): void => {
+  const url = URL.createObjectURL(blob);
+  const href = safeDownloadHref(url);
+
+  if (href !== null) {
+    const a = document.createElement('a');
+
+    a.href = href;
+    a.download = fileName;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  URL.revokeObjectURL(url);
+};
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', INITIAL_VIEW_KEY]);
 
@@ -216,6 +244,10 @@ export class DatabaseTool implements BlockTool {
   private groupMenuPopover: PopoverDesktop | null = null;
   /** Per gallery view and group: how many cards "Load more" has revealed. Session only. */
   private readonly galleryShown = new Map<string, Map<string, number>>();
+  /** Per chart view: groups and series a legend click turned off. Session only, never saved (H-charts). */
+  private readonly chartHidden = new Map<string, Set<string>>();
+  /** Per feed view: how many cards "Load more" has revealed. Session only. */
+  private readonly feedShown = new Map<string, number>();
   /** Per calendar view: the shown range, for when local storage is blocked. */
   private readonly calendarAnchors = new Map<string, string>();
   /** A day to focus after the calendar redraws into a new range. */
@@ -1282,9 +1314,11 @@ export class DatabaseTool implements BlockTool {
       gallery: DATABASE_DEFAULT_TEXT.viewTypeGallery,
       calendar: DATABASE_DEFAULT_TEXT.viewTypeCalendar,
       timeline: DATABASE_DEFAULT_TEXT.viewTypeTimeline,
+      chart: DATABASE_DEFAULT_TEXT.viewTypeChart,
+      feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
     };
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
-      groupBy: type === 'board' ? statusProp?.id : undefined,
+      groupBy: type === 'board' || type === 'chart' ? statusProp?.id : undefined,
     });
     void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);
@@ -1441,6 +1475,12 @@ export class DatabaseTool implements BlockTool {
       if (viewConfig?.type === 'timeline') {
         return this.renderTimelineView(titlePropId, viewConfig);
       }
+      if (viewConfig?.type === 'chart') {
+        return this.renderChartView(titlePropId, viewConfig);
+      }
+      if (viewConfig?.type === 'feed') {
+        return this.renderFeedView(titlePropId, viewConfig);
+      }
 
       // Unknown types (a newer client's layout) fall back to a board.
       return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
@@ -1456,7 +1496,7 @@ export class DatabaseTool implements BlockTool {
   /** Conditional color: a data attribute on each matching row, card or (table) cell. */
   private paintRowColors(viewEl: HTMLElement, view: DatabaseViewConfig): void {
     const colors = resolveRowColors(this.model.getOrderedRows(), view, this.model.getValueSchema());
-    const rowSelector = ':is([data-blok-database-table-row], [data-blok-database-card], [data-blok-database-list-row])';
+    const rowSelector = ':is([data-blok-database-table-row], [data-blok-database-card], [data-blok-database-list-row], [data-blok-database-feed-card])';
     const paint = (rowEl: HTMLElement, color: { row?: string; cells: Record<string, string> }): void => {
       if (color.row !== undefined) rowEl.setAttribute('data-blok-database-color', color.row);
       for (const [propertyId, cellColor] of Object.entries(color.cells)) {
@@ -1541,7 +1581,325 @@ export class DatabaseTool implements BlockTool {
     return row === undefined ? [] : pageContentSourceBlocks(row, this.model.getSchema(), descriptionId);
   }
 
-  /** The active view's own layout rows (board, gallery, timeline, calendar), for the view settings panel. */
+  /** The X axis: the view's grouping, else the first select-like property, else the first it can group by. */
+  private chartAxis(view: DatabaseViewConfig): PropertyDefinition | undefined {
+    const schema = this.model.getSchema();
+    const stored = view.groupBy === undefined ? undefined : this.model.getProperty(view.groupBy);
+
+    if (stored !== undefined && GROUPABLE_TYPES.includes(stored.type)) return stored;
+
+    return schema.find((p) => OPTION_GROUP_TYPES.includes(p.type)) ?? schema.find((p) => GROUPABLE_TYPES.includes(p.type));
+  }
+
+  /** Each group's rows from the view query. X groups drop the view's hidden groups; series keep all. */
+  private chartGroups(view: DatabaseViewConfig, propertyId: string, series: boolean): ChartGroupInput[] {
+    const grouped: DatabaseViewConfig = series
+      ? { ...view, groupBy: propertyId, groupSettings: view.subGroupSettings }
+      : { ...view, groupBy: propertyId };
+    const optionGroup = this.isOptionGroup(propertyId);
+    const options = series ? this.groupOptions(propertyId, grouped) : this.shownGroupOptions(propertyId, grouped);
+
+    return options.map((option) => ({
+      key: option.id,
+      label: option.label,
+      // Option ids are random; their labels sort. Date and number keys sort as they are.
+      sortKey: optionGroup ? option.label : option.id,
+      ...(option.color !== undefined ? { color: option.color } : {}),
+      rows: this.model.queryRows({ view: grouped, group: option.id, search: this.controls.search }).rows,
+    }));
+  }
+
+  private renderChartView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const schema = this.model.getSchema();
+    const localized = localizeDatabaseSchema(schema, this.api.i18n);
+    const settings = resolveChartSettings(viewConfig, schema);
+    const axis = this.chartAxis(viewConfig);
+    const hidden = this.chartHidden.get(viewConfig.id) ?? new Set<string>();
+    const groups: ChartGroupInput[] = axis === undefined || settings.type === 'number'
+      ? [{ key: '', label: viewConfig.name, sortKey: '', rows: this.model.queryRows({ view: viewConfig, search: this.controls.search }).rows }]
+      : this.chartGroups(viewConfig, axis.id, false);
+    const subId = viewConfig.subGroupBy;
+    const hasSeries = subId !== undefined && subId !== axis?.id && this.model.getProperty(subId) !== undefined
+      && (settings.type === 'column' || settings.type === 'bar' || settings.type === 'line');
+    const series: ChartSeriesInput[] = hasSeries
+      ? this.chartGroups(viewConfig, subId, true).map((group) => ({ key: group.key, label: group.label, rowIds: new Set(group.rows.map((row) => row.id)) }))
+      : [];
+    const data = foldChartData(
+      buildChartData({ groups, series, measure: settings.measure, schema, sort: settings.sort, omitZero: settings.omitZero, cumulative: settings.cumulative, hidden }),
+      { max: 8, otherLabel: this.api.i18n.t('tools.database.chartOther'), slices: settings.type === 'donut' }
+    );
+
+    this.view = new DatabaseChartView({
+      settings,
+      data,
+      xName: localized.find((p) => p.id === axis?.id)?.name ?? '',
+      yName: chartMeasureLabel(settings.measure, localized, this.api.i18n),
+      i18n: this.api.i18n,
+      formatValue: (value) => this.formatChartValue(settings.measure, value),
+      handlers: {
+        drilldown: (point) => this.openChartDrilldown(viewConfig, point, titlePropId),
+        toggle: (key) => {
+          const next = new Set(hidden);
+
+          if (!next.delete(key)) next.add(key);
+          this.chartHidden.set(viewConfig.id, next);
+          this.rerenderView({ keepDrawer: true });
+        },
+      },
+    });
+
+    return this.view.createView();
+  }
+
+  private formatChartValue(measure: ReturnType<typeof resolveChartSettings>['measure'], value: number): string {
+    const locale = resolveLocale(undefined);
+
+    if (measure.kind === 'property' && measure.fn.startsWith('percent_')) {
+      return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)}%`;
+    }
+    const property = measure.kind === 'property' ? this.model.getProperty(measure.propertyId) : undefined;
+
+    if (property?.type === 'number' && property.number !== undefined && measure.kind === 'property'
+      && ['sum', 'average', 'median', 'min', 'max', 'range'].includes(measure.fn)) {
+      return formatNumberValue(value, property.number, locale);
+    }
+
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+  }
+
+  /** Title first, then the view's visible properties, localized. */
+  private csvColumns(view: DatabaseViewConfig): PropertyDefinition[] {
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+
+    return [this.titlePropertyId(), ...visibleRowPropertyIds(view, schema)]
+      .map((id) => schema.find((p) => p.id === id))
+      .filter((p): p is PropertyDefinition => p !== undefined);
+  }
+
+  private csvText(property: PropertyDefinition, row: DatabaseRow): string {
+    return csvCellText(property, readPropertyValue(row, property), {
+      locale: resolveLocale(undefined),
+      personName: (id) => this.people?.find((person) => person.id === id)?.name,
+    });
+  }
+
+  private openChartDrilldown(view: DatabaseViewConfig, point: ChartPoint, titlePropId: string): void {
+    openChartDrilldown({
+      title: point.label,
+      rows: point.rowIds.map((id) => this.model.getRow(id)).filter((row): row is DatabaseRow => row !== undefined),
+      columns: this.csvColumns(view),
+      titlePropertyId: titlePropId,
+      cellText: (property, row) => this.csvText(property, row),
+      i18n: this.api.i18n,
+      openRow: (rowId) => this.handleRowClick(rowId),
+      directionSource: this.element,
+    });
+  }
+
+  private renderFeedView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const step = resolveLoadLimit(viewConfig);
+    const limit = this.feedShown.get(viewConfig.id) ?? step;
+    const result = this.model.queryRows({ view: viewConfig, search: this.controls.search, limit });
+    const descriptionId = this.model.getSchema().find((p) => p.type === 'richText')?.id;
+
+    this.view = new DatabaseFeedView({
+      view: viewConfig,
+      schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      rows: result.rows,
+      total: result.total ?? result.rows.length,
+      titlePropertyId: titlePropId,
+      i18n: this.api.i18n,
+      locale: resolveLocale(undefined),
+      bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
+      personName: (id) => this.people?.find((person) => person.id === id)?.name,
+      handlers: {
+        openRow: (rowId) => this.handleRowClick(rowId),
+        loadMore: () => {
+          this.feedShown.set(viewConfig.id, limit + step);
+          this.rerenderView({ keepDrawer: true });
+        },
+      },
+      ...(this.config.feedFooter !== undefined ? { footer: this.config.feedFooter } : {}),
+    });
+
+    return this.view.createView();
+  }
+
+  /** The active view as CSV, the way this person sees it: filters, sorts, search and visible properties. */
+  exportCsv(): string {
+    const saved = this.model.getView(this.activeViewId);
+
+    if (saved === undefined) return serializeCsv([]);
+    const view = this.controls.effective(saved);
+    const columns = this.csvColumns(view);
+    const rows = this.model.queryRows({ view, search: this.controls.search }).rows;
+
+    return serializeCsv([columns.map((p) => p.name), ...rows.map((row) => columns.map((p) => this.csvText(p, row)))]);
+  }
+
+  /** A CSV as a new database block right after this one, in one undo step. The first column is the title. */
+  importCsv(text: string, fileName: string): void {
+    if (this.readOnly) return;
+    const table = parseCsv(text);
+
+    if (table.length === 0) {
+      this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvEmpty') });
+
+      return;
+    }
+    const imported = buildCsvImport(table, { newId: () => nanoid(), untitled: this.api.i18n.t('tools.database.csvUntitledColumn') });
+    const model = new DatabaseModel({ schema: imported.schema, views: [], activeViewId: '' }, { defaultViewType: 'table' });
+    const views = model.getViews();
+    const data: DatabaseData = { title: fileName.replace(/\.(csv|tsv|txt)$/i, ''), schema: model.getSchema(), views, activeViewId: views[0]?.id ?? '' };
+    const id = nanoid();
+    const titleId = imported.schema[0]?.id ?? '';
+    const insert = (): void => {
+      this.api.blocks.insertAt('database', data, { position: { after: this.block.id }, id });
+      imported.rows.reduce<string | null>((previous, properties) => {
+        const position = DatabaseModel.positionBetween(previous, null);
+        const title = properties[titleId];
+
+        this.api.blocks.insertAt(
+          'database-row',
+          { properties, position, title: typeof title === 'string' ? title : '' },
+          { parentId: id, position: 'end', id: nanoid() },
+        );
+
+        return position;
+      }, null);
+    };
+
+    this.inOneStep(insert);
+    this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: imported.rows.length }) });
+  }
+
+  /**
+   * Merge with CSV: every CSV row becomes a new row; headers must match property
+   * names. Notion never updates an existing row here (research/05 §9.3).
+   */
+  mergeCsv(text: string): void {
+    if (this.readOnly || this.model.isDatabaseLocked()) return;
+    const table = parseCsv(text);
+
+    if (table.length < 2) {
+      this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvEmpty') });
+
+      return;
+    }
+    const plan = planCsvMerge(table, this.model.getSchema(), { newId: () => nanoid() });
+    const titleId = this.titlePropertyId();
+    const write = (): void => {
+      for (const [propertyId, added] of Object.entries(plan.newOptions)) {
+        const existing = [...(this.model.getProperty(propertyId)?.config?.options ?? [])].sort((a, b) => (a.position < b.position ? -1 : 1));
+        const options = added.reduce<SelectOption[]>((list, option) =>
+          [...list, { ...option, position: DatabaseModel.positionBetween(list.at(-1)?.position ?? null, null) }], existing);
+
+        this.model.updateProperty(propertyId, { config: { options } });
+        void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options } } });
+      }
+      plan.rows.reduce<string | null>((previous, properties) => {
+        const position = DatabaseModel.positionBetween(previous, null);
+        const id = nanoid();
+        const title = properties[titleId];
+
+        this.api.blocks.insertAt(
+          'database-row',
+          { properties, position, title: typeof title === 'string' ? title : '' },
+          { parentId: this.block.id, position: 'end', id },
+        );
+        void this.sync.syncCreateRow({ id, properties, position });
+
+        return position;
+      }, this.model.getOrderedRows().at(-1)?.position ?? null);
+    };
+
+    this.inOneStep(write);
+    if (Object.keys(plan.newOptions).length > 0) this.block.dispatchChange();
+    this.rerenderView({ keepDrawer: true });
+    const skipped = plan.skippedColumns.length > 0
+      ? ` ${this.api.i18n.t('tools.database.csvSkipped', { columns: plan.skippedColumns.join(', ') })}`
+      : '';
+
+    this.api.notifier.show({ message: `${this.api.i18n.t('tools.database.csvMerged', { count: plan.rows.length })}${skipped}` });
+  }
+
+  private inOneStep(fn: () => void): void {
+    if (this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(fn);
+    } else {
+      fn();
+    }
+  }
+
+  private fileBase(): string {
+    const name = this.title.trim() !== '' ? this.title.trim() : this.model.getView(this.activeViewId)?.name ?? '';
+
+    return name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'database';
+  }
+
+  private downloadCsv(): void {
+    downloadBlob(new Blob([this.exportCsv()], { type: 'text/csv;charset=utf-8' }), `${this.fileBase()}.csv`);
+  }
+
+  private async saveChart(format: 'png' | 'svg'): Promise<void> {
+    const view = this.view;
+
+    if (!(view instanceof DatabaseChartView)) return;
+    const svg = view.toSvgString();
+    const blob = format === 'svg' ? new Blob([svg], { type: 'image/svg+xml' }) : await view.toPngBlob();
+
+    if (svg !== '' && blob !== null) downloadBlob(blob, `${this.fileBase()}.${format}`);
+  }
+
+  /** A file picker for one CSV or TSV file. */
+  private pickCsvFile(then: (file: { name: string; text: string }) => void): void {
+    const input = document.createElement('input');
+
+    input.type = 'file';
+    input.accept = '.csv,.tsv,text/csv,text/tab-separated-values';
+    input.hidden = true;
+    input.setAttribute('data-blok-database-csv-input', '');
+    input.addEventListener('cancel', () => input.remove());
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+
+      input.remove();
+      if (file !== undefined) void file.text().then((text) => then({ name: file.name, text }));
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  /** "…" panel actions: save the chart, export the view, import or merge a CSV. */
+  private csvActions(): ViewSettingsAction[] {
+    const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
+    const view = this.model.getView(this.activeViewId);
+    const actions: ViewSettingsAction[] = [];
+
+    if (view?.type === 'chart' && resolveChartSettings(view, this.model.getSchema()).type !== 'number') {
+      actions.push(
+        { testId: 'database-settings-chart-png', label: t('chartSavePng'), icon: IconImage, onClick: () => void this.saveChart('png') },
+        { testId: 'database-settings-chart-svg', label: t('chartSaveSvg'), icon: IconImage, onClick: () => void this.saveChart('svg') }
+      );
+    }
+    actions.push({ testId: 'database-settings-csv-export', label: t('csvExport'), icon: IconDownload, onClick: () => this.downloadCsv() });
+    if (!this.readOnly) {
+      actions.push(
+        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, onClick: () => this.pickCsvFile((file) => this.importCsv(file.text, file.name)) },
+        {
+          testId: 'database-settings-csv-merge',
+          label: t('csvMerge'),
+          icon: IconMergeCells,
+          disabled: this.model.isDatabaseLocked(),
+          onClick: () => this.pickCsvFile((file) => this.mergeCsv(file.text)),
+        }
+      );
+    }
+
+    return actions;
+  }
+
+  /** The active view's own layout rows (board, gallery, timeline, calendar, chart), for the view settings panel. */
   layoutItems(): PopoverItemParams[] {
     const view = this.model.getView(this.activeViewId);
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
@@ -1549,6 +1907,9 @@ export class DatabaseTool implements BlockTool {
 
     if (view?.type === 'gallery') {
       return galleryLayoutItems(view, schema, this.api.i18n, update);
+    }
+    if (view?.type === 'chart') {
+      return chartLayoutItems(view, schema, this.api.i18n, update);
     }
 
     if (view?.type === 'timeline') {
@@ -1923,6 +2284,7 @@ export class DatabaseTool implements BlockTool {
       groups: (sub) => this.groupEntries(sub),
       rerender: () => this.rerenderView({ keepDrawer: true }),
       layoutItems: () => this.layoutItems(),
+      actions: () => this.csvActions(),
     };
   }
 
@@ -3147,8 +3509,9 @@ export class DatabaseTool implements BlockTool {
     const savedView = this.model.getView(this.activeViewId);
     const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
     const isList = viewConfig?.type === 'list';
-    // Table, gallery, calendar and timeline own their gestures. Unknown types render as a board.
-    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar' || viewConfig?.type === 'timeline';
+    // Table, gallery, calendar, timeline, chart and feed own their gestures. Unknown types render as a board.
+    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar'
+      || viewConfig?.type === 'timeline' || viewConfig?.type === 'chart' || viewConfig?.type === 'feed';
     const isBoard = !isList && !ownsGestures;
 
     if (isList) {

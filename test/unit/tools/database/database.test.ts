@@ -6089,4 +6089,190 @@ describe('DatabaseTool — property menu and insert placement', () => {
 
     expect(model.getView('view-1')?.properties?.map((p) => p.id)).toEqual(['prop-title', 'prop-n', added?.id, 'prop-note']);
   });
+
+  describe('chart, feed and CSV', () => {
+    const csvSchema: PropertyDefinition[] = [
+      { id: 'prop-title', name: 'Task', type: 'title', position: 'a0' },
+      { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [
+        { id: 'opt-todo', label: 'Todo', position: 'a0' },
+        { id: 'opt-done', label: 'Done', position: 'a1' },
+      ] } },
+      { id: 'prop-points', name: 'Points', type: 'number', position: 'a2' },
+    ];
+    const rows = (): BlockAPI[] => [
+      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Write, edit', 'prop-status': 'opt-todo', 'prop-points': 3 }, position: 'a0' }),
+      createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Ship', 'prop-status': 'opt-done', 'prop-points': 5 }, position: 'a1' }),
+      createMockRowBlock({ id: 'row-3', properties: { 'prop-title': 'Rest', 'prop-status': 'opt-done', 'prop-points': 1 }, position: 'a2' }),
+    ];
+    const view = (fields: Partial<DatabaseViewConfig>): DatabaseViewConfig =>
+      ({ id: 'view-x', name: 'X', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...fields });
+    const mount = (fields: Partial<DatabaseViewConfig>, readOnly = false): { tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> } => {
+      const options = createDatabaseOptions({ schema: csvSchema, views: [view(fields)], activeViewId: 'view-x', title: 'Tasks' }, {}, { childBlocks: rows(), readOnly });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      return { tool, element, options };
+    };
+    const internals = (tool: DatabaseTool): { csvActions: () => Array<{ testId: string; disabled?: boolean; onClick: () => void }> } =>
+      tool as unknown as { csvActions: () => Array<{ testId: string; disabled?: boolean; onClick: () => void }> };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('draws a chart view with one column per status group and no board subsystems', () => {
+      const { tool, element } = mount({ type: 'chart', groupBy: 'prop-status', groupSettings: { hideEmptyGroups: true } });
+      const board = tool as unknown as { cardDrag: unknown; columnDrag: unknown };
+
+      expect(queryByData(element, 'data-blok-database-chart')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).toBeNull();
+      expect(queryAllByData(element, 'data-blok-database-chart-mark').map((m) => m.getAttribute('data-key'))).toEqual(['opt-todo', 'opt-done']);
+      expect(board.cardDrag).toBeNull();
+      expect(board.columnDrag).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('measures the Y axis with the view\'s calculation', () => {
+      const { tool, element } = mount({ type: 'chart', chartType: 'number', groupBy: 'prop-status', chartMeasure: 'sum:prop-points' });
+
+      expect(queryByData(element, 'data-blok-database-chart-number')?.textContent).toBe('9');
+
+      tool.destroy();
+    });
+
+    it('hides a donut slice from its legend for this session only, with no write', () => {
+      const { tool, element, options } = mount({ type: 'chart', chartType: 'donut', groupBy: 'prop-status', groupSettings: { hideEmptyGroups: true } });
+      const before = JSON.stringify(tool.save(element));
+
+      queryAllByData(element, 'data-blok-database-chart-legend-entry')[0].click();
+
+      expect(queryAllByData(element, 'data-blok-database-chart-legend-entry')[0].getAttribute('aria-pressed')).toBe('false');
+      expect(queryAllByData(element, 'data-blok-database-chart-mark').map((m) => m.getAttribute('data-key'))).toEqual(['opt-done']);
+      expect(JSON.stringify(tool.save(element))).toBe(before);
+      expect(vi.mocked(options.block.dispatchChange)).not.toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('drills down into a group as a table of its rows', () => {
+      const { tool, element } = mount({ type: 'chart', groupBy: 'prop-status', groupSettings: { hideEmptyGroups: true } });
+
+      element.querySelector<SVGElement>('[data-blok-database-chart-hit][data-key="opt-done"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const dialog = document.querySelector<HTMLElement>('[data-blok-database-drilldown]');
+
+      expect(dialog).not.toBeNull();
+      expect([...(dialog?.querySelectorAll('[data-blok-database-drilldown-open]') ?? [])].map((b) => b.textContent)).toEqual(['Ship', 'Rest']);
+
+      tool.destroy();
+    });
+
+    it('still draws a chart and drills down in read-only mode', () => {
+      const { tool, element } = mount({ type: 'chart', groupBy: 'prop-status' }, true);
+
+      expect(queryAllByData(element, 'data-blok-database-chart-mark').length).toBeGreaterThan(0);
+
+      tool.destroy();
+    });
+
+    it('names new chart and feed views and starts a chart on a select property', () => {
+      const { tool, element } = mount({});
+
+      tool.addView('chart');
+      tool.addView('feed');
+
+      expect(tool.save(element).views.slice(1).map((v) => [v.name, v.type, v.groupBy])).toEqual([
+        ['Chart', 'chart', 'prop-status'],
+        ['Feed', 'feed', undefined],
+      ]);
+      expect(queryByData(element, 'data-blok-database-feed')).not.toBeNull();
+
+      tool.destroy();
+    });
+
+    it('stacks the rows as feed cards', () => {
+      const { tool, element } = mount({ type: 'feed' });
+
+      expect(queryAllByData(element, 'data-blok-database-feed-card').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1', 'row-2', 'row-3']);
+
+      tool.destroy();
+    });
+
+    it('exports the current view as CSV: its filters, sorts and visible properties', () => {
+      const { tool } = mount({
+        filters: [{ id: 'f1', propertyId: 'prop-points', operator: 'greater_than', value: 2 }],
+        sorts: [{ id: 's1', propertyId: 'prop-points', direction: 'desc' }],
+        properties: [{ id: 'prop-title', visible: true }, { id: 'prop-status', visible: false }, { id: 'prop-points', visible: true }],
+      });
+
+      expect(tool.exportCsv()).toBe('\uFEFFTask,Points\r\nShip,5\r\n"Write, edit",3');
+
+      tool.destroy();
+    });
+
+    it('imports a CSV as a new database block after this one, in one step', () => {
+      const { tool, options } = mount({});
+      const transact = vi.fn((fn: () => void) => fn());
+
+      Object.assign(options.api.blocks, { transact });
+      tool.importCsv('Task,Points\nWrite,3\nShip,5', 'tasks.csv');
+
+      const calls = vi.mocked(options.api.blocks.insertAt).mock.calls;
+      const [type, data, placement] = calls[0];
+      const database = data as DatabaseData;
+
+      expect(transact).toHaveBeenCalledTimes(1);
+      expect(type).toBe('database');
+      expect(placement).toMatchObject({ position: { after: 'test-block-id' } });
+      expect(database.title).toBe('tasks');
+      expect(database.schema.map((p) => [p.name, p.type])).toEqual([['Task', 'title'], ['Points', 'number']]);
+      expect(database.views[0].type).toBe('table');
+      expect(calls.slice(1).map(([rowType, rowData, rowPlacement]) => [rowType, (rowData as DatabaseRowData).title, (rowPlacement as { parentId?: string }).parentId]))
+        .toEqual([['database-row', 'Write', placement?.id], ['database-row', 'Ship', placement?.id]]);
+
+      tool.destroy();
+    });
+
+    it('merges a CSV by adding rows only, matching headers to property names', () => {
+      const { tool, options } = mount({});
+
+      tool.mergeCsv('Task,Status,Points,Extra\nShip,Done,8,x\nNew,Blocked,1,y');
+
+      const added = vi.mocked(options.api.blocks.insertAt).mock.calls
+        .filter(([type]) => type === 'database-row')
+        .map(([, data]) => (data as DatabaseRowData).properties);
+      const status = tool.save(document.createElement('div')).schema.find((p) => p.id === 'prop-status');
+      const blocked = status?.config?.options.find((o) => o.label === 'Blocked');
+
+      expect(added).toEqual([
+        { 'prop-title': 'Ship', 'prop-status': 'opt-done', 'prop-points': 8 },
+        { 'prop-title': 'New', 'prop-status': blocked?.id, 'prop-points': 1 },
+      ]);
+      expect(options.api.notifier.show).toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('lists the CSV actions in the settings panel, and the chart export on a chart', () => {
+      const { tool } = mount({ type: 'chart', groupBy: 'prop-status' });
+
+      expect(internals(tool).csvActions().map((a) => a.testId)).toEqual([
+        'database-settings-chart-png', 'database-settings-chart-svg',
+        'database-settings-csv-export', 'database-settings-csv-import', 'database-settings-csv-merge',
+      ]);
+
+      tool.destroy();
+    });
+
+    it('keeps export but drops import and merge in read-only mode', () => {
+      const { tool } = mount({}, true);
+
+      expect(internals(tool).csvActions().map((a) => a.testId)).toEqual(['database-settings-csv-export']);
+
+      tool.destroy();
+    });
+  });
 });

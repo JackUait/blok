@@ -241,6 +241,14 @@ describe('view-settings', () => {
     });
   });
 
+  describe('feed defaults', () => {
+    it('loads 10 cards and opens pages in a center peek, as Notion does (research/08)', () => {
+      expect(resolveLoadLimit(view({ type: 'feed' }))).toBe(10);
+      expect(resolveOpenPagesIn(view({ type: 'feed' }))).toBe('center');
+      expect(resolveLoadLimit(view({ type: 'feed', loadLimit: 25 }))).toBe(25);
+    });
+  });
+
   describe('gallery settings', () => {
     it('defaults to medium cards, a page-content preview and cropped images', () => {
       expect(resolveCardSize(view({ type: 'gallery' }))).toBe('medium');

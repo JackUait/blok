@@ -5,6 +5,7 @@ import type {
   DatabaseRow,
   DatabaseViewConfig,
   DatabaseViewSettingKey,
+  GroupSettings,
   PropertyConfig,
   PropertyDefinition,
   PropertySettingsV2,
@@ -18,6 +19,7 @@ import { queryGroups, queryRows } from './database-query';
 import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf } from './property-values';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
 import { resolveViewProperties, visibleRowPropertyIds } from './view-settings';
+import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
 
 export type ViewCreateConfig = Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey>>;
 
@@ -34,16 +36,13 @@ export interface DatabaseModelOptions {
    * writes the same ids, so their saves merge into one schema, not two.
    */
   idSeed?: string;
+  now?: () => Date;
 }
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
 const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
 
-/**
- * Group key for rows with no value. Not '' because card drag reads a missing
- * data-option-id as ''. 23 chars, so a default 21-char nanoid option id never equals it.
- */
-export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
+export { NO_VALUE_GROUP_KEY };
 
 /** What `updateProperty` may change. */
 export type PropertyChanges = Partial<Pick<PropertyDefinition, 'name' | 'config'>> & Partial<PropertySettingsV2>;
@@ -60,8 +59,11 @@ export class DatabaseModel {
   private activeViewId: string;
   /** Ids minted here but not yet seen in a backend snapshot. */
   private readonly locallyAdded = new Set<string>();
+  /** Today, for relative dates. Tests pin it. */
+  private readonly now: () => Date;
 
   constructor(data?: Partial<DatabaseData>, options: DatabaseModelOptions = {}) {
+    this.now = options.now ?? ((): Date => new Date());
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
@@ -193,13 +195,22 @@ export class DatabaseModel {
     return groups;
   }
 
-  /** The groups a row belongs to under `propertyId`. The query engine groups only through this. */
-  groupKeysOf(propertyId: string, options: GroupOptions = {}): (row: DatabaseRow) => string[] {
+  /**
+   * The groups a row belongs to under `propertyId`. The query engine groups
+   * only through this. Options, status and people keep the keys boards have
+   * always used; other types group by value, bucket or letter (group-keys.ts).
+   */
+  groupKeysOf(
+    propertyId: string,
+    options: GroupOptions & { settings?: GroupSettings; now?: Date } = {}
+  ): (row: DatabaseRow) => string[] {
     const property = this.getProperty(propertyId);
 
     if (property === undefined) {
       return (row) => this.toGroupKeys(row.properties[propertyId]);
     }
+    const settings = options.settings ?? {};
+    const now = options.now ?? this.now();
 
     return (row) => {
       const value = readPropertyValue(row, property);
@@ -212,8 +223,11 @@ export class DatabaseModel {
       if (property.type === 'status' && options.statusBy === 'group' && typeof value === 'string' && value !== '') {
         return [statusGroupOf(property, value)?.id ?? value];
       }
+      if (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status') {
+        return this.toGroupKeys(value);
+      }
 
-      return this.toGroupKeys(value);
+      return groupKeysFor(property, value, settings, now);
     };
   }
 
@@ -221,15 +235,43 @@ export class DatabaseModel {
     return queryRows(this.querySource(request.view), request);
   }
 
-  queryGroups(view: DatabaseViewConfig): GroupCount[] {
-    return queryGroups(this.querySource(view), view);
+  queryGroups(view: DatabaseViewConfig, options: { search?: string } = {}): GroupCount[] {
+    return queryGroups(this.querySource(view), view, options);
+  }
+
+  /**
+   * The view's groups in display order, with counts after filters and search.
+   * A select lists every option, empty ones too; other types list the groups
+   * rows fall in. `hideEmptyGroups` drops groups with no row.
+   */
+  listGroups(view: DatabaseViewConfig, options: { search?: string } = {}): GroupCount[] {
+    const property = view.groupBy === undefined ? undefined : this.getProperty(view.groupBy);
+
+    if (property === undefined) return [];
+    const settings = view.groupSettings ?? {};
+    const counts = new Map(this.queryGroups(view, options).map((g) => [g.key, g.count]));
+    const isOptionType = property.type === 'select' || property.type === 'multiSelect' || property.type === 'status';
+    const groupOptions = isOptionType ? this.getSelectOptions(property.id, { statusBy: view.groupByStatus }) : [];
+    const keys = isOptionType
+      ? [...groupOptions.map((o) => o.id), NO_VALUE_GROUP_KEY]
+      : [...new Set([...this.queryGroups({ ...view, filters: [], filterTree: undefined }).map((g) => g.key), ...counts.keys()])];
+    const ordered = orderGroupKeys(property, keys, settings, this.now(), isOptionType ? groupOptions : undefined);
+
+    return ordered
+      .map((key) => ({ key, count: counts.get(key) ?? 0 }))
+      .filter((group) => settings.hideEmptyGroups !== true || group.count > 0);
   }
 
   private querySource(view: DatabaseViewConfig): QuerySource {
+    const now = this.now();
+
     return {
       schema: this.schema,
       rows: this.rows,
-      ...(view.groupBy !== undefined ? { groupKeysOf: this.groupKeysOf(view.groupBy, { statusBy: view.groupByStatus }) } : {}),
+      now,
+      ...(view.groupBy !== undefined
+        ? { groupKeysOf: this.groupKeysOf(view.groupBy, { statusBy: view.groupByStatus, settings: view.groupSettings, now }) }
+        : {}),
     };
   }
 

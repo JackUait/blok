@@ -27,6 +27,12 @@ export interface PropertyDefinition extends PropertySettingsV2 {
   type: PropertyType;
   position: string;
   config?: PropertyConfig;
+  /**
+   * Read on the title property only: the whole database is locked. Lives
+   * here, not at the top level or in `config`, because v1.16.1 clients drop
+   * those on save but keep unknown fields on property objects.
+   */
+  databaseLocked?: boolean;
 }
 
 export type PropertyValue = string | number | boolean | string[] | OutputData | PersonValue[] | FileValue[] | null;
@@ -195,14 +201,89 @@ export interface DatabaseRowData extends BlockToolData {
 export type ViewType = 'board' | 'table' | 'gallery' | 'list';
 
 export interface SortConfig {
+  /** Optional on old documents. Every write adds one, so two peers' sorts pair by id. */
+  id?: string;
   propertyId: string;
   direction: 'asc' | 'desc';
 }
 
 export interface FilterConfig {
+  /** Optional on old documents. Every write adds one, so two peers' filters pair by id. */
+  id?: string;
   propertyId: string;
   operator: string;
   value: PropertyValue;
+}
+
+export type FilterConjunction = 'and' | 'or';
+
+/** One condition in the advanced filter tree. */
+export interface FilterRule {
+  id: string;
+  propertyId: string;
+  operator: string;
+  value: PropertyValue;
+}
+
+/**
+ * An AND/OR group in the advanced filter tree. A node is a group when it has
+ * `filterRules`. The key name is unique on purpose: the CRDT births every
+ * `filterRules` list as an array, so two peers adding the first rule keep both.
+ */
+export interface FilterGroup {
+  id: string;
+  conjunction: FilterConjunction;
+  filterRules: FilterNode[];
+}
+
+export type FilterNode = FilterRule | FilterGroup;
+
+/** Group order. Notion's API names: manual, ascending, descending. */
+export type GroupSort = 'manual' | 'ascending' | 'descending';
+
+export type DateGroupBy = 'relative' | 'day' | 'week' | 'month' | 'year';
+
+/** How a view groups its rows, per the grouped property's type. Every field is optional. */
+export interface GroupSettings {
+  sort?: GroupSort;
+  /** Date grouping. Default `relative`. */
+  dateBy?: DateGroupBy;
+  /** 0 is Sunday, 1 is Monday. Default 0. */
+  weekStart?: 0 | 1;
+  /** Number grouping. Default `unique`. */
+  numberBy?: 'unique' | 'range';
+  rangeStart?: number;
+  rangeEnd?: number;
+  rangeSize?: number;
+  /** Text grouping: the whole value, or its first letter. Default `exact`. */
+  textBy?: 'exact' | 'alphabet';
+  /** Status grouping: by status group or by option. Default `group`. */
+  statusBy?: 'group' | 'option';
+  hideEmptyGroups?: boolean;
+  /** Board only: tint each column with its option color. Default on. */
+  colorColumns?: boolean;
+}
+
+/**
+ * One group's state in one view. `id` is the group key (an option id, a date
+ * bucket, ...); a sub-group's key starts with `sub:`.
+ */
+export interface GroupState {
+  id: string;
+  hidden?: boolean;
+  collapsed?: boolean;
+}
+
+/** A conditional color rule. The rule tints rows whose property matches it. */
+export interface ColorRule {
+  id: string;
+  propertyId: string;
+  operator: string;
+  value: PropertyValue;
+  /** An option color name, such as `green`. */
+  color: string;
+  /** Table only. Default `row`. */
+  applyTo?: 'row' | 'property';
 }
 
 /** Notion API aggregator names. */
@@ -268,6 +349,19 @@ export interface DatabaseViewConfig {
   collapsedGroups?: GroupRef[];
   /** Hides the row count beside each group's name. */
   hideGroupAggregation?: boolean;
+  /**
+   * The advanced filter. Rows must match it AND every entry of `filters`.
+   * Clients older than this field ignore it and show more rows.
+   */
+  filterTree?: FilterGroup;
+  groupSettings?: GroupSettings;
+  /** Board only: a second grouping inside each column. */
+  subGroupBy?: string;
+  subGroupSettings?: GroupSettings;
+  groupStates?: GroupState[];
+  colorRules?: ColorRule[];
+  /** Default on. */
+  showPageIcon?: boolean;
 }
 
 /** An entry in a per-view group list. Objects with ids, so two peers' entries merge. */
@@ -278,7 +372,8 @@ export interface GroupRef {
 /** View fields a caller may set when creating or changing a view. */
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
-  | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation';
+  | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
+  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'groupStates' | 'colorRules' | 'showPageIcon';
 
 // ─── Top-level saved data ───
 
@@ -399,9 +494,23 @@ export interface DatabaseRowPages {
   mount(pageId: string, holder: HTMLElement): { destroy(): void };
 }
 
+/** View fields a person can change for themselves before "Save for everyone". */
+export type PersonalViewPatch = Partial<Pick<DatabaseViewConfig, 'filters' | 'sorts' | 'filterTree'>>;
+
+/**
+ * Where a person's unsaved filter and sort edits live. Without it, Blok keeps
+ * them in this browser, per document, through `api.viewState`. An empty patch
+ * means the person has no edits.
+ */
+export interface DatabaseViewStateStore {
+  get(viewId: string): Promise<Partial<DatabaseViewConfig> | null>;
+  set(viewId: string, patch: Partial<DatabaseViewConfig>): Promise<void>;
+}
+
 export interface DatabaseConfig {
   adapter?: DatabaseAdapter;
   rowPages?: DatabaseRowPages;
   /** Directory for the person property. */
   people?: DatabasePeople;
+  viewState?: DatabaseViewStateStore;
 }

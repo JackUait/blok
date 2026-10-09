@@ -266,7 +266,7 @@ describe('DatabaseModel', () => {
       expect(group.map(r => r.id)).toEqual(['r2', 'r3', 'r1']);
     });
 
-    it('groups by checkbox property using true/false keys', () => {
+    it('groups by checkbox property using true/false keys, a missing value unchecked (two groups, research/08)', () => {
       const prop = makeProperty({ id: 'done', type: 'checkbox' });
       const model = new DatabaseModel(makeData({ schema: [prop] }));
       model.setRows([
@@ -276,8 +276,8 @@ describe('DatabaseModel', () => {
       ]);
       const groups = model.getRowsGroupedBy('done');
       expect(groups.get('true')).toHaveLength(1);
-      expect(groups.get('false')).toHaveLength(1);
-      expect(groups.get(NO_VALUE_GROUP_KEY)).toHaveLength(1);
+      expect(groups.get('false')).toHaveLength(2);
+      expect(groups.has(NO_VALUE_GROUP_KEY)).toBe(false);
     });
   });
 

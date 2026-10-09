@@ -89,7 +89,11 @@ describe('database-query', () => {
       expect(FILTER_OPERATORS.select).toEqual(['equals', 'does_not_equal', 'is_empty', 'is_not_empty']);
       expect(FILTER_OPERATORS.multiSelect).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
       expect(FILTER_OPERATORS.checkbox).toEqual(['equals', 'does_not_equal']);
-      expect(FILTER_OPERATORS.date).toEqual(['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty']);
+      expect(FILTER_OPERATORS.date).toEqual([
+        'equals', 'does_not_equal', 'before', 'after', 'on_or_before', 'on_or_after',
+        'past_week', 'past_month', 'past_year', 'next_week', 'next_month', 'next_year', 'this_week', 'relative_to_today',
+        'is_empty', 'is_not_empty',
+      ]);
     });
   });
 
@@ -515,5 +519,89 @@ describe('database-query — date ranges', () => {
     ];
 
     expect(ids(sortRows(rows, [{ propertyId: 'due', direction: 'asc' }], schema))).toEqual(['am', 'pm']);
+  });
+});
+
+describe('database-query — Phase 3 filters and search', () => {
+  const NOW = new Date(2026, 9, 9, 12, 0);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['past_week', '2026-10-02', true],
+    ['past_week', '2026-10-01', false],
+    ['next_week', '2026-10-16', true],
+    ['next_week', '2026-10-17', false],
+    ['past_month', '2026-09-09', true],
+    ['past_month', '2026-09-08', false],
+    ['next_year', '2027-10-09', true],
+    ['this_week', '2026-10-04', true],
+    ['this_week', '2026-10-10', true],
+    ['this_week', '2026-10-11', false],
+  ])('a date %s %s → %s against a fixed today', (operator, due, expected) => {
+    expect(rowMatchesFilters(row('r', 'a0', { due }), [{ propertyId: 'due', operator, value: null }], schema, NOW)).toBe(expected);
+  });
+
+  it.each([
+    ['equals', 'today', '2026-10-09', true],
+    ['equals', 'tomorrow', '2026-10-10', true],
+    ['equals', 'yesterday', '2026-10-09', false],
+    ['before', 'one_week_ago', '2026-10-01', true],
+    ['on_or_after', 'one_month_from_now', '2026-11-09', true],
+  ])('a date %s %s matches %s → %s', (operator, value, due, expected) => {
+    expect(rowMatchesFilters(row('r', 'a0', { due }), [{ propertyId: 'due', operator, value }], schema, NOW)).toBe(expected);
+  });
+
+  it('reads "relative to today" as a span of days, weeks, months or years', () => {
+    const filter = (value: string): FilterConfig => ({ propertyId: 'due', operator: 'relative_to_today', value });
+
+    expect(rowMatchesFilters(row('r', 'a0', { due: '2026-10-06' }), [filter('past:3:day')], schema, NOW)).toBe(true);
+    expect(rowMatchesFilters(row('r', 'a0', { due: '2026-10-05' }), [filter('past:3:day')], schema, NOW)).toBe(false);
+    expect(rowMatchesFilters(row('r', 'a0', { due: '2026-10-23' }), [filter('next:2:week')], schema, NOW)).toBe(true);
+    expect(rowMatchesFilters(row('r', 'a0', { due: '2026-10-05' }), [filter('garbage')], schema, NOW)).toBe(true);
+  });
+
+  it('applies the advanced filter tree AND the simple filters', () => {
+    const rows = [
+      row('a', 'a0', { title: 'Alpha', num: 5, done: true }),
+      row('b', 'a1', { title: 'Bravo', num: 50, done: false }),
+      row('c', 'a2', { title: 'Charlie', num: 500, done: true }),
+    ];
+    const source: QuerySource = { schema, rows, now: NOW };
+    const filtered = view({
+      filters: [{ id: 'f1', propertyId: 'num', operator: 'greater_than', value: 1 }],
+      filterTree: {
+        id: 'root',
+        conjunction: 'or',
+        filterRules: [
+          { id: 'r1', propertyId: 'title', operator: 'starts_with', value: 'a' },
+          { id: 'r2', propertyId: 'num', operator: 'greater_than', value: 100 },
+        ],
+      },
+    });
+
+    expect(ids(queryRows(source, { view: filtered }).rows)).toEqual(['a', 'c']);
+    expect(queryGroups({ ...source, groupKeysOf: () => ['x'] }, filtered)).toEqual([{ key: 'x', count: 2 }]);
+  });
+
+  it('searches titles and property text, select labels included', () => {
+    const rows = [
+      row('a', 'a0', { title: 'Write docs' }),
+      row('b', 'a1', { title: 'Ship', text: 'needs DOCS review' }),
+      row('c', 'a2', { title: 'Plan', status: 'opt-mid' }),
+      row('d', 'a3', { title: 'Other' }),
+    ];
+    const source: QuerySource = { schema, rows };
+
+    expect(ids(queryRows(source, { view: view(), search: 'docs' }).rows)).toEqual(['a', 'b']);
+    expect(ids(queryRows(source, { view: view(), search: 'mid' }).rows)).toEqual(['c']);
+    expect(ids(queryRows(source, { view: view(), search: '  ' }).rows)).toEqual(['a', 'b', 'c', 'd']);
+    expect(queryGroups({ ...source, groupKeysOf: () => ['x'] }, view(), { search: 'docs' })).toEqual([{ key: 'x', count: 2 }]);
   });
 });

@@ -2,6 +2,8 @@ import type {
   DatabaseRow,
   DatabaseViewConfig,
   FilterConfig,
+  FilterGroup,
+  FilterNode,
   PropertyDefinition,
   PropertyType,
   PropertyValue,
@@ -9,13 +11,16 @@ import type {
 } from './types';
 import { parseDateValue } from './cells/date-value';
 import { filesOf, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupsOf } from './property-values';
+import { RELATIVE_DATE_OPERATORS, relativeWindow, resolveDay } from './relative-dates';
 
 const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
 const COMPARE_OPERATORS = ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to'] as const;
 const NUMBER_OPERATORS = [...COMPARE_OPERATORS, 'is_empty', 'is_not_empty'] as const;
 const OPTION_OPERATORS = ['equals', 'does_not_equal', 'is_empty', 'is_not_empty'] as const;
 const LIST_OPERATORS = ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'] as const;
-const DATE_OPERATORS = ['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty'] as const;
+const DATE_OPERATORS = [
+  'equals', 'does_not_equal', 'before', 'after', 'on_or_before', 'on_or_after', ...RELATIVE_DATE_OPERATORS, 'is_empty', 'is_not_empty',
+] as const;
 
 /** Operator names follow the Notion API, so saved filters stay portable. */
 export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>> = {
@@ -78,11 +83,15 @@ export interface QuerySource {
   rows: DatabaseRow[];
   /** Keys of the groups a row belongs to. The model owns grouping; the engine only asks. */
   groupKeysOf?: (row: DatabaseRow) => string[];
+  /** Today, for relative date filters. Default: the clock. */
+  now?: Date;
 }
 
 export interface QueryRowsRequest {
   view: DatabaseViewConfig;
   group?: string;
+  /** Search in view: a case-blind match on the title and property text. Session only, never saved. */
+  search?: string;
   cursor?: string;
   limit?: number;
 }
@@ -110,8 +119,16 @@ const toNumber = (value: PropertyValue | undefined): number | undefined => {
 };
 
 /** The calendar day of an ISO string; time and zone are ignored. */
-const toDay = (value: PropertyValue | undefined): string | undefined =>
-  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : undefined;
+/** The local calendar day of an ISO instant, or of a stored day as is. */
+const toLocalDayOf = (value: string): string | undefined => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const time = Date.parse(value);
+
+  if (Number.isNaN(time)) return undefined;
+  const date = new Date(time);
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 
 const toIdList = (value: PropertyValue): string[] => personIdsOf(value);
 
@@ -206,28 +223,43 @@ const matchCheckbox = (value: PropertyValue | undefined, operator: string, targe
 };
 
 /** A range matches when any of its days does; a single day is a range of one. */
-const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
+/** A range matches when any of its days does; a single day is a range of one. */
+const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue, now: Date): boolean | undefined => {
   const parsed = parseDateValue(value);
 
   if (operator === 'is_empty') return parsed === null;
   if (operator === 'is_not_empty') return parsed !== null;
 
-  const t = toDay(target);
+  const window = relativeWindow(operator, target, now);
+  const t = window === undefined ? resolveDay(target, now) : undefined;
 
-  if (t === undefined) return undefined;
+  if (window === undefined && t === undefined) return undefined;
   if (parsed === null) return false;
 
   const first = parsed.start.slice(0, 10);
   const last = (parsed.end ?? parsed.start).slice(0, 10);
 
+  if (window !== undefined) {
+    return first <= window.to && last >= window.from;
+  }
+  if (t === undefined) return undefined;
+
   switch (operator) {
     case 'equals': return first <= t && t <= last;
+    case 'does_not_equal': return !(first <= t && t <= last);
     case 'before': return first < t;
     case 'after': return last > t;
     case 'on_or_before': return first <= t;
     case 'on_or_after': return last >= t;
     default: return undefined;
   }
+};
+
+/** Created and edited times are stored as ISO instants; filters compare their local day. */
+const matchTimestamp = (value: PropertyValue | undefined, operator: string, target: PropertyValue, now: Date): boolean | undefined => {
+  const day = typeof value === 'string' && value !== '' ? toLocalDayOf(value) : undefined;
+
+  return matchDate(day ?? null, operator, target, now);
 };
 
 const matchFiles = (value: PropertyValue | undefined, operator: string): boolean | undefined => {
@@ -247,7 +279,7 @@ const matchStatus = (property: PropertyDefinition, value: PropertyValue | undefi
   return matchSelect(value, operator, wanted.length > 0 ? wanted : target);
 };
 
-type Matcher = (value: PropertyValue | undefined, operator: string, target: PropertyValue, property: PropertyDefinition) => boolean | undefined;
+type Matcher = (value: PropertyValue | undefined, operator: string, target: PropertyValue, property: PropertyDefinition, now: Date) => boolean | undefined;
 
 const MATCHERS: Record<PropertyType, Matcher> = {
   title: matchText,
@@ -266,25 +298,64 @@ const MATCHERS: Record<PropertyType, Matcher> = {
   lastEditedBy: matchMultiSelect,
   files: matchFiles,
   checkbox: matchCheckbox,
-  date: matchDate,
-  createdTime: matchDate,
-  lastEditedTime: matchDate,
+  date: (value, operator, target, _property, now) => matchDate(value, operator, target, now),
+  createdTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
+  lastEditedTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
 };
 
 /**
- * AND of every filter. A filter the engine cannot read (unknown operator,
- * wrong type, deleted property, missing value) lets the row through: hiding
+ * Whether one condition holds. `undefined` means the engine cannot read it
+ * (unknown operator, wrong type, deleted property, missing value): hiding
  * rows on a filter written by a newer client would look like data loss.
  */
-export const rowMatchesFilters = (row: DatabaseRow, filters: FilterConfig[], schema: PropertyDefinition[]): boolean =>
-  filters.every((filter) => {
-    const property = schema.find((p) => p.id === filter.propertyId);
+export const matchCondition = (
+  row: DatabaseRow,
+  condition: Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>,
+  schema: PropertyDefinition[],
+  now: Date = new Date()
+): boolean | undefined => {
+  const property = schema.find((p) => p.id === condition.propertyId);
 
-    // A type from a newer client has no entry here: let the row through.
-    if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(filter.operator) ?? false)) return true;
+  // A type from a newer client has no entry here: let the row through.
+  if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(condition.operator) ?? false)) return undefined;
 
-    return MATCHERS[property.type](readPropertyValue(row, property), filter.operator, filter.value, property) ?? true;
-  });
+  return MATCHERS[property.type](readPropertyValue(row, property), condition.operator, condition.value, property, now);
+};
+
+/** AND of every filter. A filter the engine cannot read lets the row through. */
+export const rowMatchesFilters = (
+  row: DatabaseRow,
+  filters: FilterConfig[],
+  schema: PropertyDefinition[],
+  now: Date = new Date()
+): boolean =>
+  filters.every((filter) => matchCondition(row, filter, schema, now) ?? true);
+
+export const isFilterGroup = (node: FilterNode): node is FilterGroup =>
+  Array.isArray((node as Partial<FilterGroup>).filterRules);
+
+/** `undefined` means the node says nothing about the row: no readable rule inside. */
+const evaluate = (row: DatabaseRow, node: FilterNode, schema: PropertyDefinition[], now: Date): boolean | undefined => {
+  if (!isFilterGroup(node)) {
+    return matchCondition(row, node, schema, now);
+  }
+
+  const results = node.filterRules
+    .map((child) => evaluate(row, child, schema, now))
+    .filter((result): result is boolean => result !== undefined);
+
+  if (results.length === 0) return undefined;
+
+  return node.conjunction === 'or' ? results.some(Boolean) : results.every(Boolean);
+};
+
+/** Rules the engine cannot read are skipped, so an unfinished rule hides nothing. */
+export const rowMatchesFilterTree = (
+  row: DatabaseRow,
+  tree: FilterGroup | undefined,
+  schema: PropertyDefinition[],
+  now: Date = new Date()
+): boolean => tree === undefined || (evaluate(row, tree, schema, now) ?? true);
 
 /** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
 const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => a.position.localeCompare(b.position);
@@ -433,8 +504,46 @@ export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition
     return value === undefined ? [] : [[filter.propertyId, value]];
   }));
 
-const filteredRows = (source: QuerySource, view: DatabaseViewConfig): DatabaseRow[] =>
-  source.rows.filter((row) => rowMatchesFilters(row, view.filters, source.schema));
+/** The text a search looks at for one value: option labels for selects and status, file names, the raw text otherwise. */
+const searchText = (property: PropertyDefinition, value: PropertyValue | undefined): string => {
+  const options = property.config?.options ?? [];
+  const label = (id: string): string => options.find((o) => o.id === id)?.label ?? '';
+
+  switch (property.type) {
+    case 'select':
+    case 'status':
+      return typeof value === 'string' ? label(value) : '';
+    case 'multiSelect': return personIdsOf(value).map(label).join(' ');
+    case 'files': return filesOf(value).map((file) => file.name).join(' ');
+    case 'title':
+    case 'text':
+    case 'url':
+    case 'email':
+    case 'phone':
+    case 'number':
+    case 'uniqueId':
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    default:
+      return '';
+  }
+};
+
+export const rowMatchesSearch = (row: DatabaseRow, search: string | undefined, schema: PropertyDefinition[]): boolean => {
+  const needle = (search ?? '').trim().toLowerCase();
+
+  if (needle === '') return true;
+
+  return schema.some((property) => searchText(property, readPropertyValue(row, property)).toLowerCase().includes(needle));
+};
+
+const filteredRows = (source: QuerySource, view: DatabaseViewConfig, search?: string): DatabaseRow[] => {
+  const now = source.now ?? new Date();
+
+  return source.rows.filter((row) =>
+    rowMatchesFilters(row, view.filters, source.schema, now) &&
+    rowMatchesFilterTree(row, view.filterTree, source.schema, now) &&
+    rowMatchesSearch(row, search, source.schema));
+};
 
 /**
  * In-memory answer to the view query. Synchronous for now; a remote source
@@ -443,9 +552,10 @@ const filteredRows = (source: QuerySource, view: DatabaseViewConfig): DatabaseRo
 export const queryRows = (source: QuerySource, request: QueryRowsRequest): QueryRowsResult => {
   const { view, group } = request;
   const groupKeysOf = source.groupKeysOf;
+  const matching = filteredRows(source, view, request.search);
   const inGroup = group === undefined
-    ? filteredRows(source, view)
-    : filteredRows(source, view).filter((row) => groupKeysOf?.(row).includes(group) ?? false);
+    ? matching
+    : matching.filter((row) => groupKeysOf?.(row).includes(group) ?? false);
   const sorted = sortRows(inGroup, view.sorts, source.schema);
   const start = request.cursor === undefined ? 0 : Number(request.cursor);
   const end = request.limit === undefined ? sorted.length : start + request.limit;
@@ -458,10 +568,10 @@ export const queryRows = (source: QuerySource, request: QueryRowsRequest): Query
 };
 
 /** Group counts after filtering, in the order each key first shows up in position order. */
-export const queryGroups = (source: QuerySource, view: DatabaseViewConfig): GroupCount[] => {
+export const queryGroups = (source: QuerySource, view: DatabaseViewConfig, options: { search?: string } = {}): GroupCount[] => {
   const counts = new Map<string, number>();
 
-  for (const row of sortRows(filteredRows(source, view), [], source.schema)) {
+  for (const row of sortRows(filteredRows(source, view, options.search), [], source.schema)) {
     for (const key of source.groupKeysOf?.(row) ?? []) {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }

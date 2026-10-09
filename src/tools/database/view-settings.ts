@@ -17,8 +17,11 @@ import type {
 
 export const LOAD_LIMITS: readonly LoadLimit[] = [10, 25, 50, 100];
 
-/** Unverified: Notion documents the choices (10/25/50/100), not the default. */
+/** Unverified for tables: Notion documents the choices (10/25/50/100), not the default. */
 export const DEFAULT_LOAD_LIMIT: LoadLimit = 50;
+
+/** Measured in research/08. */
+const BOARD_DEFAULT_LOAD_LIMIT: LoadLimit = 25;
 
 export interface ResolvedViewProperty {
   id: string;
@@ -195,7 +198,7 @@ export const resolveFrozenColumnCount = (view: DatabaseViewConfig): number => {
 };
 
 export const resolveLoadLimit = (view: DatabaseViewConfig): LoadLimit =>
-  LOAD_LIMITS.find((limit) => limit === view.loadLimit) ?? DEFAULT_LOAD_LIMIT;
+  LOAD_LIMITS.find((limit) => limit === view.loadLimit) ?? (view.type === 'board' ? BOARD_DEFAULT_LOAD_LIMIT : DEFAULT_LOAD_LIMIT);
 
 const OPEN_PAGES_IN: readonly OpenPagesIn[] = ['side', 'center', 'full'];
 

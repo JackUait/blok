@@ -65,22 +65,36 @@ export interface GridOptions {
   callbacks: GridCallbacks;
 }
 
-/** The value a cleared cell takes, per type. */
-export const emptyValueOf = (property: PropertyDefinition): PropertyValue => {
+/** The value a cleared cell takes, per type. Undefined: the cell cannot be cleared. */
+export const emptyValueOf = (property: PropertyDefinition): PropertyValue | undefined => {
   switch (property.type) {
     case 'title':
     case 'text':
     case 'url':
+    case 'email':
+    case 'phone':
       return '';
     case 'multiSelect':
+    case 'person':
+    case 'files':
       return [];
     case 'checkbox':
       return false;
     case 'number':
     case 'select':
+    case 'status':
     case 'date':
     case 'richText':
       return null;
+    case 'uniqueId':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'createdBy':
+    case 'lastEditedBy':
+      return undefined;
+    default:
+      // A type from a newer client: its empty shape is unknown.
+      return undefined;
   }
 };
 

@@ -414,6 +414,39 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBe('r1/p-amount');
     });
 
+    it.each([
+      ['status', 'o-1', null],
+      ['email', 'a@b.co', ''],
+      ['phone', '+1 555', ''],
+      ['person', [{ id: 'u-1' }], []],
+      ['files', [{ id: 'f-1', name: 'a.png', url: 'https://x.test/a.png' }], []],
+    ] as const)('Backspace clears a %s cell to its empty value', (type, value, empty) => {
+      const { root, handlers } = mount({
+        schema: [schema[0], { id: 'p-x', name: 'X', type, position: 'b0' }],
+        rows: [row('r1', 'Alpha', { 'p-x': structuredClone(value) })],
+      });
+
+      cell(root, 'r1', 'p-x').click();
+      // Not every editor has a text field; Escape closes any of them back to the cell.
+      press(document.activeElement ?? document.body, 'Escape');
+      expect(editor()).toBeNull();
+      press(grid(root), 'Backspace');
+
+      expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-x', empty);
+    });
+
+    it.each(['uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy'] as const)('Backspace never writes a read-only %s cell', (type) => {
+      const { root, handlers } = mount({
+        schema: [schema[0], { id: 'p-x', name: 'X', type, position: 'b0' }],
+        rows: [row('r1', 'Alpha', { 'p-x': 7 })],
+      });
+
+      selectCell(root, 'r1', 'p-x');
+      press(grid(root), 'Backspace');
+
+      expect(handlers.commitCell).not.toHaveBeenCalled();
+    });
+
     it('Shift+arrows select a rectangle; Escape turns it into a selection of its rows', () => {
       const { root } = mount();
 

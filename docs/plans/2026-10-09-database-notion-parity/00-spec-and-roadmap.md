@@ -17,6 +17,7 @@ Every Notion claim below traces to a report in `research/`. Each claim in those 
 | `research/05-notion-filter-sort-group-settings.md` | Filters, sorts, groups, the settings menu, templates, buttons, automations, bulk actions |
 | `research/06-notion-row-page-interactions.md` | Peek modes, row page layout, table and board interactions, shortcuts |
 | `research/07-notion-live-measurements.md` | Computed styles measured on public Notion pages, light and partly dark |
+| `research/08-notion-signed-in-measurements.md` | Signed-in measurement: motion, editing states, keyboard model, menus, decision answers |
 
 **Look: partly measured. Motion: not measured.** Notion's docs give no pixel values, durations or easings. `research/07-notion-live-measurements.md` holds computed-style reads from five public `*.notion.site` pages (screenshots in `research/shots/`, kept local and not committed). Cloudflare challenged rapid loads, so the agent spaced loads 30–45 s apart and never bypassed the challenge. Measured:
 - The view tab pill (32px, gray active fill, no underline).
@@ -113,6 +114,34 @@ These are conflicts or trade-offs the research turned up. Each has a recommendat
 | D8 | **Empty values in sorts** (unverified in Notion). | Empty values go last in both directions. Re-check during Task M. |
 | D9 | **Deleting a group option.** Today it deletes every row in the group. Changing that is **BREAKING**: it shipped in v1.16.1, and adapters would receive `updateRow` instead of `deleteRow`. | Rows lose the value and move to the "No ⟨property⟩" group. Never delete rows without a confirm. The non-breaking alternative keeps deleting rows, but behind a confirm. Re-check Notion's behaviour during Task M. |
 | D10 | **Published `DatabaseData.title?: string`.** The published type is missing it (it is typed `unknown` through the index signature). Adding it is **BREAKING** for consumers who type a non-string title: `title: 42` and `extends DatabaseData { title: number }` stop compiling, as do some `exactOptionalPropertyTypes` cases. Every shipped runtime already saves a string. | Add `title?: string` and label it BREAKING. `title?: unknown` would avoid the break but leave the type wrong. |
+
+
+### Decision outcomes (2026-10-09)
+
+The user approved the recommendations ("go ahead, do whatever you need"). Task M (`research/08`) then measured what Notion actually does, and it changed three of them:
+- **D3: Notion is blue.**
+  - A selected cell has a `rgba(35,131,226,0.07)` fill and a 2px `rgb(39,131,222)` ring. A selected row has a `0.14` fill.
+  - Blok's "no blue selected states" law (CLAUDE.md) wins, so Blok uses a gray fill and primary ink. This is a deliberate divergence, documented as such.
+  - Drop lines and the focus ring after keyboard navigation are not selected states. They keep Notion's blue through `--blok-focus-ring`-family tokens.
+- **D7: Notion prompts.** When you drop a row in a sorted view, Notion asks "Would you like to remove sorting?".
+  - "Don't remove" discards the drop.
+  - "Remove" deletes the sorts, keeps the sorted order as the manual order, and places the row where it was dropped.
+  - Phase 0 shipped a simpler gate (drag off within a sorted group). **Phase 1 replaces it with the prompt.**
+- **D8: confirmed.** Empty values go last in both directions. Equal values keep their manual order. Select sorts by option order.
+- **D9: confirmed, plus a confirm step.** Deleting an option asks first, then keeps the rows with their value cleared, in the "No ⟨property⟩" group. A separate column-menu action, "Move to Trash", deletes the rows, with its own confirm.
+  - Phase 0's C3 matches the data result. **Phase 1 adds both confirms and the Move-to-Trash action.**
+- **Other measured facts that override the roadmap's assumptions:**
+  - Clicking a cell opens its editor at once. Escape then selects the cell, and a second Escape selects the row.
+  - Enter commits and moves down a row. In the last row it never creates a row.
+  - **On a select board the no-value group comes LAST**, after every option column, and a group added later goes after it. Phase 0 put it first, so **Phase 1 moves it**. When grouping by number, text or date, "No ⟨prop⟩" is listed first.
+  - Multi-select board columns come out alphabetical. With more than 10 groups, a "Load more groups" button appears.
+  - Center peek and the cell editors have no open animation.
+  - Side peek slides with `translateX` over 200ms `ease` and takes half the viewport. The page beside it narrows over the same 200ms.
+  - Menus fade and scale from 0.96 over 200ms `ease`.
+  - The card and row drag ghost is `opacity:0.4`, with no rotation or shadow. The drop line is 4px, `rgba(35,131,226,0.43)`.
+  - Group collapse rotates only the caret: 200ms `ease-out`, with no height animation.
+  - The load limit offers 10/25/50/100. The board default is 25.
+  - Only checkbox has Checked, Unchecked and the matching percents in the footer.
 
 ## Gap matrix
 

@@ -171,6 +171,19 @@ describe('DatabaseTool — computed properties', () => {
     expect(doc.rows.get('b')?.data.properties.prev).toEqual([{ id: 'a' }]);
   });
 
+  it('leaves the other side alone once its synced property stopped being the mirror', () => {
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0'), fakeRow('b', 'db', { title: 'Bravo' }, 'a1')]);
+    const { tool } = build(doc);
+
+    tool.changePropertyType('prev', 'text');
+    const before = doc.rows.get('b')?.data.properties.prev;
+
+    commit(tool, 'a', 'next', [{ id: 'b' }]);
+
+    expect(doc.rows.get('a')?.data.properties.next).toEqual([{ id: 'b' }]);
+    expect(doc.rows.get('b')?.data.properties.prev).toEqual(before);
+  });
+
   it('removes the other side when a two-way relation is cleared', () => {
     const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', next: [{ id: 'b' }] }, 'a0'), fakeRow('b', 'db', { title: 'Bravo', prev: [{ id: 'a' }] }, 'a1')]);
     const { tool } = build(doc);

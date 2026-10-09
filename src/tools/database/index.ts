@@ -3655,6 +3655,24 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
+   * The mirroring property of a two-way relation, only while it still is
+   * one: a relation on the target database that points back here. A mirror
+   * deleted or changed to another type must never get relation writes.
+   */
+  private syncedMirror(property: PropertyDefinition): string | undefined {
+    const settings = property.relation;
+    const id = settings?.twoWay === true ? settings.syncedPropertyId : undefined;
+
+    if (settings === undefined || id === undefined) return undefined;
+    const schema = settings.targetDatabaseId === this.block.id ? this.model.getSchema() : this.readDatabaseSource(settings.targetDatabaseId)?.schema;
+    const mirror = schema?.find((p) => p.id === id);
+
+    return mirror?.type === 'relation' && mirror.relation?.targetDatabaseId === this.block.id && mirror.relation.syncedPropertyId === property.id
+      ? id
+      : undefined;
+  }
+
+  /**
    * A relation cell's new list. Writes the row's stored ids and, in one undo
    * step, the other side: the synced property of a two-way relation, or the
    * row that points here on a one-way self-relation.
@@ -3675,7 +3693,7 @@ export class DatabaseTool implements BlockTool {
     const kept = [...stored.filter((id) => !removed.includes(id)), ...added.filter((id) => !stored.includes(id))];
     const own = (settings.limit === 1 ? kept.slice(-1) : kept).map((id) => ({ id }));
     const target = settings.targetDatabaseId;
-    const synced = settings.twoWay === true ? settings.syncedPropertyId : undefined;
+    const synced = this.syncedMirror(property);
     const write = (): void => {
       this.updateRowBlock(rowId, { [propertyId]: own });
       if (synced !== undefined) {
@@ -3713,7 +3731,7 @@ export class DatabaseTool implements BlockTool {
       const settings = property.relation;
 
       if (property.type !== 'relation' || settings === undefined) continue;
-      const synced = settings.twoWay === true ? settings.syncedPropertyId : undefined;
+      const synced = this.syncedMirror(property);
 
       if (synced !== undefined) {
         relationIdsOf(row.properties[property.id])
@@ -3994,7 +4012,7 @@ export class DatabaseTool implements BlockTool {
       const reverseName = this.api.i18n.t('tools.database.relationReverseName', { name: this.title === '' ? property.name : this.title });
       const reverseRelation = { targetDatabaseId: this.block.id, twoWay: true, syncedPropertyId: propertyId };
       const reverseId = target === this.block.id
-        ? this.model.addProperty(reverseName, 'relation', undefined, {}, { relation: reverseRelation }).id
+        ? this.addOwnRelation(reverseName, reverseRelation)
         : this.addForeignRelation(target, reverseName, reverseRelation);
 
       if (reverseId === null) return;
@@ -4036,6 +4054,14 @@ export class DatabaseTool implements BlockTool {
     popover.getElement().setAttribute('data-blok-database-related-to', '');
     popover.on(PopoverEvent.Closed, () => queueMicrotask(() => popover.destroy()));
     popover.show();
+  }
+
+  private addOwnRelation(name: string, relation: RelationSettings): string {
+    const prop = this.model.addProperty(name, 'relation', undefined, {}, { relation });
+
+    void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position, relation });
+
+    return prop.id;
   }
 
   /** Adds a relation property to another database block through its tool. */

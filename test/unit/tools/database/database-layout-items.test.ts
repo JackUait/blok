@@ -204,5 +204,19 @@ describe('database layout items', () => {
       find(items, 'tools.database.galleryFitImage').onActivate?.();
       expect(update).toHaveBeenLastCalledWith({ fitImage: true });
     });
+
+    it('names its rows board-*, not gallery-*', () => {
+      const names = (list: PopoverItemParams[]): string[] => list.flatMap((item) => {
+        const record = item as unknown as { name?: string; children?: { items: PopoverItemParams[] } };
+
+        return [record.name ?? '', ...(record.children !== undefined ? names(record.children.items) : [])];
+      });
+      const items = names(boardLayoutItems(view({ type: 'board' }), schema, i18n, vi.fn()));
+
+      expect(items).toContain('board-card-size');
+      expect(items).toContain('board-card-preview-none');
+      expect(items).toContain('board-fit-image');
+      expect(items.filter((name) => name.startsWith('gallery-'))).toEqual([]);
+    });
   });
 });

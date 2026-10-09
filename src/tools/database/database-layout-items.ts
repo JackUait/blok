@@ -49,7 +49,8 @@ const cardLayoutItems = (
   schema: PropertyDefinition[],
   i18n: T,
   update: (changes: ViewChanges) => void,
-  preview: ReturnType<typeof resolveCardPreview>
+  preview: ReturnType<typeof resolveCardPreview>,
+  prefix: 'gallery' | 'board'
 ): PopoverItemParams[] => {
   const size = resolveCardSize(view);
   const previewKey = preview.kind === 'property' ? `property:${preview.propertyId}` : preview.kind;
@@ -59,28 +60,28 @@ const cardLayoutItems = (
   return [
     {
       type: PopoverItemType.Default,
-      name: 'gallery-card-size',
+      name: `${prefix}-card-size`,
       title: i18n.t('tools.database.galleryCardSize'),
       children: {
-        items: CARD_SIZES.map(([value, key]) => choice(`gallery-card-size-${value}`, i18n.t(key), size === value, () => update({ cardSize: value }))),
+        items: CARD_SIZES.map(([value, key]) => choice(`${prefix}-card-size-${value}`, i18n.t(key), size === value, () => update({ cardSize: value }))),
       },
     },
     {
       type: PopoverItemType.Default,
-      name: 'gallery-card-preview',
+      name: `${prefix}-card-preview`,
       title: i18n.t('tools.database.galleryCardPreview'),
       children: {
         items: [
-          ...PREVIEWS.map(([value, key]) => choice(`gallery-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
+          ...PREVIEWS.map(([value, key]) => choice(`${prefix}-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
           ...imageProperties.map((p) => {
             const value: CardPreview = `property:${p.id}`;
 
-            return choice(`gallery-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
+            return choice(`${prefix}-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
           }),
         ],
       },
     },
-    choice('gallery-fit-image', i18n.t('tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
+    choice(`${prefix}-fit-image`, i18n.t('tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
   ];
 };
 
@@ -90,7 +91,7 @@ export const galleryLayoutItems = (
   schema: PropertyDefinition[],
   i18n: T,
   update: (changes: ViewChanges) => void
-): PopoverItemParams[] => cardLayoutItems(view, schema, i18n, update, resolveCardPreview(view, schema));
+): PopoverItemParams[] => cardLayoutItems(view, schema, i18n, update, resolveCardPreview(view, schema), 'gallery');
 
 /** The same card rows on a board (H-boards); a board shows no preview until one is picked. */
 export const boardLayoutItems = (
@@ -98,7 +99,7 @@ export const boardLayoutItems = (
   schema: PropertyDefinition[],
   i18n: T,
   update: (changes: ViewChanges) => void
-): PopoverItemParams[] => cardLayoutItems(view, schema, i18n, update, resolveBoardCardPreview(view, schema));
+): PopoverItemParams[] => cardLayoutItems(view, schema, i18n, update, resolveBoardCardPreview(view, schema), 'board');
 
 /** Show calendar by, Show calendar as and Show weekends (H-calendars). */
 export const calendarLayoutItems = (

@@ -3614,19 +3614,34 @@ export class DatabaseTool implements BlockTool {
     this.api.blocks.getById(databaseId)?.call('openRow', { rowId });
   }
 
-  /** Writes one row's relation values on another database's row block. */
+  /**
+   * Writes one row's relation values: through that database's tool, so its
+   * backend adapter hears it too, else straight on the row block.
+   */
   private writeForeignRow(databaseId: string, rowId: string, changes: Record<string, PropertyValue>): void {
     if (databaseId === this.block.id) {
-      this.updateRowBlock(rowId, changes);
+      this.writeRelatedRow({ rowId, changes });
 
       return;
     }
+    const written: boolean[] = [];
+
+    this.api.blocks.getById(databaseId)?.call('writeRelatedRow', { rowId, changes, done: () => written.push(true) });
+    if (written.length > 0) return;
     const rowBlock = this.api.blocks.getChildren(databaseId).find((child) => child.id === rowId);
 
     if (rowBlock !== undefined) {
       rowBlock.call('updateProperties', changes);
       rowBlock.dispatchChange();
     }
+  }
+
+  /** The other side of a relation edit, from this database or another one. */
+  writeRelatedRow(param: { rowId: string; changes: Record<string, PropertyValue>; done?: () => void }): void {
+    if (this.readOnly || this.destroyed || this.model.getRow(param.rowId) === undefined) return;
+    this.updateRowBlock(param.rowId, param.changes);
+    this.sync.syncUpdateRow({ rowId: param.rowId, properties: param.changes });
+    param.done?.();
   }
 
   private storedRelationOf(databaseId: string, rowId: string, propertyId: string): PropertyValue | undefined {
@@ -3668,7 +3683,7 @@ export class DatabaseTool implements BlockTool {
         // A one-way self-relation shows both ways: drop the pointer on the other row too.
         removed
           .filter((id) => relationIdsOf(this.model.getRow(id)?.properties[propertyId]).includes(rowId))
-          .forEach((id) => this.updateRowBlock(id, { [propertyId]: removeRelatedIds(this.model.getRow(id)?.properties[propertyId], rowId) }));
+          .forEach((id) => this.writeRelatedRow({ rowId: id, changes: { [propertyId]: removeRelatedIds(this.model.getRow(id)?.properties[propertyId], rowId) } }));
       }
     };
 
@@ -3707,7 +3722,7 @@ export class DatabaseTool implements BlockTool {
       if (settings.targetDatabaseId === this.block.id) {
         this.model.getOrderedRows()
           .filter((other) => other.id !== rowId && relationIdsOf(other.properties[property.id]).includes(rowId))
-          .forEach((other) => this.updateRowBlock(other.id, { [property.id]: removeRelatedIds(other.properties[property.id], rowId) }));
+          .forEach((other) => this.writeRelatedRow({ rowId: other.id, changes: { [property.id]: removeRelatedIds(other.properties[property.id], rowId) } }));
       }
     }
   }

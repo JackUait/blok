@@ -12,7 +12,7 @@ import type {
 } from './types';
 
 /** Types whose value is computed from the row block, never stored in `properties`. */
-const COMPUTED_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy']);
+const COMPUTED_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'formula', 'rollup']);
 
 /** Types a person cannot edit in a cell. */
 const READ_ONLY_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([...COMPUTED_TYPES, 'uniqueId']);
@@ -28,10 +28,13 @@ const personOf = (id: string | undefined): PersonValue[] =>
   typeof id === 'string' && id !== '' ? [{ id }] : [];
 
 /**
- * The value a property shows for a row. The four computed types read the row
- * block's metadata: a time as an ISO instant, a person as a person value.
+ * The value a property shows for a row. Formula, rollup and relation values
+ * come from `row.computed` (computed-properties.ts). The four metadata types
+ * read the row block's metadata: a time as an ISO instant, a person as a
+ * person value.
  */
 export const readPropertyValue = (row: DatabaseRow, property: PropertyDefinition): PropertyValue | undefined => {
+  if (row.computed !== undefined && Object.hasOwn(row.computed, property.id)) return row.computed[property.id];
   const meta = row.meta;
 
   if (property.type === 'createdTime') return isoOf(meta?.createdAt);

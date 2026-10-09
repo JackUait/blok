@@ -1,4 +1,5 @@
 import { FUNCTIONS, paramMismatch } from './functions';
+import type { ReturnError } from './functions';
 import type { FormulaNode } from './parser';
 import { propertyFormulaType } from './properties';
 import { T, elementOf, listOf, typeName, unify } from './types';
@@ -82,8 +83,11 @@ const failArity = (name: string, min: number, max: number, got: number, node: { 
 export interface CheckOptions {
   /** The schema of a related database, for `current.prop("Name")` on its pages. */
   related?: (databaseId: string) => PropertyDefinition[] | undefined;
-  /** The formula type of a formula or rollup property. Without it they cannot be used. */
-  typeOf?: (property: PropertyDefinition) => FormulaType | undefined;
+  /**
+   * The formula type of a formula or rollup property, or the error that stops
+   * it (a cycle, a chain too deep). Without it they cannot be used.
+   */
+  typeOf?: (property: PropertyDefinition) => FormulaType | { error: ReturnError } | undefined;
 }
 
 export class Checker {
@@ -143,6 +147,7 @@ export class Checker {
     const type = property === undefined ? undefined : this.options.typeOf?.(property) ?? propertyFormulaType(property);
 
     if (property === undefined) return fail('unknownProperty', { name: id }, `Unknown property id "${id}"`, node);
+    if (type !== undefined && 'error' in type) return fail(type.error.code, type.error.params, type.error.message, node);
     if (type === undefined) return fail('propertyNotUsable', { name: property.name }, `Property "${property.name}" cannot be used in a formula`, node);
 
     return type;

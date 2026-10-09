@@ -1,5 +1,6 @@
 import { tokenize } from './tokenizer';
 import type { FormulaError, Token } from './tokenizer';
+import { FormulaFailure } from './errors';
 
 interface Span {
   start: number;
@@ -26,12 +27,6 @@ export type BinaryOp = '+' | '-' | '*' | '/' | '%' | '^' | '==' | '!=' | '>' | '
 
 export type ParseResult = { ok: true; node: FormulaNode } | { ok: false; error: FormulaError };
 
-class ParseError extends Error {
-  constructor(message: string, readonly start: number, readonly end: number) {
-    super(message);
-  }
-}
-
 /** Lowest to highest; the ternary sits below all of these. */
 const BINARY_LEVELS: Array<Partial<Record<string, BinaryOp>>> = [
   { 'or': 'or', '||': 'or' },
@@ -52,7 +47,7 @@ class Parser {
     const node = this.parseTernary();
     const next = this.peek();
 
-    if (next.type !== 'eof') throw new ParseError(`Unexpected "${next.value}"`, next.start, next.end);
+    if (next.type !== 'eof') throw new FormulaFailure('unexpectedToken', { token: next.value }, `Unexpected "${next.value}"`, next.start, next.end);
 
     return node;
   }
@@ -78,7 +73,7 @@ class Parser {
   private expectPunct(value: string): Token {
     const token = this.peek();
 
-    if (token.type !== 'punct' || token.value !== value) throw new ParseError(`Expected "${value}"`, token.start, token.start);
+    if (token.type !== 'punct' || token.value !== value) throw new FormulaFailure('expectedToken', { token: value }, `Expected "${value}"`, token.start, token.start);
 
     return this.advance();
   }
@@ -92,7 +87,7 @@ class Parser {
     const then = this.parseTernary();
     const colon = this.peek();
 
-    if (colon.type !== 'op' || colon.value !== ':') throw new ParseError('Expected ":"', colon.start, colon.start);
+    if (colon.type !== 'op' || colon.value !== ':') throw new FormulaFailure('expectedToken', { token: ':' }, 'Expected ":"', colon.start, colon.start);
     this.advance();
     const otherwise = this.parseTernary();
 
@@ -157,7 +152,7 @@ class Parser {
     this.advance();
     const name = this.peek();
 
-    if (name.type !== 'ident') throw new ParseError('Expected a function name after "."', name.start, name.end);
+    if (name.type !== 'ident') throw new FormulaFailure('expectedFunctionName', {}, 'Expected a function name after "."', name.start, name.end);
     this.advance();
     const args = this.isPunct('(') ? this.parseArgs() : { items: [], end: name.end };
 
@@ -212,12 +207,12 @@ class Parser {
         if (token.value === '[') return this.parseList(token);
         break;
       case 'eof':
-        throw new ParseError('Unexpected end of formula', token.start, token.end);
+        throw new FormulaFailure('unexpectedEnd', {}, 'Unexpected end of formula', token.start, token.end);
       case 'op':
         break;
     }
 
-    throw new ParseError(`Unexpected "${token.value}"`, token.start, token.end);
+    throw new FormulaFailure('unexpectedToken', { token: token.value }, `Unexpected "${token.value}"`, token.start, token.end);
   }
 
   private parseIdent(token: Token): FormulaNode {
@@ -232,7 +227,7 @@ class Parser {
       const [name] = args.items;
 
       if (args.items.length !== 1 || name.type !== 'string') {
-        throw new ParseError('prop() takes a property name in quotes', token.start, args.end);
+        throw new FormulaFailure('propNeedsName', {}, 'prop() takes a property name in quotes', token.start, args.end);
       }
 
       return { type: 'prop', ref: { by: 'name', name: name.value }, start: token.start, end: args.end };
@@ -268,7 +263,7 @@ export const parse = (source: string): ParseResult => {
   try {
     return { ok: true, node: new Parser(tokens.tokens).parseFormula() };
   } catch (error) {
-    if (error instanceof ParseError) return { ok: false, error: { message: error.message, start: error.start, end: error.end } };
+    if (error instanceof FormulaFailure) return { ok: false, error: error.toError() };
     throw error;
   }
 };

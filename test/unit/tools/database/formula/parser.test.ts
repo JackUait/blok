@@ -128,15 +128,15 @@ describe('formula parser', () => {
 
   describe('errors', () => {
     it('reports a missing closing parenthesis', () => {
-      expect(parse('(1 + 2')).toEqual({ ok: false, error: { message: 'Expected ")"', start: 6, end: 6 } });
+      expect(parse('(1 + 2')).toEqual({ ok: false, error: { message: 'Expected ")"', code: 'expectedToken', params: { token: ')' }, start: 6, end: 6 } });
     });
 
     it('reports a trailing token', () => {
-      expect(parse('1 2')).toEqual({ ok: false, error: { message: 'Unexpected "2"', start: 2, end: 3 } });
+      expect(parse('1 2')).toEqual({ ok: false, error: { message: 'Unexpected "2"', code: 'unexpectedToken', params: { token: '2' }, start: 2, end: 3 } });
     });
 
     it('reports a missing operand', () => {
-      expect(parse('1 +')).toEqual({ ok: false, error: { message: 'Unexpected end of formula', start: 3, end: 3 } });
+      expect(parse('1 +')).toEqual({ ok: false, error: { message: 'Unexpected end of formula', code: 'unexpectedEnd', params: {}, start: 3, end: 3 } });
     });
 
     it('reports a ternary without a colon', () => {

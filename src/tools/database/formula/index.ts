@@ -1,4 +1,5 @@
-import { Checker, FormulaCheckError, SPECIAL_FORMS, resolveProps } from './checker';
+import { Checker, SPECIAL_FORMS, resolveProps } from './checker';
+import { FormulaFailure } from './errors';
 import type { PropSpan } from './checker';
 import { evaluate } from './evaluate';
 import { FUNCTIONS } from './functions';
@@ -9,7 +10,8 @@ import type { FormulaError } from './tokenizer';
 import type { FormulaType, FormulaValue } from './types';
 import type { DatabaseRow, PropertyDefinition } from '../types';
 
-export type { FormulaError } from './tokenizer';
+export type { FormulaError, FormulaErrorCode, FormulaErrorParams } from './errors';
+export { FORMULA_ERROR_CODES, formulaErrorKey } from './errors';
 export type { FormulaDate, FormulaRef, FormulaRichText, FormulaType, FormulaValue, StyledRun } from './types';
 export { formulaValueToText } from './values';
 export { formulaDateToStored } from './dates';
@@ -53,7 +55,7 @@ export const compileFormula = (source: string, schema: PropertyDefinition[]): Co
 
     return { ok: true, formula: { source, node, propSpans, resultType }, resultType };
   } catch (error) {
-    if (error instanceof FormulaCheckError) return { ok: false, error: { message: error.message, start: error.start, end: error.end } };
+    if (error instanceof FormulaFailure) return { ok: false, error: error.toError() };
     throw error;
   }
 };

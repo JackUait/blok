@@ -50,7 +50,7 @@ describe('formula tokenizer', () => {
   });
 
   it('reports an unterminated string with its span', () => {
-    expect(tokenize('1 + "abc')).toEqual({ ok: false, error: { message: 'Unterminated string', start: 4, end: 8 } });
+    expect(tokenize('1 + "abc')).toEqual({ ok: false, error: { message: 'Unterminated string', code: 'unterminatedString', params: {}, start: 4, end: 8 } });
   });
 
   it('reports an unterminated comment', () => {
@@ -58,7 +58,7 @@ describe('formula tokenizer', () => {
   });
 
   it('reports an unexpected character', () => {
-    expect(tokenize('1 # 2')).toEqual({ ok: false, error: { message: 'Unexpected character "#"', start: 2, end: 3 } });
+    expect(tokenize('1 # 2')).toEqual({ ok: false, error: { message: 'Unexpected character "#"', code: 'unexpectedCharacter', params: { char: '#' }, start: 2, end: 3 } });
   });
 
   it('reads exponents and leading-dot decimals', () => {

@@ -1,8 +1,7 @@
-export interface FormulaError {
-  message: string;
-  start: number;
-  end: number;
-}
+import { FormulaFailure } from './errors';
+import type { FormulaError } from './errors';
+
+export type { FormulaError } from './errors';
 
 export type TokenType = 'number' | 'string' | 'ident' | 'propRef' | 'op' | 'punct' | 'eof';
 
@@ -26,12 +25,6 @@ const PATTERNS: Array<{ type: TokenType; re: RegExp }> = [
   { type: 'number', re: /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/ },
   { type: 'ident', re: /^[\p{L}_$][\p{L}\p{N}_$]*/u },
 ];
-
-class TokenizeError extends Error {
-  constructor(message: string, readonly start: number, readonly end: number) {
-    super(message);
-  }
-}
 
 class Scanner {
   private pos = 0;
@@ -75,13 +68,13 @@ class Scanner {
     if (op !== undefined) return this.push('op', ALIASES[op] ?? op, op.length);
     if (PUNCT.has(rest[0])) return this.push('punct', rest[0], 1);
 
-    throw new TokenizeError(`Unexpected character "${rest[0]}"`, this.pos, this.pos + 1);
+    throw new FormulaFailure('unexpectedCharacter', { char: rest[0] }, `Unexpected character "${rest[0]}"`, this.pos, this.pos + 1);
   }
 
   private skipComment(): void {
     const close = this.source.indexOf('*/', this.pos + 2);
 
-    if (close === -1) throw new TokenizeError('Unterminated comment', this.pos, this.source.length);
+    if (close === -1) throw new FormulaFailure('unterminatedComment', {}, 'Unterminated comment', this.pos, this.source.length);
     this.pos = close + 2;
   }
 
@@ -93,7 +86,7 @@ class Scanner {
     while (this.pos < this.source.length && this.source[this.pos] !== '"') {
       parts.push(this.readChar());
     }
-    if (this.pos >= this.source.length) throw new TokenizeError('Unterminated string', start, this.source.length);
+    if (this.pos >= this.source.length) throw new FormulaFailure('unterminatedString', {}, 'Unterminated string', start, this.source.length);
     this.pos++;
     this.tokens.push({ type: 'string', value: parts.join(''), start, end: this.pos });
   }
@@ -118,7 +111,7 @@ export const tokenize = (source: string): TokenizeResult => {
   try {
     return { ok: true, tokens: new Scanner(source).run() };
   } catch (error) {
-    if (error instanceof TokenizeError) return { ok: false, error: { message: error.message, start: error.start, end: error.end } };
+    if (error instanceof FormulaFailure) return { ok: false, error: error.toError() };
     throw error;
   }
 };

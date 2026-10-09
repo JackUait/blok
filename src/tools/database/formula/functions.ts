@@ -2,6 +2,7 @@ import {
   addToDate, dateDifference, datePart, dateUnit, formatDatePattern, parseIsoDate, startOfDay,
 } from './dates';
 import type { DatePart } from './dates';
+import type { FormulaErrorCode, FormulaErrorParams } from './errors';
 import { T, elementOf, isDate, isRef, listOf, typeName, unify } from './types';
 import type { FormulaDate, FormulaText, FormulaType, FormulaValue } from './types';
 import {
@@ -21,12 +22,19 @@ export interface RunContext {
  */
 export type ParamSpec = 'number' | 'text' | 'boolean' | 'date' | 'person' | 'page' | 'any' | 'list' | 'numbers' | 'textOrList' | 'element';
 
+/** A compile error a function's return rule reports. */
+export interface ReturnError {
+  code: FormulaErrorCode;
+  params: FormulaErrorParams;
+  message: string;
+}
+
 export interface FunctionDef {
   params: ParamSpec[];
   optional?: ParamSpec[];
   /** Zero or more trailing arguments of this kind. */
   rest?: ParamSpec;
-  returns: FormulaType | ((args: FormulaType[]) => FormulaType | { error: string });
+  returns: FormulaType | ((args: FormulaType[]) => FormulaType | { error: ReturnError });
   run: (args: FormulaValue[], ctx: RunContext) => FormulaValue;
   /** Off by default: an empty argument makes the result empty without calling `run`. */
   keepEmpty?: boolean;
@@ -345,8 +353,10 @@ export const FUNCTIONS: Record<string, FunctionDef> = {
   concat: {
     params: ['list'],
     rest: 'list',
-    returns: (args) => args.reduce<FormulaType | { error: string }>(
-      (acc, type) => ('error' in acc ? acc : unify(acc, type) ?? { error: `concat() cannot join ${typeName(acc)} and ${typeName(type)}` }),
+    returns: (args) => args.reduce<FormulaType | { error: ReturnError }>(
+      (acc, type) => ('error' in acc ? acc : unify(acc, type) ?? {
+        error: { code: 'cannotConcat', params: { a: typeName(acc), b: typeName(type) }, message: `concat() cannot join ${typeName(acc)} and ${typeName(type)}` },
+      }),
       args[0]
     ),
     run: (args) => args.flatMap(list),

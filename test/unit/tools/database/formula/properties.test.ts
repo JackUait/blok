@@ -105,7 +105,7 @@ describe('formula properties', () => {
   describe('compile errors', () => {
     it('reports an unknown property with its span', () => {
       expect(compileFormula('1 + prop("Nope")', schema)).toEqual({
-        ok: false, error: { message: 'Unknown property "Nope"', start: 4, end: 16 },
+        ok: false, error: { message: 'Unknown property "Nope"', code: 'unknownProperty', params: { name: 'Nope' }, start: 4, end: 16 },
       });
     });
 

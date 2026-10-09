@@ -1218,7 +1218,7 @@ describe('DatabaseTool', () => {
       if (card === null) throw new Error('row card was not rendered');
       card.click();
 
-      expect(opened).toHaveBeenCalledWith(expect.objectContaining({ pageId: 'row-page' }));
+      expect(opened).toHaveBeenCalledWith(expect.objectContaining({ pageId: 'row-page' }), 'side');
     } finally {
       tool.destroy();
     }

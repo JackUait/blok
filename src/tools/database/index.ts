@@ -1,7 +1,7 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, RelationSettings, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, RelationSettings, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf } from './property-values';
 import { planTypeChange } from './property-conversion';
 import { openCellEditor } from './cells';
@@ -39,6 +39,7 @@ import {
   TIMELINE_ZOOMS,
   resolveCalendarBy,
   resolveLoadLimit,
+  resolveOpenPagesIn,
   resolveShowTimelineTable,
   resolveTimelineBy,
   resolveTimelineEndBy,
@@ -2983,6 +2984,8 @@ export class DatabaseTool implements BlockTool {
           attach: (rowId, host) => this.attachRowBody(rowId, host),
           detach: () => this.mountRows(),
         },
+        adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
+        onModeChange: (mode) => this.changeOpenMode(mode),
         peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,
       });
     }
@@ -3524,11 +3527,60 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    const view = this.model.getView(this.activeViewId);
+    const viewMode = view === undefined ? 'side' : resolveOpenPagesIn(view);
+    const mode = this.cardDrawer?.isOpen === true ? this.cardDrawer.openMode : viewMode;
+
+    if (mode === 'full' && this.config.rowPages?.navigate !== undefined) {
+      this.cardDrawer?.close();
+      this.config.rowPages.navigate(rowId);
+
+      return;
+    }
     if (this.config.rowPages !== undefined && !this.readOnly && row.pageId === undefined) {
       this.cardDrawer?.setRowPageLookup(rowId, 'pending');
     }
-    this.cardDrawer?.open(row);
+    this.cardDrawer?.open(row, mode);
     void this.resolveRowPage(rowId);
+  }
+
+  /** The active view's rows in the order it shows them, groups in board order. */
+  private viewRowOrder(): DatabaseRow[] {
+    const view = this.model.getView(this.activeViewId);
+
+    if (view === undefined) {
+      return [];
+    }
+    if (view.groupBy !== undefined && this.model.getProperty(view.groupBy) !== undefined) {
+      const options = this.groupOptions(view.groupBy, view);
+      const groups = this.queryGroupRows(view, options.map((option) => option.id));
+
+      return options.flatMap((option) => groups.get(option.id) ?? []);
+    }
+
+    return this.model.queryRows({ view }).rows;
+  }
+
+  private adjacentRow(rowId: string, direction: 1 | -1): DatabaseRow | undefined {
+    const order = this.viewRowOrder();
+    const index = order.findIndex((row) => row.id === rowId);
+
+    return index === -1 ? undefined : order[index + direction];
+  }
+
+  /** A mode picked in the peek header is saved on the view, as Notion's "Open pages in" is. */
+  private changeOpenMode(mode: OpenPagesIn): void {
+    const rowId = this.cardDrawer?.openRowId ?? null;
+
+    if (!this.readOnly) {
+      this.model.updateView(this.activeViewId, { openPagesIn: mode });
+      this.block.dispatchChange();
+      void this.sync.syncUpdateView({ viewId: this.activeViewId, changes: { openPagesIn: mode } });
+    }
+    if (mode === 'full' && rowId !== null && this.config.rowPages?.navigate !== undefined) {
+      this.cardDrawer?.close();
+      this.config.rowPages.navigate(rowId);
+    }
   }
 
   /**

@@ -223,6 +223,10 @@ describe('view-settings', () => {
       expect(resolveLoadLimit(view({ loadLimit: 7 as never }))).toBe(DEFAULT_LOAD_LIMIT);
     });
 
+    it('opens pages in a center peek for calendar, a layout newer than this union', () => {
+      expect(resolveOpenPagesIn(view({ type: 'calendar' as never }))).toBe('center');
+    });
+
     it('opens pages in a side peek for table, board and list, and center for gallery', () => {
       expect(resolveOpenPagesIn(view())).toBe('side');
       expect(resolveOpenPagesIn(view({ type: 'board' }))).toBe('side');

@@ -2,11 +2,16 @@ import type { I18n, OutputData } from '../../../types';
 import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
-import type { DatabaseRow, DatabaseRowPages, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconChevronRight } from '../../components/icons';
+import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSplitView } from '../../components/icons';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { getUserOS } from '../../components/utils/browser';
+import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -35,6 +40,24 @@ const afterSlide = (drawer: HTMLElement, done: () => void): void => {
 
   drawer.addEventListener('transitionend', finish, { once: true });
   window.setTimeout(finish, DRAWER_TRANSITION_FALLBACK_MS);
+};
+
+/**
+ * Previous (-1) or next (1) row from a key press: Ctrl+Shift+K/J on a Mac,
+ * Ctrl+K/J elsewhere (research/03 §1.4). Off a Mac, Ctrl+K in a text field is
+ * the link shortcut, so the field keeps it.
+ */
+const stepOf = (event: KeyboardEvent): 1 | -1 | null => {
+  const mac = getUserOS().mac;
+  const step = ({ KeyJ: 1, KeyK: -1 } as const)[event.code as 'KeyJ' | 'KeyK'] ?? null;
+
+  if (step === null || !event.ctrlKey || event.metaKey || event.altKey || event.shiftKey !== mac) {
+    return null;
+  }
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  const inField = target !== null && (target.isContentEditable || target.matches('input, textarea, select'));
+
+  return mac || !inField ? step : null;
 };
 
 interface BlokInstance {
@@ -85,6 +108,13 @@ export interface CardDrawerOptions {
     attach(rowId: string, host: HTMLElement): boolean;
     detach(rowId: string): void;
   };
+  /** The row before (-1) or after (1) the open one in the view, if any. */
+  adjacentRow?: (rowId: string, direction: 1 | -1) => DatabaseRow | undefined;
+  /**
+   * A mode picked in the peek header. The tool saves it on the view; it may
+   * also take the page away from the drawer (a host's full page).
+   */
+  onModeChange?: (mode: OpenPagesIn) => void;
   /**
    * The page beside the side peek (the editor wrapper). It narrows by the part
    * the half-viewport drawer covers, as Notion's page does (research/08).
@@ -168,6 +198,11 @@ export class DatabaseCardDrawer {
   private readonly onOptionsChange: CardDrawerOptions['onOptionsChange'];
   private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
   private readonly rowBody: CardDrawerOptions['rowBody'];
+  private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
+  private readonly onModeChange: CardDrawerOptions['onModeChange'];
+  private mode: OpenPagesIn = 'side';
+  private backdrop: HTMLElement | null = null;
+  private modeMenu: PopoverDesktop | null = null;
   /** The row whose holder is the shown page body. */
   private attachedBodyRowId: string | null = null;
   private cellEditor: CellEditorHandle | null = null;
@@ -212,6 +247,8 @@ export class DatabaseCardDrawer {
     this.onOptionsChange = options.onOptionsChange;
     this.savedOptionsOf = options.savedOptionsOf;
     this.rowBody = options.rowBody;
+    this.adjacentRow = options.adjacentRow;
+    this.onModeChange = options.onModeChange;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -250,8 +287,16 @@ export class DatabaseCardDrawer {
     return rowDescription(row, this.schema, this.descriptionPropertyId);
   }
 
-  open(row: DatabaseRow): void {
+  /** How the open page shows: side peek, center peek or full page. */
+  get openMode(): OpenPagesIn {
+    return this.mode;
+  }
+
+  open(row: DatabaseRow, mode: OpenPagesIn = this.drawer === null ? 'side' : this.mode): void {
     if (this.drawer) {
+      if (mode !== this.mode) {
+        this.applyMode(mode);
+      }
       if (row.id === this.currentRowId) {
         return;
       }
@@ -285,16 +330,12 @@ export class DatabaseCardDrawer {
 
     const closeBtn = document.createElement('button');
 
+    closeBtn.type = 'button';
     closeBtn.setAttribute('data-blok-database-drawer-close', '');
-    closeBtn.setAttribute(
-      'aria-label',
-      this.i18n?.t('tools.database.close') ?? englishDictionary['tools.database.close']
-    );
-    closeBtn.innerHTML = IconChevronRight + IconChevronRight;
     closeBtn.addEventListener('click', () => {
       this.close();
     });
-    toolbar.appendChild(closeBtn);
+    toolbar.append(closeBtn, ...this.createHeaderControls());
 
     drawer.appendChild(toolbar);
 
@@ -347,10 +388,13 @@ export class DatabaseCardDrawer {
     drawer.appendChild(content);
     this.wrapper.appendChild(drawer);
     this.drawer = drawer;
+    this.applyMode(mode);
 
     requestAnimationFrame(() => {
       drawer.setAttribute('data-open', '');
-      this.narrowPeekHost();
+      if (this.drawer === drawer && this.mode === 'side') {
+        this.narrowPeekHost();
+      }
       afterSlide(drawer, () => {
         this.autoResizeTitle(titleInput);
 
@@ -363,7 +407,16 @@ export class DatabaseCardDrawer {
     this.initNestedEditor(editorHolder, row);
 
     this.escapeHandler = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape') {
+      const step = stepOf(e);
+
+      if (step !== null) {
+        e.preventDefault();
+        this.step(step);
+
+        return;
+      }
+      // A full page is left with its back button, not Escape.
+      if (e.key !== 'Escape' || this.mode === 'full') {
         return;
       }
 
@@ -381,7 +434,7 @@ export class DatabaseCardDrawer {
     this.outsideClickHandler = (e: MouseEvent): void => {
       const target = e.target as Node | null;
 
-      if (target && drawer.contains(target)) {
+      if ((target && drawer.contains(target)) || this.mode === 'full') {
         return;
       }
 
@@ -425,6 +478,7 @@ export class DatabaseCardDrawer {
     this.currentRowId = row.id;
     this.currentRow = row;
     this.updateActiveCard(row.id);
+    this.syncStepButtons();
 
     const title = (row.properties[this.titlePropertyId] as string) ?? '';
 
@@ -469,6 +523,15 @@ export class DatabaseCardDrawer {
     this.updateActiveCard(null);
     this.cleanupListeners();
     this.cleanupEditor();
+    this.closeModeMenu();
+    this.removeBackdrop();
+    this.wrapper.removeAttribute('data-blok-database-full-page');
+
+    // Only the side peek slides out; center and full page leave at once.
+    if (this.drawer !== null && this.mode !== 'side') {
+      this.drawer.remove();
+      this.drawer = null;
+    }
 
     if (this.drawer) {
       const drawer = this.drawer;
@@ -497,6 +560,9 @@ export class DatabaseCardDrawer {
   destroy(): void {
     this.events?.off('i18n:changed', this.followOuterDirection);
     this.releasePeekHost();
+    this.closeModeMenu();
+    this.removeBackdrop();
+    this.wrapper.removeAttribute('data-blok-database-full-page');
     this.cancelCellEditor();
     this.cleanupListeners();
     this.cleanupEditor();
@@ -540,6 +606,175 @@ export class DatabaseCardDrawer {
     this.peekHost?.removeAttribute('data-blok-database-peek');
     this.peekHost?.style.removeProperty('--_blok-peek-inset');
     this.peekHost = null;
+  }
+
+  /** Header controls after close: expand to full page, the mode menu, previous and next row. */
+  private createHeaderControls(): HTMLElement[] {
+    const button = (attr: string, labelKey: string, icon: string, onClick: (el: HTMLButtonElement) => void): HTMLButtonElement => {
+      const el = document.createElement('button');
+
+      el.type = 'button';
+      el.setAttribute(attr, '');
+      el.setAttribute('aria-label', this.label(labelKey));
+      el.innerHTML = icon;
+      el.addEventListener('click', () => onClick(el));
+
+      return el;
+    };
+
+    return [
+      button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandFullscreen, () => this.switchMode('full', false)),
+      button('data-blok-database-peek-mode', 'tools.database.peekModeMenu', IconSplitView, (el) => this.openModeMenu(el)),
+      button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
+      button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
+    ];
+  }
+
+  /** Shows the row before or after the open one, keeping the mode. */
+  private step(direction: 1 | -1): void {
+    const rowId = this.currentRowId;
+    const next = rowId === null ? undefined : this.adjacentRow?.(rowId, direction);
+
+    if (next !== undefined) {
+      this.open(next);
+    }
+  }
+
+  private syncStepButtons(): void {
+    const rowId = this.currentRowId;
+
+    (['prev', 'next'] as const).forEach((which) => {
+      const el = this.drawer?.querySelector<HTMLButtonElement>(`[data-blok-database-peek-${which}]`);
+
+      if (el !== null && el !== undefined) {
+        el.disabled = rowId === null || this.adjacentRow?.(rowId, which === 'next' ? 1 : -1) === undefined;
+      }
+    });
+  }
+
+  /**
+   * Picks a mode from the header. A saved mode goes to the tool first: for a
+   * host full page it closes this drawer and navigates.
+   */
+  private switchMode(mode: OpenPagesIn, save: boolean): void {
+    if (save) {
+      this.onModeChange?.(mode);
+    }
+    if (this.drawer !== null && mode !== this.mode) {
+      this.applyMode(mode);
+    }
+  }
+
+  private openModeMenu(anchor: HTMLElement): void {
+    this.closeModeMenu();
+    const modes: Array<{ mode: OpenPagesIn; icon: string; key: string }> = [
+      { mode: 'side', icon: IconSplitView, key: 'Side' },
+      { mode: 'center', icon: IconPreview, key: 'Center' },
+      { mode: 'full', icon: IconExpandFullscreen, key: 'Full' },
+    ];
+    const menu = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '240px',
+      autoFocusFirstItem: false,
+      items: modes.map(({ mode, icon, key }) => ({
+        type: PopoverItemType.Default,
+        title: this.label(`tools.database.openPagesIn${key}`),
+        titleEl: this.modeLabel(`tools.database.openPagesIn${key}`, `tools.database.openPagesIn${key}Description`),
+        icon,
+        ...(mode === this.mode ? { trailingIcon: IconCheck } : {}),
+        onActivate: () => this.switchMode(mode, true),
+      })),
+    });
+
+    menu.on(PopoverEvent.Closed, () => {
+      if (this.modeMenu === menu) {
+        this.modeMenu = null;
+        menu.destroy();
+      }
+    });
+    this.modeMenu = menu;
+    menu.show();
+  }
+
+  /** A menu label with Notion's one-line description under it (research/08). */
+  private modeLabel(titleKey: string, descriptionKey: string): HTMLElement {
+    const label = document.createElement('span');
+    const title = document.createElement('span');
+    const description = document.createElement('span');
+
+    label.setAttribute('data-blok-database-peek-mode-label', '');
+    title.textContent = this.label(titleKey);
+    description.setAttribute('data-blok-database-peek-mode-description', '');
+    description.textContent = this.label(descriptionKey);
+    label.append(title, description);
+
+    return label;
+  }
+
+  private closeModeMenu(): void {
+    const menu = this.modeMenu;
+
+    this.modeMenu = null;
+    menu?.destroy();
+  }
+
+  /**
+   * Side: a complementary panel at the inline end, the page beside it inset.
+   * Center: a modal over a backdrop, with no open animation (research/08).
+   * Full: the page takes the database's place; its close button reads "Back".
+   */
+  private applyMode(mode: OpenPagesIn): void {
+    const drawer = this.drawer;
+
+    this.mode = mode;
+    if (drawer === null) {
+      return;
+    }
+    drawer.setAttribute('data-peek-mode', mode);
+    drawer.setAttribute('role', ({ side: 'complementary', center: 'dialog', full: 'region' } as const)[mode]);
+    drawer.toggleAttribute('aria-modal', false);
+    if (mode === 'center') {
+      drawer.setAttribute('aria-modal', 'true');
+    }
+    this.wrapper.toggleAttribute('data-blok-database-full-page', mode === 'full');
+
+    if (mode === 'center') {
+      this.ensureBackdrop(drawer);
+    } else {
+      this.removeBackdrop();
+    }
+    if (mode === 'side' && drawer.hasAttribute('data-open')) {
+      this.narrowPeekHost();
+    }
+    if (mode !== 'side') {
+      this.releasePeekHost();
+    }
+
+    const close = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-close]');
+
+    if (close !== null) {
+      close.innerHTML = mode === 'full' ? IconChevronLeft : IconChevronRight + IconChevronRight;
+      close.setAttribute('aria-label', this.label(mode === 'full' ? 'tools.database.peekBack' : 'tools.database.close'));
+    }
+    drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
+    this.syncStepButtons();
+  }
+
+  private ensureBackdrop(drawer: HTMLElement): void {
+    if (this.backdrop === null) {
+      const backdrop = document.createElement('div');
+
+      backdrop.setAttribute('data-blok-database-peek-backdrop', '');
+      this.backdrop = backdrop;
+    }
+    drawer.before(this.backdrop);
+  }
+
+  private removeBackdrop(): void {
+    this.backdrop?.remove();
+    this.backdrop = null;
   }
 
   /** Row whose holder the drawer shows as the page body, or null. */
@@ -735,6 +970,11 @@ export class DatabaseCardDrawer {
 
   private t(key: string): string {
     return this.i18n?.t(key) ?? key;
+  }
+
+  /** Chrome labels fall back to bundled English, as the close button always did. */
+  private label(key: string): string {
+    return this.i18n?.t(key) ?? (englishDictionary as Record<string, string>)[key] ?? key;
   }
 
   /** Draws a value into its slot. The drawer pill attribute shipped in v1.16.1, so it stays. */

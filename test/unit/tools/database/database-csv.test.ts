@@ -63,6 +63,19 @@ describe('database CSV', () => {
       config: { options: [{ id: 'o1', label: 'Red', position: 'a0' }, { id: 'o2', label: 'Blue', position: 'a1' }] },
     };
 
+    it('writes computed values as text and relations as the related titles', () => {
+      const prop = (id: string, type: PropertyDefinition['type']): PropertyDefinition => ({ id, name: id, type, position: 'a0' });
+      const titles: Record<string, string> = { r1: 'Alpha', r2: 'Bravo' };
+      const withTitles = { locale: 'en-US', rowTitle: (id: string): string | undefined => titles[id] };
+
+      expect(csvCellText(prop('rel', 'relation'), [{ id: 'r1' }, { id: 'r2' }], withTitles)).toBe('Alpha, Bravo');
+      expect(csvCellText(prop('f', 'formula'), 42, withTitles)).toBe('42');
+      expect(csvCellText(prop('f', 'formula'), true, withTitles)).toBe('Yes');
+      expect(csvCellText(prop('f', 'formula'), 'done', withTitles)).toBe('done');
+      expect(csvCellText(prop('ro', 'rollup'), [{ id: 'r2' }], withTitles)).toBe('Bravo');
+      expect(csvCellText(prop('ro', 'rollup'), null, withTitles)).toBe('');
+    });
+
     it('writes each type as people read it', () => {
       expect(csvCellText(select, ['o2', 'o1'], ctx)).toBe('Blue, Red');
       expect(csvCellText({ id: 'c', name: 'Done', type: 'checkbox', position: 'a' }, true, ctx)).toBe('Yes');

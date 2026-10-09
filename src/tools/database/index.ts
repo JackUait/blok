@@ -1683,6 +1683,7 @@ export class DatabaseTool implements BlockTool {
     return csvCellText(property, readPropertyValue(row, property), {
       locale: resolveLocale(undefined),
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
+      rowTitle: (id) => this.csvRowTitle(property, id),
     });
   }
 
@@ -4419,6 +4420,16 @@ export class DatabaseTool implements BlockTool {
     const title = titleId === undefined ? undefined : row.properties[titleId];
 
     return typeof title === 'string' ? title : '';
+  }
+
+  /** A page ref's title in an export: a rollup's refs belong to the relation it reads through. */
+  private csvRowTitle(property: PropertyDefinition, rowId: string): string | undefined {
+    const relation = property.type === 'rollup' ? this.model.getProperty(property.rollup?.relationPropertyId ?? '') : property;
+
+    if (relation?.type === 'relation') return this.relatedTitle(relation, rowId);
+    const row = this.model.getRow(rowId);
+
+    return row === undefined ? undefined : DatabaseTool.titleOf({ schema: this.model.getSchema(), rows: [] }, row);
   }
 
   private relatedTitle(property: PropertyDefinition, rowId: string): string | undefined {

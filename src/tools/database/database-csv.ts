@@ -89,7 +89,26 @@ export interface CsvTextContext {
   locale: string;
   /** A person's display name, from the host's people directory. */
   personName?: (id: string) => string | undefined;
+  /** A related row's title, for relation values and page refs in computed values. */
+  rowTitle?: (id: string) => string | undefined;
 }
+
+const isRef = (item: unknown): item is { id: string } =>
+  typeof item === 'object' && item !== null && typeof (item as { id?: unknown }).id === 'string';
+
+/** A relation, formula or rollup value: page refs become titles, the rest prints plainly. */
+const computedText = (value: PropertyValue | undefined, ctx: CsvTextContext): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'number' || typeof value === 'string') return String(value);
+  if (Array.isArray(value)) {
+    return (value as unknown[])
+      .map((item) => (isRef(item) ? ctx.rowTitle?.(item.id) ?? item.id : String(item)))
+      .join(', ');
+  }
+
+  return '';
+};
 
 const bodyText = (value: PropertyValue | undefined): string => {
   const blocks: unknown = typeof value === 'object' && value !== null && !Array.isArray(value) ? value.blocks : undefined;
@@ -142,6 +161,10 @@ export const csvCellText = (property: PropertyDefinition, value: PropertyValue |
     }
     case 'richText':
       return typeof value === 'string' ? value : bodyText(value);
+    case 'relation':
+    case 'formula':
+    case 'rollup':
+      return computedText(value, ctx);
     case 'title':
     case 'text':
     case 'url':
@@ -241,6 +264,10 @@ const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | u
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
+    // Computed types are worked out from other rows, and a relation's titles cannot name a row id.
+    case 'relation':
+    case 'formula':
+    case 'rollup':
     default:
       return undefined;
   }

@@ -4769,7 +4769,7 @@ describe('DatabaseTool — property operations', () => {
     tool.renameProperty('prop-n', 'Budget');
 
     expect(schemaOf(tool).find((p) => p.id === 'prop-n')).toMatchObject({ name: 'Budget', number: { format: 'dollar', decimals: 2 } });
-    expect(tool.save().schema.find((p) => p.id === 'prop-n')).toMatchObject({ name: 'Budget', number: { format: 'dollar', decimals: 2 } });
+    expect(tool.save(document.createElement('div')).schema.find((p) => p.id === 'prop-n')).toMatchObject({ name: 'Budget', number: { format: 'dollar', decimals: 2 } });
     expect(options.block.dispatchChange).toHaveBeenCalled();
   });
 

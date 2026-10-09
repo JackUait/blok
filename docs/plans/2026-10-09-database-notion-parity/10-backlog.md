@@ -8,7 +8,7 @@ Each item names the phase that owns it. Tick an item when its test-first commit 
   - Dialog: 324 wide, 20px padding, 12px radius; enters with scale 0.97 → 1 and opacity, over 200ms ease.
 - [ ] P1: Deleting an option asks "Are you sure you want to delete this option?".
   - The group's "⋯" menu gets: Edit groups, Hide aggregation, Hide group, Move to Trash (with the confirm "All pages inside this group will be moved to Trash."), and the 10 colors.
-- [x] P1: Drag ghosts use opacity 0.4, with no rotation, scale or shadow. The drop line is 4px `rgba(35,131,226,0.43)` and fades over 200ms. There is no reflow animation on drop.
+- [ ] P1: Drag ghosts use opacity 0.4, with no rotation, scale or shadow. The drop line is 4px `rgba(35,131,226,0.43)` and fades over 200ms. There is no reflow animation on drop.
   - Today Blok uses rotate(2deg) scale(1.02), opacity 0.85 and a gap animation.
 - [ ] P1: Side peek is half the viewport. It slides in with translateX over 200ms ease, and the content narrows over the same time.
   - Today the drawer animates its width to 45%.

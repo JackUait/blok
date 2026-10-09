@@ -484,6 +484,25 @@ for (const [locale, keys] of Object.entries(AUDIO_COGNATE_RETENTIONS)) {
 }
 
 /**
+ * Database table view cognates: the native word is spelled the same as
+ * English in these locales. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_TABLE_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.database.calcSum', 'tools.database.calcMedian'],
+  de: ['tools.database.calcMedian'],
+  fr: ['tools.database.calcDate'],
+  id: ['tools.database.tableFilter', 'tools.database.calcMedian'],
+  ms: ['tools.database.calcMedian'],
+  no: ['tools.database.calcSum', 'tools.database.calcMedian'],
+  sv: ['tools.database.calcMedian'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_TABLE_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
  * Image editor cognates: the native word is spelled the same as English in
  * these locales. Each entry needs a matching ledger retention row.
  */

@@ -170,6 +170,7 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
       toolbox: [],
       richTextFields: [],
       acceptsChildren: true,
+      childTools: { deny: ['database-row'] },
       ownsChildren: false,
       isLayout: true,
       deletesChildren: true,

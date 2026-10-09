@@ -1104,7 +1104,13 @@ export class DatabaseTool implements BlockTool {
       { parentId: this.block.id, position: 'end', id: rowData.id },
     );
     this.syncRowsFromBlocks();
-    this.view.appendRow(viewEl, rowData);
+
+    // A grouped list keeps its "+ New" inside each group, so the row must go into that group's rows list.
+    const groupRows = optionId === null
+      ? null
+      : viewEl.querySelector(`[data-blok-database-list-group][data-option-id="${optionId}"] [data-blok-database-list-rows]`);
+
+    this.view.appendRow(groupRows instanceof HTMLElement ? groupRows : viewEl, rowData);
 
     void this.sync.syncCreateRow({
       id: rowData.id,

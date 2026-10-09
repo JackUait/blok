@@ -426,6 +426,33 @@ describe('DatabaseBoardView', () => {
       expect(titleDiv?.textContent).toBe('Fix bug');
       expect(onTitleEdit).not.toHaveBeenCalled();
     });
+
+    it('starts an untitled card rename empty and keeps the card untitled on an empty commit', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]');
+
+      expect(input?.value).toBe('');
+      if (input === null) return;
+
+      simulateKeydown(input, 'Enter');
+
+      expect(onTitleEdit).not.toHaveBeenCalled();
+
+      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
+
+      expect(titleDiv?.textContent).toBe('tools.database.cardTitlePlaceholder');
+      expect(titleDiv?.hasAttribute('data-placeholder')).toBe(true);
+      expect(cardEl.hasAttribute('data-empty')).toBe(true);
+    });
   });
 
   describe('accessibility', () => {

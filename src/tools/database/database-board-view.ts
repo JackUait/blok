@@ -334,13 +334,20 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       return;
     }
 
-    const originalTitle = titleEl.textContent ?? '';
+    // An untitled card shows placeholder text; it must not seed the input or count as the old title.
+    const originalTitle = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
 
     const buildTitleDiv = (title: string): HTMLElement => {
       const div = document.createElement('div');
 
       div.setAttribute('data-blok-database-card-title', '');
-      div.textContent = title;
+
+      if (title) {
+        div.textContent = title;
+      } else {
+        div.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
+        div.setAttribute('data-placeholder', '');
+      }
 
       return div;
     };
@@ -360,9 +367,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
           this.onTitleEdit?.(rowId, newTitle);
         }
 
-        if (newTitle) {
-          cardEl.removeAttribute('data-empty');
-        }
+        cardEl.toggleAttribute('data-empty', newTitle === '');
       },
     });
   }

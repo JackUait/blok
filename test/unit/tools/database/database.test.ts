@@ -2320,6 +2320,58 @@ describe('DatabaseTool', () => {
       tool.rendered();
       expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(2);
     });
+
+    it('adds a row to the end of the clicked group in a grouped list and syncs it', async () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
+      const adapter: DatabaseAdapter = {
+        loadDatabase: vi.fn(),
+        createRow: vi.fn(),
+        updateRow: vi.fn(),
+        moveRow: vi.fn(),
+        deleteRow: vi.fn(),
+        createProperty: vi.fn(),
+        updateProperty: vi.fn(),
+        deleteProperty: vi.fn(),
+        createView: vi.fn(),
+        updateView: vi.fn(),
+        deleteView: vi.fn(),
+      };
+      const data = makeListData({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+      });
+      const options = createDatabaseOptions(data, { adapter }, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      const todoGroup = queryByData(element, 'data-option-id', 'opt-todo');
+
+      expect(todoGroup).not.toBeNull();
+      if (todoGroup === null) return;
+
+      const addBtn = queryByData(todoGroup, 'data-blok-database-add-row');
+
+      expect(addBtn).not.toBeNull();
+      addBtn?.click();
+
+      const rows = queryAllByData(todoGroup, 'data-blok-database-list-row');
+
+      expect(rows).toHaveLength(2);
+      expect(rows[1].getAttribute('data-row-id')).not.toBe('row-1');
+      expect(rows[1].parentElement?.hasAttribute('data-blok-database-list-rows')).toBe(true);
+      await vi.waitFor(() => {
+        expect(adapter.createRow).toHaveBeenCalledTimes(1);
+      });
+      expect(adapter.createRow).toHaveBeenCalledWith(expect.objectContaining({
+        properties: expect.objectContaining({ 'prop-status': 'opt-todo' }),
+      }));
+
+      element.remove();
+    });
   });
 
   describe('multi-view orchestration', () => {

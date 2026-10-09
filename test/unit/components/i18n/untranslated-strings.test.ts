@@ -550,6 +550,24 @@ for (const [locale, keys] of Object.entries(DATABASE_PROPERTY_COGNATE_RETENTIONS
 }
 
 /**
+ * Database view settings cognates: the native word is spelled the same as
+ * English in these locales. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_VIEW_SETTINGS_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.database.colorOrange'],
+  de: ['tools.database.colorOrange', 'tools.database.groupStatusOption'],
+  fr: ['tools.database.settingsLoadLimitPages', 'tools.database.colorOrange'],
+  id: ['tools.database.settingsFilter'],
+  nl: ['tools.database.groupDateWeek'],
+  sv: ['tools.database.colorOrange'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_VIEW_SETTINGS_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
  * Image editor cognates: the native word is spelled the same as English in
  * these locales. Each entry needs a matching ledger retention row.
  */

@@ -219,6 +219,8 @@ export class DatabaseCardDrawer {
   private modeMenu: PopoverDesktop | null = null;
   /** The row whose holder is the shown page body. */
   private attachedBodyRowId: string | null = null;
+  /** A body still in a side peek that is sliding out. */
+  private leavingBodyRowId: string | null = null;
   private cellEditor: CellEditorHandle | null = null;
   private readonly events: Pick<Events, 'on' | 'off'> | undefined;
 
@@ -325,6 +327,7 @@ export class DatabaseCardDrawer {
     // Remove any drawer still animating out from a previous close
     const exiting = this.wrapper.querySelector('[data-blok-database-drawer]');
 
+    this.releaseLeavingBody();
     exiting?.remove();
 
     this.currentRowId = row.id;
@@ -551,7 +554,14 @@ export class DatabaseCardDrawer {
 
   close(): void {
     const wasOpen = this.drawer !== null;
+    // The side peek slides out with its body still in it; the body goes back
+    // to the pool once the slide ends.
+    const sliding = this.drawer !== null && this.mode === 'side' ? this.attachedBodyRowId : null;
 
+    if (sliding !== null) {
+      this.attachedBodyRowId = null;
+      this.leavingBodyRowId = sliding;
+    }
     this.updateActiveCard(null);
     this.cleanupListeners();
     this.cleanupEditor();
@@ -575,6 +585,7 @@ export class DatabaseCardDrawer {
       drawer.removeAttribute('data-open');
       this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
       afterSlide(drawer, () => {
+        this.releaseLeavingBody();
         drawer.remove();
 
         // A drawer opened meanwhile owns the inset now.
@@ -612,6 +623,7 @@ export class DatabaseCardDrawer {
     // Remove any drawer still animating out
     const exiting = this.wrapper.querySelector('[data-blok-database-drawer]');
 
+    this.releaseLeavingBody();
     exiting?.remove();
 
     this.currentRowId = null;
@@ -888,7 +900,7 @@ export class DatabaseCardDrawer {
 
   /** Row whose holder the drawer shows as the page body, or null. */
   get bodyRowId(): string | null {
-    return this.attachedBodyRowId;
+    return this.attachedBodyRowId ?? this.leavingBodyRowId;
   }
 
   /** Id of the row the drawer shows, or null when closed. */
@@ -1313,6 +1325,16 @@ export class DatabaseCardDrawer {
       }
       this.blokInstance = null;
       this.isBodyChanged = null;
+    }
+  }
+
+  /** Puts back a body left in a side peek that slid out. */
+  private releaseLeavingBody(): void {
+    const rowId = this.leavingBodyRowId;
+
+    this.leavingBodyRowId = null;
+    if (rowId !== null && rowId !== this.attachedBodyRowId) {
+      this.rowBody?.detach(rowId);
     }
   }
 

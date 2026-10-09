@@ -203,6 +203,12 @@ describe('row bodies are child blocks of the row', () => {
 
     await pressEscape();
 
+    // The side peek slides out with its body; the body goes back when the slide ends.
+    expect(drawerBody()?.contains(holderOf('r1'))).toBe(true);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 350);
+    });
+
     expect(holder?.querySelector('[data-blok-database-row-pool]')?.contains(holderOf('r1'))).toBe(true);
     expect(holderOf('r1')?.classList.contains('hidden')).toBe(true);
   });

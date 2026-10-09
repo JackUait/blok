@@ -156,6 +156,26 @@ test.describe('page body as child blocks', () => {
     await expect(peek(page)).toHaveCount(0);
   });
 
+  test('the body stays in the side peek while it slides out', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await expect(body(page).getByText('Alpha body')).toBeVisible();
+    await page.waitForTimeout(300);
+
+    const midSlide = await page.evaluate(async () => {
+      document.querySelector<HTMLElement>('[data-blok-database-drawer-close]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      const drawer = document.querySelector('[data-blok-database-drawer]');
+
+      return { inDom: drawer !== null, bodyText: drawer?.querySelector('[data-blok-database-drawer-editor]')?.textContent ?? '' };
+    });
+
+    expect(midSlide.inDom).toBe(true);
+    expect(midSlide.bodyText).toContain('Alpha body');
+    await expect(peek(page)).toHaveCount(0);
+    await expect(page.getByText('Alpha body')).toBeHidden();
+  });
+
   test('turns a legacy body into child blocks once, without an undo step', async ({ page }) => {
     const legacy = blocks({}, []);
     const db = legacy[1];

@@ -1,10 +1,10 @@
-import type { SanitizerConfig, SanitizerRule } from '../../types';
+import type { SanitizerConfig, SanitizerRule, ToolSanitizerConfig } from '../../types';
 import type { TagConfig } from '../../types/configs/sanitizer-config';
 import { deepMerge } from '../components/utils/object';
 import { isBoolean, isEmpty, isFunction, isObject, isString } from '../components/utils/type-guards';
 import { isSafeAttribute, PLAINTEXT } from './sanitize-rules';
 
-export type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
+export type DeepSanitizerRule = ToolSanitizerConfig | SanitizerRule;
 export type DeepData = string | Record<string, unknown> | Array<DeepData> | null;
 export type StringCleaner = (value: string, rule: DeepSanitizerRule, globalRules: SanitizerConfig) => string;
 type SanitizerFunctionRule = (el: Element) => TagConfig;

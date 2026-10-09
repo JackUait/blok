@@ -108,6 +108,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-table-row-drag.ts': 'Pointer-following table row ghost refreshed on every pointer move.',
   'tools/database/database-property-type-popover.ts': 'Shared anchored root surface registered in ROOT_SURFACE_CONTRACTS.',
   'tools/database/database-property-menu.ts': 'Mount owner for the tracked emoji-picker root surface (property icon).',
+  'tools/database/database-card-drawer.ts': 'Mount owner for the tracked emoji-picker root surface (row page icon).',
   'tools/database/database-tab-bar.ts': 'Shared anchored overflow menu plus a tracked drag ghost and popover consumer.',
   'tools/image/darkroom/motion.ts': 'Fixed fly-out clone springs once from the frame to the measured block box, then is removed.',
   'tools/image/download.ts': 'Transient styleless download anchor clicked and removed synchronously.',

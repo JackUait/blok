@@ -149,6 +149,16 @@ describe('DatabaseChartView', () => {
     expect(marks(el)).toHaveLength(3);
   });
 
+  it('keeps a smooth line between its points: it never dips below the lowest value', () => {
+    const el = render({ chartType: 'line', chartSmooth: true }, data({ points: [point('a', 5), point('b', 0), point('c', 0), point('d', 4)] }));
+    const lowest = Math.max(...[...el.querySelectorAll('circle')].map((c) => Number(c.getAttribute('cy'))));
+    const d = el.querySelector('[data-blok-database-chart-line]')?.getAttribute('d') ?? '';
+    const ys = [...d.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((m) => Number(m[2]));
+
+    expect(ys.length).toBeGreaterThan(4);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(lowest + 0.001);
+  });
+
   it('draws a donut slice per group, with the total in the center unless turned off', () => {
     const el = render({ chartType: 'donut' });
 

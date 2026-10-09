@@ -137,8 +137,12 @@ const linePath = (pts: Array<[number, number]>, smooth: boolean): string => {
     const p0 = pts[Math.max(0, i - 1)];
     const p1 = pts[i];
     const p3 = pts[Math.min(pts.length - 1, i + 2)];
-    const c1 = [p1[0] + (p[0] - p0[0]) / 6, p1[1] + (p[1] - p0[1]) / 6];
-    const c2 = [p[0] - (p3[0] - p1[0]) / 6, p[1] - (p3[1] - p1[1]) / 6];
+    // Control points stay between the two ends, so the curve never dips past a value (or below zero).
+    const low = Math.min(p1[1], p[1]);
+    const high = Math.max(p1[1], p[1]);
+    const clamp = (y: number): number => Math.min(high, Math.max(low, y));
+    const c1 = [p1[0] + (p[0] - p0[0]) / 6, clamp(p1[1] + (p[1] - p0[1]) / 6)];
+    const c2 = [p[0] - (p3[0] - p1[0]) / 6, clamp(p[1] - (p3[1] - p1[1]) / 6)];
 
     return `C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p[0]},${p[1]}`;
   }).join('')}`;
@@ -498,11 +502,12 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     return svgEl('line', { 'data-blok-database-chart-grid': '', x1, y1, x2, y2, style: `stroke:${GRID};stroke-width:1` });
   }
 
-  private axisNames(layer: SVGGElement, width: number, box: { left: number; bottom: number }, plotH: number, plotW: number): void {
+  private axisNames(layer: SVGGElement, width: number, box: { left: number; top: number }, plotH: number, plotW: number): void {
     const { xName, yName, settings } = this.options;
     const [bottomName, sideName] = settings.type === 'bar' ? [yName, xName] : [xName, yName];
-    const x = svgEl('text', { x: box.left + plotW / 2, y: box.bottom + plotH + 6, 'text-anchor': 'middle' });
-    const middle = 10 + plotH / 2;
+    // One line below the tick labels, which sit 16px under the plot.
+    const x = svgEl('text', { x: box.left + plotW / 2, y: box.top + plotH + 34, 'text-anchor': 'middle' });
+    const middle = box.top + plotH / 2;
     const y = svgEl('text', { x: 12, y: middle, 'text-anchor': 'middle', transform: `rotate(-90 12 ${middle})` });
 
     for (const [el, text] of [[x, bottomName], [y, sideName]] as const) {
@@ -588,8 +593,9 @@ export class DatabaseChartView implements DatabaseViewRenderer {
         const gradient = svgEl('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
 
         gradient.append(
-          svgEl('stop', { offset: 0, 'stop-color': line.color.color, 'stop-opacity': 0.1 * line.color.opacity * 2 }),
-          svgEl('stop', { offset: 1, 'stop-color': line.color.color, 'stop-opacity': 0 })
+          // var() works in style, not in a presentation attribute.
+          svgEl('stop', { offset: 0, style: `stop-color:${line.color.color};stop-opacity:${0.2 * line.color.opacity}` }),
+          svgEl('stop', { offset: 1, style: `stop-color:${line.color.color};stop-opacity:0` })
         );
         defs.appendChild(gradient);
         const area = svgEl('path', {

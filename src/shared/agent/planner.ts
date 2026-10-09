@@ -4,6 +4,7 @@ import { planFind, planMarkdownExport, planMarkdownInsert, planRead, planSetIcon
 import { PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
 import { planToolAction } from './tool-action-context';
+import { validateWrites } from './write-validation';
 
 import type { AgentBatch, AgentWarning } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
@@ -135,6 +136,8 @@ export const planBatch = (input: {
       });
     }
   });
+
+  validateWrites(state, input.snapshot);
 
   return {
     plan: {

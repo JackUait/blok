@@ -282,11 +282,34 @@ describe('PlanState and planner dispatch', () => {
     commands.set('scratch.sequence', {
       name: 'scratch.sequence', args: { type: 'object' }, readOnly: false, available: true, source: 'core',
     });
+    const tools = new Map(TOOLS);
+    const paragraph = tools.get('paragraph');
+
+    if (paragraph === undefined) {
+      throw new Error('Missing fixture tool');
+    }
+
+    const properties = paragraph.entry.data.properties;
+
+    if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
+      throw new Error('Expected fixture properties');
+    }
+
+    tools.set('paragraph', {
+      ...paragraph,
+      entry: {
+        ...paragraph.entry,
+        data: {
+          ...paragraph.entry.data,
+          properties: { ...properties, label: { type: 'string' } },
+        },
+      },
+    });
     const warnings: AgentWarning[] = [];
     const { plan } = planBatch({
       snapshot: DocSnapshot.fromOutput(doc),
       batch: { commands: [{ name: 'scratch.sequence', args: {} }] },
-      ctx: plannerContext({ commands }), stamp: { actorId: 'agent', at: 1 }, warnings,
+      ctx: plannerContext({ commands, tools }), stamp: { actorId: 'agent', at: 1 }, warnings,
     });
 
     expect(plan.changed).toEqual({

@@ -212,12 +212,27 @@ describe('block.insert planning', () => {
   });
 
   it('reports only sanitizer-changed fields after rich-text conversion', () => {
+    const paragraph = TOOLS.get('paragraph');
+
+    if (paragraph === undefined) {
+      throw new Error('Expected paragraph fixture');
+    }
+    const dataSchema = structuredClone(paragraph.entry.data);
+
+    if (typeof dataSchema.properties !== 'object' || dataSchema.properties === null ||
+        Array.isArray(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    Object.assign(dataSchema.properties, { label: { type: 'string' } });
+    const tools = new Map(TOOLS);
+
+    tools.set('paragraph', tool('paragraph', { ...paragraph.entry, data: dataSchema }, paragraph.runtime));
     const sanitizeBlockData = vi.fn((_type: string, data: Record<string, unknown>) => ({
       ...data, text: [{ text: 'clean' }],
     }));
     const { warnings, draft } = planOn(doc, [{
       name: 'block.insert', args: { type: 'paragraph', data: { text: 'dirty', label: 'keep' } },
-    }], { ports: stubPorts({ sanitizeBlockData }) });
+    }], { tools, ports: stubPorts({ sanitizeBlockData }) });
 
     expect(warnings).toEqual([expect.objectContaining({
       code: 'SANITIZED', commandIndex: 0, blockId: 'n1', field: 'text',

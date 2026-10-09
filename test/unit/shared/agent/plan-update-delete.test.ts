@@ -139,7 +139,13 @@ describe('block.update planning', () => {
     }));
     const tools = new Map(TOOLS);
 
-    tools.set('header', tool('header', registered('header').entry, { normalize }));
+    const dataSchema = structuredClone(registered('header').entry.data);
+
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.label = { type: 'string' };
+    tools.set('header', tool('header', { ...registered('header').entry, data: dataSchema }, { normalize }));
     const { plan, draft } = planOn(doc, [{
       name: 'block.update', args: { id: 'h', data: { text: 'New', label: 'dirty', old: null } },
     }], { tools, ports: stubPorts({ sanitizeBlockData }) });
@@ -179,7 +185,15 @@ describe('block.update planning', () => {
     const normalize = vi.fn((data: Record<string, unknown>) => ({ ...data, level: 4, derived: { valid: true } }));
     const tools = new Map(TOOLS);
 
-    tools.set('header', tool('header', registered('header').entry, { normalize }));
+    const dataSchema = structuredClone(registered('header').entry.data);
+
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.derived = {
+      type: 'object', properties: { valid: { type: 'boolean' } }, additionalProperties: false,
+    };
+    tools.set('header', tool('header', { ...registered('header').entry, data: dataSchema }, { normalize }));
     const { plan, draft } = planOn(doc, [{
       name: 'block.update', args: { id: 'h', data: { old: null } },
     }], { tools });
@@ -413,6 +427,17 @@ describe('block.update planning', () => {
   });
 
   it('preserves earlier edit payloads and caller data through later updates and draft mutation', () => {
+    const header = registered('header');
+    const dataSchema = structuredClone(header.entry.data);
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.meta = {
+      type: 'object', properties: { label: { type: 'string' } }, additionalProperties: false,
+    };
+    const tools = new Map(TOOLS);
+
+    tools.set('header', tool('header', { ...header.entry, data: dataSchema }, header.runtime));
     const snapshot = DocSnapshot.fromOutput(doc);
     const before = snapshot.toOutput();
     const data = { text: [{ text: 'First', marks: { bold: true } }], meta: { label: 'First' } };
@@ -423,7 +448,7 @@ describe('block.update planning', () => {
     ];
     const commandsBefore = structuredClone(commands);
     const { plan, draft } = planBatch({
-      snapshot, batch: { commands }, ctx: plannerContext(),
+      snapshot, batch: { commands }, ctx: plannerContext({ tools }),
       stamp: { actorId: 'agent', at: 1 }, warnings: [],
     });
     const editsBefore = structuredClone(plan.edits);
@@ -445,11 +470,22 @@ describe('block.update planning', () => {
   });
 
   it('keeps planned patches independent from caller-owned nested data and tunes', () => {
+    const header = registered('header');
+    const dataSchema = structuredClone(header.entry.data);
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.meta = {
+      type: 'object', properties: { label: { type: 'string' } }, additionalProperties: false,
+    };
+    const tools = new Map(TOOLS);
+
+    tools.set('header', tool('header', { ...header.entry, data: dataSchema }, header.runtime));
     const data = { text: [{ text: 'original', marks: { bold: true } }], meta: { label: 'original' } };
     const tunes = { align: { side: 'left' } };
     const { plan, draft } = planOn(doc, [{
       name: 'block.update', args: { id: 'h', data, tunes },
-    }]);
+    }], { tools });
     const editsBefore = structuredClone(plan.edits);
 
     data.meta.label = 'caller-only';
@@ -723,15 +759,33 @@ describe('block.duplicate planning', () => {
     { position: { before: 'h' }, order: ['n1', 'h', 'tg', 'cl', 'img', 'tbl', 'kb'] },
     { position: { after: 'cl' }, order: ['h', 'tg', 'cl', 'n1', 'img', 'tbl', 'kb'] },
   ])('honors an explicit root placement', ({ position, order }) => {
-    const { draft } = planOn(doc, [{ name: 'block.duplicate', args: { id: 'h', position } }]);
+    const header = registered('header');
+    const dataSchema = structuredClone(header.entry.data);
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.old = { type: 'string' };
+    const tools = new Map(TOOLS);
+
+    tools.set('header', tool('header', { ...header.entry, data: dataSchema }, header.runtime));
+    const { draft } = planOn(doc, [{ name: 'block.duplicate', args: { id: 'h', position } }], { tools });
 
     expect(draft.childrenOf(null)).toEqual(order);
   });
 
   it('infers a destination parent from the position sibling', () => {
+    const header = registered('header');
+    const dataSchema = structuredClone(header.entry.data);
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.old = { type: 'string' };
+    const tools = new Map(TOOLS);
+
+    tools.set('header', tool('header', { ...header.entry, data: dataSchema }, header.runtime));
     const { draft } = planOn(doc, [{
       name: 'block.duplicate', args: { id: 'h', position: { after: 'k' } },
-    }]);
+    }], { tools });
 
     expect(draft.childrenOf('tg')).toEqual(['k', 'n1']);
     expect(draft.parentOf('n1')).toBe('tg');
@@ -788,6 +842,14 @@ describe('block.duplicate planning', () => {
     const sanitizeBlockData = vi.fn((_type: string, data: Record<string, unknown>) => ({ ...data, label: 'clean' }));
     const normalize = vi.fn((data: Record<string, unknown>) => ({ ...data, ready: true }));
 
+    const paragraph = registered('paragraph');
+    const dataSchema = structuredClone(paragraph.entry.data);
+
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.label = { type: 'string' };
+    tools.set('paragraph', tool('paragraph', { ...paragraph.entry, data: dataSchema }, paragraph.runtime));
     tools.set('grid', tool('grid', {
       selfPlacesChildren: true,
       children: { accepts: true, ownedByTool: true, layout: false, deletedWithParent: true },
@@ -986,11 +1048,20 @@ describe('shared update/delete/duplicate ID and ref behavior', () => {
   );
 
   it.each(['constructor', 'toString', '__proto__'])('resolves a duplicate-created own ref %s for later updates and placement', ref => {
+    const header = registered('header');
+    const dataSchema = structuredClone(header.entry.data);
+    if (!isRecord(dataSchema.properties)) {
+      throw new Error('Expected fixture schema properties');
+    }
+    dataSchema.properties.old = { type: 'string' };
+    const tools = new Map(TOOLS);
+
+    tools.set('header', tool('header', { ...header.entry, data: dataSchema }, header.runtime));
     const { plan, draft } = planOn(doc, [
       { name: 'block.duplicate', ref, args: { id: 'h' } },
       { name: 'block.update', args: { id: '$' + ref, data: { text: 'Changed' } } },
       { name: 'block.duplicate', args: { id: 'h', position: { before: '$' + ref } } },
-    ]);
+    ], { tools });
 
     expect(draft.get('n1')?.data.text).toEqual([{ text: 'Changed' }]);
     expect(Object.hasOwn(plan.refs, ref)).toBe(true);

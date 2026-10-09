@@ -514,7 +514,17 @@ describe('recording context patches and rich text', () => {
 
         return ctx.read(blockOf(ctx).id);
       } },
-    });
+    }, {}, { data: {
+      ...registered('paragraph').entry.data,
+      properties: {
+        ...recordOf(registered('paragraph').entry.data.properties),
+        options: {
+          type: 'object',
+          properties: { first: { type: 'number' }, second: { type: 'number' } },
+          additionalProperties: false,
+        },
+      },
+    } });
     const { plan, draft } = planOn(doc, [{ name: 'paragraph.patch', args: { id: 'p' } }], setup);
 
     expect(draft.get('p')?.data).toEqual({ text: [{ text: 'Changed' }], old: 'remove', options: { second: 3 } });
@@ -565,7 +575,20 @@ describe('recording context patches and rich text', () => {
       patch: { run: (ctx: ToolActionContext) => ctx.update(blockOf(ctx).id, {
         text: '', flag: false, count: 0, label: '', nested: { value: null },
       }) },
-    });
+    }, {}, { data: {
+      ...registered('paragraph').entry.data,
+      properties: {
+        ...recordOf(registered('paragraph').entry.data.properties),
+        flag: { type: 'boolean' },
+        count: { type: 'number' },
+        label: { type: 'string' },
+        nested: {
+          type: 'object',
+          properties: { value: { type: 'null' } },
+          additionalProperties: false,
+        },
+      },
+    } });
     const { plan, draft } = planOn(doc, [{ name: 'paragraph.patch', args: { id: 'p' } }], setup);
 
     expect(draft.get('p')?.data).toMatchObject({
@@ -587,7 +610,17 @@ describe('recording context patches and rich text', () => {
 
         return { written, removed: ctx.read(blockOf(ctx).id) };
       } },
-    });
+    }, {}, { data: {
+      ...registered('paragraph').entry.data,
+      properties: {
+        ...recordOf(registered('paragraph').entry.data.properties),
+        [field]: {
+          type: 'object',
+          properties: { value: { type: 'string' } },
+          additionalProperties: false,
+        },
+      },
+    } });
     const { plan, draft } = planOn(doc, [{ name: 'paragraph.change', args: { id: 'p' } }], setup);
     const result = recordOf(plan.results[0]);
     const written = recordOf(recordOf(result.written).data);
@@ -676,7 +709,14 @@ describe('recording context patches and rich text', () => {
 
         return ctx.read(blockOf(ctx).id);
       } },
-    }, {}, {}, { normalize });
+    }, {}, { data: {
+      ...registered('header').entry.data,
+      properties: {
+        ...recordOf(registered('header').entry.data.properties),
+        label: { type: 'string' },
+        derived: { type: 'boolean' },
+      },
+    } }, { normalize });
     const sanitizeBlockData = (_type: string, data: Record<string, unknown>): Record<string, unknown> =>
       Object.hasOwn(data, 'label') ? { ...data, label: 'clean' } : data;
     const { plan, draft } = planOn(doc, [{ name: 'header.change', args: { id: 'h' } }], {
@@ -856,7 +896,17 @@ describe('recording context patches and rich text', () => {
         ctx.update(blockOf(ctx).id, patch);
         patch.options.second = 9;
       } },
-    });
+    }, {}, { data: {
+      ...registered('paragraph').entry.data,
+      properties: {
+        ...recordOf(registered('paragraph').entry.data.properties),
+        options: {
+          type: 'object',
+          properties: { first: { type: 'number' }, second: { type: 'number' } },
+          additionalProperties: false,
+        },
+      },
+    } });
     const { plan, draft } = planOn(doc, [{ name: 'paragraph.change', args: { id: 'p' } }], setup);
 
     expect(draft.get('p')?.data.options).toEqual({ second: 3 });
@@ -1361,7 +1411,13 @@ describe('explicit removal precedence under controller ruling C4', () => {
     const patch = { old: value, text: value };
     const setup = withActions('header', {
       clear: { run: (ctx: ToolActionContext) => ctx.update(blockOf(ctx).id, patch) },
-    }, {}, {}, { normalize: data => ({
+    }, {}, { data: {
+      ...registered('header').entry.data,
+      properties: {
+        ...recordOf(registered('header').entry.data.properties),
+        extra: { type: 'string' },
+      },
+    } }, { normalize: data => ({
       ...data, old: data.old ?? 'Default', text: data.text ?? [{ text: 'Default' }], extra: data.extra ?? 'Kept',
     }) });
     const command: AgentCommand = path === 'core'

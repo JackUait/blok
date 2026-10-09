@@ -79,6 +79,8 @@ export interface TableHandlers {
   sortedRowDrop: (result: TableRowDropResult) => void;
   bulkEdit: (rowIds: string[], anchor: HTMLElement) => void;
   editFilters: (anchor: HTMLElement) => void;
+  /** A group was folded or opened. The tool saves it in the view. */
+  groupToggled?: (key: string, collapsed: boolean) => void;
   /** Redraw from the model, keeping the table state. */
   rerender: () => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
@@ -719,6 +721,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     caret?.setAttribute('aria-expanded', String(!collapse));
     caret?.setAttribute('aria-label', this.t(collapse ? 'tools.database.tableExpandGroup' : 'tools.database.tableCollapseGroup'));
     this.grid?.paint();
+    this.handlers?.groupToggled?.(key, collapse);
   }
 
   // ─── Footer ───

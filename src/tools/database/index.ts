@@ -48,6 +48,13 @@ import {
   localizeDatabaseViews,
 } from './database-localization';
 import { renderBoardPreview, renderDatabasePreview } from './preview';
+import { DatabaseViewControls } from './database-view-controls';
+import type { ViewControlsHost } from './database-view-controls';
+import type { ViewGroupEntry } from './database-view-settings-panel';
+import { registerGroupToggle } from './database-group-toggle';
+import { GROUPABLE_TYPES, groupValueForKey } from './group-keys';
+import { resolveRowColors } from './view-data';
+import { groupLabel } from './database-group-labels';
 
 interface ChangedBlock {
   id?: unknown;
@@ -67,6 +74,17 @@ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup
  * by the constructor and never saved.
  */
 const INITIAL_VIEW_KEY = 'initialView';
+
+/** Groups a board shows before "Load more groups" (research/08). */
+const BOARD_GROUP_PAGE = 10;
+
+/** Layouts Blok draws; gallery is in the type but falls back to a board. */
+const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'list'];
+
+/** Select-like groups: their columns are options (or status groups) the user can rename and move. */
+const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
+
+const hasGroup = (list: Array<{ id: string }> | undefined, key: string): boolean => (list ?? []).some((group) => group.id === key);
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', INITIAL_VIEW_KEY]);
 
@@ -138,6 +156,10 @@ export class DatabaseTool implements BlockTool {
   private destroyed = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
+  private viewControls: DatabaseViewControls | null = null;
+  private unregisterGroupToggle: (() => void) | null = null;
+  /** Per board view: how many groups show before "Load more groups". Session only. */
+  private readonly groupLimits = new Map<string, number>();
 
   constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
@@ -156,6 +178,16 @@ export class DatabaseTool implements BlockTool {
 
     this.activateView(this.activeViewId);
     this.api.events.on('block changed', this.handleBlockChanged);
+  }
+
+  /** Toolbar, filter bar, settings panel and the person's unsaved filters and sorts. Built on first use, after the constructor. */
+  private get controls(): DatabaseViewControls {
+    if (this.viewControls === null) {
+      this.viewControls = new DatabaseViewControls(this.controlsHost());
+      this.viewControls.load(this.model.getViews().map((v) => v.id));
+    }
+
+    return this.viewControls;
   }
 
   static get toolbox(): ToolboxConfig {
@@ -211,8 +243,21 @@ export class DatabaseTool implements BlockTool {
     wrapper.appendChild(titleRow);
 
     this.tabBar = this.createTabBar();
-    wrapper.appendChild(this.tabBar.render());
+    const viewBar = document.createElement('div');
+
+    viewBar.setAttribute('data-blok-database-view-bar', '');
+    viewBar.append(this.tabBar.render(), this.controls.toolbar);
+    wrapper.append(viewBar, this.controls.filterBar);
     this.syncTitleRowAddBtn();
+    this.unregisterGroupToggle ??= registerGroupToggle({
+      hasGroups: () => this.activeGroupKeys().length > 0,
+      anyExpanded: () => {
+        const view = this.model.getView(this.activeViewId);
+
+        return view !== undefined && this.activeGroupKeys().some((key) => !hasGroup(view.collapsedGroups, key));
+      },
+      setAllCollapsed: (collapsed) => this.setAllGroupsCollapsed(collapsed),
+    });
 
     const boardContainer = document.createElement('div');
     boardContainer.setAttribute('data-blok-database-board-container', '');
@@ -229,6 +274,7 @@ export class DatabaseTool implements BlockTool {
       this.attachViewListeners(boardEl);
       this.initSubsystems(boardEl);
     }
+    this.controls.refresh();
 
     return wrapper;
   }
@@ -352,6 +398,9 @@ export class DatabaseTool implements BlockTool {
   destroy(): void {
     this.destroyed = true;
     this.api.events.off('block changed', this.handleBlockChanged);
+    this.viewControls?.destroy();
+    this.unregisterGroupToggle?.();
+    this.unregisterGroupToggle = null;
     this.propertyMenu?.destroy();
     this.propertyMenu = null;
     this.addPropertyPopover?.destroy();
@@ -636,9 +685,16 @@ export class DatabaseTool implements BlockTool {
 
   /** True when the active view sorts or filters by the property, so a new value can move or hide a row. */
   private activeViewQueries(propertyId: string): boolean {
-    const view = this.model.getView(this.activeViewId);
+    const saved = this.model.getView(this.activeViewId);
+    const view = saved === undefined ? undefined : this.controls.effective(saved);
 
-    return view !== undefined && [...view.sorts, ...view.filters].some((rule) => rule.propertyId === propertyId);
+    return view !== undefined && (
+      [...view.sorts, ...view.filters].some((rule) => rule.propertyId === propertyId) ||
+      JSON.stringify(view.filterTree ?? {}).includes(`"propertyId":${JSON.stringify(propertyId)}`) ||
+      (view.colorRules ?? []).some((rule) => rule.propertyId === propertyId) ||
+      view.groupBy === propertyId ||
+      this.controls.search !== ''
+    );
   }
 
   /** True while an inline rename in the board or a drag is in progress. */
@@ -913,6 +969,7 @@ export class DatabaseTool implements BlockTool {
 
     this.rebuildTabBar();
     this.fadeTabBackground(previousViewId, viewId);
+    this.controls.refresh();
   }
 
   /**
@@ -937,6 +994,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   addView(type: ViewType): void {
+    if (this.model.isDatabaseLocked()) return;
     const statusProp = this.model.getSchema().find((p) => p.type === 'select');
     const defaultNames: Partial<Record<ViewType, string>> = {
       list: DATABASE_DEFAULT_TEXT.viewTypeList,
@@ -950,11 +1008,13 @@ export class DatabaseTool implements BlockTool {
   }
 
   renameView(viewId: string, name: string): void {
+    if (this.model.isDatabaseLocked()) return;
     this.model.updateView(viewId, { name });
     void this.sync.syncUpdateView({ viewId, changes: { name } });
   }
 
   duplicateView(viewId: string): void {
+    if (this.model.isDatabaseLocked()) return;
     const sourceView = this.model.getView(viewId);
 
     if (sourceView === undefined) {
@@ -971,7 +1031,7 @@ export class DatabaseTool implements BlockTool {
   deleteView(viewId: string): void {
     const views = this.model.getViews();
 
-    if (views.length <= 1) {
+    if (views.length <= 1 || this.model.isDatabaseLocked()) {
       return;
     }
 
@@ -996,6 +1056,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   reorderView(viewId: string, newPosition: string): void {
+    if (this.model.isDatabaseLocked()) return;
     this.model.updateView(viewId, { position: newPosition });
     void this.sync.syncUpdateView({ viewId, changes: { position: newPosition } });
     this.rebuildTabBar();
@@ -1031,7 +1092,7 @@ export class DatabaseTool implements BlockTool {
     const views = this.model.getViews();
     const addBtn = this.tabBar.getAddBtnEl();
 
-    if (views.length === 1 && !this.readOnly && addBtn !== null) {
+    if (views.length === 1 && !this.readOnly && !this.model.isDatabaseLocked() && addBtn !== null) {
       this.titleRowElement.appendChild(addBtn);
       this.titleRowElement.setAttribute('data-single-view', '');
       if (tabBarEl instanceof HTMLElement) {
@@ -1045,7 +1106,7 @@ export class DatabaseTool implements BlockTool {
         el.remove();
       });
 
-      if (!this.readOnly && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {
+      if (!this.readOnly && !this.model.isDatabaseLocked() && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {
         tabBarEl.appendChild(addBtn);
       }
       if (tabBarEl instanceof HTMLElement) {
@@ -1064,8 +1125,10 @@ export class DatabaseTool implements BlockTool {
       onDuplicate: (viewId) => this.duplicateView(viewId),
       onDelete: (viewId) => this.deleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
+      onEditView: (viewId, anchor) => this.editView(viewId, anchor),
       api: this.api,
-      readOnly: this.readOnly,
+      // A locked database keeps its views: no add, rename, delete or reorder.
+      readOnly: this.readOnly || this.model.isDatabaseLocked(),
     });
   }
 
@@ -1074,23 +1137,57 @@ export class DatabaseTool implements BlockTool {
   // ---------------------------------------------------------------------------
 
   private renderActiveView(): HTMLDivElement {
-    const viewConfig = this.model.getView(this.activeViewId);
+    const saved = this.model.getView(this.activeViewId);
+    const viewConfig = saved === undefined ? undefined : this.controls.effective(saved);
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
     const groupByPropId = viewConfig?.groupBy;
+    const viewEl = ((): HTMLDivElement => {
+      if (viewConfig?.type === 'list') {
+        return this.renderListView(titlePropId, groupByPropId, viewConfig);
+      }
+      if (viewConfig?.type === 'table') {
+        return this.renderTableView(titlePropId, viewConfig);
+      }
 
-    if (viewConfig?.type === 'list') {
-      return this.renderListView(titlePropId, groupByPropId, viewConfig);
+      return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
+    })();
+
+    if (viewConfig !== undefined) {
+      this.paintRowColors(viewEl, viewConfig);
     }
 
-    if (viewConfig?.type === 'table') {
-      return this.renderTableView(titlePropId, viewConfig);
-    }
-
-    return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
+    return viewEl;
   }
 
-  /** Option groups in board order. The no-value group sits at the view's stored place, or last. */
+  /** Conditional color: a data attribute on each matching row, card or (table) cell. */
+  private paintRowColors(viewEl: HTMLElement, view: DatabaseViewConfig): void {
+    const colors = resolveRowColors(this.model.getOrderedRows(), view, this.model.getSchema());
+    const rowSelector = ':is([data-blok-database-table-row], [data-blok-database-card], [data-blok-database-list-row])';
+    const paint = (rowEl: HTMLElement, color: { row?: string; cells: Record<string, string> }): void => {
+      if (color.row !== undefined) rowEl.setAttribute('data-blok-database-color', color.row);
+      for (const [propertyId, cellColor] of Object.entries(color.cells)) {
+        rowEl.querySelector(`[data-property-id="${CSS.escape(propertyId)}"]`)?.setAttribute('data-blok-database-color', cellColor);
+      }
+    };
+
+    for (const [rowId, color] of colors) {
+      viewEl.querySelectorAll<HTMLElement>(`[data-row-id="${CSS.escape(rowId)}"]${rowSelector}`).forEach((rowEl) => paint(rowEl, color));
+    }
+  }
+
+  private isOptionGroup(propertyId: string | undefined): boolean {
+    const type = propertyId === undefined ? undefined : this.model.getProperty(propertyId)?.type;
+
+    return type !== undefined && OPTION_GROUP_TYPES.includes(type);
+  }
+
+  /**
+   * The view's groups in display order. Select-like groups are the options
+   * (or status groups) in board order, with the no-value group at the view's
+   * stored place, or last; a group sort or "Hide empty groups" reorders or
+   * drops them. Other types list the groups their rows fall in (group-keys.ts).
+   */
   private groupOptions(groupByPropId: string, view: DatabaseViewConfig | undefined): SelectOption[] {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupByPropId);
     const noValue: SelectOption = {
@@ -1098,16 +1195,37 @@ export class DatabaseTool implements BlockTool {
       label: this.api.i18n.t('tools.database.noValueGroup', { property: property?.name ?? '' }),
       position: '',
     };
+
+    if (property !== undefined && view !== undefined && !OPTION_GROUP_TYPES.includes(property.type)) {
+      return this.model.listGroups({ ...view, groupBy: groupByPropId }, { search: this.controls.search }).map((group, index) => ({
+        id: group.key,
+        label: group.key === NO_VALUE_GROUP_KEY ? noValue.label : groupLabel(property, group.key, this.api.i18n, view.groupSettings),
+        position: String(index),
+      }));
+    }
     const statusBy = view?.groupByStatus;
-    const options = statusBy === 'group' && property?.type === 'status'
+    const listed = statusBy === 'group' && property?.type === 'status'
       ? statusGroupsOf(property).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))
       : localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId, { statusBy }), this.api.i18n);
+    const sort = view?.groupSettings?.sort ?? 'manual';
+    const options = sort === 'manual'
+      ? listed
+      : [...listed].sort((x, y) => x.label.localeCompare(y.label) * (sort === 'descending' ? -1 : 1));
     const stored = view?.noValueGroupPosition;
-    const index = stored === undefined ? -1 : options.findIndex((option) => option.position > stored);
-
-    return index === -1
+    const index = stored === undefined || sort !== 'manual' ? -1 : options.findIndex((option) => option.position > stored);
+    const all = index === -1
       ? [...options, noValue]
       : [...options.slice(0, index), noValue, ...options.slice(index)];
+
+    if (view?.groupSettings?.hideEmptyGroups !== true) return all;
+    const counts = new Map(this.model.queryGroups({ ...view, groupBy: groupByPropId }, { search: this.controls.search }).map((g) => [g.key, g.count]));
+
+    return all.filter((option) => (counts.get(option.id) ?? 0) > 0);
+  }
+
+  /** Groups the view shows: hidden ones dropped. */
+  private shownGroupOptions(groupByPropId: string, view: DatabaseViewConfig | undefined): SelectOption[] {
+    return this.groupOptions(groupByPropId, view).filter((option) => !hasGroup(view?.hiddenGroups, option.id));
   }
 
   /**
@@ -1135,13 +1253,122 @@ export class DatabaseTool implements BlockTool {
 
   /** Each group's rows, queried once per render. */
   private queryGroupRows(viewConfig: DatabaseViewConfig, optionIds: string[]): Map<string, DatabaseRow[]> {
-    return new Map(optionIds.map((id) => [id, this.model.queryRows({ view: viewConfig, group: id }).rows]));
+    return new Map(optionIds.map((id) => [id, this.model.queryRows({ view: viewConfig, group: id, search: this.controls.search }).rows]));
+  }
+
+  /** Group keys the active view draws; empty when it is not grouped. */
+  private activeGroupKeys(): string[] {
+    const saved = this.model.getView(this.activeViewId);
+
+    if (saved?.groupBy === undefined) return [];
+
+    return this.shownGroupOptions(saved.groupBy, this.controls.effective(saved)).map((o) => o.id);
+  }
+
+  /** Cmd/Ctrl+Alt+T: collapse or open every group of the active view, and keep it in the view. */
+  private setAllGroupsCollapsed(collapsed: boolean): void {
+    const view = this.model.getView(this.activeViewId);
+
+    if (view === undefined || this.readOnly) return;
+    const keys = this.activeGroupKeys();
+    const others = (view.collapsedGroups ?? []).filter((group) => !keys.includes(group.id));
+    const collapsedGroups = collapsed ? [...others, ...keys.map((id) => ({ id }))] : others;
+
+    this.model.updateView(view.id, { collapsedGroups });
+    this.block.dispatchChange();
+    void this.sync.syncUpdateView({ viewId: view.id, changes: { collapsedGroups } });
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** What the toolbar, filter bar and settings panel ask of the tool. */
+  private controlsHost(): ViewControlsHost {
+    return {
+      i18n: this.api.i18n,
+      ...(this.config.viewState !== undefined ? { store: this.config.viewState } : {}),
+      fallback: {
+        get: (key) => this.api.viewState.get(this.block.id, key),
+        set: (key, value) => this.api.viewState.set(this.block.id, key, value),
+      },
+      savedView: () => this.model.getView(this.activeViewId),
+      schema: () => localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      rowCount: () => this.model.getOrderedRows().length,
+      locked: () => this.model.isDatabaseLocked(),
+      readOnly: () => this.readOnly,
+      viewCount: () => this.model.getViews().length,
+      layouts: RENDERED_LAYOUTS,
+      me: () => this.config.people?.me?.() ?? null,
+      updateView: (changes) => this.updateActiveView(changes),
+      setLayout: (type) => this.setActiveLayout(type),
+      setLocked: (locked) => this.setDatabaseLocked(locked),
+      duplicateView: () => this.duplicateView(this.activeViewId),
+      deleteView: () => this.deleteView(this.activeViewId),
+      copyViewLink: () => this.copyViewLink(),
+      groups: (sub) => this.groupEntries(sub),
+      rerender: () => this.rerenderView({ keepDrawer: true }),
+    };
+  }
+
+  private groupEntries(sub: boolean): ViewGroupEntry[] {
+    const saved = this.model.getView(this.activeViewId);
+
+    if (saved === undefined) return [];
+    const view = this.controls.effective(saved);
+    const groupBy = sub ? view.subGroupBy : view.groupBy;
+
+    if (groupBy === undefined) return [];
+    const grouped = sub ? { ...view, groupBy, groupSettings: view.subGroupSettings } : view;
+    const counts = new Map(this.model.queryGroups(grouped, { search: this.controls.search }).map((g) => [g.key, g.count]));
+
+    return this.groupOptions(groupBy, grouped).map((option) => ({ key: option.id, label: option.label, count: counts.get(option.id) ?? 0 }));
+  }
+
+  /** A board needs a grouping: the first select-like property, else the first property it can group by. */
+  private setActiveLayout(type: ViewType): void {
+    const view = this.model.getView(this.activeViewId);
+
+    if (view === undefined || view.type === type) return;
+    const schema = this.model.getSchema();
+    const groupable = (p: PropertyDefinition): boolean => p.type !== 'title' && GROUPABLE_TYPES.includes(p.type);
+    const groupBy = type === 'board' && view.groupBy === undefined
+      ? (schema.find((p) => OPTION_GROUP_TYPES.includes(p.type)) ?? schema.find(groupable))?.id
+      : undefined;
+
+    if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return;
+    this.updateActiveView({ type, ...(groupBy !== undefined ? { groupBy } : {}) });
+    this.rebuildTabBar();
+  }
+
+  /** "Edit view" on a tab: show that view, then its settings under the tab. */
+  private editView(viewId: string, anchor: HTMLElement): void {
+    this.switchView(viewId);
+    const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
+
+    this.controls.openSettings(tab?.isConnected === true ? tab : anchor, 'root');
+  }
+
+  private setDatabaseLocked(locked: boolean): void {
+    if (this.readOnly || this.model.isDatabaseLocked() === locked) return;
+    this.model.setDatabaseLocked(locked);
+    this.block.dispatchChange();
+    this.rebuildTabBar();
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** Views have no addressable URL yet: the page URL with the view id as its fragment. */
+  private copyViewLink(): void {
+    const url = `${window.location.href.split('#')[0]}#view-${this.activeViewId}`;
+
+    void navigator.clipboard?.writeText(url).then(
+      () => this.api.notifier.show({ message: this.api.i18n.t('tools.database.viewLinkCopied') }),
+      () => undefined
+    );
   }
 
   private renderBoardView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
     const allOptions = groupByPropId !== undefined ? this.groupOptions(groupByPropId, viewConfig) : [];
     const hidden = new Set((viewConfig?.hiddenGroups ?? []).map((group) => group.id));
-    const options = allOptions.filter((option) => !hidden.has(option.id));
+    const shown = allOptions.filter((option) => !hidden.has(option.id));
+    const options = shown.slice(0, this.groupLimits.get(this.activeViewId) ?? BOARD_GROUP_PAGE);
     const groups = viewConfig !== undefined && groupByPropId !== undefined
       ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
       : new Map<string, DatabaseRow[]>();
@@ -1153,7 +1380,7 @@ export class DatabaseTool implements BlockTool {
       getRows: (optionId) => groups.get(optionId) ?? [],
       titlePropertyId: titlePropId,
       hideCounts: viewConfig?.hideGroupAggregation === true,
-      hiddenGroupCount: allOptions.length - options.length,
+      hiddenGroupCount: allOptions.length - shown.length,
       onTitleEdit: (rowId, newTitle) => {
         const titlePropId = this.titlePropertyId();
         this.updateRowTitleBlock(rowId, titlePropId, newTitle);
@@ -1161,25 +1388,60 @@ export class DatabaseTool implements BlockTool {
       },
     });
 
-    return this.view.createView();
+    const boardEl = this.view.createView();
+
+    // "Color columns" off: columns lose their tint, pills keep their color.
+    if (viewConfig?.groupSettings?.colorColumns === false) {
+      boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column][data-color]').forEach((column) => {
+        column.style.removeProperty('background-color');
+        column.removeAttribute('data-color');
+      });
+    }
+    if (shown.length > options.length) {
+      boardEl.querySelector('[data-blok-database-board]')?.appendChild(this.loadMoreGroupsButton());
+    }
+
+    return boardEl;
+  }
+
+  /** Notion shows "Load more groups" past ten groups (research/08). */
+  private loadMoreGroupsButton(): HTMLElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-load-more-groups', '');
+    button.setAttribute('data-blok-testid', 'database-load-more-groups');
+    button.textContent = this.api.i18n.t('tools.database.loadMoreGroups');
+    button.addEventListener('click', () => {
+      this.groupLimits.set(this.activeViewId, (this.groupLimits.get(this.activeViewId) ?? BOARD_GROUP_PAGE) + BOARD_GROUP_PAGE);
+      this.rerenderView({ keepDrawer: true });
+    });
+
+    return button;
   }
 
   private renderTableView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
     const groupBy = viewConfig.groupBy;
-    const groupType = groupBy === undefined ? undefined : this.model.getProperty(groupBy)?.type;
-    const groups = groupBy !== undefined && (groupType === 'select' || groupType === 'multiSelect')
+    const groups = groupBy !== undefined && this.model.getProperty(groupBy) !== undefined
       ? this.tableGroups(groupBy, viewConfig)
       : undefined;
+    const state = this.tableState(viewConfig.id);
+
+    // Collapse is saved in the view, so peers and reloads see it.
+    state.collapsed.clear();
+    for (const group of groups ?? []) {
+      if (hasGroup(viewConfig.collapsedGroups, group.key)) state.collapsed.add(group.key);
+    }
 
     this.view = new DatabaseTableView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
       view: viewConfig,
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
-      rows: groups === undefined ? this.model.queryRows({ view: viewConfig }).rows : [],
+      rows: groups === undefined ? this.model.queryRows({ view: viewConfig, search: this.controls.search }).rows : [],
       ...(groups !== undefined ? { groups } : {}),
       titlePropertyId: titlePropId,
-      state: this.tableState(viewConfig.id),
+      state,
       ...(this.readOnly ? {} : { handlers: this.tableHandlers() }),
     });
 
@@ -1201,13 +1463,14 @@ export class DatabaseTool implements BlockTool {
 
   /** Notion lists the no-value group last in a table too (research/08), unless the view placed it. */
   private tableGroups(groupBy: string, viewConfig: DatabaseViewConfig): TableGroup[] {
-    const ordered = this.groupOptions(groupBy, viewConfig);
+    const ordered = this.shownGroupOptions(groupBy, viewConfig);
     const rows = this.queryGroupRows(viewConfig, ordered.map((o) => o.id));
+    const optionGroup = this.isOptionGroup(groupBy);
 
     return ordered.map((option) => ({
       key: option.id,
       label: option.label,
-      ...(option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
+      ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
       rows: rows.get(option.id) ?? [],
     }));
   }
@@ -1230,15 +1493,23 @@ export class DatabaseTool implements BlockTool {
       moveRow: (result) => this.handleTableRowDrop(result),
       sortedRowDrop: (result) => this.onSortedRowDrop(result),
       bulkEdit: () => undefined,
-      editFilters: () => undefined,
+      editFilters: (anchor) => this.controls.openSettings(anchor, 'filter'),
+      groupToggled: (key, collapsed) => this.saveGroupCollapse(this.activeViewId, key, collapsed),
       rerender: () => this.rerenderView({ keepDrawer: true }),
-      optionsChange: (propertyId, options) => this.handleTableOptionsChange(propertyId, options),
+      // Locked: no option edits, so the select editor offers no "Create" (research/05 §12).
+      ...(this.model.isDatabaseLocked() ? {} : { optionsChange: (propertyId: string, options: SelectOption[]) => this.handleTableOptionsChange(propertyId, options) }),
     };
   }
 
-  /** Filter, Sort and Group from a column header. Phase 3 owns their panels. */
-  protected onTableViewAction(_action: 'filter' | 'sort' | 'group', _propertyId: string, _anchor: HTMLElement): void {
-    // Hook only.
+  /** Filter, Sort and Group from a column header. Filter and sort are personal edits (D4). */
+  protected onTableViewAction(action: 'filter' | 'sort' | 'group', propertyId: string, anchor: HTMLElement): void {
+    if (action === 'filter') {
+      this.controls.filterBy(propertyId, anchor);
+    } else if (action === 'sort') {
+      this.controls.sortBy(propertyId, anchor);
+    } else if (!this.model.isDatabaseLocked()) {
+      this.controls.groupBy(propertyId, anchor);
+    }
   }
 
   /**
@@ -1249,8 +1520,26 @@ export class DatabaseTool implements BlockTool {
     // Hook only.
   }
 
-  private commitTableCell(rowId: string, propertyId: string, value: PropertyValue): void {
+  /**
+   * While locked, option edits are refused, so drop any option id the schema
+   * does not hold: the drawer's editor was built before the lock and may
+   * still create one.
+   */
+  private knownOptionsOnly(propertyId: string, value: PropertyValue): PropertyValue {
+    const property = this.model.getProperty(propertyId);
+
+    if (!this.model.isDatabaseLocked() || property === undefined || !this.isOptionGroup(propertyId)) return value;
+    const known = new Set((property.config?.options ?? []).map((o) => o.id));
+
+    if (Array.isArray(value)) return value.filter((id): id is string => typeof id === 'string' && known.has(id));
+
+    return typeof value === 'string' && !known.has(value) ? null : value;
+  }
+
+  private commitTableCell(rowId: string, propertyId: string, input: PropertyValue): void {
     if (this.readOnly || this.destroyed) return;
+    const value = this.knownOptionsOnly(propertyId, input);
+
     if (JSON.stringify(this.model.getRow(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
     const titlePropId = this.titlePropertyId();
 
@@ -1332,7 +1621,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private updateActiveView(changes: ViewChanges): void {
-    if (this.readOnly) return;
+    if (this.readOnly || this.model.isDatabaseLocked()) return;
     this.model.updateView(this.activeViewId, changes);
     this.block.dispatchChange();
     void this.sync.syncUpdateView({ viewId: this.activeViewId, changes: structuredClone(changes) });
@@ -1362,7 +1651,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Same as the drawer: a label the user kept goes back as the saved (unlocalized) one. */
   private handleTableOptionsChange(propertyId: string, options: SelectOption[]): void {
-    if (this.readOnly || this.destroyed) return;
+    if (this.readOnly || this.destroyed || this.model.isDatabaseLocked()) return;
     const saved = this.model.getProperty(propertyId)?.config?.options ?? [];
     const shown = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId)?.config?.options ?? [];
     const next = options.map((option) => {
@@ -1385,7 +1674,7 @@ export class DatabaseTool implements BlockTool {
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
 
     if (groupByPropId !== undefined) {
-      const options = this.groupOptions(groupByPropId, viewConfig);
+      const options = this.shownGroupOptions(groupByPropId, viewConfig);
       const groups = this.queryGroupRows(viewConfig, options.map((o) => o.id));
 
       this.view = new DatabaseListView({
@@ -1404,7 +1693,7 @@ export class DatabaseTool implements BlockTool {
       this.view = new DatabaseListView({
         readOnly: this.readOnly,
         i18n: this.api.i18n,
-        rows: this.model.queryRows({ view: viewConfig }).rows,
+        rows: this.model.queryRows({ view: viewConfig, search: this.controls.search }).rows,
         titlePropertyId: titlePropId,
         schema,
         visiblePropertyIds: visibleRowPropertyIds(viewConfig, this.model.getSchema()),
@@ -1749,16 +2038,25 @@ export class DatabaseTool implements BlockTool {
 
   /** The clicked group's value wins over a filter on the same property. */
   private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string): Record<string, PropertyValue> {
-    const filters = (this.model.getView(this.activeViewId)?.filters ?? []).filter((f) => f.propertyId !== groupByPropId);
+    const saved = this.model.getView(this.activeViewId);
+    const filters = (saved === undefined ? [] : this.controls.effective(saved).filters).filter((f) => f.propertyId !== groupByPropId);
     const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema()), [titlePropId]: '' };
 
-    return groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY
-      ? properties
-      : { ...properties, [groupByPropId]: this.groupValueFor(groupByPropId, optionId) };
+    const value = groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY ? undefined : this.groupValueFor(groupByPropId, optionId);
+
+    return groupByPropId === undefined || value === undefined ? properties : { ...properties, [groupByPropId]: value };
   }
 
-  private groupValueFor(groupByPropId: string, optionId: string): PropertyValue {
-    return this.model.getProperty(groupByPropId)?.type === 'multiSelect' ? [optionId] : optionId;
+  /** The value a row takes in a group, or `undefined` when the group is a bucket (a date range, a number range). */
+  private groupValueFor(groupByPropId: string, optionId: string): PropertyValue | undefined {
+    const property = this.model.getProperty(groupByPropId);
+    const view = this.model.getView(this.activeViewId);
+
+    if (property?.type === 'status' && view?.groupByStatus === 'group') {
+      return this.model.statusValueForGroup(groupByPropId, optionId, undefined) ?? undefined;
+    }
+
+    return property === undefined ? optionId : groupValueForKey(property, optionId, view?.groupSettings ?? {}) ?? undefined;
   }
 
   private handleAddRow(optionId: string, boardEl: HTMLDivElement): void {
@@ -1805,7 +2103,7 @@ export class DatabaseTool implements BlockTool {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
 
-    if (groupByPropId === undefined) {
+    if (groupByPropId === undefined || this.model.isDatabaseLocked()) {
       return;
     }
 
@@ -1850,7 +2148,8 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const viewConfig = this.model.getView(this.activeViewId);
+    const savedView = this.model.getView(this.activeViewId);
+    const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
     const isList = viewConfig?.type === 'list';
     const isBoard = !isList && viewConfig?.type !== 'table';
 
@@ -1869,7 +2168,10 @@ export class DatabaseTool implements BlockTool {
         wrapper: boardEl,
         onDrop: (result) => this.handleRowDrop(result),
       });
+    }
 
+    // Columns are options only there: renaming, deleting or moving a date bucket means nothing.
+    if (isBoard && this.isOptionGroup(viewConfig?.groupBy) && !this.model.isDatabaseLocked()) {
       this.columnDrag = new DatabaseColumnDrag({
         wrapper: boardEl,
         onDrop: (result) => this.handleGroupDrop(result),
@@ -1996,8 +2298,10 @@ export class DatabaseTool implements BlockTool {
         onOpenPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
         hasPeople: this.hasPeople,
         cellContext: () => this.cellContext(),
-        onPropertyValueChange: (rowId, propertyId, value) => {
+        onPropertyValueChange: (rowId, propertyId, input) => {
           if (this.readOnly || this.destroyed) return;
+          const value = this.knownOptionsOnly(propertyId, input);
+
           // Deleting an option already emptied this row through clearRemovedOptions.
           if (JSON.stringify(this.model.getRow(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
           this.updateRowBlock(rowId, { [propertyId]: value });
@@ -2005,7 +2309,7 @@ export class DatabaseTool implements BlockTool {
           this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },
         onOptionsChange: (propertyId, options) => {
-          if (this.readOnly || this.destroyed) return;
+          if (this.readOnly || this.destroyed || this.model.isDatabaseLocked()) return;
           this.clearRemovedOptions(propertyId, options);
           this.model.updateProperty(propertyId, { config: { options } });
           this.block.dispatchChange();
@@ -2136,10 +2440,10 @@ export class DatabaseTool implements BlockTool {
     // Neighbours arrive in sort order, not key order, so positionBetween would
     // throw. A reorder inside the group asks first (D7). A move to another
     // group changes the value only: Notion's answer there is unmeasured.
-    if (viewConfig !== undefined && viewConfig.sorts.length > 0) {
+    if (viewConfig !== undefined && this.controls.effective(viewConfig).sorts.length > 0) {
       const row = this.model.getRow(rowId);
 
-      if (row !== undefined && this.model.groupKeysOf(groupByPropId)(row).includes(toOptionId)) {
+      if (row !== undefined && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig.groupByStatus, settings: viewConfig.groupSettings })(row).includes(toOptionId)) {
         this.askToRemoveSorting(rowId, beforeRowId, afterRowId);
 
         return;
@@ -2247,8 +2551,16 @@ export class DatabaseTool implements BlockTool {
 
   private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {
     const target = toOptionId === NO_VALUE_GROUP_KEY ? null : toOptionId;
-    const type = this.model.getProperty(groupByPropId)?.type;
+    const property = this.model.getProperty(groupByPropId);
+    const type = property?.type;
     const current = this.model.getRow(rowId)?.properties[groupByPropId];
+
+    if (property !== undefined && !this.isOptionGroup(groupByPropId)) {
+      // A bucket names no single value: the row keeps the one it has.
+      const settings = this.model.getView(this.activeViewId)?.groupSettings ?? {};
+
+      return groupValueForKey(property, toOptionId, settings) ?? current ?? null;
+    }
 
     if (type === 'status' && target !== null && this.model.getView(this.activeViewId)?.groupByStatus === 'group') {
       return this.model.statusValueForGroup(groupByPropId, target, current);
@@ -2351,7 +2663,7 @@ export class DatabaseTool implements BlockTool {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
 
-    if (groupByPropId === undefined) {
+    if (groupByPropId === undefined || this.model.isDatabaseLocked()) {
       return;
     }
 
@@ -2370,7 +2682,7 @@ export class DatabaseTool implements BlockTool {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
 
-    if (groupByPropId === undefined) {
+    if (groupByPropId === undefined || this.model.isDatabaseLocked()) {
       return;
     }
 
@@ -2767,6 +3079,12 @@ export class DatabaseTool implements BlockTool {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
 
     if (this.readOnly || property === undefined) return;
+    // Locked: properties stay as they are, so only the view rows (filter, sort, ...) show.
+    if (this.model.isDatabaseLocked()) {
+      if (this.view instanceof DatabaseTableView) this.view.openHeaderMenu(propertyId, anchor);
+
+      return;
+    }
     this.propertyMenu ??= new DatabasePropertyMenu({
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
@@ -2792,7 +3110,7 @@ export class DatabaseTool implements BlockTool {
    * view's column order.
    */
   openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }): void {
-    if (this.readOnly) return;
+    if (this.readOnly || this.model.isDatabaseLocked()) return;
     this.addPropertyPopover?.destroy();
     this.addPropertyPopover = new DatabasePropertyTypePopover({
       i18n: this.api.i18n,
@@ -2862,5 +3180,6 @@ export class DatabaseTool implements BlockTool {
       this.attachViewListeners(newBoardWrapper);
       this.initSubsystems(newBoardWrapper);
     }
+    this.controls.refresh();
   }
 }

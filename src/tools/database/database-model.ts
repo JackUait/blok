@@ -153,6 +153,22 @@ export class DatabaseModel {
     this.schema = this.schema.filter((p) => p.id !== propertyId);
   }
 
+  /** The lock lives on the title property; see `PropertyDefinition.databaseLocked`. */
+  isDatabaseLocked(): boolean {
+    return this.schema.find((p) => p.type === 'title')?.databaseLocked === true;
+  }
+
+  setDatabaseLocked(locked: boolean): void {
+    const title = this.schema.find((p) => p.type === 'title');
+
+    if (title === undefined) return;
+    if (locked) {
+      title.databaseLocked = true;
+    } else {
+      delete title.databaseLocked;
+    }
+  }
+
   // ─── Row projection ───
 
   setRows(rows: DatabaseRow[]): void {

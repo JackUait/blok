@@ -34,6 +34,8 @@ export interface ViewControlsHost {
   readOnly: () => boolean;
   viewCount: () => number;
   layouts: readonly ViewType[];
+  /** The current user's id, for a person filter's "Me" (the people lever). */
+  me?: () => string | null;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
   setLayout: (type: ViewType) => void;

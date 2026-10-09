@@ -90,3 +90,28 @@ describe('DatabaseModel — grouping by any type', () => {
     ]);
   });
 });
+
+describe('DatabaseModel — lock', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the lock on the title property, where v1.16.1 clients leave it alone', () => {
+    const m = model();
+
+    expect(m.isDatabaseLocked()).toBe(false);
+    m.setDatabaseLocked(true);
+
+    expect(m.isDatabaseLocked()).toBe(true);
+    expect(m.snapshot().schema.find((p) => p.type === 'title')?.databaseLocked).toBe(true);
+    expect(m.snapshot().schema.filter((p) => p.databaseLocked !== undefined)).toHaveLength(1);
+
+    m.setDatabaseLocked(false);
+
+    expect(m.snapshot().schema.find((p) => p.type === 'title')).not.toHaveProperty('databaseLocked');
+  });
+});

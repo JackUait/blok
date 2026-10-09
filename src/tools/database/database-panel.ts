@@ -1,4 +1,4 @@
-import { IconChevronLeft, IconChevronRight, IconMenu } from '../../components/icons';
+import { IconCheck, IconChevronLeft, IconChevronRight, IconMenu } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
 
 /**
@@ -211,6 +211,7 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
     const check = document.createElement('span');
 
     check.setAttribute('data-blok-database-panel-check', '');
+    check.innerHTML = IconCheck;
     row.appendChild(check);
   }
   if (options.opensPage === true) {
@@ -236,8 +237,11 @@ export const panelSwitch = (options: { label: string; testId: string; checked: b
   button.setAttribute('data-blok-database-panel-switch', '');
   button.setAttribute('data-blok-testid', options.testId);
   button.disabled = options.disabled === true;
+  const knob = document.createElement('span');
+
   track.setAttribute('data-blok-database-switch-track', '');
-  track.appendChild(document.createElement('span'));
+  knob.setAttribute('data-blok-database-switch-knob', '');
+  track.appendChild(knob);
 
   const label = document.createElement('span');
 
@@ -276,7 +280,7 @@ export const panelSeparator = (): HTMLElement => {
   const line = document.createElement('div');
 
   line.setAttribute('data-blok-database-panel-separator', '');
-  line.setAttribute('role', 'separator');
+  line.setAttribute('aria-hidden', 'true');
 
   return line;
 };

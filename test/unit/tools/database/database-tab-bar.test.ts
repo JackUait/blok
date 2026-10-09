@@ -404,6 +404,33 @@ describe('DatabaseTabBar', () => {
     });
   });
 
+  describe('Edit view', () => {
+    it('opens the view settings from the tab menu, anchored at the tab', () => {
+      const onEditView = vi.fn<(viewId: string, anchor: HTMLElement) => void>();
+      const bar = new DatabaseTabBar({
+        views: [makeView({ id: 'v1' })],
+        activeViewId: 'v1',
+        onTabClick,
+        onAddView,
+        onRename,
+        onDuplicate,
+        onDelete,
+        onReorder,
+        onEditView,
+      });
+      const el = bar.render();
+
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      (document.querySelector('[data-blok-database-tab-action="edit view"]') as HTMLElement).click();
+
+      expect(onEditView).toHaveBeenCalledWith('v1', tab);
+      el.remove();
+    });
+  });
+
   describe('tab drag reordering', () => {
     const createBarWithLayout = (views: DatabaseViewConfig[], activeViewId: string): { bar: DatabaseTabBar; el: HTMLElement } => {
       const bar = createTabBar(views, activeViewId);

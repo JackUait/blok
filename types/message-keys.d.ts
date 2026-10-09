@@ -459,6 +459,7 @@ export type BlokMessageKey =
   | 'tools.database.duplicateView'
   | 'tools.database.editCardTitle'
   | 'tools.database.editProperty'
+  | 'tools.database.editView'
   | 'tools.database.emptyColumn'
   | 'tools.database.filesAdd'
   | 'tools.database.filesEmbed'

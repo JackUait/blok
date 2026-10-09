@@ -1,6 +1,6 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import { IconBoard, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
+import { IconBoard, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -54,6 +54,8 @@ export interface TabBarOptions {
   onDuplicate: (viewId: string) => void;
   onDelete: (viewId: string) => void;
   onReorder: (viewId: string, newPosition: string) => void;
+  /** "Edit view": opens the view settings panel under the tab. */
+  onEditView?: (viewId: string, anchor: HTMLElement) => void;
   api?: API;
   readOnly?: boolean;
 }
@@ -303,7 +305,17 @@ export class DatabaseTabBar {
     const canDelete = this.options.views.length > 1;
     const t = this.t.bind(this);
 
+    const onEditView = this.options.onEditView;
+    const editItems = onEditView === undefined ? [] : [{
+      icon: IconSliders,
+      title: t('tools.database.editView', 'Edit view'),
+      closeOnActivate: true,
+      onActivate: () => {
+        onEditView(viewId, tab);
+      },
+    }];
     const baseItems = [
+      ...editItems,
       {
         icon: IconPencil,
         title: t('tools.database.renameView', 'Rename'),

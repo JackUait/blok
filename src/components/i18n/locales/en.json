@@ -1006,6 +1006,7 @@
   "tools.database.colorPurple": "Purple",
   "tools.database.colorPink": "Pink",
   "tools.database.colorRed": "Red",
+  "tools.database.editView": "Edit view",
   "tools.video.errorNotMediaUrl": "Link a video file (.mp4, .webm, .mov), or use an embed block",
   "tools.video.errorUnplayable": "This video can't be played",
   "presence.anonymous.astronaut": "Anonymous Astronaut",

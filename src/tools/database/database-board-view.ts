@@ -1,7 +1,12 @@
 import type { I18n } from '../../../types';
-import type { SelectOption, DatabaseRow } from './types';
+import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
+import { renderCellValue } from './cells';
+import { createCardPreview } from './database-card-preview';
+import type { BodyBlock } from './row-body';
+import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
+import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 
@@ -16,7 +21,21 @@ interface DatabaseBoardViewOptions {
   hideCounts?: boolean;
   /** How many groups the view hides; above zero, a button after the columns shows them again. */
   hiddenGroupCount?: number;
+  /** The board's view: card size, preview and the properties cards show. Without it cards show only the title. */
+  view?: DatabaseViewConfig;
+  /** Localized schema. */
+  schema?: PropertyDefinition[];
+  /** The row's body blocks, for the page cover and page content previews. */
+  bodyOf?: (rowId: string) => BodyBlock[];
+  locale?: string;
+  /** A click on a card property: edit it in place. */
+  onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
 }
+
+/** Card widths per card size. Medium (260) is measured (research/07); small and large are unmeasured. */
+const CARD_WIDTH: Record<CardSize, number> = { small: 220, medium: 260, large: 320 };
+/** The column's 8px padding on each side (research/07). */
+const COLUMN_PADDING = 16;
 
 /**
  * DOM rendering layer for the kanban board.
@@ -32,8 +51,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
   private readonly hiddenGroupCount: number;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit'>;
 
-  constructor({ readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount }: DatabaseBoardViewOptions) {
+  constructor({
+    readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, ...settings
+  }: DatabaseBoardViewOptions) {
+    this.settings = settings;
     this.readOnly = readOnly;
     this.i18n = i18n;
     this.options = options;
@@ -58,6 +81,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const boardArea = document.createElement('div');
 
     boardArea.setAttribute('data-blok-database-board', '');
+    boardArea.setAttribute('data-blok-keyboard-owner', '');
+    boardArea.setAttribute('data-card-size', this.cardSize);
+    if (this.settings.view !== undefined && resolveFitImage(this.settings.view)) {
+      boardArea.setAttribute('data-fit-image', '');
+    }
     boardArea.style.display = 'flex';
     boardArea.style.overflowX = 'auto';
     boardArea.style.alignItems = 'flex-start';
@@ -94,8 +122,85 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     wrapper.appendChild(boardArea);
+    boardArea.querySelector<HTMLElement>('[data-blok-database-card]')?.setAttribute('tabindex', '0');
+    boardArea.addEventListener('click', this.onCardPropertyClick);
+    boardArea.addEventListener('keydown', this.onCardKeyDown);
 
     return wrapper;
+  }
+
+  private get cardSize(): CardSize {
+    return this.settings.view === undefined ? 'medium' : resolveCardSize(this.settings.view);
+  }
+
+  private readonly onCardPropertyClick = (event: MouseEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+    const property = target?.closest<HTMLElement>('[data-blok-database-card-property]');
+    const rowId = property?.closest('[data-blok-database-card]')?.getAttribute('data-row-id');
+    const propertyId = property?.getAttribute('data-property-id');
+
+    if (this.readOnly || this.settings.onPropertyEdit === undefined || property === null || property === undefined
+      || rowId === null || rowId === undefined || propertyId === null || propertyId === undefined) {
+      return;
+    }
+    event.stopPropagation();
+    this.settings.onPropertyEdit(rowId, propertyId, property);
+  };
+
+  /** Arrows move between cards and columns; Enter opens the focused card. */
+  private readonly onCardKeyDown = (event: KeyboardEvent): void => {
+    const cardEl = event.target instanceof HTMLElement && event.target.hasAttribute('data-blok-database-card') ? event.target : null;
+
+    if (cardEl === null || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      cardEl.click();
+
+      return;
+    }
+
+    const next = this.cardTarget(cardEl, event.key);
+
+    if (next === undefined) {
+      return;
+    }
+    event.preventDefault();
+    if (next === null) {
+      return;
+    }
+    cardEl.closest('[data-blok-database-board]')?.querySelectorAll('[data-blok-database-card]').forEach((el) => {
+      el.setAttribute('tabindex', el === next ? '0' : '-1');
+    });
+    next.focus();
+  };
+
+  /** The card an arrow key goes to; null at an edge; undefined for other keys. */
+  private cardTarget(cardEl: HTMLElement, key: string): HTMLElement | null | undefined {
+    const columns = [...(cardEl.closest('[data-blok-database-board]')?.querySelectorAll<HTMLElement>('[data-blok-database-column]') ?? [])];
+    const cardsOf = (column: HTMLElement | undefined): HTMLElement[] =>
+      [...(column?.querySelectorAll<HTMLElement>('[data-blok-database-card]') ?? [])];
+    const column = cardEl.closest<HTMLElement>('[data-blok-database-column]') ?? undefined;
+    const columnIndex = column === undefined ? -1 : columns.indexOf(column);
+    const index = cardsOf(column).indexOf(cardEl);
+    const rtl = getElementDirection(cardEl) === 'rtl';
+    const across: Record<string, number> = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 };
+
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+      return cardsOf(column)[index + (key === 'ArrowDown' ? 1 : -1)] ?? null;
+    }
+
+    if (across[key] === undefined) {
+      return undefined;
+    }
+
+    const candidates = (across[key] > 0 ? columns.slice(columnIndex + 1) : columns.slice(0, columnIndex).reverse())
+      .filter((c) => cardsOf(c).length > 0);
+    const target = cardsOf(candidates[0]);
+
+    return target[Math.min(index, target.length - 1)] ?? null;
   }
 
   /**
@@ -184,8 +289,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     columnEl.setAttribute('aria-label', option.label);
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
-    columnEl.style.minWidth = '276px';
-    columnEl.style.flex = '0 0 276px';
+    const columnWidth = `${CARD_WIDTH[this.cardSize] + COLUMN_PADDING}px`;
+
+    columnEl.style.minWidth = columnWidth;
+    columnEl.style.flex = `0 0 ${columnWidth}`;
 
     if (option.color !== undefined) {
       const c = option.color;
@@ -249,6 +356,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     cardsContainer.setAttribute('data-blok-database-cards', '');
     cardsContainer.setAttribute('role', 'list');
+    cardsContainer.setAttribute('data-blok-keyboard-owner', '');
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
     cardsContainer.style.paddingTop = '6px';
@@ -324,9 +432,20 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.setAttribute('data-blok-database-card', '');
     cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
+    cardEl.tabIndex = -1;
     cardEl.style.padding = '10px 12px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
+
+    const view = this.settings.view;
+    const schema = this.settings.schema ?? [];
+    const preview = view === undefined
+      ? null
+      : createCardPreview(resolveBoardCardPreview(view, schema), row, this.settings.bodyOf ?? (() => []), 'card');
+
+    if (preview !== null) {
+      cardEl.appendChild(preview);
+    }
 
     const titleEl = document.createElement('div');
 
@@ -341,6 +460,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     cardEl.appendChild(titleEl);
+
+    const properties = this.createCardProperties(row);
+
+    if (properties !== null) {
+      cardEl.appendChild(properties);
+    }
 
     if (!this.readOnly) {
       const actionsEl = document.createElement('div');
@@ -371,6 +496,44 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     return cardEl;
+  }
+
+  /** The view's visible properties, empty ones left out. */
+  private createCardProperties(row: DatabaseRow): HTMLElement | null {
+    const view = this.settings.view;
+    const schema = this.settings.schema;
+
+    if (view === undefined || schema === undefined) {
+      return null;
+    }
+
+    const list = document.createElement('div');
+
+    list.setAttribute('data-blok-database-card-properties', '');
+    for (const setting of resolveViewProperties(view, schema)) {
+      const property = schema.find((p) => p.id === setting.id);
+
+      if (!setting.visible || property === undefined || property.type === 'title') {
+        continue;
+      }
+
+      const cell = renderCellValue(property, row.properties[property.id], { i18n: this.i18n, readOnly: true, locale: this.settings.locale });
+
+      if (cell.hasAttribute('data-empty')) {
+        continue;
+      }
+
+      const item = document.createElement('div');
+
+      item.setAttribute('data-blok-database-card-property', '');
+      item.setAttribute('data-property-id', property.id);
+      item.setAttribute('data-wrap', String(setting.wrap));
+      item.title = property.name;
+      item.appendChild(cell);
+      list.appendChild(item);
+    }
+
+    return list.childElementCount > 0 ? list : null;
   }
 
   /**

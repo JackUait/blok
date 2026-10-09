@@ -3741,7 +3741,7 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    it('fades the pressed copy of a multi-group card, not the first copy', () => {
+    it('marks the pressed copy of a multi-group card as the drag source, not the first copy', () => {
       const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
       const cardInB = cardsIn(element, 'opt-b')[0];
       const cardInA = cardsIn(element, 'opt-a')[0];
@@ -3749,8 +3749,8 @@ describe('DatabaseTool', () => {
       fireEvent.pointerDown(cardInB, { clientX: 0, clientY: 0 });
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40, clientY: 40 }));
 
-      expect(cardInB.style.opacity).toBe('0.4');
-      expect(cardInA.style.opacity).toBe('');
+      expect(cardInB.hasAttribute('data-blok-database-drag-source')).toBe(true);
+      expect(cardInA.hasAttribute('data-blok-database-drag-source')).toBe(false);
 
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       tool.destroy();

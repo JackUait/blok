@@ -102,7 +102,7 @@ describe('DatabaseCardDrag', () => {
     expect(onDrop).not.toHaveBeenCalled();
   });
 
-  it('sets source card opacity to 0.4 after exceeding threshold', () => {
+  it('marks the source card, which stays in place at full opacity, after exceeding threshold', () => {
     drag.beginTracking('row-0-0', 50, 30);
 
     // Move 20px — past threshold
@@ -110,7 +110,8 @@ describe('DatabaseCardDrag', () => {
 
     const sourceCard = wrapper.querySelector('[data-row-id="row-0-0"]') as HTMLElement;
 
-    expect(sourceCard.style.opacity).toBe('0.4');
+    expect(sourceCard.hasAttribute('data-blok-database-drag-source')).toBe(true);
+    expect(sourceCard.style.opacity).toBe('');
   });
 
   it('removes ghost element from DOM after pointerup', () => {
@@ -161,14 +162,14 @@ describe('DatabaseCardDrag', () => {
 
     const firstSourceCard = wrapper.querySelector('[data-row-id="row-0-0"]') as HTMLElement;
 
-    expect(firstSourceCard.style.opacity).toBe('0.4');
+    expect(firstSourceCard.hasAttribute('data-blok-database-drag-source')).toBe(true);
 
     // Start tracking row-0-1 without pointerup — simulates concurrent call
     drag.beginTracking('row-0-1', 50, 90);
 
-    // Previous ghost should be removed and first card opacity restored
+    // Previous ghost should be removed and the first card unmarked
     expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
-    expect(firstSourceCard.style.opacity).toBe('');
+    expect(firstSourceCard.hasAttribute('data-blok-database-drag-source')).toBe(false);
 
     // Now simulate pointerup — only the second tracking session should be active
     // Since we haven't moved past threshold for row-0-1, onDrop should NOT be called
@@ -227,28 +228,26 @@ describe('DatabaseCardDrag', () => {
     });
   });
 
-  it('displaces cards below insertion point to create a gap', () => {
+  it('shows a drop line and never displaces the cards below the insertion point', () => {
     drag.beginTracking('row-0-0', 50, 30);
 
     // Move past threshold — cursor at clientY=80 is above row-0-1 midpoint (90)
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 80 }));
 
-    const displacedCard = wrapper.querySelector('[data-row-id="row-0-1"]') as HTMLElement;
+    const card = wrapper.querySelector('[data-row-id="row-0-1"]') as HTMLElement;
 
-    expect(parseFloat(displacedCard.style.marginTop)).toBeGreaterThan(0);
+    expect(document.querySelector('[data-blok-database-drop-line]')).not.toBeNull();
+    expect(card.style.marginTop).toBe('');
   });
 
-  it('clears card displacement after pointer up', () => {
+  it('fades the drop line out after pointer up', () => {
     drag.beginTracking('row-0-0', 50, 30);
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 80 }));
-
-    const displacedCard = wrapper.querySelector('[data-row-id="row-0-1"]') as HTMLElement;
-
-    expect(parseFloat(displacedCard.style.marginTop)).toBeGreaterThan(0);
-
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 80 }));
 
-    expect(displacedCard.style.marginTop).toBe('');
+    const lines = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'));
+
+    expect(lines.every((line) => line.style.opacity === '0')).toBe(true);
   });
 
   it('sets dragging attribute on wrapper during active drag', () => {
@@ -262,13 +261,15 @@ describe('DatabaseCardDrag', () => {
     expect(wrapper.hasAttribute('data-blok-database-dragging')).toBe(false);
   });
 
-  it('applies elevated shadow to ghost element', () => {
+  it('draws the ghost flat: no shadow, no tilt, 0.4 opacity', () => {
     drag.beginTracking('row-0-0', 50, 30);
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 30 }));
 
     const ghost = document.querySelector('[data-blok-database-ghost]') as HTMLElement;
 
-    expect(ghost.style.boxShadow).toBeTruthy();
+    expect(ghost.style.boxShadow).toBe('');
+    expect(ghost.style.transform).toBe('');
+    expect(ghost.style.opacity).toBe('0.4');
   });
 
   it('removes ghost element and does not call onDrop on Escape key', () => {

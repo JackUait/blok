@@ -57,6 +57,10 @@ const pointer = (type: string, clientX: number, clientY = 100): PointerEvent =>
 
 const ghost = (): HTMLElement | null => document.body.querySelector('[data-blok-database-column-ghost]');
 
+/** The left edge of the drop line that is showing, ignoring one that is fading out. */
+const lineLeft = (): string | null => Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'))
+  .find((el) => el.style.opacity !== '0')?.style.left ?? null;
+
 const hideComputedShorthand = (): void => {
   const real = window.getComputedStyle.bind(window);
 
@@ -138,13 +142,14 @@ describe('database column drag mutants', () => {
       document.dispatchEvent(pointer('pointermove', from + DRAG_THRESHOLD + 1));
     };
 
-    it('carries a copy of the column and fades the original', () => {
+    it('carries a copy of the column and leaves the original in place, marked as the source', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
 
       expect(ghost()?.textContent).toBe('a');
-      expect(board.columns[0].style.opacity).toBe('0.4');
+      expect(board.columns[0].style.opacity).toBe('');
+      expect(board.columns[0].getAttribute('data-blok-database-drag-source')).toBe('');
 
       board.drag.cleanup();
     });
@@ -175,24 +180,24 @@ describe('database column drag mutants', () => {
     });
   });
 
-  describe('the drop gap', () => {
+  describe('the drop line', () => {
     const startDrag = (board: Board): void => {
       board.drag.beginTracking('a', 50, 100);
       document.dispatchEvent(pointer('pointermove', 61));
     };
 
-    it('opens a gap before the column the cursor is left of', () => {
+    it('draws the line on the seam before the column the cursor is left of', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 120));
 
-      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('98px');
 
       board.drag.cleanup();
     });
 
-    it('moves the gap rather than opening a second one', () => {
+    it('moves the line rather than drawing a second one', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
@@ -200,24 +205,24 @@ describe('database column drag mutants', () => {
       document.dispatchEvent(pointer('pointermove', 220));
 
       expect(board.columns[1].style.marginInlineStart).toBe('');
-      expect(board.columns[2].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('198px');
 
       board.drag.cleanup();
     });
 
-    it('pads the board instead when the cursor is past the last column', () => {
+    it('draws the line after the last column when the cursor is past it', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('304px');
       expect(board.columns[1].style.marginInlineStart).toBe('');
 
       board.drag.cleanup();
     });
 
-    it('never opens a gap against the column being dragged', () => {
+    it('never moves a column, the dragged one included', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
@@ -280,7 +285,8 @@ describe('database column drag mutants', () => {
 
     const assertClean = (board: Board): void => {
       expect(ghost()).toBeNull();
-      expect(board.columns[0].style.opacity).toBe('');
+      expect(board.columns[0].hasAttribute('data-blok-database-drag-source')).toBe(false);
+      expect(lineLeft()).toBeNull();
       expect(board.columns[1].style.marginInlineStart).toBe('');
       expect(board.board.style.paddingInlineEnd).toBe('');
       expect(board.wrapper.hasAttribute('data-blok-database-column-reordering')).toBe(false);
@@ -396,7 +402,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', from + DRAG_THRESHOLD + 1));
     };
 
-    it('is anchored to the column rect and carries the full visual style', () => {
+    it('is anchored to the column rect and drawn flat at 0.4 opacity', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
@@ -406,12 +412,11 @@ describe('database column drag — strict mutants', () => {
       expect(g?.getAttribute('data-blok-database-column-ghost')).toBe('');
       expect(g?.style.position).toBe('fixed');
       expect(g?.style.pointerEvents).toBe('none');
-      expect(g?.style.opacity).toBe('0.85');
+      expect(g?.style.opacity).toBe('0.4');
       expect(g?.style.zIndex).toBe('50');
-      expect(g?.style.boxShadow).toBe('0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)');
+      expect(g?.style.boxShadow).toBe('');
       expect(g?.style.overflow).toBe('hidden');
-      expect(g?.style.transform).toBe('rotate(1deg) scale(1.02)');
-      expect(g?.style.transformOrigin).toBe('center center');
+      expect(g?.style.transform).toBe('');
       expect(g?.style.top).toBe('0px');
       expect(g?.style.width).toBe(`${COLUMN_WIDTH}px`);
       expect(board.wrapper.getAttribute('data-blok-database-column-reordering')).toBe('');
@@ -483,7 +488,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', 150));
 
       // Column b spans 100-200, so its midpoint is exactly 150.
-      expect(board.columns[2].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('198px');
 
       document.dispatchEvent(pointer('pointerup', 150));
 
@@ -497,7 +502,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', 61));
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('104px');
 
       document.dispatchEvent(pointer('pointerup', 400));
 
@@ -531,12 +536,12 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('304px');
 
       document.dispatchEvent(pointer('pointermove', 120));
 
       expect(board.board.style.paddingInlineEnd).toBe('');
-      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('98px');
 
       board.drag.cleanup();
     });
@@ -548,7 +553,7 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('104px');
 
       board.board.remove();
       document.dispatchEvent(pointer('pointermove', 400));
@@ -565,14 +570,14 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 120));
 
-      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('98px');
 
       const writes = styleWritesDuring(board.columns[1], () => {
         document.dispatchEvent(pointer('pointermove', 120));
       });
 
       expect(writes).toStrictEqual([]);
-      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('98px');
 
       board.drag.cleanup();
     });
@@ -583,14 +588,14 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('304px');
 
       const writes = styleWritesDuring(board.board, () => {
         document.dispatchEvent(pointer('pointermove', 400));
       });
 
       expect(writes).toStrictEqual([]);
-      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(lineLeft()).toBe('304px');
 
       board.drag.cleanup();
     });

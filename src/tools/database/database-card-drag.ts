@@ -1,6 +1,10 @@
 import { copyGhostRadius } from './copy-ghost-radius';
+import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
+
+/** Half the 8px gap between cards, so the line sits in the gap. */
+const HALF_GAP = 4;
 
 export interface CardDragResult {
   rowId: string;
@@ -28,11 +32,9 @@ export class DatabaseCardDrag {
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
   private sourceCard: HTMLElement | null = null;
-  private sourceCardHeight = 0;
   private ghostOffsetX = 0;
   private ghostOffsetY = 0;
-  private gapTarget: HTMLElement | null = null;
-  private gapContainer: HTMLElement | null = null;
+  private readonly dropLine: DatabaseDropLine;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -42,6 +44,7 @@ export class DatabaseCardDrag {
   constructor(options: CardDragOptions) {
     this.wrapper = options.wrapper;
     this.onDrop = options.onDrop;
+    this.dropLine = new DatabaseDropLine(options.wrapper);
 
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
@@ -76,17 +79,16 @@ export class DatabaseCardDrag {
     this.ghostEl?.remove();
     this.ghostEl = null;
 
-    this.clearGap();
+    this.dropLine.hide();
     this.wrapper.removeAttribute('data-blok-database-dragging');
 
     if (this.sourceCard) {
-      this.sourceCard.style.opacity = '';
+      this.sourceCard.removeAttribute('data-blok-database-drag-source');
       this.sourceCard = null;
     }
 
     this.isDragging = false;
     this.rowId = '';
-    this.sourceCardHeight = 0;
     this.ghostOffsetX = 0;
     this.ghostOffsetY = 0;
   }
@@ -98,6 +100,7 @@ export class DatabaseCardDrag {
 
   public destroy(): void {
     this.cleanup();
+    this.dropLine.destroy();
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -137,10 +140,9 @@ export class DatabaseCardDrag {
     if (this.sourceCard) {
       const rect = this.sourceCard.getBoundingClientRect();
 
-      this.sourceCardHeight = rect.height;
       this.ghostOffsetX = this.startX - rect.left;
       this.ghostOffsetY = this.startY - rect.top;
-      this.sourceCard.style.opacity = '0.4';
+      this.sourceCard.setAttribute('data-blok-database-drag-source', '');
     }
 
     this.wrapper.setAttribute('data-blok-database-dragging', '');
@@ -157,17 +159,15 @@ export class DatabaseCardDrag {
 
     style.position = 'fixed';
     style.pointerEvents = 'none';
-    style.opacity = '0.85';
+    style.opacity = '0.4';
     style.zIndex = '50';
-    style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
     style.overflow = 'hidden';
-    style.transform = 'rotate(2deg) scale(1.02)';
-    style.transformOrigin = 'center center';
 
     if (this.sourceCard) {
       const clone = this.sourceCard.cloneNode(true) as HTMLElement;
 
       clone.style.opacity = '';
+      clone.removeAttribute('data-blok-database-drag-source');
       ghost.appendChild(clone);
 
       copyGhostRadius(this.sourceCard, ghost);
@@ -199,53 +199,46 @@ export class DatabaseCardDrag {
     const targetColumn = this.findTargetColumn(e.clientX);
 
     if (!targetColumn) {
-      this.clearGap();
+      this.dropLine.hide();
 
       return;
     }
 
-    const position = this.getDropPosition(targetColumn, e.clientY);
-    const beforeEl = position.beforeEl as HTMLElement | null;
+    const beforeEl = this.getDropPosition(targetColumn, e.clientY).beforeEl;
+    // The source card stays in place, so it counts as a neighbour for the line.
+    const visible = Array.from(targetColumn.querySelectorAll<HTMLElement>('[data-blok-database-card]'));
 
-    if (beforeEl) {
-      if (beforeEl === this.gapTarget) {
-        return;
-      }
+    if (beforeEl instanceof HTMLElement) {
+      const rect = beforeEl.getBoundingClientRect();
+      const above = visible[visible.indexOf(beforeEl) - 1];
+      const centerY = above === undefined ? rect.top - HALF_GAP : (above.getBoundingClientRect().bottom + rect.top) / 2;
 
-      this.clearGap();
-      beforeEl.style.marginTop = `${this.sourceCardHeight}px`;
-      this.gapTarget = beforeEl;
-    } else {
-      const cardsContainer = targetColumn.querySelector<HTMLElement>(
-        '[data-blok-database-cards]'
-      );
+      this.dropLine.showHorizontal({ left: rect.left, centerY, width: rect.width });
 
-      if (!cardsContainer) {
-        this.clearGap();
-
-        return;
-      }
-
-      if (cardsContainer === this.gapContainer) {
-        return;
-      }
-
-      this.clearGap();
-      cardsContainer.style.paddingBottom = `${this.sourceCardHeight}px`;
-      this.gapContainer = cardsContainer;
-    }
-  }
-
-  private clearGap(): void {
-    if (this.gapTarget) {
-      this.gapTarget.style.marginTop = '';
-      this.gapTarget = null;
+      return;
     }
 
-    if (this.gapContainer) {
-      this.gapContainer.style.paddingBottom = '';
-      this.gapContainer = null;
+    const last = visible.at(-1);
+
+    if (last !== undefined) {
+      const rect = last.getBoundingClientRect();
+
+      this.dropLine.showHorizontal({ left: rect.left, centerY: rect.bottom + HALF_GAP, width: rect.width });
+
+      return;
     }
+
+    const cardsContainer = targetColumn.querySelector<HTMLElement>('[data-blok-database-cards]');
+
+    if (!cardsContainer) {
+      this.dropLine.hide();
+
+      return;
+    }
+
+    const rect = cardsContainer.getBoundingClientRect();
+
+    this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top + 2, width: rect.width });
   }
 
   private findTargetColumn(clientX: number): HTMLElement | null {

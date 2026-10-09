@@ -35,13 +35,14 @@ describe('database.css under prefers-reduced-motion', () => {
     expect(reducedProp('[data-blok-database-drawer]', 'transition')).toBe('none');
   });
 
-  it.each([
-    '[data-blok-database-dragging] [data-blok-database-card]',
-    '[data-blok-database-dragging] [data-blok-database-cards]',
-    '[data-blok-database-column-reordering] [data-blok-database-column]',
-    '[data-blok-database-column-reordering] [data-blok-database-board]',
-  ])('drops the drag displacement glide on %s', (selector) => {
-    expect(reducedProp(selector, 'transition')).toBe('none');
+  it('drops the drop line fade', () => {
+    expect(reducedProp('[data-blok-database-drop-line]', 'transition')).toBe('none');
+  });
+
+  it('has no drag displacement glide left to stand down: cards and columns never move during a drag', () => {
+    expect(source).not.toMatch(/\[data-blok-database-dragging\] \[data-blok-database-card\] \{[^}]*margin-top/);
+    expect(source).not.toMatch(/\[data-blok-database-dragging\] \[data-blok-database-cards\] \{[^}]*padding-bottom/);
+    expect(source).not.toMatch(/\[data-blok-database-column-reordering\] \[data-blok-database-column\] \{[^}]*margin-inline-start/);
   });
 
   it('drops the property popover entrance animation', () => {

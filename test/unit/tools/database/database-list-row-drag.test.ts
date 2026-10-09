@@ -91,14 +91,15 @@ describe('DatabaseListRowDrag', () => {
     expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
   });
 
-  it('sets source row opacity to 0.4 during drag', () => {
+  it('marks the source row and leaves it at full opacity during drag', () => {
     drag.beginTracking('row-0', 0, 0);
 
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 20 }));
 
     const sourceRow = wrapper.querySelector('[data-row-id="row-0"]') as HTMLElement;
 
-    expect(sourceRow.style.opacity).toBe('0.4');
+    expect(sourceRow.hasAttribute('data-blok-database-drag-source')).toBe(true);
+    expect(sourceRow.style.opacity).toBe('');
   });
 
   it('calls onDrop with correct result for downward move (row-0 dragged between row-1 and row-2)', () => {
@@ -148,31 +149,27 @@ describe('DatabaseListRowDrag', () => {
     expect(onDrop).not.toHaveBeenCalled();
   });
 
-  it('displaces rows to create gap during drag (marginTop)', () => {
-    // row-0 (0–40), row-1 (40–80), row-2 (80–120), row-3 (120–160)
-    // Drag row-1, drop indicator at row-2 (clientY=85 > row-1 mid 60, < row-2 mid 100)
-    // With row-1 filtered: remaining row-0 (0–40), row-2 (80–120), row-3 (120–160)
-    // clientY=85 > row-0 mid(20), < row-2 mid(100) → beforeEl = row-2
+  it('shows a drop line on the row-1 | row-2 seam and never displaces a row', () => {
+    // Drag row-1; clientY=85 lands before row-2, whose top edge is at 80.
     drag.beginTracking('row-1', 0, 40);
 
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 85 }));
 
-    const displacedRow = wrapper.querySelector('[data-row-id="row-2"]') as HTMLElement;
+    const row2 = wrapper.querySelector('[data-row-id="row-2"]') as HTMLElement;
+    const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
 
-    expect(parseFloat(displacedRow.style.marginTop)).toBeGreaterThan(0);
+    expect(line?.style.top).toBe('78px');
+    expect(row2.style.marginTop).toBe('');
   });
 
-  it('clears displacement after pointerup', () => {
+  it('fades the drop line out after pointerup', () => {
     drag.beginTracking('row-1', 0, 40);
 
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 85 }));
-
-    const displacedRow = wrapper.querySelector('[data-row-id="row-2"]') as HTMLElement;
-
-    expect(parseFloat(displacedRow.style.marginTop)).toBeGreaterThan(0);
-
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 85 }));
 
-    expect(displacedRow.style.marginTop).toBe('');
+    const lines = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'));
+
+    expect(lines.every((line) => line.style.opacity === '0')).toBe(true);
   });
 });

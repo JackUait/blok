@@ -1,4 +1,5 @@
 import { copyGhostRadius } from './copy-ghost-radius';
+import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
 
@@ -26,9 +27,8 @@ export class DatabaseListRowDrag {
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
   private sourceRow: HTMLElement | null = null;
-  private sourceRowHeight = 0;
   private ghostOffsetY = 0;
-  private gapTarget: HTMLElement | null = null;
+  private readonly dropLine: DatabaseDropLine;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -38,6 +38,7 @@ export class DatabaseListRowDrag {
   constructor(options: ListRowDragOptions) {
     this.wrapper = options.wrapper;
     this.onDrop = options.onDrop;
+    this.dropLine = new DatabaseDropLine(options.wrapper);
 
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
@@ -70,16 +71,15 @@ export class DatabaseListRowDrag {
     this.ghostEl?.remove();
     this.ghostEl = null;
 
-    this.clearGap();
+    this.dropLine.hide();
 
     if (this.sourceRow) {
-      this.sourceRow.style.opacity = '';
+      this.sourceRow.removeAttribute('data-blok-database-drag-source');
       this.sourceRow = null;
     }
 
     this.isDragging = false;
     this.rowId = '';
-    this.sourceRowHeight = 0;
     this.ghostOffsetY = 0;
   }
 
@@ -90,6 +90,7 @@ export class DatabaseListRowDrag {
 
   public destroy(): void {
     this.cleanup();
+    this.dropLine.destroy();
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -128,9 +129,8 @@ export class DatabaseListRowDrag {
     if (this.sourceRow) {
       const rect = this.sourceRow.getBoundingClientRect();
 
-      this.sourceRowHeight = rect.height;
       this.ghostOffsetY = this.startY - rect.top;
-      this.sourceRow.style.opacity = '0.4';
+      this.sourceRow.setAttribute('data-blok-database-drag-source', '');
     }
 
     this.createGhost(e);
@@ -146,15 +146,14 @@ export class DatabaseListRowDrag {
 
     style.position = 'fixed';
     style.pointerEvents = 'none';
-    style.opacity = '0.85';
+    style.opacity = '0.4';
     style.zIndex = '50';
-    style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
     style.overflow = 'hidden';
 
     if (this.sourceRow) {
       const clone = this.sourceRow.cloneNode(true) as HTMLElement;
 
-      clone.style.opacity = '';
+      clone.removeAttribute('data-blok-database-drag-source');
       ghost.appendChild(clone);
 
       copyGhostRadius(this.sourceRow, ghost);
@@ -182,27 +181,31 @@ export class DatabaseListRowDrag {
   }
 
   private updateDropIndicator(e: PointerEvent): void {
-    const position = this.getDropPosition(e.clientY);
-    const beforeEl = position.beforeEl as HTMLElement | null;
+    const beforeEl = this.getDropPosition(e.clientY).beforeEl;
+    // The source row stays in place, so it counts as a neighbour for the line.
+    const visible = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]'));
 
-    if (beforeEl) {
-      if (beforeEl === this.gapTarget) {
-        return;
-      }
+    if (beforeEl instanceof HTMLElement) {
+      const rect = beforeEl.getBoundingClientRect();
+      const above = visible[visible.indexOf(beforeEl) - 1];
+      const centerY = above === undefined ? rect.top : (above.getBoundingClientRect().bottom + rect.top) / 2;
 
-      this.clearGap();
-      beforeEl.style.marginTop = `${this.sourceRowHeight}px`;
-      this.gapTarget = beforeEl;
-    } else {
-      this.clearGap();
+      this.dropLine.showHorizontal({ left: rect.left, centerY, width: rect.width });
+
+      return;
     }
-  }
 
-  private clearGap(): void {
-    if (this.gapTarget) {
-      this.gapTarget.style.marginTop = '';
-      this.gapTarget = null;
+    const last = visible.at(-1);
+
+    if (last === undefined) {
+      this.dropLine.hide();
+
+      return;
     }
+
+    const rect = last.getBoundingClientRect();
+
+    this.dropLine.showHorizontal({ left: rect.left, centerY: rect.bottom, width: rect.width });
   }
 
   private getDropPosition(clientY: number): { beforeEl: Element | null } {

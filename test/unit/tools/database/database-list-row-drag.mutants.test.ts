@@ -51,29 +51,26 @@ const ROW_LEFT = 24;
 const ROW_WIDTH = 376;
 
 /**
- * The six unconditional declarations `createGhost` writes before it looks at
+ * The five unconditional declarations `createGhost` writes before it looks at
  * the source row. Asserted as a whole so a blanked literal (which cssstyle
  * drops from the declaration entirely) cannot hide.
  */
 const GHOST_BASE_STYLE: Record<string, string> = {
   position: 'fixed',
   'pointer-events': 'none',
-  opacity: '0.85',
+  opacity: '0.4',
   'z-index': '50',
-  'box-shadow': '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)',
   overflow: 'hidden',
 };
 
 /**
- * The same six declarations in source order. cssText is asserted as well as
+ * The same five declarations in source order. cssText is asserted as well as
  * the map because a blanked `top` in `createGhost` is re-added by
  * `updateGhostPosition` with an identical value — only the position of `top`
  * within the declaration moves.
  */
 const GHOST_BASE_CSS =
-  'position: fixed; pointer-events: none; opacity: 0.85; z-index: 50; ' +
-  'box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1); ' +
-  'overflow: hidden;';
+  'position: fixed; pointer-events: none; opacity: 0.4; z-index: 50; overflow: hidden;';
 
 /**
  * jsdom performs no layout, so every rect is all-zeros unless it is stubbed.
@@ -169,67 +166,57 @@ const readStyle = (element: HTMLElement): Record<string, string> => {
   return declarations;
 };
 
-const readMarginTops = (wrapper: HTMLElement): Record<string, string> => {
-  const margins: Record<string, string> = {};
-
-  wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]').forEach((row) => {
-    margins[row.getAttribute('data-row-id') ?? '?'] = row.style.marginTop;
-  });
-
-  return margins;
-};
-
-const readOpacities = (wrapper: HTMLElement): Record<string, string> => {
-  const opacities: Record<string, string> = {};
-
-  wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]').forEach((row) => {
-    opacities[row.getAttribute('data-row-id') ?? '?'] = row.style.opacity;
-  });
-
-  return opacities;
-};
+/** The drop line that is showing, ignoring one that is fading out. */
+const liveLine = (): HTMLElement | null => Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'))
+  .find((el) => el.style.opacity !== '0') ?? null;
 
 /**
- * Records every `marginTop` write on one row. An idempotent re-write is
- * invisible in the resulting value, so the write list is the only witness.
+ * Marks the row the drop line sits on top of with 'line'. Rows touch, so the
+ * line is centred on the row's top edge. Every row must stay unmoved ('' margin).
  */
-const recordMarginTopWrites = (row: HTMLElement): string[] => {
-  const writes: string[] = [];
-  let current = row.style.marginTop;
+const readDropMarks = (wrapper: HTMLElement): Record<string, string> => {
+  const marks: Record<string, string> = {};
+  const line = liveLine();
 
-  Object.defineProperty(row.style, 'marginTop', {
-    get: () => current,
-    set: (value: string) => {
-      current = value;
-      writes.push(value);
-    },
-    configurable: true,
+  // The fixture stacks rows from y = 0, so a row's top follows from its index.
+  wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]').forEach((row, index) => {
+    const onRow = line !== null && line.style.top === `${index * ROW_HEIGHT - 2}px`;
+
+    expect(row.style.marginTop).toBe('');
+    marks[row.getAttribute('data-row-id') ?? '?'] = onRow ? 'line' : '';
   });
 
-  return writes;
+  return marks;
+};
+
+const readSourceMarks = (wrapper: HTMLElement): Record<string, string> => {
+  const marks: Record<string, string> = {};
+
+  wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]').forEach((row) => {
+    expect(row.style.opacity).toBe('');
+    marks[row.getAttribute('data-row-id') ?? '?'] = row.hasAttribute('data-blok-database-drag-source') ? 'source' : '';
+  });
+
+  return marks;
 };
 
 /**
- * Runs `onBlank` the first time the row's opacity is blanked. `cleanup()` does
+ * Runs `onClear` the first time the source mark is removed. `cleanup()` does
  * that AFTER it has removed its document listeners but BEFORE it resets
  * `isDragging`/`rowId`, which is the only window in which those two resets are
  * observable from outside the class.
  */
-const onOpacityBlanked = (row: HTMLElement, onBlank: () => void): void => {
-  let current = row.style.opacity;
+const onSourceCleared = (row: HTMLElement, onClear: () => void): void => {
+  const remove = row.removeAttribute.bind(row);
   let fired = false;
 
-  Object.defineProperty(row.style, 'opacity', {
-    get: () => current,
-    set: (value: string) => {
-      current = value;
+  vi.spyOn(row, 'removeAttribute').mockImplementation((name: string) => {
+    remove(name);
 
-      if (value === '' && !fired) {
-        fired = true;
-        onBlank();
-      }
-    },
-    configurable: true,
+    if (name === 'data-blok-database-drag-source' && !fired) {
+      fired = true;
+      onClear();
+    }
   });
 };
 
@@ -311,23 +298,23 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       move(60);
 
       expect(ghostCount()).toBe(1);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '40px',
+        'row-2': 'line',
         'row-3': '',
       });
 
       drag.beginTracking('row-1', 0, 40);
 
       expect(ghostCount()).toBe(0);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
         'row-3': '',
       });
-      expect(readOpacities(wrapper)).toEqual({
+      expect(readSourceMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -344,13 +331,13 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       cancelPointer();
 
       expect(ghostCount()).toBe(0);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
         'row-3': '',
       });
-      expect(readOpacities(wrapper)).toEqual({
+      expect(readSourceMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -384,13 +371,13 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       drag.destroy();
 
       expect(ghostCount()).toBe(0);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
         'row-3': '',
       });
-      expect(readOpacities(wrapper)).toEqual({
+      expect(readSourceMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -398,12 +385,12 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       });
     });
 
-    it('dims the source row while dragging and restores it on drop', () => {
+    it('marks the source row while dragging, leaves it in place, and unmarks it on drop', () => {
       drag.beginTracking('row-0', 0, 0);
       move(60);
 
-      expect(readOpacities(wrapper)).toEqual({
-        'row-0': '0.4',
+      expect(readSourceMarks(wrapper)).toEqual({
+        'row-0': 'source',
         'row-1': '',
         'row-2': '',
         'row-3': '',
@@ -411,7 +398,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
 
       up(60);
 
-      expect(readOpacities(wrapper)).toEqual({
+      expect(readSourceMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -423,7 +410,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       const sourceRow = requireRow(wrapper, 'row-0');
       let restarted = false;
 
-      onOpacityBlanked(sourceRow, () => {
+      onSourceCleared(sourceRow, () => {
         restarted = true;
         // cleanup() has already removed its listeners at this point, so the
         // listeners this call adds outlive the reset that follows it.
@@ -440,7 +427,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       // is still marked active is the only thing that can displace a row.
       move(45);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -454,7 +441,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       drag.beginTracking('row-2', 0, 100);
       move(95);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -472,7 +459,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       move(10);
 
       expect(ghostCount()).toBe(0);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -488,7 +475,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       drag.beginTracking('row-0', 0, 0);
       move(5);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -587,9 +574,9 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       });
       expect(ghost.style.cssText).toBe(`${GHOST_BASE_CSS} left: 0px; top: 50px;`);
       expect(ghost.children).toHaveLength(0);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
-        'row-1': '0px',
+        'row-1': 'line',
         'row-2': '',
         'row-3': '',
       });
@@ -617,10 +604,10 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       move(90);
 
       expect(drainErrors()).toEqual([]);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '0px',
+        'row-2': 'line',
         'row-3': '',
       });
     });
@@ -633,17 +620,17 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       pressKey('a');
 
       expect(ghostCount()).toBe(1);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '40px',
+        'row-2': 'line',
         'row-3': '',
       });
 
       pressKey('Escape');
 
       expect(ghostCount()).toBe(0);
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
@@ -654,61 +641,58 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
   });
 
   describe('drop indicator', () => {
-    it('does not rewrite the gap when the target has not changed', () => {
+    it('keeps one line on the page while the target stays the same', () => {
       drag.beginTracking('row-0', 0, 0);
       move(85);
-
-      const row2 = requireRow(wrapper, 'row-2');
-      const writes = recordMarginTopWrites(row2);
-
       move(90);
 
-      expect(writes).toEqual([]);
-      expect(row2.style.marginTop).toBe('40px');
-
-      Reflect.deleteProperty(row2.style, 'marginTop');
+      expect(document.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
+      expect(liveLine()?.style.top).toBe('78px');
+      expect(liveLine()?.style.left).toBe(`${ROW_LEFT}px`);
+      expect(liveLine()?.style.width).toBe(`${ROW_WIDTH}px`);
     });
 
-    it('moves the gap from one row to the next', () => {
+    it('moves the line from one row to the next', () => {
       drag.beginTracking('row-0', 0, 0);
       move(50);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
-        'row-1': '40px',
+        'row-1': 'line',
         'row-2': '',
         'row-3': '',
       });
 
       move(90);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '40px',
+        'row-2': 'line',
         'row-3': '',
       });
     });
 
-    it('clears the gap once the pointer passes the last row', () => {
+    it('draws the line under the last row once the pointer passes it', () => {
       drag.beginTracking('row-0', 0, 0);
       move(90);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '40px',
+        'row-2': 'line',
         'row-3': '',
       });
 
       move(500);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
         'row-2': '',
         'row-3': '',
       });
+      expect(liveLine()?.style.top).toBe(`${4 * ROW_HEIGHT - 2}px`);
       expect(drainErrors()).toEqual([]);
     });
 
@@ -718,10 +702,10 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       drag.beginTracking('row-1', 0, 40);
       move(55);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '40px',
+        'row-2': 'line',
         'row-3': '',
       });
     });
@@ -731,10 +715,10 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       drag.beginTracking('row-0', 0, 0);
       move(60);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-0': '',
         'row-1': '',
-        'row-2': '40px',
+        'row-2': 'line',
         'row-3': '',
       });
 
@@ -793,7 +777,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       const sourceRow = requireRow(wrapper, 'row-a');
       let restarted = false;
 
-      onOpacityBlanked(sourceRow, () => {
+      onSourceCleared(sourceRow, () => {
         restarted = true;
         drag.beginTracking('row-d', 0, 40);
       });
@@ -808,10 +792,10 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       // back at its reset value of ''.
       move(55);
 
-      expect(readMarginTops(wrapper)).toEqual({
+      expect(readDropMarks(wrapper)).toEqual({
         'row-a': '',
         '': '',
-        'row-c': '0px',
+        'row-c': 'line',
         'row-d': '',
       });
     });

@@ -204,14 +204,16 @@ describe('DatabaseColumnDrag', () => {
       });
     });
 
-    it('opens the gap on the inline-start side of the target column', () => {
+    it('draws the line on the inline-start side of the target column, and moves no column', () => {
       drag.beginTracking('opt-0', 550, 50);
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 50 }));
 
       const target = wrapper.querySelector<HTMLElement>('[data-option-id="opt-2"]');
+      const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
 
-      expect(target?.style.marginInlineStart).not.toBe('');
-      expect(target?.style.marginLeft).toBe('');
+      // RTL: opt-2 spans 0..200 and starts at its right edge, the seam with opt-1.
+      expect(line?.style.left).toBe('198px');
+      expect(target?.style.marginInlineStart).toBe('');
     });
   });
 });

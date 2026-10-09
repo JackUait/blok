@@ -56,6 +56,7 @@
   --blok-database-table-cell-ring: rgba(55, 53, 47, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+  --blok-database-drop-line: var(--blok-database-table-drop-line);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -255,29 +256,25 @@
 }
 
 /**
- * During drag — smooth card displacement transitions.
+ * During drag the source card stays in place with the hover tint (research/08).
  */
-[data-blok-database-dragging] [data-blok-database-card] {
-  transition: box-shadow 150ms ease, border-color 150ms ease, margin-top 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+[data-blok-database-card][data-blok-database-drag-source] {
+  background-color: var(--blok-database-card-bg-hover);
 }
 
-[data-blok-database-dragging] [data-blok-database-cards] {
-  transition: padding-bottom 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-/**
- * During column reorder — smooth gap displacement and grab cursor.
- */
 [data-blok-database-column-reordering] {
   cursor: grabbing;
 }
 
-[data-blok-database-column-reordering] [data-blok-database-column] {
-  transition: margin-inline-start 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-[data-blok-database-column-reordering] [data-blok-database-board] {
-  transition: padding-inline-end 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+/**
+ * The drop line lives on document.body, outside the editor's token scope.
+ * database-drop-line.ts copies the board's resolved token inline; this
+ * fallback covers a board that resolves none.
+ */
+[data-blok-database-drop-line] {
+  z-index: 88;
+  background-color: var(--blok-database-drop-line, rgba(35, 131, 226, 0.43));
+  transition: opacity 200ms ease;
 }
 
 /**
@@ -1359,10 +1356,7 @@
 /* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-drawer],
-  [data-blok-database-dragging] [data-blok-database-card],
-  [data-blok-database-dragging] [data-blok-database-cards],
-  [data-blok-database-column-reordering] [data-blok-database-column],
-  [data-blok-database-column-reordering] [data-blok-database-board] {
+  [data-blok-database-drop-line] {
     transition: none;
   }
 

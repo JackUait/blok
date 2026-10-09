@@ -1,7 +1,11 @@
 import { getElementDirection, inlineStartOffset } from '../../components/utils/direction';
 import { copyGhostRadius } from './copy-ghost-radius';
+import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
+
+/** Half the 12px gap between columns, so the line sits in the gap. */
+const HALF_GAP = 6;
 
 export interface GroupDragResult {
   optionId: string;
@@ -28,10 +32,8 @@ export class DatabaseColumnDrag {
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
   private sourceColumn: HTMLElement | null = null;
-  private sourceColumnWidth = 0;
   private ghostOffsetX = 0;
-  private gapTarget: HTMLElement | null = null;
-  private gapContainer: HTMLElement | null = null;
+  private readonly dropLine: DatabaseDropLine;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -41,6 +43,7 @@ export class DatabaseColumnDrag {
   constructor(options: GroupDragOptions) {
     this.wrapper = options.wrapper;
     this.onDrop = options.onDrop;
+    this.dropLine = new DatabaseDropLine(options.wrapper);
 
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
@@ -71,17 +74,16 @@ export class DatabaseColumnDrag {
     this.ghostEl?.remove();
     this.ghostEl = null;
 
-    this.clearGap();
+    this.dropLine.hide();
     this.wrapper.removeAttribute('data-blok-database-column-reordering');
 
     if (this.sourceColumn) {
-      this.sourceColumn.style.opacity = '';
+      this.sourceColumn.removeAttribute('data-blok-database-drag-source');
       this.sourceColumn = null;
     }
 
     this.isDragging = false;
     this.optionId = '';
-    this.sourceColumnWidth = 0;
     this.ghostOffsetX = 0;
   }
 
@@ -92,6 +94,7 @@ export class DatabaseColumnDrag {
 
   public destroy(): void {
     this.cleanup();
+    this.dropLine.destroy();
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -130,9 +133,8 @@ export class DatabaseColumnDrag {
     if (this.sourceColumn) {
       const rect = this.sourceColumn.getBoundingClientRect();
 
-      this.sourceColumnWidth = rect.width;
       this.ghostOffsetX = this.startX - rect.left;
-      this.sourceColumn.style.opacity = '0.4';
+      this.sourceColumn.setAttribute('data-blok-database-drag-source', '');
     }
 
     this.wrapper.setAttribute('data-blok-database-column-reordering', '');
@@ -149,17 +151,14 @@ export class DatabaseColumnDrag {
 
     style.position = 'fixed';
     style.pointerEvents = 'none';
-    style.opacity = '0.85';
+    style.opacity = '0.4';
     style.zIndex = '50';
-    style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
     style.overflow = 'hidden';
-    style.transform = 'rotate(1deg) scale(1.02)';
-    style.transformOrigin = 'center center';
 
     if (this.sourceColumn) {
       const clone = this.sourceColumn.cloneNode(true) as HTMLElement;
 
-      clone.style.opacity = '';
+      clone.removeAttribute('data-blok-database-drag-source');
       ghost.appendChild(clone);
 
       copyGhostRadius(this.sourceColumn, ghost);
@@ -186,48 +185,38 @@ export class DatabaseColumnDrag {
     this.ghostEl.style.left = `${e.clientX - this.ghostOffsetX}px`;
   }
 
-  /**
-   * Opens a gap at the drop position by applying an inline-start margin to the target column,
-   * matching the card drag pattern of gap-based drop indicators.
-   */
   private updateDropIndicator(clientX: number): void {
-    const position = this.getDropPosition(clientX);
+    const { beforeColumn } = this.getDropPosition(clientX);
+    // The source column stays in place, so it counts as a neighbour for the line.
+    const visible = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]'));
+    const rtl = getElementDirection(this.wrapper) === 'rtl';
+    const startOf = (rect: DOMRect): number => (rtl ? rect.right : rect.left);
+    const endOf = (rect: DOMRect): number => (rtl ? rect.left : rect.right);
+    const outward = rtl ? -HALF_GAP : HALF_GAP;
 
-    if (position.beforeColumn) {
-      if (position.beforeColumn === this.gapTarget) {
-        return;
-      }
+    if (beforeColumn !== null) {
+      const rect = beforeColumn.getBoundingClientRect();
+      const previous = visible[visible.indexOf(beforeColumn) - 1];
+      const centerX = previous === undefined
+        ? startOf(rect) - outward
+        : (endOf(previous.getBoundingClientRect()) + startOf(rect)) / 2;
 
-      this.clearGap();
-      position.beforeColumn.style.marginInlineStart = `${this.sourceColumnWidth}px`;
-      this.gapTarget = position.beforeColumn;
-    } else {
-      this.applyEndGap();
-    }
-  }
+      this.dropLine.showVertical({ centerX, top: rect.top, height: rect.height });
 
-  private applyEndGap(): void {
-    const boardArea = this.wrapper.querySelector<HTMLElement>('[data-blok-database-board]');
-
-    if (!boardArea || boardArea === this.gapContainer) {
       return;
     }
 
-    this.clearGap();
-    boardArea.style.paddingInlineEnd = `${this.sourceColumnWidth}px`;
-    this.gapContainer = boardArea;
-  }
+    const last = visible.at(-1);
 
-  private clearGap(): void {
-    if (this.gapTarget) {
-      this.gapTarget.style.marginInlineStart = '';
-      this.gapTarget = null;
+    if (last === undefined) {
+      this.dropLine.hide();
+
+      return;
     }
 
-    if (this.gapContainer) {
-      this.gapContainer.style.paddingInlineEnd = '';
-      this.gapContainer = null;
-    }
+    const rect = last.getBoundingClientRect();
+
+    this.dropLine.showVertical({ centerX: endOf(rect) + outward, top: rect.top, height: rect.height });
   }
 
   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {

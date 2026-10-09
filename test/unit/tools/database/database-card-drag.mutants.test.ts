@@ -116,29 +116,14 @@ const startDrag = (board: Board, clientX = START_X + 20, clientY = START_Y): voi
   document.dispatchEvent(pointer('pointermove', clientX, clientY));
 };
 
-/**
- * Records every write to one style property. Re-applying the same gap is
- * invisible in the final DOM — the write itself is the only evidence.
- */
-const trackStyleWrites = (el: HTMLElement, property: 'marginTop' | 'paddingBottom'): string[] => {
-  const writes: string[] = [];
-  const real = el.style;
+/** The drop line that is showing, ignoring one that is fading out. */
+const liveLine = (): HTMLElement | null => Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'))
+  .find((el) => el.style.opacity !== '0') ?? null;
 
-  Object.defineProperty(el, 'style', {
-    configurable: true,
-    get: () => new Proxy(real, {
-      get: (target, key) => Reflect.get(target, key, target) as unknown,
-      set: (target, key, value: string) => {
-        if (key === property) {
-          writes.push(String(value));
-        }
+const lineBox = (): { left: string; top: string; width: string; height: string } | null => {
+  const el = liveLine();
 
-        return Reflect.set(target, key, value, target);
-      },
-    }),
-  });
-
-  return writes;
+  return el === null ? null : { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height };
 };
 
 /**
@@ -179,9 +164,8 @@ const recordWindowErrors = (): { errors: string[]; stop: () => void } => {
 
 const assertClean = (board: Board): void => {
   expect(ghost()).toBeNull();
-  expect(cardOf(board, 'a1').style.opacity).toBe('');
-  expect(cardOf(board, 'a2').style.marginTop).toBe('');
-  expect(board.containers[0].style.paddingBottom).toBe('');
+  expect(cardOf(board, 'a1').hasAttribute('data-blok-database-drag-source')).toBe(false);
+  expect(liveLine()).toBeNull();
   expect(board.wrapper.hasAttribute('data-blok-database-dragging')).toBe(false);
 };
 
@@ -223,7 +207,7 @@ describe('database card drag mutants', () => {
 
       expect(ghost()).toBeNull();
       expect(board.wrapper.hasAttribute('data-blok-database-dragging')).toBe(false);
-      expect(cardOf(board, 'a2').style.marginTop).toBe('');
+      expect(liveLine()).toBeNull();
     });
 
     it('ignores a vertical move that only reaches the threshold', () => {
@@ -232,7 +216,7 @@ describe('database card drag mutants', () => {
       startDrag(board, START_X, START_Y + DRAG_THRESHOLD);
 
       expect(ghost()).toBeNull();
-      expect(cardOf(board, 'a2').style.marginTop).toBe('');
+      expect(liveLine()).toBeNull();
     });
 
     it('starts on a horizontal move past the threshold in the negative direction', () => {
@@ -262,7 +246,7 @@ describe('database card drag mutants', () => {
   });
 
   describe('the ghost', () => {
-    it('carries a copy of the card and fades the original', () => {
+    it('carries a copy of the card and leaves the original in place, marked as the source', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board);
@@ -275,7 +259,9 @@ describe('database card drag mutants', () => {
 
       expect(clone.textContent).toBe('a1');
       expect(clone.style.opacity).toBe('');
-      expect(cardOf(board, 'a1').style.opacity).toBe('0.4');
+      expect(clone.hasAttribute('data-blok-database-drag-source')).toBe(false);
+      expect(cardOf(board, 'a1').style.opacity).toBe('');
+      expect(cardOf(board, 'a1').getAttribute('data-blok-database-drag-source')).toBe('');
     });
 
     it('keeps the grab offset, so the card does not jump under the cursor', () => {
@@ -298,22 +284,22 @@ describe('database card drag mutants', () => {
       expect(ghost()?.style.top).toBe('170px');
     });
 
-    it('is inert, lifted and tilted', () => {
+    it('is inert, flat and see-through, as Notion draws it', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board);
 
       const el = ghost();
 
+      expect(el?.style.opacity).toBe('0.4');
+      expect(el?.style.transform).toBe('');
+      expect(el?.style.boxShadow).toBe('');
       expect(el?.getAttribute('data-blok-database-ghost')).toBe('');
       expect(el?.getAttribute('contenteditable')).toBe('false');
       expect(el?.style.position).toBe('fixed');
       expect(el?.style.pointerEvents).toBe('none');
-      expect(el?.style.opacity).toBe('0.85');
       expect(el?.style.zIndex).toBe('50');
       expect(el?.style.overflow).toBe('hidden');
-      expect(el?.style.transform).toBe('rotate(2deg) scale(1.02)');
-      expect(el?.style.transformOrigin).toBe('center center');
     });
 
     it('keeps the radius the card has in its column', () => {
@@ -395,92 +381,77 @@ describe('database card drag mutants', () => {
     });
   });
 
-  describe('the drop gap', () => {
-    it('opens a gap above the card the cursor is over', () => {
+  describe('the drop line', () => {
+    it('draws the line between the card above and the card the cursor is over', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board);
 
-      expect(cardOf(board, 'a2').style.marginTop).toBe(`${CARD_HEIGHT}px`);
+      // a1 still sits in place, so the line goes on the a1 | a2 seam at y = 110.
+      expect(lineBox()).toEqual({ left: `${COLUMN_LEFT + CARD_INSET}px`, top: '108px', width: `${CARD_WIDTH}px`, height: '4px' });
     });
 
-    it('moves the gap rather than opening a second one', () => {
+    it('moves the line rather than drawing a second one, and never moves a card', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 170, 160));
 
-      expect(cardOf(board, 'a2').style.marginTop).toBe('');
-      expect(cardOf(board, 'a3').style.marginTop).toBe(`${CARD_HEIGHT}px`);
-    });
-
-    it('pads the card list when the cursor is past the last card', () => {
-      const board = buildBoard(TWO_COLUMNS);
-
-      startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 170, 300));
-
-      expect(board.containers[0].style.paddingBottom).toBe(`${CARD_HEIGHT}px`);
-      expect(cardOf(board, 'a2').style.marginTop).toBe('');
-    });
-
-    it('closes the padding when the cursor comes back over a card', () => {
-      const board = buildBoard(TWO_COLUMNS);
-
-      startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 170, 300));
-      document.dispatchEvent(pointer('pointermove', 170, 80));
-
+      expect(lineBox()?.top).toBe('168px');
+      expect(document.body.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
+      expect(cardOf(board, 'a3').style.marginTop).toBe('');
       expect(board.containers[0].style.paddingBottom).toBe('');
-      expect(cardOf(board, 'a2').style.marginTop).toBe(`${CARD_HEIGHT}px`);
     });
 
-    it('closes the gap when the cursor leaves every column', () => {
+    it('draws the line under the last card when the cursor is past it', () => {
+      const board = buildBoard(TWO_COLUMNS);
+
+      startDrag(board);
+      document.dispatchEvent(pointer('pointermove', 170, 300));
+
+      expect(lineBox()?.top).toBe(`${FIRST_CARD_TOP + 3 * CARD_HEIGHT + 2}px`);
+    });
+
+    it('draws the line in another column when the cursor crosses over', () => {
+      const board = buildBoard(TWO_COLUMNS);
+
+      startDrag(board);
+      document.dispatchEvent(pointer('pointermove', 350, 80));
+
+      expect(lineBox()).toEqual({
+        left: `${COLUMN_LEFT + COLUMN_WIDTH + CARD_INSET}px`,
+        top: `${FIRST_CARD_TOP + CARD_HEIGHT - 2}px`,
+        width: `${CARD_WIDTH}px`,
+        height: '4px',
+      });
+    });
+
+    it('draws the line at the top of an empty column', () => {
+      const board = buildBoard([['a1', 'a2'], []]);
+
+      stubRect(board.containers[1], { left: COLUMN_LEFT + COLUMN_WIDTH + CARD_INSET, top: 40, width: CARD_WIDTH, height: 40 });
+      startDrag(board);
+      document.dispatchEvent(pointer('pointermove', 350, 80));
+
+      expect(lineBox()).toEqual({ left: `${COLUMN_LEFT + COLUMN_WIDTH + CARD_INSET}px`, top: '40px', width: `${CARD_WIDTH}px`, height: '4px' });
+    });
+
+    it('fades the line out when the cursor leaves every column', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 800, 80));
 
-      expect(cardOf(board, 'a2').style.marginTop).toBe('');
+      expect(liveLine()).toBeNull();
     });
 
-    it('closes the gap when the target column has no card list', () => {
+    it('fades the line out on drop', () => {
       const board = buildBoard(TWO_COLUMNS);
-      const container = board.containers[1];
-
-      while (container.firstChild !== null) {
-        board.columns[1].appendChild(container.firstChild);
-      }
-      container.remove();
 
       startDrag(board);
+      document.dispatchEvent(pointer('pointerup', 170, 80));
 
-      expect(cardOf(board, 'a2').style.marginTop).toBe(`${CARD_HEIGHT}px`);
-
-      document.dispatchEvent(pointer('pointermove', 350, 300));
-
-      expect(cardOf(board, 'a2').style.marginTop).toBe('');
-    });
-
-    it('does not rewrite an unchanged card gap', () => {
-      const board = buildBoard(TWO_COLUMNS);
-      const writes = trackStyleWrites(cardOf(board, 'a2'), 'marginTop');
-
-      startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 172, 82));
-      document.dispatchEvent(pointer('pointermove', 174, 84));
-
-      expect(writes).toEqual([`${CARD_HEIGHT}px`]);
-    });
-
-    it('does not rewrite an unchanged list padding', () => {
-      const board = buildBoard(TWO_COLUMNS);
-      const writes = trackStyleWrites(board.containers[0], 'paddingBottom');
-
-      startDrag(board, 170, 300);
-      document.dispatchEvent(pointer('pointermove', 172, 302));
-
-      expect(writes).toEqual([`${CARD_HEIGHT}px`]);
+      expect(liveLine()).toBeNull();
     });
   });
 

@@ -9,6 +9,8 @@ const schema: PropertyDefinition[] = [
   { id: 'due', name: 'Due', type: 'date', position: 'a1' },
   { id: 'num', name: 'Amount', type: 'number', position: 'a2' },
   { id: 'stage', name: 'Stage', type: 'select', position: 'a3', config: { options: [{ id: 'o1', label: 'Idea', position: 'a0' }] } },
+  { id: 'prog', name: 'Progress', type: 'status', position: 'a4', config: { options: [{ id: 's1', label: 'Not started', position: 'a0', groupId: 'todo' }] } },
+  { id: 'owner', name: 'Owner', type: 'person', position: 'a5' },
 ];
 
 const click = (id: string): void => {
@@ -245,7 +247,34 @@ describe('view settings panel', () => {
 
     click('database-group-hide-all');
 
-    expect(h.state.view.groupStates).toEqual([{ id: 'o1', hidden: true }, { id: 'none', hidden: true }]);
+    expect(h.state.view.hiddenGroups).toEqual([{ id: 'o1' }, { id: 'none' }]);
+  });
+
+  it('groups a status by group or by option (research/08 "Status by")', () => {
+    const h = harness({ type: 'board', groupBy: 'prog' });
+
+    h.open('group');
+
+    expect(document.querySelector('[data-blok-testid="database-group-status-by"]')?.textContent).toContain('tools.database.groupStatusOption');
+
+    click('database-group-status-by');
+    click('database-group-status-by-group');
+
+    expect(h.ctx.updateView).toHaveBeenCalledWith({ groupByStatus: 'group' });
+    expect(exists('database-group-color-columns')).toBe(true);
+  });
+
+  it('offers "Me" first in a person filter', () => {
+    const h = harness();
+
+    h.ctx.people = () => [{ id: 'u1', name: 'Ada' }];
+    h.open('filter');
+    click('database-filter-add');
+    click('database-pick-property-owner');
+    click('database-filter-person-me');
+    click('database-filter-person-u1');
+
+    expect(h.state.view.filters[0]).toMatchObject({ propertyId: 'owner', operator: 'contains', value: ['me', 'u1'] });
   });
 
   it('adds a conditional color rule and picks its background', () => {

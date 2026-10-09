@@ -168,7 +168,6 @@ export {
   GroupSort,
   DateGroupBy,
   GroupSettings,
-  GroupState,
   ColorRule,
   DatabaseViewConfig,
   DatabaseRowData,

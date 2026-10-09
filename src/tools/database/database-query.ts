@@ -85,6 +85,8 @@ export interface QuerySource {
   groupKeysOf?: (row: DatabaseRow) => string[];
   /** Today, for relative date filters. Default: the clock. */
   now?: Date;
+  /** The current user's id, for a person filter's "Me". */
+  me?: string | null;
 }
 
 export interface QueryRowsRequest {
@@ -303,6 +305,30 @@ const MATCHERS: Record<PropertyType, Matcher> = {
   lastEditedTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
 };
 
+/** A person filter's value for the current user (Notion API `"me"`). */
+export const ME_FILTER_VALUE = 'me';
+
+const PERSON_TYPES: readonly PropertyType[] = ['person', 'createdBy', 'lastEditedBy'];
+
+/** Stands in for "Me" when nobody is signed in: no person has this id. */
+const NOBODY = '__blok-nobody__';
+
+/**
+ * "Me" becomes the current user's id. With nobody signed in it matches
+ * nobody, as the Notion API does for an internal connection.
+ */
+const resolveMe = (target: PropertyValue, me: string | null | undefined): PropertyValue => {
+  const ids = toIdList(target);
+
+  if (!ids.includes(ME_FILTER_VALUE)) return target;
+
+  return ids.flatMap((id) => {
+    if (id !== ME_FILTER_VALUE) return [id];
+
+    return me === undefined || me === null || me === '' ? [NOBODY] : [me];
+  });
+};
+
 /**
  * Whether one condition holds. `undefined` means the engine cannot read it
  * (unknown operator, wrong type, deleted property, missing value): hiding
@@ -312,14 +338,16 @@ export const matchCondition = (
   row: DatabaseRow,
   condition: Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>,
   schema: PropertyDefinition[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  me?: string | null
 ): boolean | undefined => {
   const property = schema.find((p) => p.id === condition.propertyId);
 
   // A type from a newer client has no entry here: let the row through.
   if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(condition.operator) ?? false)) return undefined;
+  const target = PERSON_TYPES.includes(property.type) ? resolveMe(condition.value, me) : condition.value;
 
-  return MATCHERS[property.type](readPropertyValue(row, property), condition.operator, condition.value, property, now);
+  return MATCHERS[property.type](readPropertyValue(row, property), condition.operator, target, property, now);
 };
 
 /** AND of every filter. A filter the engine cannot read lets the row through. */
@@ -327,21 +355,22 @@ export const rowMatchesFilters = (
   row: DatabaseRow,
   filters: FilterConfig[],
   schema: PropertyDefinition[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  me?: string | null
 ): boolean =>
-  filters.every((filter) => matchCondition(row, filter, schema, now) ?? true);
+  filters.every((filter) => matchCondition(row, filter, schema, now, me) ?? true);
 
 export const isFilterGroup = (node: FilterNode): node is FilterGroup =>
   Array.isArray((node as Partial<FilterGroup>).filterRules);
 
 /** `undefined` means the node says nothing about the row: no readable rule inside. */
-const evaluate = (row: DatabaseRow, node: FilterNode, schema: PropertyDefinition[], now: Date): boolean | undefined => {
+const evaluate = (row: DatabaseRow, node: FilterNode, schema: PropertyDefinition[], now: Date, me: string | null | undefined): boolean | undefined => {
   if (!isFilterGroup(node)) {
-    return matchCondition(row, node, schema, now);
+    return matchCondition(row, node, schema, now, me);
   }
 
   const results = node.filterRules
-    .map((child) => evaluate(row, child, schema, now))
+    .map((child) => evaluate(row, child, schema, now, me))
     .filter((result): result is boolean => result !== undefined);
 
   if (results.length === 0) return undefined;
@@ -354,8 +383,9 @@ export const rowMatchesFilterTree = (
   row: DatabaseRow,
   tree: FilterGroup | undefined,
   schema: PropertyDefinition[],
-  now: Date = new Date()
-): boolean => tree === undefined || (evaluate(row, tree, schema, now) ?? true);
+  now: Date = new Date(),
+  me?: string | null
+): boolean => tree === undefined || (evaluate(row, tree, schema, now, me) ?? true);
 
 /** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
 const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => a.position.localeCompare(b.position);
@@ -540,8 +570,8 @@ const filteredRows = (source: QuerySource, view: DatabaseViewConfig, search?: st
   const now = source.now ?? new Date();
 
   return source.rows.filter((row) =>
-    rowMatchesFilters(row, view.filters, source.schema, now) &&
-    rowMatchesFilterTree(row, view.filterTree, source.schema, now) &&
+    rowMatchesFilters(row, view.filters, source.schema, now, source.me) &&
+    rowMatchesFilterTree(row, view.filterTree, source.schema, now, source.me) &&
     rowMatchesSearch(row, search, source.schema));
 };
 

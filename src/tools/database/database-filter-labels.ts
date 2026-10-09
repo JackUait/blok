@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from './relative-dates';
+import { ME_FILTER_VALUE } from './database-query';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -10,49 +11,66 @@ export interface OperatorChoice {
   labelKey: string;
 }
 
-const op = (operator: string, labelKey: string): OperatorChoice => ({ operator, labelKey: `tools.database.${labelKey}` });
+/** Keys under `tools.database.filterOperator.`, shared with database-query's FILTER_OPERATOR_LABEL_KEYS. */
+const op = (operator: string, labelKey: string): OperatorChoice => ({ operator, labelKey: `tools.database.filterOperator.${labelKey}` });
 
-const EMPTY = [op('is_empty', 'filterOpIsEmpty'), op('is_not_empty', 'filterOpIsNotEmpty')];
+const EMPTY = [op('is_empty', 'isEmpty'), op('is_not_empty', 'isNotEmpty')];
 
 const TEXT = [
-  op('equals', 'filterOpIs'),
-  op('does_not_equal', 'filterOpIsNot'),
-  op('contains', 'filterOpContains'),
-  op('does_not_contain', 'filterOpDoesNotContain'),
-  op('starts_with', 'filterOpStartsWith'),
-  op('ends_with', 'filterOpEndsWith'),
+  op('equals', 'is'),
+  op('does_not_equal', 'isNot'),
+  op('contains', 'contains'),
+  op('does_not_contain', 'doesNotContain'),
+  op('starts_with', 'startsWith'),
+  op('ends_with', 'endsWith'),
   ...EMPTY,
 ];
 
-/** Menu labels measured in research/08. Date labels were not captured there; these follow Notion's help wording (unverified). */
+const COMPARE = [
+  op('equals', 'numberEquals'),
+  op('does_not_equal', 'numberDoesNotEqual'),
+  op('greater_than', 'greaterThan'),
+  op('less_than', 'lessThan'),
+  op('greater_than_or_equal_to', 'greaterThanOrEqual'),
+  op('less_than_or_equal_to', 'lessThanOrEqual'),
+];
+
+const LIST = [op('contains', 'contains'), op('does_not_contain', 'doesNotContain'), ...EMPTY];
+
+/** Date labels were not captured in research/08; these follow Notion's help wording (unverified). */
+const DATE = [
+  op('equals', 'is'),
+  op('does_not_equal', 'isNot'),
+  op('before', 'before'),
+  op('after', 'after'),
+  op('on_or_before', 'onOrBefore'),
+  op('on_or_after', 'onOrAfter'),
+  op('within', 'isWithin'),
+  op('relative_to_today', 'isRelativeToToday'),
+  ...EMPTY,
+];
+
+/** Menu labels measured in research/08; status, person and files there too. */
 const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
   title: TEXT,
   text: TEXT,
   url: TEXT,
+  email: TEXT,
+  phone: TEXT,
   richText: EMPTY,
-  number: [
-    op('equals', 'filterOpNumberEquals'),
-    op('does_not_equal', 'filterOpNumberNotEquals'),
-    op('greater_than', 'filterOpNumberGreater'),
-    op('less_than', 'filterOpNumberLess'),
-    op('greater_than_or_equal_to', 'filterOpNumberGreaterOrEqual'),
-    op('less_than_or_equal_to', 'filterOpNumberLessOrEqual'),
-    ...EMPTY,
-  ],
-  select: [op('equals', 'filterOpIs'), op('does_not_equal', 'filterOpIsNot'), ...EMPTY],
-  multiSelect: [op('contains', 'filterOpContains'), op('does_not_contain', 'filterOpDoesNotContain'), ...EMPTY],
-  checkbox: [op('equals', 'filterOpIs'), op('does_not_equal', 'filterOpIsNot')],
-  date: [
-    op('equals', 'filterOpIs'),
-    op('does_not_equal', 'filterOpIsNot'),
-    op('before', 'filterOpIsBefore'),
-    op('after', 'filterOpIsAfter'),
-    op('on_or_before', 'filterOpIsOnOrBefore'),
-    op('on_or_after', 'filterOpIsOnOrAfter'),
-    op('within', 'filterOpIsWithin'),
-    op('relative_to_today', 'filterOpRelativeToToday'),
-    ...EMPTY,
-  ],
+  number: [...COMPARE, ...EMPTY],
+  uniqueId: COMPARE,
+  select: [op('equals', 'is'), op('does_not_equal', 'isNot'), ...EMPTY],
+  status: [op('equals', 'is'), op('does_not_equal', 'isNot')],
+  multiSelect: LIST,
+  person: LIST,
+  createdBy: LIST,
+  lastEditedBy: LIST,
+  files: EMPTY,
+  checkbox: [op('equals', 'is'), op('does_not_equal', 'isNot')],
+  date: DATE,
+  createdTime: DATE,
+  lastEditedTime: DATE,
 };
 
 export const operatorChoices = (type: PropertyType): OperatorChoice[] => OPERATORS[type];
@@ -111,15 +129,30 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
   const base = { id: nanoid(), propertyId: property.id };
 
   switch (property.type) {
-    case 'date': return { ...base, operator: 'this_week', value: null };
-    case 'number': return { ...base, operator: 'equals', value: null };
-    case 'select': return { ...base, operator: 'equals', value: [] };
-    case 'multiSelect': return { ...base, operator: 'contains', value: [] };
+    case 'date':
+    case 'createdTime':
+    case 'lastEditedTime':
+      return { ...base, operator: 'this_week', value: null };
+    case 'number':
+    case 'uniqueId':
+      return { ...base, operator: 'equals', value: null };
+    case 'select':
+    case 'status':
+      return { ...base, operator: 'equals', value: [] };
+    case 'multiSelect':
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy':
+      return { ...base, operator: 'contains', value: [] };
     case 'checkbox': return { ...base, operator: 'equals', value: true };
-    case 'richText': return { ...base, operator: 'is_not_empty', value: null };
+    case 'richText':
+    case 'files':
+      return { ...base, operator: 'is_not_empty', value: null };
     case 'title':
     case 'text':
     case 'url':
+    case 'email':
+    case 'phone':
       return { ...base, operator: 'contains', value: '' };
   }
 };
@@ -131,11 +164,14 @@ const isRelativeValue = (value: unknown): value is typeof RELATIVE_DATE_VALUES[n
 export const filterValueText = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
   property: PropertyDefinition,
-  t: Translate
+  t: Translate,
+  personName: (id: string) => string | undefined = () => undefined
 ): string => {
   const { operator, value } = filter;
 
-  if (operator === 'is_empty' || operator === 'is_not_empty') return t(operator === 'is_empty' ? 'tools.database.filterOpIsEmpty' : 'tools.database.filterOpIsNotEmpty');
+  if (operator === 'is_empty' || operator === 'is_not_empty') {
+    return t(operator === 'is_empty' ? 'tools.database.filterOperator.isEmpty' : 'tools.database.filterOperator.isNotEmpty');
+  }
   if (isWithin(operator)) return t(withinLabelKey(operator));
   if (operator === 'relative_to_today') {
     const span = parseRelativeSpan(value);
@@ -143,13 +179,16 @@ export const filterValueText = (
     return span === undefined ? '' : t(`tools.database.filterRelative${span.direction === 'past' ? 'Past' : 'Next'}`, { count: span.count, unit: t(`tools.database.filterUnit${span.unit.charAt(0).toUpperCase()}${span.unit.slice(1)}`) });
   }
   if (property.type === 'checkbox') return value === true ? t('tools.database.filterChecked') : t('tools.database.filterUnchecked');
-  if (property.type === 'select' || property.type === 'multiSelect') {
+  if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {
+    return idsOf(value).map((id) => (id === ME_FILTER_VALUE ? t('tools.database.filterMe') : personName(id) ?? '')).filter((name) => name !== '').join(', ');
+  }
+  if (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status') {
     const ids = idsOf(value);
     const options = property.config?.options ?? [];
 
     return ids.map((id) => options.find((o) => o.id === id)?.label ?? '').filter((label) => label !== '').join(', ');
   }
-  if (property.type === 'date' && isRelativeValue(value)) return t(relativeValueLabelKey(value));
+  if (['date', 'createdTime', 'lastEditedTime'].includes(property.type) && isRelativeValue(value)) return t(relativeValueLabelKey(value));
 
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };
@@ -158,9 +197,10 @@ export const filterValueText = (
 export const filterPillLabel = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
   property: PropertyDefinition,
-  t: Translate
+  t: Translate,
+  personName?: (id: string) => string | undefined
 ): string => {
-  const value = filterValueText(filter, property, t);
+  const value = filterValueText(filter, property, t, personName);
 
   return value === '' ? property.name : `${property.name}: ${value}`;
 };
@@ -170,16 +210,20 @@ export const sortDirectionLabelKey = (type: PropertyType, direction: SortConfig[
   const asc = direction === 'asc';
 
   switch (type) {
-    case 'number': return asc ? 'tools.database.sortLowHigh' : 'tools.database.sortHighLow';
-    case 'date': return asc ? 'tools.database.sortOldNew' : 'tools.database.sortNewOld';
+    case 'number':
+    case 'uniqueId':
+      return asc ? 'tools.database.sortLowHigh' : 'tools.database.sortHighLow';
+    case 'date':
+    case 'createdTime':
+    case 'lastEditedTime':
+      return asc ? 'tools.database.sortOldNew' : 'tools.database.sortNewOld';
     case 'title':
     case 'text':
     case 'url':
+    case 'email':
+    case 'phone':
       return asc ? 'tools.database.sortAZ' : 'tools.database.sortZA';
-    case 'select':
-    case 'multiSelect':
-    case 'checkbox':
-    case 'richText':
+    default:
       return asc ? 'tools.database.sortAscending' : 'tools.database.sortDescending';
   }
 };

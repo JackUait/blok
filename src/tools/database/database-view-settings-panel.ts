@@ -38,7 +38,8 @@ import {
 } from './filter-tree';
 import { GROUPABLE_TYPES, defaultGroupSort } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
-import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, withGroupStates } from './view-data';
+import { ME_FILTER_VALUE } from './database-query';
+import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
 import {
   LOAD_LIMITS,
   resolveLoadLimit,
@@ -95,6 +96,8 @@ export interface ViewSettingsContext {
   copyViewLink: () => void;
   /** The groups of the view's grouping (`sub` for the board's sub-grouping). */
   groups: (sub: boolean) => ViewGroupEntry[];
+  /** People the host lists, for person filters. */
+  people?: () => Array<{ id: string; name: string }>;
 }
 
 /** The option colors Notion offers (research/08). */
@@ -112,6 +115,10 @@ export class ViewSettingsPages {
 
   private t(key: string, vars?: Record<string, string | number>): string {
     return this.ctx.i18n.t(`tools.database.${key}`, vars);
+  }
+
+  private personName(id: string): string | undefined {
+    return this.ctx.people?.().find((person) => person.id === id)?.name;
   }
 
   private property(id: string | undefined): PropertyDefinition | undefined {
@@ -401,7 +408,7 @@ export class ViewSettingsPages {
           return [{
             id: filter.id,
             element: panelRow({
-              label: filterPillLabel(filter, property, (key, vars) => this.ctx.i18n.t(key, vars)),
+              label: filterPillLabel(filter, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id)),
               testId: `database-filter-row-${filter.id}`,
               opensPage: true,
               onClick: () => panel.push(this.simpleFilter(filter.id)),
@@ -580,8 +587,9 @@ export class ViewSettingsPages {
 
     switch (property.type) {
       case 'select':
-      case 'multiSelect': {
-        const ids = Array.isArray(value) ? value : [];
+      case 'multiSelect':
+      case 'status': {
+        const ids = idList(value);
 
         return (property.config?.options ?? []).map((option) => panelRow({
           label: option.label,
@@ -597,7 +605,15 @@ export class ViewSettingsPages {
           checked: value === checked,
           onClick: () => update({ value: checked }),
         }));
+      case 'person':
+      case 'createdBy':
+      case 'lastEditedBy':
+        return this.personControls(value, update);
+      case 'files':
+        return [];
       case 'date':
+      case 'createdTime':
+      case 'lastEditedTime':
         return [
           ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
             label: this.ctx.i18n.t(relativeValueLabelKey(relative)),
@@ -616,6 +632,7 @@ export class ViewSettingsPages {
           }),
         ];
       case 'number':
+      case 'uniqueId':
         return [panelInput({
           value: typeof value === 'number' ? String(value) : '',
           placeholder: this.t('filterValuePlaceholder'),
@@ -631,6 +648,8 @@ export class ViewSettingsPages {
       case 'text':
       case 'url':
       case 'richText':
+      case 'email':
+      case 'phone':
         return [panelInput({
           value: typeof value === 'string' ? value : '',
           placeholder: this.t('filterValuePlaceholder'),
@@ -639,6 +658,28 @@ export class ViewSettingsPages {
           onInput: (text) => update({ value: text }),
         })];
     }
+  }
+
+  /**
+   * A person filter: "Me" first (Notion API value `me`, resolved against the
+   * people lever at query time), then everyone the host lists.
+   */
+  private personControls(value: FilterConfig['value'], update: (patch: { value: string[] }) => void): HTMLElement[] {
+    const ids = idList(value);
+    const toggle = (id: string): void => update({ value: ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id] });
+    const me = panelRow({
+      label: this.t('filterMe'),
+      testId: 'database-filter-person-me',
+      checked: ids.includes(ME_FILTER_VALUE),
+      onClick: () => toggle(ME_FILTER_VALUE),
+    });
+
+    return [me, ...(this.ctx.people?.() ?? []).map((person) => panelRow({
+      label: person.name,
+      testId: `database-filter-person-${person.id}`,
+      checked: ids.includes(person.id),
+      onClick: () => toggle(person.id),
+    }))];
   }
 
   private relativeControls(value: FilterConfig['value'], update: (patch: { value: string }) => void): HTMLElement[] {
@@ -735,7 +776,7 @@ export class ViewSettingsPages {
 
       line.setAttribute('data-blok-database-filter-rule', '');
       line.append(prefix, panelRow({
-        label: property === undefined ? this.t('filterGone') : filterPillLabel(node, property, (key, vars) => this.ctx.i18n.t(key, vars)),
+        label: property === undefined ? this.t('filterGone') : filterPillLabel(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id)),
         testId: `database-filter-rule-${node.id}`,
         opensPage: true,
         onClick: () => panel.push(this.ruleEditor({
@@ -924,6 +965,29 @@ export class ViewSettingsPages {
 
         if (property === undefined) return rows;
 
+        if (property.type === 'status' && !sub) {
+          const statusBy = view.groupByStatus ?? 'option';
+
+          rows.push(panelRow({
+            label: this.t('groupStatusBy'),
+            testId: 'database-group-status-by',
+            value: this.t(statusBy === 'group' ? 'groupStatusGroup' : 'groupStatusOption'),
+            opensPage: true,
+            disabled,
+            onClick: () => panel.push({
+              title: this.t('groupStatusBy'),
+              build: (inner) => (['group', 'option'] as const).map((by) => panelRow({
+                label: this.t(by === 'group' ? 'groupStatusGroup' : 'groupStatusOption'),
+                testId: `database-group-status-by-${by}`,
+                checked: (this.ctx.view().groupByStatus ?? 'option') === by,
+                onClick: () => {
+                  this.ctx.updateView({ groupByStatus: by });
+                  inner.back();
+                },
+              })),
+            }),
+          }));
+        }
         rows.push(...this.groupTypeRows(panel, property, settings(), setSettings, disabled));
         const sortChoices = groupSortChoices(property.type);
 
@@ -957,7 +1021,7 @@ export class ViewSettingsPages {
           disabled,
           onToggle: (next) => setSettings({ hideEmptyGroups: next }),
         }));
-        if (view.type === 'board' && !sub && (property.type === 'select' || property.type === 'multiSelect')) {
+        if (view.type === 'board' && !sub && (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status')) {
           rows.push(panelSwitch({
             label: this.t('groupColorColumns'),
             testId: 'database-group-color-columns',
@@ -969,7 +1033,7 @@ export class ViewSettingsPages {
 
         const groups = this.ctx.groups(sub);
         const hidden = (key: string): boolean =>
-          (this.ctx.view().groupStates ?? []).some((state) => state.id === stateKey(key) && state.hidden === true);
+          isGroupHidden(this.ctx.view(), stateKey(key));
         const allHidden = groups.length > 0 && groups.every((g) => hidden(g.key));
 
         rows.push(
@@ -980,7 +1044,7 @@ export class ViewSettingsPages {
             testId: 'database-group-hide-all',
             disabled,
             onClick: refreshAfter(() => this.ctx.updateView({
-              groupStates: withGroupStates(this.ctx.view(), groups.map((g) => stateKey(g.key)), { hidden: !allHidden }),
+              ...withGroupFlags(this.ctx.view(), groups.map((g) => stateKey(g.key)), { hidden: !allHidden }),
             })),
           }),
           ...groups.map((group) => panelSwitch({
@@ -989,7 +1053,7 @@ export class ViewSettingsPages {
             checked: !hidden(group.key),
             disabled,
             onToggle: (visible) => this.ctx.updateView({
-              groupStates: withGroupStates(this.ctx.view(), [stateKey(group.key)], { hidden: !visible }),
+              ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !visible }),
             }),
           })),
         );
@@ -1081,11 +1145,17 @@ export class ViewSettingsPages {
       case 'title':
       case 'text':
       case 'url':
+      case 'email':
+      case 'phone':
         return [choice('database-group-text-by', 'groupTextBy', 'textBy', [['exact', 'groupTextExact'], ['alphabet', 'groupTextAlphabet']], 'exact')];
-      case 'select':
-      case 'multiSelect':
-      case 'checkbox':
-      case 'richText':
+      case 'createdTime':
+      case 'lastEditedTime':
+        return [
+          choice('database-group-date-by', 'groupDateBy', 'dateBy', [
+            ['relative', 'groupDateRelative'], ['day', 'groupDateDay'], ['week', 'groupDateWeek'], ['month', 'groupDateMonth'], ['year', 'groupDateYear'],
+          ], 'relative'),
+        ];
+      default:
         return [];
     }
   }
@@ -1111,7 +1181,7 @@ export class ViewSettingsPages {
           card.setAttribute('data-blok-testid', `database-color-rule-${rule.id}`);
           card.append(
             panelRow({
-              label: property === undefined ? this.t('filterGone') : filterPillLabel(rule, property, (key, vars) => this.ctx.i18n.t(key, vars)),
+              label: property === undefined ? this.t('filterGone') : filterPillLabel(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id)),
               testId: `database-color-condition-${rule.id}`,
               opensPage: true,
               disabled,
@@ -1216,18 +1286,29 @@ const findRule = (group: FilterGroup, id: string): FilterRule | undefined => {
 /** Notion's group sort menus per type (research/08). Checkbox has none. */
 const groupSortChoices = (type: PropertyType): Array<readonly [GroupSort, string]> => {
   switch (type) {
-    case 'date': return [['ascending', 'groupSortOldest'], ['descending', 'groupSortNewest']];
+    case 'date':
+    case 'createdTime':
+    case 'lastEditedTime':
+      return [['ascending', 'groupSortOldest'], ['descending', 'groupSortNewest']];
     case 'number': return [['ascending', 'groupSortAscending'], ['descending', 'groupSortDescending']];
-    case 'checkbox':
-    case 'richText':
-      return [];
     case 'select':
     case 'multiSelect':
     case 'title':
     case 'text':
     case 'url':
+    case 'email':
+    case 'phone':
       return [['manual', 'groupSortManual'], ['ascending', 'groupSortAlphabetical'], ['descending', 'groupSortReverse']];
+    // Status keeps its group and option order (research/08: "Ascending" only); checkbox and people have no sort.
+    default:
+      return [];
   }
+};
+
+const idList = (value: FilterConfig['value']): string[] => {
+  if (Array.isArray(value)) return value.flatMap((entry) => (typeof entry === 'string' ? [entry] : []));
+
+  return typeof value === 'string' && value !== '' ? [value] : [];
 };
 
 export type ViewSettingsStart = 'root' | 'filter' | 'sort' | 'group';

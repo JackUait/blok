@@ -3,7 +3,7 @@ import { matchCondition } from './database-query';
 import type {
   DatabaseRow,
   DatabaseViewConfig,
-  GroupState,
+  GroupRef,
   PropertyDefinition,
   PropertyType,
   SortConfig,
@@ -66,36 +66,35 @@ export const resolveRowColors = (
   return colors;
 };
 
-const stateOf = (view: DatabaseViewConfig, key: string): GroupState | undefined =>
-  [...(view.groupStates ?? [])].reverse().find((state) => state.id === key);
+const hasRef = (list: GroupRef[] | undefined, key: string): boolean => (list ?? []).some((group) => group.id === key);
 
-export const isGroupHidden = (view: DatabaseViewConfig, key: string): boolean => stateOf(view, key)?.hidden === true;
+export const isGroupHidden = (view: DatabaseViewConfig, key: string): boolean => hasRef(view.hiddenGroups, key);
 
-export const isGroupCollapsed = (view: DatabaseViewConfig, key: string): boolean => stateOf(view, key)?.collapsed === true;
+export const isGroupCollapsed = (view: DatabaseViewConfig, key: string): boolean => hasRef(view.collapsedGroups, key);
 
-/** The `groupStates` list after patching many groups. Entries stay where they are, so peers' edits pair by id. */
-export const withGroupStates = (
+/**
+ * The `hiddenGroups` / `collapsedGroups` lists after showing, hiding,
+ * folding or opening some groups. A key is in a list or not; entries are id
+ * objects, so two peers' adds merge. A sub-group's key starts with `sub:`.
+ */
+export const withGroupFlags = (
   view: DatabaseViewConfig,
   keys: readonly string[],
-  patch: Partial<Omit<GroupState, 'id'>>
-): GroupState[] => {
-  const states = (view.groupStates ?? []).map((state) => ({ ...state }));
+  patch: { hidden?: boolean; collapsed?: boolean }
+): Partial<Pick<DatabaseViewConfig, 'hiddenGroups' | 'collapsedGroups'>> => {
+  const apply = (list: GroupRef[] | undefined, on: boolean): GroupRef[] => {
+    const current = (list ?? []).map((group) => ({ ...group }));
 
-  for (const key of keys) {
-    const index = states.findIndex((state) => state.id === key);
+    return on
+      ? [...current, ...keys.filter((key) => !hasRef(current, key)).map((id) => ({ id }))]
+      : current.filter((group) => !keys.includes(group.id));
+  };
 
-    if (index === -1) {
-      states.push({ id: key, ...patch });
-    } else {
-      states[index] = { ...states[index], ...patch };
-    }
-  }
-
-  return states;
+  return {
+    ...(patch.hidden !== undefined ? { hiddenGroups: apply(view.hiddenGroups, patch.hidden) } : {}),
+    ...(patch.collapsed !== undefined ? { collapsedGroups: apply(view.collapsedGroups, patch.collapsed) } : {}),
+  };
 };
-
-export const withGroupState = (view: DatabaseViewConfig, key: string, patch: Partial<Omit<GroupState, 'id'>>): GroupState[] =>
-  withGroupStates(view, [key], patch);
 
 /** A sort chosen from a column header replaces every other sort (research/08). */
 export const sortFromHeader = (propertyId: string, direction: SortConfig['direction']): SortConfig[] =>

@@ -115,7 +115,6 @@ const GROUP_SETTINGS = {
     rangeEnd: { type: 'number' },
     rangeSize: { type: 'number', minimum: 1 },
     textBy: { type: 'string', enum: ['exact', 'alphabet'] },
-    statusBy: { type: 'string', enum: ['group', 'option'] },
     hideEmptyGroups: { type: 'boolean' },
     colorColumns: { type: 'boolean', description: 'Board only. Default true.' },
   },
@@ -268,22 +267,8 @@ export const DATABASE_DATA = {
           hideGroupAggregation: { type: 'boolean' },
           filterTree: { ...filterGroup(1), description: 'Advanced filter. Rows must match it and every simple filter. Older clients ignore it.' },
           groupSettings: GROUP_SETTINGS,
-          subGroupBy: { type: 'string', description: 'Board only: property id of a second grouping inside each column.' },
+          subGroupBy: { type: 'string', description: 'Board only: property id of a second grouping inside each column. Its keys in hiddenGroups/collapsedGroups start with "sub:".' },
           subGroupSettings: GROUP_SETTINGS,
-          groupStates: {
-            type: 'array',
-            description: 'Hidden and collapsed groups. id is the group key; sub-group keys start with "sub:".',
-            items: {
-              type: 'object',
-              required: ['id'],
-              additionalProperties: false,
-              properties: {
-                id: { type: 'string' },
-                hidden: { type: 'boolean' },
-                collapsed: { type: 'boolean' },
-              },
-            },
-          },
           colorRules: {
             type: 'array',
             description: 'Conditional color. The first matching rule colors a row.',

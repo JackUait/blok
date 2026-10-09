@@ -37,6 +37,8 @@ export interface DatabaseModelOptions {
    */
   idSeed?: string;
   now?: () => Date;
+  /** The current user's id, for a person filter's "Me" (the people lever). */
+  me?: () => string | null;
 }
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
@@ -61,9 +63,11 @@ export class DatabaseModel {
   private readonly locallyAdded = new Set<string>();
   /** Today, for relative dates. Tests pin it. */
   private readonly now: () => Date;
+  private readonly me: () => string | null;
 
   constructor(data?: Partial<DatabaseData>, options: DatabaseModelOptions = {}) {
     this.now = options.now ?? ((): Date => new Date());
+    this.me = options.me ?? ((): null => null);
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
@@ -285,6 +289,7 @@ export class DatabaseModel {
       schema: this.schema,
       rows: this.rows,
       now,
+      me: this.me(),
       ...(view.groupBy !== undefined
         ? { groupKeysOf: this.groupKeysOf(view.groupBy, { statusBy: view.groupByStatus, settings: view.groupSettings, now }) }
         : {}),
@@ -543,7 +548,7 @@ export class DatabaseModel {
 
   /**
    * A view as it is first written. `properties`, `calculations`, `filterTree`,
-   * `colorRules`, `groupStates` and both group settings maps exist from birth so two peers' first edits
+   * `colorRules`, the group lists and both group settings maps exist from birth so two peers' first edits
    * merge: a key both peers create at once is last-writer-wins. `properties`
    * is never empty (there is always a title), so the CRDT keys its entries by
    * id; the empty lists rely on the eager array rule in yjs/serializer.ts.
@@ -563,7 +568,6 @@ export class DatabaseModel {
       collapsedGroups: seed.collapsedGroups ?? [],
       filterTree: seed.filterTree ?? { id: `${seed.id}-filters`, conjunction: 'and', filterRules: [] },
       colorRules: seed.colorRules ?? [],
-      groupStates: seed.groupStates ?? [],
       groupSettings: seed.groupSettings ?? {},
       subGroupSettings: seed.subGroupSettings ?? {},
     };

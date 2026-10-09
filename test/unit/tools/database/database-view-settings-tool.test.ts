@@ -214,11 +214,11 @@ describe('DatabaseTool — view settings', () => {
 
     root.querySelector<HTMLElement>('[data-group-key="o-idea"] [data-blok-database-table-group-toggle]')?.click();
 
-    expect(tool.save(root).views[0].groupStates).toEqual([{ id: 'o-idea', collapsed: true }]);
+    expect(tool.save(root).views[0].collapsedGroups).toEqual([{ id: 'o-idea' }]);
   });
 
   it('leaves hidden groups out of a grouped table', () => {
-    const { root } = mount({ groupBy: 'p-stage', groupStates: [{ id: 'o-build', hidden: true }] });
+    const { root } = mount({ groupBy: 'p-stage', hiddenGroups: [{ id: 'o-build' }] });
 
     expect(root.querySelector('[data-group-key="o-build"]')).toBeNull();
     expect(root.querySelector('[data-group-key="o-idea"]')).not.toBeNull();
@@ -236,11 +236,11 @@ describe('DatabaseTool — view settings', () => {
 
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyT', key: '†', altKey: true, metaKey: true, ctrlKey: true, bubbles: true }));
 
-    expect(tool.save(root).views[0].groupStates?.every((state) => state.collapsed === true)).toBe(true);
+    expect(tool.save(root).views[0].collapsedGroups?.map((group) => group.id).sort()).toEqual(['__blok-no-value-group__', 'o-build', 'o-idea']);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyT', key: '†', altKey: true, metaKey: true, ctrlKey: true, bubbles: true }));
 
-    expect(tool.save(root).views[0].groupStates?.every((state) => state.collapsed === false)).toBe(true);
+    expect(tool.save(root).views[0].collapsedGroups).toEqual([]);
     tool.destroy();
   });
 });

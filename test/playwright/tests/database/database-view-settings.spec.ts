@@ -187,7 +187,7 @@ test.describe('database view settings', () => {
     await byTestId(page, 'database-group-visible-o-build').click();
 
     await expect(page.locator('[data-blok-database-table-group][data-group-key="o-build"]')).toHaveCount(0);
-    expect((await savedView(page)).groupStates).toEqual([{ id: 'o-build', hidden: true }]);
+    expect((await savedView(page)).hiddenGroups).toEqual([{ id: 'o-build' }]);
   });
 
   test('colors rows that match a rule', async ({ page }) => {

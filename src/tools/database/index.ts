@@ -172,7 +172,9 @@ export class DatabaseTool implements BlockTool {
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
 
     this.seeded = initialView !== undefined;
-    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id } : {});
+    const me = (): string | null => this.config.people?.me?.() ?? null;
+
+    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id, me } : { me });
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
@@ -1297,6 +1299,7 @@ export class DatabaseTool implements BlockTool {
       viewCount: () => this.model.getViews().length,
       layouts: RENDERED_LAYOUTS,
       me: () => this.config.people?.me?.() ?? null,
+      people: () => this.people ?? [],
       updateView: (changes) => this.updateActiveView(changes),
       setLayout: (type) => this.setActiveLayout(type),
       setLocked: (locked) => this.setDatabaseLocked(locked),

@@ -36,6 +36,8 @@ export interface ViewControlsHost {
   layouts: readonly ViewType[];
   /** The current user's id, for a person filter's "Me" (the people lever). */
   me?: () => string | null;
+  /** People the host lists, for person filters. */
+  people?: () => Array<{ id: string; name: string }>;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
   setLayout: (type: ViewType) => void;
@@ -290,6 +292,7 @@ export class DatabaseViewControls {
       deleteView: () => this.host.deleteView(),
       copyViewLink: () => this.host.copyViewLink(),
       groups: (sub) => this.host.groups(sub),
+      people: () => this.host.people?.() ?? [],
     };
   }
 
@@ -383,12 +386,12 @@ export class DatabaseViewControls {
       const property = schema.find((p) => p.id === filter.propertyId);
 
       if (property === undefined) continue;
-      const label = filterPillLabel(filter, property, t);
+      const label = filterPillLabel(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name);
       const pill = button(`database-filter-pill-${filter.id}`, label, { text: label });
 
       pill.setAttribute('data-blok-database-filter-pill', '');
       pill.setAttribute('data-filter-id', filter.id);
-      pill.toggleAttribute('data-active', filterValueText(filter, property, t) !== '');
+      pill.toggleAttribute('data-active', filterValueText(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name) !== '');
       pill.addEventListener('click', () => this.openPill(filter.id, pill));
       pills.push(pill);
     }

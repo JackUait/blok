@@ -121,7 +121,7 @@ internal static class YDocConverter
   /// reason <c>contentIds</c> is: a later promotion runs on two peers at once
   /// and map-set is last-writer-wins, so the loser's ids are discarded.
   /// </summary>
-  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations", "hiddenGroups", "collapsedGroups", "filterRules", "colorRules", "groupStates"];
+  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations", "hiddenGroups", "collapsedGroups", "filterRules", "colorRules"];
 
   // nanoid's default alphabet; keys are random so two peers never collide.
   private const string RowKeyAlphabet =

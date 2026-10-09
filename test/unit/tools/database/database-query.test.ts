@@ -605,3 +605,41 @@ describe('database-query — Phase 3 filters and search', () => {
     expect(queryGroups({ ...source, groupKeysOf: () => ['x'] }, view(), { search: 'docs' })).toEqual([{ key: 'x', count: 2 }]);
   });
 });
+
+describe('database-query — Phase 2 types in Phase 3 filters', () => {
+  const people: PropertyDefinition[] = [
+    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'owner', name: 'Owner', type: 'person', position: 'a1' },
+    { id: 'mail', name: 'Mail', type: 'email', position: 'a2' },
+  ];
+  const rows = [
+    row('mine', 'a0', { title: 'Mine', owner: [{ id: 'u-me' }], mail: 'me@x.io' }),
+    row('theirs', 'a1', { title: 'Theirs', owner: [{ id: 'u-other' }] }),
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reads "Me" in a person filter as the current user', () => {
+    const v = view({ filters: [{ propertyId: 'owner', operator: 'contains', value: ['me'] }] });
+
+    expect(ids(queryRows({ schema: people, rows, me: 'u-me' }, { view: v }).rows)).toEqual(['mine']);
+  });
+
+  it('matches nobody on "Me" when no one is signed in, as the Notion API does', () => {
+    const v = view({ filters: [{ propertyId: 'owner', operator: 'contains', value: ['me'] }] });
+    const not = view({ filters: [{ propertyId: 'owner', operator: 'does_not_contain', value: ['me'] }] });
+
+    expect(ids(queryRows({ schema: people, rows, me: null }, { view: v }).rows)).toEqual([]);
+    expect(ids(queryRows({ schema: people, rows, me: null }, { view: not }).rows)).toEqual(['mine', 'theirs']);
+  });
+
+  it('searches email text', () => {
+    expect(ids(queryRows({ schema: people, rows }, { view: view(), search: '@x.io' }).rows)).toEqual(['mine']);
+  });
+});

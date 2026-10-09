@@ -34,7 +34,7 @@ describe('database filter labels', () => {
     expect(operatorChoices('multiSelect').map((c) => c.operator)).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
     expect(operatorChoices('checkbox').map((c) => c.operator)).toEqual(['equals', 'does_not_equal']);
     expect(operatorChoices('date').map((c) => c.operator)).toContain('within');
-    expect(operatorChoices('number')[0].labelKey).toBe('tools.database.filterOpNumberEquals');
+    expect(operatorChoices('number')[0].labelKey).toBe('tools.database.filterOperator.numberEquals');
   });
 
   it('starts a date filter at "This week", as Notion\'s default pill reads', () => {
@@ -47,7 +47,7 @@ describe('database filter labels', () => {
   it('names a pill by its property alone until it has a value', () => {
     expect(filterPillLabel({ operator: 'contains', value: '' }, prop('text'), t)).toBe('Due');
     expect(filterPillLabel({ operator: 'contains', value: 'abc' }, prop('text'), t)).toBe('Due: abc');
-    expect(filterPillLabel({ operator: 'is_not_empty', value: null }, prop('text'), t)).toBe('Due: tools.database.filterOpIsNotEmpty');
+    expect(filterPillLabel({ operator: 'is_not_empty', value: null }, prop('text'), t)).toBe('Due: tools.database.filterOperator.isNotEmpty');
     expect(filterPillLabel({ operator: 'this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
     expect(filterPillLabel({ operator: 'equals', value: 'tomorrow' }, prop('date'), t)).toBe('Due: tools.database.filterDateTomorrow');
     expect(filterPillLabel({ operator: 'equals', value: true }, prop('checkbox'), t)).toBe('Due: tools.database.filterChecked');
@@ -59,10 +59,34 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'equals', value: ['o1', 'o2'] }, select, t)).toBe('Due: Idea, Ship');
   });
 
+  it('covers every Phase 2 type with Notion\'s menu (research/04 §2, research/08)', () => {
+    expect(operatorChoices('status').map((c) => c.operator)).toEqual(['equals', 'does_not_equal']);
+    expect(operatorChoices('person').map((c) => c.operator)).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
+    expect(operatorChoices('createdBy').map((c) => c.operator)).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
+    expect(operatorChoices('files').map((c) => c.operator)).toEqual(['is_empty', 'is_not_empty']);
+    expect(operatorChoices('email').map((c) => c.operator)).toEqual(operatorChoices('text').map((c) => c.operator));
+    expect(operatorChoices('uniqueId').map((c) => c.operator)).toEqual([
+      'equals', 'does_not_equal', 'greater_than', 'less_than', 'greater_than_or_equal_to', 'less_than_or_equal_to',
+    ]);
+    expect(operatorChoices('createdTime').map((c) => c.operator)).toContain('within');
+    expect(defaultFilterFor(prop('person'))).toMatchObject({ operator: 'contains', value: [] });
+    expect(defaultFilterFor(prop('files'))).toMatchObject({ operator: 'is_not_empty' });
+    expect(defaultFilterFor(prop('lastEditedTime'))).toMatchObject({ operator: 'this_week' });
+  });
+
+  it('names "Me" and known people on a person pill', () => {
+    const names = (id: string): string | undefined => (id === 'u1' ? 'Ada' : undefined);
+
+    expect(filterPillLabel({ operator: 'contains', value: ['me', 'u1'] }, prop('person'), t, names)).toBe('Due: tools.database.filterMe, Ada');
+  });
+
   it('labels sort directions per type (research/08)', () => {
     expect(sortDirectionLabelKey('number', 'asc')).toBe('tools.database.sortLowHigh');
     expect(sortDirectionLabelKey('date', 'desc')).toBe('tools.database.sortNewOld');
     expect(sortDirectionLabelKey('select', 'asc')).toBe('tools.database.sortAscending');
     expect(sortDirectionLabelKey('text', 'desc')).toBe('tools.database.sortZA');
+    expect(sortDirectionLabelKey('uniqueId', 'asc')).toBe('tools.database.sortLowHigh');
+    expect(sortDirectionLabelKey('createdTime', 'desc')).toBe('tools.database.sortNewOld');
+    expect(sortDirectionLabelKey('email', 'asc')).toBe('tools.database.sortAZ');
   });
 });

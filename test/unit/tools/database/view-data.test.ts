@@ -5,8 +5,7 @@ import {
   isGroupHidden,
   resolveRowColors,
   sortFromHeader,
-  withGroupState,
-  withGroupStates,
+  withGroupFlags,
 } from '../../../../src/tools/database/view-data';
 import { resolveLoadLimit } from '../../../../src/tools/database/view-settings';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -67,8 +66,8 @@ describe('view-data', () => {
   });
 
   describe('group state', () => {
-    it('reads hidden and collapsed per group key', () => {
-      const v = view({ groupStates: [{ id: 'k1', hidden: true }, { id: 'k2', collapsed: true }] });
+    it('reads hidden and collapsed per group key from the view lists', () => {
+      const v = view({ hiddenGroups: [{ id: 'k1' }], collapsedGroups: [{ id: 'k2' }] });
 
       expect(isGroupHidden(v, 'k1')).toBe(true);
       expect(isGroupHidden(v, 'k2')).toBe(false);
@@ -76,15 +75,12 @@ describe('view-data', () => {
       expect(isGroupCollapsed(v, 'k3')).toBe(false);
     });
 
-    it('patches one group and keeps the rest', () => {
-      const v = view({ groupStates: [{ id: 'k1', hidden: true }] });
+    it('adds and removes keys without touching the other list or other keys', () => {
+      const v = view({ hiddenGroups: [{ id: 'k1' }], collapsedGroups: [{ id: 'k3' }] });
 
-      expect(withGroupState(v, 'k2', { collapsed: true })).toEqual([{ id: 'k1', hidden: true }, { id: 'k2', collapsed: true }]);
-      expect(withGroupState(v, 'k1', { hidden: false })).toEqual([{ id: 'k1', hidden: false }]);
-    });
-
-    it('patches many groups at once, for Hide all', () => {
-      expect(withGroupStates(view(), ['k1', 'k2'], { hidden: true })).toEqual([{ id: 'k1', hidden: true }, { id: 'k2', hidden: true }]);
+      expect(withGroupFlags(v, ['k2'], { hidden: true })).toEqual({ hiddenGroups: [{ id: 'k1' }, { id: 'k2' }] });
+      expect(withGroupFlags(v, ['k1'], { hidden: false })).toEqual({ hiddenGroups: [] });
+      expect(withGroupFlags(v, ['k3', 'k4'], { collapsed: true })).toEqual({ collapsedGroups: [{ id: 'k3' }, { id: 'k4' }] });
     });
   });
 

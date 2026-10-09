@@ -89,7 +89,6 @@ describe('DatabaseModel — mutation coverage', () => {
           collapsedGroups: [],
           filterTree: { id: expect.any(String), conjunction: 'and', filterRules: [] },
           colorRules: [],
-          groupStates: [],
           groupSettings: {},
           subGroupSettings: {},
         },
@@ -324,7 +323,6 @@ describe('DatabaseModel — mutation coverage', () => {
         collapsedGroups: [],
         filterTree: { id: expect.any(String), conjunction: 'and', filterRules: [] },
         colorRules: [],
-        groupStates: [],
         groupSettings: {},
         subGroupSettings: {},
       });
@@ -357,7 +355,6 @@ describe('DatabaseModel — mutation coverage', () => {
           collapsedGroups: [],
           filterTree: { id: expect.any(String), conjunction: 'and', filterRules: [] },
           colorRules: [],
-          groupStates: [],
           groupSettings: {},
           subGroupSettings: {},
         },

@@ -255,17 +255,9 @@ export interface GroupSettings {
   rangeEnd?: number;
   rangeSize?: number;
   textBy?: 'exact' | 'alphabet';
-  statusBy?: 'group' | 'option';
   hideEmptyGroups?: boolean;
   /** Board only. Default true. */
   colorColumns?: boolean;
-}
-
-/** One group's state in one view. `id` is the group key; a sub-group's key starts with `sub:`. */
-export interface GroupState {
-  id: string;
-  hidden?: boolean;
-  collapsed?: boolean;
 }
 
 /** A conditional color rule: rows whose property matches it get the color. */
@@ -349,10 +341,9 @@ export interface DatabaseViewConfig {
    */
   filterTree?: FilterGroup;
   groupSettings?: GroupSettings;
-  /** Board only: a second grouping inside each column. */
+  /** Board only: a second grouping inside each column. Its group keys in `hiddenGroups` / `collapsedGroups` start with `sub:`. */
   subGroupBy?: string;
   subGroupSettings?: GroupSettings;
-  groupStates?: GroupState[];
   colorRules?: ColorRule[];
   /** Default true. */
   showPageIcon?: boolean;
@@ -367,7 +358,7 @@ export interface GroupRef {
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
-  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'groupStates' | 'colorRules' | 'showPageIcon';
+  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus';
 
 // ─── Top-level saved data ───
 

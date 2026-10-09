@@ -23,14 +23,13 @@ public sealed class YDocConverterViewSettingsTests
   }
 
   [Fact]
-  public void SeedMintsTheEmptyFilterColorAndGroupListsAsYArrays()
+  public void SeedMintsTheEmptyFilterAndColorListsAsYArrays()
   {
     var view = View(Seeded(), "v1");
     var tree = Assert.IsType<YMap>(Entry(view, "filterTree"));
 
     Assert.Empty(Assert.IsType<YArray>(Entry(tree, "filterRules")).Enumerate());
     Assert.Empty(Assert.IsType<YArray>(Entry(view, "colorRules")).Enumerate());
-    Assert.Empty(Assert.IsType<YArray>(Entry(view, "groupStates")).Enumerate());
   }
 
   [Fact]
@@ -60,8 +59,7 @@ public sealed class YDocConverterViewSettingsTests
               "properties": [{ "id": "t", "visible": true }, { "id": "s", "visible": false }],
               "calculations": [],
               "filterTree": { "id": "v1-filters", "conjunction": "and", "filterRules": [] },
-              "colorRules": [],
-              "groupStates": []
+              "colorRules": []
             },
             {
               "id": "v2", "name": "Two", "type": "table", "position": "a1",

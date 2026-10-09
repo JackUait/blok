@@ -132,3 +132,33 @@ describe('group-keys', () => {
     });
   });
 });
+
+describe('group-keys — Phase 2 types', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('groups people by person id, the no-value group last (research/08 "Jack Uait, No Owner")', () => {
+    const person = prop('person');
+
+    expect(groupKeysFor(person, [{ id: 'u1' }, { id: 'u2' }], {}, NOW)).toEqual(['u1', 'u2']);
+    expect(orderGroupKeys(person, [NO_VALUE_GROUP_KEY, 'u1'], {})).toEqual(['u1', NO_VALUE_GROUP_KEY]);
+    expect(groupValueForKey(person, 'u1', {})).toEqual([{ id: 'u1' }]);
+  });
+
+  it('groups created time by its local day buckets', () => {
+    expect(groupKeysFor(prop('createdTime'), new Date(2026, 9, 9, 9).toISOString(), {}, NOW)).toEqual(['rel:today']);
+    expect(groupKeysFor(prop('createdTime'), new Date(2026, 9, 9, 9).toISOString(), { dateBy: 'year' }, NOW)).toEqual(['year:2026']);
+  });
+
+  it('groups a status by option and leaves files ungroupable', () => {
+    expect(groupKeysFor(prop('status'), 's1', {}, NOW)).toEqual(['s1']);
+    expect(GROUPABLE_TYPES).toContain('status');
+    expect(GROUPABLE_TYPES).not.toContain('files');
+    expect(GROUPABLE_TYPES).not.toContain('uniqueId');
+  });
+});

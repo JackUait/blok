@@ -257,21 +257,9 @@ export interface GroupSettings {
   rangeSize?: number;
   /** Text grouping: the whole value, or its first letter. Default `exact`. */
   textBy?: 'exact' | 'alphabet';
-  /** Status grouping: by status group or by option. Default `group`. */
-  statusBy?: 'group' | 'option';
   hideEmptyGroups?: boolean;
   /** Board only: tint each column with its option color. Default on. */
   colorColumns?: boolean;
-}
-
-/**
- * One group's state in one view. `id` is the group key (an option id, a date
- * bucket, ...); a sub-group's key starts with `sub:`.
- */
-export interface GroupState {
-  id: string;
-  hidden?: boolean;
-  collapsed?: boolean;
 }
 
 /** A conditional color rule. The rule tints rows whose property matches it. */
@@ -355,10 +343,12 @@ export interface DatabaseViewConfig {
    */
   filterTree?: FilterGroup;
   groupSettings?: GroupSettings;
-  /** Board only: a second grouping inside each column. */
+  /**
+   * Board only: a second grouping inside each column. Its hidden and
+   * collapsed groups go in `hiddenGroups` / `collapsedGroups` with a `sub:` key.
+   */
   subGroupBy?: string;
   subGroupSettings?: GroupSettings;
-  groupStates?: GroupState[];
   colorRules?: ColorRule[];
   /** Default on. */
   showPageIcon?: boolean;
@@ -373,7 +363,7 @@ export interface GroupRef {
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
-  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'groupStates' | 'colorRules' | 'showPageIcon';
+  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus';
 
 // ─── Top-level saved data ───
 

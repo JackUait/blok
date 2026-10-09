@@ -117,7 +117,11 @@ export const groupKeysFor = (
 ): string[] => {
   switch (property.type) {
     case 'checkbox': return [value === true ? 'true' : 'false'];
-    case 'multiSelect': return Array.isArray(value) && value.length > 0 ? [...value] : [NO_VALUE_GROUP_KEY];
+    case 'multiSelect': {
+      const ids = personIdsOf(value);
+
+      return ids.length > 0 ? ids : [NO_VALUE_GROUP_KEY];
+    }
     case 'select': return typeof value === 'string' && value !== '' ? [value] : [NO_VALUE_GROUP_KEY];
     case 'number': {
       const n = toNumber(value);

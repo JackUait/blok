@@ -4,7 +4,7 @@ import { DocumentStore } from '../../../../src/components/modules/yjs/document-s
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { addFilterGroup, addFilterRule, countFilterRules } from '../../../../src/tools/database/filter-tree';
-import { withGroupState } from '../../../../src/tools/database/view-data';
+import { withGroupFlags } from '../../../../src/tools/database/view-data';
 import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
@@ -77,12 +77,12 @@ describe('database view filters — two peers editing one view', () => {
     vi.restoreAllMocks();
   });
 
-  it('births a view with an empty advanced filter, color rules and group states', () => {
+  it('births a view with an empty advanced filter and color rules', () => {
     const view = bornView();
 
     expect(view.filterTree).toEqual({ id: `${view.id}-filters`, conjunction: 'and', filterRules: [] });
     expect(view.colorRules).toEqual([]);
-    expect(view.groupStates).toEqual([]);
+    expect(view).not.toHaveProperty('groupStates');
   });
 
   it('keeps both rules when two people add the first rule to the same group', () => {
@@ -124,14 +124,11 @@ describe('database view filters — two peers editing one view', () => {
   it('keeps both hidden groups when two people hide different groups', () => {
     const [storeA, storeB] = seed(bornView());
 
-    edit(storeA, (view) => ({ groupStates: withGroupState(view, 'k1', { hidden: true }) }));
-    edit(storeB, (view) => ({ groupStates: withGroupState(view, 'k2', { collapsed: true }) }));
+    edit(storeA, (view) => withGroupFlags(view, ['k1'], { hidden: true }));
+    edit(storeB, (view) => withGroupFlags(view, ['k2'], { hidden: true }));
     sync(storeA, storeB);
 
-    expect(viewsOf(storeA)[0].groupStates).toEqual(expect.arrayContaining([
-      { id: 'k1', hidden: true },
-      { id: 'k2', collapsed: true },
-    ]));
+    expect((viewsOf(storeA)[0].hiddenGroups ?? []).map((group) => group.id).sort()).toEqual(['k1', 'k2']);
   });
 
   it('keeps both group settings set at the same moment', () => {

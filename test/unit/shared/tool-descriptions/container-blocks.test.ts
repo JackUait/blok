@@ -297,7 +297,8 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
         groupSettings: { sort: 'ascending', hideEmptyGroups: true, colorColumns: false },
         subGroupBy: 'due',
         subGroupSettings: { dateBy: 'week', weekStart: 1 },
-        groupStates: [{ id: 'stage-a', hidden: true }, { id: 'sub:week:2026-10-05', collapsed: true }],
+        hiddenGroups: [{ id: 'stage-a' }],
+        collapsedGroups: [{ id: 'sub:week:2026-10-05' }],
         colorRules: [{ id: 'c1', propertyId: 'due', operator: 'is_not_empty', value: null, color: 'green', applyTo: 'property' }],
         showPageIcon: false,
       }],
@@ -500,7 +501,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('15de45c08b8f23e13ab0eac5aec65efc7246d6aa1ff1222686c09df945ba74ac');
+      .toBe('fe0c2a6113c9eb61c6c0262d74c6bacca88c31cb64f046b3aefd4f41beeadb9d');
 
     const published: unknown = JSON.parse(snapshot);
 

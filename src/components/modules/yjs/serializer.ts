@@ -47,10 +47,11 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
 /**
  * NESTED data keys holding a LIST THAT IS BORN EMPTY and then grows on two
  * peers at once: a table cell's `blocks` (ordered child ids), and a database
- * view's `filters`, `sorts`, `calculations`, `colorRules`, `groupStates` and
- * every `filterRules` list in its filter tree. The names are unusual on
- * purpose: the rule matches a key name at any depth in every tool's data.
- * Stored as a `Y.Array` from birth — empty, and whatever the elements turn out to be — so two peers each
+ * view's `filters`, `sorts`, `calculations`, `hiddenGroups`,
+ * `collapsedGroups`, `colorRules` and every `filterRules` list in its filter
+ * tree. The names are unusual on purpose: the rule matches a key name at any
+ * depth in every tool's data. Stored as a `Y.Array` from birth — empty, and
+ * whatever the elements turn out to be — so two peers each
  * adding the FIRST element keep both instead of one whole-value write
  * discarding the other's.
  *
@@ -79,7 +80,7 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
  * container is a plain array where a client-seeded one is a Y.Array.
  */
 const EAGER_ARRAY_KEYS = new Set([
-  'blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules', 'groupStates',
+  'blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules',
 ]);
 
 /**

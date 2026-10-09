@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 867 + 117 + 313 + 4 closure for all 1301 keys', () => {
+  it('rebuilds a disjoint 889 + 117 + 356 + 4 closure for all 1366 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1301);
+    expect(lifecycle.size).toBe(1366);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -333,7 +333,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +21: relation, rollup and formula call their type names, relation*, rollup* and formula* keys by literal.
       // +14: the row page drawer calls its 13 new keys (peek*, icon, cover, properties, rowBodyEmpty) and
       // tools.database.settingsOpenPagesIn by literal.
-      'executable-literal': 867,
+      // +22: the chart, feed and CSV actions and the CSV paste offer call their tools.database.chart*, csv* and viewType* keys by literal.
+      'executable-literal': 889,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -353,7 +354,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +57: formula error codes (formulaErrorKey), the 24 rollup functions (rollupFn.<fn>) and
       // the any/every/none rollup filter operators are composed from tools.database.* namespaces.
       // -1: tools.database.settingsOpenPagesIn moved to executable-literal (see above).
-      'registered-namespace-compatible': 313,
+      // +43: the chart settings rows build their tools.database.chart* keys from a short name.
+      'registered-namespace-compatible': 356,
       'catalog-only': 4,
     });
     expect(

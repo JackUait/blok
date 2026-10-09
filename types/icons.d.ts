@@ -98,6 +98,7 @@ export declare const IconDatabase: string;
 export declare const IconBoard: string;
 export declare const IconGallery: string;
 export declare const IconList: string;
+export declare const IconTimeline: string;
 export declare const IconCalendar: string;
 export declare const IconMergeCells: string;
 export declare const IconSplitCell: string;

@@ -30,6 +30,7 @@ import {
   IconTable,
   IconTableOfContents,
   IconTabs,
+  IconTimeline,
   IconUpload,
 } from '../../../../src/components/icons';
 
@@ -246,6 +247,25 @@ describe('Blok Line layout geometry', () => {
     });
     edges.slice(1).forEach((edge, index) => {
       expect(Math.abs(edge - edges[index] - 14 / count)).toBeLessThanOrEqual(0.01);
+    });
+  });
+
+  it('draws the timeline as three open bars that start later as they go down', () => {
+    const bars = Array.from(svgOf(IconTimeline).querySelectorAll('rect'));
+    const at = (bar: Element, attribute: string): number => numberOf(bar, attribute);
+
+    expect(bars).toHaveLength(3);
+    bars.forEach(bar => {
+      expect(at(bar, 'rx')).toBe(1);
+      expect(at(bar, 'height') - 1.25).toBeGreaterThanOrEqual(1.75);
+      expect(at(bar, 'x')).toBeGreaterThanOrEqual(3);
+      expect(at(bar, 'x') + at(bar, 'width')).toBeLessThanOrEqual(17);
+    });
+    bars.slice(1).forEach((bar, index) => {
+      const previous = bars[index];
+
+      expect(at(bar, 'x')).toBeGreaterThan(at(previous, 'x'));
+      expect((at(bar, 'y') - at(previous, 'y') - at(previous, 'height') - 1.25) * 16 / 20).toBeGreaterThanOrEqual(1);
     });
   });
 

@@ -1790,7 +1790,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const plan = planCsvMerge(table, this.model.getSchema(), { newId: () => nanoid() });
+    const plan = planCsvMerge(table, this.model.getSchema(), { newId: () => nanoid(), localized: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n) });
     const titleId = this.titlePropertyId();
     const write = (): void => {
       for (const [propertyId, added] of Object.entries(plan.newOptions)) {

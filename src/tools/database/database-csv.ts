@@ -1,6 +1,5 @@
 import type { BodyBlock } from './row-body';
-import { formatDateDisplay, toIsoDay } from './cells/date-format';
-import { formatNumberValue } from './cells/number-format';
+import { formatDateDisplay, toIsoDay, toIsoTime } from './cells/date-format';
 import { filesOf, personIdsOf } from './property-values';
 import type { PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
@@ -120,12 +119,14 @@ export const csvCellText = (property: PropertyDefinition, value: PropertyValue |
     }
     case 'checkbox':
       return value === true ? 'Yes' : 'No';
+    // The bare number: a currency or percent display would not read back.
     case 'number':
-      return typeof value === 'number' ? formatNumberValue(value, property.number ?? {}, ctx.locale) : '';
+      return typeof value === 'number' ? String(value) : '';
+    // A relative date ("Today") would not read back, so it writes the full date.
     case 'date':
     case 'createdTime':
     case 'lastEditedTime':
-      return formatDateDisplay(value, ctx.locale, property.date) ?? '';
+      return formatDateDisplay(value, ctx.locale, { ...property.date, ...(property.date?.dateFormat === 'relative' ? { dateFormat: 'full' } : {}) }) ?? '';
     case 'person':
     case 'createdBy':
     case 'lastEditedBy':
@@ -159,18 +160,36 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isNumber = (text: string): boolean => text !== '' && text !== '-' && NUMBER.test(text);
 
-/** `YYYY-MM-DD`, or Notion's import format MM/DD/YYYY (research/05 §9.3). */
-const toDay = (text: string): string | null => {
-  if (ISO_DAY.test(text)) return text;
+const ISO_DAY_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+/** Blok's English date display, as an export writes it: "October 9, 2026", maybe with a time. */
+const WRITTEN_DAY = /^[A-Za-z]{3,9}\.? \d{1,2}, \d{4}(,? \d{1,2}:\d{2}( ?[AP]M)?)?$/i;
+
+/** One date: `YYYY-MM-DD`, Notion's import format MM/DD/YYYY (research/05 §9.3), or written out. */
+const toDatePart = (text: string): string | null => {
+  if (ISO_DAY.test(text) || ISO_DAY_TIME.test(text)) return text;
   const us = US_DAY.exec(text);
 
   if (us !== null) return `${us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}`;
   const time = Date.parse(text);
 
-  return Number.isNaN(time) || !/\d{4}/.test(text) ? null : toIsoDay(new Date(time));
+  if (Number.isNaN(time) || !/\d{4}/.test(text)) return null;
+  const date = new Date(time);
+
+  return /\d:\d{2}/.test(text) ? `${toIsoDay(date)}T${toIsoTime(date)}` : toIsoDay(date);
 };
 
-const isDay = (text: string): boolean => ISO_DAY.test(text) || US_DAY.test(text);
+/** A date or a range, as the date property stores it. A range is written "start → end". */
+const toDay = (text: string): string | null => {
+  const parts = text.split('→').map((part) => toDatePart(part.trim()));
+
+  return parts.length > 2 || parts.some((part) => part === null) ? null : parts.join('/');
+};
+
+const isDay = (text: string): boolean => text.split('→').every((part) => {
+  const trimmed = part.trim();
+
+  return ISO_DAY.test(trimmed) || ISO_DAY_TIME.test(trimmed) || US_DAY.test(trimmed) || WRITTEN_DAY.test(trimmed);
+});
 
 /**
  * A column's type from its cells. Every filled cell must agree, else text:
@@ -268,6 +287,24 @@ export interface CsvMergePlan {
 }
 
 /**
+ * A multi-select cell's labels. The export joins them with ", ", so a comma
+ * inside a known label keeps its pieces together.
+ */
+const splitLabels = (text: string, isKnown: (label: string) => boolean): string[] => {
+  const parts = text.split(',');
+  const labels: string[] = [];
+
+  for (const cursor = { i: 0 }; cursor.i < parts.length;) {
+    const end = [...parts.keys()].reverse().find((j) => j >= cursor.i && isKnown(parts.slice(cursor.i, j + 1).join(',').trim())) ?? cursor.i;
+
+    labels.push(parts.slice(cursor.i, end + 1).join(',').trim());
+    cursor.i = end + 1;
+  }
+
+  return labels.filter((label) => label !== '');
+};
+
+/**
  * Merge with CSV: headers must match property names exactly, and every CSV
  * row becomes a new row. Notion never updates an existing row here
  * (research/05 §9.3), so neither does Blok.
@@ -275,14 +312,23 @@ export interface CsvMergePlan {
 export const planCsvMerge = (
   table: string[][],
   schema: PropertyDefinition[],
-  options: { newId: () => string }
+  options: {
+    newId: () => string;
+    /** The schema as this person reads it: an export writes localized names and labels. */
+    localized?: PropertyDefinition[];
+  }
 ): CsvMergePlan => {
   const [header = [], ...body] = table;
-  const columns = header.map((name) => schema.find((property) => property.name === name));
+  const shown = (property: PropertyDefinition): PropertyDefinition | undefined => options.localized?.find((p) => p.id === property.id);
+  const columns = header.map((name) => schema.find((property) => property.name === name || shown(property)?.name === name));
   const newOptions: CsvMergePlan['newOptions'] = {};
+  const knownOption = (property: PropertyDefinition, label: string): SelectOption | undefined => {
+    const localizedLabel = (id: string): string | undefined => shown(property)?.config?.options.find((option) => option.id === id)?.label;
+
+    return property.config?.options.find((option) => option.label === label || localizedLabel(option.id) === label);
+  };
   const optionId = (property: PropertyDefinition, label: string): string => {
-    const known = property.config?.options.find((option) => option.label === label)
-      ?? newOptions[property.id]?.find((option) => option.label === label);
+    const known = knownOption(property, label) ?? newOptions[property.id]?.find((option) => option.label === label);
 
     if (known !== undefined) return known.id;
     const created = { id: options.newId(), label };
@@ -295,9 +341,9 @@ export const planCsvMerge = (
     const text = raw.trim();
 
     if (property.type === 'select') return text === '' ? null : optionId(property, text);
-    if (property.type === 'multiSelect') return text.split(',').map((part) => part.trim()).filter((part) => part !== '').map((label) => optionId(property, label));
+    if (property.type === 'multiSelect') return splitLabels(text, (label) => knownOption(property, label) !== undefined).map((label) => optionId(property, label));
     // Status options sit in status groups; an unknown label has no group to go in.
-    if (property.type === 'status') return property.config?.options.find((option) => option.label === text)?.id ?? null;
+    if (property.type === 'status') return knownOption(property, text)?.id ?? null;
 
     return parseCell(property, raw);
   };

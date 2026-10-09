@@ -81,6 +81,7 @@ describe('database CSV', () => {
       expect(inferColumnType(['1', '2.5', '-3', '1,200', ''])).toBe('number');
       expect(inferColumnType(['Yes', 'No', ''])).toBe('checkbox');
       expect(inferColumnType(['2026-10-09', '10/31/2026'])).toBe('date');
+      expect(inferColumnType(['October 9, 2026', 'Oct 12, 2026 → Oct 14, 2026'])).toBe('date');
       expect(inferColumnType(['https://a.com', 'http://b.org/x'])).toBe('url');
       expect(inferColumnType(['a@b.co', 'c@d.org'])).toBe('email');
       expect(inferColumnType(['1', 'two'])).toBe('text');
@@ -143,6 +144,54 @@ describe('database CSV', () => {
 
       expect(plan.rows.map((r) => r['p-tag'])).toEqual(['o1', 'o-new', 'o-new']);
       expect(plan.newOptions).toEqual({ 'p-tag': [{ id: 'o-new', label: 'Green' }] });
+    });
+  });
+
+  describe('export then merge gives back the stored values', () => {
+    const roundTrip = (property: PropertyDefinition, value: unknown, localized: PropertyDefinition = property): unknown => {
+      const text = csvCellText(localized, value as never, ctx);
+      const plan = planCsvMerge([[localized.name], [text]], [property], { newId: () => 'o-new', localized: [localized] });
+
+      return plan.rows[0]?.[property.id];
+    };
+
+    it('keeps numbers, whatever their display format', () => {
+      expect(roundTrip({ id: 'n', name: 'N', type: 'number', position: 'a', number: { format: 'dollar' } }, 1234.5)).toBe(1234.5);
+      expect(roundTrip({ id: 'n', name: 'N', type: 'number', position: 'a', number: { format: 'percent' } }, 0.25)).toBe(0.25);
+    });
+
+    it('keeps days, day ranges and times, even when the property shows relative dates', () => {
+      const date: PropertyDefinition = { id: 'd', name: 'D', type: 'date', position: 'a' };
+
+      expect(roundTrip(date, '2026-10-09')).toBe('2026-10-09');
+      expect(roundTrip(date, '2026-10-09/2026-10-12')).toBe('2026-10-09/2026-10-12');
+      expect(roundTrip(date, '2026-10-09T15:30')).toBe('2026-10-09T15:30');
+      expect(roundTrip({ ...date, date: { dateFormat: 'relative' } }, '2026-10-09')).toBe('2026-10-09');
+    });
+
+    it('keeps a checkbox, a url and a select', () => {
+      expect(roundTrip({ id: 'c', name: 'C', type: 'checkbox', position: 'a' }, true)).toBe(true);
+      expect(roundTrip({ id: 'u', name: 'U', type: 'url', position: 'a' }, 'https://a.com/x?y=1,2')).toBe('https://a.com/x?y=1,2');
+      expect(roundTrip({ id: 's', name: 'S', type: 'select', position: 'a', config: { options: [{ id: 'o1', label: 'Red', position: 'a0' }] } }, 'o1')).toBe('o1');
+    });
+
+    it('keeps a multi-select label that holds a comma', () => {
+      const tags: PropertyDefinition = {
+        id: 't',
+        name: 'Tags',
+        type: 'multiSelect',
+        position: 'a',
+        config: { options: [{ id: 'o1', label: 'Smith, Jo', position: 'a0' }, { id: 'o2', label: 'Ann', position: 'a1' }] },
+      };
+
+      expect(roundTrip(tags, ['o1', 'o2'])).toEqual(['o1', 'o2']);
+    });
+
+    it('matches the localized column name and option label a non-English export wrote', () => {
+      const saved: PropertyDefinition = { id: 's', name: 'Status', type: 'status', position: 'a', config: { options: [{ id: 'o1', label: 'Done', position: 'a0' }] } };
+      const shown: PropertyDefinition = { ...saved, name: 'Статус', config: { options: [{ id: 'o1', label: 'Готово', position: 'a0' }] } };
+
+      expect(roundTrip(saved, 'o1', shown)).toBe('o1');
     });
   });
 });

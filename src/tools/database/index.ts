@@ -1598,12 +1598,16 @@ export class DatabaseTool implements BlockTool {
       : { ...view, groupBy: propertyId };
     const optionGroup = this.isOptionGroup(propertyId);
     const options = series ? this.groupOptions(propertyId, grouped) : this.shownGroupOptions(propertyId, grouped);
+    // Date and number keys do not collate in value order ("range:below", "rel:today"): rank them the way the model sorts them.
+    const rank = optionGroup
+      ? undefined
+      : new Map(this.groupOptions(propertyId, { ...grouped, groupSettings: { ...grouped.groupSettings, sort: 'ascending', hideEmptyGroups: false } })
+        .map((option, index) => [option.id, String(index).padStart(6, '0')]));
 
     return options.map((option) => ({
       key: option.id,
       label: option.label,
-      // Option ids are random; their labels sort. Date and number keys sort as they are.
-      sortKey: optionGroup ? option.label : option.id,
+      sortKey: rank === undefined ? option.label : rank.get(option.id) ?? option.id,
       ...(option.color !== undefined ? { color: option.color } : {}),
       rows: this.model.queryRows({ view: grouped, group: option.id, search: this.controls.search }).rows,
     }));

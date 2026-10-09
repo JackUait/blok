@@ -6136,6 +6136,25 @@ describe('DatabaseTool — property menu and insert placement', () => {
       tool.destroy();
     });
 
+    it('sorts number-range groups on the X axis by value, below-range first', () => {
+      const ranged = [
+        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-points': 150 }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-points': -10 }, position: 'a1' }),
+        createMockRowBlock({ id: 'row-c', properties: { 'prop-title': 'C', 'prop-points': 20 }, position: 'a2' }),
+      ];
+      const options = createDatabaseOptions({
+        schema: csvSchema,
+        views: [view({ type: 'chart', groupBy: 'prop-points', chartSort: 'xAscending', chartCumulative: true, groupSettings: { numberBy: 'range', rangeStart: 0, rangeEnd: 1000, rangeSize: 100, sort: 'descending' } })],
+        activeViewId: 'view-x',
+      }, {}, { childBlocks: ranged });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      expect(queryAllByData(element, 'data-blok-database-chart-mark').map((m) => m.getAttribute('data-key'))).toEqual(['range:below', 'range:0', 'range:100']);
+
+      tool.destroy();
+    });
+
     it('measures the Y axis with the view\'s calculation', () => {
       const { tool, element } = mount({ type: 'chart', chartType: 'number', groupBy: 'prop-status', chartMeasure: 'sum:prop-points' });
 

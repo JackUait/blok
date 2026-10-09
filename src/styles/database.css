@@ -455,7 +455,7 @@
 }
 
 [data-blok-database-column-header]:hover [data-blok-database-column-actions],
-[data-blok-database-column-actions]:focus-within {
+[data-blok-database-column-actions]:has(:focus-visible) {
   opacity: 1;
 }
 

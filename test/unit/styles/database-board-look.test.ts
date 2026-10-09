@@ -31,7 +31,7 @@ describe('board column header actions', () => {
   it('shows them only while the header is hovered, or holds focus or an open menu', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions]')).toContain('opacity: 0');
     expect(ruleBody(database, '[data-blok-database-column-header]:hover [data-blok-database-column-actions]')).toContain('opacity: 1');
-    expect(ruleBody(database, '[data-blok-database-column-actions]:focus-within')).toContain('opacity: 1');
+    expect(ruleBody(database, '[data-blok-database-column-actions]:has(:focus-visible)')).toContain('opacity: 1');
   });
 
   it('pushes them to the inline end of the header', () => {

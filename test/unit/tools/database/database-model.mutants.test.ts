@@ -85,6 +85,8 @@ describe('DatabaseModel — mutation coverage', () => {
           visibleProperties: [],
           properties: expect.any(Array),
           calculations: [],
+          hiddenGroups: [],
+          collapsedGroups: [],
         },
       ]);
     });
@@ -313,6 +315,8 @@ describe('DatabaseModel — mutation coverage', () => {
         visibleProperties: expect.any(Array),
         properties: expect.any(Array),
         calculations: [],
+        hiddenGroups: [],
+        collapsedGroups: [],
       });
     });
 
@@ -339,6 +343,8 @@ describe('DatabaseModel — mutation coverage', () => {
           visibleProperties: [],
           properties: expect.any(Array),
           calculations: [],
+          hiddenGroups: [],
+          collapsedGroups: [],
         },
       ]);
     });

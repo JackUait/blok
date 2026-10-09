@@ -56,8 +56,11 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
+    case 'formula':
+    case 'relation':
+    case 'rollup':
     default:
-      return typeof value === 'string' ? value : '';
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
   }
 };
 
@@ -181,6 +184,9 @@ export const valueFromText = (property: PropertyDefinition, text: string): Prope
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
+    case 'formula':
+    case 'relation':
+    case 'rollup':
     default:
       return undefined;
   }

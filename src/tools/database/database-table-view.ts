@@ -4,7 +4,7 @@ import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyValue
 import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill, openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
-import { readPropertyValue } from './property-values';
+import { isReadOnlyType, readPropertyValue } from './property-values';
 import { formatDateText, resolveLocale } from './cells/date-format';
 import { computeCalculation } from './database-calculations';
 import type { CalculationResult } from './database-calculations';
@@ -20,7 +20,6 @@ import {
 } from './view-settings';
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import type { CellChange, TableState } from './database-table-grid';
-import { isReadOnlyType } from './property-values';
 import { pageIconElement, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, openMenu, rowMenuItems } from './database-table-menus';

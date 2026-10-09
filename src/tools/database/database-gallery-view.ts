@@ -1,11 +1,10 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyValue, SelectOption } from './types';
+import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
 import { createOptionPill, renderCellValue } from './cells';
-import { coverImageOf, pageContentPreview } from './row-body';
+import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
-import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus } from '../../components/icons';
 
@@ -66,13 +65,6 @@ interface DragState {
   active: boolean;
   target: { card: HTMLElement; side: 'before' | 'after' } | null;
 }
-
-const imageFromValue = (value: PropertyValue | undefined): string | undefined => {
-  const first: unknown = Array.isArray(value) ? value[0] : value;
-  const url = typeof first === 'object' && first !== null ? (first as { url?: unknown }).url : first;
-
-  return typeof url === 'string' && url !== '' ? url : undefined;
-};
 
 /**
  * Notion's gallery layout (research/03 §4): a grid of cards with a preview,
@@ -203,7 +195,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       card.setAttribute('aria-label', title);
     }
 
-    const preview = this.createPreview(row);
+    const preview = createCardPreview(resolveCardPreview(this.options.view, this.options.schema), row, this.options.bodyOf, 'gallery');
 
     if (preview !== null) {
       card.appendChild(preview);
@@ -252,73 +244,6 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     }
 
     return card;
-  }
-
-  private createPreview(row: DatabaseRow): HTMLElement | null {
-    const preview = resolveCardPreview(this.options.view, this.options.schema);
-
-    if (preview.kind === 'none') {
-      return null;
-    }
-
-    const box = document.createElement('div');
-
-    box.setAttribute('data-blok-database-gallery-preview', '');
-    box.setAttribute('data-preview', preview.kind);
-
-    if (preview.kind === 'property') {
-      this.fillImage(box, imageFromValue(row.properties[preview.propertyId]));
-
-      return box;
-    }
-
-    const body = this.options.bodyOf(row.id);
-
-    if (preview.kind === 'cover') {
-      this.fillImage(box, coverImageOf(body));
-
-      return box;
-    }
-
-    const content = pageContentPreview(body);
-
-    if (content.image !== undefined) {
-      this.fillImage(box, content.image);
-
-      return box;
-    }
-
-    for (const line of content.lines) {
-      const el = document.createElement('div');
-
-      el.setAttribute('data-blok-database-gallery-preview-line', line.level);
-      el.textContent = line.text;
-      box.appendChild(el);
-    }
-    if (content.lines.length === 0) {
-      box.setAttribute('data-empty', '');
-    }
-
-    return box;
-  }
-
-  private fillImage(box: HTMLElement, url: string | undefined): void {
-    const src = url === undefined ? null : safeImageSrc(url);
-
-    if (src === null) {
-      box.setAttribute('data-empty', '');
-
-      return;
-    }
-
-    const img = document.createElement('img');
-
-    img.setAttribute('data-blok-database-gallery-image', '');
-    img.alt = '';
-    img.loading = 'lazy';
-    img.draggable = false;
-    img.src = src;
-    box.appendChild(img);
   }
 
   private createNewCard(groupKey: string): HTMLElement {

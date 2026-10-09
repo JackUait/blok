@@ -82,7 +82,7 @@ const openDrawerHeldMidSlide = async (page: Page): Promise<void> => {
 const finishDrawerSlide = async (page: Page): Promise<void> => {
   await page.evaluate(async () => {
     document.querySelector('[data-blok-database-drawer]')?.getAnimations().forEach((animation) => animation.finish());
-    // The menu re-places from a ResizeObserver, which reports after the next layout.
+    // The menu follows the slide frame by frame; the next frame sees it finished.
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
 };

@@ -90,7 +90,7 @@ export class DatabasePropertyTypePopover {
     this.popoverEl = popover;
 
     reposition();
-    // The drawer grows its width as it slides in, carrying the anchor along.
+    // The drawer slides in with a transform, carrying the anchor along.
     this.positionTracker = createPositionTracker(popover, reposition, anchor);
     this.positionTracker.attach();
 

@@ -316,7 +316,8 @@ export function positionFixedAnchored(
  *
  * `attach()` wires a capture-phase, passive `scroll` listener (so scrolls in
  * any ancestor scroll container are observed), a `resize` listener, and a
- * `ResizeObserver` on the content. `detach()` tears all three down. The
+ * `ResizeObserver` on the content, plus the anchor follow (see
+ * {@link createPositionTracker}). `detach()` tears them all down. The
  * `ResizeObserver` is feature-detected so environments lacking it (jsdom) do
  * not crash.
  */
@@ -331,22 +332,53 @@ export interface PositionTracker {
  * @param reposition - callback that re-computes and applies the position;
  *   receives the originating event for scroll so consumers can fail closed
  *   when a virtual anchor has no live nested-scroll context
- * @param anchor - optional element to observe too: an anchor inside a panel
- *   that animates its size moves without any scroll or window resize
+ * @param anchor - optional element to follow too. An anchor inside a panel
+ *   that resizes or slides moves without any scroll or window resize. A
+ *   ResizeObserver never sees a transform, so while an animation runs on the
+ *   anchor or an ancestor, the content re-places every frame.
  */
 export function createPositionTracker(
   content: Element,
   reposition: (event?: Event) => void,
   anchor?: Element
 ): PositionTracker {
-  const state: { attached: boolean; resizeObserver: ResizeObserver | null } = {
+  const state: { attached: boolean; resizeObserver: ResizeObserver | null; frame: number | null } = {
     attached: false,
     resizeObserver: null,
+    frame: null,
   };
 
   const scrollOptions: AddEventListenerOptions = { capture: true, passive: true };
   const onScroll = (event: Event): void => reposition(event);
   const onResize = (): void => reposition();
+
+  const carriesAnchor = (target: unknown): boolean =>
+    anchor !== undefined && target instanceof Element && target.contains(anchor);
+
+  const anchorIsMoving = (): boolean =>
+    typeof document.getAnimations === 'function' &&
+    document.getAnimations().some(({ effect }) => effect !== null && 'target' in effect && carriesAnchor(effect.target));
+
+  // The frame that sees the animation gone still re-places, so the content lands on the final spot.
+  const followFrame = (): void => {
+    state.frame = null;
+    reposition();
+    if (anchorIsMoving()) {
+      state.frame = requestAnimationFrame(followFrame);
+    }
+  };
+
+  const followAnchor = (): void => {
+    if (state.frame === null && anchorIsMoving()) {
+      state.frame = requestAnimationFrame(followFrame);
+    }
+  };
+
+  const onAnimationStart = (event: Event): void => {
+    if (carriesAnchor(event.target)) {
+      followAnchor();
+    }
+  };
 
   return {
     attach(): void {
@@ -365,6 +397,12 @@ export function createPositionTracker(
           state.resizeObserver.observe(anchor);
         }
       }
+
+      if (anchor !== undefined) {
+        document.addEventListener('transitionrun', onAnimationStart, true);
+        document.addEventListener('animationstart', onAnimationStart, true);
+        followAnchor();
+      }
     },
 
     detach(): void {
@@ -378,6 +416,13 @@ export function createPositionTracker(
 
       state.resizeObserver?.disconnect();
       state.resizeObserver = null;
+
+      document.removeEventListener('transitionrun', onAnimationStart, true);
+      document.removeEventListener('animationstart', onAnimationStart, true);
+      if (state.frame !== null) {
+        cancelAnimationFrame(state.frame);
+        state.frame = null;
+      }
     },
   };
 }

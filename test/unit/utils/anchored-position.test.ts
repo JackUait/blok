@@ -298,6 +298,126 @@ describe('anchored-position', () => {
       vi.unstubAllGlobals();
     });
 
+    describe('an anchor inside an animating panel', () => {
+      const frames: { queue: Map<number, FrameRequestCallback>; next: number } = { queue: new Map(), next: 1 };
+      const running: { animations: Animation[] } = { animations: [] };
+
+      const runFrame = (): void => {
+        const callbacks = [...frames.queue.values()];
+
+        frames.queue.clear();
+        callbacks.forEach((callback) => callback(0));
+      };
+
+      const slideOf = (target: Element): Animation => ({ effect: { target } }) as unknown as Animation;
+
+      const mount = (): { panel: HTMLElement; anchor: HTMLElement; content: HTMLElement } => {
+        const panel = document.createElement('aside');
+        const anchor = document.createElement('button');
+        const content = document.createElement('div');
+
+        panel.appendChild(anchor);
+        document.body.append(panel, content);
+
+        return { panel, anchor, content };
+      };
+
+      beforeEach(() => {
+        frames.queue.clear();
+        running.animations = [];
+        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback): number => {
+          const id = frames.next++;
+
+          frames.queue.set(id, callback);
+
+          return id;
+        });
+        vi.stubGlobal('cancelAnimationFrame', (id: number): void => {
+          frames.queue.delete(id);
+        });
+        Object.defineProperty(document, 'getAnimations', {
+          configurable: true,
+          value: () => running.animations,
+        });
+      });
+
+      afterEach(() => {
+        // restoreAllMocks does not undo defineProperty.
+        Reflect.deleteProperty(document, 'getAnimations');
+        vi.unstubAllGlobals();
+      });
+
+      it('re-places the content every frame while the panel slides, and once more when it ends', () => {
+        const { panel, anchor, content } = mount();
+        const reposition = vi.fn();
+
+        running.animations = [slideOf(panel)];
+
+        const tracker = createPositionTracker(content, reposition, anchor);
+
+        tracker.attach();
+        runFrame();
+        runFrame();
+        expect(reposition).toHaveBeenCalledTimes(2);
+
+        running.animations = [];
+        runFrame();
+        expect(reposition).toHaveBeenCalledTimes(3);
+        expect(frames.queue.size).toBe(0);
+
+        tracker.detach();
+      });
+
+      it('starts following when the panel starts a transition after the content opened', () => {
+        const { panel, anchor, content } = mount();
+        const reposition = vi.fn();
+        const tracker = createPositionTracker(content, reposition, anchor);
+
+        tracker.attach();
+        expect(frames.queue.size).toBe(0);
+
+        running.animations = [slideOf(panel)];
+        panel.dispatchEvent(new Event('transitionrun', { bubbles: true }));
+        runFrame();
+        expect(reposition).toHaveBeenCalledTimes(1);
+
+        tracker.detach();
+      });
+
+      it('ignores animations that do not carry the anchor', () => {
+        const { anchor, content } = mount();
+        const elsewhere = document.createElement('div');
+
+        document.body.appendChild(elsewhere);
+        running.animations = [slideOf(elsewhere)];
+
+        const tracker = createPositionTracker(content, vi.fn(), anchor);
+
+        tracker.attach();
+        elsewhere.dispatchEvent(new Event('transitionrun', { bubbles: true }));
+        expect(frames.queue.size).toBe(0);
+
+        tracker.detach();
+      });
+
+      it('stops following on detach', () => {
+        const { panel, anchor, content } = mount();
+        const reposition = vi.fn();
+
+        running.animations = [slideOf(panel)];
+
+        const tracker = createPositionTracker(content, reposition, anchor);
+
+        tracker.attach();
+        tracker.detach();
+        runFrame();
+
+        expect(reposition).not.toHaveBeenCalled();
+        panel.dispatchEvent(new Event('transitionrun', { bubbles: true }));
+        expect(frames.queue.size).toBe(0);
+      });
+    });
+
     it('does not throw when ResizeObserver is unavailable', () => {
       const originalResizeObserver = globalThis.ResizeObserver;
 

@@ -654,6 +654,23 @@ for (const [locale, keys] of Object.entries(DATABASE_RELATION_ROLLUP_FORMULA_COG
   for (const key of keys) set.add(key);
 }
 
+/**
+ * Chart, feed and CSV cognates: the native word is spelled the same as
+ * English. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_CHART_CSV_COGNATE_RETENTIONS: Record<string, string[]> = {
+  de: ['tools.database.viewTypeFeed', 'tools.database.chartGridHorizontal'],
+  es: ['tools.database.viewTypeFeed'],
+  fr: ['tools.database.chartDrilldownCount'],
+  nl: ['tools.database.viewTypeFeed'],
+  pt: ['tools.database.viewTypeFeed'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_CHART_CSV_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

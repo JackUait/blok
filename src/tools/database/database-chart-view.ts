@@ -309,7 +309,7 @@ export class DatabaseChartView implements DatabaseViewRenderer {
       context.scale(2, 2);
       context.drawImage(image, 0, 0, width, height);
 
-      return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
     } catch {
       return null;
     } finally {

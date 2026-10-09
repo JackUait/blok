@@ -1362,7 +1362,5 @@
   "tools.database.csvMerged": "Added {count} rows",
   "tools.database.csvSkipped": "No property matches these columns, so they were skipped: {columns}",
   "tools.database.csvEmpty": "This CSV file has no rows",
-  "tools.database.csvUntitledColumn": "Column",
-  "tools.database.csvPasteOffer": "Turn the pasted table into a database",
-  "tools.database.csvPasteConvert": "Convert to database"
+  "tools.database.csvUntitledColumn": "Column"
 }

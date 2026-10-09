@@ -26,7 +26,7 @@ const rows: Record<string, DatabaseRow[]> = {
     { id: 'r1', position: 'a0', properties: { title: 'One', notes: 'First note' } },
     { id: 'r2', position: 'a1', properties: { title: 'Two', notes: '' } },
   ],
-  o2: [{ id: 'r3', position: 'a2', properties: { title: 'Three', files: [{ url: 'https://example.com/a.png', name: 'a.png' }] } }],
+  o2: [{ id: 'r3', position: 'a2', properties: { title: 'Three', files: [{ id: 'f1', url: 'https://example.com/a.png', name: 'a.png' }] } }],
 };
 
 const mount = (overrides: Partial<ConstructorParameters<typeof DatabaseBoardView>[0]> = {}): HTMLElement => {

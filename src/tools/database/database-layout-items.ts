@@ -19,8 +19,9 @@ type T = Pick<I18n, 't'>;
  * (Phase 3) mounts these; nothing here opens a menu.
  */
 
-const choice = (title: string, isActive: boolean, onActivate: () => void): PopoverItemParams => ({
+const choice = (name: string, title: string, isActive: boolean, onActivate: () => void): PopoverItemParams => ({
   type: PopoverItemType.Default,
+  name,
   title,
   isActive,
   onActivate,
@@ -54,26 +55,28 @@ export const galleryLayoutItems = (
   return [
     {
       type: PopoverItemType.Default,
+      name: 'gallery-card-size',
       title: i18n.t('tools.database.galleryCardSize'),
       children: {
-        items: CARD_SIZES.map(([value, key]) => choice(i18n.t(key), size === value, () => update({ cardSize: value }))),
+        items: CARD_SIZES.map(([value, key]) => choice(`gallery-card-size-${value}`, i18n.t(key), size === value, () => update({ cardSize: value }))),
       },
     },
     {
       type: PopoverItemType.Default,
+      name: 'gallery-card-preview',
       title: i18n.t('tools.database.galleryCardPreview'),
       children: {
         items: [
-          ...PREVIEWS.map(([value, key]) => choice(i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
+          ...PREVIEWS.map(([value, key]) => choice(`gallery-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
           ...imageProperties.map((p) => {
             const value: CardPreview = `property:${p.id}`;
 
-            return choice(p.name, previewKey === value, () => update({ cardPreview: value }));
+            return choice(`gallery-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
           }),
         ],
       },
     },
-    choice(i18n.t('tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
+    choice('gallery-fit-image', i18n.t('tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
   ];
 };
 
@@ -92,21 +95,23 @@ export const calendarLayoutItems = (
   return [
     {
       type: PopoverItemType.Default,
+      name: 'calendar-show-by',
       title: i18n.t('tools.database.calendarShowBy'),
       children: {
-        items: dates.map((p) => choice(p.name, by === p.id, () => update({ calendarBy: p.id }))),
+        items: dates.map((p) => choice(`calendar-show-by-${p.id}`, p.name, by === p.id, () => update({ calendarBy: p.id }))),
       },
     },
     {
       type: PopoverItemType.Default,
+      name: 'calendar-show-as',
       title: i18n.t('tools.database.calendarShowAs'),
       children: {
         items: [
-          choice(i18n.t('tools.database.calendarMonth'), range === 'month', () => update({ calendarRange: 'month' })),
-          choice(i18n.t('tools.database.calendarWeek'), range === 'week', () => update({ calendarRange: 'week' })),
+          choice('calendar-range-month', i18n.t('tools.database.calendarMonth'), range === 'month', () => update({ calendarRange: 'month' })),
+          choice('calendar-range-week', i18n.t('tools.database.calendarWeek'), range === 'week', () => update({ calendarRange: 'week' })),
         ],
       },
     },
-    choice(i18n.t('tools.database.calendarShowWeekends'), weekends, () => update({ showWeekends: !weekends })),
+    choice('calendar-show-weekends', i18n.t('tools.database.calendarShowWeekends'), weekends, () => update({ showWeekends: !weekends })),
   ];
 };

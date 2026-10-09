@@ -3,6 +3,7 @@ import { openFilterPill, openViewSettings } from '../../../../src/tools/database
 import type { ViewSettingsContext } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -114,6 +115,50 @@ describe('view settings panel', () => {
 
     expect(h.ctx.setLayout).toHaveBeenCalledWith('board');
     expect(document.querySelector('[data-blok-testid="database-layout-board"]')?.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('mounts the layout rows a gallery or calendar gives: a page per choice list, a switch per toggle', () => {
+    const h = harness({ type: 'gallery' });
+    const pickLarge = vi.fn();
+    const flip = vi.fn();
+
+    h.ctx.layoutItems = () => [
+      {
+        type: PopoverItemType.Default,
+        name: 'gallery-card-size',
+        title: 'Card size',
+        children: { items: [
+          { type: PopoverItemType.Default, name: 'gallery-card-size-small', title: 'Small', isActive: true, onActivate: vi.fn() },
+          { type: PopoverItemType.Default, name: 'gallery-card-size-large', title: 'Large', isActive: false, onActivate: pickLarge },
+        ] },
+      },
+      { type: PopoverItemType.Default, name: 'gallery-fit-image', title: 'Fit image', isActive: true, onActivate: flip },
+    ];
+    h.open();
+    click('database-settings-layout');
+
+    expect(document.querySelector('[data-blok-testid="database-gallery-card-size"]')?.textContent).toContain('Small');
+    expect(document.querySelector('[data-blok-testid="database-gallery-fit-image"]')?.getAttribute('role')).toBe('switch');
+    expect(document.querySelector('[data-blok-testid="database-gallery-fit-image"]')?.getAttribute('aria-checked')).toBe('true');
+
+    click('database-gallery-fit-image');
+    expect(flip).toHaveBeenCalledTimes(1);
+
+    click('database-gallery-card-size');
+    expect(document.querySelector('[data-blok-testid="database-gallery-card-size-small"]')?.getAttribute('aria-checked')).toBe('true');
+    click('database-gallery-card-size-large');
+    expect(pickLarge).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the mounted layout rows while the database is locked', () => {
+    const h = harness({ type: 'gallery' });
+
+    h.ctx.layoutItems = () => [{ type: PopoverItemType.Default, name: 'gallery-fit-image', title: 'Fit image', isActive: false, onActivate: vi.fn() }];
+    h.state.locked = true;
+    h.open();
+    click('database-settings-layout');
+
+    expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-gallery-fit-image"]')?.disabled).toBe(true);
   });
 
   it('sets the load limit, where pages open, and the layout switches', () => {

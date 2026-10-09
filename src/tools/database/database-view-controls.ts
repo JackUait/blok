@@ -1,3 +1,4 @@
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { IconSearch, IconSliders, IconLock, IconPlus } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelRow } from './database-panel';
@@ -48,6 +49,8 @@ export interface ViewControlsHost {
   groups: (sub: boolean) => ViewGroupEntry[];
   /** Redraws the active view after a personal edit or a search. */
   rerender: () => void;
+  /** The active gallery or calendar view's layout rows. */
+  layoutItems?: () => PopoverItemParams[];
 }
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
@@ -293,6 +296,7 @@ export class DatabaseViewControls {
       copyViewLink: () => this.host.copyViewLink(),
       groups: (sub) => this.host.groups(sub),
       people: () => this.host.people?.() ?? [],
+      ...(this.host.layoutItems !== undefined ? { layoutItems: this.host.layoutItems } : {}),
     };
   }
 

@@ -86,7 +86,7 @@ const INITIAL_VIEW_KEY = 'initialView';
 const BOARD_GROUP_PAGE = 10;
 
 /** Layouts Blok draws; gallery is in the type but falls back to a board. */
-const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'list'];
+const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'calendar'];
 
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
 const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
@@ -1493,6 +1493,7 @@ export class DatabaseTool implements BlockTool {
       copyViewLink: () => this.copyViewLink(),
       groups: (sub) => this.groupEntries(sub),
       rerender: () => this.rerenderView({ keepDrawer: true }),
+      layoutItems: () => this.layoutItems(),
     };
   }
 

@@ -56,6 +56,26 @@ describe('database layout items', () => {
     vi.restoreAllMocks();
   });
 
+  it('names every row, so the settings panel can give each a stable test id', () => {
+    const named = (items: PopoverItemParams[]): string[] => items.flatMap((item) => {
+      const record = item as unknown as { name?: string; children?: { items: PopoverItemParams[] } };
+
+      return [record.name ?? '', ...(record.children !== undefined ? named(record.children.items) : [])];
+    });
+
+    expect(named(galleryLayoutItems(view(), schema, i18n, vi.fn()))).toEqual([
+      'gallery-card-size', 'gallery-card-size-small', 'gallery-card-size-medium', 'gallery-card-size-large',
+      'gallery-card-preview', 'gallery-card-preview-none', 'gallery-card-preview-cover', 'gallery-card-preview-content',
+      'gallery-card-preview-p-link', 'gallery-card-preview-p-files',
+      'gallery-fit-image',
+    ]);
+    expect(named(calendarLayoutItems(view({ type: 'calendar' }), schema, i18n, vi.fn()))).toEqual([
+      'calendar-show-by', 'calendar-show-by-p-due', 'calendar-show-by-p-start',
+      'calendar-show-as', 'calendar-range-month', 'calendar-range-week',
+      'calendar-show-weekends',
+    ]);
+  });
+
   describe('gallery', () => {
     it('offers card size with the current one marked, and writes the pick', () => {
       const update = vi.fn();

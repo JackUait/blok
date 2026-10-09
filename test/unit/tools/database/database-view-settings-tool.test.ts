@@ -164,6 +164,31 @@ describe('DatabaseTool — view settings', () => {
     expect(root.querySelector('[data-blok-database-list]')).not.toBeNull();
   });
 
+  it('offers Gallery and Calendar as layouts, and their layout rows once picked', () => {
+    const { tool, root } = mount({}, {}, { schema: [...schema, { id: 'p-due', name: 'Due', type: 'date', position: 'a3' }] });
+
+    click('database-toolbar-settings');
+    click('database-settings-layout');
+    click('database-layout-gallery');
+    expect(root.querySelector('[data-blok-database-gallery]')).not.toBeNull();
+
+    click('database-gallery-card-size');
+    click('database-gallery-card-size-large');
+    expect(tool.save(root).views[0].cardSize).toBe('large');
+    expect(root.querySelector('[data-blok-database-gallery]')?.getAttribute('data-card-size')).toBe('large');
+
+    click('database-panel-back');
+    click('database-gallery-fit-image');
+    expect(tool.save(root).views[0].fitImage).toBe(true);
+
+    click('database-layout-calendar');
+    expect(root.querySelector('[data-blok-database-calendar]')).not.toBeNull();
+    click('database-calendar-show-weekends');
+    expect(tool.save(root).views[0].showWeekends).toBe(false);
+    expect(q('database-gallery-card-size')).toBeNull();
+    tool.destroy();
+  });
+
   it('locks the database: views and properties stop changing, data entry goes on', () => {
     const { tool, root } = mount();
 

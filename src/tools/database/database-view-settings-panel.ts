@@ -67,6 +67,7 @@ import type {
   ViewType,
 } from './types';
 import { nanoid } from 'nanoid';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 
 export interface ViewGroupEntry {
   key: string;
@@ -98,7 +99,45 @@ export interface ViewSettingsContext {
   groups: (sub: boolean) => ViewGroupEntry[];
   /** People the host lists, for person filters. */
   people?: () => Array<{ id: string; name: string }>;
+  /**
+   * The active layout's own rows (gallery, calendar), as menu items. A row
+   * with children becomes a page of choices; one without becomes a switch.
+   * Each item needs a `name`: it is the row's test id.
+   */
+  layoutItems?: () => PopoverItemParams[];
 }
+
+interface LayoutItem {
+  name: string;
+  title: string;
+  active: boolean;
+  activate?: () => void;
+  children?: LayoutItem[];
+}
+
+/** Reads the parts of a menu item the panel draws. Separators and unnamed items are skipped. */
+const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flatMap((item): LayoutItem[] => {
+  const record = item as {
+    name?: string;
+    title?: string;
+    isActive?: boolean | (() => boolean);
+    onActivate?: (self: PopoverItemParams) => void;
+    children?: { items?: PopoverItemParams[] };
+  };
+
+  if (typeof record.name !== 'string' || typeof record.title !== 'string') {
+    return [];
+  }
+  const onActivate = record.onActivate;
+
+  return [{
+    name: record.name,
+    title: record.title,
+    active: typeof record.isActive === 'function' ? record.isActive() : record.isActive === true,
+    ...(onActivate !== undefined ? { activate: () => onActivate(item) } : {}),
+    ...(record.children?.items !== undefined ? { children: readLayoutItems(record.children.items) } : {}),
+  }];
+});
 
 /** The option colors Notion offers (research/08). */
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
@@ -294,8 +333,62 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.loadLimit()),
           }),
           ...switches,
+          ...this.layoutRows(panel),
         ];
       },
+    };
+  }
+
+  private currentLayoutItems(): LayoutItem[] {
+    return readLayoutItems(this.ctx.layoutItems?.() ?? []);
+  }
+
+  /** The gallery or calendar rows, read afresh on every refresh so a pick shows at once. */
+  private layoutRows(panel: DatabasePanel): HTMLElement[] {
+    const items = this.currentLayoutItems();
+
+    if (items.length === 0) {
+      return [];
+    }
+
+    return [panelSeparator(), ...items.map((item) => {
+      if (item.children === undefined) {
+        return panelSwitch({
+          label: item.title,
+          testId: `database-${item.name}`,
+          checked: item.active,
+          disabled: !this.shared,
+          onToggle: () => {
+            item.activate?.();
+            panel.refresh();
+          },
+        });
+      }
+
+      return panelRow({
+        label: item.title,
+        testId: `database-${item.name}`,
+        value: item.children.find((child) => child.active)?.title ?? '',
+        opensPage: true,
+        disabled: !this.shared,
+        onClick: () => panel.push(this.layoutChoices(item.name, item.title)),
+      });
+    })];
+  }
+
+  private layoutChoices(name: string, title: string): PanelPage {
+    return {
+      title,
+      build: (panel) => (this.currentLayoutItems().find((item) => item.name === name)?.children ?? []).map((child) => panelRow({
+        label: child.title,
+        testId: `database-${child.name}`,
+        checked: child.active,
+        disabled: !this.shared,
+        onClick: () => {
+          child.activate?.();
+          panel.refresh();
+        },
+      })),
     };
   }
 

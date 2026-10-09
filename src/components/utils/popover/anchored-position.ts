@@ -351,6 +351,13 @@ export function createPositionTracker(
   const scrollOptions: AddEventListenerOptions = { capture: true, passive: true };
   const onScroll = (event: Event): void => reposition(event);
   const onResize = (): void => reposition();
+  // A panel that slides with a transform carries the anchor without resizing
+  // anything, so its transition end is the only signal that the anchor moved.
+  const onTransitionEnd = (event: Event): void => {
+    if (anchor !== undefined && event.target instanceof Node && event.target.contains(anchor)) {
+      reposition();
+    }
+  };
 
   const carriesAnchor = (target: unknown): boolean =>
     anchor !== undefined && target instanceof Element && target.contains(anchor);
@@ -389,6 +396,7 @@ export function createPositionTracker(
 
       window.addEventListener('scroll', onScroll, scrollOptions);
       window.addEventListener('resize', onResize);
+      document.addEventListener('transitionend', onTransitionEnd, true);
 
       if (typeof ResizeObserver !== 'undefined') {
         state.resizeObserver = new ResizeObserver(() => reposition());
@@ -413,6 +421,7 @@ export function createPositionTracker(
 
       window.removeEventListener('scroll', onScroll, scrollOptions);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('transitionend', onTransitionEnd, true);
 
       state.resizeObserver?.disconnect();
       state.resizeObserver = null;

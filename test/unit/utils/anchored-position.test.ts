@@ -214,6 +214,32 @@ describe('anchored-position', () => {
       tracker.detach();
     });
 
+    it('re-positions when a transform slide on an ancestor of the anchor ends, and only then', () => {
+      const panel = document.createElement('div');
+      const anchor = document.createElement('button');
+      const elsewhere = document.createElement('div');
+      const content = document.createElement('div');
+
+      panel.appendChild(anchor);
+      document.body.append(panel, elsewhere, content);
+      const reposition = vi.fn();
+      const tracker = createPositionTracker(content, reposition, anchor);
+
+      tracker.attach();
+      elsewhere.dispatchEvent(new Event('transitionend', { bubbles: true }));
+      expect(reposition).not.toHaveBeenCalled();
+
+      panel.dispatchEvent(new Event('transitionend', { bubbles: true }));
+      expect(reposition).toHaveBeenCalledTimes(1);
+
+      tracker.detach();
+      panel.dispatchEvent(new Event('transitionend', { bubbles: true }));
+      expect(reposition).toHaveBeenCalledTimes(1);
+      panel.remove();
+      elsewhere.remove();
+      content.remove();
+    });
+
     it('stops re-positioning after detach', () => {
       const content = document.createElement('div');
 

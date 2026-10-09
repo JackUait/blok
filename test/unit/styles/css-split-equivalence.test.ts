@@ -759,7 +759,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TIMELINE_BYTES = 12_069;
     // database.css: board card previews, properties and sub-group lanes, and the calendar "No date" list.
     const DATABASE_BOARD_CARD_BYTES = 5_546;
-    const DATABASE_BOARD_CARD_BYTES = 4_684;
     // database.css: relation chips and picker, and the formula editor.
     const DATABASE_COMPUTED_PROPERTIES_BYTES = 3_040;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952

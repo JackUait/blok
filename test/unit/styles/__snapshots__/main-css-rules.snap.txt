@@ -4012,6 +4012,23 @@ span[data-blok-slash-search] {
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
+  --blok-database-gallery-card-bg: #ffffff;
+  --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-gallery-card-hover-bg: rgba(55, 53, 47, 0.04);
+  --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
+  --blok-database-gallery-preview-text: rgb(125, 122, 117);
+  --blok-database-gallery-title-text: rgb(44, 44, 43);
+  --blok-database-gallery-muted-text: rgb(161, 158, 153);
+  --blok-database-calendar-border: rgb(230, 229, 227);
+  --blok-database-calendar-weekend-bg: rgb(249, 248, 247);
+  --blok-database-calendar-muted-text: rgb(161, 158, 153);
+  --blok-database-calendar-day-text: rgb(44, 44, 43);
+  --blok-database-calendar-nav-icon: rgb(142, 139, 134);
+  --blok-database-calendar-event-bg: #ffffff;
+  --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
+  --blok-database-calendar-today-text: #ffffff;
 }
 
 [@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
@@ -4073,6 +4090,23 @@ span[data-blok-slash-search] {
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-gallery-card-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-gallery-preview-border: rgba(255, 255, 243, 0.082);
+  --blok-database-gallery-preview-text: var(--blok-text-secondary);
+  --blok-database-gallery-title-text: rgb(240, 239, 237);
+  --blok-database-gallery-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
+  --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+  --blok-database-calendar-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-day-text: rgb(240, 239, 237);
+  --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-calendar-event-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-calendar-today-text: #ffffff;
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
@@ -4134,6 +4168,23 @@ span[data-blok-slash-search] {
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-gallery-card-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-gallery-preview-border: rgba(255, 255, 243, 0.082);
+  --blok-database-gallery-preview-text: var(--blok-text-secondary);
+  --blok-database-gallery-title-text: rgb(240, 239, 237);
+  --blok-database-gallery-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
+  --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+  --blok-database-calendar-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-day-text: rgb(240, 239, 237);
+  --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-calendar-event-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-calendar-today-text: #ffffff;
 }
 
 [data-blok-database-board] {

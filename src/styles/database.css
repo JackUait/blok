@@ -3503,6 +3503,9 @@
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-view-toolbar] > button,
   [data-blok-database-panel-row] {
+    transition: none;
+  }
+}
 
 /* ─── Gallery ───
    Measured (research/07, 08): 16px gap, 146px cover, 10px card radius,

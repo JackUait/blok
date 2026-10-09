@@ -754,7 +754,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // settings panel, conditional color fills and the switch knob motion.
     const DATABASE_VIEW_SETTINGS_BYTES = 11_292;
     // database.css: the gallery and calendar views, and their tokens in all three themes.
-    const DATABASE_GALLERY_CALENDAR_BYTES = 18_212;
+    const DATABASE_GALLERY_CALENDAR_BYTES = 18_209;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

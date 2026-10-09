@@ -30,7 +30,7 @@ describe('database board card and calendar "No date" styles', () => {
   });
 
   it('bleeds the preview to the card edges and crops unless Fit image is on', () => {
-    expect(ruleBody('[data-blok-database-card-preview]')).toContain('margin: -10px -12px 8px');
+    expect(ruleBody('[data-blok-database-card-preview]')).toContain('margin: calc(-1 * var(--blok-space-2-5)) calc(-1 * var(--blok-space-3)) var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-card-image]')).toMatch(/object-fit:\s*cover/);
     expect(ruleBody('[data-blok-database-board][data-fit-image] [data-blok-database-card-image]')).toMatch(/object-fit:\s*contain/);
   });

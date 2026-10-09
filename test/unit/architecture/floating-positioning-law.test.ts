@@ -117,6 +117,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/spacer/alignment-guide.ts': 'Pointer-driven fixed guide whose coordinates refresh throughout the drag.',
   'tools/table/table-row-col-drag.ts': 'Pointer-following table ghost and indicator refreshed on every pointer move.',
   'tools/tabs/index.ts': 'Mount owner for the tracked emoji-picker root surface (tab Edit icon).',
+  'tools/database/database-download.ts': 'Transient styleless download anchor clicked and removed synchronously.',
   'tools/video/index.ts': 'Transient styleless download anchor clicked and removed synchronously.',
 };
 

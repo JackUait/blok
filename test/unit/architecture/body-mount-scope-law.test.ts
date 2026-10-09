@@ -117,6 +117,7 @@ const EXEMPTIONS: Record<string, Exemption> = {
   },
   'tools/image/download.ts': { reason: 'transient styleless <a download> clicked and removed' },
   'tools/video/index.ts': { reason: 'transient styleless <a download> clicked and removed' },
+  'tools/database/database-download.ts': { reason: 'transient styleless <a download> clicked and removed' },
   'tools/audio/index.ts': { reason: 'transient styleless <a download> clicked and removed' },
 };
 

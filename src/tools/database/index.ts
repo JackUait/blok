@@ -98,7 +98,7 @@ import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
 import { buildCsvImport, csvCellText, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
 import { formatNumberValue } from './cells/number-format';
-import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { downloadBlob } from './database-download';
 
 interface ChangedBlock {
   id?: unknown;
@@ -153,25 +153,6 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-add-row]',
   '[data-blok-database-delete-row]',
 ].join(', ');
-
-/** Saves a file through a same-origin object URL, where `download` is honored. The anchor lives in `host` for the click. */
-const downloadBlob = (blob: Blob, fileName: string, host: HTMLElement): void => {
-  const url = URL.createObjectURL(blob);
-  const href = safeDownloadHref(url);
-
-  if (href !== null) {
-    const a = document.createElement('a');
-
-    a.href = href;
-    a.download = fileName;
-    a.rel = 'noopener';
-    a.hidden = true;
-    host.appendChild(a);
-    a.click();
-    a.remove();
-  }
-  URL.revokeObjectURL(url);
-};
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', INITIAL_VIEW_KEY]);
 
@@ -1843,7 +1824,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private downloadCsv(): void {
-    if (this.element !== null) downloadBlob(new Blob([this.exportCsv()], { type: 'text/csv;charset=utf-8' }), `${this.fileBase()}.csv`, this.element);
+    downloadBlob(new Blob([this.exportCsv()], { type: 'text/csv;charset=utf-8' }), `${this.fileBase()}.csv`);
   }
 
   private async saveChart(format: 'png' | 'svg'): Promise<void> {
@@ -1853,7 +1834,7 @@ export class DatabaseTool implements BlockTool {
     const svg = view.toSvgString();
     const blob = format === 'svg' ? new Blob([svg], { type: 'image/svg+xml' }) : await view.toPngBlob();
 
-    if (svg !== '' && blob !== null && this.element !== null) downloadBlob(blob, `${this.fileBase()}.${format}`, this.element);
+    if (svg !== '' && blob !== null) downloadBlob(blob, `${this.fileBase()}.${format}`);
   }
 
   /** A file picker for one CSV or TSV file. */

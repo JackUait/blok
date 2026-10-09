@@ -1,3 +1,4 @@
+import { pageIconElement } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -16,6 +17,8 @@ interface DatabaseListViewOptions {
   /** Groups the view saved collapsed. */
   collapsedGroupIds?: ReadonlySet<string>;
   onToggleCollapse?: (optionId: string, collapsed: boolean) => void;
+  /** Show each row's page icon before its title. Default true. */
+  showPageIcon?: boolean;
 }
 
 /**
@@ -33,9 +36,11 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly groupOptions: SelectOption[] | undefined;
   private readonly getGroupRows: ((optionId: string) => DatabaseRow[]) | undefined;
   private readonly collapsedGroupIds: ReadonlySet<string>;
+  private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
 
-  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse }: DatabaseListViewOptions) {
+  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon }: DatabaseListViewOptions) {
+    this.showPageIcon = showPageIcon !== false;
     this.readOnly = readOnly;
     this.i18n = i18n;
     this.rows = rows;
@@ -237,6 +242,11 @@ export class DatabaseListView implements DatabaseViewRenderer {
       titleEl.setAttribute('data-placeholder', '');
     }
 
+    const icon = this.showPageIcon ? pageIconElement(row) : null;
+
+    if (icon !== null) {
+      rowEl.appendChild(icon);
+    }
     rowEl.appendChild(titleEl);
 
     const propertiesEl = this.createPropertiesElement(row);

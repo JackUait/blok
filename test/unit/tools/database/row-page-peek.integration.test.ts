@@ -294,6 +294,33 @@ describe('row page peek modes', () => {
     expect(document.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
   });
 
+  it.each([
+    ['table', {}, '[data-row-id="r1"] [role="gridcell"]'],
+    ['board', { type: 'board', groupBy: 's' }, '[data-blok-database-card][data-row-id="r1"]'],
+    ['list', { type: 'list' }, '[data-blok-database-list-row][data-row-id="r1"]'],
+    ['gallery', { type: 'gallery' }, '[data-blok-database-gallery-card][data-row-id="r1"], [data-row-id="r1"]'],
+  ])('shows the page icon in a %s view, unless the view hides page icons', async (_name, view, rowSelector) => {
+    const withIcon = (hide: boolean): OutputBlockData[] => {
+      const blocks = doc({ ...view, ...(hide ? { showPageIcon: false } : {}) });
+
+      (blocks[0].data as { schema: unknown[] }).schema.push({
+        id: 's', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'Todo', position: 'a0' }] },
+      });
+      blocks[1] = { ...blocks[1], data: { ...blocks[1].data, icon: '🚀', properties: { t: 'One', s: 'o1' } } };
+
+      return blocks;
+    };
+    const iconIn = (): string | null | undefined => q(rowSelector)?.querySelector('[data-blok-database-page-icon]')?.textContent;
+
+    await make(withIcon(false));
+    expect(iconIn()).toBe('🚀');
+
+    editor?.destroy();
+    holder?.replaceChildren();
+    await make(withIcon(true));
+    expect(iconIn()).toBeUndefined();
+  });
+
   it('switches the mode from the peek header and saves it on the view', async () => {
     await make(doc());
     await openRow('r1');

@@ -4738,6 +4738,14 @@ span[data-blok-slash-search] {
   color: var(--blok-database-add-text);
 }
 
+[data-blok-database-page-icon] {
+  margin-inline-end: var(--blok-space-1);
+}
+
+[data-blok-database-page-icon] + [data-blok-database-card-title], [data-blok-database-page-icon] + [data-blok-database-gallery-title] {
+  display: inline;
+}
+
 [data-blok-database-drawer-page-head] {
   display: flex;
   min-height: var(--blok-space-6);

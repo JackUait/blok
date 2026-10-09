@@ -73,6 +73,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks } from '../nested-blocks';
 import { moveElementToEnd } from '../../components/utils/html';
 import { legacyBodyInserts, rowDescription } from './row-body';
+import { showsPageIcon } from './page-icon';
 import {
   DATABASE_DEFAULT_TEXT,
   localizeDatabaseSchema,
@@ -2434,6 +2435,7 @@ export class DatabaseTool implements BlockTool {
       const groups = this.queryGroupRows(viewConfig, options.map((o) => o.id));
 
       this.view = new DatabaseListView({
+        showPageIcon: showsPageIcon(viewConfig),
         readOnly: this.readOnly,
         i18n: this.api.i18n,
         rows: [],
@@ -2447,6 +2449,7 @@ export class DatabaseTool implements BlockTool {
       });
     } else {
       this.view = new DatabaseListView({
+        showPageIcon: showsPageIcon(viewConfig),
         readOnly: this.readOnly,
         i18n: this.api.i18n,
         rows: this.model.queryRows({ view: viewConfig, search: this.controls.search }).rows,
@@ -3095,6 +3098,8 @@ export class DatabaseTool implements BlockTool {
           row?.call('updateIcon', { icon });
           row?.dispatchChange();
           this.syncRowsFromBlocks();
+          this.cardDrawer?.syncOpenRow(this.model.getRow(rowId));
+          this.rerenderView({ keepDrawer: true });
         },
         onModeChange: (mode) => this.changeOpenMode(mode),
         peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,

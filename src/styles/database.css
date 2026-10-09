@@ -930,6 +930,16 @@
   color: var(--blok-database-add-text);
 }
 
+/* A row's page icon before its title in a view (size unmeasured: the title's own line). */
+[data-blok-database-page-icon] {
+  margin-inline-end: var(--blok-space-1);
+}
+
+[data-blok-database-page-icon] + [data-blok-database-card-title],
+[data-blok-database-page-icon] + [data-blok-database-gallery-title] {
+  display: inline;
+}
+
 /* Page icon above the title (icon size unmeasured: Blok's page title icon scale). */
 [data-blok-database-drawer-page-head] {
   display: flex;

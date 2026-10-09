@@ -323,6 +323,25 @@ describe('row bodies are child blocks of the row', () => {
     expect((await editor?.save())?.blocks.find((block) => block.id === 'r1')?.data.icon).toBe('🚀');
   });
 
+  it('keeps the page open while the icon picker is used', async () => {
+    await make(docWithBodies());
+    await openRow('r1');
+    const picker = document.createElement('div');
+    const backdrop = document.createElement('div');
+
+    picker.setAttribute('data-blok-emoji-picker', '');
+    picker.appendChild(document.createElement('button'));
+    backdrop.setAttribute('data-blok-emoji-picker-backdrop', '');
+    document.body.append(picker, backdrop);
+    picker.firstElementChild?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await quiet();
+
+    expect(holder?.querySelector('[data-blok-database-drawer][data-open]')).not.toBeNull();
+    picker.remove();
+    backdrop.remove();
+  });
+
   it('offers "Add icon" on a page with none, never to a read-only viewer', async () => {
     await make(docWithBodies());
     await openRow('r2');

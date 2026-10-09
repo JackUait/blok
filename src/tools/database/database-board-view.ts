@@ -1,3 +1,4 @@
+import { pageIconElement, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -547,6 +548,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       cardEl.setAttribute('data-empty', '');
     }
 
+    const icon = showsPageIcon(this.settings.view) ? pageIconElement(row) : null;
+
+    if (icon !== null) {
+      cardEl.appendChild(icon);
+    }
     cardEl.appendChild(titleEl);
 
     const properties = this.createCardProperties(row);

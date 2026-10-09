@@ -23,6 +23,7 @@ import type { CellChange, TableState } from './database-table-grid';
 import { openCellEditor } from './cells';
 import type { CellEditorHandle } from './cells';
 import { isReadOnlyType } from './property-values';
+import { pageIconElement, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, openMenu, rowMenuItems } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -645,6 +646,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     });
 
     cell.replaceChildren(value);
+
+    const icon = column.property.type === 'title' && showsPageIcon(this.options.view) ? pageIconElement(row) : null;
+
+    if (icon !== null) {
+      cell.insertBefore(icon, value);
+    }
 
     if (column.property.type === 'title' && (this.handlers !== undefined || this.options.openRow !== undefined)) {
       const open = document.createElement('button');

@@ -274,6 +274,24 @@ test.describe('peek modes', () => {
   });
 });
 
+test.describe('page icon', () => {
+  test('Add icon picks an emoji that shows on the page and in the title cell', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await page.getByRole('button', { name: 'Add icon' }).click();
+    const emoji = page.locator('[data-blok-emoji-picker] [data-emoji-native]').first();
+
+    await expect(emoji).toBeVisible();
+    const native = await emoji.getAttribute('data-emoji-native');
+
+    await emoji.click();
+
+    await expect(peek(page).locator('[data-blok-database-drawer-icon]')).toHaveText(native ?? '');
+    await expect(page.locator('[data-blok-database-table-row][data-row-id="r1"] [data-blok-database-page-icon]')).toHaveText(native ?? '');
+    expect((await saved(page)).find((b) => b.id === 'r1')?.data.icon).toBe(native);
+  });
+});
+
 test.describe('read-only', () => {
   test('a read-only viewer opens a row page to read it', async ({ page }) => {
     await mount(page, blocks(), true);

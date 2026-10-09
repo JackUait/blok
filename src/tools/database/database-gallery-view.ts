@@ -1,3 +1,4 @@
+import { pageIconElement, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
@@ -212,6 +213,11 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       titleEl.textContent = title;
       if (title === '') {
         titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
+      }
+      const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
+
+      if (icon !== null) {
+        card.appendChild(icon);
       }
       card.appendChild(titleEl);
     }

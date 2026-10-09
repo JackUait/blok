@@ -480,7 +480,7 @@ export class DatabaseCardDrawer {
        * clicking a popover item would be treated as an "outside click"
        * and close the drawer.
        */
-      if (target instanceof Element && target.closest('[data-blok-popover-opened]') !== null) {
+      if (target instanceof Element && target.closest('[data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop]') !== null) {
         return;
       }
 

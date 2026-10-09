@@ -65,6 +65,11 @@ describe('board column, card and header look (research/08)', () => {
     expect(tokenValues('--blok-database-column-brown-accent')[0]).toBe('rgb(182, 137, 101)');
   });
 
+  it('uses the measured gray option pill, which keeps the board header pill readable (research/08)', () => {
+    expect(tokenValues('--blok-database-option-gray-bg')).toEqual(['rgba(28, 19, 1, 0.11)', 'rgba(255, 252, 235, 0.306)', 'rgba(255, 252, 235, 0.306)']);
+    expect(tokenValues('--blok-database-option-gray-text')).toEqual(['rgb(73, 72, 70)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
+  });
+
   it('draws a card with the block radius, a 3-layer shadow whose 1px ring takes the column hue, and 8px below it', () => {
     const body = ruleBody(database, '[data-blok-database-card]');
 

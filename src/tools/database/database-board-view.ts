@@ -193,7 +193,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       // Only some hues were measured (colors.css); the rest derive from the option pill.
       columnEl.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
       columnEl.style.setProperty('--_blok-group-ring', `var(--blok-database-column-${c}-ring, color-mix(in srgb, var(--blok-database-option-${c}-bg) 49%, transparent))`);
-      columnEl.style.setProperty('--_blok-group-accent', `var(--blok-database-column-${c}-accent, var(--blok-color-${c}-text))`);
+      // Unmeasured hues fall back to the pill text, which holds AA on the tint; the Marker text did not.
+      columnEl.style.setProperty('--_blok-group-accent', `var(--blok-database-column-${c}-accent, var(--blok-database-option-${c}-text))`);
       columnEl.setAttribute('data-color', c);
     }
 

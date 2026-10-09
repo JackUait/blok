@@ -199,7 +199,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.getPropertyValue('--_blok-group-ring'))
         .toBe('var(--blok-database-column-green-ring, color-mix(in srgb, var(--blok-database-option-green-bg) 49%, transparent))');
       expect(column.style.getPropertyValue('--_blok-group-accent'))
-        .toBe('var(--blok-database-column-green-accent, var(--blok-color-green-text))');
+        .toBe('var(--blok-database-column-green-accent, var(--blok-database-option-green-text))');
       expect(column.style.backgroundColor).toBe('');
     });
 

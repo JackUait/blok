@@ -6,11 +6,11 @@
 :where([data-blok-interface]),
 :where([data-blok-popover]),
 :where([data-blok-top-layer]) {
-  /* Option pills: values measured in research/07; gray is unmeasured. */
+  /* Option pills: values measured in research/07; gray in research/08. */
   --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
   --blok-database-option-default-text: rgb(44, 44, 43);
-  --blok-database-option-gray-bg: var(--blok-color-gray-bg);
-  --blok-database-option-gray-text: var(--blok-color-gray-text);
+  --blok-database-option-gray-bg: rgba(28, 19, 1, 0.11);
+  --blok-database-option-gray-text: rgb(73, 72, 70);
   --blok-database-option-brown-bg: rgba(127, 51, 0, 0.157);
   --blok-database-option-brown-text: rgb(88, 68, 55);
   --blok-database-option-orange-bg: rgba(196, 88, 0, 0.204);
@@ -80,11 +80,11 @@
   :where(:root:not([data-blok-theme="light"]) [data-blok-interface]),
   :where(:root:not([data-blok-theme="light"]) [data-blok-popover]),
   :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
-    /* Option pills: dark values measured in research/07; gray, purple, pink and red are unmeasured. */
+    /* Option pills: dark values measured in research/07, gray in research/08; purple, pink and red are unmeasured here. */
     --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
     --blok-database-option-default-text: rgb(240, 239, 237);
-    --blok-database-option-gray-bg: var(--blok-color-gray-bg);
-    --blok-database-option-gray-text: var(--blok-color-gray-text);
+    --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
+    --blok-database-option-gray-text: rgb(240, 239, 237);
     --blok-database-option-brown-bg: rgba(255, 184, 132, 0.365);
     --blok-database-option-brown-text: rgb(245, 237, 233);
     --blok-database-option-orange-bg: rgba(255, 143, 71, 0.482);
@@ -153,8 +153,8 @@
 :where([data-blok-theme="dark"] [data-blok-top-layer]) {
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
-  --blok-database-option-gray-bg: var(--blok-color-gray-bg);
-  --blok-database-option-gray-text: var(--blok-color-gray-text);
+  --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
+  --blok-database-option-gray-text: rgb(240, 239, 237);
   --blok-database-option-brown-bg: rgba(255, 184, 132, 0.365);
   --blok-database-option-brown-text: rgb(245, 237, 233);
   --blok-database-option-orange-bg: rgba(255, 143, 71, 0.482);

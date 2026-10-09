@@ -305,6 +305,43 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'gallery and calendar views with their layout settings',
+    data: {
+      activeViewId: 'view-gallery',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'due', name: 'Due', type: 'date', position: 'a1' },
+      ],
+      views: [
+        {
+          id: 'view-gallery',
+          name: 'Gallery',
+          type: 'gallery',
+          position: 'a0',
+          sorts: [],
+          filters: [],
+          visibleProperties: [],
+          cardSize: 'large',
+          cardPreview: 'property:due',
+          fitImage: true,
+        },
+        {
+          id: 'view-calendar',
+          name: 'Calendar',
+          type: 'calendar',
+          position: 'a1',
+          sorts: [],
+          filters: [],
+          visibleProperties: [],
+          calendarBy: 'due',
+          calendarRange: 'week',
+          showWeekends: false,
+        },
+      ],
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'a legacy row with no top-level title or pageId',
     data: {
@@ -501,7 +538,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('fe0c2a6113c9eb61c6c0262d74c6bacca88c31cb64f046b3aefd4f41beeadb9d');
+      .toBe('06e58854a8b1a450785a8100b2dc3cc9afe234df4f6855a67654ddcd77fa8892');
 
     const published: unknown = JSON.parse(snapshot);
 

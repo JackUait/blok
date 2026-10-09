@@ -1,6 +1,8 @@
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
 import type {
+  CalendarRange,
   CalculationFn,
+  CardSize,
   DatabaseViewConfig,
   LoadLimit,
   OpenPagesIn,
@@ -202,9 +204,56 @@ export const resolveLoadLimit = (view: DatabaseViewConfig): LoadLimit =>
 
 const OPEN_PAGES_IN: readonly OpenPagesIn[] = ['side', 'center', 'full'];
 
-/** Notion's per-layout defaults: gallery (and calendar) open in a center peek, the rest in a side peek. */
+/** Notion's per-layout defaults: gallery and calendar open in a center peek, the rest in a side peek. */
 export const resolveOpenPagesIn = (view: DatabaseViewConfig): OpenPagesIn =>
-  OPEN_PAGES_IN.find((mode) => mode === view.openPagesIn) ?? (view.type === 'gallery' ? 'center' : 'side');
+  OPEN_PAGES_IN.find((mode) => mode === view.openPagesIn)
+  ?? (view.type === 'gallery' || view.type === 'calendar' ? 'center' : 'side');
+
+const CARD_SIZES: readonly CardSize[] = ['small', 'medium', 'large'];
+
+export const resolveCardSize = (view: DatabaseViewConfig): CardSize =>
+  CARD_SIZES.find((size) => size === view.cardSize) ?? 'medium';
+
+export type ResolvedCardPreview =
+  | { kind: 'none' | 'cover' | 'content' }
+  | { kind: 'property'; propertyId: string };
+
+const PROPERTY_PREVIEW = 'property:';
+
+/** Notion shows page content when no preview is picked (H-galleries). A deleted property falls back the same way. */
+export const resolveCardPreview = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ResolvedCardPreview => {
+  const stored = view.cardPreview;
+
+  if (stored === 'none' || stored === 'cover' || stored === 'content') {
+    return { kind: stored };
+  }
+
+  if (typeof stored === 'string' && stored.startsWith(PROPERTY_PREVIEW)) {
+    const propertyId = stored.slice(PROPERTY_PREVIEW.length);
+
+    if (schema.some((p) => p.id === propertyId)) {
+      return { kind: 'property', propertyId };
+    }
+  }
+
+  return { kind: 'content' };
+};
+
+export const resolveFitImage = (view: DatabaseViewConfig): boolean => view.fitImage === true;
+
+const CALENDAR_RANGES: readonly CalendarRange[] = ['month', 'week'];
+
+export const resolveCalendarRange = (view: DatabaseViewConfig): CalendarRange =>
+  CALENDAR_RANGES.find((range) => range === view.calendarRange) ?? 'month';
+
+export const resolveShowWeekends = (view: DatabaseViewConfig): boolean => view.showWeekends !== false;
+
+/** The stored date property, else the first date property in schema order, else none. */
+export const resolveCalendarBy = (view: DatabaseViewConfig, schema: PropertyDefinition[]): string | undefined => {
+  const dates = bySchemaPosition(schema).filter((p) => p.type === 'date');
+
+  return dates.find((p) => p.id === view.calendarBy)?.id ?? dates[0]?.id;
+};
 
 /**
  * Property id → calculation. Two peers can add a calculation to one column

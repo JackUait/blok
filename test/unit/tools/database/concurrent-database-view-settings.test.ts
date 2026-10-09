@@ -130,6 +130,41 @@ describe('database view settings — two peers editing one view', () => {
     expect(resolveCalculations(viewsOf(storeB)[0], schema)).toEqual(onA);
   });
 
+  it('keeps both gallery settings when two people change different ones at the same moment', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'gallery' });
+
+    edit(storeA, () => ({ cardSize: 'large' }));
+    edit(storeB, () => ({ cardPreview: 'cover', fitImage: true }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0]).toMatchObject({ cardSize: 'large', cardPreview: 'cover', fitImage: true });
+    expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
+  });
+
+  it('settles on one card preview when two people pick one at the same moment', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'gallery' });
+
+    edit(storeA, () => ({ cardPreview: 'property:p-due' }));
+    edit(storeB, () => ({ cardPreview: 'cover' }));
+    sync(storeA, storeB);
+
+    const preview = viewsOf(storeA)[0].cardPreview;
+
+    expect(['property:p-due', 'cover']).toContain(preview);
+    expect(viewsOf(storeB)[0].cardPreview).toBe(preview);
+  });
+
+  it('keeps both calendar settings when two people change different ones at the same moment', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'calendar' });
+
+    edit(storeA, () => ({ calendarRange: 'week' }));
+    edit(storeB, () => ({ showWeekends: false, calendarBy: 'p-due' }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0]).toMatchObject({ calendarRange: 'week', showWeekends: false, calendarBy: 'p-due' });
+    expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
+  });
+
   // Known gap: a view saved before `properties` existed has no key to merge
   // into, so two first writes race on creating it.
   it.fails('keeps both widths on a view written before properties existed', () => {

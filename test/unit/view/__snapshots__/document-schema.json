@@ -2081,7 +2081,8 @@
                   "board",
                   "table",
                   "gallery",
-                  "list"
+                  "list",
+                  "calendar"
                 ]
               },
               "position": {
@@ -2260,7 +2261,41 @@
                   "center",
                   "full"
                 ],
-                "description": "Where a row page opens. Default side; center for gallery."
+                "description": "Where a row page opens. Default side; center for gallery and calendar."
+              },
+              "cardSize": {
+                "type": "string",
+                "enum": [
+                  "small",
+                  "medium",
+                  "large"
+                ],
+                "description": "Gallery card size. Default medium."
+              },
+              "cardPreview": {
+                "type": "string",
+                "pattern": "^(none|cover|content|property:.+)$",
+                "description": "What a gallery card shows above its title: none, the page cover, the page content, or \"property:<id>\". Default content."
+              },
+              "fitImage": {
+                "type": "boolean",
+                "description": "Gallery: show the whole image instead of cropping it. Default false."
+              },
+              "calendarBy": {
+                "type": "string",
+                "description": "Calendar: the date property id that places each row. Default the first date property."
+              },
+              "calendarRange": {
+                "type": "string",
+                "enum": [
+                  "month",
+                  "week"
+                ],
+                "description": "Calendar range. Default month."
+              },
+              "showWeekends": {
+                "type": "boolean",
+                "description": "Calendar. Default true."
               },
               "noValueGroupPosition": {
                 "type": "string",

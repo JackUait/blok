@@ -198,7 +198,7 @@ export interface DatabaseRowData extends BlockToolData {
 
 // ─── View config ───
 
-export type ViewType = 'board' | 'table' | 'gallery' | 'list';
+export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar';
 
 export interface SortConfig {
   /** Optional on old documents. Every write adds one, so two peers' sorts pair by id. */
@@ -285,6 +285,17 @@ export type LoadLimit = 10 | 25 | 50 | 100;
 
 export type OpenPagesIn = 'side' | 'center' | 'full';
 
+export type CardSize = 'small' | 'medium' | 'large';
+
+/**
+ * What a gallery card shows above its title. One string, not an object, so
+ * two peers picking at once settle on one pick: the CRDT merges objects key
+ * by key.
+ */
+export type CardPreview = 'none' | 'cover' | 'content' | `property:${string}`;
+
+export type CalendarRange = 'month' | 'week';
+
 /**
  * One property's settings in one view. The array order is the column order.
  * `id` is the property id: the CRDT pairs entries by it, so a peer's width
@@ -329,6 +340,15 @@ export interface DatabaseViewConfig {
   loadLimit?: LoadLimit;
   calculations?: ViewCalculation[];
   openPagesIn?: OpenPagesIn;
+  /** Gallery. */
+  cardSize?: CardSize;
+  cardPreview?: CardPreview;
+  /** Gallery: show the whole image instead of cropping it to the card. */
+  fitImage?: boolean;
+  /** Calendar: the date property that places each row. */
+  calendarBy?: string;
+  calendarRange?: CalendarRange;
+  showWeekends?: boolean;
   /** Where the no-value group sits among the option groups. Absent means last. */
   noValueGroupPosition?: string;
   /** Groups this view hides, by option id (the no-value group uses its own key). */
@@ -363,7 +383,8 @@ export interface GroupRef {
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
-  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus';
+  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends';
 
 // ─── Top-level saved data ───
 
@@ -503,4 +524,6 @@ export interface DatabaseConfig {
   /** Directory for the person property. */
   people?: DatabasePeople;
   viewState?: DatabaseViewStateStore;
+  /** First day of the calendar week, 0 = Sunday … 6 = Saturday. Defaults to the locale's. */
+  weekStart?: number;
 }

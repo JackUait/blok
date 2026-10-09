@@ -198,7 +198,7 @@ export interface DatabaseRowData extends BlockToolData {
 
 // ─── View config ───
 
-export type ViewType = 'board' | 'table' | 'gallery' | 'list';
+export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar';
 
 export interface SortConfig {
   /** Optional on old documents. Blok adds one on every write. */
@@ -285,6 +285,15 @@ export type LoadLimit = 10 | 25 | 50 | 100;
 /** Where a row's page opens. */
 export type OpenPagesIn = 'side' | 'center' | 'full';
 
+/** Gallery card size. */
+export type CardSize = 'small' | 'medium' | 'large';
+
+/** What a gallery card shows above its title: nothing, the page cover, the page content, or a property (`property:<id>`). */
+export type CardPreview = 'none' | 'cover' | 'content' | `property:${string}`;
+
+/** How much time a calendar view shows at once. */
+export type CalendarRange = 'month' | 'week';
+
 /** One property's settings in one view. The array order is the column order. */
 export interface ViewPropertySetting {
   /** The property id. */
@@ -325,8 +334,20 @@ export interface DatabaseViewConfig {
   showVerticalLines?: boolean;
   loadLimit?: LoadLimit;
   calculations?: ViewCalculation[];
-  /** Default 'side', or 'center' for a gallery. */
+  /** Default 'side', or 'center' for a gallery or a calendar. */
   openPagesIn?: OpenPagesIn;
+  /** Gallery. Default 'medium'. */
+  cardSize?: CardSize;
+  /** Gallery. Default 'content'. */
+  cardPreview?: CardPreview;
+  /** Gallery: show the whole image instead of cropping it. Default false. */
+  fitImage?: boolean;
+  /** Calendar: the date property that places each row. Default the first date property. */
+  calendarBy?: string;
+  /** Calendar. Default 'month'. */
+  calendarRange?: CalendarRange;
+  /** Calendar. Default true. */
+  showWeekends?: boolean;
   /** Where the no-value group sits among the option groups. Absent means last. */
   noValueGroupPosition?: string;
   /** Groups this view hides, by option id. */
@@ -358,7 +379,8 @@ export interface GroupRef {
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
-  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus';
+  | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends';
 
 // ─── Top-level saved data ───
 
@@ -482,6 +504,8 @@ export interface DatabaseConfig {
   people?: DatabasePeople;
   /** Per-person unsaved filter and sort edits. Default: this browser, per document. */
   viewState?: DatabaseViewStateStore;
+  /** First day of the calendar week, 0 = Sunday … 6 = Saturday. Defaults to the locale's. */
+  weekStart?: number;
 }
 
 /**

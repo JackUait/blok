@@ -4,8 +4,14 @@ import {
   DEFAULT_LOAD_LIMIT,
   resolveCalculations,
   resolveFrozenColumnCount,
+  resolveCalendarBy,
+  resolveCalendarRange,
+  resolveCardPreview,
+  resolveCardSize,
+  resolveFitImage,
   resolveLoadLimit,
   resolveOpenPagesIn,
+  resolveShowWeekends,
   resolveShowVerticalLines,
   resolveViewProperties,
   resolveWrapCells,
@@ -216,6 +222,62 @@ describe('view-settings', () => {
       expect(resolveOpenPagesIn(view({ type: 'list' }))).toBe('side');
       expect(resolveOpenPagesIn(view({ type: 'gallery' }))).toBe('center');
       expect(resolveOpenPagesIn(view({ openPagesIn: 'sideways' as never }))).toBe('side');
+    });
+
+    it('opens calendar pages in a center peek by default', () => {
+      expect(resolveOpenPagesIn(view({ type: 'calendar' }))).toBe('center');
+      expect(resolveOpenPagesIn(view({ type: 'calendar', openPagesIn: 'side' }))).toBe('side');
+    });
+  });
+
+  describe('gallery settings', () => {
+    it('defaults to medium cards, a page-content preview and cropped images', () => {
+      expect(resolveCardSize(view({ type: 'gallery' }))).toBe('medium');
+      expect(resolveCardPreview(view({ type: 'gallery' }), schema)).toEqual({ kind: 'content' });
+      expect(resolveFitImage(view({ type: 'gallery' }))).toBe(false);
+    });
+
+    it('reads stored values', () => {
+      const v = view({ type: 'gallery', cardSize: 'large', cardPreview: 'cover', fitImage: true });
+
+      expect(resolveCardSize(v)).toBe('large');
+      expect(resolveCardPreview(v, schema)).toEqual({ kind: 'cover' });
+      expect(resolveFitImage(v)).toBe(true);
+      expect(resolveCardPreview(view({ cardPreview: 'none' }), schema)).toEqual({ kind: 'none' });
+    });
+
+    it('reads a property preview and falls back when the property is gone', () => {
+      expect(resolveCardPreview(view({ cardPreview: 'property:p-due' }), schema)).toEqual({ kind: 'property', propertyId: 'p-due' });
+      expect(resolveCardPreview(view({ cardPreview: 'property:gone' }), schema)).toEqual({ kind: 'content' });
+    });
+
+    it('falls back for values it does not know', () => {
+      expect(resolveCardSize(view({ cardSize: 'huge' as never }))).toBe('medium');
+      expect(resolveCardPreview(view({ cardPreview: 'banner' as never }), schema)).toEqual({ kind: 'content' });
+    });
+  });
+
+  describe('calendar settings', () => {
+    it('shows a month with weekends by default', () => {
+      expect(resolveCalendarRange(view({ type: 'calendar' }))).toBe('month');
+      expect(resolveShowWeekends(view({ type: 'calendar' }))).toBe(true);
+    });
+
+    it('reads stored values', () => {
+      const v = view({ type: 'calendar', calendarRange: 'week', showWeekends: false });
+
+      expect(resolveCalendarRange(v)).toBe('week');
+      expect(resolveShowWeekends(v)).toBe(false);
+      expect(resolveCalendarRange(view({ calendarRange: 'year' as never }))).toBe('month');
+    });
+
+    it('shows the calendar by the stored date property, else the first date property', () => {
+      const twoDates: PropertyDefinition[] = [...schema, { id: 'p-start', name: 'Start', type: 'date', position: 'a0x' }];
+
+      expect(resolveCalendarBy(view({ calendarBy: 'p-start' }), twoDates)).toBe('p-start');
+      expect(resolveCalendarBy(view(), twoDates)).toBe('p-start');
+      expect(resolveCalendarBy(view({ calendarBy: 'p-status' }), schema)).toBe('p-due');
+      expect(resolveCalendarBy(view(), schema.filter((p) => p.type !== 'date'))).toBeUndefined();
     });
   });
 

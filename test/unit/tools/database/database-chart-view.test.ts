@@ -93,7 +93,7 @@ describe('DatabaseChartView', () => {
     const [anchor, content, options] = vi.mocked(tooltip.show).mock.calls[0];
 
     expect(anchor).toBeInstanceOf(HTMLElement);
-    expect((anchor as HTMLElement).hasAttribute('data-blok-database-chart-anchor')).toBe(true);
+    expect((anchor).hasAttribute('data-blok-database-chart-anchor')).toBe(true);
     expect((content as HTMLElement).textContent).toContain('B');
     expect((content as HTMLElement).textContent).toContain('5');
     expect(options?.delay).toBeUndefined();

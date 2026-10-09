@@ -5303,7 +5303,7 @@ describe('DatabaseTool', () => {
       const large = size !== undefined && 'children' in size ? size.children?.items?.[2] : undefined;
 
       if (large !== undefined && 'onActivate' in large) {
-        large.onActivate?.(large as never);
+        large.onActivate?.(large);
       }
 
       expect(tool.save(element).views[0].cardSize).toBe('large');

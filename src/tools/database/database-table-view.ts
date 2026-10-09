@@ -84,6 +84,8 @@ export interface TableHandlers {
   /** A drop in a sorted view. Notion asks to remove the sort (D7); the tool decides. */
   sortedRowDrop: (result: TableRowDropResult) => void;
   bulkEdit: (rowIds: string[], anchor: HTMLElement) => void;
+  /** Undo (false) or redo (true) from the grid's keys. */
+  history?: (redo: boolean) => void;
   /** A paste, fill or bulk edit: cell writes, then new rows. One undo step. */
   commitCells: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>) => void;
   editFilters: (anchor: HTMLElement) => void;
@@ -274,6 +276,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         selectionChanged: () => this.syncSelectionChrome(),
         commitCells: (changes, newRows) => this.handlers?.commitCells(changes, newRows),
         bulkEdit: (rowIds) => this.openBulkPicker(rowIds),
+        history: (redo) => this.handlers?.history?.(redo),
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
           : {}),

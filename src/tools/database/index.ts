@@ -2157,6 +2157,7 @@ export class DatabaseTool implements BlockTool {
       sortedRowDrop: (result) => this.onSortedRowDrop(result),
       bulkEdit: () => undefined,
       commitCells: (changes, newRows) => this.commitTableCells(changes, newRows),
+      history: (redo) => (redo ? this.api.history.redo() : this.api.history.undo()),
       editFilters: (anchor) => this.controls.openSettings(anchor, 'filter'),
       groupToggled: (key, collapsed) => this.saveGroupCollapse(this.activeViewId, key, collapsed),
       rerender: () => this.rerenderView({ keepDrawer: true }),

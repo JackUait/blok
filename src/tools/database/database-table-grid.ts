@@ -66,6 +66,8 @@ export interface GridCallbacks {
   commitCells?: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>) => void;
   /** Cmd/Ctrl+/ on selected rows: edit them all at once. */
   bulkEdit?: (rowIds: string[]) => void;
+  /** Undo (false) or redo (true). The grid owns its keys, so the editor never sees them. */
+  history?: (redo: boolean) => void;
 }
 
 export interface GridOptions {
@@ -753,6 +755,14 @@ export class DatabaseTableGrid {
       return;
     }
     const mod = event.metaKey || event.ctrlKey;
+    const isZ = event.code === 'KeyZ' || event.key.toLowerCase() === 'z';
+
+    if (mod && (isZ || (event.ctrlKey && event.key.toLowerCase() === 'y')) && this.callbacks.history !== undefined) {
+      event.preventDefault();
+      this.callbacks.history(event.shiftKey || !isZ);
+
+      return;
+    }
 
     if (mod && event.key === '/' && selection !== null && !this.readOnly && this.callbacks.bulkEdit !== undefined) {
       event.preventDefault();

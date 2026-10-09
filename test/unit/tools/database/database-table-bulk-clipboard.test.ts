@@ -304,6 +304,20 @@ describe('table bulk actions and clipboard', () => {
     });
   });
 
+  describe('undo', () => {
+    it('forwards Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z from the grid, which owns its keys', () => {
+      const history = vi.fn();
+      const { root } = mount({ handlers: { ...makeHandlers(), history } });
+
+      selectCell(root, 'r1', 'p-notes');
+      const undo = press(grid(root), 'z', { metaKey: true, code: 'KeyZ' });
+      press(grid(root), 'z', { metaKey: true, shiftKey: true, code: 'KeyZ' });
+
+      expect(undo.defaultPrevented).toBe(true);
+      expect(history.mock.calls).toEqual([[false], [true]]);
+    });
+  });
+
   describe('selection bar', () => {
     const selectRows = (root: HTMLElement, ...rowIds: string[]): void => {
       rowIds.forEach((rowId) => root.querySelector<HTMLElement>(`[data-row-id="${rowId}"] [data-blok-database-table-row-checkbox]`)?.click());

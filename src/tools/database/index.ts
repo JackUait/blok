@@ -32,6 +32,7 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { pageContentSourceBlocks } from './row-body';
 import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
 import type { TableGroup, TableHandlers, TableState } from './database-table-view';
+import type { CellChange } from './database-table-grid';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import type { ViewChanges } from './database-model';
@@ -2155,6 +2156,7 @@ export class DatabaseTool implements BlockTool {
       moveRow: (result) => this.handleTableRowDrop(result),
       sortedRowDrop: (result) => this.onSortedRowDrop(result),
       bulkEdit: () => undefined,
+      commitCells: (changes, newRows) => this.commitTableCells(changes, newRows),
       editFilters: (anchor) => this.controls.openSettings(anchor, 'filter'),
       groupToggled: (key, collapsed) => this.saveGroupCollapse(this.activeViewId, key, collapsed),
       rerender: () => this.rerenderView({ keepDrawer: true }),
@@ -2219,6 +2221,38 @@ export class DatabaseTool implements BlockTool {
     if (this.cardDrawer?.openRowId === rowId) {
       this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
     }
+  }
+
+  /**
+   * A paste, fill or bulk edit: every write in one undo step. New rows go at
+   * the end, with the values the view's filters give a new row under the
+   * pasted ones.
+   */
+  private commitTableCells(changes: CellChange[], newRows: Array<Record<string, PropertyValue>>): void {
+    if (this.readOnly || this.destroyed || (changes.length === 0 && newRows.length === 0)) return;
+    const run = (): void => {
+      changes.forEach(({ rowId, propertyId, value }) => this.commitTableCell(rowId, propertyId, value));
+      newRows.forEach((values) => {
+        const titlePropId = this.titlePropertyId();
+        const rowData = this.model.createRowData({ ...this.newRowProperties(titlePropId, undefined, NO_VALUE_GROUP_KEY), ...values });
+        const title = rowData.properties[titlePropId];
+
+        this.api.blocks.insertAt(
+          'database-row',
+          { properties: rowData.properties, position: rowData.position, title: typeof title === 'string' ? title : '' },
+          { parentId: this.block.id, position: 'end', id: rowData.id },
+        );
+        this.syncRowsFromBlocks();
+        void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
+      });
+    };
+
+    if (this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(run);
+    } else {
+      run();
+    }
+    this.rerenderView({ keepDrawer: true });
   }
 
   /** Inserts a row block at the end, or right after `afterRowId`. */

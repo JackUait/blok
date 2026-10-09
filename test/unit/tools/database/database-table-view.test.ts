@@ -47,6 +47,7 @@ const makeHandlers = (): TableHandlers => ({
   moveRow: vi.fn(),
   sortedRowDrop: vi.fn(),
   bulkEdit: vi.fn(),
+  commitCells: vi.fn(),
   editFilters: vi.fn(),
   rerender: vi.fn(),
   optionsChange: vi.fn(),

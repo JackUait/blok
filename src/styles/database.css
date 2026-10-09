@@ -106,6 +106,8 @@
   --blok-database-timeline-arrow-icon: #ffffff;
   /* Center peek (research/07 and 08): 60% backdrop and the side peek's shadow. */
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
+  /* Fill handle: white in light, rgb(25,25,25) in dark (research/08). */
+  --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
 }
 
@@ -208,6 +210,7 @@
     --blok-database-timeline-control-text: rgb(173, 169, 163);
     --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
     --blok-database-timeline-arrow-icon: #ffffff;
+    --blok-database-fill-handle-bg: rgb(25, 25, 25);
     /* Peek unmeasured in dark: the shadow follows Notion's measured dark menu (research/08). */
     --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   }
@@ -311,6 +314,7 @@
   --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
   --blok-database-timeline-arrow-icon: #ffffff;
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-fill-handle-bg: rgb(25, 25, 25);
 }
 
 /**
@@ -3326,6 +3330,31 @@
 [data-blok-database-table-selection-bar] svg {
   width: 16px;
   height: 16px;
+}
+
+/* One button per property: its name, sized to fit (research/08). */
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
+  width: auto;
+  padding-inline: var(--blok-space-2);
+  color: var(--blok-text-primary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Fill handle: a 9×9 white circle with a 2px ring at the range's bottom-end corner (research/08). */
+[data-blok-database-table-fill-handle] {
+  position: absolute;
+  /* The cell clips overflow, so the handle sits just inside its corner. */
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--blok-focus-ring);
+  border-radius: 50%;
+  background-color: var(--blok-database-fill-handle-bg);
+  cursor: ns-resize;
 }
 
 @media (prefers-reduced-motion: reduce) {

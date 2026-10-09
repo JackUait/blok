@@ -19,7 +19,11 @@ import {
   withPropertySetting,
 } from './view-settings';
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
-import type { TableState } from './database-table-grid';
+import type { CellChange, TableState } from './database-table-grid';
+import { openCellEditor } from './cells';
+import type { CellEditorHandle } from './cells';
+import { isReadOnlyType } from './property-values';
+
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, openMenu, rowMenuItems } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize } from './database-table-resize';
@@ -36,6 +40,7 @@ import {
   IconSplitView,
   IconTrash,
   IconDotsHorizontal,
+  IconCopy,
 } from '../../components/icons';
 
 export { createTableState };
@@ -45,7 +50,6 @@ export type { TableState };
 export const DEFAULT_TITLE_WIDTH = 280;
 export const DEFAULT_COLUMN_WIDTH = 200;
 export const MIN_COLUMN_WIDTH = 32;
-
 
 export interface TableGroup {
   /** Group key; the model's no-value key for "No ⟨property⟩". */
@@ -80,6 +84,8 @@ export interface TableHandlers {
   /** A drop in a sorted view. Notion asks to remove the sort (D7); the tool decides. */
   sortedRowDrop: (result: TableRowDropResult) => void;
   bulkEdit: (rowIds: string[], anchor: HTMLElement) => void;
+  /** A paste, fill or bulk edit: cell writes, then new rows. One undo step. */
+  commitCells: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>) => void;
   editFilters: (anchor: HTMLElement) => void;
   /** A group was folded or opened. The tool saves it in the view. */
   groupToggled?: (key: string, collapsed: boolean) => void;
@@ -174,6 +180,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
   }
 
+  /** The row checkbox clicked last: a shift-click selects from it. */
+  private lastToggledRowId: string | null = null;
+
   private get handlers(): TableHandlers | undefined {
     return this.options.handlers;
   }
@@ -263,6 +272,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         deleteRows: (rowIds) => this.handlers?.deleteRows(rowIds),
         duplicateRows: (rowIds) => rowIds.forEach((rowId) => this.handlers?.duplicateRow(rowId)),
         selectionChanged: () => this.syncSelectionChrome(),
+        commitCells: (changes, newRows) => this.handlers?.commitCells(changes, newRows),
+        bulkEdit: (rowIds) => this.openBulkPicker(rowIds),
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
           : {}),
@@ -833,6 +844,16 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     count.setAttribute('data-blok-database-table-selection-count', '');
     count.setAttribute('aria-live', 'polite');
 
+    const propertyButtons = this.bulkProperties().map((property) => {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.setAttribute('data-blok-database-table-selection-property', '');
+      button.setAttribute('data-property-id', property.id);
+      button.textContent = property.name;
+
+      return button;
+    });
     const trash = document.createElement('button');
 
     trash.type = 'button';
@@ -847,21 +868,99 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     more.setAttribute('aria-label', this.t('tools.database.tableMoreActions'));
     more.innerHTML = IconDotsHorizontal;
 
-    bar.append(count, trash, more);
+    bar.append(count, ...propertyButtons, trash, more);
     bar.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const rowIds = this.grid?.selectedRowIds() ?? [];
+      const propertyButton = target?.closest<HTMLElement>('[data-blok-database-table-selection-property]');
 
-      if (target?.closest('[data-blok-database-table-selection-delete]') != null) {
+      if (propertyButton !== null && propertyButton !== undefined) {
+        this.openBulkEditor(rowIds, propertyButton.getAttribute('data-property-id') ?? '', propertyButton);
+      } else if (target?.closest('[data-blok-database-table-selection-delete]') != null) {
         this.state.selection = null;
         this.handlers?.deleteRows(rowIds);
         this.grid?.paint();
       } else if (target?.closest('[data-blok-database-table-selection-more]') != null) {
-        this.handlers?.bulkEdit(rowIds, more);
+        this.openSelectionMenu(rowIds, more);
       }
     });
 
     return bar;
+  }
+
+  // ─── Bulk edit ───
+
+  /** Visible properties a bulk edit can write: no title, nothing computed. */
+  private bulkProperties(): PropertyDefinition[] {
+    return this.columns.map((c) => c.property).filter((property) => property.type !== 'title' && !isReadOnlyType(property.type));
+  }
+
+  private bulkEditor: CellEditorHandle | null = null;
+
+  /** One property's cell editor, anchored on its bar button; the value lands on every selected row. */
+  private openBulkEditor(rowIds: string[], propertyId: string, anchor: HTMLElement): void {
+    const property = this.columns.find((c) => c.property.id === propertyId)?.property;
+    const handlers = this.handlers;
+
+    if (property === undefined || handlers === undefined || rowIds.length === 0) {
+      return;
+    }
+    this.bulkEditor?.close();
+    this.bulkEditor = openCellEditor(property, null, anchor, {
+      i18n: this.options.i18n,
+      readOnly: false,
+      ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
+      onCommit: (value) => handlers.commitCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
+      onClose: () => {
+        this.bulkEditor = null;
+      },
+    });
+  }
+
+  /** Cmd/Ctrl+/: the properties to edit on every selected row. */
+  private openBulkPicker(rowIds: string[]): void {
+    const anchor = this.bar ?? this.gridEl;
+
+    if (anchor === null || rowIds.length === 0) {
+      return;
+    }
+    this.showMenu(anchor, this.bulkProperties().map((property) => ({
+      title: property.name,
+      icon: propertyTypeMeta(property.type).icon,
+      closeOnActivate: true,
+      onActivate: () => {
+        const button = this.bar?.querySelector<HTMLElement>(`[data-blok-database-table-selection-property][data-property-id="${property.id}"]`);
+
+        this.openBulkEditor(rowIds, property.id, button ?? anchor);
+      },
+    })), { searchable: true });
+  }
+
+  /** The bar's "…": Duplicate and Move to Trash. */
+  private openSelectionMenu(rowIds: string[], anchor: HTMLElement): void {
+    const handlers = this.handlers;
+
+    if (handlers === undefined) {
+      return;
+    }
+    this.showMenu(anchor, [
+      {
+        title: this.t('tools.database.tableDuplicate'),
+        icon: IconCopy,
+        closeOnActivate: true,
+        onActivate: () => rowIds.forEach((rowId) => handlers.duplicateRow(rowId)),
+      },
+      {
+        title: this.t('tools.database.tableMoveToTrash'),
+        icon: IconTrash,
+        closeOnActivate: true,
+        onActivate: () => {
+          this.state.selection = null;
+          handlers.deleteRows(rowIds);
+          this.grid?.paint();
+        },
+      },
+    ]);
   }
 
   // ─── Clicks ───
@@ -972,7 +1071,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     if (closest('[data-blok-database-table-row-checkbox]') !== null) {
-      this.grid?.toggleRow(rowId);
+      if (event.shiftKey && this.lastToggledRowId !== null) {
+        this.grid?.selectRowRange(this.lastToggledRowId, rowId);
+      } else {
+        this.grid?.toggleRow(rowId);
+      }
+      this.lastToggledRowId = rowId;
 
       return;
     }

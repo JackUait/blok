@@ -595,7 +595,6 @@ const filterTargetValue = (type: PropertyType | undefined, operator: string, tar
     case 'url':
     case 'richText':
     case 'multiSelect':
-    case 'date':
     case 'person':
     case 'files':
     case 'createdTime':

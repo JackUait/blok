@@ -3050,6 +3050,9 @@ export class DatabaseTool implements BlockTool {
           }
         },
         onOpenPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
+        onOpenAddProperty: (anchor) => this.openAddProperty(anchor, undefined, () => {
+          this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+        }),
         hasPeople: this.hasPeople,
         cellContext: () => this.cellContext(),
         onPropertyValueChange: (rowId, propertyId, input) => {
@@ -4440,7 +4443,7 @@ export class DatabaseTool implements BlockTool {
    * (Insert left/right), the new column lands beside that one in the active
    * view's column order.
    */
-  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }): void {
+  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: () => void): void {
     if (this.readOnly || this.model.isDatabaseLocked()) return;
     this.addPropertyPopover?.destroy();
     this.addPropertyPopover = new DatabasePropertyTypePopover({
@@ -4451,6 +4454,9 @@ export class DatabaseTool implements BlockTool {
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
         const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) });
 
+        if (created !== null) {
+          onAdded?.();
+        }
         // research/08: Relation opens "Related to" right away.
         if (created?.type === 'relation') this.openRelatedToPicker(created.id, anchor);
       },

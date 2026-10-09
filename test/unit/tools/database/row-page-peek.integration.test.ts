@@ -283,6 +283,17 @@ describe('row page peek modes', () => {
     expect(document.querySelector('[data-blok-emoji-picker]')?.isConnected).toBe(true);
   });
 
+  it('"+ Add a property" on the page goes through the database add-property menu, which a lock closes', async () => {
+    const blocks = doc();
+
+    (blocks[0].data as { schema: Array<Record<string, unknown>> }).schema[0].databaseLocked = true;
+    await make(blocks);
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-add-prop]'));
+
+    expect(document.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
+  });
+
   it('switches the mode from the peek header and saves it on the view', async () => {
     await make(doc());
     await openRow('r1');

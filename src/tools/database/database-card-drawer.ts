@@ -84,6 +84,8 @@ export interface CardDrawerOptions {
   onClose: () => void;
   /** "+ Add a property": the chosen type and the name typed above it ('' when left empty). */
   onAddProperty?: (type: PropertyType, name: string) => void;
+  /** "+ Add a property": the database's add-property menu under `anchor`. Wins over `onAddProperty`. */
+  onOpenAddProperty?: (anchor: HTMLElement) => void;
   /** A property label was clicked: open its property menu under `anchor`. */
   onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement) => void;
   /** Offer Person when adding a property. */
@@ -199,6 +201,7 @@ export class DatabaseCardDrawer {
   private readonly onClose: () => void;
   private readonly onAddProperty: CardDrawerOptions['onAddProperty'];
   private readonly onOpenPropertyMenu: CardDrawerOptions['onOpenPropertyMenu'];
+  private readonly onOpenAddProperty: CardDrawerOptions['onOpenAddProperty'];
   private readonly hasPeople: boolean;
   private readonly cellContext: () => Partial<CellContext>;
   private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
@@ -257,6 +260,7 @@ export class DatabaseCardDrawer {
     this.onClose = options.onClose;
     this.onAddProperty = options.onAddProperty;
     this.onOpenPropertyMenu = options.onOpenPropertyMenu;
+    this.onOpenAddProperty = options.onOpenAddProperty;
     this.hasPeople = options.hasPeople === true;
     this.cellContext = options.cellContext ?? ((): Partial<CellContext> => ({}));
     this.onPropertyValueChange = options.onPropertyValueChange;
@@ -1076,6 +1080,11 @@ export class DatabaseCardDrawer {
       addBtn.setAttribute('data-blok-database-drawer-add-prop', '');
       addBtn.textContent = this.t('tools.database.addProperty');
       addBtn.addEventListener('click', () => {
+        if (this.onOpenAddProperty !== undefined) {
+          this.onOpenAddProperty(addBtn);
+
+          return;
+        }
         if (this.propertyTypePopover === null) {
           this.propertyTypePopover = new DatabasePropertyTypePopover({
             onSelect: (type, name) => {

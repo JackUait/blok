@@ -271,6 +271,43 @@ describe('select cell editor', () => {
       expect(editorRoot()?.querySelector('[data-blok-database-option-name]')).not.toBeNull();
     });
 
+    it('the delete prompt is a labelled modal that keeps focus on its two buttons', () => {
+      openSelect(['o1']);
+
+      openMenu('o1');
+      q('[data-blok-database-option-delete]').click();
+      const prompt = q('[data-blok-database-option-delete-prompt]');
+      const confirm = q('[data-blok-database-option-delete-confirm]');
+      const cancel = q('[data-blok-database-option-delete-cancel]');
+
+      expect(prompt.getAttribute('role')).toBe('alertdialog');
+      expect(prompt.getAttribute('aria-modal')).toBe('true');
+      expect(prompt.getAttribute('aria-label')).toBe('tools.database.optionDeleteConfirm');
+      expect(confirm).toHaveFocus();
+      expect(q('[data-blok-database-select-chips]').hasAttribute('inert')).toBe(true);
+
+      cancel.focus();
+      expect(press(cancel, 'Tab').defaultPrevented).toBe(true);
+      expect(confirm).toHaveFocus();
+
+      expect(press(confirm, 'Tab', { shiftKey: true }).defaultPrevented).toBe(true);
+      expect(cancel).toHaveFocus();
+    });
+
+    it('Escape in the delete prompt cancels back to the option menu', () => {
+      const ctx = openSelect(['o1']);
+
+      openMenu('o1');
+      q('[data-blok-database-option-delete]').click();
+      press(q('[data-blok-database-option-delete-confirm]'), 'Escape');
+
+      expect(editorRoot()?.querySelector('[data-blok-database-option-delete-prompt]')).toBeNull();
+      expect(editorRoot()?.querySelector('[data-blok-database-option-name]')).not.toBeNull();
+      expect(q('[data-blok-database-select-chips]').hasAttribute('inert')).toBe(false);
+      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
+      expect(ctx.onClose).not.toHaveBeenCalled();
+    });
+
     it('Escape in the menu steps back to the list and keeps the editor open', () => {
       const ctx = openSelect(null);
 

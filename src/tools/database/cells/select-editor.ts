@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 
 import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconTrash } from '../../../components/icons';
+import { getTabbables } from '../../../components/utils/modal-dialog';
 import { DatabaseModel } from '../database-model';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover } from './cell-popover';
@@ -61,6 +62,7 @@ class SelectEditor {
   private readonly body = document.createElement('div');
   private readonly popover: CellPopover;
   private panelOptionId: string | null = null;
+  private deletePromptOpen = false;
 
   constructor(
     private readonly property: PropertyDefinition,
@@ -103,6 +105,11 @@ class SelectEditor {
       content: this.root,
       minWidth: `${Math.max(anchor.getBoundingClientRect().width, 280)}px`,
       onEscape: () => {
+        if (this.deletePromptOpen) {
+          this.renderPanel();
+
+          return;
+        }
         if (this.panelOptionId !== null) {
           this.closePanel();
 
@@ -128,6 +135,7 @@ class SelectEditor {
       return;
     }
     this.open = false;
+    this.setDeletePromptOpen(false);
     this.endDrag();
     if (closePopover) {
       this.popover.close();
@@ -406,6 +414,7 @@ class SelectEditor {
 
   private closePanel(): void {
     this.panelOptionId = null;
+    this.setDeletePromptOpen(false);
     this.renderChips();
     this.renderList();
     this.search.focus();
@@ -415,7 +424,14 @@ class SelectEditor {
     this.setOptions(this.options.map((option) => (option.id === optionId ? { ...option, ...changes } : option)));
   }
 
+  /** The search row stays in the popover under the prompt; inert keeps the prompt modal. */
+  private setDeletePromptOpen(open: boolean): void {
+    this.deletePromptOpen = open;
+    this.chips.toggleAttribute('inert', open);
+  }
+
   private renderPanel(): void {
+    this.setDeletePromptOpen(false);
     const option = this.options.find((o) => o.id === this.panelOptionId);
 
     if (option === undefined) {
@@ -512,6 +528,7 @@ class SelectEditor {
 
     prompt.setAttribute('data-blok-database-option-delete-prompt', '');
     prompt.setAttribute('role', 'alertdialog');
+    prompt.setAttribute('aria-modal', 'true');
     text.textContent = this.t('tools.database.optionDeleteConfirm');
     prompt.setAttribute('aria-label', text.textContent);
     confirm.type = 'button';
@@ -529,8 +546,22 @@ class SelectEditor {
       this.closePanel();
     });
     cancel.addEventListener('click', () => this.renderPanel());
+    prompt.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab') {
+        return;
+      }
+      const tabbables = getTabbables(prompt);
+      const first = tabbables[0];
+      const last = tabbables[tabbables.length - 1];
+
+      if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+      }
+    });
     prompt.append(text, confirm, cancel);
     this.body.replaceChildren(prompt);
+    this.setDeletePromptOpen(true);
     confirm.focus();
   }
 

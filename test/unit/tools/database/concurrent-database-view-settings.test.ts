@@ -202,6 +202,30 @@ describe('database view settings — two peers editing one view', () => {
     expect(viewsOf(storeB)[0].tableProperties).toEqual(viewsOf(storeA)[0].tableProperties);
   });
 
+  it('keeps both chart settings when two people change different ones at the same moment', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'chart' });
+
+    edit(storeA, () => ({ chartType: 'line', chartSmooth: true }));
+    edit(storeB, () => ({ chartMeasure: 'sum:p-due', chartColor: 'purple', chartLegend: 'side' }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0]).toMatchObject({ chartType: 'line', chartSmooth: true, chartMeasure: 'sum:p-due', chartColor: 'purple', chartLegend: 'side' });
+    expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
+  });
+
+  it('settles on one chart measure when two people pick one at the same moment', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'chart' });
+
+    edit(storeA, () => ({ chartMeasure: 'count' }));
+    edit(storeB, () => ({ chartMeasure: 'unique:p-status' }));
+    sync(storeA, storeB);
+
+    const measure = viewsOf(storeA)[0].chartMeasure;
+
+    expect(['count', 'unique:p-status']).toContain(measure);
+    expect(viewsOf(storeB)[0].chartMeasure).toBe(measure);
+  });
+
   // Known gap: a view saved before `properties` existed has no key to merge
   // into, so two first writes race on creating it.
   it.fails('keeps both widths on a view written before properties existed', () => {

@@ -282,7 +282,8 @@ export interface DatabaseRowData extends BlockToolData {
 
 // ─── View config ───
 
-export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar' | 'timeline';
+export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar' | 'timeline'
+  | 'chart' | 'feed';
 
 export interface SortConfig {
   /** Optional on old documents. Every write adds one, so two peers' sorts pair by id. */
@@ -472,6 +473,52 @@ export interface DatabaseViewConfig {
   showPageIcon?: boolean;
 }
 
+// ─── Chart view (Phase 6) ───
+// Flat primitive fields, one per setting: two peers changing different
+// settings both keep theirs. The X axis is `groupBy` (+ `groupSettings`,
+// `hiddenGroups`); the series are `subGroupBy`.
+
+/** Notion API `chart_type`. */
+export type ChartType = 'column' | 'bar' | 'line' | 'donut' | 'number';
+
+/** Notion API `color_theme`. */
+export type ChartColorTheme =
+  | 'auto' | 'colorful' | 'gray' | 'blue' | 'yellow' | 'green' | 'purple' | 'teal' | 'orange' | 'pink' | 'red';
+
+export type ChartHeight = 'small' | 'medium' | 'large' | 'extraLarge';
+
+export type ChartSort = 'manual' | 'xAscending' | 'xDescending' | 'yAscending' | 'yDescending';
+
+export type ChartGridLines = 'none' | 'horizontal' | 'vertical' | 'both';
+
+/** Notion API `legend_position`. */
+export type ChartLegend = 'off' | 'bottom' | 'side';
+
+/**
+ * The Y axis: `count`, or `<calculation>:<property id>`. One string, not an
+ * object, so two peers picking at once settle on one pick.
+ */
+export type ChartMeasure = 'count' | `${CalculationFn}:${string}`;
+
+export interface DatabaseViewConfig {
+  chartType?: ChartType;
+  chartMeasure?: ChartMeasure;
+  chartSort?: ChartSort;
+  chartOmitZero?: boolean;
+  /** Only for Count or Sum with the X axis ascending. */
+  chartCumulative?: boolean;
+  chartColor?: ChartColorTheme;
+  chartHeight?: ChartHeight;
+  chartGridLines?: ChartGridLines;
+  chartAxisNames?: boolean;
+  chartDataLabels?: boolean;
+  chartSmooth?: boolean;
+  chartGradient?: boolean;
+  /** Donut: the total in the hole. */
+  chartCenterValue?: boolean;
+  chartLegend?: ChartLegend;
+}
+
 /** An entry in a per-view group list. Objects with ids, so two peers' entries merge. */
 export interface GroupRef {
   id: string;
@@ -483,7 +530,9 @@ export type DatabaseViewSettingKey =
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
-  | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy';
+  | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
+  | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'
+  | 'chartGridLines' | 'chartAxisNames' | 'chartDataLabels' | 'chartSmooth' | 'chartGradient' | 'chartCenterValue' | 'chartLegend';
 
 // ─── Top-level saved data ───
 

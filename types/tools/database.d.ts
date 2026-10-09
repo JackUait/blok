@@ -282,7 +282,7 @@ export interface DatabaseRowData extends BlockToolData {
 
 // ─── View config ───
 
-export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar' | 'timeline';
+export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar' | 'timeline' | 'chart' | 'feed';
 
 export interface SortConfig {
   /** Optional on old documents. Blok adds one on every write. */
@@ -381,6 +381,26 @@ export type CalendarRange = 'month' | 'week';
 /** How much time one screen of a timeline view shows. Notion API `zoom_level` names. */
 export type TimelineZoom = 'hours' | 'day' | 'week' | 'bi_week' | 'month' | 'quarter' | 'year' | '5_years';
 
+/** Chart type (Notion API `chart_type`). */
+export type ChartType = 'column' | 'bar' | 'line' | 'donut' | 'number';
+
+/** Chart color palette (Notion API `color_theme`). */
+export type ChartColorTheme =
+  | 'auto' | 'colorful' | 'gray' | 'blue' | 'yellow' | 'green' | 'purple' | 'teal' | 'orange' | 'pink' | 'red';
+
+export type ChartHeight = 'small' | 'medium' | 'large' | 'extraLarge';
+
+/** Bar order: the group order, or by the X label or the Y value. */
+export type ChartSort = 'manual' | 'xAscending' | 'xDescending' | 'yAscending' | 'yDescending';
+
+export type ChartGridLines = 'none' | 'horizontal' | 'vertical' | 'both';
+
+/** Legend position (Notion API `legend_position`). */
+export type ChartLegend = 'off' | 'bottom' | 'side';
+
+/** The chart's Y axis: `count`, or `<calculation>:<property id>` such as `sum:p1`. */
+export type ChartMeasure = 'count' | `${CalculationFn}:${string}`;
+
 /** One property's settings in one view. The array order is the column order. */
 export interface ViewPropertySetting {
   /** The property id. */
@@ -447,6 +467,34 @@ export interface DatabaseViewConfig {
   tableProperties?: ViewPropertySetting[];
   /** Timeline: the self-relation that draws dependency arrows. */
   arrowsBy?: string;
+  /** Chart. The X axis (donut: each slice) is `groupBy`; the series are `subGroupBy`. Default 'column'. */
+  chartType?: ChartType;
+  /** Chart Y axis. Default 'count'. */
+  chartMeasure?: ChartMeasure;
+  /** Chart. Default 'manual'. */
+  chartSort?: ChartSort;
+  /** Chart: drop groups whose value is zero. Default false. */
+  chartOmitZero?: boolean;
+  /** Chart: running total, only for Count or Sum with `chartSort` 'xAscending'. Default false. */
+  chartCumulative?: boolean;
+  /** Chart. Default 'auto'. */
+  chartColor?: ChartColorTheme;
+  /** Chart. Default 'medium'. */
+  chartHeight?: ChartHeight;
+  /** Chart. Default 'horizontal'. */
+  chartGridLines?: ChartGridLines;
+  /** Chart. Default false. */
+  chartAxisNames?: boolean;
+  /** Chart. Default false. */
+  chartDataLabels?: boolean;
+  /** Line chart. Default false. */
+  chartSmooth?: boolean;
+  /** Line chart: shade the area under the line. Default false. */
+  chartGradient?: boolean;
+  /** Donut chart: the total in the center. Default true. */
+  chartCenterValue?: boolean;
+  /** Chart. Default 'bottom'. */
+  chartLegend?: ChartLegend;
   /** Where the no-value group sits among the option groups. Absent means last. */
   noValueGroupPosition?: string;
   /** Groups this view hides, by option id. */
@@ -480,7 +528,9 @@ export type DatabaseViewSettingKey =
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
-  | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy';
+  | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
+  | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'
+  | 'chartGridLines' | 'chartAxisNames' | 'chartDataLabels' | 'chartSmooth' | 'chartGradient' | 'chartCenterValue' | 'chartLegend';
 
 // ─── Top-level saved data ───
 

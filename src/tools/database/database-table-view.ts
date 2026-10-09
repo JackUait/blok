@@ -125,6 +125,11 @@ interface Column {
   frozenAt?: number;
 }
 
+const tableIds = { next: 0 };
+
+/** A DOM id from row and property ids, which may hold any character. */
+const idPart = (value: string): string => value.replace(/[^A-Za-z0-9_-]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}`);
+
 const CALC_NUMBER = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, useGrouping: false });
 
 export const formatCalculation = (result: CalculationResult, locale: string | undefined): string => {
@@ -162,6 +167,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   private root: HTMLDivElement | null = null;
   private gridEl: HTMLDivElement | null = null;
   private bar: HTMLElement | null = null;
+  /** Unique per table, so two tables on a page never share a cell id. */
+  private readonly idPrefix = `blok-database-table-${++tableIds.next}`;
   /** The menu this table opened. Its anchor dies with a redraw, so the menu must too. */
   private menu: PopoverDesktop | null = null;
 
@@ -260,6 +267,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         commitCell: (rowId, propertyId, value) => this.handlers?.commitCell(rowId, propertyId, value),
         editEnded: () => this.handlers?.editEnded(),
         deleteRows: (rowIds) => this.handlers?.deleteRows(rowIds),
+        duplicateRows: (rowIds) => rowIds.forEach((rowId) => this.handlers?.duplicateRow(rowId)),
         selectionChanged: () => this.syncSelectionChrome(),
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
@@ -575,6 +583,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       const cell = document.createElement('div');
 
       cell.setAttribute('role', 'gridcell');
+      cell.id = `${this.idPrefix}-${idPart(row.id)}-${idPart(column.property.id)}`;
       cell.setAttribute('data-blok-database-table-cell', '');
       cell.setAttribute('data-property-id', column.property.id);
       cell.setAttribute('data-type', column.property.type);

@@ -143,9 +143,11 @@ describe('DatabaseTableView', () => {
     PopoverRegistry.resetForTests();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
+    // A drop leaves a one-tick click swallow on the document; let it lapse.
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
   describe('layout', () => {
@@ -376,6 +378,18 @@ describe('DatabaseTableView', () => {
       expect([...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
     });
 
+    it('points aria-activedescendant at the selected cell, so a screen reader follows it', () => {
+      const { root } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      press(grid(root), 'ArrowDown');
+
+      const id = grid(root).getAttribute('aria-activedescendant');
+
+      expect(id).toBeTruthy();
+      expect(document.getElementById(id ?? '')).toBe(cell(root, 'r2', 'p-notes'));
+    });
+
     it('keeps the selection across a re-render through the shared state', () => {
       const state = createTableState();
       const first = mount({ state });
@@ -400,6 +414,17 @@ describe('DatabaseTableView', () => {
       all?.click();
       expect(root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')).toHaveLength(3);
       expect(all?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('Cmd/Ctrl+D duplicates the selected rows', () => {
+      const { root, handlers } = mount();
+
+      root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-checkbox]')?.click();
+      press(grid(root), 'd', { metaKey: true });
+      press(grid(root), 'd', { ctrlKey: true });
+
+      expect(handlers.duplicateRow).toHaveBeenCalledTimes(2);
+      expect(handlers.duplicateRow).toHaveBeenCalledWith('r2');
     });
 
     it('the selection bar deletes the selected rows', () => {
@@ -563,6 +588,30 @@ describe('DatabaseTableView', () => {
   });
 
   describe('row drag', () => {
+    it('swallows the release click even when the drop redraws the table', () => {
+      const handlers = makeHandlers();
+      const state = createTableState();
+      const first = mount({ handlers, state });
+      const second: { root: HTMLElement | null } = { root: null };
+
+      vi.mocked(handlers.moveRow).mockImplementation(() => {
+        first.view.destroy();
+        first.root.remove();
+        second.root = mount({ handlers, state }).root;
+      });
+      const rowEls = [...first.root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: i * 37, bottom: i * 37 + 37, left: 0, right: 600, width: 600, height: 37, x: 0, y: i * 37, toJSON: () => ({}) }));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 100 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 100 }));
+      second.root?.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+
+      expect(handlers.moveRow).toHaveBeenCalledTimes(1);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
     const rect = (top: number): DOMRect => ({ top, bottom: top + 37, left: 0, right: 600, width: 600, height: 37, x: 0, y: top, toJSON: () => ({}) });
 
     it('drops a row between two others and ignores the click on release', () => {

@@ -146,8 +146,9 @@ export class DatabaseTableRowDrag {
       return;
     }
     // A drag is not a click: the handle must not open its menu on release.
-    this.grid.addEventListener('click', swallow, { capture: true, once: true });
-    setTimeout(() => this.grid.removeEventListener('click', swallow, { capture: true }), 0);
+    // On the document: the drop redraws the table, so the click lands in new DOM.
+    document.addEventListener('click', swallow, { capture: true, once: true });
+    setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
 
     const rowId = press.rowEl.getAttribute('data-row-id') ?? '';
     const beforeRowId = target.before?.getAttribute('data-row-id') ?? null;

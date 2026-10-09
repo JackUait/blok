@@ -4430,6 +4430,23 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    it('keeps the horizontal scroll when an edit redraws the table', () => {
+      const { tool, element } = setup();
+      const scroller = (): HTMLElement | null => queryByData(element, 'data-blok-database-table-scroller');
+
+      (scroller() as HTMLElement).scrollLeft = 120;
+      expect(scroller()?.scrollLeft).toBe(120);
+
+      gridCell(element, 'row-1', 'prop-notes').click();
+      field().value = 'changed';
+      enter(field());
+
+      expect(gridCell(element, 'row-1', 'prop-notes').textContent).toContain('changed');
+      expect(scroller()?.scrollLeft).toBe(120);
+
+      tool.destroy();
+    });
+
     it('+ New page inserts a row block under the database and opens its title', async () => {
       const { tool, element, options } = setup();
 

@@ -13,6 +13,7 @@ import {
   IconSplitView,
   IconTrash,
 } from '../../components/icons';
+import { beautifyShortcut } from '../../components/utils/string';
 import type { CalculationFn, PropertyDefinition } from './types';
 
 type T = Pick<I18n, 't'>;
@@ -229,7 +230,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
     },
     { type: PopoverItemType.Separator },
     { type: PopoverItemType.Default, title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
-    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: '⌘D', onActivate: ctx.onDuplicate },
+    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
     { type: PopoverItemType.Default, title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: 'Del', onActivate: ctx.onDelete },
   ];
 };

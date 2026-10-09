@@ -2217,7 +2217,9 @@ export class DatabaseTool implements BlockTool {
       ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-list]')
       ?? this.boardContainer.firstElementChild as HTMLElement | null;
 
-    const oldBoardArea = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]');
+    // The board and the table each scroll sideways in their own element.
+    const scrollSelector = '[data-blok-database-board], [data-blok-database-table-scroller]';
+    const oldBoardArea = this.boardContainer.querySelector<HTMLElement>(scrollSelector);
     const savedScrollLeft = oldBoardArea?.scrollLeft ?? 0;
 
     this.cardDrag?.destroy();
@@ -2244,7 +2246,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     // Restore horizontal scroll on the new board area
-    const newBoardArea = newBoardWrapper.querySelector<HTMLElement>('[data-blok-database-board]');
+    const newBoardArea = newBoardWrapper.querySelector<HTMLElement>(scrollSelector);
 
     if (newBoardArea !== null) {
       newBoardArea.scrollLeft = savedScrollLeft;

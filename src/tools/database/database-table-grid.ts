@@ -48,6 +48,7 @@ export interface GridCallbacks {
   commitCell: (rowId: string, propertyId: string, value: PropertyValue) => void;
   editEnded: () => void;
   deleteRows: (rowIds: string[]) => void;
+  duplicateRows: (rowIds: string[]) => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** Selection changed: the view repaints checkboxes and the selection bar. */
   selectionChanged: () => void;
@@ -424,6 +425,12 @@ export class DatabaseTableGrid {
 
     if (event.key === 'Escape') {
       this.escape(event);
+
+      return;
+    }
+    if (selection?.kind === 'rows' && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd' && !this.readOnly) {
+      event.preventDefault();
+      this.callbacks.duplicateRows(selection.rowIds);
 
       return;
     }

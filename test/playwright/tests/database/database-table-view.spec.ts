@@ -188,6 +188,20 @@ test.describe('cell keyboard model', () => {
     expect((await savedRow(page, 'r1'))['p-notes']).toBe('');
   });
 
+  test('clicking another cell while editing saves the first and opens the second', async ({ page }) => {
+    await cell(page, 'r1', 'p-notes').click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.type('first');
+    await cell(page, 'r2', 'p-notes').click();
+
+    await expect(editor(page).locator('[data-blok-database-cell-input]')).toBeFocused();
+    await page.keyboard.type('second');
+    await page.keyboard.press('Enter');
+
+    expect((await savedRow(page, 'r1'))['p-notes']).toBe('first');
+    expect((await savedRow(page, 'r2'))['p-notes']).toBe('second');
+  });
+
   test('Enter in an editor on the last row stays on that row', async ({ page }) => {
     await cell(page, 'r3', 'p-notes').click();
     await page.keyboard.type('end');
@@ -291,6 +305,7 @@ test.describe('columns', () => {
     await page.mouse.up();
 
     await expect(page.getByRole('columnheader').nth(1)).toHaveAttribute('data-property-id', 'p-stage');
+    await expect(page.getByRole('menu')).toHaveCount(0);
     const order = ((await savedView(page)).properties as Array<{ id: string }>).map((p) => p.id);
 
     expect(order.indexOf('p-stage')).toBeLessThan(order.indexOf('p-notes'));

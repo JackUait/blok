@@ -400,10 +400,6 @@ export class DatabaseTool implements BlockTool {
     const hadRows = this.model.getOrderedRows().length > 0;
 
     this.syncRowsFromBlocks();
-    // A database that rendered first read this one from saved data; let it re-read the live rows.
-    this.documentDatabases()
-      .filter((database) => database.id !== this.block.id)
-      .forEach((database) => this.api.blocks.getById(database.id)?.call('relatedSourceChanged', { databaseId: this.block.id }));
 
     if (!hadRows && this.model.getOrderedRows().length > 0) {
       this.rerenderView();
@@ -645,12 +641,6 @@ export class DatabaseTool implements BlockTool {
     const engine = new ComputedProperties(databaseId);
 
     return { schema, rows: engine.apply(schema, rows, { databaseId, now: new Date() }), valueProperty: (property) => engine.valueProperty(property) };
-  }
-
-  /** Another database's rows changed outside its own redraw: redraw this one if it relates to it. */
-  relatedSourceChanged(param: { databaseId: string }): void {
-    if (this.destroyed || !this.isRelatedChange({ id: param.databaseId, name: 'database' })) return;
-    this.reprojectRows();
   }
 
   /** Read by another database of this document: this database's schema and computed rows. */

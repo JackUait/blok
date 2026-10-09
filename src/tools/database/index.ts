@@ -2,7 +2,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
-import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf } from './property-values';
+import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, statusGroupsOf } from './property-values';
 import { planTypeChange } from './property-conversion';
 import type { CellContext } from './cells';
 import { DatabasePropertyMenu } from './database-property-menu';
@@ -1073,6 +1073,10 @@ export class DatabaseTool implements BlockTool {
     };
 
     const statusBy = this.model.getView(this.activeViewId)?.groupByStatus;
+
+    if (statusBy === 'group' && property?.type === 'status') {
+      return [noValue, ...statusGroupsOf(property).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))];
+    }
 
     return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId, { statusBy }), this.api.i18n)];
   }

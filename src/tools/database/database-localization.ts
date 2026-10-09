@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
-import type { DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
+import type { DatabaseViewConfig, PropertyDefinition, SelectOption, StatusGroup } from './types';
 
 const DEFAULT_KEYS = {
   titleProperty: 'tools.database.defaultTitleProperty',
@@ -8,6 +8,9 @@ const DEFAULT_KEYS = {
   statusNotStarted: 'tools.database.defaultStatusNotStarted',
   statusInProgress: 'tools.database.defaultStatusInProgress',
   statusDone: 'tools.database.defaultStatusDone',
+  statusGroupTodo: 'tools.database.statusGroupTodo',
+  statusGroupInProgress: 'tools.database.statusGroupInProgress',
+  statusGroupComplete: 'tools.database.statusGroupComplete',
   viewBoard: 'tools.database.defaultViewBoard',
   viewTypeBoard: 'tools.database.viewTypeBoard',
   viewTypeList: 'tools.database.viewTypeList',
@@ -25,6 +28,9 @@ export const DATABASE_DEFAULT_TEXT = {
   statusNotStarted: englishDefault(DEFAULT_KEYS.statusNotStarted),
   statusInProgress: englishDefault(DEFAULT_KEYS.statusInProgress),
   statusDone: englishDefault(DEFAULT_KEYS.statusDone),
+  statusGroupTodo: englishDefault(DEFAULT_KEYS.statusGroupTodo),
+  statusGroupInProgress: englishDefault(DEFAULT_KEYS.statusGroupInProgress),
+  statusGroupComplete: englishDefault(DEFAULT_KEYS.statusGroupComplete),
   viewBoard: englishDefault(DEFAULT_KEYS.viewBoard),
   viewTypeBoard: englishDefault(DEFAULT_KEYS.viewTypeBoard),
   viewTypeList: englishDefault(DEFAULT_KEYS.viewTypeList),
@@ -79,12 +85,26 @@ export const localizeDatabaseSelectOptions = (
   label: localizeStatusLabel(option.label, i18n),
 }));
 
+const GROUP_KEYS: Record<StatusGroup['kind'], DefaultKey> = {
+  todo: DEFAULT_KEYS.statusGroupTodo,
+  inProgress: DEFAULT_KEYS.statusGroupInProgress,
+  complete: DEFAULT_KEYS.statusGroupComplete,
+};
+
+/** A group still named its English default shows in the editor language; a renamed one keeps its name. */
+const localizeStatusGroups = (groups: StatusGroup[], i18n: I18n): StatusGroup[] => groups.map((group) => {
+  const key = GROUP_KEYS[group.kind] as DefaultKey | undefined;
+
+  return key === undefined ? group : { ...group, name: localizeCanonicalValue(group.name, englishDefault(key), key, i18n) };
+});
+
 export const localizeDatabaseSchema = (
   schema: PropertyDefinition[],
   i18n: I18n
 ): PropertyDefinition[] => schema.map((property) => ({
   ...property,
   name: localizePropertyName(property, i18n),
+  ...(property.status === undefined ? {} : { status: { ...property.status, groups: localizeStatusGroups(property.status.groups, i18n) } }),
   ...(property.config === undefined
     ? {}
     : {

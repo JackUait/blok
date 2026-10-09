@@ -989,5 +989,8 @@
   "tools.database.numberFormat.vietnamese_dong": "Vietnamese Dong",
   "tools.database.numberFormat.pakistani_rupee": "Pakistani Rupee",
   "tools.database.numberFormat.nigerian_naira": "Nigerian Naira",
-  "tools.database.numberFormat.bitcoin": "Bitcoin"
+  "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.statusGroupTodo": "To-do",
+  "tools.database.statusGroupInProgress": "In progress",
+  "tools.database.statusGroupComplete": "Complete"
 }

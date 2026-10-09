@@ -449,3 +449,15 @@ describe('model property operations', () => {
     expect(model.getSchema().map((p) => p.id)).toEqual(['title', added.id, 'n', 'z']);
   });
 });
+
+describe('status group localization', () => {
+  it('shows a default group name in the editor language and keeps a renamed one', async () => {
+    const { localizeDatabaseSchema } = await import('../../../../src/tools/database/database-localization');
+    const i18n = { t: (key: string) => `«${key}»` } as never;
+    const settings = createDefaultStatusSettings();
+    const renamed = { ...settings, groups: settings.groups.map((g) => (g.id === 'complete' ? { ...g, name: 'Shipped' } : g)) };
+    const [localized] = localizeDatabaseSchema([{ id: 'st', name: 'S', type: 'status', position: 'a0', status: renamed }], i18n);
+
+    expect(localized.status?.groups.map((g) => g.name)).toEqual(['«tools.database.statusGroupTodo»', '«tools.database.statusGroupInProgress»', 'Shipped']);
+  });
+});

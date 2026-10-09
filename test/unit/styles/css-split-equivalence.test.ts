@@ -766,6 +766,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // panel, the selection bar property buttons, the fill handle, page icons in
     // views, board and list selection, the page cover, and their tokens.
     const DATABASE_ROW_PAGE_BYTES = 8_972;
+    // database.css: the chart, drilldown and feed views, and their tokens in all three themes.
+    const DATABASE_CHART_FEED_BYTES = 12_026;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -831,7 +833,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIMELINE_BYTES
       + DATABASE_BOARD_CARD_BYTES
       + DATABASE_COMPUTED_PROPERTIES_BYTES
-      + DATABASE_ROW_PAGE_BYTES;
+      + DATABASE_ROW_PAGE_BYTES
+      + DATABASE_CHART_FEED_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

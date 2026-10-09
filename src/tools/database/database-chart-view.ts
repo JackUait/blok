@@ -111,7 +111,7 @@ const fit = (text: string, width: number): string => {
   return text.length <= chars ? text : `${text.slice(0, Math.max(1, chars - 1))}…`;
 };
 
-/** A bar with a rounded data end and a square foot on the baseline. */
+/** A bar with a curved data end and a square foot on the baseline. */
 const barPath = (x: number, y: number, w: number, h: number, horizontal: boolean, round: boolean): string => {
   const r = round ? Math.min(BAR_RADIUS, w / 2, h / 2) : 0;
 

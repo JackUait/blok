@@ -109,6 +109,23 @@
   /* Fill handle: white in light, rgb(25,25,25) in dark (research/08). */
   --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  /* Chart marks. Notion's chart is unmeasured (research/08: paywalled); these
+     are the dataviz skill's validated categorical steps on Blok's surfaces.
+     Keep in step with HUE_FALLBACK in database-chart-view.ts. */
+  --blok-database-chart-blue: #2a78d6;
+  --blok-database-chart-orange: #eb6834;
+  --blok-database-chart-teal: #1baf7a;
+  --blok-database-chart-yellow: #eda100;
+  --blok-database-chart-pink: #e87ba4;
+  --blok-database-chart-green: #008300;
+  --blok-database-chart-purple: #4a3aa7;
+  --blok-database-chart-red: #e34948;
+  --blok-database-chart-gray: #8e8b86;
+  --blok-database-chart-tooltip-bg: #ffffff;
+  --blok-database-chart-tooltip-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  /* Feed card, measured on Notion's feed view (research/08). */
+  --blok-database-feed-card-bg: #ffffff;
+  --blok-database-feed-card-shadow: rgba(0, 0, 0, 0.02) 0 12px 32px, rgba(0, 0, 0, 0.05) 0 0 0 1px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -213,6 +230,20 @@
     --blok-database-fill-handle-bg: rgb(25, 25, 25);
     /* Peek unmeasured in dark: the shadow follows Notion's measured dark menu (research/08). */
     --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+    --blok-database-chart-blue: #3987e5;
+    --blok-database-chart-orange: #d95926;
+    --blok-database-chart-teal: #199e70;
+    --blok-database-chart-yellow: #c98500;
+    --blok-database-chart-pink: #d55181;
+    --blok-database-chart-green: #008300;
+    --blok-database-chart-purple: #9085e9;
+    --blok-database-chart-red: #e66767;
+    --blok-database-chart-gray: #9b9b9b;
+    --blok-database-chart-tooltip-bg: rgb(37, 37, 37);
+    --blok-database-chart-tooltip-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+    /* Unmeasured in dark: the calendar event card's dark surface. */
+    --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   }
 }
 
@@ -315,6 +346,20 @@
   --blok-database-timeline-arrow-icon: #ffffff;
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
+  --blok-database-chart-blue: #3987e5;
+  --blok-database-chart-orange: #d95926;
+  --blok-database-chart-teal: #199e70;
+  --blok-database-chart-yellow: #c98500;
+  --blok-database-chart-pink: #d55181;
+  --blok-database-chart-green: #008300;
+  --blok-database-chart-purple: #9085e9;
+  --blok-database-chart-red: #e66767;
+  --blok-database-chart-gray: #9b9b9b;
+  --blok-database-chart-tooltip-bg: rgb(37, 37, 37);
+  --blok-database-chart-tooltip-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  /* Unmeasured in dark: the calendar event card's dark surface. */
+  --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
 }
 
 /**
@@ -5094,4 +5139,381 @@
 [data-blok-database-cell="formula"],
 [data-blok-database-cell="rollup"] {
   color: var(--blok-text-primary);
+}
+
+/* ─── Chart ───
+   Unmeasured: Notion's chart view is paywalled in the measured workspace
+   (research/08). Marks follow the dataviz skill; chrome uses Blok tokens. */
+
+[data-blok-database-chart] {
+  position: relative;
+  padding-block: var(--blok-space-4) var(--blok-space-2);
+  font-size: 12px;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-chart-body] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-chart][data-legend="side"] [data-blok-database-chart-body] {
+  flex-direction: row;
+  align-items: center;
+}
+
+[data-blok-database-chart-plot] {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+[data-blok-database-chart-plot] svg {
+  display: block;
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-blok-database-chart-hit] {
+  cursor: pointer;
+  outline: none;
+}
+
+[data-blok-database-chart-hit]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: -2px;
+}
+
+[data-blok-database-chart-legend] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--blok-space-1) var(--blok-space-3);
+}
+
+[data-blok-database-chart][data-legend="side"] [data-blok-database-chart-legend] {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  max-inline-size: 30%;
+}
+
+[data-blok-database-chart-legend-entry] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-chart-legend-entry]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-chart-legend-entry][aria-pressed="false"] {
+  color: var(--blok-database-table-muted-text);
+}
+
+[data-blok-database-chart-legend-entry][aria-pressed="false"] [data-blok-database-chart-swatch] {
+  filter: grayscale(1);
+}
+
+[data-blok-database-chart-legend-entry]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
+}
+
+[data-blok-database-chart-swatch] {
+  display: inline-block;
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: var(--blok-radius-mark);
+}
+
+[data-blok-database-chart-tooltip] {
+  position: absolute;
+  z-index: 1;
+  min-inline-size: 120px;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-chart-tooltip-bg);
+  box-shadow: var(--blok-database-chart-tooltip-shadow);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+}
+
+[data-blok-database-chart-tooltip][hidden] {
+  display: none;
+}
+
+[data-blok-database-chart-tooltip-title] {
+  margin-block-end: var(--blok-space-0-5);
+  font-weight: 600;
+}
+
+[data-blok-database-chart-tooltip-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  color: var(--blok-database-table-header-text);
+}
+
+[data-blok-database-chart-tooltip-value] {
+  margin-inline-start: auto;
+  color: var(--blok-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-blok-database-chart-number-box] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-block: var(--blok-space-6);
+}
+
+[data-blok-database-chart-number] {
+  font-size: 48px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+[data-blok-database-chart-number-caption],
+[data-blok-database-chart-empty],
+[data-blok-database-chart-truncated] {
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+}
+
+[data-blok-database-chart-empty] {
+  padding-block: var(--blok-space-6);
+  text-align: center;
+}
+
+[data-blok-database-chart-truncated] {
+  margin-block-start: var(--blok-space-2);
+  font-size: 12px;
+}
+
+/* Drilldown: a read-only table in a modal. Unmeasured. */
+[data-blok-database-drilldown] {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--blok-database-confirm-backdrop);
+  animation: blok-database-confirm-fade 200ms ease both;
+}
+
+[data-blok-database-drilldown-panel] {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  inline-size: min(760px, calc(100vw - 32px));
+  max-block-size: min(600px, calc(100vh - 64px));
+  border-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-database-confirm-bg);
+  box-shadow: var(--blok-database-confirm-shadow);
+}
+
+[data-blok-database-drilldown-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-3) var(--blok-space-4);
+  border-block-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-drilldown-title] {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+[data-blok-database-drilldown-count] {
+  flex: 1;
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+}
+
+[data-blok-database-drilldown-close] {
+  display: inline-flex;
+  padding: var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-drilldown-close]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-drilldown-close]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-drilldown-open]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
+}
+
+[data-blok-database-drilldown-scroller] {
+  overflow: auto;
+}
+
+[data-blok-database-drilldown] table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+[data-blok-database-drilldown] th {
+  padding: var(--blok-space-2);
+  border-block-end: 1px solid var(--blok-database-table-border);
+  color: var(--blok-database-table-header-text);
+  font-weight: 400;
+  text-align: start;
+}
+
+[data-blok-database-drilldown] td {
+  padding: var(--blok-space-2);
+  border-block-end: 1px solid var(--blok-database-table-border);
+  color: var(--blok-database-table-cell-text);
+}
+
+[data-blok-database-drilldown-open] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-drilldown-open]:hover {
+  text-decoration: underline;
+}
+
+[data-blok-database-drilldown-open][data-empty] {
+  color: var(--blok-database-table-muted-text);
+}
+
+/* ─── Feed ───
+   Measured (research/08): one card per row, 692 wide, 16px padding, 12px
+   radius (the surface role gives 10px), two-layer shadow; title 26px/26px
+   weight 600; author 14px/21px weight 500. Unmeasured: card gap, body text. */
+
+[data-blok-database-feed] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-4);
+  padding-block: var(--blok-space-4);
+}
+
+[data-blok-database-feed-card] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 692px;
+  padding: var(--blok-space-4);
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-feed-card-bg);
+  box-shadow: var(--blok-database-feed-card-shadow);
+}
+
+[data-blok-database-feed-byline] {
+  display: flex;
+  align-items: baseline;
+  gap: var(--blok-space-2);
+  font-size: 14px;
+  line-height: 21px;
+}
+
+[data-blok-database-feed-author] {
+  font-weight: 500;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-feed-time] {
+  color: var(--blok-database-table-header-text);
+}
+
+[data-blok-database-feed-title] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 26px;
+  line-height: 26px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-feed-title][data-placeholder]::before {
+  content: attr(data-placeholder);
+  color: var(--blok-database-table-muted-text);
+}
+
+[data-blok-database-feed-title]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-feed-more]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-database-feed-properties] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-1) var(--blok-space-2);
+  font-size: 14px;
+}
+
+[data-blok-database-feed-body] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+[data-blok-database-feed-line][data-level="h1"] { font-size: 1.5em; font-weight: 600; }
+[data-blok-database-feed-line][data-level="h2"] { font-size: 1.25em; font-weight: 600; }
+[data-blok-database-feed-line][data-level="h3"] { font-size: 1.1em; font-weight: 600; }
+
+[data-blok-database-feed-image] {
+  display: block;
+  max-inline-size: 100%;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-feed-more] {
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-feed-more]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-drilldown] {
+    animation: none;
+  }
 }

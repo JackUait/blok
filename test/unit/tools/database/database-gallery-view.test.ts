@@ -139,6 +139,16 @@ describe('DatabaseGalleryView', () => {
       expect(cards(root)[0].querySelector('img')?.getAttribute('src')).toBe('https://example.com/f.png');
     });
 
+    it('never loads a script URL from a property as the image', () => {
+      const { root } = mount({
+        view: galleryView({ cardPreview: 'property:p-link' }),
+        groups: single([row('r1', 'Alpha', { 'p-link': 'javascript:alert(1)' })]),
+      });
+
+      expect(cards(root)[0].querySelector('img')).toBeNull();
+      expect(cards(root)[0].querySelector('[data-blok-database-gallery-preview]')?.hasAttribute('data-empty')).toBe(true);
+    });
+
     it('leaves out the preview when set to none', () => {
       const { root } = mount({ view: galleryView({ cardPreview: 'none' }), bodyOf: () => [image] });
 

@@ -71,7 +71,7 @@ const imageFromValue = (value: PropertyValue | undefined): string | undefined =>
   const first: unknown = Array.isArray(value) ? value[0] : value;
   const url = typeof first === 'object' && first !== null ? (first as { url?: unknown }).url : first;
 
-  return typeof url === 'string' && url !== '' ? safeImageSrc(url) ?? undefined : undefined;
+  return typeof url === 'string' && url !== '' ? url : undefined;
 };
 
 /**
@@ -302,8 +302,10 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     return box;
   }
 
-  private fillImage(box: HTMLElement, src: string | undefined): void {
-    if (src === undefined) {
+  private fillImage(box: HTMLElement, url: string | undefined): void {
+    const src = url === undefined ? null : safeImageSrc(url);
+
+    if (src === null) {
       box.setAttribute('data-empty', '');
 
       return;

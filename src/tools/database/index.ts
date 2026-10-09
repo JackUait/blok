@@ -2208,7 +2208,11 @@ export class DatabaseTool implements BlockTool {
 
     const afterIndex = afterRowId === null ? -1 : rest.findIndex((row) => row.id === afterRowId);
     const beforeIndex = beforeRowId === null ? -1 : rest.findIndex((row) => row.id === beforeRowId);
-    const insertAt = afterIndex !== -1 ? afterIndex + 1 : beforeIndex !== -1 ? beforeIndex : rest.length;
+    const insertAt = ((): number => {
+      if (afterIndex !== -1) return afterIndex + 1;
+
+      return beforeIndex !== -1 ? beforeIndex : rest.length;
+    })();
     const order = [...rest.slice(0, insertAt), dragged, ...rest.slice(insertAt)];
     const moves: Array<{ rowId: string; position: string }> = [];
 

@@ -1654,7 +1654,7 @@ describe('DatabaseTool', () => {
         get preservedData() {
           return saved.data;
         },
-        call: vi.fn((method: string, params?: Record<string, unknown>) => {
+        call: vi.fn((method: string, params?: Parameters<BlockAPI["call"]>[1]) => {
           const fn = (row as unknown as Record<string, unknown>)[method];
 
           if (typeof fn === 'function') {
@@ -4490,7 +4490,7 @@ describe('DatabaseTool', () => {
       childBlocks.forEach((block) => {
         const original = vi.mocked(block.call).getMockImplementation();
 
-        vi.mocked(block.call).mockImplementation((method: string, params?: object) => {
+        vi.mocked(block.call).mockImplementation((method: string, params?: Parameters<BlockAPI["call"]>[1]) => {
           if (method === 'updatePosition') inside.push(block.id);
           original?.(method, params);
         });

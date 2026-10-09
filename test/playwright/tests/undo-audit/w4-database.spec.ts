@@ -515,8 +515,7 @@ test.describe('W4D board actions that write many rows', () => {
 
     const after = await ids(page);
 
-    expect(after).not.toContain('row-1');
-    expect(after).not.toContain('row-3');
+    expect(after.filter((id) => id === 'row-1' || id === 'row-3')).toEqual([]);
     expect(after).toEqual(expect.arrayContaining(['row-2', 'p-before', 'p-after', 'db-1']));
 
     await park(page);

@@ -1851,3 +1851,664 @@
     transition: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Database table view
+   Sizes and colors are Notion's, measured in research/07 and 08.
+   ═══════════════════════════════════════════════════════ */
+
+[data-blok-database-table] {
+  position: relative;
+}
+
+/* Spans the editor and lines its content up with the text column, like the board. */
+[data-blok-database-table-scroller] {
+  overflow-x: auto;
+  padding-inline: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-block-end: var(--blok-space-6);
+}
+
+[data-blok-database-table-grid] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+  color: var(--blok-database-table-cell-text);
+  font-size: 14px;
+  line-height: 21px;
+  outline: none;
+}
+
+/* Sticky inside its scroller. Unverified against page scroll: the scroller
+   clips on both axes. */
+[data-blok-database-table-header] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 3;
+  display: flex;
+  height: 36px;
+  background-color: var(--blok-database-table-bg);
+  box-shadow: inset 0 -1px 0 var(--blok-database-table-border);
+}
+
+[data-blok-database-table-column-header] {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 400;
+  cursor: pointer;
+  background-color: var(--blok-database-table-bg);
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-table-column-header]:hover {
+  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+}
+
+[data-blok-database-table-column-button] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-table-column-icon] {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-table-column-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-column-name] {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-table-resize] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: -3px;
+  z-index: 1;
+  width: 5px;
+  height: 36px;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 200ms ease-out;
+}
+
+[data-blok-database-table-resize]:hover,
+[data-blok-database-table-resize][data-active] {
+  background-color: var(--blok-database-table-resize);
+}
+
+[data-blok-database-table-add-property] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-block: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-0-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-table-add-property]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-add-property] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-filler] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+[data-blok-database-table-row] > [data-blok-database-table-filler],
+[data-blok-database-table-footer] > [data-blok-database-table-filler] {
+  border-block-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-table-footer] > [data-blok-database-table-filler] {
+  border-block-end: none;
+}
+
+/* ─── Rows and cells ─── */
+
+[data-blok-database-table-row] {
+  position: relative;
+  display: flex;
+}
+
+/* Row selection halo: fades in over 200ms (research/08). */
+[data-blok-database-table-row]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-color: transparent;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+[data-blok-database-table-row][aria-selected="true"]::after {
+  background-color: var(--blok-icon-active-bg);
+  opacity: 1;
+}
+
+[data-blok-database-table-cell] {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  min-height: 37px;
+  padding: 7.5px var(--blok-space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-block-end: 1px solid var(--blok-database-table-border);
+  outline: none;
+  cursor: default;
+}
+
+[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell],
+[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-column-header] {
+  border-inline-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-table-cell][data-wrap] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+[data-blok-database-table-cell][data-type="title"] {
+  font-weight: 500;
+}
+
+[data-blok-database-table-cell][data-type="number"] {
+  text-align: end;
+}
+
+[data-blok-database-table-cell][data-type="select"],
+[data-blok-database-table-cell][data-type="multiSelect"] {
+  padding: var(--blok-space-2);
+}
+
+[data-blok-database-table-cell][data-type="checkbox"] {
+  padding: var(--blok-space-2-5) var(--blok-space-2);
+}
+
+[data-blok-database-table-cell] [data-blok-database-option-pill] {
+  margin-inline-end: var(--blok-space-1-5);
+}
+
+[data-blok-database-table-cell][data-frozen],
+[data-blok-database-table-column-header][data-frozen],
+[data-blok-database-table-calc][data-frozen] {
+  position: sticky;
+  z-index: 1;
+  background-color: var(--blok-database-table-bg);
+}
+
+/* Selection is gray (D3). A cell keeps a ring only on the anchor; the
+   rest of a range gets the fill alone (research/08). */
+[data-blok-database-table-cell][aria-selected="true"] {
+  background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
+}
+
+[data-blok-database-table-cell][data-blok-database-table-cell-anchor] {
+  border-radius: var(--blok-radius-mark);
+  box-shadow: inset 0 0 0 2px var(--blok-database-table-cell-ring);
+}
+
+/* ─── OPEN button on the title cell ─── */
+
+[data-blok-database-table-open] {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-end: 6px;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  gap: var(--blok-space-1);
+  height: 24px;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-open-bg);
+  box-shadow: var(--blok-database-table-open-shadow);
+  color: var(--blok-database-table-header-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-table-open] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-table-row]:hover [data-blok-database-table-open] {
+  display: inline-flex;
+}
+
+[data-blok-database-table-open]:hover {
+  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+}
+
+/* ─── Left gutter: "+", ⋮⋮ and the row checkbox ─── */
+
+[data-blok-database-table-gutter] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 100%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding-inline-end: var(--blok-space-1);
+  opacity: 0;
+}
+
+[data-blok-database-table-row]:hover > [data-blok-database-table-gutter],
+[data-blok-database-table-header]:hover > [data-blok-database-table-gutter],
+[data-blok-database-table-row][aria-selected="true"] > [data-blok-database-table-gutter],
+[data-blok-database-table-header] > [data-blok-database-table-gutter]:has([aria-checked="true"], [aria-checked="mixed"]) {
+  opacity: 1;
+}
+
+[data-blok-database-table-row-add],
+[data-blok-database-table-row-handle] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-table-gutter-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-table-row-add] {
+  width: 24px;
+}
+
+[data-blok-database-table-row-handle] {
+  width: 18px;
+  cursor: grab;
+}
+
+[data-blok-database-table-row-add]:hover,
+[data-blok-database-table-row-handle]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-row-add] svg,
+[data-blok-database-table-row-handle] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-row-checkbox],
+[data-blok-database-table-select-all] {
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-inline: var(--blok-space-1);
+  border: 1px solid var(--blok-database-checkbox-border);
+  border-radius: var(--blok-radius-control-sm);
+  cursor: pointer;
+  transition: background-color 200ms ease-out;
+}
+
+[data-blok-database-table-row-checkbox][aria-checked="true"],
+[data-blok-database-table-select-all][aria-checked="true"],
+[data-blok-database-table-select-all][aria-checked="mixed"] {
+  border-color: var(--blok-icon-active-text);
+  background-color: var(--blok-icon-active-bg);
+}
+
+/* A check drawn in primary ink. */
+[data-blok-database-table-row-checkbox][aria-checked="true"]::after,
+[data-blok-database-table-select-all][aria-checked="true"]::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 4px;
+  width: 4px;
+  height: 8px;
+  border-block-end: 2px solid var(--blok-icon-active-text);
+  border-inline-end: 2px solid var(--blok-icon-active-text);
+  transform: rotate(45deg);
+}
+
+[data-blok-database-table-select-all][aria-checked="mixed"]::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: 3px;
+  width: 8px;
+  height: 2px;
+  background-color: var(--blok-icon-active-text);
+}
+
+/* ─── "+ New page", Load more, empty state ─── */
+
+[data-blok-database-table-add-row] {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  padding-inline-start: var(--blok-space-2);
+  border: none;
+  background: transparent;
+  color: var(--blok-database-table-muted-text);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-table-add-row] > span {
+  display: inline-flex;
+  margin-inline: var(--blok-space-0-25) var(--blok-space-1-75);
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-table-add-row] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-load-more] {
+  align-self: flex-start;
+  height: 32px;
+  padding-inline: var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-table-load-more]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-empty] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-2);
+  padding-block: var(--blok-space-4);
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  width: auto;
+}
+
+[data-blok-database-table-edit-filters] {
+  height: 28px;
+  padding-inline: var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ─── Calculation footer ─── */
+
+[data-blok-database-table-footer] {
+  position: relative;
+  display: flex;
+  min-height: 35px;
+}
+
+[data-blok-database-table-footer] > [data-blok-database-table-gutter] {
+  display: none;
+}
+
+[data-blok-database-table-calc] {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 35px;
+  padding: 0 var(--blok-space-1-5);
+  border: none;
+  background: transparent;
+  color: var(--blok-database-table-calc-value);
+  font: inherit;
+  font-size: 14px;
+  line-height: 21px;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 200ms;
+}
+
+[data-blok-database-table-calc][data-type="number"] {
+  justify-content: flex-end;
+}
+
+[data-blok-database-table-calc]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-calc-label] {
+  margin-inline-end: var(--blok-space-1);
+  color: var(--blok-database-table-muted-text);
+  font-size: 10px;
+  line-height: 15px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* The "Calculate" placeholder hides until the footer is hovered. */
+[data-blok-database-table-calc-placeholder] {
+  color: var(--blok-database-table-muted-text);
+  opacity: 0;
+}
+
+[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder],
+[data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
+  opacity: 1;
+}
+
+/* ─── Groups ─── */
+
+[data-blok-database-table-group] {
+  margin-block-end: var(--blok-space-3);
+}
+
+[data-blok-database-table-group-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  height: 42px;
+}
+
+[data-blok-database-table-group-toggle] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-table-cell-text);
+  cursor: pointer;
+}
+
+[data-blok-database-table-group-toggle] svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 200ms ease-out;
+}
+
+[data-blok-database-table-group-toggle]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-group][data-collapsed] [data-blok-database-table-group-toggle] svg {
+  transform: rotate(-90deg);
+}
+
+[dir="rtl"] [data-blok-database-table-group][data-collapsed] [data-blok-database-table-group-toggle] svg {
+  transform: rotate(90deg);
+}
+
+[data-blok-database-table-group-label] {
+  font-weight: 500;
+}
+
+[data-blok-database-table-group-count] {
+  padding-inline: var(--blok-space-2);
+  color: var(--blok-database-table-muted-text);
+  font-weight: 500;
+}
+
+/* ─── Drag: ghost at 0.4, 4px drop line (research/08) ─── */
+
+[data-blok-database-table-row-ghost],
+[data-blok-database-table-column-ghost] {
+  z-index: 1000;
+  display: flex;
+  opacity: 0.4;
+  pointer-events: none;
+  background-color: var(--blok-database-table-bg);
+  color: var(--blok-database-table-cell-text);
+  font-size: 14px;
+  line-height: 21px;
+}
+
+[data-blok-database-table-row-ghost] > [data-blok-database-table-gutter] {
+  display: none;
+}
+
+[data-blok-database-table-drop-line],
+[data-blok-database-table-column-drop-line] {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  background-color: var(--blok-database-table-drop-line);
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+[data-blok-database-table-drop-line] {
+  inset-inline: 0;
+  height: 4px;
+}
+
+[data-blok-database-table-column-drop-line] {
+  inset-block: 0;
+  width: 4px;
+}
+
+[data-blok-database-table-drop-line][data-visible],
+[data-blok-database-table-column-drop-line][data-visible] {
+  opacity: 1;
+}
+
+/* ─── Selection bar ─── */
+
+[data-blok-database-table-selection-bar] {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-open-bg);
+  box-shadow: var(--blok-database-table-open-shadow);
+}
+
+[data-blok-database-table-selection-count] {
+  padding-inline: var(--blok-space-2-5);
+  color: var(--blok-icon-active-text);
+  font-size: 14px;
+  line-height: 21px;
+}
+
+[data-blok-database-table-selection-bar] button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-table-selection-bar] button:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-selection-bar] svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-table-row]::after,
+  [data-blok-database-table-resize],
+  [data-blok-database-table-row-checkbox],
+  [data-blok-database-table-select-all],
+  [data-blok-database-table-group-toggle] svg,
+  [data-blok-database-table-drop-line],
+  [data-blok-database-table-column-drop-line],
+  [data-blok-database-table-calc],
+  [data-blok-database-table-column-header],
+  [data-blok-database-table-open],
+  [data-blok-database-table-add-property] {
+    transition: none;
+  }
+}

@@ -737,6 +737,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css + colors.css: cell pills, checkbox, select and date editors,
     // the drawer value button, and the option/checkbox/today tokens in all three themes.
     const DATABASE_CELL_EDITORS_BYTES = 19_619;
+    // database.css + colors.css: the table view grid, gutter, footer, groups,
+    // drag visuals, selection bar, and its tokens in all three themes.
+    const DATABASE_TABLE_VIEW_BYTES = 20_384;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -792,7 +795,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + AGENT_MARKER_BYTES
       + FIND_FIELD_COLUMN_BYTES
       + DATABASE_REDUCED_MOTION_BYTES
-      + DATABASE_CELL_EDITORS_BYTES;
+      + DATABASE_CELL_EDITORS_BYTES
+      + DATABASE_TABLE_VIEW_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

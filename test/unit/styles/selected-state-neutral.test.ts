@@ -10,7 +10,7 @@ import { readMainCss } from './helpers/read-main-css';
 const css = readMainCss();
 
 /** The keyboard cursor fill counts as selected too: Notion paints it gray. */
-const SELECTED_FILLS = ['--blok-icon-active-bg', '--blok-popover-icon-active-bg', '--blok-item-focus-bg', '--blok-item-focus-shadow', '--blok-database-card-border-active'];
+const SELECTED_FILLS = ['--blok-icon-active-bg', '--blok-popover-icon-active-bg', '--blok-item-focus-bg', '--blok-item-focus-shadow', '--blok-database-card-border-active', '--blok-database-table-cell-ring'];
 
 const declarations = (token: string): string[] =>
   [...css.matchAll(new RegExp(`${token}:\\s*([^;]+);`, 'g'))].map(match => match[1].trim());

@@ -457,6 +457,31 @@ describe('database-query', () => {
       expect(rowMatchesFilters(row('new', 'a0', values), filters, schema)).toBe(true);
     });
 
+    it('fills a date the filters allow: the day itself, the day past a strict bound, or today (research/08)', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 9, 9, 12));
+      try {
+        const dateFor = (operator: string, value: FilterConfig['value']): unknown =>
+          newRowValues([{ propertyId: 'due', operator, value }], schema).due;
+
+        expect(dateFor('equals', '2026-10-05')).toBe('2026-10-05');
+        expect(dateFor('on_or_after', '2026-10-05')).toBe('2026-10-05');
+        expect(dateFor('on_or_before', '2026-10-05')).toBe('2026-10-05');
+        expect(dateFor('after', '2026-10-05')).toBe('2026-10-06');
+        expect(dateFor('before', '2026-10-01')).toBe('2026-09-30');
+        expect(dateFor('is_not_empty', null)).toBe('2026-10-09');
+        expect(dateFor('this_week', null)).toBe('2026-10-09');
+        expect(dateFor('equals', 'this_week')).toBe('2026-10-09');
+        expect(dateFor('is_empty', null)).toBeUndefined();
+
+        const values = newRowValues([{ propertyId: 'due', operator: 'after', value: '2026-10-05' }], schema);
+
+        expect(rowMatchesFilters(row('new', 'a0', values), [{ propertyId: 'due', operator: 'after', value: '2026-10-05' }], schema)).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('takes nothing from other operators, the title, or a filter with no usable value', () => {
       expect(newRowValues([
         { propertyId: 'status', operator: 'does_not_equal', value: 'opt-mid' },

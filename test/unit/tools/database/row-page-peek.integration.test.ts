@@ -205,6 +205,25 @@ describe('row page peek modes', () => {
     expect(q('[data-blok-database-wrapper]')?.hasAttribute('data-blok-database-full-page')).toBe(true);
   });
 
+  it('opens a new row of a filtered view in its peek, prefilled so it passes the filter', async () => {
+    const blocks = doc({ filters: [{ propertyId: 'n', operator: 'equals', value: 'Draft' }] });
+
+    (blocks[0].data as { schema: unknown[] }).schema.push({ id: 'n', name: 'Notes', type: 'text', position: 'a1' });
+    await make(blocks);
+    await click(q('[data-blok-database-table-add-row]'));
+
+    const rowId = drawer()?.closest('[data-blok-database-wrapper]') === null ? undefined : (await editor?.save())?.blocks
+      .filter((block) => block.type === 'database-row').at(-1)?.id;
+
+    expect(drawer()?.getAttribute('data-peek-mode')).toBe('side');
+    expect(rowId).toBeDefined();
+    expect(drawer()?.querySelector(`[data-blok-element][data-blok-id="${rowId}"]`)).not.toBeNull();
+
+    const saved = (await editor?.save())?.blocks.find((block) => block.id === rowId);
+
+    expect((saved?.data as { properties: Record<string, unknown> }).properties.n).toBe('Draft');
+  });
+
   it('switches the mode from the peek header and saves it on the view', async () => {
     await make(doc());
     await openRow('r1');

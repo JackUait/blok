@@ -2240,7 +2240,21 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position });
     this.rerenderView({ keepDrawer: true });
 
-    return rowData.id;
+    // The page opens instead of the inline title edit.
+    return this.openIfFiltered(rowData.id) ? null : rowData.id;
+  }
+
+  /**
+   * Notion opens a row made in a filtered view in its peek: the filter may
+   * hide the row, and the page is where the rest gets filled in (research/08).
+   */
+  private openIfFiltered(rowId: string): boolean {
+    if ((this.model.getView(this.activeViewId)?.filters.length ?? 0) === 0) {
+      return false;
+    }
+    this.handleRowClick(rowId);
+
+    return true;
   }
 
   private deleteTableRows(rowIds: string[]): void {
@@ -2729,6 +2743,7 @@ export class DatabaseTool implements BlockTool {
       properties: rowData.properties,
       position: rowData.position,
     });
+    this.openIfFiltered(rowData.id);
   }
 
   /** The clicked group's value wins over a filter on the same property. */
@@ -2808,6 +2823,7 @@ export class DatabaseTool implements BlockTool {
       properties: rowData.properties,
       position: rowData.position,
     });
+    this.openIfFiltered(rowData.id);
   }
 
   private handleAddColumn(boardEl: HTMLDivElement): void {

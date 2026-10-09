@@ -531,7 +531,49 @@ export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: Prope
 };
 
 /** The value an `equals` filter asks for, or `undefined` when a new row cannot take it. */
+/** Today in the viewer's zone, as a stored date. */
+const todayValue = (): string => {
+  const now = new Date();
+
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+const shiftDay = (day: string, by: number): string => {
+  const [year, month, date] = day.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, date + by));
+
+  return shifted.toISOString().slice(0, 10);
+};
+
+const RELATIVE_TODAY: ReadonlySet<string> = new Set(['today', 'this_week', 'this_month', 'this_year']);
+
+/**
+ * A date a new row can take and still pass the filter. A relative "this
+ * week" becomes today, as Notion fills it (research/08).
+ */
+const dateTargetValue = (operator: string, target: PropertyValue): string | undefined => {
+  if (operator === 'is_not_empty' || operator === 'this_week' || (typeof target === 'string' && RELATIVE_TODAY.has(target))) {
+    return todayValue();
+  }
+  const day = toDay(target);
+
+  if (day === undefined) return undefined;
+
+  switch (operator) {
+    case 'equals':
+    case 'on_or_before':
+    case 'on_or_after':
+      return day;
+    case 'before': return shiftDay(day, -1);
+    case 'after': return shiftDay(day, 1);
+    default: return undefined;
+  }
+};
+
 const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue): PropertyValue | undefined => {
+  if (type === 'date') {
+    return dateTargetValue(operator, target);
+  }
   if (operator === 'contains' && type === 'person') {
     const id = toIdList(target)[0];
 

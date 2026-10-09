@@ -38,7 +38,7 @@ const PREVIEWS: Array<[CardPreview, string]> = [
   ['content', 'tools.database.galleryCardPreviewContent'],
 ];
 
-/** Card size, Card preview and Fit image (H-galleries). A url property stands in for Files & media until that type exists. */
+/** Card size, Card preview and Fit image (H-galleries). Files & media properties, and url properties holding an image link, can be the preview. */
 export const galleryLayoutItems = (
   view: DatabaseViewConfig,
   schema: PropertyDefinition[],
@@ -48,7 +48,7 @@ export const galleryLayoutItems = (
   const size = resolveCardSize(view);
   const preview = resolveCardPreview(view, schema);
   const previewKey = preview.kind === 'property' ? `property:${preview.propertyId}` : preview.kind;
-  const imageProperties = schema.filter((p) => p.type === 'url');
+  const imageProperties = schema.filter((p) => p.type === 'url' || p.type === 'files');
   const fit = resolveFitImage(view);
 
   return [

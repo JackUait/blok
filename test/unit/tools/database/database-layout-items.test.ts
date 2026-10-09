@@ -10,6 +10,7 @@ const schema: PropertyDefinition[] = [
   { id: 'p-start', name: 'Start', type: 'date', position: 'a2' },
   { id: 'p-link', name: 'Image', type: 'url', position: 'a3' },
   { id: 'p-notes', name: 'Notes', type: 'text', position: 'a4' },
+  { id: 'p-files', name: 'Attachments', type: 'files', position: 'a5' },
 ];
 
 const view = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
@@ -70,7 +71,7 @@ describe('database layout items', () => {
       expect(update).toHaveBeenCalledWith({ cardSize: 'large' });
     });
 
-    it('offers none, cover, content and each url property as the preview', () => {
+    it('offers none, cover, content and each files or url property as the preview', () => {
       const update = vi.fn();
       const items = flat(galleryLayoutItems(view(), schema, i18n, update));
       const preview = find(items, 'tools.database.galleryCardPreview').children ?? [];
@@ -80,6 +81,7 @@ describe('database layout items', () => {
         ['tools.database.galleryCardPreviewCover', false],
         ['tools.database.galleryCardPreviewContent', true],
         ['Image', false],
+        ['Attachments', false],
       ]);
       find(preview, 'Image').onActivate?.();
       expect(update).toHaveBeenCalledWith({ cardPreview: 'property:p-link' });

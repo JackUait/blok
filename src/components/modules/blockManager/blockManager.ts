@@ -66,6 +66,34 @@ interface SyncBlockDataOptions {
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
  */
 export class BlockManager extends Module {
+  private agentScope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string } | null = null;
+
+  public attributeTo(scope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string }): () => void {
+    this.agentScope = scope;
+
+    return () => {
+      if (this.agentScope === scope) {
+        this.agentScope = null;
+      }
+    };
+  }
+
+  private agentFor(blockId: string): { id: string; name: string; turnId: string } | undefined {
+    const scope = this.agentScope;
+
+    return scope !== null && scope.ids.has(blockId)
+      ? { id: scope.actor.id, name: scope.actor.name, turnId: scope.turnId }
+      : undefined;
+  }
+
+  private stampBlockEdit(block: Block): void {
+    const editedBlock = block;
+
+    editedBlock.lastEditedAt = Date.now();
+    editedBlock.lastEditedBy = this.agentFor(editedBlock.id)?.id ?? this.config.user?.id ?? null;
+    this.Blok.YjsManager.updateBlockMetadata(editedBlock.id, editedBlock.lastEditedAt, editedBlock.lastEditedBy);
+  }
+
   /**
    * Returns current Block index
    * @returns {number}
@@ -370,6 +398,8 @@ export class BlockManager extends Module {
    */
   private toolTransactionHoldsCapture = false;
 
+  private toolTransactionCallbacks: Array<() => void> = [];
+
   /**
    * Every top-level data key each block's save() has emitted. Removing one of
    * these is the user's edit; removing any other key is normalisation.
@@ -513,6 +543,13 @@ export class BlockManager extends Module {
         Caret: this.Blok.Caret,
         I18n: this.Blok.I18n,
         eventsDispatcher: this.eventsDispatcher,
+        stampBlockEdit: (blockId) => {
+          const block = this.getBlockById(blockId);
+
+          if (block !== undefined) {
+            this.stampBlockEdit(block);
+          }
+        },
       },
       this.repository,
       this.factory,
@@ -1185,7 +1222,11 @@ export class BlockManager extends Module {
   /**
    * Close the undo group opened by `beginToolTransaction()`.
    */
-  public endToolTransaction(): void {
+  public endToolTransaction(onClosed?: () => void): void {
+    if (onClosed !== undefined) {
+      this.toolTransactionCallbacks.push(onClosed);
+    }
+
     // Closing boundary uses two nested queueMicrotask calls to ensure correct ordering.
     //
     // Microtask ordering after the operation returns:
@@ -1220,6 +1261,13 @@ export class BlockManager extends Module {
         this.Blok.YjsManager.releaseCapture();
       }
       this.operations.suppressStopCapturing = this.suppressBeforeToolTransaction;
+
+      const callbacks = this.toolTransactionCallbacks;
+
+      this.toolTransactionCallbacks = [];
+      for (const callback of callbacks) {
+        callback();
+      }
     };
     const closeWhenWritesSettle = (): void => {
       this.Blok.YjsManager.onPendingBlockWritesSettled(close);
@@ -2121,10 +2169,12 @@ export class BlockManager extends Module {
     detailData: BlockMutationEventDetailWithoutTarget<Type>,
     origin: BlockMutationOrigin = 'local'
   ): void {
+    const agent = origin === 'local' ? this.agentFor(block.id) : undefined;
     const eventDetail = {
       target: new BlockAPI(block, this.Blok.API),
       ...this.placementDetail(mutationType, block, detailData),
       ...detailData,
+      ...(agent !== undefined && { agent }),
       origin,
     };
 
@@ -2684,14 +2734,7 @@ export class BlockManager extends Module {
         return;
       }
 
-      // Bump edit metadata only when data actually changed, so we don't add
-      // a spurious metadata-only entry to the Yjs undo stack.
-      // eslint-disable-next-line no-param-reassign
-      block.lastEditedAt = Date.now();
-      // eslint-disable-next-line no-param-reassign
-      block.lastEditedBy = this.config.user?.id ?? null;
-
-      this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
+      this.stampBlockEdit(block);
     };
 
     if (options.derivedFrom !== undefined) {

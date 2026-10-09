@@ -1,13 +1,21 @@
+import type { AgentContract, BlokCustomToolsFile, HostService, ManifestOverrides } from '../../types';
 import type { AgentWarning } from '../../types/agent';
 import type { SanitizerConfig, ToolSanitizerConfig } from '../../types/configs/sanitizer-config';
 import type { OutputBlockData, OutputData } from '../../types/data-formats/output-data';
+import { getBlokVersion } from '../components/utils/version';
 import { markdownToBlocksWithReport } from '../markdown';
+import { COMMANDS } from '../shared/agent/commands';
+import { buildBuiltInSnapshot } from '../shared/built-in-snapshot';
+import { runtimesWithCustomTools, snapshotWithCustomTools } from '../shared/custom-tools-file';
 import type { AgentPorts } from '../shared/agent/types';
 import { mintId } from '../shared/mint-id';
 import { protectPageReferenceAnchor } from '../shared/page-reference';
-import { outputBlocksToSegments } from '../shared/rich-text/block-data';
+import { outputBlocksToHtml, outputBlocksToSegments } from '../shared/rich-text/block-data';
 import { isRichText } from '../shared/rich-text/guards';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
+import { BUILT_IN_TOOL_RUNTIMES } from '../shared/tool-actions';
+import type { ToolRuntimeRegistry } from '../shared/tool-actions/runtime';
+import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
 import { getEffectiveRuleForString, isPlaintextRule, walkSanitize, type StringCleaner } from '../shared/sanitize-walk';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
@@ -98,7 +106,8 @@ export const createHeadlessPorts = (input: {
       };
     },
     blocksToMarkdown: (doc) => {
-      const { markdown, warnings } = blocksToMarkdownWithReport(doc);
+      const blocks = outputBlocksToHtml(doc.blocks, input.richTextFieldsFor);
+      const { markdown, warnings } = blocksToMarkdownWithReport({ ...doc, blocks });
 
       return {
         markdown,
@@ -179,6 +188,39 @@ export const loadStoredDocument = (
   });
 
   return { ...doc, blocks: outputBlocksToSegments(blocks, richTextFieldsFor, htmlToSegmentsNode) };
+};
+
+export const createHeadlessAgentSetup = (options: {
+  customTools?: BlokCustomToolsFile;
+  overrides?: ManifestOverrides;
+  services?: HostService[];
+  runtime?: 'node' | 'jint' | 'node-live';
+  globalSanitizer?: SanitizerConfig;
+  openPageDocument?: AgentPorts['openPageDocument'];
+} = {}): {
+  contract: AgentContract;
+  tools: ToolRuntimeRegistry;
+  ports: AgentPorts;
+  richTextFieldsFor(type: string): string[];
+} => {
+  const services = options.services ?? [];
+  const snapshot = snapshotWithCustomTools(
+    buildBuiltInSnapshot({ blokVersion: getBlokVersion(), services }),
+    options.customTools
+  );
+  const manifest = buildToolManifest(snapshot, options.overrides);
+  const contract = buildAgentContract(manifest, COMMANDS, { runtime: options.runtime ?? 'node', services });
+  const tools = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, options.customTools);
+  const richTextFieldsFor = (type: string): string[] =>
+    manifest.blocks.find(entry => entry.name === type)?.richTextFields ?? [];
+  const ports = createHeadlessPorts({
+    sanitizeFor: type => tools.get(type)?.sanitize,
+    richTextFieldsFor,
+    globalSanitizer: options.globalSanitizer,
+    openPageDocument: options.openPageDocument,
+  });
+
+  return { contract, tools, ports, richTextFieldsFor };
 };
 
 export type { OutputBlockData };

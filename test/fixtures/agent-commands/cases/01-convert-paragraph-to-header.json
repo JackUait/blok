@@ -1,0 +1,84 @@
+{
+  "name": "01-convert-paragraph-to-header",
+  "seed": {
+    "title": "Seed",
+    "blocks": [
+      {
+        "id": "h",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Title"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello world"
+            }
+          ]
+        }
+      },
+      {
+        "id": "tg",
+        "type": "toggle",
+        "data": {
+          "text": [
+            {
+              "text": "More"
+            }
+          ]
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "inside"
+            }
+          ]
+        },
+        "parent": "tg"
+      },
+      {
+        "id": "q",
+        "type": "quote",
+        "data": {
+          "text": [
+            {
+              "text": "Q"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "block.convert",
+          "args": {
+            "id": "p",
+            "type": "header",
+            "data": {
+              "level": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

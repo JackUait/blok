@@ -1,0 +1,229 @@
+{
+  "cases": [
+    {
+      "name": "keeps seed ids, relabels minted ids everywhere they appear",
+      "keepIds": [
+        "p1"
+      ],
+      "input": {
+        "time": 1,
+        "version": "x",
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ]
+            },
+            "lastEditedAt": 5,
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "Zq81",
+            "type": "toggle",
+            "data": {
+              "text": [
+                {
+                  "text": "t"
+                }
+              ]
+            },
+            "content": [
+              "Xx9"
+            ]
+          },
+          {
+            "id": "Xx9",
+            "type": "paragraph",
+            "parent": "Zq81",
+            "data": {
+              "text": [
+                {
+                  "text": "c",
+                  "marks": {
+                    "bold": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ]
+            },
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "b1",
+            "type": "toggle",
+            "data": {
+              "text": [
+                {
+                  "text": "t"
+                }
+              ]
+            },
+            "content": [
+              "b1.0"
+            ]
+          },
+          {
+            "id": "b1.0",
+            "type": "paragraph",
+            "parent": "b1",
+            "data": {
+              "text": [
+                {
+                  "text": "c",
+                  "marks": {
+                    "bold": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "turns an HTML rich field into segments",
+      "tsOnly": "The C# runners emit segments; HTML parsing is the TS canonicalizer's job (06 C16).",
+      "keepIds": [
+        "p"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "p",
+            "type": "paragraph",
+            "data": {
+              "text": "<b>c</b>"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "p",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "c",
+                  "marks": {
+                    "bold": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "orders children by content, roots by array order",
+      "keepIds": [
+        "r",
+        "c1",
+        "c2"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "c2",
+            "type": "paragraph",
+            "parent": "r",
+            "data": {
+              "text": []
+            }
+          },
+          {
+            "id": "r",
+            "type": "toggle",
+            "data": {
+              "text": []
+            },
+            "content": [
+              "c1",
+              "c2"
+            ]
+          },
+          {
+            "id": "c1",
+            "type": "paragraph",
+            "parent": "r",
+            "data": {
+              "text": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "r",
+            "type": "toggle",
+            "data": {
+              "text": []
+            },
+            "content": [
+              "c1",
+              "c2"
+            ]
+          },
+          {
+            "id": "c1",
+            "type": "paragraph",
+            "parent": "r",
+            "data": {
+              "text": []
+            }
+          },
+          {
+            "id": "c2",
+            "type": "paragraph",
+            "parent": "r",
+            "data": {
+              "text": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "keeps the page field",
+      "keepIds": [],
+      "input": {
+        "blocks": [],
+        "title": "Q3 plan",
+        "icon": {
+          "type": "emoji",
+          "value": "📅"
+        }
+      },
+      "expected": {
+        "blocks": [],
+        "title": "Q3 plan",
+        "icon": {
+          "type": "emoji",
+          "value": "📅"
+        }
+      }
+    }
+  ]
+}

@@ -972,7 +972,7 @@ export class BlocksAPI extends Module {
    * @param toolName - the tool the data is meant for
    * @param data - data from the host
    */
-  private hostDataForTool<T extends Partial<BlockToolData>>(toolName: string, data: T): T {
+  public hostDataForTool<T extends Partial<BlockToolData>>(toolName: string, data: T): T {
     const html: Record<string, unknown> = this.richTextToHtml(toolName, data);
     // render() expands legacy shapes into blocks before it sanitizes; the tool's
     // rule has no entry for them, so sanitize them as the blocks they become.

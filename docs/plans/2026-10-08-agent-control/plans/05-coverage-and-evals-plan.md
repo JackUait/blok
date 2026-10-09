@@ -2131,7 +2131,7 @@ export const normalizeForParity = (doc: OutputData, keepIds: ReadonlySet<string>
   });
 
   const cleaned = ordered.map(({ block }) => {
-    const { lastEditedAt: _at, ...rest } = block as OutputBlockData & { lastEditedAt?: number };
+    const { createdAt: _createdAt, lastEditedAt: _at, ...rest } = block;
     const minted = TOOL_MINTED[rest.type];
     const data = minted === undefined ? rest.data : minted.strip(rest.data as Record<string, unknown>);
 
@@ -2161,6 +2161,8 @@ export const stableStringify = (value: unknown): string => {
 ```
 
 The first normalizer case expects root labels `b1` for the second root because `p1` (a kept id) still takes position `b0`. That matches `ordered` above: every root gets a position label, kept ids just do not use theirs.
+
+Execution ruling: also drop `createdAt` from parity comparisons. Editor insertion stamps creation time, while JSON insertion does not. Keep production creation metadata unchanged and compare `createdBy` and `lastEditedBy`. Add a test using both real insertion producers before changing the normalizer. This helper accepts coherent, acyclic hierarchies; partial or dangling hierarchies need a separate input-boundary decision.
 
 - [ ] **Step 6: Run the test to verify it passes**
 

@@ -24,7 +24,7 @@ import {
   markdownTextEscaper,
   serializeBlocksToMarkdown
 } from './blocks-to-markdown-core';
-import type { InlineBackend, SerializableBlock, TextEscaper } from './blocks-to-markdown-core';
+import type { InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from './blocks-to-markdown-core';
 
 export type { SerializableBlock, MarkdownDegradation } from './blocks-to-markdown-core';
 
@@ -135,3 +135,6 @@ const domInlineBackend: InlineBackend = {
  */
 export const blocksToMarkdown = (blocks: SerializableBlock[]): string =>
   serializeBlocksToMarkdown(blocks, domInlineBackend).markdown;
+
+export const blocksToMarkdownWithReport = (blocks: SerializableBlock[]): { markdown: string; warnings: MarkdownDegradation[] } =>
+  serializeBlocksToMarkdown(blocks, domInlineBackend);

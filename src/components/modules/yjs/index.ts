@@ -12,7 +12,7 @@ import { BlockObserver } from './block-observer';
 import { DocumentStore, type DataKeySnapshot } from './document-store';
 import { cleanPageField, readPageFields, writePageField, type PageFieldKey, type PageFields } from './page-fields';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
-import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
+import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretHistoryEntry, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
 import type { ClosedStep } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
@@ -903,6 +903,26 @@ export class YjsManager extends Module {
   }
 
   // ========== Public API: Undo/Redo ==========
+
+  public topUndoToken(): CaretHistoryEntry | undefined {
+    return this.undoHistory.topUndoToken();
+  }
+
+  public topRedoToken(): CaretHistoryEntry | undefined {
+    return this.undoHistory.topRedoToken();
+  }
+
+  public tagTopUndoStep(tag: { actorId: string; sessionId: string }): void {
+    this.undoHistory.tagTopUndo(tag);
+  }
+
+  public undoStepTag(token: CaretHistoryEntry | undefined): { actorId: string; sessionId: string } | undefined {
+    return this.undoHistory.tagOf(token);
+  }
+
+  public gestureCount(): number {
+    return this.undoHistory.gestureCount;
+  }
 
   /**
    * Undo the last operation.

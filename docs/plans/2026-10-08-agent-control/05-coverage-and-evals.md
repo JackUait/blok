@@ -239,7 +239,7 @@ Each runner writes its final document, and the `DocumentView` (01 §3.11), into 
 - caller-chosen ids are kept as they are. Cases name new blocks with `ref` / `$ref` or with `block.insert`'s optional `id` (05-Q1);
 - tool-minted inner ids (table cells) stay random, so those are replaced by tree-position labels (`b0`, `b0.1`, …), and every reference to them (parent, `contentIds`, ids inside data) is renamed the same way (05-Q1);
 - tool-minted data fields that have no pure `normalize` yet are ignored, from one listed set with a reason per entry. Each entry leaves the set when its tool ships `normalize` (06 answer to 01-Q11; table ids are the known case, 06 C17);
-- `time`, `version`, `lastEditedAt` dropped;
+- `time`, `version`, `createdAt`, `lastEditedAt` dropped. Creation time is assigned by each runtime and is not part of content parity. `createdBy` and `lastEditedBy` stay in the comparison;
 - the top-level `page` field is kept and compared (06 §10.1 A);
 - rich text canonicalized to segments (reuse the canonicalizer behind `diffOutputData`, `src/view/diff-output-data.ts:139-142`). This also absorbs the HTML that the editor snapshot and `DocumentStore` serialize (06 C16).
 

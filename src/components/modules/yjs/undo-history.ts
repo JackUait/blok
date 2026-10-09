@@ -223,6 +223,9 @@ export class UndoHistory {
    */
   private caretRedoStack: CaretHistoryEntry[] = [];
 
+  private readonly stepTags = new WeakMap<CaretHistoryEntry, { actorId: string; sessionId: string }>();
+  private gestures = 0;
+
   /**
    * Pending caret snapshot captured before a change starts.
    * Used because Yjs 'stack-item-added' fires after the change.
@@ -1362,6 +1365,30 @@ export class UndoHistory {
     this.pendingValueWrite = false;
   }
 
+  public get gestureCount(): number {
+    return this.gestures;
+  }
+
+  public topUndoToken(): CaretHistoryEntry | undefined {
+    return this.caretUndoStack.at(-1);
+  }
+
+  public topRedoToken(): CaretHistoryEntry | undefined {
+    return this.caretRedoStack.at(-1);
+  }
+
+  public tagTopUndo(tag: { actorId: string; sessionId: string }): void {
+    const token = this.topUndoToken();
+
+    if (token !== undefined) {
+      this.stepTags.set(token, tag);
+    }
+  }
+
+  public tagOf(token: CaretHistoryEntry | undefined): { actorId: string; sessionId: string } | undefined {
+    return token === undefined ? undefined : this.stepTags.get(token);
+  }
+
   /**
    * Undo the newest action that can apply.
    *
@@ -2212,6 +2239,7 @@ export class UndoHistory {
       return false;
     }
 
+    this.gestures++;
     this.gesturesDriveSteps = true;
     this.openGestureTask();
 

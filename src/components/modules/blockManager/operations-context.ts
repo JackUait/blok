@@ -35,6 +35,8 @@ export interface BlockOperationsDependencies {
   I18n: I18n;
   /** Events dispatcher */
   eventsDispatcher: EventsDispatcher<BlokEventMap>;
+  /** Runs inside the transaction of a changed data patch. */
+  stampBlockEdit?: (blockId: string) => void;
 }
 
 /**

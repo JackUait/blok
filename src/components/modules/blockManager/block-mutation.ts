@@ -666,13 +666,21 @@ export class BlockMutation {
     }
 
     const write = (): void => {
+      const state = { dataChanged: false };
+
       for (const [key, value] of Object.entries(data)) {
-        this.dependencies.YjsManager.updateBlockData(blockId, key, value);
+        if (this.dependencies.YjsManager.updateBlockData(blockId, key, value)) {
+          state.dataChanged = true;
+        }
+      }
+
+      if (state.dataChanged) {
+        this.dependencies.stampBlockEdit?.(blockId);
       }
     };
 
     if (derivedFrom === undefined) {
-      write();
+      this.dependencies.YjsManager.transact(write);
 
       return;
     }

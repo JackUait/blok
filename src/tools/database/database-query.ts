@@ -235,7 +235,6 @@ const matchCheckbox = (value: PropertyValue | undefined, operator: string, targe
 };
 
 /** A range matches when any of its days does; a single day is a range of one. */
-/** A range matches when any of its days does; a single day is a range of one. */
 const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue, now: Date): boolean | undefined => {
   const parsed = parseDateValue(value);
 
@@ -545,17 +544,25 @@ const shiftDay = (day: string, by: number): string => {
   return shifted.toISOString().slice(0, 10);
 };
 
-const RELATIVE_TODAY: ReadonlySet<string> = new Set(['today', 'this_week', 'this_month', 'this_year']);
-
 /**
- * A date a new row can take and still pass the filter. A relative "this
- * week" becomes today, as Notion fills it (research/08).
+ * A date a new row can take and still pass the filter: the day itself, the
+ * day past a strict bound, or today when today is in a relative window (a
+ * "this week" filter fills today, as Notion does, research/08).
  */
 const dateTargetValue = (operator: string, target: PropertyValue): string | undefined => {
-  if (operator === 'is_not_empty' || operator === 'this_week' || (typeof target === 'string' && RELATIVE_TODAY.has(target))) {
+  const now = new Date();
+
+  if (operator === 'is_not_empty') {
     return todayValue();
   }
-  const day = toDay(target);
+  const window = relativeWindow(operator, target, now);
+
+  if (window !== undefined) {
+    const today = todayValue();
+
+    return window.from <= today && today <= window.to ? today : window.from;
+  }
+  const day = resolveDay(target, now);
 
   if (day === undefined) return undefined;
 

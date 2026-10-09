@@ -732,7 +732,7 @@ export class DatabaseCardDrawer {
 
     return [
       button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandFullscreen, () => this.switchMode('full', false)),
-      button('data-blok-database-peek-mode', 'tools.database.peekModeMenu', IconSplitView, (el) => this.openModeMenu(el)),
+      button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconSplitView, (el) => this.openModeMenu(el)),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
     ];
@@ -788,8 +788,8 @@ export class DatabaseCardDrawer {
       autoFocusFirstItem: false,
       items: modes.map(({ mode, icon, key }) => ({
         type: PopoverItemType.Default,
-        title: this.label(`tools.database.openPagesIn${key}`),
-        titleEl: this.modeLabel(`tools.database.openPagesIn${key}`, `tools.database.openPagesIn${key}Description`),
+        title: this.label(`tools.database.openPages${key}`),
+        titleEl: this.modeLabel(`tools.database.openPages${key}`, `tools.database.openPages${key}Description`),
         icon,
         ...(mode === this.mode ? { trailingIcon: IconCheck } : {}),
         closeOnActivate: true,

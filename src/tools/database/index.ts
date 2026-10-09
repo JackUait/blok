@@ -3681,11 +3681,8 @@ export class DatabaseTool implements BlockTool {
   private changeOpenMode(mode: OpenPagesIn): void {
     const rowId = this.cardDrawer?.openRowId ?? null;
 
-    if (!this.readOnly) {
-      this.model.updateView(this.activeViewId, { openPagesIn: mode });
-      this.block.dispatchChange();
-      void this.sync.syncUpdateView({ viewId: this.activeViewId, changes: { openPagesIn: mode } });
-    }
+    // The same write as the settings panel's "Open pages in": the view field is the one source.
+    this.updateActiveView({ openPagesIn: mode });
     if (mode === 'full' && rowId !== null && this.config.rowPages?.navigate !== undefined) {
       this.cardDrawer?.close();
       this.config.rowPages.navigate(rowId);

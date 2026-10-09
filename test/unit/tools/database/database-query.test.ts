@@ -471,7 +471,8 @@ describe('database-query', () => {
         expect(dateFor('before', '2026-10-01')).toBe('2026-09-30');
         expect(dateFor('is_not_empty', null)).toBe('2026-10-09');
         expect(dateFor('this_week', null)).toBe('2026-10-09');
-        expect(dateFor('equals', 'this_week')).toBe('2026-10-09');
+        expect(dateFor('equals', 'today')).toBe('2026-10-09');
+        expect(dateFor('past_week', null)).toBe('2026-10-09');
         expect(dateFor('is_empty', null)).toBeUndefined();
 
         const values = newRowValues([{ propertyId: 'due', operator: 'after', value: '2026-10-05' }], schema);

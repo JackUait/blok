@@ -5219,7 +5219,7 @@ describe('DatabaseTool', () => {
 
     it('still renders a view type it does not know as a board', () => {
       const options = createDatabaseOptions({
-        views: [{ id: 'view-x', name: 'Chart', type: 'chart' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+        views: [{ id: 'view-x', name: 'Map', type: 'map' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
         activeViewId: 'view-x',
       });
       const tool = new DatabaseTool(options);

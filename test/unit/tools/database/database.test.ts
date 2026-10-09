@@ -3360,7 +3360,7 @@ describe('DatabaseTool', () => {
       return card;
     };
 
-    it('entering read-only leaves cards inert: no drag start, no drawer', () => {
+    it('entering read-only leaves cards undraggable; a click opens the page to read', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: makeBoardRows() }));
       const element = tool.render();
 
@@ -3371,13 +3371,14 @@ describe('DatabaseTool', () => {
 
       getCard(element).click();
 
-      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-drawer-title')?.hasAttribute('readonly')).toBe(true);
+      expect(queryByData(element, 'data-blok-database-drawer-add-prop')).toBeNull();
       expect(notPrevented).toBe(true);
 
       tool.destroy();
     });
 
-    it('rows that arrive after a read-only boot stay inert: no drag start, no drawer', () => {
+    it('rows that arrive after a read-only boot stay undraggable; a click opens the page to read', () => {
       const options = createDatabaseOptions({}, {}, { readOnly: true });
 
       (options.api.blocks.getChildren as ReturnType<typeof vi.fn>)
@@ -3393,7 +3394,8 @@ describe('DatabaseTool', () => {
 
       getCard(element).click();
 
-      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-drawer-title')?.hasAttribute('readonly')).toBe(true);
+      expect(queryByData(element, 'data-blok-database-drawer-add-prop')).toBeNull();
       expect(notPrevented).toBe(true);
 
       tool.destroy();

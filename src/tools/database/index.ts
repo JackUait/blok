@@ -128,6 +128,18 @@ const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 's
 
 const hasGroup = (list: Array<{ id: string }> | undefined, key: string): boolean => (list ?? []).some((group) => group.id === key);
 
+/** Card and row controls that act on their own and never open the row page. */
+const ROW_CONTROL_SELECTOR = [
+  '[data-blok-database-add-card]',
+  '[data-blok-database-column-new-page]',
+  '[data-blok-database-column-menu]',
+  '[data-blok-database-hidden-groups]',
+  '[data-blok-database-add-column]',
+  '[data-blok-database-card-menu]',
+  '[data-blok-database-add-row]',
+  '[data-blok-database-delete-row]',
+].join(', ');
+
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', INITIAL_VIEW_KEY]);
 
 /**
@@ -341,10 +353,7 @@ export class DatabaseTool implements BlockTool {
     const boardEl = this.renderActiveView();
     boardContainer.appendChild(boardEl);
 
-    if (!this.readOnly) {
-      this.attachViewListeners(boardEl);
-      this.initSubsystems(boardEl);
-    }
+    this.wireView(boardEl);
     this.controls.refresh();
 
     return wrapper;
@@ -1217,10 +1226,7 @@ export class DatabaseTool implements BlockTool {
     const newBoardWrapper = this.renderActiveView();
     this.boardContainer.appendChild(newBoardWrapper);
 
-    if (!this.readOnly) {
-      this.attachViewListeners(newBoardWrapper);
-      this.initSubsystems(newBoardWrapper);
-    }
+    this.wireView(newBoardWrapper);
 
     this.rebuildTabBar();
     this.fadeTabBackground(previousViewId, viewId);
@@ -2096,7 +2102,7 @@ export class DatabaseTool implements BlockTool {
       titlePropertyId: titlePropId,
       state,
       cellContext: this.cellContext(),
-      ...(this.readOnly ? {} : { handlers: this.tableHandlers() }),
+      ...(this.readOnly ? { openRow: (rowId: string) => this.handleRowClick(rowId) } : { handlers: this.tableHandlers() }),
     });
 
     return this.view.createView();
@@ -2467,29 +2473,57 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
-      // List: row click
-      const listRowEl = target.closest('[data-blok-database-list-row]');
+    });
+  }
 
-      if (listRowEl !== null) {
-        const rowId = listRowEl.getAttribute('data-row-id');
+  /**
+   * Listeners every viewer gets, read-only included: opening a row page to
+   * read it. Phase 0 made read-only paint no write listener at all, so these
+   * live apart from {@link attachViewListeners}.
+   */
+  private wireView(boardEl: HTMLDivElement): void {
+    this.attachReadListeners(boardEl);
+    this.ensureCardDrawer();
+    this.attachKeyboard(boardEl);
 
-        if (rowId !== null) {
-          this.handleRowClick(rowId);
-        }
+    if (!this.readOnly) {
+      this.attachViewListeners(boardEl);
+      this.initSubsystems(boardEl);
+    }
+  }
 
+  private attachReadListeners(boardEl: HTMLDivElement): void {
+    boardEl.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+
+      // Controls inside a card or row act on their own; they never open the page.
+      if (target.closest(ROW_CONTROL_SELECTOR) !== null) {
         return;
       }
+      const rowEl = target.closest('[data-blok-database-list-row], [data-blok-database-card]');
+      const rowId = rowEl?.getAttribute('data-row-id') ?? null;
 
-      const cardEl = target.closest('[data-blok-database-card]');
-
-      if (cardEl !== null) {
-        const rowId = cardEl.getAttribute('data-row-id');
-
-        if (rowId !== null) {
-          this.handleRowClick(rowId);
-        }
+      // A gallery opens the same row through its own handler first; the second open is a no-op.
+      if (rowId !== null) {
+        this.handleRowClick(rowId);
       }
     });
+  }
+
+  private attachKeyboard(boardEl: HTMLDivElement): void {
+    this.keyboard = new DatabaseKeyboard({
+      wrapper: boardEl,
+      onEscape: () => {
+        if (this.cardDrawer?.isOpen) {
+          this.cardDrawer.close();
+
+          return true;
+        }
+
+        return false;
+      },
+    });
+    this.keyboard.attach();
   }
 
   private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, boardEl: HTMLElement): void {
@@ -2823,78 +2857,14 @@ export class DatabaseTool implements BlockTool {
    * boardEl is the current board element for drag/column operations.
    * cardDrawer is attached to this.element (outer wrapper) so it persists across view switches.
    */
-  private initSubsystems(boardEl: HTMLDivElement): void {
+  /** The drawer hangs off the outer wrapper, so it stays across view switches. */
+  private ensureCardDrawer(): void {
     if (this.element === null) {
       return;
     }
+    const titlePropId = this.titlePropertyId();
+    const descriptionPropId = this.model.getSchema().find((p) => p.type === 'richText')?.id;
 
-    const savedView = this.model.getView(this.activeViewId);
-    const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
-    const isList = viewConfig?.type === 'list';
-    // Table, gallery, calendar and timeline own their gestures. Unknown types render as a board.
-    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar' || viewConfig?.type === 'timeline';
-    const isBoard = !isList && !ownsGestures;
-
-    const titleProp = this.model.getSchema().find((p) => p.type === 'title');
-    const titlePropId = titleProp?.id ?? '';
-    const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
-    const descriptionPropId = descriptionProp?.id;
-
-    if (isList) {
-      this.listRowDrag = new DatabaseListRowDrag({
-        wrapper: boardEl,
-        onDrop: (result) => this.handleListRowDrop(result),
-      });
-    } else if (isBoard) {
-      this.cardDrag = new DatabaseCardDrag({
-        wrapper: boardEl,
-        onDrop: (result) => this.handleRowDrop(result),
-      });
-    }
-
-    // Columns are options only there: renaming, deleting or moving a date bucket means nothing.
-    if (isBoard && this.isOptionGroup(viewConfig?.groupBy) && !this.model.isDatabaseLocked()) {
-      this.columnDrag = new DatabaseColumnDrag({
-        wrapper: boardEl,
-        onDrop: (result) => this.handleGroupDrop(result),
-      });
-
-      this.columnControls = new DatabaseColumnControls({
-        i18n: this.api.i18n,
-        onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-        onDelete: (optionId) => {
-          void openDatabaseConfirm({
-            title: this.api.i18n.t('tools.database.optionDeleteConfirm'),
-            confirmLabel: this.api.i18n.t('tools.database.optionDelete'),
-            cancelLabel: this.api.i18n.t('tools.database.optionDeleteCancel'),
-            destructive: true,
-            directionSource: this.element,
-          }).then((confirmed) => {
-            if (confirmed && !this.destroyed && !this.readOnly) {
-              this.handleOptionDelete(optionId);
-            }
-          });
-        },
-        onRenameInput: (optionId, label) => {
-          // Instant local save — update the model immediately so save() captures latest value
-          this.handleOptionRename(optionId, label);
-        },
-        onRenameCommit: (optionId, label) => {
-          // Debounced backend persist
-          const viewConfig = this.model.getView(this.activeViewId);
-          const groupByPropId = viewConfig?.groupBy;
-          if (groupByPropId === undefined) return;
-          const prop = this.model.getProperty(groupByPropId);
-          if (prop?.config === undefined) return;
-          const options = prop.config.options.map((o) => (o.id === optionId ? { ...o, label } : o));
-          this.sync.syncUpdatePropertyDebounced({ propertyId: groupByPropId, changes: { config: { options } } });
-        },
-      });
-
-      this.makeColumnHeadersEditable(boardEl);
-    }
-
-    // cardDrawer is attached to outer wrapper so it stays across view switches
     if (this.cardDrawer === null) {
       this.cardDrawer = new DatabaseCardDrawer({
         wrapper: this.element,
@@ -3017,19 +2987,73 @@ export class DatabaseTool implements BlockTool {
       });
     }
 
-    this.keyboard = new DatabaseKeyboard({
-      wrapper: boardEl,
-      onEscape: () => {
-        if (this.cardDrawer?.isOpen) {
-          this.cardDrawer.close();
+  }
 
-          return true;
-        }
+  private initSubsystems(boardEl: HTMLDivElement): void {
+    if (this.element === null) {
+      return;
+    }
 
-        return false;
-      },
-    });
-    this.keyboard.attach();
+    const savedView = this.model.getView(this.activeViewId);
+    const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
+    const isList = viewConfig?.type === 'list';
+    // Table, gallery, calendar and timeline own their gestures. Unknown types render as a board.
+    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar' || viewConfig?.type === 'timeline';
+    const isBoard = !isList && !ownsGestures;
+
+    if (isList) {
+      this.listRowDrag = new DatabaseListRowDrag({
+        wrapper: boardEl,
+        onDrop: (result) => this.handleListRowDrop(result),
+      });
+    } else if (isBoard) {
+      this.cardDrag = new DatabaseCardDrag({
+        wrapper: boardEl,
+        onDrop: (result) => this.handleRowDrop(result),
+      });
+    }
+
+    // Columns are options only there: renaming, deleting or moving a date bucket means nothing.
+    if (isBoard && this.isOptionGroup(viewConfig?.groupBy) && !this.model.isDatabaseLocked()) {
+      this.columnDrag = new DatabaseColumnDrag({
+        wrapper: boardEl,
+        onDrop: (result) => this.handleGroupDrop(result),
+      });
+
+      this.columnControls = new DatabaseColumnControls({
+        i18n: this.api.i18n,
+        onRename: (optionId, label) => this.handleOptionRename(optionId, label),
+        onDelete: (optionId) => {
+          void openDatabaseConfirm({
+            title: this.api.i18n.t('tools.database.optionDeleteConfirm'),
+            confirmLabel: this.api.i18n.t('tools.database.optionDelete'),
+            cancelLabel: this.api.i18n.t('tools.database.optionDeleteCancel'),
+            destructive: true,
+            directionSource: this.element,
+          }).then((confirmed) => {
+            if (confirmed && !this.destroyed && !this.readOnly) {
+              this.handleOptionDelete(optionId);
+            }
+          });
+        },
+        onRenameInput: (optionId, label) => {
+          // Instant local save — update the model immediately so save() captures latest value
+          this.handleOptionRename(optionId, label);
+        },
+        onRenameCommit: (optionId, label) => {
+          // Debounced backend persist
+          const viewConfig = this.model.getView(this.activeViewId);
+          const groupByPropId = viewConfig?.groupBy;
+          if (groupByPropId === undefined) return;
+          const prop = this.model.getProperty(groupByPropId);
+          if (prop?.config === undefined) return;
+          const options = prop.config.options.map((o) => (o.id === optionId ? { ...o, label } : o));
+          this.sync.syncUpdatePropertyDebounced({ propertyId: groupByPropId, changes: { config: { options } } });
+        },
+      });
+
+      this.makeColumnHeadersEditable(boardEl);
+    }
 
     boardEl.addEventListener('pointerdown', (e) => {
       const target = e.target as HTMLElement;
@@ -4317,12 +4341,9 @@ export class DatabaseTool implements BlockTool {
       newBoardArea.scrollLeft = savedScrollLeft;
     }
 
-    // Same gate as render() and switchView(): rows arriving after boot,
-    // undo/peer reprojection and setReadOnly all rerender through here.
-    if (!this.readOnly) {
-      this.attachViewListeners(newBoardWrapper);
-      this.initSubsystems(newBoardWrapper);
-    }
+    // Rows arriving after boot, undo/peer reprojection and setReadOnly all
+    // rerender through here.
+    this.wireView(newBoardWrapper);
     this.controls.refresh();
   }
 }

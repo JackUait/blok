@@ -258,6 +258,44 @@ describe('row bodies are child blocks of the row', () => {
     expect(shown()).toBe(false);
   });
 
+  it('lets a read-only viewer open a row page to read it', async () => {
+    await make(docWithBodies(), true);
+    await openRow('r1');
+
+    const drawer = holder?.querySelector('[data-blok-database-drawer]');
+    const title = drawer?.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+    expect(drawer).not.toBeNull();
+    expect(title?.readOnly).toBe(true);
+    expect(drawerBody()?.contains(holderOf('r1'))).toBe(true);
+    expect(drawerBody()?.textContent).toContain('first body');
+    expect(drawer?.querySelector('[data-blok-database-drawer-add-prop]')).toBeNull();
+  });
+
+  it('opens a board card for a read-only viewer', async () => {
+    const blocks = docWithBodies();
+    const db = blocks[1];
+
+    db.data = {
+      ...db.data,
+      schema: [
+        { id: 't', name: 'Name', type: 'title', position: 'a0' },
+        { id: 's', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'Todo', position: 'a0' }] } },
+      ],
+      views: [{ id: 'v', name: 'Board', type: 'board', groupBy: 's', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+    };
+    await make(blocks, true);
+
+    holder?.querySelector<HTMLElement>('[data-blok-database-card][data-row-id="r1"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await quiet();
+
+    expect(drawerBody()?.contains(holderOf('r1'))).toBe(true);
+
+    await pressEscape();
+
+    expect(holder?.querySelector('[data-blok-database-drawer][data-open]')).toBeNull();
+  });
+
   it('declares the row a layout container that never nests another row', () => {
     expect(DatabaseRowTool.isLayout).toBe(true);
     expect(DatabaseRowTool.deletesChildren).toBe(true);

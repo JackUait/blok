@@ -89,6 +89,8 @@ export interface TableHandlers {
 }
 
 export interface DatabaseTableViewOptions {
+  /** Opens a row page without any write handler: what a read-only viewer gets. */
+  openRow?: (rowId: string) => void;
   readOnly: boolean;
   i18n: I18n;
   view: DatabaseViewConfig;
@@ -630,7 +632,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     cell.replaceChildren(value);
 
-    if (column.property.type === 'title' && this.handlers !== undefined) {
+    if (column.property.type === 'title' && (this.handlers !== undefined || this.options.openRow !== undefined)) {
       const open = document.createElement('button');
 
       open.type = 'button';
@@ -894,6 +896,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     if (handlers === undefined) {
+      if (this.options.readOnly) {
+        this.clickReadOnlyCell(target, event);
+      }
+
       return;
     }
     if (closest('[data-blok-database-table-edit-filters]') !== null) {
@@ -915,7 +921,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const propertyId = cellEl?.getAttribute('data-property-id');
 
     if (target.closest('[data-blok-database-table-open]') !== null && typeof rowId === 'string') {
-      this.handlers?.openRow(rowId);
+      (this.handlers?.openRow ?? this.options.openRow)?.(rowId);
 
       return;
     }

@@ -272,6 +272,27 @@ public sealed class YDocConverterConcurrentLossTests
   }
 
   /// <summary>
+  /// A row page cover URL is a plain leaf too: an /edit writes it whole and
+  /// keeps a peer's concurrent position change.
+  /// </summary>
+  [Fact]
+  public void ARowCoverWrittenByTheServerIsAPlainValueAndKeepsAConcurrentChange()
+  {
+    var doc = SeededDoc("""{ "id": "r", "type": "database-row", "data": { "position": "a0", "cover": "https://example.com/a.png", "properties": { "t": "One" } } }""");
+    var peer = Fork(doc);
+    var before = doc.EncodeStateVector();
+
+    peer.Transact(transaction => Data(peer, "r").Set(transaction, "position", "a5"));
+
+    Apply(doc, """{ "op": "update", "id": "r", "data": { "position": "a0", "cover": "https://example.com/b.png", "properties": { "t": "One" } } }""");
+
+    doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
+
+    Assert.IsType<string>(Get(Data(doc, "r"), "cover"));
+    Assert.Equal("https://example.com/b.png", BlockNamed(YDocConverter.Export(doc), "r")["data"]?["cover"]?.GetValue<string>());
+  }
+
+  /// <summary>
   /// The marker a client sets when it turns a legacy body into child blocks,
   /// written while an /edit changes the row's values. Losing it would let the
   /// next opener convert the blob again over the edited body.

@@ -360,7 +360,7 @@ describe('concurrent database row bodies', { timeout: 60000 }, () => {
     }
   });
 
-  it('converges on one icon when two peers pick at once, and keeps a concurrent title edit', async () => {
+  it('converges on one icon and one cover when two peers pick at once, and keeps a concurrent title edit', async () => {
     const a = await bootLive();
     const b = await bootLive();
 
@@ -369,8 +369,10 @@ describe('concurrent database row bodies', { timeout: 60000 }, () => {
       client.core.moduleInstances.API.methods.blocks.getById('row-1');
 
     rowOf(a)?.call('updateIcon', { icon: '🚀' });
+    rowOf(a)?.call('updateCover', { cover: 'https://example.com/a.png' });
     rowOf(a)?.dispatchChange();
     rowOf(b)?.call('updateIcon', { icon: '🌱' });
+    rowOf(b)?.call('updateCover', { cover: 'https://example.com/b.png' });
     rowOf(b)?.call('updateTitle', { title: 'First edited', titlePropertyId: 'prop-title' });
     rowOf(b)?.dispatchChange();
     await settle();
@@ -381,5 +383,7 @@ describe('concurrent database row bodies', { timeout: 60000 }, () => {
     expect(icons[0]).toBe(icons[1]);
     expect(['🚀', '🌱']).toContain(icons[0]);
     expect(dataOf(a, 'row-1').title).toBe('First edited');
+    expect(dataOf(a, 'row-1').cover).toBe(dataOf(b, 'row-1').cover);
+    expect(['https://example.com/a.png', 'https://example.com/b.png']).toContain(dataOf(a, 'row-1').cover);
   });
 });

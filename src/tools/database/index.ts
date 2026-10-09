@@ -642,6 +642,7 @@ export class DatabaseTool implements BlockTool {
           properties,
           ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
           ...(typeof rowData?.icon === 'string' && rowData.icon !== '' ? { icon: rowData.icon } : {}),
+          ...(typeof rowData?.cover === 'string' && rowData.cover !== '' ? { cover: rowData.cover } : {}),
           ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });
@@ -3108,6 +3109,16 @@ export class DatabaseTool implements BlockTool {
         },
         adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
         onEscapeClose: (rowId) => this.dropFreshRow(rowId),
+        onCoverChange: (rowId, cover) => {
+          if (this.readOnly || this.destroyed) return;
+          const row = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
+
+          row?.call('updateCover', { cover });
+          row?.dispatchChange();
+          this.syncRowsFromBlocks();
+          this.cardDrawer?.syncOpenRow(this.model.getRow(rowId));
+        },
+        uploadCover: this.coverUploader(),
         onIconChange: (rowId, icon) => {
           if (this.readOnly || this.destroyed) return;
           const row = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
@@ -4259,6 +4270,17 @@ export class DatabaseTool implements BlockTool {
         }
         : {}),
     };
+  }
+
+  /** Uploads a cover image through the host's image uploader, when it has one. */
+  private coverUploader(): ((file: File) => Promise<string>) | undefined {
+    const uploader = this.api.uploader;
+
+    if (this.readOnly || uploader === undefined || !uploader.isConfigured('image', 'uploadByFile')) {
+      return undefined;
+    }
+
+    return (file) => uploader.uploadByFile(file, { kind: 'image', tool: 'database' }).then((asset) => asset.url);
   }
 
   /** Whether the person property can be offered: the host gave a people directory. */

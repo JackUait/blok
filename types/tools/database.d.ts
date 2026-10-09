@@ -240,6 +240,8 @@ export interface DatabaseRow {
   pageId?: string;
   /** The page icon, an emoji. */
   icon?: string;
+  /** The page cover, an image URL. */
+  cover?: string;
   /** Row block metadata, for the read-only time and person properties. */
   meta?: DatabaseRowMeta;
   /**
@@ -274,6 +276,8 @@ export interface DatabaseRowData extends BlockToolData {
    * converge on one pick instead of a mix of both.
    */
   icon?: string;
+  /** The page cover, an image URL. A plain leaf, like the icon. */
+  cover?: string;
 }
 
 // ─── View config ───

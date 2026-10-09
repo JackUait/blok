@@ -49,6 +49,11 @@ const docWithBodies = (): OutputBlockData[] => [
   { id: 'p2', type: 'paragraph', data: { text: 'after' } },
 ];
 
+// The cover picker positions itself with elementFromPoint, which jsdom lacks.
+if (typeof document.elementFromPoint !== 'function') {
+  Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
+}
+
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
@@ -340,6 +345,43 @@ describe('row bodies are child blocks of the row', () => {
     expect(holder?.querySelector('[data-blok-database-drawer][data-open]')).not.toBeNull();
     picker.remove();
     backdrop.remove();
+  });
+
+  it('shows a row cover at the top of its page; a writer gets "Add cover", a read-only viewer not', async () => {
+    const blocks = docWithBodies();
+
+    blocks[2] = { ...blocks[2], data: { ...blocks[2].data, cover: 'https://example.com/c.png' } };
+    await make(blocks);
+    await openRow('r1');
+
+    expect(holder?.querySelector<HTMLImageElement>('[data-blok-database-drawer-cover] img')?.getAttribute('src')).toBe('https://example.com/c.png');
+    await pressEscape();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 350);
+    });
+    await openRow('r2');
+    holder?.querySelector<HTMLElement>('[data-blok-database-drawer-add-cover]')?.click();
+
+    expect(document.querySelector('[data-role="audio-cover-picker"]')).not.toBeNull();
+    expect(holder?.querySelector('[data-blok-database-drawer][data-open]')).not.toBeNull();
+    document.querySelector('[data-role="audio-cover-picker"]')?.remove();
+
+    editor?.destroy();
+    holder?.replaceChildren();
+    await make(blocks, true);
+    await openRow('r2');
+
+    expect(holder?.querySelector('[data-blok-database-drawer-add-cover]')).toBeNull();
+  });
+
+  it('never paints an unsafe cover URL', async () => {
+    const blocks = docWithBodies();
+
+    blocks[2] = { ...blocks[2], data: { ...blocks[2].data, cover: 'javascript:alert(1)' } };
+    await make(blocks);
+    await openRow('r1');
+
+    expect(holder?.querySelector('[data-blok-database-drawer-cover]')).toBeNull();
   });
 
   it('offers "Add icon" on a page with none, never to a read-only viewer', async () => {

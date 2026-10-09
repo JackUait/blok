@@ -13,6 +13,9 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { EmojiPicker } from '../callout/emoji-picker';
+import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
+import type { CoverPickerHandle } from '../audio/cover-picker';
+import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -113,6 +116,10 @@ export interface CardDrawerOptions {
     /** Puts the caret in the body, adding its first paragraph when it is empty. */
     start(rowId: string): void;
   };
+  /** A page cover set (an image URL) or removed (null). */
+  onCoverChange?: (rowId: string, cover: string | null) => void;
+  /** Uploads a picked cover file and gives its URL. Without it, a cover comes from a link only. */
+  uploadCover?: (file: File) => Promise<string>;
   /** Escape closed the page of this row. */
   onEscapeClose?: (rowId: string) => void;
   /** A page icon picked (an emoji) or removed (null). */
@@ -212,6 +219,9 @@ export class DatabaseCardDrawer {
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
+  private readonly onCoverChange: CardDrawerOptions['onCoverChange'];
+  private readonly uploadCover: CardDrawerOptions['uploadCover'];
+  private coverPicker: CoverPickerHandle | null = null;
   private emojiPicker: EmojiPicker | null = null;
   /** The properties section is folded away. Session only. */
   private propsCollapsed = false;
@@ -271,6 +281,8 @@ export class DatabaseCardDrawer {
     this.onModeChange = options.onModeChange;
     this.onIconChange = options.onIconChange;
     this.onEscapeClose = options.onEscapeClose;
+    this.onCoverChange = options.onCoverChange;
+    this.uploadCover = options.uploadCover;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -480,7 +492,7 @@ export class DatabaseCardDrawer {
        * clicking a popover item would be treated as an "outside click"
        * and close the drawer.
        */
-      if (target instanceof Element && target.closest('[data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop]') !== null) {
+      if (target instanceof Element && target.closest('[data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop], [data-role="audio-cover-picker"]') !== null) {
         return;
       }
 
@@ -573,6 +585,8 @@ export class DatabaseCardDrawer {
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
     this.emojiPicker = null;
+    this.coverPicker?.close();
+    this.coverPicker = null;
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
 
@@ -664,6 +678,35 @@ export class DatabaseCardDrawer {
     const head = document.createElement('div');
 
     head.setAttribute('data-blok-database-drawer-page-head', '');
+    const src = row.cover === undefined ? null : safeImageSrc(row.cover);
+
+    if (src !== null) {
+      const cover = document.createElement('div');
+      const img = document.createElement('img');
+
+      cover.setAttribute('data-blok-database-drawer-cover', '');
+      img.alt = '';
+      img.src = src;
+      cover.appendChild(img);
+      if (!this.readOnly && this.onCoverChange !== undefined) {
+        const change = document.createElement('button');
+
+        change.type = 'button';
+        change.setAttribute('data-blok-database-drawer-change-cover', '');
+        change.textContent = this.label('tools.database.changeCover');
+        change.addEventListener('click', () => this.openCover(row.id, change));
+        cover.appendChild(change);
+      }
+      head.appendChild(cover);
+    } else if (!this.readOnly && this.onCoverChange !== undefined) {
+      const add = document.createElement('button');
+
+      add.type = 'button';
+      add.setAttribute('data-blok-database-drawer-add-cover', '');
+      add.textContent = this.label('tools.database.addCover');
+      add.addEventListener('click', () => this.openCover(row.id, add));
+      head.appendChild(add);
+    }
     if (row.icon !== undefined) {
       const icon = document.createElement('button');
 
@@ -685,6 +728,50 @@ export class DatabaseCardDrawer {
     }
 
     return head;
+  }
+
+  /** The shared cover picker (upload or link), anchored on the cover button. */
+  private openCover(rowId: string, anchor: HTMLElement): void {
+    const onCoverChange = this.onCoverChange;
+
+    if (this.readOnly || onCoverChange === undefined) {
+      return;
+    }
+    this.coverPicker?.close();
+    const picker = openCoverPicker({
+      anchor,
+      ...(this.i18n !== undefined ? { i18n: this.i18n } : {}),
+      onUrl: (url) => {
+        if (safeImageSrc(url) === null) {
+          picker.setError(this.label('tools.database.coverInvalid'));
+
+          return;
+        }
+        onCoverChange(rowId, url);
+        picker.close();
+      },
+      onFile: (file) => {
+        const error = validateCoverFile(file, this.i18n);
+        const upload = this.uploadCover;
+
+        if (error !== null || upload === undefined) {
+          picker.setError(error ?? this.label('tools.database.coverNoUpload'));
+
+          return;
+        }
+        void upload(file).then((url) => {
+          onCoverChange(rowId, url);
+          picker.close();
+        }).catch(() => picker.setError(this.label('tools.database.coverNoUpload')));
+      },
+      onClose: () => {
+        if (this.coverPicker === picker) {
+          this.coverPicker = null;
+        }
+      },
+    });
+
+    this.coverPicker = picker;
   }
 
   /** The row menu's "Edit icon": the picker under the open page's icon. */

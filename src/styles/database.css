@@ -940,6 +940,48 @@
   display: inline;
 }
 
+/* Page cover over the top of the page. Height unmeasured: Blok's image block height. */
+[data-blok-database-drawer-page-head] {
+  flex-wrap: wrap;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-drawer-cover] {
+  position: relative;
+  flex-basis: 100%;
+  height: 200px;
+  margin-bottom: var(--blok-space-2);
+  overflow: hidden;
+  border-radius: var(--blok-radius-block);
+}
+
+[data-blok-database-drawer-cover] img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-blok-database-drawer-change-cover] {
+  position: absolute;
+  inset-block-end: var(--blok-space-2);
+  inset-inline-end: var(--blok-space-2);
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-table-open-bg);
+  box-shadow: var(--blok-database-table-open-shadow);
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+[data-blok-database-drawer-cover]:hover [data-blok-database-drawer-change-cover],
+[data-blok-database-drawer-change-cover]:focus-visible {
+  opacity: 1;
+}
+
 /* Page icon above the title (icon size unmeasured: Blok's page title icon scale). */
 [data-blok-database-drawer-page-head] {
   display: flex;
@@ -962,6 +1004,7 @@
 }
 
 [data-blok-database-drawer-add-icon],
+[data-blok-database-drawer-add-cover],
 [data-blok-database-drawer-props-toggle],
 [data-blok-database-drawer-hidden-props] {
   display: inline-flex;
@@ -977,12 +1020,15 @@
 }
 
 /* "Add icon" shows on hover of the page head, as Notion's page controls do. */
-[data-blok-database-drawer-add-icon] {
+[data-blok-database-drawer-add-icon],
+[data-blok-database-drawer-add-cover] {
   opacity: 0;
   transition: opacity 100ms ease;
 }
 
 [data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-icon],
+[data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-cover],
+[data-blok-database-drawer-add-cover]:focus-visible,
 [data-blok-database-drawer-add-icon]:focus-visible {
   opacity: 1;
 }

@@ -6,7 +6,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, PropertyValue } from '../database/types';
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -36,6 +36,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (typeof data.icon === 'string' && data.icon !== '') {
     row.icon = data.icon;
+  }
+  if (typeof data.cover === 'string' && data.cover !== '') {
+    row.cover = data.cover;
   }
 
   return row;
@@ -176,6 +179,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.icon !== undefined) {
       saved.icon = this._data.icon;
     }
+    if (this._data.cover !== undefined) {
+      saved.cover = this._data.cover;
+    }
 
     return saved;
   }
@@ -254,6 +260,15 @@ export class DatabaseRowTool implements BlockTool {
       delete this._data.icon;
     } else {
       this._data.icon = param.icon;
+    }
+  }
+
+  /** Sets the page cover (an image URL); null removes it. */
+  public updateCover(param: { cover: string | null }): void {
+    if (param.cover === null || param.cover === '') {
+      delete this._data.cover;
+    } else {
+      this._data.cover = param.cover;
     }
   }
 

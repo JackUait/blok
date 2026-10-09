@@ -166,6 +166,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   private rowDrag: DatabaseTableRowDrag | null = null;
   private root: HTMLDivElement | null = null;
   private gridEl: HTMLDivElement | null = null;
+  /** A pointer is down in the grid. */
+  private pressing = false;
   private bar: HTMLElement | null = null;
   /** Unique per table, so two tables on a page never share a cell id. */
   private readonly idPrefix = `blok-database-table-${++tableIds.next}`;
@@ -275,6 +277,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       },
     });
     gridEl.addEventListener('click', this.handleClick);
+    // Bubble on the grid runs before the popover registry's document listener,
+    // whose outside press closes the open editor and asks for a redraw.
+    gridEl.addEventListener('pointerdown', this.handlePress);
     gridEl.addEventListener('blok-database-table-repaint', this.handleRepaint);
 
     if (this.editable) {
@@ -347,12 +352,28 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.resize?.destroy();
     this.columnDrag?.destroy();
     this.rowDrag?.destroy();
+    this.handleRelease();
   }
 
-  /** True while an editor, a resize or a drag runs. */
+  /**
+   * True while an editor, a resize, a drag or a press runs. A redraw during a
+   * press replaces the pressed cell, and its click never arrives.
+   */
   get interacting(): boolean {
-    return this.state.editing || this.state.busy;
+    return this.state.editing || this.state.busy || this.pressing;
   }
+
+  private readonly handlePress = (): void => {
+    this.pressing = true;
+    window.addEventListener('pointerup', this.handleRelease, true);
+    window.addEventListener('pointercancel', this.handleRelease, true);
+  };
+
+  private readonly handleRelease = (): void => {
+    this.pressing = false;
+    window.removeEventListener('pointerup', this.handleRelease, true);
+    window.removeEventListener('pointercancel', this.handleRelease, true);
+  };
 
   private findRow(wrapper: HTMLElement, rowId: string): HTMLElement | null {
     return [...wrapper.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')]

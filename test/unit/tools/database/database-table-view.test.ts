@@ -335,6 +335,40 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBe('r2/p-notes');
     });
 
+    it('a press on another cell while editing keeps the table until the click opens that cell', async () => {
+      const handlers = makeHandlers();
+      const state = createTableState();
+      let current = mount({ handlers, state });
+
+      // The tool's rule: redraw on editEnded unless the table says it is busy.
+      vi.mocked(handlers.editEnded).mockImplementation(() => {
+        if (!current.view.interacting) {
+          current.view.destroy();
+          current.root.remove();
+          current = mount({ handlers, state });
+        }
+      });
+
+      cell(current.root, 'r1', 'p-notes').click();
+      editorField().value = 'first';
+
+      const pressed = cell(current.root, 'r2', 'p-notes');
+
+      pressed.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      expect(pressed.isConnected).toBe(true);
+      expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'first');
+
+      pressed.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }));
+      pressed.click();
+      // The closed editor's popover is destroyed in a microtask.
+      await Promise.resolve();
+
+      expect(document.querySelectorAll('[data-blok-database-cell-editor]')).toHaveLength(1);
+      expect(editorField().value).toBe('');
+      expect(anchorCell(current.root)).toBe('r2/p-notes');
+    });
+
     it('Enter in an editor on the last row commits and stays', () => {
       const { root } = mount();
 

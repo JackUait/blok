@@ -342,6 +342,47 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'a timeline view with its layout settings and a board with card settings',
+    data: {
+      activeViewId: 'view-timeline',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'start', name: 'Start', type: 'date', position: 'a1' },
+        { id: 'end', name: 'End', type: 'date', position: 'a2' },
+      ],
+      views: [
+        {
+          id: 'view-timeline',
+          name: 'Timeline',
+          type: 'timeline',
+          position: 'a0',
+          sorts: [],
+          filters: [],
+          visibleProperties: [],
+          timelineBy: 'start',
+          timelineEndBy: 'end',
+          timelineZoom: '5_years',
+          showTimelineTable: true,
+          tableProperties: [{ id: 'start', visible: true, width: 120 }],
+          arrowsBy: 'blocked-by',
+        },
+        {
+          id: 'view-board',
+          name: 'Board',
+          type: 'board',
+          position: 'a1',
+          sorts: [],
+          filters: [],
+          visibleProperties: [],
+          cardSize: 'small',
+          cardPreview: 'cover',
+          fitImage: true,
+        },
+      ],
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'a legacy row with no top-level title or pageId',
     data: {
@@ -538,7 +579,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('06e58854a8b1a450785a8100b2dc3cc9afe234df4f6855a67654ddcd77fa8892');
+      .toBe('5a96232605bc12c51437dab4270e4ea052125bde8d83bdee05fa8506df3e6659');
 
     const published: unknown = JSON.parse(snapshot);
 

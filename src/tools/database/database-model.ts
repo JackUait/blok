@@ -570,6 +570,7 @@ export class DatabaseModel {
       colorRules: seed.colorRules ?? [],
       groupSettings: seed.groupSettings ?? {},
       subGroupSettings: seed.subGroupSettings ?? {},
+      ...(seed.type === 'timeline' ? { tableProperties: seed.tableProperties ?? [] } : {}),
     };
     const properties = seed.properties ?? resolveViewProperties(base, this.schema).map(({ id, visible }) => ({ id, visible }));
 

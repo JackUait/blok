@@ -6,6 +6,7 @@ import type {
   DatabaseViewConfig,
   LoadLimit,
   OpenPagesIn,
+  TimelineZoom,
   PropertyDefinition,
   ViewCalculation,
   ViewPropertySetting,
@@ -239,6 +240,15 @@ export const resolveCardPreview = (view: DatabaseViewConfig, schema: PropertyDef
   return { kind: 'content' };
 };
 
+/**
+ * A board card's preview. Unlike the gallery, a board shows none until one
+ * is picked: boards saved before card previews existed keep their look.
+ */
+export const resolveBoardCardPreview = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ResolvedCardPreview =>
+  view.cardPreview === undefined || (view.cardPreview.startsWith(PROPERTY_PREVIEW) && resolveCardPreview(view, schema).kind !== 'property')
+    ? { kind: 'none' }
+    : resolveCardPreview(view, schema);
+
 export const resolveFitImage = (view: DatabaseViewConfig): boolean => view.fitImage === true;
 
 const CALENDAR_RANGES: readonly CalendarRange[] = ['month', 'week'];
@@ -249,11 +259,45 @@ export const resolveCalendarRange = (view: DatabaseViewConfig): CalendarRange =>
 export const resolveShowWeekends = (view: DatabaseViewConfig): boolean => view.showWeekends !== false;
 
 /** The stored date property, else the first date property in schema order, else none. */
-export const resolveCalendarBy = (view: DatabaseViewConfig, schema: PropertyDefinition[]): string | undefined => {
+const resolveDateProperty = (stored: string | undefined, schema: PropertyDefinition[]): string | undefined => {
   const dates = bySchemaPosition(schema).filter((p) => p.type === 'date');
 
-  return dates.find((p) => p.id === view.calendarBy)?.id ?? dates[0]?.id;
+  return dates.find((p) => p.id === stored)?.id ?? dates[0]?.id;
 };
+
+export const resolveTimelineBy = (view: DatabaseViewConfig, schema: PropertyDefinition[]): string | undefined =>
+  resolveDateProperty(view.timelineBy, schema);
+
+/** A separate end property, only when it is a date property other than the start. */
+export const resolveTimelineEndBy = (view: DatabaseViewConfig, schema: PropertyDefinition[]): string | undefined => {
+  const end = schema.find((p) => p.id === view.timelineEndBy && p.type === 'date')?.id;
+
+  return end !== undefined && end !== resolveTimelineBy(view, schema) ? end : undefined;
+};
+
+export const TIMELINE_ZOOMS: readonly TimelineZoom[] = ['hours', 'day', 'week', 'bi_week', 'month', 'quarter', 'year', '5_years'];
+
+/** A new Notion timeline opens at Month zoom (research/08 shot 83). */
+export const resolveTimelineZoom = (view: DatabaseViewConfig): TimelineZoom =>
+  TIMELINE_ZOOMS.find((zoom) => zoom === view.timelineZoom) ?? 'month';
+
+/** A new Notion timeline has "Show table" off (research/08). */
+export const resolveShowTimelineTable = (view: DatabaseViewConfig): boolean => view.showTimelineTable === true;
+
+/** The table panel's columns. The title shows and leads; the rest stay hidden until picked. */
+export const resolveTimelineTableProperties = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ResolvedViewProperty[] => {
+  const resolved = resolveViewProperties({ ...view, type: 'timeline', properties: Array.isArray(view.tableProperties) ? view.tableProperties : [] }, schema);
+  const titleIds = new Set(schema.filter((p) => p.type === 'title').map((p) => p.id));
+
+  return [...resolved.filter((p) => titleIds.has(p.id)), ...resolved.filter((p) => !titleIds.has(p.id))];
+};
+
+/** The dependency relation, while that property exists. */
+export const resolveArrowsBy = (view: DatabaseViewConfig, schema: PropertyDefinition[]): string | undefined =>
+  schema.some((p) => p.id === view.arrowsBy) ? view.arrowsBy : undefined;
+
+export const resolveCalendarBy = (view: DatabaseViewConfig, schema: PropertyDefinition[]): string | undefined =>
+  resolveDateProperty(view.calendarBy, schema);
 
 /**
  * Property id → calculation. Two peers can add a calculation to one column

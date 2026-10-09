@@ -198,7 +198,7 @@ export interface DatabaseRowData extends BlockToolData {
 
 // ─── View config ───
 
-export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar';
+export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar' | 'timeline';
 
 export interface SortConfig {
   /** Optional on old documents. Blok adds one on every write. */
@@ -285,7 +285,7 @@ export type LoadLimit = 10 | 25 | 50 | 100;
 /** Where a row's page opens. */
 export type OpenPagesIn = 'side' | 'center' | 'full';
 
-/** Gallery card size. */
+/** Gallery or board card size. */
 export type CardSize = 'small' | 'medium' | 'large';
 
 /** What a gallery card shows above its title: nothing, the page cover, the page content, or a property (`property:<id>`). */
@@ -293,6 +293,9 @@ export type CardPreview = 'none' | 'cover' | 'content' | `property:${string}`;
 
 /** How much time a calendar view shows at once. */
 export type CalendarRange = 'month' | 'week';
+
+/** How much time one screen of a timeline view shows. Notion API `zoom_level` names. */
+export type TimelineZoom = 'hours' | 'day' | 'week' | 'bi_week' | 'month' | 'quarter' | 'year' | '5_years';
 
 /** One property's settings in one view. The array order is the column order. */
 export interface ViewPropertySetting {
@@ -336,11 +339,11 @@ export interface DatabaseViewConfig {
   calculations?: ViewCalculation[];
   /** Default 'side', or 'center' for a gallery or a calendar. */
   openPagesIn?: OpenPagesIn;
-  /** Gallery. Default 'medium'. */
+  /** Gallery or board. Default 'medium'. */
   cardSize?: CardSize;
-  /** Gallery. Default 'content'. */
+  /** Gallery or board. Default 'content' on a gallery, 'none' on a board. */
   cardPreview?: CardPreview;
-  /** Gallery: show the whole image instead of cropping it. Default false. */
+  /** Gallery or board: show the whole image instead of cropping it. Default false. */
   fitImage?: boolean;
   /** Calendar: the date property that places each row. Default the first date property. */
   calendarBy?: string;
@@ -348,6 +351,18 @@ export interface DatabaseViewConfig {
   calendarRange?: CalendarRange;
   /** Calendar. Default true. */
   showWeekends?: boolean;
+  /** Timeline: the date property that places each bar. Default the first date property. */
+  timelineBy?: string;
+  /** Timeline: a second date property that ends each bar. Absent means `timelineBy` holds the range. */
+  timelineEndBy?: string;
+  /** Timeline. Default 'month'. */
+  timelineZoom?: TimelineZoom;
+  /** Timeline: show the table panel beside the bars. Default false. */
+  showTimelineTable?: boolean;
+  /** Timeline: the table panel's columns, apart from the bar properties. Array order is column order. */
+  tableProperties?: ViewPropertySetting[];
+  /** Timeline: the self-relation that draws dependency arrows. */
+  arrowsBy?: string;
   /** Where the no-value group sits among the option groups. Absent means last. */
   noValueGroupPosition?: string;
   /** Groups this view hides, by option id. */
@@ -380,7 +395,8 @@ export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
-  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends';
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
+  | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy';
 
 // ─── Top-level saved data ───
 

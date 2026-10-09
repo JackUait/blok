@@ -13,6 +13,13 @@ import {
   resolveOpenPagesIn,
   resolveShowWeekends,
   resolveShowVerticalLines,
+  resolveArrowsBy,
+  resolveBoardCardPreview,
+  resolveShowTimelineTable,
+  resolveTimelineBy,
+  resolveTimelineEndBy,
+  resolveTimelineTableProperties,
+  resolveTimelineZoom,
   resolveViewProperties,
   resolveWrapCells,
   visibleRowPropertyIds,
@@ -278,6 +285,66 @@ describe('view-settings', () => {
       expect(resolveCalendarBy(view(), twoDates)).toBe('p-start');
       expect(resolveCalendarBy(view({ calendarBy: 'p-status' }), schema)).toBe('p-due');
       expect(resolveCalendarBy(view(), schema.filter((p) => p.type !== 'date'))).toBeUndefined();
+    });
+  });
+
+  describe('timeline settings', () => {
+    const twoDates: PropertyDefinition[] = [...schema, { id: 'p-end', name: 'End', type: 'date', position: 'a4' }];
+
+    it('opens timeline pages in a side peek by default', () => {
+      expect(resolveOpenPagesIn(view({ type: 'timeline' }))).toBe('side');
+    });
+
+    it('shows the timeline by the stored date property, else the first one', () => {
+      expect(resolveTimelineBy(view({ type: 'timeline', timelineBy: 'p-end' }), twoDates)).toBe('p-end');
+      expect(resolveTimelineBy(view({ type: 'timeline' }), twoDates)).toBe('p-due');
+      expect(resolveTimelineBy(view({ type: 'timeline', timelineBy: 'p-status' }), twoDates)).toBe('p-due');
+      expect(resolveTimelineBy(view(), schema.filter((p) => p.type !== 'date'))).toBeUndefined();
+    });
+
+    it('reads a separate end property only when it is another date property', () => {
+      expect(resolveTimelineEndBy(view({ type: 'timeline', timelineEndBy: 'p-end' }), twoDates)).toBe('p-end');
+      expect(resolveTimelineEndBy(view({ type: 'timeline' }), twoDates)).toBeUndefined();
+      expect(resolveTimelineEndBy(view({ type: 'timeline', timelineEndBy: 'p-status' }), twoDates)).toBeUndefined();
+      expect(resolveTimelineEndBy(view({ type: 'timeline', timelineBy: 'p-due', timelineEndBy: 'p-due' }), twoDates)).toBeUndefined();
+    });
+
+    it('zooms to a month by default and keeps every Notion zoom level', () => {
+      expect(resolveTimelineZoom(view({ type: 'timeline' }))).toBe('month');
+      for (const zoom of ['hours', 'day', 'week', 'bi_week', 'month', 'quarter', 'year', '5_years'] as const) {
+        expect(resolveTimelineZoom(view({ type: 'timeline', timelineZoom: zoom }))).toBe(zoom);
+      }
+      expect(resolveTimelineZoom(view({ timelineZoom: 'decade' as never }))).toBe('month');
+    });
+
+    it('hides the table panel by default', () => {
+      expect(resolveShowTimelineTable(view({ type: 'timeline' }))).toBe(false);
+      expect(resolveShowTimelineTable(view({ type: 'timeline', showTimelineTable: true }))).toBe(true);
+    });
+
+    it('lists the table panel properties apart from the bar properties, title first and shown', () => {
+      const v = view({
+        type: 'timeline',
+        properties: [{ id: 'p-status', visible: true }],
+        tableProperties: [{ id: 'p-due', visible: true }],
+      });
+
+      expect(resolveTimelineTableProperties(v, schema).filter((p) => p.visible).map((p) => p.id)).toEqual(['p-title', 'p-due']);
+      expect(resolveTimelineTableProperties(view({ type: 'timeline' }), schema).filter((p) => p.visible).map((p) => p.id)).toEqual(['p-title']);
+    });
+
+    it('reads arrows by a property that still exists, else none', () => {
+      expect(resolveArrowsBy(view({ type: 'timeline', arrowsBy: 'p-status' }), schema)).toBe('p-status');
+      expect(resolveArrowsBy(view({ type: 'timeline', arrowsBy: 'gone' }), schema)).toBeUndefined();
+      expect(resolveArrowsBy(view({ type: 'timeline' }), schema)).toBeUndefined();
+    });
+  });
+
+  describe('board card preview', () => {
+    it('shows no preview on a board until one is picked, so old boards keep their look', () => {
+      expect(resolveBoardCardPreview(view({ type: 'board' }), schema)).toEqual({ kind: 'none' });
+      expect(resolveBoardCardPreview(view({ type: 'board', cardPreview: 'cover' }), schema)).toEqual({ kind: 'cover' });
+      expect(resolveBoardCardPreview(view({ type: 'board', cardPreview: 'property:gone' }), schema)).toEqual({ kind: 'none' });
     });
   });
 

@@ -165,6 +165,30 @@ describe('database view settings — two peers editing one view', () => {
     expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
   });
 
+  it('keeps both timeline settings when two people change different ones at the same moment', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'timeline' });
+
+    edit(storeA, () => ({ timelineZoom: 'week' }));
+    edit(storeB, () => ({ timelineBy: 'p-due', showTimelineTable: true }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0]).toMatchObject({ timelineZoom: 'week', timelineBy: 'p-due', showTimelineTable: true });
+    expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
+  });
+
+  it('keeps both table panel columns when two people add the first one at the same moment', () => {
+    const model = new DatabaseModel({ schema, views: [], activeViewId: '' });
+    const born = { ...model.addView('Timeline', 'timeline'), id: 'v1' };
+    const [storeA, storeB] = seed(born);
+
+    edit(storeA, (view) => ({ tableProperties: [...(view.tableProperties ?? []), { id: 'p-status', visible: true }] }));
+    edit(storeB, (view) => ({ tableProperties: [...(view.tableProperties ?? []), { id: 'p-due', visible: true }] }));
+    sync(storeA, storeB);
+
+    expect((viewsOf(storeA)[0].tableProperties ?? []).map((p) => p.id).sort()).toEqual(['p-due', 'p-status']);
+    expect(viewsOf(storeB)[0].tableProperties).toEqual(viewsOf(storeA)[0].tableProperties);
+  });
+
   // Known gap: a view saved before `properties` existed has no key to merge
   // into, so two first writes race on creating it.
   it.fails('keeps both widths on a view written before properties existed', () => {

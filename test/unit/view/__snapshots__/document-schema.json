@@ -2082,7 +2082,8 @@
                   "table",
                   "gallery",
                   "list",
-                  "calendar"
+                  "calendar",
+                  "timeline"
                 ]
               },
               "position": {
@@ -2270,16 +2271,16 @@
                   "medium",
                   "large"
                 ],
-                "description": "Gallery card size. Default medium."
+                "description": "Gallery or board card size. Default medium."
               },
               "cardPreview": {
                 "type": "string",
                 "pattern": "^(none|cover|content|property:.+)$",
-                "description": "What a gallery card shows above its title: none, the page cover, the page content, or \"property:<id>\". Default content."
+                "description": "What a gallery or board card shows above its title: none, the page cover, the page content, or \"property:<id>\". Default content on a gallery, none on a board."
               },
               "fitImage": {
                 "type": "boolean",
-                "description": "Gallery: show the whole image instead of cropping it. Default false."
+                "description": "Gallery or board: show the whole image instead of cropping it. Default false."
               },
               "calendarBy": {
                 "type": "string",
@@ -2296,6 +2297,64 @@
               "showWeekends": {
                 "type": "boolean",
                 "description": "Calendar. Default true."
+              },
+              "timelineBy": {
+                "type": "string",
+                "description": "Timeline: the date property id that places each bar. Default the first date property."
+              },
+              "timelineEndBy": {
+                "type": "string",
+                "description": "Timeline: a second date property id that ends each bar. Absent means timelineBy holds the range."
+              },
+              "timelineZoom": {
+                "type": "string",
+                "enum": [
+                  "hours",
+                  "day",
+                  "week",
+                  "bi_week",
+                  "month",
+                  "quarter",
+                  "year",
+                  "5_years"
+                ],
+                "description": "Timeline zoom. Default month."
+              },
+              "showTimelineTable": {
+                "type": "boolean",
+                "description": "Timeline: show the table panel. Default false."
+              },
+              "tableProperties": {
+                "type": "array",
+                "description": "Timeline table panel columns, apart from the bar properties; array order is column order.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Property id."
+                    },
+                    "visible": {
+                      "type": "boolean"
+                    },
+                    "width": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "Column width in pixels."
+                    },
+                    "wrap": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "arrowsBy": {
+                "type": "string",
+                "description": "Timeline: the self-relation property id that draws dependency arrows."
               },
               "noValueGroupPosition": {
                 "type": "string",

@@ -198,7 +198,7 @@ export interface DatabaseRowData extends BlockToolData {
 
 // ─── View config ───
 
-export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar';
+export type ViewType = 'board' | 'table' | 'gallery' | 'list' | 'calendar' | 'timeline';
 
 export interface SortConfig {
   /** Optional on old documents. Every write adds one, so two peers' sorts pair by id. */
@@ -296,6 +296,9 @@ export type CardPreview = 'none' | 'cover' | 'content' | `property:${string}`;
 
 export type CalendarRange = 'month' | 'week';
 
+/** Notion API `zoom_level` names. */
+export type TimelineZoom = 'hours' | 'day' | 'week' | 'bi_week' | 'month' | 'quarter' | 'year' | '5_years';
+
 /**
  * One property's settings in one view. The array order is the column order.
  * `id` is the property id: the CRDT pairs entries by it, so a peer's width
@@ -340,15 +343,26 @@ export interface DatabaseViewConfig {
   loadLimit?: LoadLimit;
   calculations?: ViewCalculation[];
   openPagesIn?: OpenPagesIn;
-  /** Gallery. */
+  /** Gallery or board. */
   cardSize?: CardSize;
   cardPreview?: CardPreview;
-  /** Gallery: show the whole image instead of cropping it to the card. */
+  /** Gallery or board: show the whole image instead of cropping it to the card. */
   fitImage?: boolean;
   /** Calendar: the date property that places each row. */
   calendarBy?: string;
   calendarRange?: CalendarRange;
   showWeekends?: boolean;
+  /** Timeline: the date property that places each bar. */
+  timelineBy?: string;
+  /** Timeline: a second date property that ends each bar. Absent means `timelineBy` holds the range. */
+  timelineEndBy?: string;
+  timelineZoom?: TimelineZoom;
+  /** Timeline: show the table panel beside the bars. */
+  showTimelineTable?: boolean;
+  /** Timeline: the table panel's own columns, apart from the bar properties. */
+  tableProperties?: ViewPropertySetting[];
+  /** Timeline: the self-relation that draws dependency arrows. Nothing draws them yet. */
+  arrowsBy?: string;
   /** Where the no-value group sits among the option groups. Absent means last. */
   noValueGroupPosition?: string;
   /** Groups this view hides, by option id (the no-value group uses its own key). */
@@ -384,7 +398,8 @@ export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
-  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends';
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
+  | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy';
 
 // ─── Top-level saved data ───
 

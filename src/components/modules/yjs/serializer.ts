@@ -80,7 +80,7 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
  * container is a plain array where a client-seeded one is a Y.Array.
  */
 const EAGER_ARRAY_KEYS = new Set([
-  'blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules',
+  'blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules', 'tableProperties',
 ]);
 
 /**

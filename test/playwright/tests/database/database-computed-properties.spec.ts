@@ -109,7 +109,6 @@ test.describe('formula', () => {
     await expect(cell(page, 'r2', 'p-double')).toHaveText('4');
 
     await cell(page, 'r2', 'p-amount').click();
-    await page.keyboard.press('Enter');
     await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('10');
     await page.keyboard.press('Enter');
@@ -160,7 +159,6 @@ test.describe('formula', () => {
 test.describe('relation and rollup', () => {
   test('relating a row writes both sides of a two-way relation, and one undo takes both back', async ({ page }) => {
     await cell(page, 'r1', 'p-next').click();
-    await page.keyboard.press('Enter');
     await expect(editor(page)).toBeVisible();
     await editor(page).locator('[data-blok-database-relation-option="r2"]').click();
     await page.keyboard.press('Escape');
@@ -178,7 +176,6 @@ test.describe('relation and rollup', () => {
 
   test('a rollup sums the related rows and follows a change', async ({ page }) => {
     await cell(page, 'r1', 'p-next').click();
-    await page.keyboard.press('Enter');
     await editor(page).locator('[data-blok-database-relation-option="r2"]').click();
     await editor(page).locator('[data-blok-database-relation-option="r3"]').click();
     await page.keyboard.press('Escape');
@@ -189,24 +186,25 @@ test.describe('relation and rollup', () => {
 
   test('a chip opens the related row', async ({ page }) => {
     await cell(page, 'r1', 'p-next').click();
-    await page.keyboard.press('Enter');
     await editor(page).locator('[data-blok-database-relation-option="r3"]').click();
     await page.keyboard.press('Escape');
 
     await cell(page, 'r1', 'p-next').locator('[data-blok-database-relation-chip]').click();
 
     await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
-    await expect(page.locator('[data-blok-database-drawer]')).toContainText('Charlie');
+    // Charlie's page: its Amount is 4, and its Prev mirrors Alpha. The title sits in a text field.
+    await expect(page.locator('[data-blok-database-drawer]')).toContainText('Amount4');
+    await expect(page.locator('[data-blok-database-drawer]')).toContainText('PrevAlpha');
   });
 
   test('deleting a related row takes it out of the relation', async ({ page }) => {
     await cell(page, 'r1', 'p-next').click();
-    await page.keyboard.press('Enter');
     await editor(page).locator('[data-blok-database-relation-option="r2"]').click();
     await page.keyboard.press('Escape');
 
+    await row(page, 'r2').hover();
     await row(page, 'r2').locator('[data-blok-database-table-row-handle]').click();
-    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await page.getByRole('menuitem', { name: 'Move to Trash' }).click();
 
     await expect(row(page, 'r2')).toHaveCount(0);
     await expect(cell(page, 'r1', 'p-next').locator('[data-blok-database-relation-chip]')).toHaveCount(0);
@@ -277,7 +275,6 @@ test.describe('two databases in one document', () => {
     await expect(dbCell(page, 'db-p', 'p1', 'pp-tasks').locator('[data-blok-database-relation-chip]')).toHaveText(['Write']);
 
     await dbCell(page, 'db-t', 't1', 'tt-hours').click();
-    await page.keyboard.press('Enter');
     await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('10');
     await page.keyboard.press('Enter');
@@ -293,7 +290,6 @@ test.describe('two databases in one document', () => {
 
   test('relating a row from the other side writes both databases', async ({ page }) => {
     await dbCell(page, 'db-t', 't2', 'tt-project').click();
-    await page.keyboard.press('Enter');
     await editor(page).locator('[data-blok-database-relation-option="p1"]').click();
     await page.keyboard.press('Escape');
 

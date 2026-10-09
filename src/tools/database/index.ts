@@ -400,6 +400,10 @@ export class DatabaseTool implements BlockTool {
     const hadRows = this.model.getOrderedRows().length > 0;
 
     this.syncRowsFromBlocks();
+    // A database that rendered first read this one from saved data; let it re-read the live rows.
+    this.documentDatabases()
+      .filter((database) => database.id !== this.block.id)
+      .forEach((database) => this.api.blocks.getById(database.id)?.call('relatedSourceChanged', { databaseId: this.block.id }));
 
     if (!hadRows && this.model.getOrderedRows().length > 0) {
       this.rerenderView();
@@ -636,7 +640,17 @@ export class DatabaseTool implements BlockTool {
         return { id: child.id, position: data?.position ?? '', properties: { ...(data?.properties ?? {}) } };
       });
 
-    return { schema: Array.isArray(saved?.schema) ? saved.schema : [], rows };
+    const schema = Array.isArray(saved?.schema) ? saved.schema : [];
+    // Not built yet: work its formulas out here, or a rollup of one reads nothing.
+    const engine = new ComputedProperties(databaseId);
+
+    return { schema, rows: engine.apply(schema, rows, { databaseId, now: new Date() }), valueProperty: (property) => engine.valueProperty(property) };
+  }
+
+  /** Another database's rows changed outside its own redraw: redraw this one if it relates to it. */
+  relatedSourceChanged(param: { databaseId: string }): void {
+    if (this.destroyed || !this.isRelatedChange({ id: param.databaseId, name: 'database' })) return;
+    this.reprojectRows();
   }
 
   /** Read by another database of this document: this database's schema and computed rows. */
@@ -3648,7 +3662,11 @@ export class DatabaseTool implements BlockTool {
     if (this.readOnly || this.destroyed || this.model.getRow(param.rowId) === undefined) return;
     this.updateRowBlock(param.rowId, param.changes);
     this.sync.syncUpdateRow({ rowId: param.rowId, properties: param.changes });
-    param.done?.();
+    if (param.done !== undefined) {
+      // Written from another database: the model already holds it, so no change event redraws this one.
+      param.done();
+      this.rerenderView({ keepDrawer: true });
+    }
   }
 
   private storedRelationOf(databaseId: string, rowId: string, propertyId: string): PropertyValue | undefined {

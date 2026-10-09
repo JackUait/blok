@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 684 + 117 + 61 + 4 closure for all 866 keys', () => {
+  it('rebuilds a disjoint 731 + 117 + 142 + 4 closure for all 994 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(866);
+    expect(lifecycle.size).toBe(994);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -324,7 +324,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +21: the database cell editors (tools.database.cellEmpty, select*, option*, date*) call their keys by literal.
       // +1: the database names a new table view with tools.database.viewTypeTable.
       // +61: the database table view calls its tools.database.table*, calc* and viewTypeTableDescription keys by literal.
-      'executable-literal': 684,
+      // +47: the database property system (type names, person, files, property menu rows, status group names) calls its keys by literal.
+      'executable-literal': 731,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -338,7 +339,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +16: the new filter names, built from the preset name like the first 8.
       // +5: the video keys above.
       // -9: the shortcut sheet now names those 9 markup tools by literal.
-      'registered-namespace-compatible': 61,
+      // +81: the database filter operators, number formats, date/time formats, show-as, visibility and
+      // display-as choices are composed from tools.database.* namespaces.
+      'registered-namespace-compatible': 142,
       'catalog-only': 4,
     });
     expect(

@@ -248,3 +248,37 @@ describe('database — two peers editing the new property settings', () => {
     expect(options[0].groupId).toBe('complete');
   });
 });
+
+describe('database — two peers numbering new rows at once', () => {
+  it('ends with the same distinct IDs on both peers', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const storeA = createStore();
+    const storeB = createStore();
+
+    pinClientId(storeA, 1);
+    pinClientId(storeB, 2);
+    storeA.fromJSON([{ id: 'old', type: 'database-row', data: { position: 'a0', properties: { uid: 4 } }, createdAt: 10 }]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+
+    // Each peer creates a row offline and numbers it from what it can see.
+    storeA.addBlock({ id: 'rowA', type: 'database-row', data: { position: 'a1', properties: { uid: 5 } }, createdAt: 200 });
+    storeB.addBlock({ id: 'rowB', type: 'database-row', data: { position: 'a2', properties: { uid: 5 } }, createdAt: 100 });
+    sync(storeA, storeB);
+
+    const idsOn = (store: DocumentStore): Record<string, PropertyValue> => {
+      const rows = store.toJSON()
+        .filter((block) => block.type === 'database-row')
+        .map((block) => ({
+          id: block.id ?? '',
+          position: (block.data as { position: string }).position,
+          properties: (block.data as { properties: Record<string, PropertyValue> }).properties,
+          ...(block.createdAt !== undefined ? { meta: { createdAt: block.createdAt } } : {}),
+        }));
+
+      return Object.fromEntries(assignUniqueIds(rows, 'uid').map((row) => [row.id, row.properties.uid]));
+    };
+
+    expect(idsOn(storeA)).toEqual({ old: 4, rowB: 5, rowA: 6 });
+    expect(idsOn(storeB)).toEqual(idsOn(storeA));
+  });
+});

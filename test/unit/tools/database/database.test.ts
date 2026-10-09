@@ -4787,3 +4787,46 @@ describe('DatabaseTool — property operations', () => {
     expect(adapter.updateProperty).toHaveBeenCalledWith(expect.objectContaining({ propertyId: 'prop-note', changes: expect.objectContaining({ type: 'email' }) }));
   });
 });
+
+describe('DatabaseTool — property menu and insert placement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('gives the property menu the saved status groups, so a settings change never saves a translated name', async () => {
+    const { DatabasePropertyMenu } = await import('../../../../src/tools/database/database-property-menu');
+    const open = vi.spyOn(DatabasePropertyMenu.prototype, 'open').mockImplementation(() => undefined);
+    const tool = new DatabaseTool(createDatabaseOptions({}, {}, {}));
+
+    tool.render();
+    const stage = tool.addProperty({ name: 'Stage', type: 'status' });
+
+    tool.openPropertyMenu(stage?.id ?? '', document.createElement('button'));
+    const passed = open.mock.calls[0]?.[0];
+
+    expect(passed?.status?.groups.map((g) => g.name)).toEqual(['To-do', 'In progress', 'Complete']);
+  });
+
+  it('inserts to the right of a column in the view\'s column order, not the schema order', () => {
+    const schema: PropertyDefinition[] = [
+      { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+      { id: 'prop-note', name: 'Note', type: 'text', position: 'a1' },
+      { id: 'prop-n', name: 'Amount', type: 'number', position: 'a2' },
+    ];
+    const view: DatabaseViewConfig = {
+      id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['prop-n', 'prop-note'],
+      properties: [{ id: 'prop-title', visible: true }, { id: 'prop-n', visible: true }, { id: 'prop-note', visible: true }],
+    };
+    const tool = new DatabaseTool(createDatabaseOptions({ schema, views: [view], activeViewId: 'view-1' }));
+
+    tool.render();
+    const added = tool.addProperty({ name: 'Paid', type: 'checkbox', afterId: 'prop-n' });
+    const model = (tool as unknown as { model: DatabaseModel }).model;
+
+    expect(model.getView('view-1')?.properties?.map((p) => p.id)).toEqual(['prop-title', 'prop-n', added?.id, 'prop-note']);
+  });
+});

@@ -2445,11 +2445,9 @@ export class DatabaseTool implements BlockTool {
       hasPeople: this.hasPeople,
       withNameField: true,
       onSelect: (type, name) => {
-        this.addProperty({
-          name,
-          type,
-          ...(placement === undefined ? {} : placement.side === 'left' ? { beforeId: placement.propertyId } : { afterId: placement.propertyId }),
-        });
+        const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
+
+        this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) });
       },
     });
     this.addPropertyPopover.open(anchor);

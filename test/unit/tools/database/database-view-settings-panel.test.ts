@@ -264,6 +264,18 @@ describe('view settings panel', () => {
     expect(exists('database-group-color-columns')).toBe(true);
   });
 
+  it.each([
+    ['prog', 'status'],
+    ['owner', 'person'],
+  ])('shows no group sort for a %s (%s) grouping, as research/08 measured', (groupBy) => {
+    harness({ groupBy }).open('group');
+
+    expect(exists('database-group-sort')).toBe(false);
+    expect(exists('database-group-text-by')).toBe(false);
+    expect(exists('database-group-date-by')).toBe(false);
+    expect(exists('database-group-hide-empty')).toBe(true);
+  });
+
   it('offers "Me" first in a person filter', () => {
     const h = harness();
 

@@ -88,5 +88,8 @@ describe('database filter labels', () => {
     expect(sortDirectionLabelKey('uniqueId', 'asc')).toBe('tools.database.sortLowHigh');
     expect(sortDirectionLabelKey('createdTime', 'desc')).toBe('tools.database.sortNewOld');
     expect(sortDirectionLabelKey('email', 'asc')).toBe('tools.database.sortAZ');
+    expect(sortDirectionLabelKey('status', 'desc')).toBe('tools.database.sortDescending');
+    expect(sortDirectionLabelKey('person', 'asc')).toBe('tools.database.sortAscending');
+    expect(sortDirectionLabelKey('checkbox', 'asc')).toBe('tools.database.sortAscending');
   });
 });

@@ -1155,7 +1155,20 @@ export class ViewSettingsPages {
             ['relative', 'groupDateRelative'], ['day', 'groupDateDay'], ['week', 'groupDateWeek'], ['month', 'groupDateMonth'], ['year', 'groupDateYear'],
           ], 'relative'),
         ];
-      default:
+      // research/08: select, multi-select, checkbox and person have no "by" row; status's
+      // "Status by" is built by the caller because it writes the view, not these settings.
+      case 'select':
+      case 'multiSelect':
+      case 'status':
+      case 'checkbox':
+      case 'person':
+      case 'createdBy':
+      case 'lastEditedBy':
+        return [];
+      // Not groupable (GROUPABLE_TYPES): Notion leaves Files and ID out of "Group by".
+      case 'files':
+      case 'uniqueId':
+      case 'richText':
         return [];
     }
   }
@@ -1299,8 +1312,18 @@ const groupSortChoices = (type: PropertyType): Array<readonly [GroupSort, string
     case 'email':
     case 'phone':
       return [['manual', 'groupSortManual'], ['ascending', 'groupSortAlphabetical'], ['descending', 'groupSortReverse']];
-    // Status keeps its group and option order (research/08: "Ascending" only); checkbox and people have no sort.
-    default:
+    // research/08: status shows only its default ("Ascending" = group and option order);
+    // checkbox and person groups have no sort row.
+    case 'status':
+    case 'checkbox':
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy':
+      return [];
+    // Not groupable (GROUPABLE_TYPES).
+    case 'files':
+    case 'uniqueId':
+    case 'richText':
       return [];
   }
 };

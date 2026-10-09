@@ -223,7 +223,17 @@ export const sortDirectionLabelKey = (type: PropertyType, direction: SortConfig[
     case 'email':
     case 'phone':
       return asc ? 'tools.database.sortAZ' : 'tools.database.sortZA';
-    default:
+    // Measured for select (research/08); status sorts by its group and option order the same way.
+    // Checkbox, people and files were not measured: the plain words are the safe reading.
+    case 'select':
+    case 'multiSelect':
+    case 'status':
+    case 'checkbox':
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'files':
+    case 'richText':
       return asc ? 'tools.database.sortAscending' : 'tools.database.sortDescending';
   }
 };

@@ -36,7 +36,11 @@ const panel = (): HTMLElement | null =>
 const optionFor = (type: string): HTMLElement | null =>
   document.body.querySelector(`[data-blok-database-property-type-option="${type}"]`);
 
-const TYPES: PropertyType[] = ['text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url'];
+/** Notion's "Select type" order (research/08), without Person: no people directory here. */
+const TYPES: PropertyType[] = [
+  'text', 'number', 'select', 'multiSelect', 'status', 'date', 'files', 'checkbox', 'url', 'phone', 'email',
+  'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+];
 
 describe('database property type popover mutants', () => {
   beforeEach(() => {
@@ -141,7 +145,7 @@ describe('database property type popover mutants', () => {
       popover.open(anchor);
       optionFor(type)?.click();
 
-      expect(onSelect).toHaveBeenCalledWith(type);
+      expect(onSelect).toHaveBeenCalledWith(type, '');
       expect(panel()).toBeNull();
     });
   });

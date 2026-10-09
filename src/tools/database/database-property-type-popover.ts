@@ -1,45 +1,28 @@
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import {
-  IconText,
-  IconHash,
-  IconSelect,
-  IconMultiSelect,
-  IconCalendar,
-  IconListChecklist,
-  IconGlobe,
-} from '../../components/icons';
 import type { I18n } from '../../../types';
 import type { PropertyType } from './types';
+import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import {
   createPositionTracker,
   positionFixedAnchored,
   type PositionTracker,
 } from '../../components/utils/popover/anchored-position';
 
-interface PropertyTypeOption {
-  type: PropertyType;
-  icon: string;
-  labelKey: string;
-}
-
-const PROPERTY_TYPES: PropertyTypeOption[] = [
-  { type: 'text', icon: IconText, labelKey: 'tools.database.propertyTypeText' },
-  { type: 'number', icon: IconHash, labelKey: 'tools.database.propertyTypeNumber' },
-  { type: 'select', icon: IconSelect, labelKey: 'tools.database.propertyTypeSelect' },
-  { type: 'multiSelect', icon: IconMultiSelect, labelKey: 'tools.database.propertyTypeMultiSelect' },
-  { type: 'date', icon: IconCalendar, labelKey: 'tools.database.propertyTypeDate' },
-  { type: 'checkbox', icon: IconListChecklist, labelKey: 'tools.database.propertyTypeCheckbox' },
-  { type: 'url', icon: IconGlobe, labelKey: 'tools.database.propertyTypeUrl' },
-];
-
 export interface PropertyTypePopoverOptions {
-  onSelect: (type: PropertyType) => void;
+  /** `name` is the name field's text, '' without the field. */
+  onSelect: (type: PropertyType, name: string) => void;
   i18n?: I18n;
+  /** Offer Person: the host gave a people directory. */
+  hasPeople?: boolean;
+  /** Show Notion's "Type property name…" field above the types. */
+  withNameField?: boolean;
 }
 
 export class DatabasePropertyTypePopover {
-  private readonly onSelect: (type: PropertyType) => void;
+  private readonly onSelect: (type: PropertyType, name: string) => void;
   private readonly i18n: I18n | undefined;
+  private readonly hasPeople: boolean;
+  private readonly withNameField: boolean;
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
   private positionTracker: PositionTracker | null = null;
@@ -47,6 +30,8 @@ export class DatabasePropertyTypePopover {
   constructor(options: PropertyTypePopoverOptions) {
     this.onSelect = options.onSelect;
     this.i18n = options.i18n;
+    this.hasPeople = options.hasPeople === true;
+    this.withNameField = options.withNameField === true;
   }
 
   open(anchor: HTMLElement): void {
@@ -58,26 +43,37 @@ export class DatabasePropertyTypePopover {
     popover.setAttribute('data-blok-database-property-type-popover', '');
     popover.style.zIndex = '1000';
 
+    const nameField = this.withNameField ? document.createElement('input') : null;
+
+    if (nameField !== null) {
+      nameField.type = 'text';
+      nameField.setAttribute('data-blok-database-property-name-input', '');
+      nameField.placeholder = this.i18n?.t('tools.database.propertyNamePlaceholder') ?? 'tools.database.propertyNamePlaceholder';
+      nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
+      popover.appendChild(nameField);
+    }
+
     const heading = document.createElement('div');
     heading.setAttribute('data-blok-database-property-type-heading', '');
     heading.textContent = this.i18n?.t('tools.database.propertyTypeHeading') ?? 'tools.database.propertyTypeHeading';
     popover.appendChild(heading);
 
-    for (const option of PROPERTY_TYPES) {
+    for (const type of addablePropertyTypes(this.hasPeople)) {
+      const meta = propertyTypeMeta(type);
       const item = document.createElement('div');
-      item.setAttribute('data-blok-database-property-type-option', option.type);
+      item.setAttribute('data-blok-database-property-type-option', type);
 
       const iconEl = document.createElement('div');
       iconEl.setAttribute('data-blok-database-property-type-option-icon', '');
-      iconEl.innerHTML = option.icon;
+      iconEl.innerHTML = meta.icon;
       item.appendChild(iconEl);
 
       const label = document.createElement('span');
-      label.textContent = this.i18n?.t(option.labelKey) ?? option.labelKey;
+      label.textContent = this.i18n?.t(meta.labelKey) ?? meta.labelKey;
       item.appendChild(label);
 
       item.addEventListener('click', () => {
-        this.onSelect(option.type);
+        this.onSelect(type, nameField?.value.trim() ?? '');
         this.close();
       });
 
@@ -106,6 +102,7 @@ export class DatabasePropertyTypePopover {
     };
 
     document.addEventListener('mousedown', this.boundOutsideClick);
+    nameField?.focus();
   }
 
   close(): void {

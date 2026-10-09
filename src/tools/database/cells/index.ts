@@ -1,5 +1,7 @@
 import type { PropertyDefinition, PropertyValue } from '../types';
 import { openDateEditor } from './date-editor';
+import { openFilesEditor } from './files-editor';
+import { openPersonEditor } from './person-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
@@ -48,7 +50,9 @@ export const openCellEditor = (
     case 'phone':
       return openTextEditor(property, value, anchor, ctx);
     case 'person':
+      return openPersonEditor(property, value, anchor, ctx) ?? CLOSED;
     case 'files':
+      return openFilesEditor(property, value, anchor, ctx);
     case 'createdTime':
     case 'lastEditedTime':
     case 'createdBy':

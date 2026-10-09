@@ -33,8 +33,12 @@ export interface CellContext {
    * the search. The date editor ignores it.
    */
   initialText?: string;
-  /** The host's people, for names and avatars. Without it a person shows a placeholder. */
+  /** The host's people, for names and avatars. Without it a person shows a placeholder and cannot be edited. */
   people?: DatabasePerson[];
+  /** The current user's id, listed first in the person editor. */
+  me?: string;
+  /** Stores a picked file and gives its URL. Without it the files editor offers links only. */
+  uploadFile?: (file: File) => Promise<{ url: string; name?: string }>;
   /** Anchors the relative date format. Defaults to the current time. */
   now?: Date;
 }

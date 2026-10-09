@@ -9,13 +9,13 @@ const rect = (overrides: Partial<DOMRect>): DOMRect => ({
 });
 
 describe('DatabasePropertyTypePopover', () => {
-  let onSelect: ReturnType<typeof vi.fn<(type: PropertyType) => void>>;
+  let onSelect: ReturnType<typeof vi.fn<(type: PropertyType, name: string) => void>>;
   let popover: DatabasePropertyTypePopover;
   let anchor: HTMLElement;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onSelect = vi.fn<(type: PropertyType) => void>();
+    onSelect = vi.fn<(type: PropertyType, name: string) => void>();
     anchor = document.createElement('button');
     document.body.appendChild(anchor);
     popover = new DatabasePropertyTypePopover({ onSelect });
@@ -83,13 +83,42 @@ describe('DatabasePropertyTypePopover', () => {
       expect(el.style.top).toBe('496px');
     });
 
-    it('renders all 7 user-addable property types', () => {
+    it('renders every user-addable property type', () => {
       popover.open(anchor);
-      const types: PropertyType[] = ['text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url'];
+      const types: PropertyType[] = ['text', 'number', 'select', 'multiSelect', 'status', 'date', 'files', 'checkbox', 'url', 'phone', 'email', 'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy'];
       for (const type of types) {
         const item = document.querySelector(`[data-blok-database-property-type-option="${type}"]`);
         expect(item).not.toBeNull();
       }
+    });
+
+    it('offers Person only when the host has a people directory', () => {
+      popover.open(anchor);
+      expect(document.querySelector('[data-blok-database-property-type-option="person"]')).toBeNull();
+
+      const withPeople = new DatabasePropertyTypePopover({ onSelect, hasPeople: true });
+
+      withPeople.open(anchor);
+      expect(document.querySelector('[data-blok-database-property-type-option="person"]')).not.toBeNull();
+      withPeople.destroy();
+    });
+
+    it('names the new property from its name field, as Notion\'s "+" flow does', () => {
+      const named = vi.fn<(type: PropertyType, name: string) => void>();
+      const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true });
+
+      flow.open(anchor);
+      const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+      expect(field).not.toBeNull();
+      expect(field).toHaveFocus();
+      if (field === null) return;
+      field.value = 'Budget';
+      field.dispatchEvent(new Event('input'));
+      document.querySelector<HTMLElement>('[data-blok-database-property-type-option="number"]')?.click();
+
+      expect(named).toHaveBeenCalledWith('number', 'Budget');
+      flow.destroy();
     });
 
     it('does not render title or richText options', () => {
@@ -102,49 +131,49 @@ describe('DatabasePropertyTypePopover', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="text"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('text');
+      expect(onSelect).toHaveBeenCalledWith('text', '');
     });
 
     it('calls onSelect with "number" when number option is clicked', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="number"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('number');
+      expect(onSelect).toHaveBeenCalledWith('number', '');
     });
 
     it('calls onSelect with "select" when select option is clicked', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="select"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('select');
+      expect(onSelect).toHaveBeenCalledWith('select', '');
     });
 
     it('calls onSelect with "multiSelect" when multiSelect option is clicked', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="multiSelect"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('multiSelect');
+      expect(onSelect).toHaveBeenCalledWith('multiSelect', '');
     });
 
     it('calls onSelect with "date" when date option is clicked', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="date"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('date');
+      expect(onSelect).toHaveBeenCalledWith('date', '');
     });
 
     it('calls onSelect with "checkbox" when checkbox option is clicked', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="checkbox"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('checkbox');
+      expect(onSelect).toHaveBeenCalledWith('checkbox', '');
     });
 
     it('calls onSelect with "url" when url option is clicked', () => {
       popover.open(anchor);
       const item = document.querySelector('[data-blok-database-property-type-option="url"]') as HTMLElement;
       item.click();
-      expect(onSelect).toHaveBeenCalledWith('url');
+      expect(onSelect).toHaveBeenCalledWith('url', '');
     });
 
     it('closes the popover after selecting a type', () => {

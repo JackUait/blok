@@ -44,6 +44,10 @@ export const openTextEditor = (
       field.inputMode = 'decimal';
     } else if (property.type === 'url') {
       field.inputMode = 'url';
+    } else if (property.type === 'email') {
+      field.inputMode = 'email';
+    } else if (property.type === 'phone') {
+      field.inputMode = 'tel';
     }
   } else {
     field.rows = 1;

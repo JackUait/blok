@@ -683,16 +683,21 @@ export class DatabaseTool implements BlockTool {
    */
   private readonly handleBlockChanged = (payload: unknown): void => {
     const target = changedBlock(payload);
+    const own = this.isOwnRowChange(target);
 
-    if (this.reprojectQueued || !(this.isOwnRowChange(target) || this.isRelatedChange(target))) {
+    if (this.reprojectQueued || !(own || this.isRelatedChange(target))) {
       return;
     }
 
     this.reprojectQueued = true;
-    queueMicrotask(() => {
+    const run = (): void => {
       this.reprojectQueued = false;
       this.reprojectRows();
-    });
+    };
+
+    // A related database re-reads its own rows in a microtask queued by the
+    // same event; wait one more tick so this one reads them after that.
+    queueMicrotask(own ? run : () => queueMicrotask(run));
   };
 
   /**

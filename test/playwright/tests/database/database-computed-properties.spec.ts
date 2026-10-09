@@ -90,6 +90,11 @@ const cell = (page: Page, rowId: string, propertyId: string): Locator =>
 const header = (page: Page, propertyId: string): Locator => page.locator(`[role="columnheader"][data-property-id="${propertyId}"]`);
 const editor = (page: Page): Locator => page.locator('[data-blok-database-cell-editor]');
 
+/** Undo through the public history API: the grid owns its keyboard, so Cmd+Z there is not Blok's. */
+const undo = async (page: Page): Promise<void> => {
+  await page.evaluate(() => window.blokInstance?.history.undo());
+};
+
 test.beforeAll(ensureBlokBundleBuilt);
 
 test.beforeEach(async ({ page }) => {
@@ -165,9 +170,7 @@ test.describe('relation and rollup', () => {
     expect((await savedProperties(page, 'r1'))['p-next']).toEqual([{ id: 'r2' }]);
     expect((await savedProperties(page, 'r2'))['p-prev']).toEqual([{ id: 'r1' }]);
 
-    await page.locator('[data-blok-database-table-grid]').click({ position: { x: 1, y: 1 } });
-    await page.keyboard.press('Escape');
-    await page.keyboard.press('ControlOrMeta+z');
+    await undo(page);
 
     await expect(cell(page, 'r1', 'p-next').locator('[data-blok-database-relation-chip]')).toHaveCount(0);
     await expect(cell(page, 'r2', 'p-prev').locator('[data-blok-database-relation-chip]')).toHaveCount(0);
@@ -208,5 +211,94 @@ test.describe('relation and rollup', () => {
     await expect(row(page, 'r2')).toHaveCount(0);
     await expect(cell(page, 'r1', 'p-next').locator('[data-blok-database-relation-chip]')).toHaveCount(0);
     expect((await savedProperties(page, 'r1'))['p-next']).toEqual([]);
+  });
+});
+
+test.describe('two databases in one document', () => {
+  const TWO: OutputBlockData[] = [
+    {
+      id: 'db-p',
+      type: 'database',
+      data: {
+        title: 'Projects',
+        schema: [
+          { id: 'pp-title', name: 'Project', type: 'title', position: 'a0' },
+          { id: 'pp-tasks', name: 'Tasks', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db-t', twoWay: true, syncedPropertyId: 'tt-project' } },
+          { id: 'pp-total', name: 'Effort', type: 'rollup', position: 'a2', rollup: { relationPropertyId: 'pp-tasks', targetPropertyId: 'tt-double', function: 'sum' } },
+        ],
+        views: [{ id: 'vp', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'vp',
+      },
+      content: ['p1'],
+    },
+    { id: 'p1', type: 'database-row', data: { position: 'a0', properties: { 'pp-title': 'Launch', 'pp-tasks': [{ id: 't1' }] } } },
+    {
+      id: 'db-t',
+      type: 'database',
+      data: {
+        title: 'Tasks',
+        schema: [
+          { id: 'tt-title', name: 'Task', type: 'title', position: 'a0' },
+          { id: 'tt-hours', name: 'Hours', type: 'number', position: 'a1' },
+          { id: 'tt-double', name: 'Double', type: 'formula', position: 'a2', formula: { expression: '{{property:tt-hours}} * 2' } },
+          { id: 'tt-project', name: 'Project', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db-p', twoWay: true, syncedPropertyId: 'pp-tasks' } },
+        ],
+        views: [{ id: 'vt', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'vt',
+      },
+      content: ['t1', 't2'],
+    },
+    { id: 't1', type: 'database-row', data: { position: 'a0', properties: { 'tt-title': 'Write', 'tt-hours': 3, 'tt-project': [{ id: 'p1' }] } } },
+    { id: 't2', type: 'database-row', data: { position: 'a1', properties: { 'tt-title': 'Ship', 'tt-hours': 5 } } },
+  ];
+
+  const inDb = (page: Page, databaseId: string): Locator => page.locator(`[data-blok-id="${databaseId}"]`);
+  const dbCell = (page: Page, databaseId: string, rowId: string, propertyId: string): Locator =>
+    inDb(page, databaseId).locator(`[data-blok-database-table-row][data-row-id="${rowId}"] [role="gridcell"][data-property-id="${propertyId}"]`);
+
+  test.beforeEach(async ({ page }) => {
+    await page.evaluate(async (input) => {
+      await window.blokInstance?.destroy?.();
+      window.blokInstance = undefined;
+      document.getElementById('blok')?.remove();
+      const holder = document.createElement('div');
+
+      holder.id = 'blok';
+      holder.style.cssText = 'max-width:900px;margin:40px auto 0';
+      document.body.appendChild(holder);
+      window.blokInstance = new window.Blok({ holder, data: { blocks: input } });
+      await window.blokInstance.isReady;
+    }, TWO);
+    await expect(page.getByRole('grid')).toHaveCount(2);
+  });
+
+  test('a rollup reads a formula of the other database and follows its edits and their undo', async ({ page }) => {
+    await expect(dbCell(page, 'db-p', 'p1', 'pp-total')).toHaveText('6');
+    await expect(dbCell(page, 'db-p', 'p1', 'pp-tasks').locator('[data-blok-database-relation-chip]')).toHaveText(['Write']);
+
+    await dbCell(page, 'db-t', 't1', 'tt-hours').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.type('10');
+    await page.keyboard.press('Enter');
+
+    await expect(dbCell(page, 'db-p', 'p1', 'pp-total')).toHaveText('20');
+
+    await page.keyboard.press('Escape');
+    await undo(page);
+
+    await expect(dbCell(page, 'db-t', 't1', 'tt-hours')).toHaveText('3');
+    await expect(dbCell(page, 'db-p', 'p1', 'pp-total')).toHaveText('6');
+  });
+
+  test('relating a row from the other side writes both databases', async ({ page }) => {
+    await dbCell(page, 'db-t', 't2', 'tt-project').click();
+    await page.keyboard.press('Enter');
+    await editor(page).locator('[data-blok-database-relation-option="p1"]').click();
+    await page.keyboard.press('Escape');
+
+    await expect(dbCell(page, 'db-p', 'p1', 'pp-tasks').locator('[data-blok-database-relation-chip]')).toHaveText(['Write', 'Ship']);
+    await expect(dbCell(page, 'db-p', 'p1', 'pp-total')).toHaveText('16');
+    expect((await savedProperties(page, 'p1'))['pp-tasks']).toEqual([{ id: 't1' }, { id: 't2' }]);
   });
 });

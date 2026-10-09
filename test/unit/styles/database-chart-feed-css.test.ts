@@ -21,8 +21,6 @@ const ruleBody = (selector: string): string =>
 const HUES = ['blue', 'orange', 'teal', 'yellow', 'pink', 'green', 'purple', 'red', 'gray'];
 const TOKENS = [
   ...HUES.map((hue) => `--blok-database-chart-${hue}`),
-  '--blok-database-chart-tooltip-bg',
-  '--blok-database-chart-tooltip-shadow',
   '--blok-database-feed-card-bg',
   '--blok-database-feed-card-shadow',
 ];

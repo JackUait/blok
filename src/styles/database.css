@@ -121,8 +121,6 @@
   --blok-database-chart-purple: #4a3aa7;
   --blok-database-chart-red: #e34948;
   --blok-database-chart-gray: #8e8b86;
-  --blok-database-chart-tooltip-bg: #ffffff;
-  --blok-database-chart-tooltip-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   /* Feed card, measured on Notion's feed view (research/08). */
   --blok-database-feed-card-bg: #ffffff;
   --blok-database-feed-card-shadow: rgba(0, 0, 0, 0.02) 0 12px 32px, rgba(0, 0, 0, 0.05) 0 0 0 1px;
@@ -239,8 +237,6 @@
     --blok-database-chart-purple: #9085e9;
     --blok-database-chart-red: #e66767;
     --blok-database-chart-gray: #9b9b9b;
-    --blok-database-chart-tooltip-bg: rgb(37, 37, 37);
-    --blok-database-chart-tooltip-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
     /* Unmeasured in dark: the calendar event card's dark surface. */
     --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
     --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
@@ -355,8 +351,6 @@
   --blok-database-chart-purple: #9085e9;
   --blok-database-chart-red: #e66767;
   --blok-database-chart-gray: #9b9b9b;
-  --blok-database-chart-tooltip-bg: rgb(37, 37, 37);
-  --blok-database-chart-tooltip-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   /* Unmeasured in dark: the calendar event card's dark surface. */
   --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
@@ -5236,37 +5230,19 @@
   border-radius: var(--blok-radius-mark);
 }
 
-[data-blok-database-chart-tooltip] {
+[data-blok-database-chart-anchor] {
   position: absolute;
-  z-index: 1;
-  min-inline-size: 120px;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
-  border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-chart-tooltip-bg);
-  box-shadow: var(--blok-database-chart-tooltip-shadow);
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 8px));
 }
 
-[data-blok-database-chart-tooltip][hidden] {
-  display: none;
-}
-
-[data-blok-database-chart-tooltip-title] {
-  margin-block-end: var(--blok-space-0-5);
+[data-blok-database-chart-readout-title] {
   font-weight: 600;
 }
 
-[data-blok-database-chart-tooltip-row] {
+[data-blok-database-chart-readout-row] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  color: var(--blok-database-table-header-text);
-}
-
-[data-blok-database-chart-tooltip-value] {
-  margin-inline-start: auto;
-  color: var(--blok-text-primary);
   font-variant-numeric: tabular-nums;
 }
 

@@ -4,6 +4,7 @@ import { CHART_HEIGHT_PX } from './chart-settings';
 import type { ResolvedChartSettings } from './chart-settings';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { ChartColorTheme } from './types';
+import { hide as hideHint, show as showHint } from '../../components/utils/tooltip';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -161,7 +162,7 @@ export class DatabaseChartView implements DatabaseViewRenderer {
   private readonly id = `blok-chart-${(counter.next += 1)}`;
   private root: HTMLDivElement | null = null;
   private plot: HTMLDivElement | null = null;
-  private tooltip: HTMLDivElement | null = null;
+  private anchor: HTMLDivElement | null = null;
   private observer: ResizeObserver | null = null;
   private width = 0;
 
@@ -194,17 +195,16 @@ export class DatabaseChartView implements DatabaseViewRenderer {
 
     const body = document.createElement('div');
     const plot = document.createElement('div');
-    const tooltip = document.createElement('div');
+    const anchor = document.createElement('div');
 
     body.setAttribute('data-blok-database-chart-body', '');
     plot.setAttribute('data-blok-database-chart-plot', '');
-    tooltip.setAttribute('data-blok-database-chart-tooltip', '');
-    tooltip.setAttribute('role', 'tooltip');
-    tooltip.hidden = true;
+    anchor.setAttribute('data-blok-database-chart-anchor', '');
+    anchor.setAttribute('aria-hidden', 'true');
     this.plot = plot;
-    this.tooltip = tooltip;
+    this.anchor = anchor;
     body.appendChild(plot);
-    root.append(body, tooltip);
+    root.append(body, anchor);
 
     const legend = this.createLegend();
 
@@ -238,6 +238,7 @@ export class DatabaseChartView implements DatabaseViewRenderer {
   }
 
   destroy(): void {
+    hideHint();
     this.observer?.disconnect();
     this.observer = null;
   }
@@ -713,30 +714,47 @@ export class DatabaseChartView implements DatabaseViewRenderer {
       event.preventDefault();
       this.options.handlers.drilldown(point, undefined);
     });
-    hit.addEventListener('pointerenter', () => this.showTooltip(hit, point));
-    hit.addEventListener('pointerleave', () => this.hideTooltip());
+    // Hover only, never focus: a hint waits its delay on every bar (CLAUDE.md), unlike the usual chart readout.
+    hit.addEventListener('mouseenter', () => this.showReadout(hit, point));
+    hit.addEventListener('mouseleave', () => hideHint());
   }
 
-  /** A data readout under the pointer, not a hint: it follows the pointer from mark to mark at once. */
-  private showTooltip(anchor: SVGElement, point: ChartPoint): void {
-    const tooltip = this.tooltip;
+  /**
+   * The value under the pointer, through the shared hint. The anchor is an
+   * HTML box laid over the mark: SVG shapes have no client size to place
+   * a hint against.
+   */
+  private showReadout(mark: SVGElement, point: ChartPoint): void {
+    const anchor = this.anchor;
     const root = this.root;
 
-    if (tooltip === null || root === null) return;
+    if (anchor === null || root === null) return;
+    const box = mark.getBoundingClientRect();
+    const frame = root.getBoundingClientRect();
+
+    anchor.style.left = `${box.left - frame.left}px`;
+    anchor.style.top = `${box.top - frame.top}px`;
+    anchor.style.width = `${box.width}px`;
+    anchor.style.height = `${box.height}px`;
+    showHint(anchor, this.readout(point));
+  }
+
+  private readout(point: ChartPoint): HTMLElement {
+    const content = document.createElement('div');
     const title = document.createElement('div');
 
-    title.setAttribute('data-blok-database-chart-tooltip-title', '');
+    content.setAttribute('data-blok-database-chart-readout', '');
+    title.setAttribute('data-blok-database-chart-readout-title', '');
     title.textContent = point.label;
-    tooltip.replaceChildren(title);
+    content.appendChild(title);
     const rows = this.options.data.series.length === 0
       ? [{ label: this.options.yName, value: point.value, color: undefined }]
       : this.shownSeries().map((entry) => ({ label: entry.series.label, value: point.values[entry.series.key] ?? 0, color: entry.color }));
 
     for (const row of rows) {
       const line = document.createElement('div');
-      const value = document.createElement('span');
 
-      line.setAttribute('data-blok-database-chart-tooltip-row', '');
+      line.setAttribute('data-blok-database-chart-readout-row', '');
       if (row.color !== undefined) {
         const swatch = document.createElement('span');
 
@@ -745,20 +763,10 @@ export class DatabaseChartView implements DatabaseViewRenderer {
         swatch.style.opacity = String(row.color.opacity);
         line.appendChild(swatch);
       }
-      value.setAttribute('data-blok-database-chart-tooltip-value', '');
-      value.textContent = this.options.formatValue(row.value);
-      line.append(`${row.label} `, value);
-      tooltip.appendChild(line);
+      line.append(`${row.label}: ${this.options.formatValue(row.value)}`);
+      content.appendChild(line);
     }
-    tooltip.hidden = false;
-    const box = anchor.getBoundingClientRect();
-    const frame = root.getBoundingClientRect();
 
-    tooltip.style.left = `${Math.max(0, box.left - frame.left + box.width / 2)}px`;
-    tooltip.style.top = `${Math.max(0, box.top - frame.top)}px`;
-  }
-
-  private hideTooltip(): void {
-    if (this.tooltip !== null) this.tooltip.hidden = true;
+    return content;
   }
 }

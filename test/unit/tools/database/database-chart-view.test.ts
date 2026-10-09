@@ -4,6 +4,9 @@ import { DatabaseChartView } from '../../../../src/tools/database/database-chart
 import type { ChartViewOptions } from '../../../../src/tools/database/database-chart-view';
 import type { ChartData, ChartPoint } from '../../../../src/tools/database/chart-data';
 import { resolveChartSettings } from '../../../../src/tools/database/chart-settings';
+import * as tooltip from '../../../../src/components/utils/tooltip';
+
+vi.mock('../../../../src/components/utils/tooltip', () => ({ show: vi.fn(), hide: vi.fn() }));
 import type { DatabaseViewConfig } from '../../../../src/tools/database/types';
 
 const point = (key: string, value: number, values: Record<string, number> = {}): ChartPoint => ({
@@ -81,18 +84,29 @@ describe('DatabaseChartView', () => {
     expect(hit?.getAttribute('aria-label')).toContain('B');
   });
 
-  it('shows a tooltip with the group and its value on hover, and hides it on leave', () => {
+  it('asks tooltip.ts for a delayed hint on hover, anchored on the hovered mark, and hides it on leave', () => {
     const el = render();
     const hit = el.querySelector<SVGElement>('[data-blok-database-chart-hit][data-key="b"]');
-    const tooltip = el.querySelector<HTMLElement>('[data-blok-database-chart-tooltip]');
 
-    expect(tooltip?.hidden).toBe(true);
-    hit?.dispatchEvent(new MouseEvent('pointerenter', { bubbles: true }));
-    expect(tooltip?.hidden).toBe(false);
-    expect(tooltip?.textContent).toContain('B');
-    expect(tooltip?.textContent).toContain('5');
-    hit?.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
-    expect(tooltip?.hidden).toBe(true);
+    hit?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(tooltip.show).toHaveBeenCalledTimes(1);
+    const [anchor, content, options] = vi.mocked(tooltip.show).mock.calls[0];
+
+    expect(anchor).toBeInstanceOf(HTMLElement);
+    expect((anchor as HTMLElement).hasAttribute('data-blok-database-chart-anchor')).toBe(true);
+    expect((content as HTMLElement).textContent).toContain('B');
+    expect((content as HTMLElement).textContent).toContain('5');
+    expect(options?.delay).toBeUndefined();
+
+    hit?.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(tooltip.hide).toHaveBeenCalledTimes(1);
+  });
+
+  it('never asks for a hint on focus', () => {
+    const el = render();
+
+    el.querySelector<SVGElement>('[data-blok-database-chart-hit][data-key="b"]')?.dispatchEvent(new FocusEvent('focus'));
+    expect(tooltip.show).not.toHaveBeenCalled();
   });
 
   it('has no legend for one series', () => {

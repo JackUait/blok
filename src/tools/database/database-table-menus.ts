@@ -102,6 +102,7 @@ export const openMenu = (
 ): PopoverDesktop => {
   const popover = new PopoverDesktop({
     class: DATABASE_MENU_CLASS,
+    animateClose: true,
     trigger: anchor,
     items,
     width: 'auto',

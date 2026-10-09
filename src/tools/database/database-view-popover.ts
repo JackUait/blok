@@ -69,6 +69,7 @@ export class DatabaseViewPopover {
 
     this.popover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       items,
       trigger: anchor,
       width: 'auto',

@@ -339,6 +339,7 @@ export class DatabaseTabBar {
 
     this.contextPopover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: tab,
       width: 'auto',
       minWidth: '160px',

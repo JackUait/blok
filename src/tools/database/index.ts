@@ -1548,6 +1548,7 @@ export class DatabaseTool implements BlockTool {
 
     this.cardMenuPopover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: '140px',
@@ -1599,7 +1600,7 @@ export class DatabaseTool implements BlockTool {
   private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement): void {
     this.groupMenuPopover?.destroy();
 
-    const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
+    const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
 
     owner?.setAttribute('data-popover-open', '');
     popover.on(PopoverEvent.Closed, () => {

@@ -45,18 +45,18 @@ describe('database filter labels', () => {
   });
 
   it('names a pill by its property alone until it has a value', () => {
-    expect(filterPillLabel({ propertyId: 'p', operator: 'contains', value: '' }, prop('text'), t)).toBe('Due');
-    expect(filterPillLabel({ propertyId: 'p', operator: 'contains', value: 'abc' }, prop('text'), t)).toBe('Due: abc');
-    expect(filterPillLabel({ propertyId: 'p', operator: 'is_not_empty', value: null }, prop('text'), t)).toBe('Due: tools.database.filterOpIsNotEmpty');
-    expect(filterPillLabel({ propertyId: 'p', operator: 'this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
-    expect(filterPillLabel({ propertyId: 'p', operator: 'equals', value: 'tomorrow' }, prop('date'), t)).toBe('Due: tools.database.filterDateTomorrow');
-    expect(filterPillLabel({ propertyId: 'p', operator: 'equals', value: true }, prop('checkbox'), t)).toBe('Due: tools.database.filterChecked');
+    expect(filterPillLabel({ operator: 'contains', value: '' }, prop('text'), t)).toBe('Due');
+    expect(filterPillLabel({ operator: 'contains', value: 'abc' }, prop('text'), t)).toBe('Due: abc');
+    expect(filterPillLabel({ operator: 'is_not_empty', value: null }, prop('text'), t)).toBe('Due: tools.database.filterOpIsNotEmpty');
+    expect(filterPillLabel({ operator: 'this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
+    expect(filterPillLabel({ operator: 'equals', value: 'tomorrow' }, prop('date'), t)).toBe('Due: tools.database.filterDateTomorrow');
+    expect(filterPillLabel({ operator: 'equals', value: true }, prop('checkbox'), t)).toBe('Due: tools.database.filterChecked');
   });
 
   it('shows option labels on a select pill', () => {
     const select = prop('select', { config: { options: [{ id: 'o1', label: 'Idea', position: 'a0' }, { id: 'o2', label: 'Ship', position: 'a1' }] } });
 
-    expect(filterPillLabel({ propertyId: 'p', operator: 'equals', value: ['o1', 'o2'] }, select, t)).toBe('Due: Idea, Ship');
+    expect(filterPillLabel({ operator: 'equals', value: ['o1', 'o2'] }, select, t)).toBe('Due: Idea, Ship');
   });
 
   it('labels sort directions per type (research/08)', () => {

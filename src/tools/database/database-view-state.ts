@@ -1,4 +1,4 @@
-import type { DatabaseViewConfig, DatabaseViewStateStore, PersonalViewPatch } from './types';
+import type { DatabaseViewConfig, DatabaseViewStateStore, FilterGroup, PersonalViewPatch } from './types';
 
 /** Synchronous per-browser storage; `api.viewState` scoped to the block in production. */
 export interface ViewStateFallback {
@@ -17,6 +17,10 @@ export interface PersonalViewEditsOptions {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const isFilterTree = (value: unknown): value is FilterGroup =>
+  isRecord(value) && typeof value.id === 'string' && Array.isArray(value.filterRules) &&
+  (value.conjunction === 'and' || value.conjunction === 'or');
+
 /** Keeps only the personal keys, each with the right outer shape. */
 const sanitize = (value: unknown): PersonalViewPatch => {
   if (!isRecord(value)) return {};
@@ -24,8 +28,8 @@ const sanitize = (value: unknown): PersonalViewPatch => {
 
   if (Array.isArray(value.filters)) patch.filters = value.filters as PersonalViewPatch['filters'];
   if (Array.isArray(value.sorts)) patch.sorts = value.sorts as PersonalViewPatch['sorts'];
-  if (isRecord(value.filterTree) && Array.isArray(value.filterTree.filterRules)) {
-    patch.filterTree = value.filterTree as PersonalViewPatch['filterTree'];
+  if (isFilterTree(value.filterTree)) {
+    patch.filterTree = value.filterTree;
   }
 
   return patch;

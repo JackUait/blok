@@ -5,7 +5,7 @@ import { YBlockSerializer } from '../../../../src/components/modules/yjs/seriali
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { addFilterGroup, addFilterRule, countFilterRules } from '../../../../src/tools/database/filter-tree';
 import { withGroupState } from '../../../../src/tools/database/view-data';
-import type { ColorRule, DatabaseViewConfig, FilterGroup, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
 
@@ -65,7 +65,7 @@ const tree = (view: DatabaseViewConfig): FilterGroup => {
   return view.filterTree;
 };
 
-const rule = (id: string, value: number): FilterGroup['filterRules'][number] =>
+const rule = (id: string, value: number): FilterRule =>
   ({ id, propertyId: 'p-num', operator: 'greater_than', value });
 
 describe('database view filters — two peers editing one view', () => {

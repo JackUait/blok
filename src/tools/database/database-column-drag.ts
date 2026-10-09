@@ -233,7 +233,7 @@ export class DatabaseColumnDrag {
   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {
     const columns = Array.from(
       this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]')
-    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId);
+    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId && !col.hasAttribute('data-blok-database-no-value-group'));
     const direction = getElementDirection(this.wrapper);
 
     for (const col of columns) {

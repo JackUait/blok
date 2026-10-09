@@ -394,6 +394,7 @@ export type BlokMessageKey =
   | 'tools.database.moreViews'
   | 'tools.database.newPage'
   | 'tools.database.newRow'
+  | 'tools.database.noValueGroup'
   | 'tools.database.openRow'
   | 'tools.database.propertyTypeCheckbox'
   | 'tools.database.propertyTypeDate'

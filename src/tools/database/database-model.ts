@@ -16,6 +16,12 @@ import { DATABASE_DEFAULT_TEXT } from './database-localization';
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
 const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
 
+/**
+ * Group key for rows with no value. Not '' because card drag reads a missing
+ * data-option-id as ''. 23 chars, so a default 21-char nanoid option id never equals it.
+ */
+export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
+
 export class DatabaseModel {
   private schema: PropertyDefinition[];
   private rows: DatabaseRow[] = [];
@@ -107,13 +113,11 @@ export class DatabaseModel {
     const groups = new Map<string, DatabaseRow[]>();
     const ordered = this.getOrderedRows();
     for (const row of ordered) {
-      const rawValue = row.properties[propertyId];
-      const key = this.toGroupKey(rawValue);
-      const existing = groups.get(key);
-      if (existing !== undefined) {
-        existing.push(row);
-      } else {
-        groups.set(key, [row]);
+      for (const key of this.toGroupKeys(row.properties[propertyId])) {
+        const group = groups.get(key) ?? [];
+
+        group.push(row);
+        groups.set(key, group);
       }
     }
     return groups;
@@ -139,7 +143,7 @@ export class DatabaseModel {
     const knownIds = new Set(known.map((o) => o.id));
 
     return [...this.getRowsGroupedBy(propertyId).keys()]
-      .filter((key) => key !== '' && !knownIds.has(key))
+      .filter((key) => key !== NO_VALUE_GROUP_KEY && !knownIds.has(key))
       .map((key) => ({ id: key, label: '', position: ORPHAN_GROUP_POSITION }));
   }
 
@@ -224,11 +228,12 @@ export class DatabaseModel {
 
   // ─── Static helpers ───
 
-  private toGroupKey(value: PropertyValue | undefined): string {
-    if (value === undefined || value === null) return '';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'boolean' || typeof value === 'number') return String(value);
-    return '';
+  private toGroupKeys(value: PropertyValue | undefined): string[] {
+    if (Array.isArray(value)) return value.length > 0 ? value : [NO_VALUE_GROUP_KEY];
+    if (value === undefined || value === null || value === '') return [NO_VALUE_GROUP_KEY];
+    if (typeof value === 'string') return [value];
+    if (typeof value === 'boolean' || typeof value === 'number') return [String(value)];
+    return [NO_VALUE_GROUP_KEY];
   }
 
   /**

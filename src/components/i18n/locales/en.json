@@ -283,6 +283,7 @@
   "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "Empty page",
   "tools.database.columnTitlePlaceholder": "Column",
+  "tools.database.noValueGroup": "No {property}",
   "tools.database.emptyColumn": "No cards",
   "tools.database.rowTitlePlaceholder": "Empty page",
   "tools.database.addRow": "Add row",

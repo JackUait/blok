@@ -2,7 +2,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
-import { DatabaseModel } from './database-model';
+import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
@@ -84,6 +84,8 @@ export class DatabaseTool implements BlockTool {
   private tabBar: DatabaseTabBar | null = null;
 
   private cardDrag: DatabaseCardDrag | null = null;
+  /** Group of the card the pointer pressed; a multiSelect drop replaces this option. */
+  private cardDragFromOptionId: string | null = null;
   private columnDrag: DatabaseColumnDrag | null = null;
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
@@ -913,10 +915,23 @@ export class DatabaseTool implements BlockTool {
     return this.renderBoardView(titlePropId, groupByPropId);
   }
 
+  /**
+   * The no-value option must stay first: column drag never drops before it,
+   * and handleGroupDrop reads a missing left neighbour as "first real option".
+   */
+  private groupOptions(groupByPropId: string): SelectOption[] {
+    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupByPropId);
+    const noValue: SelectOption = {
+      id: NO_VALUE_GROUP_KEY,
+      label: this.api.i18n.t('tools.database.noValueGroup', { property: property?.name ?? '' }),
+      position: '',
+    };
+
+    return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)];
+  }
+
   private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
-    const options = groupByPropId !== undefined
-      ? localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)
-      : [];
+    const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId) : [];
     const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
 
     this.view = new DatabaseBoardView({
@@ -939,10 +954,7 @@ export class DatabaseTool implements BlockTool {
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
 
     if (groupByPropId !== undefined) {
-      const options = localizeDatabaseSelectOptions(
-        this.model.getSelectOptions(groupByPropId),
-        this.api.i18n
-      );
+      const options = this.groupOptions(groupByPropId);
       const groups = this.model.getRowsGroupedBy(groupByPropId);
 
       this.view = new DatabaseListView({
@@ -1106,8 +1118,8 @@ export class DatabaseTool implements BlockTool {
 
     const properties: Record<string, PropertyValue> = { [titlePropId]: '' };
 
-    if (groupByPropId !== undefined && optionId !== null) {
-      properties[groupByPropId] = optionId;
+    if (groupByPropId !== undefined && optionId !== null && optionId !== NO_VALUE_GROUP_KEY) {
+      properties[groupByPropId] = this.groupValueFor(groupByPropId, optionId);
     }
 
     const rowData = this.model.createRowData(properties);
@@ -1132,6 +1144,10 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
+  private groupValueFor(groupByPropId: string, optionId: string): PropertyValue {
+    return this.model.getProperty(groupByPropId)?.type === 'multiSelect' ? [optionId] : optionId;
+  }
+
   private handleAddRow(optionId: string, boardEl: HTMLDivElement): void {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
@@ -1142,10 +1158,9 @@ export class DatabaseTool implements BlockTool {
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
-    const rowData = this.model.createRowData({
-      [titlePropId]: '',
-      [groupByPropId]: optionId,
-    });
+    const rowData = this.model.createRowData(optionId === NO_VALUE_GROUP_KEY
+      ? { [titlePropId]: '' }
+      : { [titlePropId]: '', [groupByPropId]: this.groupValueFor(groupByPropId, optionId) });
 
     this.api.blocks.insertAt(
       'database-row',
@@ -1244,7 +1259,7 @@ export class DatabaseTool implements BlockTool {
       this.columnControls = new DatabaseColumnControls({
         i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-        onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
+        onDelete: (optionId) => this.handleOptionDelete(optionId),
         onRenameInput: (optionId, label) => {
           // Instant local save — update the model immediately so save() captures latest value
           this.handleOptionRename(optionId, label);
@@ -1384,7 +1399,7 @@ export class DatabaseTool implements BlockTool {
         const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
         const optId = columnEl?.getAttribute('data-option-id') ?? null;
 
-        if (optId !== null) {
+        if (optId !== null && optId !== NO_VALUE_GROUP_KEY) {
           e.preventDefault();
           e.stopPropagation();
           this.columnDrag?.beginTracking(optId, e.clientX, e.clientY);
@@ -1394,7 +1409,7 @@ export class DatabaseTool implements BlockTool {
       }
 
       // Board: card drag
-      const cardEl = target.closest('[data-blok-database-card]');
+      const cardEl = target.closest<HTMLElement>('[data-blok-database-card]');
 
       if (cardEl !== null) {
         const rowId = cardEl.getAttribute('data-row-id');
@@ -1402,7 +1417,8 @@ export class DatabaseTool implements BlockTool {
         if (rowId !== null) {
           e.preventDefault();
           e.stopPropagation();
-          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY);
+          this.cardDragFromOptionId = cardEl.closest('[data-blok-database-column]')?.getAttribute('data-option-id') ?? null;
+          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY, cardEl);
         }
 
         return;
@@ -1434,7 +1450,7 @@ export class DatabaseTool implements BlockTool {
       const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
       const optId = columnEl?.getAttribute('data-option-id');
 
-      if (optId !== null && optId !== undefined) {
+      if (optId !== null && optId !== undefined && optId !== NO_VALUE_GROUP_KEY) {
         this.columnControls.makePillTitleEditable(header, optId);
         this.columnControls.appendDeleteButton(header, optId);
       }
@@ -1467,12 +1483,31 @@ export class DatabaseTool implements BlockTool {
     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
 
-    this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
+    const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
+
+    this.updateRowBlock(rowId, { [groupByPropId]: value });
     this.moveRowBlock(rowId, position);
     this.rerenderView();
 
-    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
+    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: value } });
     void this.sync.syncMoveRow({ rowId, position });
+  }
+
+  private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {
+    const target = toOptionId === NO_VALUE_GROUP_KEY ? null : toOptionId;
+
+    if (this.model.getProperty(groupByPropId)?.type !== 'multiSelect') {
+      return target;
+    }
+
+    const current = this.model.getRow(rowId)?.properties[groupByPropId];
+    const list = Array.isArray(current) ? current : [];
+    const from = this.cardDragFromOptionId;
+    const next = list.some((id) => id === from)
+      ? list.map((id) => (id === from ? target : id))
+      : [...list, target];
+
+    return [...new Set(next.filter((id): id is string => id !== null))];
   }
 
   private handleGroupDrop(result: GroupDragResult): void {
@@ -1563,7 +1598,7 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options } } });
   }
 
-  private handleOptionDelete(optionId: string, boardEl: HTMLDivElement): void {
+  private handleOptionDelete(optionId: string): void {
     const viewConfig = this.model.getView(this.activeViewId);
     const groupByPropId = viewConfig?.groupBy;
 
@@ -1581,19 +1616,19 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    // Delete rows in this group
-    const groups = this.model.getRowsGroupedBy(groupByPropId);
-    const rowsInGroup = groups.get(optionId) ?? [];
+    const rowsInGroup = this.model.getRowsGroupedBy(groupByPropId).get(optionId) ?? [];
 
     for (const row of rowsInGroup) {
-      this.deleteRowBlock(row.id);
-      void this.sync.syncDeleteRow({ rowId: row.id });
+      const current = row.properties[groupByPropId];
+      const value = Array.isArray(current) ? current.filter((id) => id !== optionId) : null;
+
+      this.updateRowBlock(row.id, { [groupByPropId]: value });
+      this.sync.syncUpdateRow({ rowId: row.id, properties: { [groupByPropId]: value } });
     }
 
-    // Remove the option
     const filteredOptions = prop.config.options.filter((o) => o.id !== optionId);
     this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
-    this.view.removeGroup?.(boardEl, optionId);
+    this.rerenderView();
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
   }
 

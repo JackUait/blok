@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 600 + 117 + 61 + 4 closure for all 782 keys', () => {
+  it('rebuilds a disjoint 601 + 117 + 61 + 4 closure for all 783 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(782);
+    expect(lifecycle.size).toBe(783);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -321,7 +321,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the find bar names why a replace button is disabled by literal.
       // +2: the page title header calls title.placeholder and title.ariaLabel by literal.
       // +2: the page icon calls title.addIcon and title.changeIcon by literal.
-      'executable-literal': 600,
+      'executable-literal': 601,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

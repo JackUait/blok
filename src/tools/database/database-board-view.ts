@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { NO_VALUE_GROUP_KEY } from './database-model';
 import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 
@@ -156,6 +157,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     columnEl.setAttribute('data-blok-database-column', '');
     columnEl.setAttribute('data-option-id', option.id);
+
+    if (option.id === NO_VALUE_GROUP_KEY) {
+      columnEl.setAttribute('data-blok-database-no-value-group', '');
+    }
+
     columnEl.setAttribute('role', 'group');
     columnEl.setAttribute('aria-label', option.label);
     columnEl.style.display = 'flex';

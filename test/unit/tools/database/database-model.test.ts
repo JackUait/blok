@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DatabaseModel } from '../../../../src/tools/database/database-model';
+import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
 import type {
   DatabaseData,
   DatabaseRow,
@@ -240,7 +240,7 @@ describe('DatabaseModel', () => {
       expect(groups.get('optB')).toHaveLength(1);
     });
 
-    it('puts rows with no value under empty string key', () => {
+    it('puts rows with no value under the no-value group key', () => {
       const opt = makeSelectOption({ id: 'optA', label: 'A', position: 'a0' });
       const prop = makeProperty({ id: 'status', type: 'select', config: { options: [opt] } });
       const model = new DatabaseModel(makeData({ schema: [prop] }));
@@ -250,8 +250,7 @@ describe('DatabaseModel', () => {
       ]);
       const groups = model.getRowsGroupedBy('status');
       expect(groups.get('optA')).toHaveLength(1);
-      expect(groups.get('')).toHaveLength(1);
-      expect(groups.get('')![0].id).toBe('r2');
+      expect(groups.get(NO_VALUE_GROUP_KEY)?.map((r) => r.id)).toEqual(['r2']);
     });
 
     it('sorts rows within each group by position', () => {
@@ -278,7 +277,28 @@ describe('DatabaseModel', () => {
       const groups = model.getRowsGroupedBy('done');
       expect(groups.get('true')).toHaveLength(1);
       expect(groups.get('false')).toHaveLength(1);
-      expect(groups.get('')).toHaveLength(1);
+      expect(groups.get(NO_VALUE_GROUP_KEY)).toHaveLength(1);
+    });
+  });
+
+  describe('getRowsGroupedBy on a multiSelect property', () => {
+    it('puts a row in every option group it carries, and an empty list in the no-value group', () => {
+      const optA = makeSelectOption({ id: 'a', label: 'A', position: 'a0' });
+      const optB = makeSelectOption({ id: 'b', label: 'B', position: 'a1' });
+      const prop = makeProperty({ id: 'tags', type: 'multiSelect', config: { options: [optA, optB] } });
+      const model = new DatabaseModel(makeData({ schema: [prop] }));
+
+      model.setRows([
+        makeRow({ id: 'r1', position: 'a0', properties: { tags: ['a', 'b'] } }),
+        makeRow({ id: 'r2', position: 'a1', properties: { tags: ['b'] } }),
+        makeRow({ id: 'r3', position: 'a2', properties: { tags: [] } }),
+      ]);
+
+      const groups = model.getRowsGroupedBy('tags');
+
+      expect(groups.get('a')?.map((r) => r.id)).toEqual(['r1']);
+      expect(groups.get('b')?.map((r) => r.id)).toEqual(['r1', 'r2']);
+      expect(groups.get(NO_VALUE_GROUP_KEY)?.map((r) => r.id)).toEqual(['r3']);
     });
   });
 

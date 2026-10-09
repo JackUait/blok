@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DatabaseModel } from '../../../../src/tools/database/database-model';
+import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
 import type {
   DatabaseRow,
   DatabaseViewConfig,
@@ -215,8 +215,8 @@ describe('DatabaseModel — mutation coverage', () => {
 
     // The undefined/null guard in `toGroupKey` is a shortcut, not a decision:
     // typeof undefined is 'undefined' and typeof null is 'object', so both fall
-    // through the string/boolean/number checks to the same '' return.
-    it('stringifies numbers and drops list values into the empty-key group', () => {
+    // through the string/boolean/number checks to the same NO_VALUE_GROUP_KEY return.
+    it('stringifies numbers and puts a list row in each of its values\' groups', () => {
       const numeric = makeRow({ id: 'r1', position: 'a0', properties: { score: 5 } });
       const list = makeRow({ id: 'r2', position: 'a1', properties: { score: ['x', 'y'] } });
       const missing = makeRow({ id: 'r3', position: 'a2', properties: {} });
@@ -226,7 +226,9 @@ describe('DatabaseModel — mutation coverage', () => {
 
       expect(model.getRowsGroupedBy('score')).toStrictEqual(new Map([
         ['5', [numeric]],
-        ['', [list, missing]],
+        ['x', [list]],
+        ['y', [list]],
+        [NO_VALUE_GROUP_KEY, [missing]],
       ]));
     });
   });

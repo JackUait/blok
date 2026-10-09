@@ -253,12 +253,12 @@ describe('DatabaseTool', () => {
       expect(element.getAttribute('data-blok-tool')).toBe('database');
     });
 
-    it('renders 3 columns for default data with 3 select options', () => {
+    it('renders the no-value column plus 3 columns for default data with 3 select options', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
       const columns = queryAllByData(element, 'data-blok-database-column');
 
-      expect(columns).toHaveLength(3);
+      expect(columns).toHaveLength(4);
     });
 
     it('renders a title element with data-blok-database-title attribute', () => {
@@ -391,6 +391,7 @@ describe('DatabaseTool', () => {
       expect(titleEl?.getAttribute('data-placeholder')).toBe('Neue Datenbank');
       expect(viewName?.textContent).toBe('Tafel');
       expect(columnTitles.map((column) => column.textContent)).toEqual([
+        'tools.database.noValueGroup',
         'Nicht begonnen',
         'In Arbeit',
         'Erledigt',
@@ -700,7 +701,7 @@ describe('DatabaseTool', () => {
 
       const initialColumns = queryAllByData(element, 'data-blok-database-column');
 
-      expect(initialColumns).toHaveLength(3);
+      expect(initialColumns).toHaveLength(4);
 
       const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
 
@@ -710,7 +711,7 @@ describe('DatabaseTool', () => {
 
       const columns = queryAllByData(element, 'data-blok-database-column');
 
-      expect(columns).toHaveLength(4);
+      expect(columns).toHaveLength(5);
 
       const saved = tool.save(document.createElement('div'));
       const statusProp = saved.schema.find((p) => p.type === 'select');
@@ -776,91 +777,6 @@ describe('DatabaseTool', () => {
 
       // An open menu holds the page scroll lock until it is destroyed.
       expect(queryByData(document.body, 'data-mock-popover')).toBeNull();
-    });
-  });
-
-  describe('column delete cascades block deletions for rows', () => {
-    it('calls api.blocks.delete for each row then adapter.updateProperty when option is deleted', async () => {
-      const deleteRowCalls: string[] = [];
-      const updatePropertyCalls: Array<{ propertyId: string }> = [];
-
-      const mockAdapter = {
-        loadDatabase: vi.fn(),
-        createRow: vi.fn(),
-        updateRow: vi.fn(),
-        moveRow: vi.fn(),
-        deleteRow: vi.fn(async (params: { rowId: string }) => {
-          deleteRowCalls.push(params.rowId);
-        }),
-        createProperty: vi.fn(),
-        updateProperty: vi.fn(async (params: { propertyId: string }) => {
-          updatePropertyCalls.push(params);
-          return {} as never;
-        }),
-        deleteProperty: vi.fn(),
-        createView: vi.fn(),
-        updateView: vi.fn(),
-        deleteView: vi.fn(),
-      };
-
-      const childBlocks = [
-        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
-        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, position: 'a1' }),
-      ];
-
-      const options = createDatabaseOptions({}, { adapter: mockAdapter }, { childBlocks });
-
-      // Make getBlockIndex return distinct indices for different row IDs
-      let deleteCallCount = 0;
-
-      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockImplementation((blockId: string) => {
-        if (blockId === 'row-1') return 1;
-        if (blockId === 'row-2') return 2;
-        return 0;
-      });
-
-      // After each delete, remove the block from the children array so syncRowsFromBlocks sees the update
-      (options.api.blocks.delete as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        deleteCallCount++;
-        // After deletion, the subsequent getChildren calls should return fewer blocks
-        if (deleteCallCount >= 2) {
-          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([]);
-        } else {
-          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([childBlocks[1]]);
-        }
-      });
-
-      const tool = new DatabaseTool(options);
-      const element = tool.render();
-      tool.rendered();
-
-      // Find the delete-column button for opt-todo (injected by DatabaseColumnControls.makeEditable)
-      const deleteBtn = queryAllByData(element, 'data-blok-database-delete-column')
-        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!;
-
-      expect(deleteBtn).not.toBeNull();
-
-      deleteBtn.click();
-
-      // api.blocks.delete should be called for each row in the column
-      expect(options.api.blocks.delete).toHaveBeenCalledTimes(2);
-
-      // Adapter deleteRow calls are async — wait for them to flush
-      await vi.waitFor(() => {
-        expect(deleteRowCalls).toHaveLength(2);
-      });
-
-      expect(deleteRowCalls).toContain('row-1');
-      expect(deleteRowCalls).toContain('row-2');
-      expect(updatePropertyCalls.length).toBeGreaterThan(0);
-      expect(updatePropertyCalls[0].propertyId).toBe('prop-status');
-
-      // Column should be removed from DOM
-      const remainingColumns = queryAllByData(element, 'data-blok-database-column');
-
-      expect(remainingColumns).toHaveLength(2);
-
-      tool.destroy();
     });
   });
 
@@ -2373,7 +2289,7 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
-      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(2);
+      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(3);
     });
 
     it('adds a row to the end of the clicked group in a grouped list and syncs it', async () => {
@@ -3324,6 +3240,335 @@ describe('DatabaseTool', () => {
 
       tool.destroy();
       container.remove();
+    });
+  });
+
+  describe('no-value group', () => {
+    const interpolatingT = (key: string, vars?: Record<string, string | number>): string => {
+      if (key === 'tools.database.noValueGroup') return `No ${String(vars?.property)}`;
+
+      return key === 'tools.database.defaultStatusProperty' ? 'Status' : key;
+    };
+
+    const renderBoard = (rows: Array<{ id: string; properties: Record<string, unknown> }>): {
+      tool: DatabaseTool;
+      element: HTMLElement;
+      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
+    } => {
+      const childBlocks = rows.map((r, i) => createMockRowBlock({ id: r.id, properties: r.properties, position: `a${i}` }));
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+
+      options.api.i18n.t = interpolatingT;
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      return { tool, element, options };
+    };
+
+    const noValueColumn = (element: HTMLElement): HTMLElement | null =>
+      queryByData(element, 'data-blok-database-no-value-group');
+
+    it('shows a row with no group value on the board, in a first "No <property>" column', () => {
+      const { tool, element } = renderBoard([
+        { id: 'row-empty', properties: { 'prop-title': 'Loose', 'prop-status': null } },
+        { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
+      ]);
+
+      const card = queryAllByData(element, 'data-row-id', 'row-empty').find((el) => el.hasAttribute('data-blok-database-card'));
+
+      expect(card).toBeDefined();
+
+      const column = noValueColumn(element);
+
+      expect(column).not.toBeNull();
+      expect(column?.contains(card ?? null)).toBe(true);
+      expect(queryAllByData(element, 'data-blok-database-column')[0]).toBe(column);
+      expect(queryByData(column ?? element, 'data-blok-database-column-title')?.textContent).toBe('No Status');
+
+      tool.destroy();
+    });
+
+    it('keeps the no-value column on an empty board so a card can be dropped into it', () => {
+      const { tool, element } = renderBoard([]);
+
+      expect(noValueColumn(element)).not.toBeNull();
+
+      tool.destroy();
+    });
+
+    it('gives the no-value column no delete button and no rename', () => {
+      const { tool, element } = renderBoard([]);
+      const column = noValueColumn(element);
+
+      expect(column).not.toBeNull();
+      expect(queryByData(column ?? element, 'data-blok-database-delete-column')).toBeNull();
+
+      const title = queryByData(column ?? element, 'data-blok-database-column-title');
+
+      title?.click();
+
+      expect(queryByData(column ?? element, 'data-blok-database-column-title-input')).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('creates a row with no group value from "+ New" in the no-value column', () => {
+      const { tool, element, options } = renderBoard([]);
+      const column = noValueColumn(element);
+      const addCard = queryByData(column ?? element, 'data-blok-database-add-card');
+
+      expect(addCard).not.toBeNull();
+      addCard?.click();
+
+      const insertAt = vi.mocked(options.api.blocks.insertAt);
+
+      expect(insertAt).toHaveBeenCalledTimes(1);
+
+      const data = insertAt.mock.calls[0][1] as DatabaseRowData;
+
+      expect(data.properties).not.toHaveProperty('prop-status');
+
+      tool.destroy();
+    });
+
+    it('clears the group value when a card is dropped into the no-value column', () => {
+      const { tool, element, options } = renderBoard([
+        { id: 'row-todo', properties: { 'prop-title': 'Todo', 'prop-status': 'opt-todo' } },
+      ]);
+      const column = noValueColumn(element);
+      const toOptionId = column?.getAttribute('data-option-id') ?? 'missing';
+      const cardDrag = (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag;
+      const rowBlock = vi.mocked(options.api.blocks.getChildren).mock.results[0]?.value as BlockAPI[];
+
+      cardDrag.onDrop({ rowId: 'row-todo', toOptionId, beforeRowId: null, afterRowId: null });
+
+      expect(rowBlock[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
+
+      tool.destroy();
+    });
+
+    it('never starts a column drag from the no-value column header', () => {
+      const { tool, element } = renderBoard([]);
+      const header = queryByData(noValueColumn(element) ?? element, 'data-blok-database-column-header');
+      const columnDrag = (tool as unknown as { columnDrag: DatabaseColumnDrag }).columnDrag;
+      const begin = vi.spyOn(columnDrag, 'beginTracking');
+
+      expect(header).not.toBeNull();
+      fireEvent.pointerDown(header ?? element, { clientX: 0, clientY: 0 });
+
+      expect(begin).not.toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('shows a row with no group value in a grouped list', () => {
+      const childBlocks = [createMockRowBlock({ id: 'row-empty', properties: { 'prop-title': 'Loose' }, position: 'a0' })];
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+      }, {}, { childBlocks });
+
+      options.api.i18n.t = interpolatingT;
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      const row = queryAllByData(element, 'data-row-id', 'row-empty').find((el) => el.hasAttribute('data-blok-database-list-row'));
+
+      expect(row).toBeDefined();
+
+      tool.destroy();
+    });
+  });
+
+  describe('grouping by a multiSelect property', () => {
+    const tagsData = (): Partial<DatabaseData> => ({
+      schema: [
+        { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+        { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
+          options: [
+            { id: 'opt-a', label: 'A', position: 'a0' },
+            { id: 'opt-b', label: 'B', position: 'a1' },
+            { id: 'opt-c', label: 'C', position: 'a2' },
+          ],
+        }},
+      ],
+      views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
+    });
+
+    const renderTagsBoard = (tags: string[]): {
+      tool: DatabaseTool;
+      element: HTMLElement;
+      options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
+      rowBlock: BlockAPI;
+    } => {
+      const rowBlock = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task', 'prop-tags': tags }, position: 'a0' });
+      const options = createDatabaseOptions(tagsData(), {}, { childBlocks: [rowBlock] });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      return { tool, element, options, rowBlock };
+    };
+
+    const cardsIn = (element: HTMLElement, optionId: string): HTMLElement[] => {
+      const column = queryAllByData(element, 'data-option-id', optionId).find((el) => el.hasAttribute('data-blok-database-column'));
+
+      return column === undefined ? [] : queryAllByData(column, 'data-blok-database-card');
+    };
+
+    const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
+      (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag.onDrop(result);
+    };
+
+    it('shows a row in every option group it carries', () => {
+      const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
+
+      expect(cardsIn(element, 'opt-a').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
+      expect(cardsIn(element, 'opt-b').map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
+      expect(cardsIn(element, 'opt-c')).toHaveLength(0);
+
+      tool.destroy();
+    });
+
+    it('replaces only the dragged-from option when a card moves to another group', () => {
+      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
+      const cardInA = cardsIn(element, 'opt-a')[0];
+
+      fireEvent.pointerDown(cardInA, { clientX: 0, clientY: 0 });
+      dropCard(tool, { rowId: 'row-1', toOptionId: 'opt-c', beforeRowId: null, afterRowId: null });
+
+      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-c', 'opt-b'] });
+
+      tool.destroy();
+    });
+
+    it('drops the dragged-from option when a card moves to a group the row already has', () => {
+      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
+
+      fireEvent.pointerDown(cardsIn(element, 'opt-a')[0], { clientX: 0, clientY: 0 });
+      dropCard(tool, { rowId: 'row-1', toOptionId: 'opt-b', beforeRowId: null, afterRowId: null });
+
+      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
+
+      tool.destroy();
+    });
+
+    it('removes the dragged-from option when a card moves to the no-value group', () => {
+      const { tool, element, rowBlock } = renderTagsBoard(['opt-a', 'opt-b']);
+      const noValueId = queryByData(element, 'data-blok-database-no-value-group')?.getAttribute('data-option-id') ?? 'missing';
+
+      fireEvent.pointerDown(cardsIn(element, 'opt-b')[0], { clientX: 0, clientY: 0 });
+      dropCard(tool, { rowId: 'row-1', toOptionId: noValueId, beforeRowId: null, afterRowId: null });
+
+      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-a'] });
+
+      tool.destroy();
+    });
+
+    it('fades the pressed copy of a multi-group card, not the first copy', () => {
+      const { tool, element } = renderTagsBoard(['opt-a', 'opt-b']);
+      const cardInB = cardsIn(element, 'opt-b')[0];
+      const cardInA = cardsIn(element, 'opt-a')[0];
+
+      fireEvent.pointerDown(cardInB, { clientX: 0, clientY: 0 });
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40, clientY: 40 }));
+
+      expect(cardInB.style.opacity).toBe('0.4');
+      expect(cardInA.style.opacity).toBe('');
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      tool.destroy();
+    });
+
+    it('creates a row carrying the option as a list from "+ New" in a multiSelect group', () => {
+      const { tool, element, options } = renderTagsBoard([]);
+      const column = queryAllByData(element, 'data-option-id', 'opt-a').find((el) => el.hasAttribute('data-blok-database-column'));
+      const addCard = queryByData(column ?? element, 'data-blok-database-add-card');
+
+      addCard?.click();
+
+      const data = vi.mocked(options.api.blocks.insertAt).mock.calls[0][1] as DatabaseRowData;
+
+      expect(data.properties['prop-tags']).toEqual(['opt-a']);
+
+      tool.destroy();
+    });
+  });
+
+  // GATED ON USER DECISION D9: rows keep existing when their column is deleted.
+  describe('deleting a board column', () => {
+    const liveRowBlock = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
+      const block = createMockRowBlock({ id, properties, position });
+      const data = block.preservedData as DatabaseRowData;
+
+      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
+        if (method === 'updateProperties') Object.assign(data.properties, params);
+      });
+
+      return block;
+    };
+
+    const clickDelete = (element: HTMLElement, optionId: string): void => {
+      queryAllByData(element, 'data-blok-database-delete-column')
+        .find((el) => el.getAttribute('data-option-id') === optionId)
+        ?.click();
+    };
+
+    it('keeps the rows and moves them to the no-value group', () => {
+      const childBlocks = [
+        liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0'),
+        liveRowBlock('row-2', { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, 'a1'),
+      ];
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      clickDelete(element, 'opt-todo');
+
+      expect(options.api.blocks.delete).not.toHaveBeenCalled();
+      expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
+      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
+
+      const noValue = queryByData(element, 'data-blok-database-no-value-group');
+      const cardIds = queryAllByData(noValue ?? element, 'data-blok-database-card').map((c) => c.getAttribute('data-row-id'));
+
+      expect(cardIds).toEqual(['row-1', 'row-2']);
+      expect(queryAllByData(element, 'data-option-id', 'opt-todo')).toHaveLength(0);
+
+      tool.destroy();
+    });
+
+    it('removes only the deleted option from a multiSelect row', () => {
+      const row = liveRowBlock('row-1', { 'prop-title': 'Task', 'prop-tags': ['opt-a', 'opt-b'] }, 'a0');
+      const options = createDatabaseOptions({
+        schema: [
+          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+          { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
+            options: [
+              { id: 'opt-a', label: 'A', position: 'a0' },
+              { id: 'opt-b', label: 'B', position: 'a1' },
+            ],
+          }},
+        ],
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
+      }, {}, { childBlocks: [row] });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      clickDelete(element, 'opt-a');
+
+      expect(options.api.blocks.delete).not.toHaveBeenCalled();
+      expect(row.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
+
+      tool.destroy();
     });
   });
 });

@@ -63,6 +63,16 @@ describe('DatabaseColumnDrag', () => {
     vi.restoreAllMocks();
   });
 
+  it('never drops a column before the no-value column', () => {
+    wrapper.querySelector('[data-option-id="opt-0"]')?.setAttribute('data-blok-database-no-value-group', '');
+
+    drag.beginTracking('opt-2', 450, 50);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 50 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 50 }));
+
+    expect(onDrop).toHaveBeenCalledWith({ optionId: 'opt-2', beforeOptionId: 'opt-1', afterOptionId: null });
+  });
+
   it('does not start drag below 10px horizontal threshold', () => {
     drag.beginTracking('opt-0', 50, 50);
 

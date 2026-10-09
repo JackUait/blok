@@ -51,14 +51,15 @@ export class DatabaseCardDrag {
 
   /**
    * Start tracking pointer after a pointerdown on a card.
+   * A multiSelect board draws one card per option, so pass the pressed card.
    */
-  public beginTracking(rowId: string, startX: number, startY: number): void {
+  public beginTracking(rowId: string, startX: number, startY: number, sourceCard?: HTMLElement): void {
     this.cleanup();
     this.rowId = rowId;
     this.startX = startX;
     this.startY = startY;
     this.isDragging = false;
-    this.sourceCard = this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
+    this.sourceCard = sourceCard ?? this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
 
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);

@@ -26,6 +26,13 @@ describe('cell editor CSS', () => {
     expect(declared('[data-blok-database-select-option-check]', 'color')).toEqual(['var(--blok-icon-active-text)']);
   });
 
+  it('a related row picked in the relation editor has no fill and keeps the unselected ink', () => {
+    expect(declared('[data-blok-database-relation-option][aria-selected="true"]', 'background-color')).toEqual([]);
+    expect(declared('[data-blok-database-relation-option][aria-selected="true"]', 'color')).toEqual(['var(--blok-text-primary)']);
+    expect(declared('[data-blok-database-relation-option]', 'color')).toEqual(['var(--blok-text-primary)']);
+    expect(declared('[data-blok-database-relation-option][aria-selected="true"]::after', 'color')).toEqual(['var(--blok-text-primary)']);
+  });
+
   it('the picked day is a gray fill with primary ink, never blue', () => {
     expect(declared('[data-blok-database-date-day][aria-selected="true"]', 'background-color')).toEqual(['var(--blok-icon-active-bg)']);
     expect(declared('[data-blok-database-date-day][aria-selected="true"]', 'color')).toEqual(['var(--blok-icon-active-text)']);

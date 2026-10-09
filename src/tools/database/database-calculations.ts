@@ -39,6 +39,10 @@ export const CALCULATIONS_FOR_TYPE: Readonly<Record<PropertyType, readonly Calcu
   uniqueId: GENERIC,
   createdTime: [...GENERIC, 'earliest_date', 'latest_date', 'date_range'],
   lastEditedTime: [...GENERIC, 'earliest_date', 'latest_date', 'date_range'],
+  relation: GENERIC,
+  // A formula or rollup calculates as its result type: callers ask with that property.
+  formula: GENERIC,
+  rollup: GENERIC,
 };
 
 const isEmpty = (value: PropertyValue | undefined): boolean => {

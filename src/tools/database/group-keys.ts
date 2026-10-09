@@ -12,7 +12,7 @@ export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
 /** Rich text holds a document, which has no group. Notion also leaves out Files, Button and ID (research/08). */
 export const GROUPABLE_TYPES: readonly PropertyType[] = [
   'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'checkbox', 'url', 'email', 'phone',
-  'person', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+  'person', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'relation', 'formula', 'rollup',
 ];
 
 const DATE_LIKE: readonly PropertyType[] = ['date', 'createdTime', 'lastEditedTime'];
@@ -136,7 +136,8 @@ export const groupKeysFor = (
     case 'status': return typeof value === 'string' && value !== '' ? [value] : [NO_VALUE_GROUP_KEY];
     case 'person':
     case 'createdBy':
-    case 'lastEditedBy': {
+    case 'lastEditedBy':
+    case 'relation': {
       const ids = personIdsOf(value);
 
       return ids.length > 0 ? ids : [NO_VALUE_GROUP_KEY];
@@ -165,6 +166,9 @@ export const groupKeysFor = (
     }
     case 'richText':
     case 'files':
+    // Grouped by their result type: the model groups with that property.
+    case 'formula':
+    case 'rollup':
       return [NO_VALUE_GROUP_KEY];
   }
 };
@@ -250,7 +254,9 @@ export const groupValueForKey = (property: PropertyDefinition, key: string, sett
     case 'status':
       return key;
     case 'multiSelect': return [key];
-    case 'person': return [{ id: key }];
+    case 'person':
+    case 'relation':
+      return [{ id: key }];
     case 'checkbox': return key === 'true';
     case 'number': return settings.numberBy === 'range' ? undefined : toNumber(key);
     case 'date': return key.startsWith('day:') ? key.slice(4) : undefined;
@@ -267,6 +273,8 @@ export const groupValueForKey = (property: PropertyDefinition, key: string, sett
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
+    case 'formula':
+    case 'rollup':
       return undefined;
   }
 };

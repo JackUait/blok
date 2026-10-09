@@ -16,7 +16,7 @@ import {
   defaultFilterFor,
   filterPillLabel,
   menuOperatorOf,
-  operatorChoices,
+  operatorChoicesFor,
   operatorLabelKey,
   operatorNeedsValue,
   relativeValueLabelKey,
@@ -99,6 +99,8 @@ export interface ViewSettingsContext {
   groups: (sub: boolean) => ViewGroupEntry[];
   /** People the host lists, for person filters. */
   people?: () => Array<{ id: string; name: string }>;
+  /** Rows a relation can point at, for relation filters. */
+  relatedRows?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
   /**
    * The active layout's own rows (gallery, calendar), as menu items. A row
    * with children becomes a page of choices; one without becomes a switch.
@@ -651,7 +653,7 @@ export class ViewSettingsPages {
   private operators(property: PropertyDefinition, current: string, onPick: (operator: string) => void): PanelPage {
     return {
       title: property.name,
-      build: () => operatorChoices(property.type).map((choice) => panelRow({
+      build: () => operatorChoicesFor(property).map((choice) => panelRow({
         label: this.ctx.i18n.t(choice.labelKey),
         testId: `database-filter-op-${choice.operator}`,
         checked: menuOperatorOf(current) === choice.operator,
@@ -702,7 +704,11 @@ export class ViewSettingsPages {
       case 'createdBy':
       case 'lastEditedBy':
         return this.personControls(value, update);
+      case 'relation':
+        return this.relationControls(property, value, update);
       case 'files':
+      case 'formula':
+      case 'rollup':
         return [];
       case 'date':
       case 'createdTime':
@@ -751,6 +757,18 @@ export class ViewSettingsPages {
           onInput: (text) => update({ value: text }),
         })];
     }
+  }
+
+  /** A relation filter: the related database's rows, by title. */
+  private relationControls(property: PropertyDefinition, value: FilterConfig['value'], update: (patch: { value: string[] }) => void): HTMLElement[] {
+    const ids = idList(value);
+
+    return (this.ctx.relatedRows?.(property) ?? []).map((row) => panelRow({
+      label: row.title === '' ? this.t('relationUntitled') : row.title,
+      testId: `database-filter-related-${row.id}`,
+      checked: ids.includes(row.id),
+      onClick: () => update({ value: ids.includes(row.id) ? ids.filter((id) => id !== row.id) : [...ids, row.id] }),
+    }));
   }
 
   /**
@@ -1257,11 +1275,15 @@ export class ViewSettingsPages {
       case 'person':
       case 'createdBy':
       case 'lastEditedBy':
+      case 'relation':
         return [];
       // Not groupable (GROUPABLE_TYPES): Notion leaves Files and ID out of "Group by".
       case 'files':
       case 'uniqueId':
       case 'richText':
+      // The panel gets formula and rollup as their result type.
+      case 'formula':
+      case 'rollup':
         return [];
     }
   }
@@ -1412,11 +1434,14 @@ const groupSortChoices = (type: PropertyType): Array<readonly [GroupSort, string
     case 'person':
     case 'createdBy':
     case 'lastEditedBy':
+    case 'relation':
       return [];
     // Not groupable (GROUPABLE_TYPES).
     case 'files':
     case 'uniqueId':
     case 'richText':
+    case 'formula':
+    case 'rollup':
       return [];
   }
 };

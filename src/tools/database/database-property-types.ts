@@ -1,9 +1,11 @@
 import {
   IconBookmark,
+  IconArrowDiagonal,
   IconCalendar,
   IconCursor,
   IconEmojiSmile,
   IconEmojiWink,
+  IconEquation,
   IconFile,
   IconGlobe,
   IconHash,
@@ -13,6 +15,7 @@ import {
   IconMultiSelect,
   IconPencil,
   IconPlus,
+  IconSearch,
   IconSelect,
   IconSliders,
   IconText,
@@ -45,12 +48,15 @@ export const PROPERTY_TYPE_META: Readonly<Record<PropertyType, PropertyTypeMeta>
   lastEditedTime: { icon: IconPencil, labelKey: 'tools.database.propertyTypeLastEditedTime' },
   createdBy: { icon: IconEmojiWink, labelKey: 'tools.database.propertyTypeCreatedBy' },
   lastEditedBy: { icon: IconCursor, labelKey: 'tools.database.propertyTypeLastEditedBy' },
+  relation: { icon: IconArrowDiagonal, labelKey: 'tools.database.propertyTypeRelation' },
+  rollup: { icon: IconSearch, labelKey: 'tools.database.propertyTypeRollup' },
+  formula: { icon: IconEquation, labelKey: 'tools.database.propertyTypeFormula' },
 };
 
 /** Notion's "Select type" order (research/08), limited to the types Blok has. */
 const ADDABLE_ORDER: readonly PropertyType[] = [
   'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'files', 'checkbox', 'url', 'phone', 'email',
-  'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+  'relation', 'rollup', 'formula', 'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
 ];
 
 /** Types a person can add or change to. Person needs the host's people directory. */

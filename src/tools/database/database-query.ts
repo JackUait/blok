@@ -43,7 +43,15 @@ export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>>
   createdTime: DATE_OPERATORS,
   lastEditedTime: DATE_OPERATORS,
   uniqueId: COMPARE_OPERATORS,
+  relation: LIST_OPERATORS,
+  // Formula and rollup filter as their result type; the model queries with
+  // that property (ComputedProperties.valueProperty), never with these.
+  formula: [],
+  rollup: [],
 };
+
+/** A rollup that shows a list filters with Notion's API quantifiers. */
+const QUANTIFIERS = ['any', 'every', 'none'] as const;
 
 const OP = 'tools.database.filterOperator.';
 
@@ -305,6 +313,33 @@ const MATCHERS: Record<PropertyType, Matcher> = {
   date: (value, operator, target, _property, now) => matchDate(value, operator, target, now),
   createdTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
   lastEditedTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
+  relation: matchMultiSelect,
+  formula: () => undefined,
+  rollup: () => undefined,
+};
+
+const LIST_SHAPES: readonly PropertyType[] = ['multiSelect', 'person', 'relation', 'files'];
+
+const isRollupList = (property: PropertyDefinition): boolean => property.rollup !== undefined && LIST_SHAPES.includes(property.type);
+
+/**
+ * any / every / none over a rollup list: each item is compared by id with the
+ * picked ids. Every on an empty list is false, as nothing is picked.
+ */
+const matchQuantified = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
+  const items = personIdsOf(value ?? null);
+  const wanted = toIdList(target);
+
+  if (operator === 'is_empty') return items.length === 0;
+  if (operator === 'is_not_empty') return items.length > 0;
+  if (wanted.length === 0) return undefined;
+  const hit = (id: string): boolean => wanted.includes(id);
+
+  if (operator === 'any') return items.some(hit);
+  if (operator === 'every') return items.length > 0 && items.every(hit);
+  if (operator === 'none') return !items.some(hit);
+
+  return undefined;
 };
 
 /** A person filter's value for the current user (Notion API `"me"`). */
@@ -345,6 +380,11 @@ export const matchCondition = (
 ): boolean | undefined => {
   const property = schema.find((p) => p.id === condition.propertyId);
 
+  if (property !== undefined && isRollupList(property)) {
+    return (QUANTIFIERS as readonly string[]).includes(condition.operator) || condition.operator === 'is_empty' || condition.operator === 'is_not_empty'
+      ? matchQuantified(readPropertyValue(row, property), condition.operator, condition.value)
+      : undefined;
+  }
   // A type from a newer client has no entry here: let the row through.
   if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(condition.operator) ?? false)) return undefined;
   const target = PERSON_TYPES.includes(property.type) ? resolveMe(condition.value, me) : condition.value;
@@ -431,7 +471,8 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
     }
     case 'person':
     case 'createdBy':
-    case 'lastEditedBy': {
+    case 'lastEditedBy':
+    case 'relation': {
       const keys = personIdsOf(value);
 
       return keys.length > 0 ? keys : undefined;
@@ -448,7 +489,8 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
     case 'email':
     case 'phone':
       return typeof value === 'string' && value !== '' ? value : undefined;
-    default:
+    case 'formula':
+    case 'rollup':
       return undefined;
   }
 };
@@ -519,6 +561,9 @@ const filterTargetValue = (type: PropertyType | undefined, operator: string, tar
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
+    case 'relation':
+    case 'formula':
+    case 'rollup':
     case undefined:
       return undefined;
   }
@@ -564,6 +609,9 @@ const searchText = (property: PropertyDefinition, value: PropertyValue | undefin
     case 'createdTime':
     case 'lastEditedTime':
     case 'richText':
+    case 'relation':
+    case 'formula':
+    case 'rollup':
       return '';
   }
 };

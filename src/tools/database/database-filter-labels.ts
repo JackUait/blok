@@ -71,7 +71,24 @@ const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
   date: DATE,
   createdTime: DATE,
   lastEditedTime: DATE,
+  relation: LIST,
+  // A formula or rollup filters by its result type: callers pass that property.
+  formula: TEXT,
+  rollup: TEXT,
 };
+
+/** A rollup that shows a list: Notion's API filters it with any / every / none. */
+const QUANTIFIED = [op('any', 'any'), op('every', 'every'), op('none', 'none'), ...EMPTY];
+
+const LIST_SHAPES: readonly PropertyType[] = ['multiSelect', 'person', 'relation', 'files'];
+
+/** Whether a property (as its value shows) is a rollup list. */
+export const isRollupList = (property: Pick<PropertyDefinition, 'type' | 'rollup'>): boolean =>
+  property.rollup !== undefined && LIST_SHAPES.includes(property.type);
+
+/** Operators for a property as its value shows: a rollup list gets any / every / none. */
+export const operatorChoicesFor = (property: Pick<PropertyDefinition, 'type' | 'rollup'>): OperatorChoice[] =>
+  isRollupList(property) ? QUANTIFIED : OPERATORS[property.type];
 
 export const operatorChoices = (type: PropertyType): OperatorChoice[] => OPERATORS[type];
 
@@ -109,7 +126,7 @@ const isWithin = (operator: string): operator is typeof WITHIN_OPERATORS[number]
 export const menuOperatorOf = (operator: string): string => (isWithin(operator) ? 'within' : operator);
 
 export const operatorLabelKey = (type: PropertyType, operator: string): string | undefined =>
-  OPERATORS[type].find((choice) => choice.operator === menuOperatorOf(operator))?.labelKey;
+  [...OPERATORS[type], ...QUANTIFIED].find((choice) => choice.operator === menuOperatorOf(operator))?.labelKey;
 
 /** Whether an operator takes a value from the person. */
 export const operatorNeedsValue = (operator: string): boolean => {
@@ -128,6 +145,8 @@ const idsOf = (value: unknown): string[] => {
 export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & { id: string } => {
   const base = { id: nanoid(), propertyId: property.id };
 
+  if (isRollupList(property)) return { ...base, operator: 'any', value: [] };
+
   switch (property.type) {
     case 'date':
     case 'createdTime':
@@ -143,10 +162,13 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
     case 'person':
     case 'createdBy':
     case 'lastEditedBy':
+    case 'relation':
       return { ...base, operator: 'contains', value: [] };
     case 'checkbox': return { ...base, operator: 'equals', value: true };
     case 'richText':
     case 'files':
+    case 'formula':
+    case 'rollup':
       return { ...base, operator: 'is_not_empty', value: null };
     case 'title':
     case 'text':
@@ -165,7 +187,8 @@ export const filterValueText = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
   property: PropertyDefinition,
   t: Translate,
-  personName: (id: string) => string | undefined = () => undefined
+  personName: (id: string) => string | undefined = () => undefined,
+  rowTitle: (id: string) => string | undefined = () => undefined
 ): string => {
   const { operator, value } = filter;
 
@@ -181,6 +204,9 @@ export const filterValueText = (
   if (property.type === 'checkbox') return value === true ? t('tools.database.filterChecked') : t('tools.database.filterUnchecked');
   if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {
     return idsOf(value).map((id) => (id === ME_FILTER_VALUE ? t('tools.database.filterMe') : personName(id) ?? '')).filter((name) => name !== '').join(', ');
+  }
+  if (property.type === 'relation') {
+    return idsOf(value).map((id) => rowTitle(id) ?? '').filter((name) => name !== '').join(', ');
   }
   if (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status') {
     const ids = idsOf(value);
@@ -234,6 +260,9 @@ export const sortDirectionLabelKey = (type: PropertyType, direction: SortConfig[
     case 'lastEditedBy':
     case 'files':
     case 'richText':
+    case 'relation':
+    case 'formula':
+    case 'rollup':
       return asc ? 'tools.database.sortAscending' : 'tools.database.sortDescending';
   }
 };

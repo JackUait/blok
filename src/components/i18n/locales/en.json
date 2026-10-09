@@ -1238,5 +1238,12 @@
   "tools.database.formula.error.conditionNotBoolean": "{name}() needs a condition that returns Boolean, got {type}",
   "tools.database.formula.error.unknownRelatedProperty": "The related database has no property \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" refers back to itself",
-  "tools.database.formula.error.tooDeep": "Formulas can reference other formulas only 15 levels deep"
+  "tools.database.formula.error.tooDeep": "Formulas can reference other formulas only 15 levels deep",
+  "tools.database.propertyTypeRelation": "Relation",
+  "tools.database.propertyTypeRollup": "Rollup",
+  "tools.database.propertyTypeFormula": "Formula",
+  "tools.database.filterOperator.any": "Any",
+  "tools.database.filterOperator.every": "Every",
+  "tools.database.filterOperator.none": "None",
+  "tools.database.relationUntitled": "Untitled"
 }

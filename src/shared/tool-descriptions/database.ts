@@ -63,6 +63,44 @@ const PROPERTY_SETTINGS = {
     },
   },
   uniqueId: { type: 'object', additionalProperties: false, properties: { prefix: { type: 'string' } } },
+  formula: {
+    type: 'object',
+    required: ['expression'],
+    additionalProperties: false,
+    properties: {
+      expression: { type: 'string', description: 'Formulas 2.0 source. prop("Name") is stored as {{property:<id>}}, so a rename keeps working.' },
+    },
+  },
+  relation: {
+    type: 'object',
+    description: 'Values are id objects of rows of the target database: [{ "id": "<row block id>" }].',
+    required: ['targetDatabaseId'],
+    additionalProperties: false,
+    properties: {
+      targetDatabaseId: { type: 'string', description: 'A database block in this document. The database\'s own id makes a self-relation.' },
+      targetDocumentId: { type: 'string', description: 'A database in another document, resolved by the host.' },
+      limit: { enum: [1, null], description: '1 keeps one related row. Absent or null means no limit.' },
+      twoWay: { type: 'boolean' },
+      syncedPropertyId: { type: 'string', description: 'Two-way: the mirroring property on the target database.' },
+    },
+  },
+  rollup: {
+    type: 'object',
+    required: ['relationPropertyId', 'targetPropertyId', 'function'],
+    additionalProperties: false,
+    properties: {
+      relationPropertyId: { type: 'string' },
+      targetPropertyId: { type: 'string', description: 'A property of the related database.' },
+      function: {
+        type: 'string',
+        enum: [
+          'show_original', 'show_unique', 'count', 'count_values', 'unique', 'empty', 'not_empty', 'percent_empty', 'percent_not_empty',
+          'sum', 'average', 'median', 'min', 'max', 'range', 'earliest_date', 'latest_date', 'date_range',
+          'checked', 'unchecked', 'percent_checked', 'percent_unchecked', 'count_per_group', 'percent_per_group',
+        ],
+      },
+    },
+  },
 };
 
 /** Per-view group lists hold id objects so two peers' entries merge. */
@@ -143,6 +181,7 @@ export const DATABASE_DATA = {
             enum: [
               'title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url', 'richText',
               'status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId',
+              'relation', 'rollup', 'formula',
             ],
           },
           position: { type: 'string', description: 'Fractional-index sort key.' },

@@ -178,6 +178,14 @@ export {
   DatabaseConfig,
   DatabaseViewStateStore,
   PersonalViewPatch,
+  ComputedPropertyType,
+  FormulaSettings,
+  RelationSettings,
+  RollupSettings,
+  RollupFunction,
+  RelationValue,
+  ResolvedRelationRow,
+  DatabaseRelations,
 } from './tools/database';
 export { BlockId } from './data-formats/block-id';
 export {

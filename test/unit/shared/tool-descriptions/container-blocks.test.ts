@@ -251,6 +251,27 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'relation, rollup and formula properties',
+    data: {
+      activeViewId: 'v',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'hours', name: 'Hours', type: 'number', position: 'a1' },
+        { id: 'rel', name: 'Related', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db', limit: 1, twoWay: true, syncedPropertyId: 'back' } },
+        { id: 'far', name: 'Elsewhere', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db2', targetDocumentId: 'doc2', limit: null } },
+        { id: 'roll', name: 'Total', type: 'rollup', position: 'a4', rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' }, number: { format: 'number' } },
+        { id: 'fx', name: 'Double', type: 'formula', position: 'a5', formula: { expression: '{{property:hours}} * 2' } },
+      ],
+      views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [{ propertyId: 'roll', operator: 'any', value: [] }], visibleProperties: [] }],
+    },
+  },
+  {
+    name: 'database-row',
+    scenario: 'relation values are row id objects',
+    data: { properties: { rel: [{ id: 'row-2' }, { id: 'row-3' }] }, position: 'a0' },
+  },
+  {
     name: 'database-row',
     scenario: 'person and file values, and a value kept by a type change',
     data: {
@@ -579,7 +600,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('5a96232605bc12c51437dab4270e4ea052125bde8d83bdee05fa8506df3e6659');
+      .toBe('3efb253659070fb961875911274927d3db2cf1804316c5431336d16f309574b1');
 
     const published: unknown = JSON.parse(snapshot);
 

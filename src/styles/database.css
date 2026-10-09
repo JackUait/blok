@@ -32,6 +32,23 @@
   --blok-database-checkbox-check: #ffffff;
   /* Measured on Notion's calendar view "today" (research/07); its date picker is unmeasured. */
   --blok-database-today: rgb(229, 100, 88);
+  /* Table view (research/07 and 08). */
+  --blok-database-table-bg: var(--blok-bg-primary);
+  --blok-database-table-border: rgba(42, 28, 0, 0.07);
+  --blok-database-table-header-text: rgb(125, 122, 117);
+  --blok-database-table-header-icon: rgb(142, 139, 134);
+  --blok-database-table-header-hover-bg: rgba(33, 27, 23, 0.05);
+  --blok-database-table-cell-text: rgb(44, 44, 43);
+  --blok-database-table-muted-text: rgb(161, 158, 153);
+  --blok-database-table-calc-value: rgb(125, 122, 117);
+  --blok-database-table-gutter-icon: rgb(173, 169, 163);
+  --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
+  --blok-database-table-open-bg: #ffffff;
+  --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  /* Selection is gray (D3), not Notion's blue. */
+  --blok-database-table-cell-ring: rgba(55, 53, 47, 0.35);
+  --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
+  --blok-database-table-resize: rgba(35, 131, 226, 0.8);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -62,6 +79,22 @@
     --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
     --blok-database-checkbox-check: #ffffff;
     --blok-database-today: rgb(229, 100, 88);
+    /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
+    --blok-database-table-bg: var(--blok-bg-primary);
+    --blok-database-table-border: rgba(255, 255, 243, 0.082);
+    --blok-database-table-header-text: rgb(173, 169, 163);
+    --blok-database-table-header-icon: rgb(173, 169, 163);
+    --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-table-cell-text: rgb(240, 239, 237);
+    --blok-database-table-muted-text: rgb(125, 122, 117);
+    --blok-database-table-calc-value: rgb(173, 169, 163);
+    --blok-database-table-gutter-icon: rgb(125, 122, 117);
+    --blok-database-table-control-border: rgba(255, 255, 243, 0.082);
+    --blok-database-table-open-bg: rgb(37, 37, 37);
+    --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+    --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
+    --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
+    --blok-database-table-resize: rgba(35, 131, 226, 0.8);
   }
 }
 
@@ -91,6 +124,22 @@
   --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
+  /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
+  --blok-database-table-bg: var(--blok-bg-primary);
+  --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-table-header-text: rgb(173, 169, 163);
+  --blok-database-table-header-icon: rgb(173, 169, 163);
+  --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-table-cell-text: rgb(240, 239, 237);
+  --blok-database-table-muted-text: rgb(125, 122, 117);
+  --blok-database-table-calc-value: rgb(173, 169, 163);
+  --blok-database-table-gutter-icon: rgb(125, 122, 117);
+  --blok-database-table-control-border: rgba(255, 255, 243, 0.082);
+  --blok-database-table-open-bg: rgb(37, 37, 37);
+  --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
+  --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
+  --blok-database-table-resize: rgba(35, 131, 226, 0.8);
 }
 
 /**

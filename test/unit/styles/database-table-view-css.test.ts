@@ -27,8 +27,10 @@ const TOKENS = [
 ];
 
 describe('database table view styles', () => {
-  it.each(TOKENS)('%s is defined for light, system dark and forced dark', (token) => {
-    expect(colors.match(new RegExp(`${token}:`, 'g'))?.length ?? 0).toBeGreaterThanOrEqual(3);
+  it.each(TOKENS)('%s is defined in database.css for light, system dark and forced dark, and not in colors.css', (token) => {
+    expect(css.match(new RegExp(`${token}:`, 'g'))?.length ?? 0).toBeGreaterThanOrEqual(3);
+    // colors.css feeds view.css, which has a byte budget.
+    expect(colors).not.toContain(`${token}:`);
   });
 
   it('uses the measured Notion sizes: 36px header, 37px rows, 35px footer, 5px resize handle', () => {

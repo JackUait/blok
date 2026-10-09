@@ -2,6 +2,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyType, PropertyValue } from './types';
+import { personIdsOf } from './property-values';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues } from './database-query';
 import { DatabaseBoardView } from './database-board-view';
@@ -1025,7 +1026,9 @@ export class DatabaseTool implements BlockTool {
       position: '',
     };
 
-    return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)];
+    const statusBy = this.model.getView(this.activeViewId)?.groupByStatus;
+
+    return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId, { statusBy }), this.api.i18n)];
   }
 
   /** Each group's rows, queried once per render. */
@@ -1873,10 +1876,12 @@ export class DatabaseTool implements BlockTool {
     // GATED ON D7: neighbours arrive in sort order, not key order, so
     // positionBetween would throw. Only the group value may change.
     if (viewConfig !== undefined && viewConfig.sorts.length > 0) {
-      if (this.model.getRow(rowId)?.properties[groupByPropId] !== toOptionId) {
-        this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
+      const sortedValue = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
+
+      if (JSON.stringify(this.model.getRow(rowId)?.properties[groupByPropId] ?? null) !== JSON.stringify(sortedValue)) {
+        this.updateRowBlock(rowId, { [groupByPropId]: sortedValue });
         this.rerenderView();
-        this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
+        this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: sortedValue } });
       }
 
       return;
@@ -1898,13 +1903,17 @@ export class DatabaseTool implements BlockTool {
 
   private droppedGroupValue(groupByPropId: string, rowId: string, toOptionId: string): PropertyValue {
     const target = toOptionId === NO_VALUE_GROUP_KEY ? null : toOptionId;
+    const type = this.model.getProperty(groupByPropId)?.type;
+    const current = this.model.getRow(rowId)?.properties[groupByPropId];
 
-    if (this.model.getProperty(groupByPropId)?.type !== 'multiSelect') {
+    if (type === 'status' && target !== null && this.model.getView(this.activeViewId)?.groupByStatus === 'group') {
+      return this.model.statusValueForGroup(groupByPropId, target, current);
+    }
+    if (type !== 'multiSelect') {
       return target;
     }
 
-    const current = this.model.getRow(rowId)?.properties[groupByPropId];
-    const list = Array.isArray(current) ? current : [];
+    const list = personIdsOf(current);
     const from = this.cardDragFromOptionId;
     const next = list.some((id) => id === from)
       ? list.map((id) => (id === from ? target : id))

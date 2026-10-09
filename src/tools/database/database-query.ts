@@ -8,8 +8,14 @@ import type {
   SortConfig,
 } from './types';
 import { parseDateValue } from './cells/date-value';
+import { filesOf, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupsOf } from './property-values';
 
 const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
+const COMPARE_OPERATORS = ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to'] as const;
+const NUMBER_OPERATORS = [...COMPARE_OPERATORS, 'is_empty', 'is_not_empty'] as const;
+const OPTION_OPERATORS = ['equals', 'does_not_equal', 'is_empty', 'is_not_empty'] as const;
+const LIST_OPERATORS = ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'] as const;
+const DATE_OPERATORS = ['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty'] as const;
 
 /** Operator names follow the Notion API, so saved filters stay portable. */
 export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>> = {
@@ -17,12 +23,55 @@ export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>>
   text: TEXT_OPERATORS,
   url: TEXT_OPERATORS,
   richText: TEXT_OPERATORS,
-  number: ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to', 'is_empty', 'is_not_empty'],
-  select: ['equals', 'does_not_equal', 'is_empty', 'is_not_empty'],
-  multiSelect: ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
+  email: TEXT_OPERATORS,
+  phone: TEXT_OPERATORS,
+  number: NUMBER_OPERATORS,
+  select: OPTION_OPERATORS,
+  status: OPTION_OPERATORS,
+  multiSelect: LIST_OPERATORS,
+  person: LIST_OPERATORS,
+  createdBy: LIST_OPERATORS,
+  lastEditedBy: LIST_OPERATORS,
+  files: ['is_empty', 'is_not_empty'],
   checkbox: ['equals', 'does_not_equal'],
-  date: ['equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty'],
+  date: DATE_OPERATORS,
+  createdTime: DATE_OPERATORS,
+  lastEditedTime: DATE_OPERATORS,
+  uniqueId: COMPARE_OPERATORS,
 };
+
+const OP = 'tools.database.filterOperator.';
+
+const WORD_LABELS: Readonly<Record<string, string>> = {
+  equals: `${OP}is`,
+  does_not_equal: `${OP}isNot`,
+  contains: `${OP}contains`,
+  does_not_contain: `${OP}doesNotContain`,
+  starts_with: `${OP}startsWith`,
+  ends_with: `${OP}endsWith`,
+  is_empty: `${OP}isEmpty`,
+  is_not_empty: `${OP}isNotEmpty`,
+  before: `${OP}before`,
+  after: `${OP}after`,
+  on_or_before: `${OP}onOrBefore`,
+  on_or_after: `${OP}onOrAfter`,
+};
+
+/** Number filters read as symbols in Notion's menu (research/08): =, ≠, >, <, ≥, ≤. */
+const SYMBOL_LABELS: Readonly<Record<string, string>> = {
+  ...WORD_LABELS,
+  equals: `${OP}numberEquals`,
+  does_not_equal: `${OP}numberDoesNotEqual`,
+  greater_than: `${OP}greaterThan`,
+  greater_than_or_equal_to: `${OP}greaterThanOrEqual`,
+  less_than: `${OP}lessThan`,
+  less_than_or_equal_to: `${OP}lessThanOrEqual`,
+};
+
+/** The i18n key of each operator's menu label, per type. */
+export const FILTER_OPERATOR_LABEL_KEYS: Readonly<Record<PropertyType, Readonly<Record<string, string>>>> = Object.fromEntries(
+  Object.keys(FILTER_OPERATORS).map((type) => [type, type === 'number' || type === 'uniqueId' ? SYMBOL_LABELS : WORD_LABELS])
+) as Record<PropertyType, Record<string, string>>;
 
 export interface QuerySource {
   schema: PropertyDefinition[];
@@ -64,11 +113,7 @@ const toNumber = (value: PropertyValue | undefined): number | undefined => {
 const toDay = (value: PropertyValue | undefined): string | undefined =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : undefined;
 
-const toIdList = (value: PropertyValue): string[] => {
-  if (Array.isArray(value)) return value;
-
-  return typeof value === 'string' && value !== '' ? [value] : [];
-};
+const toIdList = (value: PropertyValue): string[] => personIdsOf(value);
 
 /** `undefined` means "this filter does not apply", so the row passes. */
 const matchText = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
@@ -133,7 +178,7 @@ const matchSelect = (value: PropertyValue | undefined, operator: string, target:
 };
 
 const matchMultiSelect = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
-  const current = Array.isArray(value) ? value : [];
+  const current = personIdsOf(value);
 
   if (operator === 'is_empty') return current.length === 0;
   if (operator === 'is_not_empty') return current.length > 0;
@@ -185,16 +230,45 @@ const matchDate = (value: PropertyValue | undefined, operator: string, target: P
   }
 };
 
-const MATCHERS: Record<PropertyType, (value: PropertyValue | undefined, operator: string, target: PropertyValue) => boolean | undefined> = {
+const matchFiles = (value: PropertyValue | undefined, operator: string): boolean | undefined => {
+  if (operator === 'is_empty') return filesOf(value).length === 0;
+  if (operator === 'is_not_empty') return filesOf(value).length > 0;
+
+  return undefined;
+};
+
+/** A target that names a status group matches every option in it, as the Notion API does. */
+const matchStatus = (property: PropertyDefinition, value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
+  const groupIds = new Set(statusGroupsOf(property).map((g) => g.id));
+  const wanted = toIdList(target).flatMap((id) => (groupIds.has(id)
+    ? (property.config?.options ?? []).filter((o) => (o.groupId ?? statusGroupsOf(property)[0]?.id) === id).map((o) => o.id)
+    : [id]));
+
+  return matchSelect(value, operator, wanted.length > 0 ? wanted : target);
+};
+
+type Matcher = (value: PropertyValue | undefined, operator: string, target: PropertyValue, property: PropertyDefinition) => boolean | undefined;
+
+const MATCHERS: Record<PropertyType, Matcher> = {
   title: matchText,
   text: matchText,
   url: matchText,
   richText: matchText,
+  email: matchText,
+  phone: matchText,
   number: matchNumber,
+  uniqueId: matchNumber,
   select: matchSelect,
+  status: (value, operator, target, property) => matchStatus(property, value, operator, target),
   multiSelect: matchMultiSelect,
+  person: matchMultiSelect,
+  createdBy: matchMultiSelect,
+  lastEditedBy: matchMultiSelect,
+  files: matchFiles,
   checkbox: matchCheckbox,
   date: matchDate,
+  createdTime: matchDate,
+  lastEditedTime: matchDate,
 };
 
 /**
@@ -206,9 +280,10 @@ export const rowMatchesFilters = (row: DatabaseRow, filters: FilterConfig[], sch
   filters.every((filter) => {
     const property = schema.find((p) => p.id === filter.propertyId);
 
-    if (property === undefined || !FILTER_OPERATORS[property.type].includes(filter.operator)) return true;
+    // A type from a newer client has no entry here: let the row through.
+    if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(filter.operator) ?? false)) return true;
 
-    return MATCHERS[property.type](row.properties[filter.propertyId], filter.operator, filter.value) ?? true;
+    return MATCHERS[property.type](readPropertyValue(row, property), filter.operator, filter.value, property) ?? true;
   });
 
 /** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
@@ -232,20 +307,46 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
   const optionPosition = (id: string): string | undefined => property.config?.options.find((o) => o.id === id)?.position;
 
   switch (property.type) {
-    case 'number': return toNumber(value);
+    case 'number':
+    case 'uniqueId':
+      return toNumber(value);
     case 'checkbox': return value === true ? 1 : 0;
     case 'date': return parseDateValue(value)?.start;
+    case 'createdTime':
+    case 'lastEditedTime':
+      return typeof value === 'string' ? Date.parse(value) : undefined;
     case 'select': return typeof value === 'string' && value !== '' ? optionPosition(value) ?? value : undefined;
+    case 'status': {
+      const rank = orderedStatusOptions(property).findIndex((o) => o.id === value);
+
+      return rank === -1 ? undefined : rank;
+    }
     case 'multiSelect': {
       const keys = toIdList(value ?? null).map((id) => optionPosition(id) ?? id).sort(compareKeys);
 
       return keys.length > 0 ? keys : undefined;
     }
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy': {
+      const keys = personIdsOf(value);
+
+      return keys.length > 0 ? keys : undefined;
+    }
+    case 'files': {
+      const names = filesOf(value).map((file) => file.name);
+
+      return names.length > 0 ? names : undefined;
+    }
     case 'title':
     case 'text':
     case 'url':
     case 'richText':
+    case 'email':
+    case 'phone':
       return typeof value === 'string' && value !== '' ? value : undefined;
+    default:
+      return undefined;
   }
 };
 
@@ -266,8 +367,8 @@ export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: Prope
   });
 
   const compareBy = (property: PropertyDefinition, sign: number, a: DatabaseRow, b: DatabaseRow): number => {
-    const ka = sortKeyOf(property, a.properties[property.id]);
-    const kb = sortKeyOf(property, b.properties[property.id]);
+    const ka = sortKeyOf(property, readPropertyValue(a, property));
+    const kb = sortKeyOf(property, readPropertyValue(b, property));
 
     // Empty check runs before the sign, or descending would put empties first.
     if (ka === undefined && kb === undefined) return 0;
@@ -285,31 +386,49 @@ export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: Prope
 };
 
 /** The value an `equals` filter asks for, or `undefined` when a new row cannot take it. */
-const filterTargetValue = (type: PropertyType | undefined, target: PropertyValue): PropertyValue | undefined => {
+const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue): PropertyValue | undefined => {
+  if (operator === 'contains' && type === 'person') {
+    const id = toIdList(target)[0];
+
+    return id === undefined ? undefined : [{ id }];
+  }
+  if (operator !== 'equals') return undefined;
+
   switch (type) {
-    case 'select': return toIdList(target)[0];
+    case 'select':
+    case 'status':
+      return toIdList(target)[0];
     case 'checkbox': return typeof target === 'boolean' ? target : undefined;
-    case 'text': return typeof target === 'string' && target !== '' ? target : undefined;
+    case 'text':
+    case 'email':
+    case 'phone':
+      return typeof target === 'string' && target !== '' ? target : undefined;
     case 'number': return toNumber(target);
     case 'title':
     case 'url':
     case 'richText':
     case 'multiSelect':
     case 'date':
+    case 'person':
+    case 'files':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'uniqueId':
     case undefined:
       return undefined;
   }
 };
 
 /**
- * Values a new row takes from the view's `equals` filters, as Notion does,
- * so the filter does not hide the row on the next redraw.
+ * Values a new row takes from the view's `equals` filters (and a person
+ * `contains`), as Notion does, so the filter does not hide the row on the
+ * next redraw.
  */
 export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[]): Record<string, PropertyValue> =>
   Object.fromEntries(filters.flatMap((filter) => {
-    const value = filter.operator === 'equals'
-      ? filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.value)
-      : undefined;
+    const value = filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.operator, filter.value);
 
     return value === undefined ? [] : [[filter.propertyId, value]];
   }));

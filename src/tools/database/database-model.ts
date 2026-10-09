@@ -14,6 +14,7 @@ import type {
 } from './types';
 import { DATABASE_DEFAULT_TEXT } from './database-localization';
 import { queryGroups, queryRows } from './database-query';
+import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf } from './property-values';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
 import { resolveViewProperties, visibleRowPropertyIds } from './view-settings';
 
@@ -42,6 +43,11 @@ const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
  * data-option-id as ''. 23 chars, so a default 21-char nanoid option id never equals it.
  */
 export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
+
+export interface GroupOptions {
+  /** Status only: one group per status group instead of per option. */
+  statusBy?: 'group' | 'option';
+}
 
 export class DatabaseModel {
   private schema: PropertyDefinition[];
@@ -129,11 +135,13 @@ export class DatabaseModel {
 
   // ─── View-oriented queries ───
 
-  getRowsGroupedBy(propertyId: string): Map<string, DatabaseRow[]> {
+  getRowsGroupedBy(propertyId: string, options: GroupOptions = {}): Map<string, DatabaseRow[]> {
     const groups = new Map<string, DatabaseRow[]>();
     const ordered = this.getOrderedRows();
+    const keysOf = this.groupKeysOf(propertyId, options);
+
     for (const row of ordered) {
-      for (const key of this.toGroupKeys(row.properties[propertyId])) {
+      for (const key of keysOf(row)) {
         const group = groups.get(key) ?? [];
 
         group.push(row);
@@ -144,8 +152,27 @@ export class DatabaseModel {
   }
 
   /** The groups a row belongs to under `propertyId`. The query engine groups only through this. */
-  groupKeysOf(propertyId: string): (row: DatabaseRow) => string[] {
-    return (row) => this.toGroupKeys(row.properties[propertyId]);
+  groupKeysOf(propertyId: string, options: GroupOptions = {}): (row: DatabaseRow) => string[] {
+    const property = this.getProperty(propertyId);
+
+    if (property === undefined) {
+      return (row) => this.toGroupKeys(row.properties[propertyId]);
+    }
+
+    return (row) => {
+      const value = readPropertyValue(row, property);
+
+      if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {
+        const ids = personIdsOf(value);
+
+        return ids.length > 0 ? ids : [NO_VALUE_GROUP_KEY];
+      }
+      if (property.type === 'status' && options.statusBy === 'group' && typeof value === 'string' && value !== '') {
+        return [statusGroupOf(property, value)?.id ?? value];
+      }
+
+      return this.toGroupKeys(value);
+    };
   }
 
   queryRows(request: QueryRowsRequest): QueryRowsResult {
@@ -160,17 +187,33 @@ export class DatabaseModel {
     return {
       schema: this.schema,
       rows: this.rows,
-      ...(view.groupBy !== undefined ? { groupKeysOf: this.groupKeysOf(view.groupBy) } : {}),
+      ...(view.groupBy !== undefined ? { groupKeysOf: this.groupKeysOf(view.groupBy, { statusBy: view.groupByStatus }) } : {}),
     };
   }
 
-  getSelectOptions(propertyId: string): SelectOption[] {
+  getSelectOptions(propertyId: string, grouping: GroupOptions = {}): SelectOption[] {
     const prop = this.getProperty(propertyId);
+
+    if (prop?.type === 'status') {
+      return grouping.statusBy === 'group'
+        ? statusGroupsOf(prop).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))
+        : orderedStatusOptions(prop);
+    }
     if (prop === undefined || (prop.type !== 'select' && prop.type !== 'multiSelect')) return [];
     const options = prop.config?.options ?? [];
     const sorted = [...options].sort((a, b) => (a.position < b.position ? -1 : 1));
 
     return [...sorted, ...this.orphanGroupOptions(propertyId, sorted)];
+  }
+
+  /** The option a card takes when dropped into a status group: its own if already there, else the group's first. */
+  statusValueForGroup(propertyId: string, groupId: string, current: PropertyValue | undefined): string | null {
+    const prop = this.getProperty(propertyId);
+
+    if (prop === undefined) return null;
+    if (typeof current === 'string' && statusGroupOf(prop, current)?.id === groupId) return current;
+
+    return orderedStatusOptions(prop).find((o) => statusGroupOf(prop, o.id)?.id === groupId)?.id ?? null;
   }
 
   /**
@@ -280,7 +323,11 @@ export class DatabaseModel {
   // ─── Static helpers ───
 
   private toGroupKeys(value: PropertyValue | undefined): string[] {
-    if (Array.isArray(value)) return value.length > 0 ? value : [NO_VALUE_GROUP_KEY];
+    if (Array.isArray(value)) {
+      const ids = personIdsOf(value);
+
+      return ids.length > 0 ? ids : [NO_VALUE_GROUP_KEY];
+    }
     if (value === undefined || value === null || value === '') return [NO_VALUE_GROUP_KEY];
     if (typeof value === 'string') return [value];
     if (typeof value === 'boolean' || typeof value === 'number') return [String(value)];

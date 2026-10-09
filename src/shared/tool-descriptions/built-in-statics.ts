@@ -147,7 +147,7 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
     title: 'Database',
     statics: {
       toolbox: [
-        { name: 'database', title: 'Database', previewCaption: 'Organize pages in a table with properties' },
+        { name: 'database', title: 'Database', previewCaption: 'Organize pages in a table with properties', data: { initialView: 'table' } },
         { name: 'board', title: 'Board', previewCaption: 'Track work on a board of cards' },
       ],
       richTextFields: [],

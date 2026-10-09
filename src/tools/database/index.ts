@@ -81,6 +81,8 @@ export class DatabaseTool implements BlockTool {
 
   private title: string;
   private unknown: Record<string, unknown>;
+  /** Set when the insert data carried the toolbox seed, which the document still holds. */
+  private seeded: boolean;
   private activeViewId: string;
   private model: DatabaseModel;
   private view!: DatabaseViewRenderer;
@@ -121,6 +123,7 @@ export class DatabaseTool implements BlockTool {
     this.unknown = unknownKeys(data);
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
 
+    this.seeded = initialView !== undefined;
     this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table' } : {});
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
@@ -259,6 +262,13 @@ export class DatabaseTool implements BlockTool {
 
   rendered(): void {
     this.block.stretched = true;
+
+    // The insert wrote the raw seed into the shared document; one save
+    // replaces it with the real schema and views.
+    if (this.seeded) {
+      this.seeded = false;
+      this.block.dispatchChange();
+    }
 
     const hadRows = this.model.getOrderedRows().length > 0;
 

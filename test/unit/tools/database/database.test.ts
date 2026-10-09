@@ -6155,6 +6155,57 @@ describe('DatabaseTool — property menu and insert placement', () => {
       tool.destroy();
     });
 
+    describe('computed properties on the axes', () => {
+      const computed: PropertyDefinition[] = [
+        ...csvSchema,
+        { id: 'fx-double', name: 'Double', type: 'formula', position: 'a3', formula: { expression: '{{property:prop-points}} * 2' } },
+        { id: 'fx-list', name: 'Pair', type: 'formula', position: 'a4', formula: { expression: '[1, 2]' } },
+        { id: 'roll', name: 'Total', type: 'rollup', position: 'a5', rollup: { relationPropertyId: 'rel', targetPropertyId: 'prop-points', function: 'sum' } },
+      ];
+      const mountComputed = (fields: Partial<DatabaseViewConfig>): { tool: DatabaseTool; element: HTMLElement } => {
+        const options = createDatabaseOptions({ schema: computed, views: [view(fields)], activeViewId: 'view-x' }, {}, { childBlocks: rows() });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        document.body.appendChild(element);
+
+        return { tool, element };
+      };
+      const childNames = (tool: DatabaseTool, name: string): string[] => {
+        const item = tool.layoutItems().find((entry) => (entry as { name?: string }).name === name) as { children?: { items: Array<{ name?: string }> } } | undefined;
+
+        return (item?.children?.items ?? []).map((entry) => entry.name ?? '');
+      };
+
+      it('offers a formula by its result type on both axes, and never a rollup or a list formula (H-charts)', () => {
+        const { tool } = mountComputed({ type: 'chart', groupBy: 'prop-status' });
+        const x = childNames(tool, 'chart-x');
+        const y = childNames(tool, 'chart-y');
+
+        expect(x).toContain('chart-x-fx-double');
+        expect(y).toContain('chart-y-sum:fx-double');
+        expect([...x, ...y].filter((name) => name.includes('roll') || name.includes('fx-list'))).toEqual([]);
+
+        tool.destroy();
+      });
+
+      it('sums a number formula on the Y axis', () => {
+        const { tool, element } = mountComputed({ type: 'chart', chartType: 'number', groupBy: 'prop-status', chartMeasure: 'sum:fx-double' });
+
+        expect(queryByData(element, 'data-blok-database-chart-number')?.textContent).toBe('18');
+
+        tool.destroy();
+      });
+
+      it('falls back to Count for a rollup measure and to another axis for a rollup grouping', () => {
+        const { tool, element } = mountComputed({ type: 'chart', chartType: 'number', groupBy: 'roll', chartMeasure: 'count_values:roll' });
+
+        expect(queryByData(element, 'data-blok-database-chart-number')?.textContent).toBe('3');
+
+        tool.destroy();
+      });
+    });
+
     it('measures the Y axis with the view\'s calculation', () => {
       const { tool, element } = mount({ type: 'chart', chartType: 'number', groupBy: 'prop-status', chartMeasure: 'sum:prop-points' });
 

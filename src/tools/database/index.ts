@@ -1563,10 +1563,27 @@ export class DatabaseTool implements BlockTool {
     return row === undefined ? [] : pageContentSourceBlocks(row, this.model.getSchema(), descriptionId);
   }
 
+  /**
+   * What a chart axis may use, as values read: a formula by its result type.
+   * Never a rollup, files, a unique id or a list formula (H-charts).
+   */
+  private chartSchema(): PropertyDefinition[] {
+    const saved = this.model.getSchema();
+    const isList = (property: PropertyDefinition): boolean => {
+      const compiled = this.computedValues.compile(property, saved);
+
+      return compiled.ok && compiled.resultType.kind === 'list';
+    };
+    const excluded = new Set(saved
+      .filter((p) => p.type === 'rollup' || p.type === 'files' || p.type === 'uniqueId' || (p.type === 'formula' && isList(p)))
+      .map((p) => p.id));
+
+    return this.model.getValueSchema().filter((p) => !excluded.has(p.id));
+  }
+
   /** The X axis: the view's grouping, else the first select-like property, else the first it can group by. */
-  private chartAxis(view: DatabaseViewConfig): PropertyDefinition | undefined {
-    const schema = this.model.getSchema();
-    const stored = view.groupBy === undefined ? undefined : this.model.getProperty(view.groupBy);
+  private chartAxis(view: DatabaseViewConfig, schema: PropertyDefinition[]): PropertyDefinition | undefined {
+    const stored = schema.find((p) => p.id === view.groupBy);
 
     if (stored !== undefined && GROUPABLE_TYPES.includes(stored.type)) return stored;
 
@@ -1596,16 +1613,16 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderChartView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
-    const schema = this.model.getSchema();
+    const schema = this.chartSchema();
     const localized = localizeDatabaseSchema(schema, this.api.i18n);
     const settings = resolveChartSettings(viewConfig, schema);
-    const axis = this.chartAxis(viewConfig);
+    const axis = this.chartAxis(viewConfig, schema);
     const hidden = this.chartHidden.get(viewConfig.id) ?? new Set<string>();
     const groups: ChartGroupInput[] = axis === undefined || settings.type === 'number'
       ? [{ key: '', label: viewConfig.name, sortKey: '', rows: this.model.queryRows({ view: viewConfig, search: this.controls.search }).rows }]
       : this.chartGroups(viewConfig, axis.id, false);
     const subId = viewConfig.subGroupBy;
-    const hasSeries = subId !== undefined && subId !== axis?.id && this.model.getProperty(subId) !== undefined
+    const hasSeries = subId !== undefined && subId !== axis?.id && schema.some((p) => p.id === subId && GROUPABLE_TYPES.includes(p.type))
       && (settings.type === 'column' || settings.type === 'bar' || settings.type === 'line');
     const series: ChartSeriesInput[] = hasSeries
       ? this.chartGroups(viewConfig, subId, true).map((group) => ({ key: group.key, label: group.label, rowIds: new Set(group.rows.map((row) => row.id)) }))
@@ -1621,7 +1638,7 @@ export class DatabaseTool implements BlockTool {
       xName: localized.find((p) => p.id === axis?.id)?.name ?? '',
       yName: chartMeasureLabel(settings.measure, localized, this.api.i18n),
       i18n: this.api.i18n,
-      formatValue: (value) => this.formatChartValue(settings.measure, value),
+      formatValue: (value) => this.formatChartValue(settings.measure, value, schema),
       handlers: {
         drilldown: (point) => this.openChartDrilldown(viewConfig, point, titlePropId),
         toggle: (key) => {
@@ -1637,13 +1654,13 @@ export class DatabaseTool implements BlockTool {
     return this.view.createView();
   }
 
-  private formatChartValue(measure: ReturnType<typeof resolveChartSettings>['measure'], value: number): string {
+  private formatChartValue(measure: ReturnType<typeof resolveChartSettings>['measure'], value: number, schema: PropertyDefinition[]): string {
     const locale = resolveLocale(undefined);
 
     if (measure.kind === 'property' && measure.fn.startsWith('percent_')) {
       return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)}%`;
     }
-    const property = measure.kind === 'property' ? this.model.getProperty(measure.propertyId) : undefined;
+    const property = measure.kind === 'property' ? schema.find((p) => p.id === measure.propertyId) : undefined;
 
     if (property?.type === 'number' && property.number !== undefined && measure.kind === 'property'
       && ['sum', 'average', 'median', 'min', 'max', 'range'].includes(measure.fn)) {
@@ -1853,7 +1870,7 @@ export class DatabaseTool implements BlockTool {
     const view = this.model.getView(this.activeViewId);
     const actions: ViewSettingsAction[] = [];
 
-    if (view?.type === 'chart' && resolveChartSettings(view, this.model.getSchema()).type !== 'number') {
+    if (view?.type === 'chart' && resolveChartSettings(view, this.chartSchema()).type !== 'number') {
       actions.push(
         { testId: 'database-settings-chart-png', label: t('chartSavePng'), icon: IconImage, onClick: () => void this.saveChart('png') },
         { testId: 'database-settings-chart-svg', label: t('chartSaveSvg'), icon: IconImage, onClick: () => void this.saveChart('svg') }
@@ -1886,7 +1903,7 @@ export class DatabaseTool implements BlockTool {
       return galleryLayoutItems(view, schema, this.api.i18n, update);
     }
     if (view?.type === 'chart') {
-      return chartLayoutItems(view, schema, this.api.i18n, update);
+      return chartLayoutItems(view, localizeDatabaseSchema(this.chartSchema(), this.api.i18n), this.api.i18n, update);
     }
 
     if (view?.type === 'timeline') {

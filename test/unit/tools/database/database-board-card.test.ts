@@ -174,7 +174,9 @@ describe('DatabaseBoardView card parity', () => {
       const cards = [...board.querySelectorAll<HTMLElement>('[data-blok-database-card]')];
 
       expect(cards.map((c) => c.tabIndex)).toEqual([0, -1, -1]);
-      expect(board.querySelector('[data-blok-database-board]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+      expect([...board.querySelectorAll('[data-blok-database-cards]')].every((list) => list.hasAttribute('data-blok-keyboard-owner'))).toBe(true);
+      // Only the card lists: editor keys such as undo still work elsewhere on the board.
+      expect(board.querySelector('[data-blok-database-board]')?.hasAttribute('data-blok-keyboard-owner')).toBe(false);
     });
 
     it('moves down a column and across to the next column', () => {

@@ -91,7 +91,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const boardArea = document.createElement('div');
 
     boardArea.setAttribute('data-blok-database-board', '');
-    boardArea.setAttribute('data-blok-keyboard-owner', '');
     boardArea.setAttribute('data-card-size', this.cardSize);
     if (this.settings.view !== undefined && resolveFitImage(this.settings.view)) {
       boardArea.setAttribute('data-fit-image', '');

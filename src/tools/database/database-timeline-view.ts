@@ -4,6 +4,7 @@ import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption,
 import type { GalleryDropResult } from './database-gallery-view';
 import { createOptionPill, renderCellValue } from './cells';
 import { addDays, daysBetween, isWeekend } from './calendar-dates';
+import { toLocalDate } from './cells/date-format';
 import type { EventSpan } from './calendar-dates';
 import {
   TIMELINE_DAY_WIDTH,
@@ -387,7 +388,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
       dot.setAttribute('data-blok-database-timeline-today-dot', '');
       dot.style.insetInlineStart = `${todayIndex * this.dayWidth + this.dayWidth / 2}px`;
-      dot.textContent = this.options.today.slice(8).replace(/^0/, '');
+      dot.textContent = new Intl.DateTimeFormat(this.options.locale ?? 'en-US', { day: 'numeric' }).format(toLocalDate(this.options.today));
       header.appendChild(dot);
     }
 

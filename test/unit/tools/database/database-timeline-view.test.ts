@@ -172,6 +172,13 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r1').querySelector('[data-property-id="p-notes"]')).toBeNull();
     });
 
+    it('labels today\'s dot with the locale\'s day number', () => {
+      const { root } = mount({ locale: 'ar-EG' });
+
+      expect(root.querySelector('[data-blok-database-timeline-today-dot]')?.textContent)
+        .toBe(new Intl.DateTimeFormat('ar-EG', { day: 'numeric' }).format(new Date(2026, 9, 9)));
+    });
+
     it('marks today on the date axis', () => {
       const { root } = mount();
       const marker = root.querySelector<HTMLElement>('[data-blok-database-timeline-today-line]');

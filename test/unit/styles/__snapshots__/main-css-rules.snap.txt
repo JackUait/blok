@@ -8857,7 +8857,7 @@ span[data-blok-slash-search] {
   inline-size: 100%;
   max-inline-size: 692px;
   padding: var(--blok-space-4);
-  border-radius: var(--blok-radius-surface);
+  border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-feed-card-bg);
   box-shadow: var(--blok-database-feed-card-shadow);
 }

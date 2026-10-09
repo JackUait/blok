@@ -5382,7 +5382,7 @@
 
 /* ─── Feed ───
    Measured (research/08): one card per row, 692 wide, 16px padding, 12px
-   radius (the surface role gives 10px), two-layer shadow; title 26px/26px
+   radius (the dialog role is the 12px step), two-layer shadow; title 26px/26px
    weight 600; author 14px/21px weight 500. Unmeasured: card gap, body text. */
 
 [data-blok-database-feed] {
@@ -5401,7 +5401,7 @@
   inline-size: 100%;
   max-inline-size: 692px;
   padding: var(--blok-space-4);
-  border-radius: var(--blok-radius-surface);
+  border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-feed-card-bg);
   box-shadow: var(--blok-database-feed-card-shadow);
 }

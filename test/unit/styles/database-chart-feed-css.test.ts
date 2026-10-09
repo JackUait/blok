@@ -38,9 +38,11 @@ describe('database chart and feed styles', () => {
     expect(fallback).toBe(light);
   });
 
-  it('uses the measured feed card: 692 wide, 16px padding, two-layer shadow, 26px title', () => {
+  it('uses the measured feed card: 692 wide, 16px padding, 12px radius, two-layer shadow, 26px title', () => {
     expect(ruleBody('[data-blok-database-feed-card]')).toMatch(/max-inline-size:\s*692px/);
     expect(ruleBody('[data-blok-database-feed-card]')).toContain('padding: var(--blok-space-4)');
+    // Measured 12px: the dialog role is the 12px step of the radius scale.
+    expect(ruleBody('[data-blok-database-feed-card]')).toContain('border-radius: var(--blok-radius-dialog)');
     expect(ruleBody('[data-blok-database-feed-card]')).toContain('box-shadow: var(--blok-database-feed-card-shadow)');
     expect(css).toMatch(/--blok-database-feed-card-shadow:\s*rgba\(0, 0, 0, 0\.02\) 0 12px 32px, rgba\(0, 0, 0, 0\.05\) 0 0 0 1px/);
     expect(ruleBody('[data-blok-database-feed-title]')).toMatch(/font-size:\s*26px/);

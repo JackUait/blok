@@ -118,7 +118,11 @@ describe('database relations — two peers', () => {
 
     const rows = (store: DocumentStore): DatabaseRow[] => store.toJSON()
       .filter((block) => block.type === 'database-row')
-      .map((block) => ({ id: block.id, position: String((block.data as { position?: string }).position ?? ''), properties: propertiesOf(store, block.id) }));
+      .map((block) => {
+        const id = String(block.id);
+
+        return { id, position: String((block.data as { position?: string }).position ?? ''), properties: propertiesOf(store, id) };
+      });
 
     for (const store of [storeA, storeB]) {
       const computed = new ComputedProperties('db').apply(schema, rows(store), { databaseId: 'db', now: new Date(0) });

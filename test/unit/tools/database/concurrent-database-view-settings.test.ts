@@ -6,6 +6,8 @@ import { DocumentStore, captureDataKeySnapshot } from '../../../../src/component
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { DatabaseTableView } from '../../../../src/tools/database/database-table-view';
+import type { TableHandlers } from '../../../../src/tools/database/database-table-view';
 import { resolveCalculations, resolveViewProperties, withCalculation, withPropertyOrder, withPropertySetting } from '../../../../src/tools/database/view-settings';
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
@@ -186,5 +188,61 @@ describe('database view settings — two peers editing one view', () => {
     expect(data.schema.filter((p) => p.type === 'title')).toHaveLength(1);
     expect(data.views).toHaveLength(1);
     expect(storeB.toJSON()).toEqual(storeA.toJSON());
+  });
+  describe('through the table view', () => {
+    /** Resize one column in a table drawn from this peer's view, and return the write it makes. */
+    const resizeInTable = (store: DocumentStore, propertyId: string, toWidth: number): Partial<DatabaseViewConfig> => {
+      const updateView = vi.fn<(changes: Partial<DatabaseViewConfig>) => void>();
+      const table = new DatabaseTableView({
+        readOnly: false,
+        i18n: { t: (key: string) => key } as never,
+        view: viewsOf(store)[0],
+        schema,
+        rows: [],
+        titlePropertyId: 'p-title',
+        handlers: { updateView } as unknown as TableHandlers,
+      });
+      const root = table.createView();
+
+      document.body.appendChild(root);
+      const header = [...root.querySelectorAll<HTMLElement>('[role="columnheader"]')].find((el) => el.getAttribute('data-property-id') === propertyId);
+      const handle = header?.querySelector<HTMLElement>('[data-blok-database-table-resize]');
+      const from = parseFloat(header?.style.width ?? '0');
+
+      handle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: toWidth - from }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: toWidth - from }));
+      table.destroy();
+      root.remove();
+
+      return updateView.mock.calls[0]?.[0] ?? {};
+    };
+
+    it('keeps both widths when two people resize different table columns at once', () => {
+      const [storeA, storeB] = seed(bornView());
+      const fromA = resizeInTable(storeA, 'p-status', 180);
+      const fromB = resizeInTable(storeB, 'p-due', 240);
+
+      edit(storeA, () => fromA);
+      edit(storeB, () => fromB);
+      sync(storeA, storeB);
+
+      expect(widths(storeA)).toMatchObject({ 'p-status': 180, 'p-due': 240 });
+      expect(widths(storeB)).toEqual(widths(storeA));
+    });
+
+    // Same gap as the helper-level pin above: both peers create `properties` at once and one list wins.
+    it.fails('keeps both widths on a view a v1.16.1 client wrote', () => {
+      const [storeA, storeB] = seed(legacyView());
+      const fromA = resizeInTable(storeA, 'p-status', 150);
+      const fromB = resizeInTable(storeB, 'p-due', 260);
+
+      edit(storeA, () => fromA);
+      edit(storeB, () => fromB);
+      sync(storeA, storeB);
+
+      expect(widths(storeA)).toMatchObject({ 'p-status': 150, 'p-due': 260 });
+      expect(widths(storeB)).toEqual(widths(storeA));
+    });
   });
 });

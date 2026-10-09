@@ -34,3 +34,19 @@ Each item names the phase that owns it. Tick an item when its test-first commit 
 - [ ] P1: The board column tint rounds all four corners. Notion rounds only the bottom (0 0 10px 10px).
 - [ ] P1: The measured yellow (~2.2:1) and brown (~3.0:1) column accents are below WCAG AA. Blok's a11y law wins, so this is a documented divergence: use AA-safe text.
 - [ ] P3: "Remove sorting" rewrites shared row positions. Check that this matches Notion when other views have their own manual order.
+- [ ] P5: The calendar "No date (N)" toolbar button lists rows with no date (measured in research/08). Today those rows are hidden with no home.
+- [ ] P5: The gallery and calendar settings `layoutItems()` are not mounted in the Phase 3 settings panel yet.
+- [ ] P5: A card cannot be dropped into an empty gallery group.
+- [ ] P3: Board sub-groups are saved and editable but never drawn.
+- [ ] P1: The column-header property menu (database-property-menu.ts) has neither DATABASE_MENU_CLASS nor the open/close motion.
+- [ ] P5: Timeline hours zoom moves bars by whole days only.
+- [ ] P5: The timeline zoom centre is per user (local). Notion stores a shared `center_timestamp`.
+- [ ] P5: Timeline dependency arrows: `arrowsBy` is stored, nothing is drawn. Needs relations (P6).
+- [ ] P5: The timeline table panel has no calculations.
+- [ ] P5: Sub-group lanes:
+  - every lane repeats the column headers;
+  - "+ New page" in a lane does not set the sub-group;
+  - a sorted cross-lane drop loses the sub-group change;
+  - the add-group buttons sit below the lanes.
+- [ ] P5: The board layout rows reuse gallery-* test ids.
+- [ ] P5: Board card padding is 10px 12px; Notion measured 8px 10px 6px.

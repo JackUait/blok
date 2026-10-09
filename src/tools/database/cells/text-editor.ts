@@ -37,7 +37,7 @@ export const openTextEditor = (
 
   field.setAttribute('data-blok-database-cell-input', property.type);
   field.setAttribute('aria-label', property.name);
-  field.value = original;
+  field.value = ctx.initialText ?? original;
   if (field instanceof HTMLInputElement) {
     field.type = 'text';
     if (property.type === 'number') {

@@ -386,4 +386,10 @@ describe('select cell editor', () => {
       expect(ctx.onOptionsChange).not.toHaveBeenCalled();
     });
   });
+  it('initialText becomes the search text, so typing over a selected cell offers to create it', () => {
+    openSelect('o1', { initialText: 'S' });
+
+    expect(q<HTMLInputElement>('[data-blok-database-select-search]').value).toBe('S');
+    expect(document.querySelector('[data-blok-database-select-create]')).not.toBeNull();
+  });
 });

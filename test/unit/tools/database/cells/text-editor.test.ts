@@ -239,4 +239,13 @@ describe('checkbox cell', () => {
 
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
+  it('initialText replaces the value, so typing over a selected cell starts a new value', () => {
+    const ctx = makeEditorContext({ initialText: 'Z' });
+
+    openCellEditor(makeProperty('text'), 'short', makeAnchor(), ctx);
+
+    expect(field().value).toBe('Z');
+    press(field(), 'Enter');
+    expect(ctx.onCommit).toHaveBeenCalledWith('Z');
+  });
 });

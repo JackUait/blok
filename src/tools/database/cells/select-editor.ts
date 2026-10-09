@@ -120,6 +120,11 @@ class SelectEditor {
       onDismiss: () => this.finish(false),
     });
 
+    if (ctx.initialText !== undefined) {
+      this.search.value = ctx.initialText;
+      this.query = ctx.initialText;
+      this.activeIndex = ctx.initialText.trim() === '' ? -1 : 0;
+    }
     this.renderChips();
     this.renderList();
     this.popover.show();

@@ -27,6 +27,12 @@ export interface CellContext {
   weekStart?: number;
   /** 12- or 24-hour time. Defaults to the locale's. */
   hourCycle?: 'h12' | 'h23';
+  /**
+   * Text that replaces the value when the editor opens: a key typed on a
+   * selected table cell. Text editors take it as the value, select editors as
+   * the search. The date editor ignores it.
+   */
+  initialText?: string;
 }
 
 /**

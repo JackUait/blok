@@ -10,6 +10,7 @@ import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
+import { rowDescription } from './row-body';
 import { outputBlocksToHtml, outputBlocksToSegments } from '../../shared/rich-text/block-data';
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
@@ -233,39 +234,7 @@ export class DatabaseCardDrawer {
   }
 
   private descriptionFor(row: DatabaseRow): OutputData | undefined {
-    const hasBody = (value: PropertyValue | undefined): value is OutputData =>
-      value !== undefined && value !== null && typeof value === 'object' && !Array.isArray(value)
-      && Array.isArray(value.blocks) && value.blocks.length > 0;
-    const designated = this.schema.find((property) => property.id === this.descriptionPropertyId);
-    const designatedValue = this.descriptionPropertyId === undefined
-      ? undefined
-      : row.properties[this.descriptionPropertyId];
-
-    // An explicit empty body must not revive an older body column.
-    if (designatedValue !== undefined) {
-      return designatedValue === null ? undefined : designatedValue as OutputData;
-    }
-
-    // Peers can create duplicate body columns with the same name.
-    for (const property of this.schema) {
-      const value = row.properties[property.id];
-
-      if (property.type === 'richText' && property.name === designated?.name && hasBody(value)) {
-        return value;
-      }
-    }
-
-    // A backend-omitted column can still hold the row's saved body.
-    // New edits append a property key, so the latest orphan comes first.
-    for (const [propertyId, value] of Object.entries(row.properties).reverse()) {
-      if (!this.schema.some((property) => property.id === propertyId) && hasBody(value)) {
-        return value;
-      }
-    }
-
-    return this.descriptionPropertyId === undefined
-      ? undefined
-      : row.properties[this.descriptionPropertyId] as OutputData | undefined;
+    return rowDescription(row, this.schema, this.descriptionPropertyId);
   }
 
   open(row: DatabaseRow): void {

@@ -1388,11 +1388,16 @@ export class DatabaseTool implements BlockTool {
           );
         },
         onPropertyValueChange: (rowId, propertyId, value) => {
+          if (this.readOnly || this.destroyed) return;
+          // Deleting an option already emptied this row through clearRemovedOptions.
+          if (JSON.stringify(this.model.getRow(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
           this.updateRowBlock(rowId, { [propertyId]: value });
           this.rerenderView({ keepDrawer: true });
           this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },
         onOptionsChange: (propertyId, options) => {
+          if (this.readOnly || this.destroyed) return;
+          this.clearRemovedOptions(propertyId, options);
           this.model.updateProperty(propertyId, { config: { options } });
           this.block.dispatchChange();
           this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
@@ -1674,6 +1679,27 @@ export class DatabaseTool implements BlockTool {
     this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
     this.rerenderView();
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
+  }
+
+  /** A deleted option leaves its rows in place with the value emptied, as Notion does (research/08, D9). */
+  private clearRemovedOptions(propertyId: string, next: SelectOption[]): void {
+    const kept = new Set(next.map((option) => option.id));
+    const removed = (this.model.getProperty(propertyId)?.config?.options ?? []).filter((option) => !kept.has(option.id));
+
+    if (removed.length === 0) return;
+    const gone = new Set(removed.map((option) => option.id));
+
+    for (const row of this.model.getOrderedRows()) {
+      const current = row.properties[propertyId];
+      const ids = Array.isArray(current) ? current : [];
+      const value = Array.isArray(current) ? ids.filter((id) => !gone.has(id)) : null;
+      const holdsRemoved = typeof current === 'string' ? gone.has(current) : ids.some((id) => gone.has(id));
+
+      if (holdsRemoved) {
+        this.updateRowBlock(row.id, { [propertyId]: value });
+        this.sync.syncUpdateRow({ rowId: row.id, properties: { [propertyId]: value } });
+      }
+    }
   }
 
   private handleRowClick(rowId: string): void {

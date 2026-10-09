@@ -474,6 +474,7 @@ export class DatabaseCardDrawer {
 
   destroy(): void {
     this.events?.off('i18n:changed', this.followOuterDirection);
+    this.cancelCellEditor();
     this.cleanupListeners();
     this.cleanupEditor();
     this.propertyTypePopover?.destroy();
@@ -755,6 +756,14 @@ export class DatabaseCardDrawer {
 
     this.cellEditor = null;
     editor?.close();
+  }
+
+  /** Teardown drops a draft: the block may be going read-only or away, and must not be written. */
+  private cancelCellEditor(): void {
+    const editor = this.cellEditor;
+
+    this.cellEditor = null;
+    editor?.cancel();
   }
 
   /**

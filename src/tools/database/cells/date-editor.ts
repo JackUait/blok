@@ -531,5 +531,6 @@ export const openDateEditor = (
       return editor.isOpen;
     },
     close: () => editor.finish(true),
+    cancel: () => editor.finish(true),
   };
 };

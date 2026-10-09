@@ -497,6 +497,116 @@ describe('DatabaseTool', () => {
       element.remove();
     });
 
+    describe('drawer cell editors and the block lifecycle', () => {
+      const SCHEMA = [
+        { id: 'prop-title', name: 'Title', type: 'title' as const, position: 'a0' },
+        {
+          id: 'prop-status',
+          name: 'Status',
+          type: 'select' as const,
+          position: 'a1',
+          config: { options: [{ id: 'opt-a', label: 'A', position: 'a0' }, { id: 'opt-b', label: 'B', position: 'a1' }] },
+        },
+        {
+          id: 'prop-tags',
+          name: 'Tags',
+          type: 'multiSelect' as const,
+          position: 'a2',
+          config: { options: [{ id: 'tag-x', label: 'X', position: 'a0' }, { id: 'tag-y', label: 'Y', position: 'a1' }] },
+        },
+        { id: 'prop-score', name: 'Score', type: 'number' as const, position: 'a3' },
+      ];
+
+      const mount = (rows: BlockAPI[]): { tool: DatabaseTool; element: HTMLElement; api: API } => {
+        const options = createDatabaseOptions({ schema: SCHEMA }, {}, { childBlocks: rows });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+        queryByData(element, 'data-blok-database-card')?.click();
+
+        return { tool, element, api: options.api };
+      };
+
+      const openValue = (element: HTMLElement, propertyId: string): void => {
+        element.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-value][data-property-id="${propertyId}"]`)?.click();
+      };
+
+      const draftScore = (text: string): void => {
+        const input = document.querySelector<HTMLInputElement>('[data-blok-database-cell-input="number"]');
+
+        if (input === null) {
+          throw new Error('number editor did not open');
+        }
+        input.value = text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      const propertyWrites = (row: BlockAPI): unknown[] =>
+        vi.mocked(row.call).mock.calls.filter(([method]) => method === 'updateProperties').map(([, changes]) => changes);
+
+      afterEach(() => {
+        document.body.innerHTML = '';
+      });
+
+      it('a draft still open when the block turns read-only is dropped, not written', () => {
+        const row = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'T', 'prop-score': 1 }, position: 'a0' });
+        const { tool } = mount([row]);
+
+        openValue(document.body, 'prop-score');
+        draftScore('9');
+        tool.setReadOnly(true);
+
+        expect(propertyWrites(row)).toEqual([]);
+        tool.destroy();
+      });
+
+      it('a draft still open when the block is destroyed is dropped, not written', () => {
+        const row = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'T', 'prop-score': 1 }, position: 'a0' });
+        const { tool } = mount([row]);
+
+        openValue(document.body, 'prop-score');
+        draftScore('9');
+        tool.destroy();
+
+        expect(propertyWrites(row)).toEqual([]);
+      });
+
+      it('deleting an option empties it on every row, and the rows stay', () => {
+        const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-b', 'prop-tags': ['tag-x'] }, position: 'a0' });
+        const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-status': 'opt-a', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
+        const third = createMockRowBlock({ id: 'row-3', properties: { 'prop-title': 'Three', 'prop-status': 'opt-a' }, position: 'a2' });
+        const { tool, element, api } = mount([first, second, third]);
+
+        openValue(element, 'prop-status');
+        document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"] [data-blok-database-select-option-menu]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+
+        expect(propertyWrites(second)).toContainEqual({ 'prop-status': null });
+        expect(propertyWrites(third)).toContainEqual({ 'prop-status': null });
+        expect(propertyWrites(first)).not.toContainEqual({ 'prop-status': null });
+        expect(api.blocks.delete).not.toHaveBeenCalled();
+        tool.destroy();
+      });
+
+      it('deleting a multi-select option drops just that id from every row', () => {
+        const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-tags': ['tag-y'] }, position: 'a0' });
+        const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
+        const { tool, element } = mount([first, second]);
+
+        openValue(element, 'prop-tags');
+        document.querySelector<HTMLElement>('[data-blok-database-select-option="tag-x"] [data-blok-database-select-option-menu]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+
+        expect(propertyWrites(second)).toContainEqual({ 'prop-tags': ['tag-y'] });
+        expect(propertyWrites(first)).toEqual([]);
+        tool.destroy();
+      });
+    });
+
     it('renders title before the tab bar', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();

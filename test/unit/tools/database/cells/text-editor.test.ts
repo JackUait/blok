@@ -130,6 +130,18 @@ describe('cell text editors', () => {
     expect(field.bind(null)).toThrow();
   });
 
+  it('handle.cancel() drops a pending draft', () => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty('text'), 'a', makeAnchor(), ctx);
+
+    type('draft');
+    handle.cancel();
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onCancel).toHaveBeenCalledTimes(1);
+    expect(handle.isOpen).toBe(false);
+  });
+
   it('title and url edit on one line', () => {
     openCellEditor(makeProperty('url'), '', makeAnchor(), makeEditorContext());
 

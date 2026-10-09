@@ -53,6 +53,8 @@ export interface CellEditorHandle {
   readonly isOpen: boolean;
   /** Closes the editor as an outside click does: a pending text draft commits. */
   close(): void;
+  /** Closes the editor and drops a pending text draft. Live commits already made stay. */
+  cancel(): void;
 }
 
 export type CellRenderer = (property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext) => HTMLElement;

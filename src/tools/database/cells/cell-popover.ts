@@ -44,6 +44,8 @@ export class CellPopover {
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
         this.teardown();
+        // Destroying inside the popover's own Closed emit would re-enter it.
+        queueMicrotask(() => popover.destroy());
         this.options.onDismiss();
       }
     });
@@ -62,18 +64,12 @@ export class CellPopover {
       return;
     }
     this.teardown();
-    popover.hide();
     popover.destroy();
   }
 
   private teardown(): void {
-    const popover = this.popover;
-
     this.popover = null;
     window.removeEventListener('keydown', this.handleEscape, true);
-    if (popover !== null) {
-      queueMicrotask(() => popover.destroy());
-    }
   }
 
   private readonly handleEscape = (event: KeyboardEvent): void => {

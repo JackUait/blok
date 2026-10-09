@@ -40,6 +40,13 @@ const BLOCKS: OutputBlockData[] = [
         { id: 'prop-due', name: 'Due', type: 'date', position: 'a2' },
         { id: 'prop-score', name: 'Score', type: 'number', position: 'a3' },
         { id: 'prop-done', name: 'Done', type: 'checkbox', position: 'a4' },
+        {
+          id: 'prop-tags',
+          name: 'Tags',
+          type: 'multiSelect',
+          position: 'a5',
+          config: { options: [{ id: 'tag-x', label: 'X', color: 'red', position: 'a0' }, { id: 'tag-y', label: 'Y', position: 'a1' }] },
+        },
       ],
       views: [
         { id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: ['prop-title'] },
@@ -161,4 +168,20 @@ test('checkbox: a click flips the saved boolean with no popover', async ({ page 
   await expect(editor(page)).toHaveCount(0);
   await expect(value(page, 'prop-done').locator('[data-blok-database-checkbox]')).toHaveAttribute('data-state', 'checked');
   expect((await saved(page)).properties['prop-done']).toBe(true);
+});
+
+test('multi-select: each toggle saves and the editor stays open', async ({ page }) => {
+  await value(page, 'prop-tags').click();
+  await editor(page).locator('[data-blok-database-select-option="tag-x"]').click();
+  await editor(page).locator('[data-blok-database-select-option="tag-y"]').click();
+
+  await expect(editor(page)).toBeVisible();
+  expect((await saved(page)).properties['prop-tags']).toEqual(['tag-x', 'tag-y']);
+
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Escape');
+
+  await expect(editor(page)).toHaveCount(0);
+  await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
+  expect((await saved(page)).properties['prop-tags']).toEqual(['tag-x']);
 });

@@ -11,7 +11,7 @@ export type { ParsedDateValue } from './date-value';
 export { OPTION_COLORS, optionColorOf, pickOptionColor } from './option-colors';
 export type { OptionColor } from './option-colors';
 
-const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined };
+const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined, cancel: () => undefined };
 
 /**
  * Opens the editor for one cell under `anchor`. Read-only does nothing.

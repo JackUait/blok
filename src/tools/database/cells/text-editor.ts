@@ -114,5 +114,6 @@ export const openTextEditor = (
       return state.open;
     },
     close: () => finish(resolve() ?? { kind: 'cancel' }),
+    cancel: () => finish({ kind: 'cancel' }),
   };
 };

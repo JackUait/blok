@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PropertyDefinition, Pr
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSplitView } from '../../components/icons';
+import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -107,6 +107,8 @@ export interface CardDrawerOptions {
   rowBody?: {
     attach(rowId: string, host: HTMLElement): boolean;
     detach(rowId: string): void;
+    /** Puts the caret in the body, adding its first paragraph when it is empty. */
+    start(rowId: string): void;
   };
   /** The row before (-1) or after (1) the open one in the view, if any. */
   adjacentRow?: (rowId: string, direction: 1 | -1) => DatabaseRow | undefined;
@@ -360,8 +362,13 @@ export class DatabaseCardDrawer {
       this.autoResizeTitle(titleInput);
     });
     titleInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
+      if (e.key !== 'Enter' || e.isComposing) {
+        return;
+      }
+      e.preventDefault();
+      // "Press Enter to continue with an empty page".
+      if (!this.readOnly && this.attachedBodyRowId !== null) {
+        this.rowBody?.start(this.attachedBodyRowId);
       }
     });
     content.appendChild(titleInput);
@@ -684,6 +691,7 @@ export class DatabaseCardDrawer {
         titleEl: this.modeLabel(`tools.database.openPagesIn${key}`, `tools.database.openPagesIn${key}Description`),
         icon,
         ...(mode === this.mode ? { trailingIcon: IconCheck } : {}),
+        closeOnActivate: true,
         onActivate: () => this.switchMode(mode, true),
       })),
     });
@@ -755,7 +763,7 @@ export class DatabaseCardDrawer {
     const close = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-close]');
 
     if (close !== null) {
-      close.innerHTML = mode === 'full' ? IconChevronLeft : IconChevronRight + IconChevronRight;
+      close.innerHTML = ({ side: IconChevronRight + IconChevronRight, center: IconCross, full: IconChevronLeft } as const)[mode];
       close.setAttribute('aria-label', this.label(mode === 'full' ? 'tools.database.peekBack' : 'tools.database.close'));
     }
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');

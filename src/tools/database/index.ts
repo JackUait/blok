@@ -2983,6 +2983,7 @@ export class DatabaseTool implements BlockTool {
         rowBody: {
           attach: (rowId, host) => this.attachRowBody(rowId, host),
           detach: () => this.mountRows(),
+          start: (rowId) => this.api.blocks.getById(rowId)?.call('startBody'),
         },
         adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
         onModeChange: (mode) => this.changeOpenMode(mode),

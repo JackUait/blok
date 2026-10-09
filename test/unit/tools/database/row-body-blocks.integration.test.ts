@@ -296,6 +296,16 @@ describe('row bodies are child blocks of the row', () => {
     expect(holder?.querySelector('[data-blok-database-drawer][data-open]')).toBeNull();
   });
 
+  it('starts the body from the title with Enter', async () => {
+    await make(docWithBodies());
+    await openRow('r2');
+    holder?.querySelector('[data-blok-database-drawer-title]')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect((await editor?.save())?.blocks.filter((block) => block.parent === 'r2').map((block) => block.type)).toEqual(['paragraph']);
+  });
+
   it('declares the row a layout container that never nests another row', () => {
     expect(DatabaseRowTool.isLayout).toBe(true);
     expect(DatabaseRowTool.deletesChildren).toBe(true);

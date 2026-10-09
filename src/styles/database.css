@@ -3342,6 +3342,11 @@
   height: 16px;
 }
 
+/* A picked board card or list row: gray, never blue (D3). */
+[data-blok-database-row-selected] {
+  background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
+}
+
 /* One button per property: its name, sized to fit (research/08). */
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;

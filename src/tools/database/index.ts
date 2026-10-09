@@ -11,6 +11,8 @@ import { openFormulaEditor } from './database-formula-editor';
 import type { FormulaEditorHandle } from './database-formula-editor';
 import type { DatabaseSource } from './computed-properties';
 import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
+import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
+import { openMenu } from './database-table-menus';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
@@ -64,7 +66,7 @@ import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash, IconCheck } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -231,6 +233,11 @@ export class DatabaseTool implements BlockTool {
   private unregisterGroupToggle: (() => void) | null = null;
   /** Per board view: how many groups show before "Load more groups". Session only. */
   private readonly groupLimits = new Map<string, number>();
+  /** Board and list rows picked with Cmd/Ctrl- or Shift-click. Session only. */
+  private readonly rowSelection = new Set<string>();
+  /** The last row a click picked: a Shift-click selects from it. */
+  private selectionAnchor: string | null = null;
+  private bulkEditor: CellEditorHandle | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -485,6 +492,8 @@ export class DatabaseTool implements BlockTool {
 
   destroy(): void {
     this.destroyed = true;
+    document.removeEventListener('keydown', this.handleSelectionKeys, true);
+    this.bulkEditor?.close();
     this.api.events.off('block changed', this.handleBlockChanged);
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.viewControls?.destroy();
@@ -1205,6 +1214,7 @@ export class DatabaseTool implements BlockTool {
     if (viewId === this.activeViewId || this.boardContainer === null) {
       return;
     }
+    this.rowSelection.clear();
 
     // Destroy per-view subsystems (not cardDrawer)
     this.cardDrag?.destroy();
@@ -2575,6 +2585,7 @@ export class DatabaseTool implements BlockTool {
    * live apart from {@link attachViewListeners}.
    */
   private wireView(boardEl: HTMLDivElement): void {
+    this.paintRowSelection();
     this.attachReadListeners(boardEl);
     this.ensureCardDrawer();
     this.attachKeyboard(boardEl);
@@ -2595,7 +2606,13 @@ export class DatabaseTool implements BlockTool {
       }
       const rowEl = target.closest('[data-blok-database-list-row], [data-blok-database-card]');
       const rowId = rowEl?.getAttribute('data-row-id') ?? null;
+      const picks = event.metaKey || event.ctrlKey || event.shiftKey;
 
+      if (rowId !== null && picks && !this.readOnly && rowEl?.matches('[data-blok-database-list-row], [data-blok-database-board] [data-blok-database-card]') === true) {
+        this.pickRow(rowId, event.shiftKey);
+
+        return;
+      }
       // A gallery opens the same row through its own handler first; the second open is a no-op.
       if (rowId !== null) {
         this.handleRowClick(rowId);
@@ -3663,6 +3680,158 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer?.open(row, mode);
     void this.resolveRowPage(rowId);
   }
+
+  // ---------------------------------------------------------------------------
+  // Board and list selection
+  // ---------------------------------------------------------------------------
+
+  /** Cmd/Ctrl-click toggles a row; Shift-click adds every row from the last pick (view order). */
+  private pickRow(rowId: string, range: boolean): void {
+    const order = this.viewRowOrder().map((row) => row.id);
+    const from = this.selectionAnchor === null ? -1 : order.indexOf(this.selectionAnchor);
+    const to = order.indexOf(rowId);
+
+    if (range && from !== -1 && to !== -1) {
+      order.slice(Math.min(from, to), Math.max(from, to) + 1).forEach((id) => this.rowSelection.add(id));
+    } else if (this.rowSelection.has(rowId)) {
+      this.rowSelection.delete(rowId);
+    } else {
+      this.rowSelection.add(rowId);
+    }
+    this.selectionAnchor = rowId;
+    this.paintRowSelection();
+  }
+
+  private clearRowSelection(): void {
+    this.rowSelection.clear();
+    this.selectionAnchor = null;
+    this.paintRowSelection();
+  }
+
+  /** Gray halo on each picked row (D3) and the selection bar above the view. */
+  private paintRowSelection(): void {
+    const container = this.boardContainer;
+
+    if (container === null) {
+      return;
+    }
+    const present = new Set(this.model.getOrderedRows().map((row) => row.id));
+
+    [...this.rowSelection].filter((id) => !present.has(id)).forEach((id) => this.rowSelection.delete(id));
+    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card]').forEach((el) => {
+      const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
+
+      el.toggleAttribute('data-blok-database-row-selected', selected);
+      if (selected) {
+        el.setAttribute('aria-selected', 'true');
+      } else {
+        el.removeAttribute('aria-selected');
+      }
+    });
+    container.querySelector(':scope > [data-blok-database-table-selection-bar]')?.remove();
+    document.removeEventListener('keydown', this.handleSelectionKeys, true);
+    if (this.rowSelection.size === 0) {
+      return;
+    }
+    document.addEventListener('keydown', this.handleSelectionKeys, true);
+    const view = this.model.getView(this.activeViewId);
+    const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
+    const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id));
+
+    container.prepend(createSelectionBar({
+      count: this.rowSelection.size,
+      properties,
+      i18n: this.api.i18n,
+      onEdit: (propertyId, anchor) => this.openBulkEditor(propertyId, anchor),
+      onDelete: () => this.trashSelection(),
+      onMore: (anchor) => {
+        openMenu(anchor, [
+          { title: this.api.i18n.t('tools.database.tableDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.duplicateSelection() },
+          { title: this.api.i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, closeOnActivate: true, onActivate: () => this.trashSelection() },
+        ]);
+      },
+    }));
+  }
+
+  private openBulkEditor(propertyId: string, anchor: HTMLElement): void {
+    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
+    const rowIds = [...this.rowSelection];
+
+    if (property === undefined || rowIds.length === 0 || this.readOnly) {
+      return;
+    }
+    this.bulkEditor?.close();
+    this.bulkEditor = openCellEditor(property, null, anchor, {
+      ...this.cellContext(),
+      i18n: this.api.i18n,
+      readOnly: false,
+      onCommit: (value) => this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
+      onClose: () => {
+        this.bulkEditor = null;
+      },
+    });
+  }
+
+  private duplicateSelection(): void {
+    [...this.rowSelection].forEach((rowId) => this.duplicateTableRow(rowId));
+    this.paintRowSelection();
+  }
+
+  private trashSelection(): void {
+    const rowIds = [...this.rowSelection];
+
+    this.rowSelection.clear();
+    this.deleteTableRows(rowIds);
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /**
+   * While board or list rows are picked: Escape clears, Cmd/Ctrl+D
+   * duplicates, Delete or Backspace trashes, Cmd/Ctrl+/ edits them all.
+   * A key typed into a field keeps its own meaning.
+   */
+  private readonly handleSelectionKeys = (event: KeyboardEvent): void => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+
+    if (this.rowSelection.size === 0 || (target !== null && (target.isContentEditable || target.matches('input, textarea, select')))) {
+      return;
+    }
+    const mod = event.metaKey || event.ctrlKey;
+    const key = event.key.toLowerCase();
+    const act = (run: () => void): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      run();
+    };
+
+    if (key === 'escape') {
+      act(() => this.clearRowSelection());
+    } else if (mod && key === 'd') {
+      act(() => this.duplicateSelection());
+    } else if (!mod && (key === 'backspace' || key === 'delete')) {
+      act(() => this.trashSelection());
+    } else if (mod && key === '/') {
+      act(() => {
+        const bar = this.boardContainer?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');
+        const view = this.model.getView(this.activeViewId);
+        const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
+        const properties = bulkEditableProperties(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id)));
+
+        if (bar === null || bar === undefined) {
+          return;
+        }
+        openMenu(bar, properties.map((property) => ({
+          title: property.name,
+          closeOnActivate: true,
+          onActivate: () => {
+            const button = bar.querySelector<HTMLElement>(`[data-property-id="${property.id}"]`);
+
+            this.openBulkEditor(property.id, button ?? bar);
+          },
+        })), { searchable: true });
+      });
+    }
+  };
 
   /** Opens a row's page; its row block calls this when find-in-page reveals a match inside it. */
   public openRow(param: { rowId: string }): void {

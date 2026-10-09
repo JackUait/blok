@@ -6914,6 +6914,10 @@ span[data-blok-slash-search] {
   height: 16px;
 }
 
+[data-blok-database-row-selected] {
+  background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
+}
+
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
   padding-inline: var(--blok-space-2);

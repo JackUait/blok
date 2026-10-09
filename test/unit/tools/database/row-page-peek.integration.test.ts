@@ -321,6 +321,71 @@ describe('row page peek modes', () => {
     expect(iconIn()).toBeUndefined();
   });
 
+  describe('board and list selection', () => {
+    const boardDoc = (type: 'board' | 'list'): OutputBlockData[] => {
+      const blocks = doc({ type, ...(type === 'board' ? { groupBy: 's' } : {}), visibleProperties: ['d'] });
+
+      blocks[0].data = {
+        ...blocks[0].data,
+        schema: [
+          { id: 't', name: 'Name', type: 'title', position: 'a0' },
+          { id: 's', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'Todo', position: 'a0' }] } },
+          { id: 'd', name: 'Done', type: 'checkbox', position: 'a2' },
+        ],
+      };
+      [1, 2, 3].forEach((i) => {
+        blocks[i] = { ...blocks[i], data: { ...blocks[i].data, properties: { ...(blocks[i].data as { properties: object }).properties, s: 'o1' } } };
+      });
+
+      return blocks;
+    };
+    const rowEl = (rowId: string): HTMLElement | null => q(`[data-blok-database-card][data-row-id="${rowId}"], [data-blok-database-list-row][data-row-id="${rowId}"]`);
+    const modClick = async (rowId: string, init: MouseEventInit): Promise<void> => {
+      rowEl(rowId)?.dispatchEvent(new MouseEvent('click', { bubbles: true, ...init }));
+      await quiet();
+    };
+    const savedRows = async (): Promise<Array<{ id?: string; data: { properties: Record<string, unknown> } }>> =>
+      ((await editor?.save())?.blocks ?? []).filter((block) => block.type === 'database-row') as Array<{ id?: string; data: { properties: Record<string, unknown> } }>;
+
+    it.each(['board', 'list'] as const)('in a %s, Cmd/Ctrl-click and Shift-click select rows gray, with the bar, and never open them', async (type) => {
+      await make(boardDoc(type));
+      await modClick('r1', { metaKey: true });
+      await modClick('r3', { shiftKey: true });
+
+      expect(drawer()).toBeNull();
+      expect(['r1', 'r2', 'r3'].map((id) => rowEl(id)?.getAttribute('aria-selected'))).toEqual(['true', 'true', 'true']);
+      expect(q('[data-blok-database-table-selection-count]')?.textContent).toBe('3 selected');
+
+      await key({ key: 'Escape' });
+
+      expect(rowEl('r1')?.getAttribute('aria-selected')).not.toBe('true');
+      expect(q('[data-blok-database-table-selection-bar]')).toBeNull();
+    });
+
+    it('a bar property button edits every selected card', async () => {
+      await make(boardDoc('board'));
+      await modClick('r1', { metaKey: true });
+      await modClick('r2', { ctrlKey: true });
+      await click(q('[data-blok-database-table-selection-property][data-property-id="d"]'));
+
+      expect((await savedRows()).map((row) => row.data.properties.d)).toEqual([true, true, undefined]);
+    });
+
+    it('trash, Cmd/Ctrl+D and Cmd/Ctrl+/ act on the selection', async () => {
+      await make(boardDoc('list'));
+      await modClick('r2', { metaKey: true });
+      await key({ key: 'd', ctrlKey: true });
+
+      expect(await savedRows()).toHaveLength(4);
+
+      await key({ key: '/', ctrlKey: true });
+      expect([...document.querySelectorAll('[data-blok-popover-item]')].map((item) => item.textContent?.trim())).toContain('Done');
+
+      await click(q('[data-blok-database-table-selection-delete]'));
+      expect((await savedRows()).map((row) => row.id)).not.toContain('r2');
+    });
+  });
+
   it('switches the mode from the peek header and saves it on the view', async () => {
     await make(doc());
     await openRow('r1');

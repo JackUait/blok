@@ -117,6 +117,12 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
 });
 
+const bodyDirection = (page: Page): Promise<string | null> => page.evaluate(() => {
+  const body = document.querySelector('[data-blok-database-drawer-editor]');
+
+  return body === null ? null : getComputedStyle(body).direction;
+});
+
 test.describe('tool surfaces after a runtime flip to RTL', () => {
   test('the audio cover picker moves to where a fresh RTL picker opens', async ({ page }) => {
     const blocks: OutputBlockData[] = [{ type: 'audio', data: { url: AUDIO_URL, title: 'نشيد' } }];
@@ -212,13 +218,12 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
   test('the database page body editor follows the flip', async ({ page }) => {
     await createBlok(page, 'ltr', database('إصلاح الخطأ'));
     await page.locator('[data-blok-database-card]').first().click();
-    const inner = page.locator('[data-blok-database-drawer-editor] [data-blok-editor]');
-
-    await expect(inner).toHaveAttribute('dir', 'ltr');
+    // The page body is the row's own blocks in this editor, so it flips with it.
+    await expect.poll(() => bodyDirection(page)).toBe('ltr');
 
     await flip(page);
 
-    await expect(inner).toHaveAttribute('dir', 'rtl');
+    await expect.poll(() => bodyDirection(page)).toBe('rtl');
   });
 
   test('flipping with the page body open saves nothing', async ({ page }) => {
@@ -253,11 +258,11 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
 
     await mount();
     await page.locator('[data-blok-database-card]').first().click();
-    await expect(page.locator('[data-blok-database-drawer-editor] [data-blok-editor]')).toHaveAttribute('dir', 'ltr');
+    await expect.poll(() => bodyDirection(page)).toBe('ltr');
     const openBefore = await settledChanges();
 
     await flip(page);
-    await expect(page.locator('[data-blok-database-drawer-editor] [data-blok-editor]')).toHaveAttribute('dir', 'rtl');
+    await expect.poll(() => bodyDirection(page)).toBe('rtl');
 
     expect(await settledChanges() - openBefore).toBe(closedDelta);
   });

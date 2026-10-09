@@ -47,7 +47,9 @@ const DB_DOC: OutputData['blocks'] = [
     },
     content: ['row-1', 'row-2'],
   },
-  { id: 'row-1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'prop-title': 'Card one', 'prop-status': 'opt-todo' } } },
+  { id: 'row-1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'prop-title': 'Card one', 'prop-status': 'opt-todo' } }, content: ['row-1-body'] },
+  // The page body is the row's child blocks.
+  { id: 'row-1-body', type: 'paragraph', parent: 'row-1', data: { text: 'Body text' } },
   { id: 'row-2', type: 'database-row', parent: 'db-1', data: { position: 'a1', properties: { 'prop-title': 'Card two', 'prop-status': 'opt-done' } } },
   { id: 'p-after', type: 'paragraph', data: { text: 'after' } },
 ];
@@ -210,6 +212,7 @@ test.describe('W4D card page (drawer)', () => {
     const body = pageBody(page);
 
     await body.click();
+    await page.keyboard.press('End');
     await page.keyboard.type('body');
     await wait(page, 1200);
     await closeCard(page);
@@ -219,10 +222,11 @@ test.describe('W4D card page (drawer)', () => {
     await undo(page);
 
     expect(await rowData(page, 'row-1')).toEqual(row1);
+    expect(JSON.stringify((await save(page)).find(b => b.id === 'row-1-body')?.data)).not.toContain('body');
   });
 
-  // A press in the card page's nested editor belongs to that editor. The outer editor's redactor
-  // mousedown handler must not treat it as a press below its own blocks.
+  // A press in the card page body is a press on that body block. The redactor's mousedown
+  // handler must not treat it as a press below the document's blocks.
   test('W4D-3: clicking into a card page body adds no block to the outer document', async ({ page }) => {
     await mount(page);
     await gap(page);

@@ -205,9 +205,12 @@ for (const direction of DIRECTIONS) {
         expect(transform).toBe(direction === 'rtl' ? 'matrix(-1, 0, 0, 1, 0, 0)' : 'none');
       });
 
-      await expect.poll(() => drawer.evaluate(element =>
-        element.querySelector('[data-blok-database-drawer-editor] [data-blok-interface]')?.getAttribute('dir') ?? null
-      )).toBe(direction);
+      // The page body is the row's own blocks in this editor, so it reads in the editor's direction.
+      await expect.poll(() => drawer.evaluate((element) => {
+        const body = element.querySelector('[data-blok-database-drawer-editor]');
+
+        return body === null ? null : getComputedStyle(body).direction;
+      })).toBe(direction);
     });
 
     test('the video settings menu opens over the player with its speed ruler inside', async ({ page }) => {

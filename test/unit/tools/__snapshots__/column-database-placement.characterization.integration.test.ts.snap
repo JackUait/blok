@@ -1456,9 +1456,9 @@ exports[`column and database placement — characterization > adds a database ro
     "mountedIn": [
       "a@-",
       "db@-",
-      "r1@-",
-      "r2@-",
-      "n1@-",
+      "r1@db",
+      "r2@db",
+      "n1@db",
       "z@-",
     ],
     "saved": [
@@ -1741,9 +1741,9 @@ exports[`column and database placement — characterization > adds a database ro
     "mountedIn": [
       "a@-",
       "db@-",
-      "r1@-",
-      "r2@-",
-      "n1@-",
+      "r1@db",
+      "r2@db",
+      "n1@db",
       "z@-",
     ],
     "saved": [
@@ -2008,8 +2008,8 @@ exports[`column and database placement — characterization > adds a database ro
     "mountedIn": [
       "a@-",
       "db@-",
-      "r1@-",
-      "r2@-",
+      "r1@db",
+      "r2@db",
       "z@-",
     ],
     "saved": [
@@ -2286,9 +2286,9 @@ exports[`column and database placement — characterization > adds a database ro
     "mountedIn": [
       "a@-",
       "db@-",
-      "r1@-",
-      "r2@-",
-      "n1@-",
+      "r1@db",
+      "r2@db",
+      "n1@db",
       "z@-",
     ],
     "saved": [
@@ -2569,9 +2569,9 @@ exports[`column and database placement — characterization > adds a database ro
     "mountedIn": [
       "a@-",
       "db@-",
-      "r1@-",
-      "r2@-",
-      "n1@-",
+      "r1@db",
+      "r2@db",
+      "n1@db",
       "z@-",
     ],
     "saved": [
@@ -2835,8 +2835,8 @@ exports[`column and database placement — characterization > adds a database ro
     "mountedIn": [
       "a@-",
       "db@-",
-      "r1@-",
-      "r2@-",
+      "r1@db",
+      "r2@db",
       "z@-",
     ],
     "saved": [

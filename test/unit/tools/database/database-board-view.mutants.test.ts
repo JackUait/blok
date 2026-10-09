@@ -245,13 +245,13 @@ describe('DatabaseBoardView — mutation coverage', () => {
         headerCursor: 'grab',
         cardsDisplay: 'flex',
         cardsFlexDirection: 'column',
-        cardsGap: '8px',
+        cardsGap: '',
         cardsPaddingTop: '6px',
         cardsMinHeight: '40px',
       });
     });
 
-    it('derives the pill background, pill text and count colours from the option colour', () => {
+    it('derives the pill colours from the option colour and leaves the count colour to the column accent', () => {
       const { board } = createBoard({ options: [makeOption({ color: 'blue' })] });
       const pill = requireEl(board, '[data-blok-database-column-pill]');
       const count = requireEl(board, '[data-blok-database-column-count]');
@@ -263,10 +263,10 @@ describe('DatabaseBoardView — mutation coverage', () => {
         dotBackground: dot.style.backgroundColor,
         countColor: count.style.color,
       }).toStrictEqual({
-        pillBackground: 'color-mix(in srgb, var(--blok-color-blue-text) 20%, var(--blok-color-blue-bg))',
-        pillColor: 'var(--blok-color-blue-text)',
+        pillBackground: 'var(--blok-database-option-blue-bg)',
+        pillColor: 'var(--blok-database-option-blue-text)',
         dotBackground: 'var(--blok-color-blue-text)',
-        countColor: 'var(--blok-color-blue-text)',
+        countColor: '',
       });
     });
 

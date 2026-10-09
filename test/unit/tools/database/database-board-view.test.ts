@@ -187,24 +187,48 @@ describe('DatabaseBoardView', () => {
       expect(cardEls[1].getAttribute('data-row-id')).toBe('row-y');
     });
 
-    it('applies column color as background on the column element when color is defined', () => {
+    it('hands a colored column its Notion tint, card ring and accent through private custom properties', () => {
       const options = [makeOption({ id: 'opt-1', color: 'green' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
-      expect(column.style.backgroundColor).toBe('var(--blok-color-green-bg)');
+      expect(column.style.getPropertyValue('--_blok-group-tint'))
+        .toBe('var(--blok-database-column-green-bg, color-mix(in srgb, var(--blok-database-option-green-bg) 22%, transparent))');
+      expect(column.style.getPropertyValue('--_blok-group-ring'))
+        .toBe('var(--blok-database-column-green-ring, color-mix(in srgb, var(--blok-database-option-green-bg) 49%, transparent))');
+      expect(column.style.getPropertyValue('--_blok-group-accent'))
+        .toBe('var(--blok-database-column-green-accent, var(--blok-color-green-text))');
+      expect(column.style.backgroundColor).toBe('');
     });
 
-    it('does not apply column color when color is undefined', () => {
+    it('leaves an uncolored column on the default tokens', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
+      expect(column.style.getPropertyValue('--_blok-group-tint')).toBe('');
       expect(column.style.backgroundColor).toBe('');
+    });
+
+    it('paints a colored header pill with the option pill colors', () => {
+      const options = [makeOption({ id: 'opt-1', color: 'yellow' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const pill = view.createView().querySelector('[data-blok-database-column-pill]') as HTMLElement;
+
+      expect(pill.style.backgroundColor).toBe('var(--blok-database-option-yellow-bg)');
+      expect(pill.style.color).toBe('var(--blok-database-option-yellow-text)');
+    });
+
+    it('makes each column 276px wide', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
+      const column = view.createView().querySelector('[data-blok-database-column]') as HTMLElement;
+
+      expect(column.style.flex).toBe('0 0 276px');
+      expect(column.style.minWidth).toBe('276px');
     });
 
     it('does not render action buttons in read-only mode', () => {
@@ -638,7 +662,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.display).toBe('flex');
       expect(column.style.flexDirection).toBe('column');
       expect(column.style.minWidth).toBeTruthy();
-      expect(column.style.flex).toBe('0 0 260px');
+      expect(column.style.flex).toBe('0 0 276px');
     });
 
     it('column header has flex layout with padding', () => {
@@ -673,7 +697,8 @@ describe('DatabaseBoardView', () => {
 
       expect(container.style.display).toBe('flex');
       expect(container.style.flexDirection).toBe('column');
-      expect(container.style.gap).toBeTruthy();
+      // Spacing between cards is the card's own 8px bottom margin (database.css).
+      expect(container.style.gap).toBe('');
     });
 
     it('card element has padding and pointer cursor', () => {
@@ -738,16 +763,6 @@ describe('DatabaseBoardView', () => {
       expect(boardArea.style.gap).toBe('12px');
     });
 
-    it('cards container has updated gap of 8px', () => {
-      const options = [makeOption({ id: 'opt-1' })];
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
-      const board = view.createView();
-
-      const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
-
-      expect(container.style.gap).toBe('8px');
-    });
-
     it('cards container has padding-top of 6px', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
@@ -758,14 +773,14 @@ describe('DatabaseBoardView', () => {
       expect(container.style.paddingTop).toBe('6px');
     });
 
-    it('column element has min-width of 260px', () => {
+    it('column element has min-width of 276px', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
-      expect(column.style.minWidth).toBe('260px');
+      expect(column.style.minWidth).toBe('276px');
     });
 
     it('card element has updated padding of 10px 12px', () => {
@@ -792,36 +807,22 @@ describe('DatabaseBoardView', () => {
       expect(header.style.borderRadius).toBe('');
     });
 
-    it('applies Notion-style card background via --blok-database-card-bg token', () => {
+    it('leaves card background and shadow to database.css, so a column can recolor the ring', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
-      const board = view.createView();
+      const card = view.createView().querySelector('[data-blok-database-card]') as HTMLElement;
 
-      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
-
-      expect(card.style.backgroundColor).toBe('var(--blok-database-card-bg)');
+      expect(card.style.backgroundColor).toBe('');
+      expect(card.style.boxShadow).toBe('');
     });
 
-    it('applies Notion-style card shadow via --blok-database-card-shadow token', () => {
-      const options = [makeOption({ id: 'opt-1' })];
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
-      const board = view.createView();
-
-      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
-
-      expect(card.style.boxShadow).toBe('var(--blok-database-card-shadow)');
-    });
-
-    it('add-card button border color matches column color when color is defined', () => {
+    it('leaves the add-card ring to database.css', () => {
       const options = [makeOption({ id: 'opt-1', color: 'blue' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
-      const board = view.createView();
+      const addCardBtn = view.createView().querySelector('[data-blok-database-add-card]') as HTMLElement;
 
-      const addCardBtn = board.querySelector('[data-blok-database-add-card]') as HTMLElement;
-
-      expect(addCardBtn.style.borderColor).toBe('color-mix(in srgb, var(--blok-color-blue-text) 30%, transparent)');
+      expect(addCardBtn.style.borderColor).toBe('');
     });
 
     it('add-card button has no inline border color when column has no color', () => {

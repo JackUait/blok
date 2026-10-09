@@ -184,12 +184,17 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     columnEl.setAttribute('aria-label', option.label);
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
-    columnEl.style.minWidth = '260px';
-    columnEl.style.flex = '0 0 260px';
+    columnEl.style.minWidth = '276px';
+    columnEl.style.flex = '0 0 276px';
 
     if (option.color !== undefined) {
-      columnEl.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
-      columnEl.setAttribute('data-color', option.color);
+      const c = option.color;
+
+      // Only some hues were measured (colors.css); the rest derive from the option pill.
+      columnEl.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
+      columnEl.style.setProperty('--_blok-group-ring', `var(--blok-database-column-${c}-ring, color-mix(in srgb, var(--blok-database-option-${c}-bg) 49%, transparent))`);
+      columnEl.style.setProperty('--_blok-group-accent', `var(--blok-database-column-${c}-accent, var(--blok-color-${c}-text))`);
+      columnEl.setAttribute('data-color', c);
     }
 
     const header = document.createElement('div');
@@ -206,8 +211,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     pill.setAttribute('data-blok-database-column-pill', '');
 
     if (option.color !== undefined) {
-      pill.style.backgroundColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 20%, var(--blok-color-${option.color}-bg))`;
-      pill.style.color = `var(--blok-color-${option.color}-text)`;
+      pill.style.backgroundColor = `var(--blok-database-option-${option.color}-bg)`;
+      pill.style.color = `var(--blok-database-option-${option.color}-text)`;
 
       const dot = document.createElement('span');
 
@@ -230,10 +235,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     countEl.setAttribute('data-blok-database-column-count', '');
     countEl.textContent = String(rows.length);
 
-    if (option.color !== undefined) {
-      countEl.style.color = `var(--blok-color-${option.color}-text)`;
-    }
-
     countEl.hidden = this.hideCounts;
     header.appendChild(countEl);
 
@@ -249,7 +250,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardsContainer.setAttribute('role', 'list');
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
-    cardsContainer.style.gap = '8px';
     cardsContainer.style.paddingTop = '6px';
     cardsContainer.style.minHeight = '40px';
 
@@ -278,13 +278,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
       labelEl.textContent = this.i18n.t('tools.database.newPage');
       addCardBtn.appendChild(labelEl);
-
-      if (option.color !== undefined) {
-        // Border only. The label's colour is left to database.css: tinting it
-        // with the Marker palette put "New page" at ~2.8:1 on the column tint,
-        // and an inline style would outrank any stylesheet fix.
-        addCardBtn.style.borderColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 30%, transparent)`;
-      }
 
       columnEl.appendChild(addCardBtn);
     }
@@ -333,8 +326,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.style.padding = '10px 12px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
-    cardEl.style.backgroundColor = 'var(--blok-database-card-bg)';
-    cardEl.style.boxShadow = 'var(--blok-database-card-shadow)';
 
     const titleEl = document.createElement('div');
 

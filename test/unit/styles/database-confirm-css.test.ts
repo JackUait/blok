@@ -60,7 +60,7 @@ describe('database confirm dialog css', () => {
 
     expect(body).toContain('width: 100%');
     expect(body).toContain('height: 32px');
-    expect(body).toContain('margin-top: 8px');
+    expect(body).toContain('margin-top: var(--blok-space-2)');
     expect(body).toContain('border-radius: var(--blok-radius-control)');
     expect(body).toContain('font-size: 14px');
     expect(body).toContain('font-weight: 500');

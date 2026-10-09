@@ -74,15 +74,17 @@ describe('radius tokens in database, table, columns and checklist CSS', () => {
 });
 
 describe('database board', () => {
-  it('a column is a surface and publishes the inner radius for its padding', () => {
-    expect(radiusOf('database.css', '[data-blok-database-column]')).toEqual([role('surface')]);
-    expect(innerOf('database.css', '[data-blok-database-column]')).toEqual([derive('surface', '2')]);
+  // Notion measures the column body, the card and "+ New page" all at 10px
+  // (research/08), so the card takes the block role instead of nesting.
+  it('a column, its cards and its add-card button are blocks', () => {
+    expect(radiusOf('database.css', '[data-blok-database-column]')).toEqual([role('block')]);
+    expect(innerOf('database.css', '[data-blok-database-column]')).toEqual([]);
+    expect(radiusOf('database.css', '[data-blok-database-card]')).toEqual([role('block')]);
+    expect(radiusOf('database.css', '[data-blok-database-add-card]')).toEqual([role('block')]);
   });
 
-  it('header, cards and the add-card button nest inside the column', () => {
+  it('the column header nests its small-control radius', () => {
     expect(radiusOf('database.css', '[data-blok-database-column-header]')).toEqual([inner('control-sm')]);
-    expect(radiusOf('database.css', '[data-blok-database-card]')).toEqual([inner('surface')]);
-    expect(radiusOf('database.css', '[data-blok-database-add-card]')).toEqual([inner('surface')]);
   });
 
   it('the add-column button is a large control', () => {
@@ -96,8 +98,8 @@ describe('database board', () => {
       .toEqual([inner('control')]);
   });
 
-  it('the column pill is a pill and the delete button a small control', () => {
-    expect(radiusOf('database.css', '[data-blok-database-column-pill]')).toEqual([role('pill')]);
+  it('the column pill (4px, research/08) and the delete button are small controls', () => {
+    expect(radiusOf('database.css', '[data-blok-database-column-pill]')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-delete-column]')).toEqual([role('control-sm')]);
   });
 

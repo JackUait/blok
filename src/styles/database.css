@@ -56,6 +56,16 @@
   --blok-database-table-cell-ring: rgba(55, 53, 47, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+  /* Board group colors (research/08). Only these hues were measured; the rest
+     derive from the option pill color in database-board-view.ts. */
+  --blok-database-column-yellow-bg: rgba(207, 175, 0, 0.063);
+  --blok-database-column-brown-bg: rgba(115, 59, 3, 0.035);
+  --blok-database-column-yellow-ring: rgba(211, 168, 0, 0.137);
+  --blok-database-column-accent: rgb(95, 94, 89);
+  --blok-database-column-yellow-accent: rgb(216, 163, 47);
+  --blok-database-column-brown-accent: rgb(182, 137, 101);
+  --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
+  --blok-database-card-ring: rgba(42, 28, 0, 0.07);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-confirm-bg: #ffffff;
   --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -113,6 +123,17 @@
     --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
     --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
     --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+    /* Measured in dark: default, yellow and pink. Brown is unmeasured and
+       derives from the dark option pill like the other hues. */
+    --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
+    --blok-database-column-brown-bg: color-mix(in srgb, var(--blok-database-option-brown-bg) 11%, transparent);
+    --blok-database-column-pink-bg: rgba(255, 78, 149, 0.055);
+    --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
+    --blok-database-column-accent: rgb(188, 186, 182);
+    --blok-database-column-yellow-accent: rgb(216, 163, 47);
+    --blok-database-column-pink-accent: rgb(219, 105, 153);
+    --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
+    --blok-database-card-ring: rgba(255, 255, 243, 0.082);
     /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
     --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
     --blok-database-confirm-bg: rgb(37, 37, 37);
@@ -169,6 +190,17 @@
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
+  /* Measured in dark: default, yellow and pink. Brown is unmeasured and
+     derives from the dark option pill like the other hues. */
+  --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
+  --blok-database-column-brown-bg: color-mix(in srgb, var(--blok-database-option-brown-bg) 11%, transparent);
+  --blok-database-column-pink-bg: rgba(255, 78, 149, 0.055);
+  --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
+  --blok-database-column-accent: rgb(188, 186, 182);
+  --blok-database-column-yellow-accent: rgb(216, 163, 47);
+  --blok-database-column-pink-accent: rgb(219, 105, 153);
+  --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
+  --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-confirm-bg: rgb(37, 37, 37);
@@ -220,13 +252,13 @@
 }
 
 /**
- * Column background tint — a subtle fill so columns read as lanes.
+ * Column tint (research/08). A colored column gets its tint, card ring and
+ * accent from the --_blok-group-* properties database-board-view.ts sets inline.
  */
 [data-blok-database-column] {
-  background-color: var(--blok-database-column-bg);
-  border-radius: var(--blok-radius-surface);
-  padding: var(--blok-space-2);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-2)));
+  background-color: var(--_blok-group-tint, var(--blok-database-column-bg));
+  border-radius: var(--blok-radius-block);
+  padding: 0 var(--blok-space-2) var(--blok-space-2);
 }
 
 /**
@@ -241,11 +273,12 @@
  * Cards — elevated surface with subtle border and shadow.
  */
 [data-blok-database-card] {
+  margin-bottom: var(--blok-space-2);
   background-color: var(--blok-database-card-bg);
-  box-shadow: var(--blok-database-card-shadow);
-  border: 1px solid var(--blok-database-card-border);
-  border-radius: var(--blok-radius-inner, var(--blok-radius-surface));
-  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, outline-color 150ms ease;
+  box-shadow: var(--blok-database-card-lift), var(--_blok-group-ring, var(--blok-database-card-ring)) 0 0 0 1px;
+  border: none;
+  border-radius: var(--blok-radius-block);
+  transition: background-color 100ms ease-out;
 }
 
 [data-blok-database-card]:hover {
@@ -256,20 +289,6 @@
   background-color: var(--blok-database-card-bg-hover);
   outline: 2px solid var(--blok-database-card-border-active);
   outline-offset: -1px;
-}
-
-/**
- * Colored columns — cards use a transparent overlay so the column
- * background color shows through, matching the "New page" button.
- */
-[data-blok-database-column][data-color] [data-blok-database-card] {
-  background-color: var(--blok-database-card-colored-overlay);
-  box-shadow: none;
-  border-color: var(--blok-database-card-colored-border);
-}
-
-[data-blok-database-column][data-color] [data-blok-database-card]:hover {
-  background-color: var(--blok-database-card-colored-overlay-hover);
 }
 
 /**
@@ -384,18 +403,9 @@
   color: var(--blok-text-primary, inherit);
 }
 
-/* In colored columns, add-card keeps the accent color on hover too */
-[data-blok-database-column][data-color] [data-blok-database-add-card]:hover {
-  background-color: color-mix(in srgb, currentColor 8%, transparent);
-}
-
-/**
- * Inside a coloured column the add affordance sits on the column's tint, where
- * the neutral grey it uses elsewhere drops below AA. Reuse the on-pill colour,
- * which is chosen to carry text over exactly these tints.
- */
-[data-blok-database-column][data-color] [data-blok-database-add-card] {
-  color: var(--blok-database-column-pill-text);
+/* "+ New page" keeps the group's accent on hover. */
+[data-blok-database-add-card]:hover {
+  color: var(--_blok-group-accent, var(--blok-database-column-accent));
 }
 
 [data-blok-database-add-column] {
@@ -497,30 +507,30 @@
 [data-blok-database-column-pill] {
   display: inline-flex;
   align-items: center;
-  gap: var(--blok-space-1-25);
-  padding: var(--blok-space-0-5) var(--blok-space-1-75) var(--blok-space-0-5) var(--blok-space-1-25);
-  border-radius: var(--blok-radius-pill);
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-option-default-bg);
+  color: var(--blok-database-option-default-text);
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 500;
   flex: 0 0 auto;
   min-width: 0;
   width: fit-content;
 }
 
-/**
- * Colored pills take a dedicated on-pill text colour in BOTH themes, overriding
- * the inline colour JS sets from the Marker palette. That palette is persisted
- * into saved documents, and every one of its light `--blok-color-*-text` values
- * fails AA on its own `--blok-color-*-bg` (yellow 2.30:1, orange 2.83:1, teal
- * 3.05:1 … purple 4.09:1), so the pill has to opt out rather than the palette be
- * retuned. The token itself flips per theme, so one rule covers both.
- */
-[data-blok-database-column][data-color] [data-blok-database-column-pill] {
-  color: var(--blok-database-column-pill-text) !important;
+/* The no-value group's name is plain text, no pill. */
+[data-blok-database-no-value-group] [data-blok-database-column-pill] {
+  background-color: transparent;
+  padding: 0;
+  margin-inline-start: var(--blok-space-1);
 }
 
-/**
- * Column status dot — solid circle using the accent text color.
- */
+/* Notion's select pill has no dot. The element stays for hosts that style it. */
 [data-blok-database-column-dot] {
+  display: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -534,10 +544,7 @@
 [data-blok-database-no-value-label],
 [data-blok-database-column-title-input] {
   white-space: nowrap;
-  font-size: 14px;
-  font-weight: 400;
-  text-transform: capitalize;
-  letter-spacing: 0.04em;
+  font: inherit;
 }
 
 [data-blok-database-column-title-input] {
@@ -552,9 +559,10 @@
  * Card title text — clamp to two lines.
  */
 [data-blok-database-card-title] {
-  font-size: 14px;
+  padding: 0 var(--blok-space-0-25);
+  font-size: 15px;
+  line-height: 22.5px;
   font-weight: 500;
-  line-height: 1.45;
   word-break: break-word;
 }
 
@@ -736,12 +744,17 @@
 }
 
 /**
- * Add card — match card height and visual rhythm.
+ * "+ New page" at the column foot: a 40px ring button, text in the group's accent.
  */
 [data-blok-database-add-card] {
-  margin-top: var(--blok-space-1-5);
-  padding: var(--blok-space-2-5) var(--blok-space-3);
-  border-radius: var(--blok-radius-inner, var(--blok-radius-surface));
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 var(--blok-space-2-5);
+  border: none;
+  border-radius: var(--blok-radius-block);
+  box-shadow: var(--_blok-group-ring, var(--blok-database-card-ring)) 0 0 0 1px;
+  color: var(--_blok-group-accent, var(--blok-database-column-accent));
+  transition: background-color 100ms ease-in-out;
 }
 
 [data-blok-database-add-card-icon] {
@@ -759,11 +772,16 @@
  * Card count badge — muted counter after column title.
  */
 [data-blok-database-column-count] {
-  color: var(--blok-database-add-text);
-  font-size: 13px;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control-sm);
+  color: var(--_blok-group-accent, var(--blok-database-column-accent));
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 400;
-  margin-inline-start: var(--blok-space-0-5);
   flex-shrink: 0;
+  transition: background 100ms ease-in-out;
 }
 
 /**
@@ -1466,7 +1484,7 @@
 [data-blok-database-confirm-action] {
   width: 100%;
   height: 32px;
-  margin-top: 8px;
+  margin-top: var(--blok-space-2);
   border: 1px solid var(--blok-popover-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;

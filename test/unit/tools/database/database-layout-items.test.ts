@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { calendarLayoutItems, galleryLayoutItems } from '../../../../src/tools/database/database-layout-items';
+import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from '../../../../src/tools/database/database-layout-items';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 
@@ -138,6 +138,60 @@ describe('database layout items', () => {
       find(items, 'tools.database.calendarShowWeekends').onActivate?.();
       expect(update).toHaveBeenNthCalledWith(1, { calendarRange: 'month' });
       expect(update).toHaveBeenNthCalledWith(2, { showWeekends: false });
+    });
+  });
+  describe('timeline', () => {
+    it('shows the timeline by a date property, the current one marked', () => {
+      const update = vi.fn();
+      const showBy = find(flat(timelineLayoutItems(view({ type: 'timeline', timelineBy: 'p-start' }), schema, i18n, update)), 'tools.database.timelineShowBy');
+
+      expect(showBy.children?.map((c) => [c.title, c.isActive])).toEqual([['Due', false], ['Start', true]]);
+      find(showBy.children ?? [], 'Due').onActivate?.();
+      expect(update).toHaveBeenCalledWith({ timelineBy: 'p-due' });
+    });
+
+    it('picks a separate end property, or none', () => {
+      const update = vi.fn();
+      const endBy = find(flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update)), 'tools.database.timelineEndBy');
+
+      expect(endBy.children?.map((c) => [c.title, c.isActive])).toEqual([['tools.database.timelineEndNone', true], ['Start', false]]);
+      find(endBy.children ?? [], 'Start').onActivate?.();
+      expect(update).toHaveBeenLastCalledWith({ timelineEndBy: 'p-start' });
+    });
+
+    it('toggles the table panel', () => {
+      const update = vi.fn();
+
+      find(flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update)), 'tools.database.timelineShowTable').onActivate?.();
+      expect(update).toHaveBeenCalledWith({ showTimelineTable: true });
+    });
+
+    it('shows or hides a table panel column apart from the bar properties', () => {
+      const update = vi.fn();
+      const v = view({ type: 'timeline', properties: [{ id: 'p-notes', visible: true }], tableProperties: [{ id: 'p-due', visible: true }] });
+      const columns = find(flat(timelineLayoutItems(v, schema, i18n, update)), 'tools.database.timelineTableProperties');
+
+      expect(columns.children?.map((c) => [c.title, c.isActive])).toEqual([
+        ['Due', true], ['Start', false], ['Image', false], ['Notes', false], ['Attachments', false],
+      ]);
+      find(columns.children ?? [], 'Notes').onActivate?.();
+      expect(update).toHaveBeenCalledWith({ tableProperties: [{ id: 'p-due', visible: true }, { id: 'p-notes', visible: true }] });
+      find(columns.children ?? [], 'Due').onActivate?.();
+      expect(update).toHaveBeenLastCalledWith({ tableProperties: [{ id: 'p-due', visible: false }] });
+    });
+  });
+
+  describe('board', () => {
+    it('offers card size, card preview and fit image, with no preview marked by default', () => {
+      const update = vi.fn();
+      const items = flat(boardLayoutItems(view({ type: 'board' }), schema, i18n, update));
+      const preview = find(items, 'tools.database.galleryCardPreview');
+
+      expect(find(preview.children ?? [], 'tools.database.galleryCardPreviewNone').isActive).toBe(true);
+      find(find(items, 'tools.database.galleryCardSize').children ?? [], 'tools.database.galleryCardSizeLarge').onActivate?.();
+      expect(update).toHaveBeenCalledWith({ cardSize: 'large' });
+      find(items, 'tools.database.galleryFitImage').onActivate?.();
+      expect(update).toHaveBeenLastCalledWith({ fitImage: true });
     });
   });
 });

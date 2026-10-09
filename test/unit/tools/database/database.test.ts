@@ -5217,7 +5217,7 @@ describe('DatabaseTool', () => {
 
     it('still renders a view type it does not know as a board', () => {
       const options = createDatabaseOptions({
-        views: [{ id: 'view-x', name: 'Timeline', type: 'timeline' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+        views: [{ id: 'view-x', name: 'Chart', type: 'chart' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
         activeViewId: 'view-x',
       });
       const tool = new DatabaseTool(options);
@@ -5406,6 +5406,143 @@ describe('DatabaseTool', () => {
         const tool = new DatabaseTool(createDatabaseOptions());
 
         expect(tool.validate(makeDefaultData({ schema: dateSchema, views: [calendarView], activeViewId: 'view-cal' }))).toBe(true);
+      });
+    });
+
+    describe('timeline', () => {
+      const timelineView: DatabaseViewConfig = { id: 'view-tl', name: 'Timeline', type: 'timeline', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+      const twoDates: PropertyDefinition[] = [...dateSchema, { id: 'prop-end', name: 'End', type: 'date', position: 'a2' }];
+      const timelineTool = (view: Partial<DatabaseViewConfig> = {}, childBlocks: BlockAPI[] = rowsWithDates(), schema: PropertyDefinition[] = dateSchema): ReturnType<typeof galleryTool> => {
+        const options = createDatabaseOptions({ schema, views: [{ ...timelineView, ...view }], activeViewId: 'view-tl' }, {}, { childBlocks });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+
+        return { tool, element, options };
+      };
+      type TimelineInternals = { view: { options: { handlers: Record<string, (...args: never[]) => void> } } };
+      const handlersOf = (tool: DatabaseTool): TimelineInternals['view']['options']['handlers'] =>
+        (tool as unknown as TimelineInternals).view.options.handlers;
+      const centerKey = 'blok:database-timeline:test-block-id:view-tl';
+
+      beforeEach(() => {
+        window.localStorage.removeItem(centerKey);
+      });
+
+      it('renders bars for dated rows, with no board subsystems', () => {
+        const { tool, element } = timelineTool();
+        const internals = tool as unknown as { cardDrag: unknown; columnDrag: unknown };
+
+        expect(queryByData(element, 'data-blok-database-timeline')).not.toBeNull();
+        expect(queryByData(element, 'data-blok-database-board')).toBeNull();
+        expect(queryAllByData(element, 'data-blok-database-timeline-bar').map((bar) => bar.getAttribute('data-row-id'))).toEqual(['row-1', 'row-2']);
+        expect(internals.cardDrag).toBeNull();
+        expect(internals.columnDrag).toBeNull();
+
+        tool.destroy();
+      });
+
+      it('names a new timeline view and gives it an empty table panel list', () => {
+        const { tool, element } = galleryTool();
+
+        tool.addView('timeline');
+
+        const added = tool.save(element).views[1];
+
+        expect([added.name, added.type, added.tableProperties]).toEqual(['Timeline', 'timeline', []]);
+        expect(queryByData(element, 'data-blok-database-timeline')).not.toBeNull();
+
+        tool.destroy();
+      });
+
+      it('writes a dragged two-property bar as one change to the row block', () => {
+        const children = rowsWithDates();
+        const { tool } = timelineTool({ timelineBy: 'prop-due', timelineEndBy: 'prop-end' }, children, twoDates);
+
+        handlersOf(tool).writeDates('row-1' as never, { start: '2026-10-10', end: '2026-10-12' } as never);
+
+        expect(vi.mocked(children[0].call).mock.calls.filter(([method]) => method === 'updateProperties'))
+          .toEqual([['updateProperties', { 'prop-due': '2026-10-10', 'prop-end': '2026-10-12' }]]);
+
+        tool.destroy();
+      });
+
+      it('stores a picked zoom and the table toggle on the view', () => {
+        const { tool, element } = timelineTool();
+
+        handlersOf(tool).setZoom('year' as never);
+        expect(tool.save(element).views[0].timelineZoom).toBe('year');
+        expect(queryByData(element, 'data-blok-database-timeline')?.getAttribute('data-zoom')).toBe('year');
+
+        queryByData(element, 'data-blok-database-timeline-table-toggle')?.click();
+        expect(tool.save(element).views[0].showTimelineTable).toBe(true);
+        expect(queryByData(element, 'data-blok-database-timeline-table')).not.toBeNull();
+
+        tool.destroy();
+      });
+
+      it('lists every zoom level in the zoom menu and stores a pick', () => {
+        const { tool, element } = timelineTool();
+
+        queryByData(element, 'data-blok-database-timeline-zoom')?.click();
+
+        const items = [...document.querySelectorAll('[data-mock-popover-action]')];
+        const zooms = ['Hours', 'Day', 'Week', 'BiWeek', 'Month', 'Quarter', 'Year', 'FiveYears'].map((z) => `tools.database.timelinezoom${z.toLowerCase()}`);
+
+        expect(items.map((item) => item.getAttribute('data-mock-popover-action'))).toEqual(zooms);
+        (items[6] as HTMLElement).click();
+        expect(tool.save(element).views[0].timelineZoom).toBe('year');
+
+        tool.destroy();
+      });
+
+      it('remembers the centre per person, in local storage', () => {
+        const first = timelineTool();
+
+        handlersOf(first.tool).navigate('2027-02-01' as never);
+        expect(window.localStorage.getItem(centerKey)).toBe('2027-02-01');
+        expect(first.tool.save(first.element).views[0]).not.toHaveProperty('center');
+        first.tool.destroy();
+
+        const again = timelineTool();
+
+        expect(queryAllByData(again.element, 'data-blok-database-timeline-units').length).toBe(1);
+        expect(queryByData(again.element, 'data-blok-database-timeline-units')?.querySelector('[data-day="2027-02-01"]')).not.toBeNull();
+        again.tool.destroy();
+      });
+
+      it('adds a row dated today from "+ New"', () => {
+        const { tool, element, options } = timelineTool();
+
+        queryByData(element, 'data-blok-database-timeline-new')?.click();
+
+        expect(options.api.blocks.insertAt).toHaveBeenCalledWith(
+          'database-row',
+          expect.objectContaining({ properties: expect.objectContaining({ 'prop-due': '2026-10-09' }) }),
+          expect.objectContaining({ parentId: 'test-block-id' }),
+        );
+
+        tool.destroy();
+      });
+
+      it('shows the load limit, then more on "Load more"', () => {
+        const many = Array.from({ length: 12 }, (_, i) =>
+          createMockRowBlock({ id: `row-${i}`, properties: { 'prop-title': `Row ${i}`, 'prop-due': '2026-10-09' }, position: `a${String(i).padStart(2, '0')}` }));
+        const { tool, element } = timelineTool({ loadLimit: 10 }, many);
+
+        expect(queryAllByData(element, 'data-blok-database-timeline-row')).toHaveLength(10);
+        queryByData(element, 'data-blok-database-timeline-load-more')?.click();
+        expect(queryAllByData(element, 'data-blok-database-timeline-row')).toHaveLength(12);
+
+        tool.destroy();
+      });
+
+      it('validates a timeline view without groupBy', () => {
+        const tool = new DatabaseTool(createDatabaseOptions());
+
+        expect(tool.validate(makeDefaultData({ schema: dateSchema, views: [timelineView], activeViewId: 'view-tl' }))).toBe(true);
       });
     });
   });

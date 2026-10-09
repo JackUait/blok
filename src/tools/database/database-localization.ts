@@ -17,6 +17,7 @@ const DEFAULT_KEYS = {
   viewTypeTable: 'tools.database.viewTypeTable',
   viewTypeGallery: 'tools.database.viewTypeGallery',
   viewTypeCalendar: 'tools.database.viewTypeCalendar',
+  viewTypeTimeline: 'tools.database.viewTypeTimeline',
 } as const;
 
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
@@ -39,6 +40,7 @@ export const DATABASE_DEFAULT_TEXT = {
   viewTypeTable: englishDefault(DEFAULT_KEYS.viewTypeTable),
   viewTypeGallery: englishDefault(DEFAULT_KEYS.viewTypeGallery),
   viewTypeCalendar: englishDefault(DEFAULT_KEYS.viewTypeCalendar),
+  viewTypeTimeline: englishDefault(DEFAULT_KEYS.viewTypeTimeline),
 } as const;
 
 const localizeCanonicalValue = (
@@ -153,6 +155,10 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
 
   if (view.type === 'calendar') {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeCalendar, DEFAULT_KEYS.viewTypeCalendar, i18n);
+  }
+
+  if (view.type === 'timeline') {
+    return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeTimeline, DEFAULT_KEYS.viewTypeTimeline, i18n);
   }
 
   return view.name;

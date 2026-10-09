@@ -18,7 +18,10 @@ import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
-import { calendarLayoutItems, galleryLayoutItems } from './database-layout-items';
+import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
+import type { TimelineGroup } from './database-timeline-view';
+import type { BarWrite } from './timeline-dates';
+import { calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { pageContentSourceBlocks } from './row-body';
 import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
@@ -26,7 +29,18 @@ import type { TableGroup, TableHandlers, TableState } from './database-table-vie
 import type { TableRowDropResult } from './database-table-row-drag';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import type { ViewChanges } from './database-model';
-import { resolveCalendarBy, resolveLoadLimit, resolveViewProperties, visibleRowPropertyIds, withPropertyOrder } from './view-settings';
+import {
+  TIMELINE_ZOOMS,
+  resolveCalendarBy,
+  resolveLoadLimit,
+  resolveShowTimelineTable,
+  resolveTimelineBy,
+  resolveTimelineEndBy,
+  resolveTimelineZoom,
+  resolveViewProperties,
+  visibleRowPropertyIds,
+  withPropertyOrder,
+} from './view-settings';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { firstStrongDirection } from '../../shared/text-direction';
 import { equalsOutputData } from '../../shared/output-data';
@@ -86,7 +100,7 @@ const INITIAL_VIEW_KEY = 'initialView';
 const BOARD_GROUP_PAGE = 10;
 
 /** Layouts Blok draws; gallery is in the type but falls back to a board. */
-const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'calendar'];
+const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'timeline', 'calendar'];
 
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
 const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
@@ -163,6 +177,8 @@ export class DatabaseTool implements BlockTool {
   private readonly calendarAnchors = new Map<string, string>();
   /** A day to focus after the calendar redraws into a new range. */
   private calendarFocusDay: string | undefined;
+  /** Per timeline view: the centre day, for when local storage is blocked. */
+  private readonly timelineCenters = new Map<string, string>();
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -1014,6 +1030,7 @@ export class DatabaseTool implements BlockTool {
       table: DATABASE_DEFAULT_TEXT.viewTypeTable,
       gallery: DATABASE_DEFAULT_TEXT.viewTypeGallery,
       calendar: DATABASE_DEFAULT_TEXT.viewTypeCalendar,
+      timeline: DATABASE_DEFAULT_TEXT.viewTypeTimeline,
     };
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
       groupBy: type === 'board' ? statusProp?.id : undefined,
@@ -1170,6 +1187,9 @@ export class DatabaseTool implements BlockTool {
       if (viewConfig?.type === 'calendar') {
         return this.renderCalendarView(titlePropId, viewConfig);
       }
+      if (viewConfig?.type === 'timeline') {
+        return this.renderTimelineView(titlePropId, viewConfig);
+      }
 
       // Unknown types (a newer client's layout) fall back to a board.
       return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
@@ -1210,11 +1230,7 @@ export class DatabaseTool implements BlockTool {
     const optionGroup = this.isOptionGroup(groupBy);
     const limit = resolveLoadLimit(viewConfig);
     const shown = this.galleryShown.get(viewConfig.id) ?? new Map<string, number>();
-    const query = (key: string, group?: string): Pick<GalleryGroup, 'rows' | 'total'> => {
-      const result = this.model.queryRows({ view: viewConfig, ...(group !== undefined ? { group } : {}), limit: shown.get(key) ?? limit });
-
-      return { rows: result.rows, total: result.total ?? result.rows.length };
-    };
+    const query = this.pagedQuery(viewConfig, shown, limit);
     const groups: GalleryGroup[] = grouped
       ? this.shownGroupOptions(groupBy, viewConfig).map((option) => ({
         key: option.id,
@@ -1251,6 +1267,15 @@ export class DatabaseTool implements BlockTool {
     return this.view.createView();
   }
 
+  /** One group's rows cut to what "Load more" has revealed, and the group's total. */
+  private pagedQuery(viewConfig: DatabaseViewConfig, shown: Map<string, number>, limit: number) {
+    return (key: string, group?: string): Pick<GalleryGroup, 'rows' | 'total'> => {
+      const result = this.model.queryRows({ view: viewConfig, ...(group !== undefined ? { group } : {}), limit: shown.get(key) ?? limit });
+
+      return { rows: result.rows, total: result.total ?? result.rows.length };
+    };
+  }
+
   /** A row page's body: its child blocks, else the legacy body column. A host `rowPages` body is not readable here. */
   private rowBodyBlocks(rowId: string, descriptionId: string | undefined): Array<{ type: string; data: unknown }> {
     const children = this.api.blocks.getChildren(rowId).filter((child) => child.name !== 'database-row');
@@ -1272,6 +1297,10 @@ export class DatabaseTool implements BlockTool {
 
     if (view?.type === 'gallery') {
       return galleryLayoutItems(view, schema, this.api.i18n, update);
+    }
+
+    if (view?.type === 'timeline') {
+      return timelineLayoutItems(view, schema, this.api.i18n, update);
     }
 
     return view?.type === 'calendar' ? calendarLayoutItems(view, schema, this.api.i18n, update) : [];
@@ -1352,6 +1381,135 @@ export class DatabaseTool implements BlockTool {
     });
 
     return this.view.createView();
+  }
+
+  private timelineStorageKey(viewId: string): string {
+    return `blok:database-timeline:${this.block.id}:${viewId}`;
+  }
+
+  /** The person's last centre day. Local only, like the calendar range: a shared field would sync every pan. */
+  private timelineCenter(viewId: string, today: string): string {
+    try {
+      const stored = window.localStorage.getItem(this.timelineStorageKey(viewId));
+
+      if (stored !== null && /^\d{4}-\d{2}-\d{2}$/.test(stored)) {
+        return stored;
+      }
+    } catch {
+      // Blocked storage: fall back to this session's value.
+    }
+
+    return this.timelineCenters.get(viewId) ?? today;
+  }
+
+  private setTimelineCenter(viewId: string, day: string): void {
+    this.timelineCenters.set(viewId, day);
+    try {
+      window.localStorage.setItem(this.timelineStorageKey(viewId), day);
+    } catch {
+      // Blocked storage: the session map still holds it.
+    }
+  }
+
+  private renderTimelineView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const schema = this.model.getSchema();
+    const startId = resolveTimelineBy(viewConfig, schema);
+    const endId = resolveTimelineEndBy(viewConfig, schema);
+    const today = toIsoDay(new Date());
+    const groupBy = viewConfig.groupBy;
+    const grouped = groupBy !== undefined && this.model.getProperty(groupBy) !== undefined;
+    const optionGroup = this.isOptionGroup(groupBy);
+    const limit = resolveLoadLimit(viewConfig);
+    const shown = this.galleryShown.get(viewConfig.id) ?? new Map<string, number>();
+    const query = this.pagedQuery(viewConfig, shown, limit);
+    const groups: TimelineGroup[] = grouped
+      ? this.shownGroupOptions(groupBy, viewConfig).map((option) => ({
+        key: option.id,
+        label: option.label,
+        ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
+        ...query(option.id, option.id),
+      }))
+      : [{ key: '', label: '', ...query('') }];
+
+    this.view = new DatabaseTimelineView({
+      readOnly: this.readOnly,
+      i18n: this.api.i18n,
+      view: viewConfig,
+      schema: localizeDatabaseSchema(schema, this.api.i18n),
+      groups,
+      grouped,
+      titlePropertyId: titlePropId,
+      startPropertyId: startId,
+      endPropertyId: endId,
+      center: this.timelineCenter(viewConfig.id, today),
+      today,
+      locale: resolveLocale(undefined),
+      handlers: {
+        openRow: (rowId) => this.handleRowClick(rowId),
+        addRow: (groupKey) => this.addTimelineRow(groupKey, startId, today),
+        writeDates: (rowId, write) => this.writeTimelineDates(rowId, write, startId, endId),
+        moveRow: (result) => this.handleTableRowDrop(result),
+        setZoom: (zoom) => this.updateActiveView({ timelineZoom: zoom }),
+        openZoomMenu: (anchor) => this.openTimelineZoomMenu(anchor, viewConfig),
+        navigate: (day) => {
+          this.setTimelineCenter(viewConfig.id, day);
+          this.rerenderView({ keepDrawer: true });
+        },
+        toggleTable: () => this.updateActiveView({ showTimelineTable: !resolveShowTimelineTable(viewConfig) }),
+        loadMore: (groupKey) => {
+          shown.set(groupKey, (shown.get(groupKey) ?? limit) + limit);
+          this.galleryShown.set(viewConfig.id, shown);
+          this.rerenderView({ keepDrawer: true });
+        },
+      },
+    });
+
+    return this.view.createView();
+  }
+
+  /** "+ New": a row dated today, so its bar shows, plus what the view's filters and group ask for. */
+  private addTimelineRow(groupKey: string | null, startId: string | undefined, today: string): void {
+    if (this.readOnly) return;
+    const titlePropId = this.titlePropertyId();
+    const groupBy = groupKey === null ? undefined : this.model.getView(this.activeViewId)?.groupBy;
+    const properties = this.newRowProperties(titlePropId, groupBy, groupKey ?? NO_VALUE_GROUP_KEY);
+    const rowData = this.model.createRowData(startId === undefined ? properties : { ...properties, [startId]: today });
+
+    this.api.blocks.insertAt(
+      'database-row',
+      { properties: rowData.properties, position: rowData.position, title: '' },
+      { parentId: this.block.id, position: 'end', id: rowData.id },
+    );
+    void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** A moved bar may change both of its properties: one row write, one sync, one undo step. */
+  private writeTimelineDates(rowId: string, write: BarWrite, startId: string | undefined, endId: string | undefined): void {
+    if (this.readOnly || this.destroyed || startId === undefined) return;
+    const changes: Record<string, PropertyValue> = {
+      ...(write.start !== undefined ? { [startId]: write.start } : {}),
+      ...(write.end !== undefined && endId !== undefined ? { [endId]: write.end } : {}),
+    };
+
+    if (Object.keys(changes).length === 0) return;
+    this.updateRowBlock(rowId, changes);
+    this.sync.syncUpdateRow({ rowId, properties: changes });
+    if (this.cardDrawer?.openRowId === rowId) {
+      this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+    }
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  private openTimelineZoomMenu(anchor: HTMLElement, viewConfig: DatabaseViewConfig): void {
+    const current = resolveTimelineZoom(viewConfig);
+
+    this.showGroupPopover(anchor, TIMELINE_ZOOMS.map((zoom) => ({
+      type: PopoverItemType.Default,
+      title: this.api.i18n.t(timelineZoomLabelKey(zoom)),
+      isActive: zoom === current,
+      onActivate: () => this.updateActiveView({ timelineZoom: zoom }),
+    })));
   }
 
   /** "+" on a day: a new row dated that day, plus what the view's filters ask for. */
@@ -2340,8 +2498,8 @@ export class DatabaseTool implements BlockTool {
     const savedView = this.model.getView(this.activeViewId);
     const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
     const isList = viewConfig?.type === 'list';
-    // Table, gallery and calendar own their gestures. Unknown types render as a board.
-    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar';
+    // Table, gallery, calendar and timeline own their gestures. Unknown types render as a board.
+    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar' || viewConfig?.type === 'timeline';
     const isBoard = !isList && !ownsGestures;
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
@@ -2421,7 +2579,8 @@ export class DatabaseTool implements BlockTool {
             ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]')
             ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-table]')
             ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-gallery]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-calendar]');
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-calendar]')
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline]');
 
           if (currentView !== null && currentView !== undefined) {
             this.view.updateRowTitle(currentView, rowId, title);

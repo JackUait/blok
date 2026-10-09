@@ -1,4 +1,4 @@
-import { IconBoard, IconCalendar, IconGallery, IconList, IconTable } from '../../components/icons';
+import { IconBoard, IconCalendar, IconGallery, IconList, IconTable, IconTimeline } from '../../components/icons';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -18,6 +18,7 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'board', icon: IconBoard, labelKey: 'tools.database.viewTypeBoard', descriptionKey: 'tools.database.viewTypeBoardDescription' },
   { type: 'gallery', icon: IconGallery, labelKey: 'tools.database.viewTypeGallery', descriptionKey: 'tools.database.viewTypeGalleryDescription' },
   { type: 'list', icon: IconList, labelKey: 'tools.database.viewTypeList', descriptionKey: 'tools.database.viewTypeListDescription' },
+  { type: 'timeline', icon: IconTimeline, labelKey: 'tools.database.viewTypeTimeline', descriptionKey: 'tools.database.viewTypeTimelineDescription' },
   { type: 'calendar', icon: IconCalendar, labelKey: 'tools.database.viewTypeCalendar', descriptionKey: 'tools.database.viewTypeCalendarDescription' },
 ];
 

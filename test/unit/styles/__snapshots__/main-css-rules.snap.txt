@@ -4029,6 +4029,16 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
   --blok-database-calendar-today-text: #ffffff;
+  --blok-database-timeline-bar-bg: #ffffff;
+  --blok-database-timeline-bar-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-timeline-grid-line: rgba(42, 28, 0, 0.07);
+  --blok-database-timeline-header-line: rgb(230, 229, 227);
+  --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
+  --blok-database-timeline-muted-text: rgb(161, 158, 153);
+  --blok-database-timeline-text: rgb(44, 44, 43);
+  --blok-database-timeline-control-text: rgb(142, 139, 134);
+  --blok-database-timeline-arrow-bg: rgb(142, 139, 134);
+  --blok-database-timeline-arrow-icon: #ffffff;
 }
 
 [@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
@@ -4107,6 +4117,16 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
   --blok-database-calendar-today-text: #ffffff;
+  --blok-database-timeline-bar-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-timeline-bar-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
+  --blok-database-timeline-header-line: rgba(255, 255, 243, 0.082);
+  --blok-database-timeline-weekend-bg: var(--blok-bg-secondary);
+  --blok-database-timeline-muted-text: rgb(125, 122, 117);
+  --blok-database-timeline-text: rgb(240, 239, 237);
+  --blok-database-timeline-control-text: rgb(173, 169, 163);
+  --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
+  --blok-database-timeline-arrow-icon: #ffffff;
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
@@ -4185,6 +4205,16 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
   --blok-database-calendar-today-text: #ffffff;
+  --blok-database-timeline-bar-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-timeline-bar-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
+  --blok-database-timeline-header-line: rgba(255, 255, 243, 0.082);
+  --blok-database-timeline-weekend-bg: var(--blok-bg-secondary);
+  --blok-database-timeline-muted-text: rgb(125, 122, 117);
+  --blok-database-timeline-text: rgb(240, 239, 237);
+  --blok-database-timeline-control-text: rgb(173, 169, 163);
+  --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
+  --blok-database-timeline-arrow-icon: #ffffff;
 }
 
 [data-blok-database-board] {
@@ -7609,6 +7639,374 @@ span[data-blok-slash-search] {
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-calendar-nav] button, [data-blok-database-calendar-day-number], [data-blok-database-calendar-add], [data-blok-database-calendar-event] {
+  transition: none;
+}
+
+[data-blok-database-timeline] {
+  --blok-database-timeline-line: 28px;
+  --blok-database-timeline-day: 40px;
+  display: flex;
+  flex-direction: column;
+  padding-block-end: var(--blok-space-4);
+  color: var(--blok-database-timeline-text);
+}
+
+[data-blok-database-timeline-toolbar] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  min-block-size: 42px;
+}
+
+[data-blok-database-timeline-toolbar-spacer] {
+  flex: 1;
+}
+
+[data-blok-database-timeline-toolbar] button, [data-blok-database-timeline-new], [data-blok-database-timeline-load-more] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  min-inline-size: 24px;
+  block-size: 24px;
+  padding: 0 var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-timeline-text);
+  font-size: 14px;
+  line-height: 16.8px;
+  cursor: pointer;
+  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-timeline-zoom], [data-blok-database-timeline-table-toggle], [data-blok-database-timeline-new], [data-blok-database-timeline-load-more] {
+  color: var(--blok-database-timeline-control-text);
+}
+
+[data-blok-database-timeline-toolbar] button:hover, [data-blok-database-timeline-new]:hover, [data-blok-database-timeline-load-more]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-timeline] svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[dir="rtl"] [data-blok-database-timeline-table-toggle] svg, [dir="rtl"] [data-blok-database-timeline-offscreen] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-timeline-empty] {
+  padding: var(--blok-space-4) var(--blok-space-2);
+  color: var(--blok-database-timeline-muted-text);
+  font-size: 14px;
+}
+
+[data-blok-database-timeline-body] {
+  display: flex;
+  align-items: flex-start;
+  border-block-start: 1px solid var(--blok-database-timeline-grid-line);
+}
+
+[data-blok-database-timeline-table] {
+  flex: none;
+  inline-size: 305px;
+  overflow: hidden;
+  border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
+}
+
+[data-blok-database-timeline-table-header], [data-blok-database-timeline-table-row], [data-blok-database-timeline-table-group] {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: center;
+  block-size: 36px;
+  padding-inline: var(--blok-space-2);
+  font-size: 14px;
+  white-space: nowrap;
+  border-block-end: 1px solid var(--blok-database-timeline-grid-line);
+}
+
+[data-blok-database-timeline-table-header] {
+  block-size: calc(var(--blok-database-timeline-line) * 2);
+  box-sizing: border-box;
+  color: var(--blok-database-timeline-muted-text);
+}
+
+[data-blok-database-timeline-table-row] {
+  box-sizing: border-box;
+}
+
+[data-blok-database-timeline-table-row] > * {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-timeline-table-title] {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-timeline-spacer] {
+  block-size: 24px;
+}
+
+[data-blok-database-timeline-scroller] {
+  position: relative;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  outline-offset: -2px;
+}
+
+[data-blok-database-timeline-scroller]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+}
+
+[data-blok-database-timeline-canvas] {
+  position: relative;
+  min-block-size: 120px;
+}
+
+[data-blok-database-timeline-header] {
+  position: relative;
+  block-size: calc(var(--blok-database-timeline-line) * 2);
+  box-shadow: var(--blok-database-timeline-header-line) 0 -1px 0 0 inset;
+}
+
+[data-blok-database-timeline-groups], [data-blok-database-timeline-units] {
+  position: relative;
+  block-size: var(--blok-database-timeline-line);
+}
+
+[data-blok-database-timeline-groups] > *, [data-blok-database-timeline-units] > * {
+  position: absolute;
+  inset-block: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[data-blok-database-timeline-groups] > * {
+  padding-inline-start: var(--blok-space-4);
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+  border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
+}
+
+[data-blok-database-timeline-units] > * {
+  font-size: 12px;
+  line-height: var(--blok-database-timeline-line);
+  text-align: center;
+  color: var(--blok-database-timeline-muted-text);
+}
+
+[data-blok-database-timeline-today-dot] {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: calc(var(--blok-database-timeline-line) + 3px);
+  margin-inline-start: -11px;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-today);
+  color: var(--blok-database-calendar-today-text);
+  font-size: 12px;
+  line-height: 22px;
+  font-weight: 500;
+  text-align: center;
+}
+
+[data-blok-database-timeline-background] {
+  position: absolute;
+  inset-block: calc(var(--blok-database-timeline-line) * 2) 0;
+  inset-inline: 0;
+  pointer-events: none;
+}
+
+[data-blok-database-timeline-weekend] {
+  position: absolute;
+  inset-block: 0;
+  inline-size: var(--blok-database-timeline-day);
+  background-color: var(--blok-database-timeline-weekend-bg);
+}
+
+[data-blok-database-timeline-today-line] {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 1px;
+  background-color: var(--blok-database-today);
+}
+
+[data-blok-database-timeline-row], [data-blok-database-timeline-group] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  block-size: 36px;
+}
+
+[data-blok-database-timeline-group-label] {
+  position: sticky;
+  inset-inline-start: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding-inline: var(--blok-space-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-blok-database-timeline-group-count] {
+  color: var(--blok-database-timeline-muted-text);
+  font-weight: 400;
+}
+
+[data-blok-database-timeline-row][data-drop="before"] {
+  box-shadow: var(--blok-database-drop-line) 0 2px 0 0 inset;
+}
+
+[data-blok-database-timeline-row][data-drop="after"] {
+  box-shadow: var(--blok-database-drop-line) 0 -2px 0 0 inset;
+}
+
+[data-blok-database-timeline-row-edge], [data-blok-database-timeline-row-end] {
+  position: sticky;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding-inline: var(--blok-space-1);
+}
+
+[data-blok-database-timeline-row-edge] {
+  inset-inline-start: 0;
+}
+
+[data-blok-database-timeline-row-end] {
+  inset-inline-end: 0;
+}
+
+[data-blok-database-timeline-row-handle] {
+  display: inline-flex;
+  color: var(--blok-database-timeline-control-text);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+
+[data-blok-database-timeline-row]:hover [data-blok-database-timeline-row-handle] {
+  opacity: 1;
+}
+
+[data-blok-database-timeline-offscreen] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 16px;
+  block-size: 16px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-timeline-arrow-bg);
+  color: var(--blok-database-timeline-arrow-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-timeline-offscreen] svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+
+[data-blok-database-timeline-offscreen][hidden] {
+  display: none;
+}
+
+[data-blok-database-timeline-bar] {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 1px;
+  block-size: 34px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-6) var(--blok-space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-timeline-bar-bg);
+  box-shadow: var(--blok-database-timeline-bar-shadow);
+  cursor: pointer;
+  user-select: none;
+  outline-offset: 2px;
+  transition: opacity 0.2s ease;
+}
+
+[data-blok-database-timeline-bar]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+}
+
+[data-blok-database-timeline-bar][data-dragging] {
+  opacity: 0.4;
+}
+
+[data-blok-database-timeline-bar-title] {
+  flex: none;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+}
+
+[data-blok-database-timeline-bar-title]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-database-timeline-muted-text);
+}
+
+[data-blok-database-timeline-bar-property] {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+[data-blok-database-timeline-resize] {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 8px;
+  cursor: ew-resize;
+}
+
+[data-blok-database-timeline-resize="start"] {
+  inset-inline-start: 0;
+}
+
+[data-blok-database-timeline-resize="end"] {
+  inset-inline-end: 0;
+}
+
+[data-blok-database-timeline-new] {
+  align-self: flex-start;
+  margin-block-start: var(--blok-space-1);
+}
+
+[data-blok-database-timeline][data-dragging="move"], [data-blok-database-timeline][data-dragging="row"] {
+  cursor: grabbing;
+}
+
+[data-blok-database-timeline][data-dragging="start"], [data-blok-database-timeline][data-dragging="end"] {
+  cursor: ew-resize;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-timeline-toolbar] button, [data-blok-database-timeline-new], [data-blok-database-timeline-load-more], [data-blok-database-timeline-row-handle], [data-blok-database-timeline-bar] {
   transition: none;
 }
 

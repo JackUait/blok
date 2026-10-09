@@ -1,6 +1,6 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import { IconBoard, IconCalendar, IconGallery, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders } from '../../components/icons';
+import { IconBoard, IconCalendar, IconGallery, IconList, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -45,6 +45,7 @@ const VIEW_ICONS: Record<string, string> = {
   table: IconTable,
   gallery: IconGallery,
   calendar: IconCalendar,
+  timeline: IconTimeline,
 };
 
 export interface TabBarOptions {

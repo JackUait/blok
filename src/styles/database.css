@@ -2063,8 +2063,33 @@
   padding: var(--blok-space-2-5) var(--blok-space-2);
 }
 
-[data-blok-database-table-cell] [data-blok-database-option-pill] {
-  margin-inline-end: var(--blok-space-1-5);
+/* Block-level, so an inline-flex baseline does not grow the 37px row. */
+[data-blok-database-table-cell] > [data-blok-database-cell] {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-height: 21px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[data-blok-database-table-cell]:is([data-type="title"], [data-type="text"], [data-type="richText"], [data-type="number"], [data-type="url"], [data-type="date"]) > [data-blok-database-cell] {
+  display: block;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-table-cell]:is([data-type="select"], [data-type="multiSelect"]) > [data-blok-database-cell] {
+  min-height: 20px;
+}
+
+[data-blok-database-table-cell][data-type="checkbox"] > [data-blok-database-cell] {
+  min-height: 16px;
+}
+
+[data-blok-database-table-cell][data-wrap] > [data-blok-database-cell] {
+  flex-wrap: wrap;
+  white-space: pre-wrap;
 }
 
 [data-blok-database-table-cell][data-frozen],

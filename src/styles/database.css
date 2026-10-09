@@ -74,6 +74,25 @@
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
+  /* Gallery (research/07, 08): measured; hover in C. */
+  --blok-database-gallery-card-bg: #ffffff;
+  --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-gallery-card-hover-bg: rgba(55, 53, 47, 0.04);
+  --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
+  --blok-database-gallery-preview-text: rgb(125, 122, 117);
+  --blok-database-gallery-title-text: rgb(44, 44, 43);
+  --blok-database-gallery-muted-text: rgb(161, 158, 153);
+  /* Calendar (research/07 chrome, research/08 event card). */
+  --blok-database-calendar-border: rgb(230, 229, 227);
+  --blok-database-calendar-weekend-bg: rgb(249, 248, 247);
+  --blok-database-calendar-muted-text: rgb(161, 158, 153);
+  --blok-database-calendar-day-text: rgb(44, 44, 43);
+  --blok-database-calendar-nav-icon: rgb(142, 139, 134);
+  --blok-database-calendar-event-bg: #ffffff;
+  --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
+  --blok-database-calendar-today-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -145,6 +164,25 @@
     --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
     --blok-database-confirm-destructive-text: rgb(229, 100, 88);
     --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+    /* Gallery card and empty cover are measured (research/08); the rest is unmeasured. */
+    --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+    --blok-database-gallery-card-hover-bg: var(--blok-item-hover-bg);
+    --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
+    --blok-database-gallery-preview-border: rgba(255, 255, 243, 0.082);
+    --blok-database-gallery-preview-text: var(--blok-text-secondary);
+    --blok-database-gallery-title-text: rgb(240, 239, 237);
+    --blok-database-gallery-muted-text: rgb(125, 122, 117);
+    /* Dark calendar is unmeasured: table and gallery dark values stand in. */
+    --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
+    --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+    --blok-database-calendar-muted-text: rgb(125, 122, 117);
+    --blok-database-calendar-day-text: rgb(240, 239, 237);
+    --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+    --blok-database-calendar-event-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+    --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
+    --blok-database-calendar-today-text: #ffffff;
   }
 }
 
@@ -215,6 +253,25 @@
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  /* Gallery card and empty cover are measured (research/08); the rest is unmeasured. */
+  --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-gallery-card-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-gallery-preview-border: rgba(255, 255, 243, 0.082);
+  --blok-database-gallery-preview-text: var(--blok-text-secondary);
+  --blok-database-gallery-title-text: rgb(240, 239, 237);
+  --blok-database-gallery-muted-text: rgb(125, 122, 117);
+  /* Dark calendar is unmeasured: table and gallery dark values stand in. */
+  --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
+  --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+  --blok-database-calendar-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-day-text: rgb(240, 239, 237);
+  --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-calendar-event-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-calendar-today-text: #ffffff;
 }
 
 /**
@@ -3446,6 +3503,527 @@
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-view-toolbar] > button,
   [data-blok-database-panel-row] {
+
+/* ─── Gallery ───
+   Measured (research/07, 08): 16px gap, 146px cover, 10px card radius,
+   40px title row (8px 10px, 15px/22.5px 500), cover text 12px/18px.
+   Unmeasured: the card minimum widths (Notion's medium column falls between
+   254px and 296px), small and large sizes, the "+ New" card and load more. */
+
+[data-blok-database-gallery] {
+  --blok-database-gallery-card-min: 260px;
+  --blok-database-gallery-preview-height: 146px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-4);
+  padding-block: var(--blok-space-4) var(--blok-space-1);
+}
+
+[data-blok-database-gallery][data-card-size="small"] {
+  --blok-database-gallery-card-min: 180px;
+  --blok-database-gallery-preview-height: 100px;
+}
+
+[data-blok-database-gallery][data-card-size="medium"] {
+  --blok-database-gallery-card-min: 260px;
+  --blok-database-gallery-preview-height: 146px;
+}
+
+[data-blok-database-gallery][data-card-size="large"] {
+  --blok-database-gallery-card-min: 340px;
+  --blok-database-gallery-preview-height: 200px;
+}
+
+[data-blok-database-gallery-grid] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--blok-database-gallery-card-min)), 1fr));
+  gap: 16px;
+}
+
+[data-blok-database-gallery-group-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 32px;
+  margin-block-end: var(--blok-space-2);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--blok-database-gallery-title-text);
+}
+
+[data-blok-database-gallery-group-count] {
+  color: var(--blok-database-gallery-muted-text);
+}
+
+[data-blok-database-gallery-card],
+[data-blok-database-gallery-new] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-gallery-card-bg);
+  box-shadow: var(--blok-database-gallery-card-shadow);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.1s ease-out, opacity 0.2s ease;
+}
+
+[data-blok-database-gallery-card]:hover,
+[data-blok-database-gallery-new]:hover {
+  background-color: var(--blok-database-gallery-card-hover-bg);
+}
+
+[data-blok-database-gallery-card]:focus-visible,
+[data-blok-database-gallery-new]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-database-gallery-card] {
+  padding-block-end: var(--blok-space-2);
+}
+
+[data-blok-database-gallery-card][data-dragging] {
+  opacity: 0.4;
+}
+
+[data-blok-database-gallery-card][data-drop]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: 4px;
+  background-color: var(--blok-database-table-drop-line);
+  border-radius: var(--blok-radius-mark);
+  pointer-events: none;
+}
+
+[data-blok-database-gallery-card][data-drop="before"]::before {
+  inset-inline-start: 0;
+}
+
+[data-blok-database-gallery-card][data-drop="after"]::before {
+  inset-inline-end: 0;
+}
+
+[data-blok-database-gallery-preview] {
+  flex: none;
+  block-size: var(--blok-database-gallery-preview-height);
+  overflow: hidden;
+  background-color: var(--blok-database-gallery-preview-bg);
+  border-block-end: 1px solid var(--blok-database-gallery-preview-border);
+}
+
+[data-blok-database-gallery-preview][data-preview="content"] {
+  padding: 8px 8px 0;
+  color: var(--blok-database-gallery-preview-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+[data-blok-database-gallery-preview-line] {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-gallery-preview-line="h1"],
+[data-blok-database-gallery-preview-line="h2"] {
+  font-size: 22.5px;
+  line-height: 29.25px;
+  font-weight: 600;
+  color: var(--blok-database-gallery-title-text);
+}
+
+[data-blok-database-gallery-preview-line="h3"] {
+  font-size: 18px;
+  line-height: 23.4px;
+  font-weight: 600;
+  color: var(--blok-database-gallery-title-text);
+}
+
+[data-blok-database-gallery-image] {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+[data-blok-database-gallery][data-fit-image] [data-blok-database-gallery-image] {
+  object-fit: contain;
+}
+
+[data-blok-database-gallery-title] {
+  padding: 8px 10px;
+  min-height: 38px;
+  font-size: 15px;
+  line-height: 22.5px;
+  font-weight: 500;
+  color: var(--blok-database-gallery-title-text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-gallery-title]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-database-gallery-muted-text);
+}
+
+[data-blok-database-gallery-properties] {
+  display: flex;
+  flex-direction: column;
+  padding-inline: 10px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--blok-database-gallery-title-text);
+}
+
+[data-blok-database-gallery-property] {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-gallery-property][data-wrap="true"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+[data-blok-database-gallery-new] {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-1);
+  min-height: 80px;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--blok-database-gallery-muted-text);
+  font-size: 14px;
+}
+
+[data-blok-database-gallery-new] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-gallery-load-more] {
+  margin-block-start: var(--blok-space-2);
+  padding: 0 var(--blok-space-2);
+  min-height: 32px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-gallery-muted-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-gallery-load-more]:hover {
+  background-color: var(--blok-database-gallery-card-hover-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-gallery-card],
+  [data-blok-database-gallery-new] {
+    transition: none;
+  }
+}
+
+/* ─── Calendar ───
+   Measured (research/07): 42px title bar, 14px/14px 600 title, 24px nav and
+   Today buttons, 24px weekday row (12px/18px), 140px day cells, 14px/24px
+   day numbers, 24px red today circle, weekend fill.
+   Measured (research/08): 28px event card, 14px/21px 600 title, its shadow
+   and hover. Unmeasured: the lane gap, the "+" button, week-range height. */
+
+[data-blok-database-calendar] {
+  --blok-database-calendar-number-row: 32px;
+  --blok-database-calendar-lane-pitch: 30px;
+  display: flex;
+  flex-direction: column;
+  padding-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-calendar-toolbar] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+}
+
+[data-blok-database-calendar-title] {
+  margin-inline: 8px;
+  font-size: 14px;
+  line-height: 14px;
+  font-weight: 600;
+  color: var(--blok-database-calendar-day-text);
+}
+
+[data-blok-database-calendar-nav] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+}
+
+[data-blok-database-calendar-nav] button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 24px;
+  block-size: 24px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-calendar-day-text);
+  font-size: 14px;
+  line-height: 16.8px;
+  cursor: pointer;
+  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-calendar-prev],
+[data-blok-database-calendar-next] {
+  color: var(--blok-database-calendar-nav-icon);
+}
+
+[data-blok-database-calendar-nav] svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+[dir="rtl"] [data-blok-database-calendar-nav] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-calendar-nav] button:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-calendar-empty] {
+  padding: var(--blok-space-4) var(--blok-space-2);
+  color: var(--blok-database-calendar-muted-text);
+  font-size: 14px;
+}
+
+[data-blok-database-calendar-grid] {
+  display: flex;
+  flex-direction: column;
+  border-inline-start: 1px solid var(--blok-database-calendar-border);
+}
+
+[data-blok-database-calendar-weekdays],
+[data-blok-database-calendar-week] {
+  display: grid;
+  grid-template-columns: repeat(var(--blok-database-calendar-columns, 7), minmax(0, 1fr));
+}
+
+[data-blok-database-calendar-weekdays] {
+  min-height: 24px;
+  border-block-end: 1px solid var(--blok-database-calendar-border);
+}
+
+[data-blok-database-calendar-weekdays] [role="columnheader"] {
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--blok-database-calendar-muted-text);
+}
+
+[data-blok-database-calendar-day] {
+  position: relative;
+  min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  border-inline-end: 1px solid var(--blok-database-calendar-border);
+  border-block-end: 1px solid var(--blok-database-calendar-border);
+  outline-offset: -2px;
+}
+
+[data-blok-database-calendar-day][data-weekend] {
+  background-color: var(--blok-database-calendar-weekend-bg);
+}
+
+[data-blok-database-calendar-day]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+}
+
+[data-blok-database-calendar-day][data-drop] {
+  background-color: var(--blok-icon-active-bg);
+}
+
+[data-blok-database-calendar-day-number] {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 10px;
+  min-inline-size: 24px;
+  block-size: 24px;
+  padding-inline: 4px;
+  font-size: 14px;
+  line-height: 24px;
+  text-align: center;
+  color: var(--blok-database-calendar-day-text);
+  border-radius: var(--blok-radius-pill);
+  transition: color 0.1s ease-out;
+}
+
+[data-blok-database-calendar-day][data-outside] [data-blok-database-calendar-day-number] {
+  color: var(--blok-database-calendar-muted-text);
+}
+
+[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number] {
+  background-color: var(--blok-database-today);
+  color: var(--blok-database-calendar-today-text);
+}
+
+[data-blok-database-calendar-add] {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-start: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-calendar-nav-icon);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+
+[data-blok-database-calendar-add] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-calendar-day]:hover [data-blok-database-calendar-add] {
+  opacity: 1;
+}
+
+[data-blok-database-calendar-add]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-calendar][data-dragging] [data-blok-database-calendar-add] {
+  opacity: 0;
+}
+
+[data-blok-database-calendar-event] {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lane, 0) * var(--blok-database-calendar-lane-pitch));
+  inset-inline-start: 4px;
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 8px);
+  height: 28px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: 2px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-calendar-event-bg);
+  box-shadow: var(--blok-database-calendar-event-shadow);
+  color: var(--blok-database-calendar-day-text);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.02s ease-in, opacity 0.2s ease;
+}
+
+[data-blok-database-calendar-event]:hover {
+  background-color: var(--blok-database-calendar-event-hover-bg);
+}
+
+[data-blok-database-calendar-event]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+}
+
+[data-blok-database-calendar-event][data-dragging] {
+  opacity: 0.4;
+}
+
+/* A bar cut by the week edge runs flush into the next row. */
+[data-blok-database-calendar-event][data-continues-before] {
+  inset-inline-start: 0;
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 4px);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+[data-blok-database-calendar-event][data-continues-after] {
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 4px);
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+[data-blok-database-calendar-event][data-continues-before][data-continues-after] {
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100%);
+}
+
+[data-blok-database-calendar-event-title] {
+  flex: none;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 600;
+}
+
+[data-blok-database-calendar-event-title]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-database-calendar-muted-text);
+}
+
+[data-blok-database-calendar-event-property] {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--blok-database-calendar-muted-text);
+}
+
+[data-blok-database-calendar-resize] {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 6px;
+  cursor: ew-resize;
+}
+
+[data-blok-database-calendar-resize="start"] {
+  inset-inline-start: 0;
+}
+
+[data-blok-database-calendar-resize="end"] {
+  inset-inline-end: 0;
+}
+
+[data-blok-database-calendar][data-dragging="move"] {
+  cursor: grabbing;
+}
+
+[data-blok-database-calendar][data-dragging="start"],
+[data-blok-database-calendar][data-dragging="end"] {
+  cursor: ew-resize;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-calendar-nav] button,
+  [data-blok-database-calendar-day-number],
+  [data-blok-database-calendar-add],
+  [data-blok-database-calendar-event] {
     transition: none;
   }
 }

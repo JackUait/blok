@@ -3,6 +3,8 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
 import { createOptionPill, renderCellValue } from './cells';
+import type { CellContext } from './cells';
+import { readPropertyValue } from './property-values';
 import { addDays, daysBetween, isWeekend } from './calendar-dates';
 import { toLocalDate } from './cells/date-format';
 import type { EventSpan } from './calendar-dates';
@@ -67,6 +69,8 @@ export interface DatabaseTimelineViewOptions {
   today: string;
   handlers?: TimelineHandlers;
   locale?: string;
+  /** What cells need from the host: relation titles, computed result types. */
+  cellContext?: Partial<CellContext>;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -296,7 +300,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         cell.setAttribute('data-blok-database-timeline-table-title', '');
         cell.textContent = this.titleOf(row);
       } else {
-        cell.appendChild(renderCellValue(property, row.properties[property.id], {
+        cell.appendChild(renderCellValue(property, readPropertyValue(row, property), {
+          ...this.options.cellContext,
           i18n: this.options.i18n,
           readOnly: true,
           locale: this.options.locale,
@@ -542,7 +547,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     el.appendChild(titleEl);
 
     for (const property of this.barProperties()) {
-      const cell = renderCellValue(property, row.properties[property.id], {
+      const cell = renderCellValue(property, readPropertyValue(row, property), {
+        ...this.options.cellContext,
         i18n: this.options.i18n,
         readOnly: true,
         locale: this.options.locale,

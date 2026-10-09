@@ -2,7 +2,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, RelationSettings, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
-import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, statusGroupsOf } from './property-values';
+import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf } from './property-values';
 import { planTypeChange } from './property-conversion';
 import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
@@ -1559,6 +1559,7 @@ export class DatabaseTool implements BlockTool {
       center: this.timelineCenter(viewConfig.id, today),
       today,
       locale: resolveLocale(undefined),
+      cellContext: this.cellContext(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         addRow: (groupKey) => this.addTimelineRow(groupKey, startId, today),
@@ -1868,6 +1869,7 @@ export class DatabaseTool implements BlockTool {
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
       locale: resolveLocale(undefined),
+      cellContext: this.cellContext(),
       onPropertyEdit: (rowId, propertyId, anchor) => this.editCardProperty(rowId, propertyId, anchor),
       ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
       onTitleEdit: (rowId, newTitle) => {
@@ -1938,7 +1940,7 @@ export class DatabaseTool implements BlockTool {
     if (this.readOnly || property === undefined || row === undefined) return;
     this.cardCellEditor?.close();
 
-    const handle = openCellEditor(property, row.properties[propertyId], anchor, {
+    const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext(),
       i18n: this.api.i18n,
       readOnly: false,

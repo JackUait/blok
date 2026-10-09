@@ -3,6 +3,8 @@ import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition,
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
 import { createOptionPill, renderCellValue } from './cells';
+import type { CellContext } from './cells';
+import { readPropertyValue } from './property-values';
 import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
@@ -29,6 +31,8 @@ interface DatabaseBoardViewOptions {
   /** The row's body blocks, for the page cover and page content previews. */
   bodyOf?: (rowId: string) => BodyBlock[];
   locale?: string;
+  /** What cells need from the host: relation titles, computed result types. */
+  cellContext?: Partial<CellContext>;
   /** A click on a card property: edit it in place. */
   onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
   /** Sub-groups: one horizontal lane each, holding every column. */
@@ -61,7 +65,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
   private readonly hiddenGroupCount: number;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext'>;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, ...settings
@@ -601,7 +605,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
         continue;
       }
 
-      const cell = renderCellValue(property, row.properties[property.id], { i18n: this.i18n, readOnly: true, locale: this.settings.locale });
+      const cell = renderCellValue(property, readPropertyValue(row, property), {
+        ...this.settings.cellContext, i18n: this.i18n, readOnly: true, locale: this.settings.locale,
+      });
 
       if (cell.hasAttribute('data-empty')) {
         continue;

@@ -199,7 +199,10 @@ describe('key-set lockstep with the C# converter', () => {
 
     expect(csharp.length).toBeGreaterThan(0);
     expect(csharp.filter((key) => !isOrderedIdArrayKey(key))).toEqual([]);
-    expect(isOrderedIdArrayKey('blocks')).toBe(true);
-    expect(csharp).toContain('blocks');
+
+    for (const key of ['blocks', 'filters', 'sorts', 'calculations']) {
+      expect(isOrderedIdArrayKey(key), `TS is missing ${key}`).toBe(true);
+      expect(csharp, `C# is missing ${key}`).toContain(key);
+    }
   });
 });

@@ -117,11 +117,11 @@ internal static class YDocConverter
   /// The generic array rule cannot cover it: <c>IsConvertibleArray</c> promotes
   /// only non-empty ALL-OBJECT/ARRAY arrays, and a cell is born
   /// <c>blocks: []</c> and then holds strings — as a view is born
-  /// <c>filters: []</c> / <c>sorts: []</c>. Minting is EAGER for the same
+  /// <c>filters: []</c> / <c>sorts: []</c> / <c>calculations: []</c>. Minting is EAGER for the same
   /// reason <c>contentIds</c> is: a later promotion runs on two peers at once
   /// and map-set is last-writer-wins, so the loser's ids are discarded.
   /// </summary>
-  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts"];
+  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations"];
 
   // nanoid's default alphabet; keys are random so two peers never collide.
   private const string RowKeyAlphabet =

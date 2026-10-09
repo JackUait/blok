@@ -47,9 +47,10 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
 /**
  * NESTED data keys holding a LIST THAT IS BORN EMPTY and then grows on two
  * peers at once: a table cell's `blocks` (ordered child ids), and a database
- * view's `filters` and `sorts`. Stored as a `Y.Array` from birth — empty, and
- * whatever the elements turn out to be — so two peers each adding the FIRST
- * element keep both instead of one whole-value write discarding the other's.
+ * view's `filters`, `sorts` and `calculations`. Stored as a `Y.Array` from
+ * birth — empty, and whatever the elements turn out to be — so two peers each
+ * adding the FIRST element keep both instead of one whole-value write
+ * discarding the other's.
  *
  * The general array rule cannot cover them: `isConvertibleArray` promotes only
  * non-empty arrays, so a list born `[]` is a plain leaf, and each peer's first
@@ -75,7 +76,7 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
  * the same keys AND defer to the wrapper the same way, or a server-seeded
  * container is a plain array where a client-seeded one is a Y.Array.
  */
-const EAGER_ARRAY_KEYS = new Set(['blocks', 'filters', 'sorts']);
+const EAGER_ARRAY_KEYS = new Set(['blocks', 'filters', 'sorts', 'calculations']);
 
 /**
  * Whether a NESTED data key is always stored as a Y.Array, empty included.

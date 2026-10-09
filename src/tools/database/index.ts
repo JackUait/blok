@@ -3653,6 +3653,11 @@ export class DatabaseTool implements BlockTool {
     void this.resolveRowPage(rowId);
   }
 
+  /** Opens a row's page; its row block calls this when find-in-page reveals a match inside it. */
+  public openRow(param: { rowId: string }): void {
+    this.handleRowClick(param.rowId);
+  }
+
   /** The active view's rows in the order it shows them, groups in board order. */
   private viewRowOrder(): DatabaseRow[] {
     const view = this.model.getView(this.activeViewId);

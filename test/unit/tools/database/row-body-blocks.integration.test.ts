@@ -337,6 +337,16 @@ describe('row bodies are child blocks of the row', () => {
     expect(holder?.querySelector('[data-blok-database-drawer-add-icon]')).toBeNull();
   });
 
+  it('opens its page when find reveals a match in a closed row', async () => {
+    await make(docWithBodies());
+
+    editor?.blocks.getById('r1')?.call('expand');
+    await quiet();
+
+    expect(drawerBody()?.contains(holderOf('c1'))).toBe(true);
+    expect(holderOf('r1')?.classList.contains('hidden')).toBe(false);
+  });
+
   it('declares the row a layout container that never nests another row', () => {
     expect(DatabaseRowTool.isLayout).toBe(true);
     expect(DatabaseRowTool.deletesChildren).toBe(true);

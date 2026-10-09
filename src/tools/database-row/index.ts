@@ -103,6 +103,20 @@ export class DatabaseRowTool implements BlockTool {
     return el;
   }
 
+  /**
+   * Find-in-page calls this on a hidden ancestor of a match: the closed row
+   * asks its database to open its page, which shows the body.
+   */
+  public expand(): void {
+    const parentId = this.block?.parentId;
+    const id = this.block?.id;
+
+    if (parentId === null || parentId === undefined || id === undefined) {
+      return;
+    }
+    this.api?.blocks.getById(parentId)?.call('openRow', { rowId: id });
+  }
+
   /** Adds the first paragraph of an empty page body and puts the caret in it. */
   public startBody(): void {
     const api = this.api;

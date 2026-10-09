@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { IconChevronDown } from '../../components/icons';
 
 interface DatabaseListViewOptions {
   readOnly: boolean;
@@ -11,6 +12,9 @@ interface DatabaseListViewOptions {
   visiblePropertyIds: string[];
   options?: SelectOption[];
   getRows?: (optionId: string) => DatabaseRow[];
+  /** Groups the view saved collapsed. */
+  collapsedGroupIds?: ReadonlySet<string>;
+  onToggleCollapse?: (optionId: string, collapsed: boolean) => void;
 }
 
 /**
@@ -27,8 +31,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly visiblePropertyIds: string[];
   private readonly groupOptions: SelectOption[] | undefined;
   private readonly getGroupRows: ((optionId: string) => DatabaseRow[]) | undefined;
+  private readonly collapsedGroupIds: ReadonlySet<string>;
+  private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
 
-  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows }: DatabaseListViewOptions) {
+  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse }: DatabaseListViewOptions) {
     this.readOnly = readOnly;
     this.i18n = i18n;
     this.rows = rows;
@@ -37,6 +43,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
     this.visiblePropertyIds = visiblePropertyIds;
     this.groupOptions = options;
     this.getGroupRows = getRows;
+    this.collapsedGroupIds = collapsedGroupIds ?? new Set();
+    this.onToggleCollapse = onToggleCollapse;
   }
 
   /**
@@ -92,7 +100,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const toggle = document.createElement('span');
 
     toggle.setAttribute('data-blok-database-list-group-toggle', '');
-    toggle.textContent = '▼';
+    toggle.innerHTML = IconChevronDown;
 
     const dot = document.createElement('span');
 
@@ -132,16 +140,25 @@ export class DatabaseListView implements DatabaseViewRenderer {
     // Add-row button
     const addRowBtn = this.readOnly ? null : this.createAddRowButton(option.id);
 
-    // Collapse/expand toggle
-    header.addEventListener('click', () => {
-      const collapsed = rowsContainer.style.display === 'none';
-
-      rowsContainer.style.display = collapsed ? '' : 'none';
-      toggle.textContent = collapsed ? '▼' : '▶';
+    // Rows show and hide at once; only the caret turns (database.css, research/08).
+    const setCollapsed = (collapsed: boolean): void => {
+      rowsContainer.style.display = collapsed ? 'none' : '';
+      groupEl.toggleAttribute('data-collapsed', collapsed);
 
       if (addRowBtn !== null) {
-        addRowBtn.style.display = collapsed ? '' : 'none';
+        addRowBtn.style.display = collapsed ? 'none' : '';
       }
+    };
+
+    if (this.collapsedGroupIds.has(option.id)) {
+      setCollapsed(true);
+    }
+
+    header.addEventListener('click', () => {
+      const collapsed = !groupEl.hasAttribute('data-collapsed');
+
+      setCollapsed(collapsed);
+      this.onToggleCollapse?.(option.id, collapsed);
     });
 
     groupEl.appendChild(header);

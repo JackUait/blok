@@ -621,7 +621,7 @@ describe('DatabaseListView', () => {
       expect(rowsContainer.style.display).toBe('');
     });
 
-    it('toggle text switches between ▼ (expanded) and ▶ (collapsed)', () => {
+    it('draws the toggle as a chevron and marks the group collapsed, so only the caret turns', () => {
       const { options, getRows } = makeGroupedOptions();
       const view = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
@@ -629,17 +629,47 @@ describe('DatabaseListView', () => {
       });
       const list = view.createView();
 
-      const firstGroup = list.querySelector('[data-blok-database-list-group]');
-      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
-      const toggle = firstGroup?.querySelector('[data-blok-database-list-group-toggle]') as HTMLElement;
+      const firstGroup = list.querySelector('[data-blok-database-list-group]') as HTMLElement;
+      const header = firstGroup.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+      const toggle = firstGroup.querySelector('[data-blok-database-list-group-toggle]') as HTMLElement;
 
-      expect(toggle.textContent).toBe('▼');
+      expect(toggle.querySelector('svg')).not.toBeNull();
+      expect(toggle.textContent?.trim()).toBe('');
+      expect(firstGroup.hasAttribute('data-collapsed')).toBe(false);
 
       header.click();
-      expect(toggle.textContent).toBe('▶');
+      expect(firstGroup.hasAttribute('data-collapsed')).toBe(true);
 
       header.click();
-      expect(toggle.textContent).toBe('▼');
+      expect(firstGroup.hasAttribute('data-collapsed')).toBe(false);
+    });
+
+    it('starts a group collapsed when the view saved it collapsed', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows, collapsedGroupIds: new Set([options[0].id]),
+      });
+      const firstGroup = view.createView().querySelector('[data-blok-database-list-group]') as HTMLElement;
+
+      expect(firstGroup.hasAttribute('data-collapsed')).toBe(true);
+      expect((firstGroup.querySelector('[data-blok-database-list-rows]') as HTMLElement).style.display).toBe('none');
+      expect((firstGroup.querySelector('[data-blok-database-add-row]') as HTMLElement).style.display).toBe('none');
+    });
+
+    it('reports each collapse and expand, so the view can keep it', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const onToggleCollapse = vi.fn();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows, onToggleCollapse,
+      });
+      const header = view.createView().querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+
+      header.click();
+      header.click();
+
+      expect(onToggleCollapse.mock.calls).toEqual([[options[0].id, true], [options[0].id, false]]);
     });
 
     it('clicking toggle hides add-row button within the group', () => {

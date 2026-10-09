@@ -859,7 +859,7 @@
   color: var(--blok-database-tab-text);
   user-select: none;
   white-space: nowrap;
-  transition: background-color 120ms ease;
+  transition: background-color 100ms ease-in-out;
 }
 
 [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab] {
@@ -879,6 +879,24 @@
 [data-blok-database-tab][data-active] {
   background-color: var(--blok-database-tab-bg-active);
   color: var(--blok-database-tab-text-active);
+}
+
+/* The start of a tab switch; index.ts drops both marks a frame later. */
+[data-blok-database-tab][data-blok-database-tab-was-active] {
+  background-color: var(--blok-database-tab-bg-active);
+}
+
+[data-blok-database-tab][data-active][data-blok-database-tab-activating] {
+  background-color: var(--blok-database-tab-bg);
+}
+
+/* Database menus open from the anchor's corner (popover-animation.css sets the origin). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
+  transform: scale(0.96);
 }
 
 [data-blok-database-add-view] {
@@ -1276,13 +1294,29 @@
  * Collapse toggle — small chevron, rotates when expanded/collapsed.
  */
 [data-blok-database-list-group-toggle] {
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--blok-database-add-text);
-  line-height: 1;
   flex-shrink: 0;
-  width: 12px;
-  text-align: center;
+  width: 16px;
+  height: 16px;
   transition: color 80ms ease;
+}
+
+/* Only the caret turns; the rows show and hide at once (research/08). */
+[data-blok-database-list-group-toggle] svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 200ms ease-out;
+}
+
+[data-blok-database-list-group][data-collapsed] [data-blok-database-list-group-toggle] svg {
+  transform: rotate(-90deg);
+}
+
+[dir="rtl"] [data-blok-database-list-group][data-collapsed] [data-blok-database-list-group-toggle] svg {
+  transform: rotate(90deg);
 }
 
 [data-blok-database-list-group-header]:hover [data-blok-database-list-group-toggle] {
@@ -1518,8 +1552,15 @@
 
   [data-blok-database-drawer],
   [data-blok-database-drop-line],
-  [data-blok-database-column-actions] {
+  [data-blok-database-column-actions],
+  [data-blok-database-list-group-toggle] svg,
+  [data-blok-database-tab],
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
     transition: none;
+  }
+
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
+    transform: none;
   }
 
   [data-blok-database-property-type-popover] {

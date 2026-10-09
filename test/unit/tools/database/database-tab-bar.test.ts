@@ -15,13 +15,17 @@ vi.mock('../../../../src/components/utils/popover', () => {
     private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string }>;
     private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
 
+    private readonly className: unknown;
+
     constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string }>; [key: string]: unknown }) {
       this.items = params.items ?? [];
+      this.className = params.class;
     }
 
     show(): void {
       this.container = document.createElement('div');
       this.container.setAttribute('data-blok-database-tab-context', '');
+      if (typeof this.className === 'string') this.container.setAttribute('data-mock-popover-class', this.className);
       this.container.style.position = 'fixed';
 
       for (const item of this.items) {
@@ -336,6 +340,16 @@ describe('DatabaseTabBar', () => {
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
       const popover = document.querySelector('[data-blok-database-tab-context]');
       expect(popover).not.toBeNull();
+      el.remove();
+    });
+
+    it('opens the context popover with the database menu motion', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      expect(document.querySelector('[data-blok-database-tab-context]')?.getAttribute('data-mock-popover-class')).toBe('blok-database-menu');
       el.remove();
     });
 

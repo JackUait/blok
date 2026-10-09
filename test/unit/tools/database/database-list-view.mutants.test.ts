@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { IconChevronDown } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -173,7 +174,16 @@ describe('DatabaseListView — mutation coverage', () => {
     });
   });
 
-  describe('createView — grouped branch', () => {
+  /** The chevron as the DOM serializes it once parsed. */
+const chevronHtml = (): string => {
+  const span = document.createElement('span');
+
+  span.innerHTML = IconChevronDown;
+
+  return span.innerHTML;
+};
+
+describe('createView — grouped branch', () => {
     it('serializes a whole group: markers on group, header, toggle, dot, title, count and rows container', () => {
       const view = new DatabaseListView({
         readOnly: false,
@@ -192,7 +202,7 @@ describe('DatabaseListView — mutation coverage', () => {
         '<div data-blok-database-list="">'
         + '<div data-blok-database-list-group="" data-option-id="opt-a">'
         + '<div data-blok-database-list-group-header="">'
-        + '<span data-blok-database-list-group-toggle="">▼</span>'
+        + `<span data-blok-database-list-group-toggle="">${chevronHtml()}</span>`
         + '<span data-blok-database-list-group-dot="" style="background-color: var(--blok-color-red-text);"></span>'
         + '<span data-blok-database-list-group-title="">Alpha</span>'
         + '<span data-blok-database-list-group-count="">1</span>'
@@ -264,7 +274,8 @@ describe('DatabaseListView — mutation coverage', () => {
         header?.click();
 
         expect(rowsContainer?.style.display).toBe('none');
-        expect(toggle?.textContent).toBe('▶');
+        expect(group?.hasAttribute('data-collapsed')).toBe(true);
+        expect(toggle?.querySelector('svg')).not.toBeNull();
         // The collapse handler must skip the null add-row button; the throw it
         // would otherwise raise reaches jsdom as a window error event, not as a
         // synchronous exception out of `click()`.

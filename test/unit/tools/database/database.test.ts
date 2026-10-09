@@ -67,13 +67,17 @@ vi.mock('../../../../src/components/utils/popover', () => {
     private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string; element?: HTMLElement }>;
     private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
 
+    private readonly className: unknown;
+
     constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string; element?: HTMLElement }>; [key: string]: unknown }) {
       this.items = params.items ?? [];
+      this.className = params.class;
     }
 
     show(): void {
       this.container = document.createElement('div');
       this.container.setAttribute('data-mock-popover', '');
+      if (typeof this.className === 'string') this.container.setAttribute('data-mock-popover-class', this.className);
 
       for (const item of this.items) {
         if (item.type === PopoverItemType.Html && item.element !== undefined) {
@@ -2366,6 +2370,113 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('collapsing a group in a grouped list', () => {
+    const groupedList = (readOnly = false): { tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> } => {
+      const childBlocks = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' }, position: 'a0' })];
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [], collapsedGroups: [] }],
+      }, {}, { childBlocks });
+
+      options.readOnly = readOnly;
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      return { tool, element, options };
+    };
+
+    const header = (element: HTMLElement, optionId: string): HTMLElement | undefined =>
+      queryAllByData(element, 'data-blok-database-list-group')
+        .find((group) => group.getAttribute('data-option-id') === optionId)
+        ?.querySelector<HTMLElement>('[data-blok-database-list-group-header]') ?? undefined;
+
+    it('keeps the collapse on the view, so a reload shows the group collapsed', () => {
+      const { tool, element } = groupedList();
+
+      header(element, 'opt-todo')?.click();
+
+      const saved = tool.save(element);
+
+      expect(saved.views[0].collapsedGroups).toEqual([{ id: 'opt-todo' }]);
+
+      const reloaded = new DatabaseTool(createDatabaseOptions(saved));
+      const reloadedElement = reloaded.render();
+
+      reloaded.rendered();
+
+      const group = queryAllByData(reloadedElement, 'data-blok-database-list-group').find((g) => g.getAttribute('data-option-id') === 'opt-todo');
+
+      expect(group?.hasAttribute('data-collapsed')).toBe(true);
+
+      tool.destroy();
+      reloaded.destroy();
+    });
+
+    it('expanding removes the group from the saved list', () => {
+      const { tool, element } = groupedList();
+
+      header(element, 'opt-todo')?.click();
+      header(element, 'opt-todo')?.click();
+
+      expect(tool.save(element).views[0].collapsedGroups).toEqual([]);
+
+      tool.destroy();
+    });
+
+    it('collapses on screen but saves nothing in read-only mode', () => {
+      const { tool, element } = groupedList(true);
+
+      header(element, 'opt-todo')?.click();
+
+      expect(tool.save(element).views[0].collapsedGroups).toEqual([]);
+
+      tool.destroy();
+    });
+  });
+
+  describe('switching the view tab', () => {
+    it('hands the active background from the old tab to the new one, so it can fade over 100ms', async () => {
+      const options = createDatabaseOptions({
+        views: [
+          { id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] },
+          { id: 'view-2', name: 'List', type: 'list', position: 'a1', sorts: [], filters: [], visibleProperties: [] },
+        ],
+      });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      const seen: string[] = [];
+      const observer = new MutationObserver((records) => {
+        records.forEach((record) => {
+          const target = record.target as HTMLElement;
+
+          seen.push(`${target.getAttribute('data-view-id') ?? '?'}:${record.attributeName ?? ''}:${record.oldValue === null ? 'added' : 'removed'}`);
+        });
+      });
+
+      observer.observe(element, { subtree: true, attributeOldValue: true, attributeFilter: ['data-blok-database-tab-was-active', 'data-blok-database-tab-activating'] });
+      queryAllByData(element, 'data-view-id', 'view-2').find((el) => el.hasAttribute('data-blok-database-tab'))?.click();
+      await Promise.resolve();
+      observer.disconnect();
+
+      expect(seen).toEqual([
+        'view-1:data-blok-database-tab-was-active:added',
+        'view-2:data-blok-database-tab-activating:added',
+        'view-1:data-blok-database-tab-was-active:removed',
+        'view-2:data-blok-database-tab-activating:removed',
+      ]);
+      expect(queryAllByData(element, 'data-blok-database-tab-was-active')).toHaveLength(0);
+
+      tool.destroy();
+      element.remove();
+    });
+  });
+
   describe('list view', () => {
     const makeListData = (overrides: Partial<DatabaseData> = {}): DatabaseData => ({
       schema: [
@@ -3919,6 +4030,21 @@ describe('DatabaseTool', () => {
 
     afterEach(() => {
       document.body.innerHTML = '';
+    });
+
+    it('opens the group menu and the card menu with the database menu motion', () => {
+      const { tool, element } = board();
+
+      openMenu(element, 'opt-todo');
+
+      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu')).not.toBeNull();
+
+      queryAllByData(document.body, 'data-mock-popover').forEach((el) => el.remove());
+      queryByData(element, 'data-blok-database-card-menu')?.click();
+
+      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu')).not.toBeNull();
+
+      tool.destroy();
     });
 
     it('hides a group and keeps it hidden after a reload', () => {

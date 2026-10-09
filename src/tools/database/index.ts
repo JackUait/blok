@@ -10,7 +10,7 @@ import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues, sortRows } from './database-query';
 import { openDatabaseConfirm } from './database-confirm-dialog';
-import { groupMenuItems } from './database-group-menu';
+import { DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
@@ -896,6 +896,8 @@ export class DatabaseTool implements BlockTool {
     this.sync.flushPendingPropertyUpdates();
     this.sync.destroy();
 
+    const previousViewId = this.activeViewId;
+
     this.activateView(viewId);
 
     this.boardContainer.innerHTML = '';
@@ -909,6 +911,28 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.rebuildTabBar();
+    this.fadeTabBackground(previousViewId, viewId);
+  }
+
+  /**
+   * The rebuilt bar starts with the old tab still painted active and the new one
+   * blank, then drops both marks so the 100ms background transition in
+   * database.css plays (research/08). The body already swapped in one frame.
+   */
+  private fadeTabBackground(fromViewId: string, toViewId: string): void {
+    const bar = this.element?.querySelector('[data-blok-database-tab-bar]');
+    const from = bar?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${fromViewId}"]`);
+    const to = bar?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${toViewId}"]`);
+
+    if (from === null || from === undefined || to === null || to === undefined) {
+      return;
+    }
+    from.setAttribute('data-blok-database-tab-was-active', '');
+    to.setAttribute('data-blok-database-tab-activating', '');
+    // Commit the start state, or the browser skips straight to the end.
+    void to.getBoundingClientRect();
+    from.removeAttribute('data-blok-database-tab-was-active');
+    to.removeAttribute('data-blok-database-tab-activating');
   }
 
   addView(type: ViewType): void {
@@ -1372,6 +1396,8 @@ export class DatabaseTool implements BlockTool {
         visiblePropertyIds: visibleRowPropertyIds(viewConfig, this.model.getSchema()),
         options,
         getRows: (optionId) => groups.get(optionId) ?? [],
+        collapsedGroupIds: new Set((viewConfig.collapsedGroups ?? []).map((group) => group.id)),
+        onToggleCollapse: (optionId, collapsed) => this.saveGroupCollapse(viewConfig.id, optionId, collapsed),
       });
     } else {
       this.view = new DatabaseListView({
@@ -1520,6 +1546,7 @@ export class DatabaseTool implements BlockTool {
     cardEl.setAttribute('data-popover-open', '');
 
     this.cardMenuPopover = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
       trigger: anchor,
       width: 'auto',
       minWidth: '140px',
@@ -1570,7 +1597,7 @@ export class DatabaseTool implements BlockTool {
   private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>): void {
     this.groupMenuPopover?.destroy();
 
-    const popover = new PopoverDesktop({ trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
+    const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
 
     popover.on(PopoverEvent.Closed, () => {
       if (this.groupMenuPopover === popover) {
@@ -1614,6 +1641,20 @@ export class DatabaseTool implements BlockTool {
       closeOnActivate: true,
       onActivate: () => this.toggleGroupHidden(group.id),
     })));
+  }
+
+  /** Kept on the view without a redraw, so the caret's turn plays out. Read-only keeps it on screen only. */
+  private saveGroupCollapse(viewId: string, groupId: string, collapsed: boolean): void {
+    const current = this.model.getView(viewId)?.collapsedGroups ?? [];
+
+    if (this.readOnly || this.destroyed || current.some((group) => group.id === groupId) === collapsed) {
+      return;
+    }
+    const collapsedGroups = collapsed ? [...current, { id: groupId }] : current.filter((group) => group.id !== groupId);
+
+    this.model.updateView(viewId, { collapsedGroups });
+    this.block.dispatchChange();
+    void this.sync.syncUpdateView({ viewId, changes: { collapsedGroups } });
   }
 
   private toggleGroupHidden(groupId: string): void {

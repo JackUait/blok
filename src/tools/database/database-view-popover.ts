@@ -1,4 +1,5 @@
 import { IconBoard, IconList, IconTable } from '../../components/icons';
+import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -67,6 +68,7 @@ export class DatabaseViewPopover {
     ];
 
     this.popover = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
       items,
       trigger: anchor,
       width: 'auto',

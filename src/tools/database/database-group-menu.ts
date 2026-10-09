@@ -4,6 +4,12 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { IconCheck, IconHash, IconPreview, IconSliders, IconTrash } from '../../components/icons';
 import { OPTION_COLORS, optionColorLabelKey, type OptionColor } from './cells/option-colors';
 
+/**
+ * PopoverDesktop `class` for the database's menus. database.css keys their
+ * 200ms open and close motion off it; cell editors leave it off, as Notion's do.
+ */
+export const DATABASE_MENU_CLASS = 'blok-database-menu';
+
 export interface GroupMenuParams {
   i18n: I18n;
   /** The no-value group has no option, so it has no color. */

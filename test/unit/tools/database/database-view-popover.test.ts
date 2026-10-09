@@ -100,6 +100,12 @@ describe('DatabaseViewPopover', () => {
       expect(el).not.toBeNull();
     });
 
+    it('opens with the database menu motion', () => {
+      popover.open(anchor);
+
+      expect((mockPopoverInstances.at(-1)?.params as { class?: string } | undefined)?.class).toBe('blok-database-menu');
+    });
+
     it('renders a heading with "Add view" text', () => {
       popover.open(anchor);
       const items = getLastItems();

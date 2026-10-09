@@ -2,6 +2,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { IconBoard, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
+import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
@@ -337,6 +338,7 @@ export class DatabaseTabBar {
       : [];
 
     this.contextPopover = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
       trigger: tab,
       width: 'auto',
       minWidth: '160px',

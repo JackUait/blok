@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 731 + 117 + 142 + 4 closure for all 994 keys', () => {
+  it('rebuilds a disjoint 742 + 117 + 142 + 4 closure for all 1005 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(994);
+    expect(lifecycle.size).toBe(1005);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -325,7 +325,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the database names a new table view with tools.database.viewTypeTable.
       // +61: the database table view calls its tools.database.table*, calc* and viewTypeTableDescription keys by literal.
       // +47: the database property system (type names, person, files, property menu rows, status group names) calls its keys by literal.
-      'executable-literal': 731,
+      // +11: the database sort prompt (tools.database.removeSorting*) and group menu (group*, hiddenGroups) call their keys by literal.
+      'executable-literal': 742,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

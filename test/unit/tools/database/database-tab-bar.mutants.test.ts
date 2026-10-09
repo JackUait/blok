@@ -152,6 +152,10 @@ const makeApi = (i18n: I18nStub): API => ({ i18n } as unknown as API);
 /** Echoes keys back, so a mutated translation key shows up in the rendered string. */
 const echoApi = (): API => makeApi({ t: (key: string) => key, has: () => false });
 
+/** A layout a newer client saved that this build has no icon for, as an old client sees it. */
+const futureType: string = 'feed-unknown';
+const NEWER_CLIENT_TYPE = futureType as ViewType;
+
 const makeView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
   id: 'view',
   name: 'Board',
@@ -431,9 +435,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(queryOne(active, '[data-blok-database-tab-name]').getAttribute('data-blok-database-tab-name')).toBe('');
     });
 
-    // gallery has no tab icon yet; table got one with the table view (ad2fe9e2).
     it('renders no icon markup for a view type the icon table does not cover', () => {
-      const { el } = mount([makeView({ id: 'v1', type: 'gallery' })], 'v1');
+      const { el } = mount([makeView({ id: 'v1', type: NEWER_CLIENT_TYPE })], 'v1');
       const tab = tabOf(el, 'v1');
 
       expect(tab.children.length).toBe(2);
@@ -1075,7 +1078,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
     it('gives every item an icon slot — drawn for known types, empty for the rest', () => {
       const views = [
         makeView({ id: 'v1', name: 'One', position: 'a0', type: 'board' }),
-        makeView({ id: 'v2', name: 'Two', position: 'a1', type: 'gallery' }),
+        makeView({ id: 'v2', name: 'Two', position: 'a1', type: NEWER_CLIENT_TYPE }),
       ];
       const { dropdown } = openDropdown(views, 'v1');
       const items = Array.from(dropdown.querySelectorAll('[data-blok-database-tab-overflow-item]'));

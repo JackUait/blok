@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockAPI } from '../../../../types';
-import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
+import type { DatabaseConfig, DatabaseData, DatabaseRowData, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 
 vi.mock('../../../../src/blok', () => ({
@@ -215,6 +215,25 @@ describe('DatabaseTool — computed properties', () => {
     expect(doc.transact).toHaveBeenCalledTimes(1);
     expect(doc.rows.get('a')?.data.properties.related).toEqual([]);
     expect(doc.rows.get('a')?.data.properties.next).toEqual([]);
+  });
+
+  it('tells the backend adapter about both sides of a two-way relation, as id objects', async () => {
+    vi.useFakeTimers();
+    try {
+      const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0'), fakeRow('b', 'db', { title: 'Bravo' }, 'a1')]);
+      const updateRow = vi.fn(() => Promise.resolve({ id: 'x', position: '', properties: {} }));
+      const adapter = { updateRow } as unknown as NonNullable<DatabaseConfig['adapter']>;
+      const tool = new DatabaseTool({ data, config: { adapter }, api: doc.api, readOnly: false, block: { id: 'db', dispatchChange: vi.fn() } as never });
+
+      document.body.appendChild(tool.render());
+      commit(tool, 'a', 'next', [{ id: 'b' }]);
+      await vi.runAllTimersAsync();
+
+      expect(updateRow).toHaveBeenCalledWith({ rowId: 'a', properties: { next: [{ id: 'b' }] } });
+      expect(updateRow).toHaveBeenCalledWith({ rowId: 'b', properties: { prev: [{ id: 'a' }] } });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('answers another database with its schema and computed rows', () => {

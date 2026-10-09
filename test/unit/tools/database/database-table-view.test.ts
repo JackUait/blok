@@ -5,7 +5,7 @@ import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } 
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -414,13 +414,13 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBe('r1/p-amount');
     });
 
-    it.each([
+    it.each<[PropertyType, PropertyValue, PropertyValue]>([
       ['status', 'o-1', null],
       ['email', 'a@b.co', ''],
       ['phone', '+1 555', ''],
       ['person', [{ id: 'u-1' }], []],
       ['files', [{ id: 'f-1', name: 'a.png', url: 'https://x.test/a.png' }], []],
-    ] as const)('Backspace clears a %s cell to its empty value', (type, value, empty) => {
+    ])('Backspace clears a %s cell to its empty value', (type, value, empty) => {
       const { root, handlers } = mount({
         schema: [schema[0], { id: 'p-x', name: 'X', type, position: 'b0' }],
         rows: [row('r1', 'Alpha', { 'p-x': structuredClone(value) })],

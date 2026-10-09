@@ -181,6 +181,20 @@ describe('DatabaseTool — view settings', () => {
     expect(q('database-toolbar-locked')?.hidden).toBe(false);
   });
 
+  it('offers no new option in a locked table, so no cell can point at an option that was never saved', () => {
+    const { root } = mount({}, {}, { schema: schema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p)) });
+
+    root.querySelector<HTMLElement>('[data-row-id="r3"] [data-property-id="p-stage"]')?.click();
+    const search = document.querySelector<HTMLInputElement>('[data-blok-database-select-search]');
+
+    expect(search).not.toBeNull();
+    if (search === null) return;
+    search.value = 'Brand new';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(document.querySelector('[data-blok-database-select-create]')).toBeNull();
+  });
+
   it('paints rows that match a color rule', () => {
     const { root } = mount({ colorRules: [{ id: 'c1', propertyId: 'p-num', operator: 'greater_than', value: 100, color: 'green' }] });
 

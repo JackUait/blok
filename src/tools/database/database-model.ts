@@ -543,7 +543,7 @@ export class DatabaseModel {
 
   /**
    * A view as it is first written. `properties`, `calculations`, `filterTree`,
-   * `colorRules` and `groupStates` exist from birth so two peers' first edits
+   * `colorRules`, `groupStates` and both group settings maps exist from birth so two peers' first edits
    * merge: a key both peers create at once is last-writer-wins. `properties`
    * is never empty (there is always a title), so the CRDT keys its entries by
    * id; the empty lists rely on the eager array rule in yjs/serializer.ts.
@@ -564,6 +564,8 @@ export class DatabaseModel {
       filterTree: seed.filterTree ?? { id: `${seed.id}-filters`, conjunction: 'and', filterRules: [] },
       colorRules: seed.colorRules ?? [],
       groupStates: seed.groupStates ?? [],
+      groupSettings: seed.groupSettings ?? {},
+      subGroupSettings: seed.subGroupSettings ?? {},
     };
     const properties = seed.properties ?? resolveViewProperties(base, this.schema).map(({ id, visible }) => ({ id, visible }));
 

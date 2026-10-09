@@ -134,6 +134,20 @@ describe('database view filters — two peers editing one view', () => {
     ]));
   });
 
+  it('keeps both group settings set at the same moment', () => {
+    const [storeA, storeB] = seed(bornView());
+
+    edit(storeA, (view) => ({ groupSettings: { ...view.groupSettings, hideEmptyGroups: true } }));
+    edit(storeB, (view) => ({ groupSettings: { ...view.groupSettings, dateBy: 'week' } }));
+    edit(storeA, (view) => ({ subGroupSettings: { ...view.subGroupSettings, sort: 'descending' } }));
+    edit(storeB, (view) => ({ subGroupSettings: { ...view.subGroupSettings, textBy: 'alphabet' } }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0].groupSettings).toEqual({ hideEmptyGroups: true, dateBy: 'week' });
+    expect(viewsOf(storeA)[0].subGroupSettings).toEqual({ sort: 'descending', textBy: 'alphabet' });
+    expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
+  });
+
   it('keeps both simple filters added at the same moment', () => {
     const [storeA, storeB] = seed(bornView());
 

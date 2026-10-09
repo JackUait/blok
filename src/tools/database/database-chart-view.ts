@@ -396,7 +396,7 @@ export class DatabaseChartView implements DatabaseViewRenderer {
 
     svg.setAttribute('role', 'img');
     svg.setAttribute('aria-label', this.options.i18n.t('tools.database.chartLabel', { x: xName, y: yName }));
-    svg.setAttribute('font-size', FONT_SIZE);
+    svg.setAttribute('font-size', String(FONT_SIZE));
     if (settings.type === 'donut') {
       this.drawDonut(svg, width, height);
     } else {

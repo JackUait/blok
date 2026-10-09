@@ -107,7 +107,7 @@ export const planToolAction = (state: PlanState, name: string, args: Record<stri
 
   const prepared = state.ctx.prepared.get(state.index);
 
-  if (prepared === PREPARE_PENDING) {
+  if (prepared === PREPARE_PENDING && target === 'block') {
     return {};
   }
 
@@ -119,7 +119,7 @@ export const planToolAction = (state: PlanState, name: string, args: Record<stri
   }
 
   try {
-    const result = impl.run(createActionContext(state, block, tool), args, prepared);
+    const result = impl.run(createActionContext(state, block, tool), args, prepared === PREPARE_PENDING ? undefined : prepared);
 
     if (result !== null && (typeof result === 'object' || typeof result === 'function') &&
         'then' in result && typeof result.then === 'function') {

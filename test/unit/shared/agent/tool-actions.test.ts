@@ -265,7 +265,7 @@ describe('tool action pre-planning and failures', () => {
     { name: 'table.change', args: { id: 'tbl' }, target: 'block' },
     { name: 'table.create', args: {}, target: 'create' },
   ] satisfies Array<{ name: AgentCommand['name']; args: Record<string, unknown>; target: 'block' | 'create' }>)
-  ('does not run $name while preparation is pending', ({ name, args, target }) => {
+  ('handles pending preparation for $name by target', ({ name, args, target }) => {
     const run = vi.fn((ctx: ToolActionContext) => ctx.insert({ type: 'paragraph', data: { text: 'Should not exist' } }));
     const action = target === 'block' ? 'change' : 'create';
     const setup = withActions('table', { [action]: { run } }, { [action]: target });
@@ -273,10 +273,25 @@ describe('tool action pre-planning and failures', () => {
       ...setup, prepared: new Map<number, unknown>([[0, PREPARE_PENDING]]),
     });
 
-    expect(plan.edits).toEqual([]);
-    expect(plan.results).toEqual([{}]);
-    expect(draft.toOutput()).toEqual(doc);
-    expect(run).not.toHaveBeenCalled();
+    if (target === 'block') {
+      expect(plan.edits).toEqual([]);
+      expect(plan.results).toEqual([{}]);
+      expect(draft.toOutput()).toEqual(doc);
+      expect(run).not.toHaveBeenCalled();
+
+      return;
+    }
+
+    expect(plan.edits).toEqual([{
+      op: 'insert', parentId: null, afterId: 'dv',
+      block: { id: 'n1', type: 'paragraph', data: { text: [{ text: 'Should not exist' }] }, children: [] },
+    }]);
+    expect(plan.results).toEqual(['n1']);
+    expect(draft.get('n1')).toMatchObject({ id: 'n1', type: 'paragraph', data: { text: [{ text: 'Should not exist' }] } });
+    expect(plan.changed).toEqual({ created: ['n1'], updated: [], moved: [], removed: [] });
+    expect([...plan.touched]).toEqual(['n1']);
+    expect(run).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledWith(expect.objectContaining({ tool: 'table' }), args, undefined);
   });
 
   it('still checks a pending action block target', () => {

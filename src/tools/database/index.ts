@@ -2150,7 +2150,10 @@ export class DatabaseTool implements BlockTool {
       duplicateRow: (rowId) => this.duplicateTableRow(rowId),
       openRow: (rowId) => this.handleRowClick(rowId),
       copyRowLink: (rowId) => this.copyRowLink(rowId),
-      editRowIcon: () => undefined,
+      editRowIcon: (rowId) => {
+        this.handleRowClick(rowId);
+        this.cardDrawer?.editIcon();
+      },
       updateView: (changes) => this.updateActiveView(changes),
       openPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
       addProperty: (anchor, placement) => this.openAddProperty(anchor, placement),

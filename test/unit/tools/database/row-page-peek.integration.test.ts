@@ -271,6 +271,18 @@ describe('row page peek modes', () => {
     expect(await rowCount()).toBe(3);
   });
 
+  it('the row menu "Edit icon" opens the row page with the icon picker', async () => {
+    await make(doc());
+    await click(q('[data-row-id="r2"] [data-blok-database-table-row-handle]'));
+    const editIcon = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')]
+      .find((item) => item.textContent?.includes('Edit icon'));
+
+    await click(editIcon ?? null);
+
+    expect(shownTitle()).toBe('Two');
+    expect(document.querySelector('[data-blok-emoji-picker]')?.isConnected).toBe(true);
+  });
+
   it('switches the mode from the peek header and saves it on the view', async () => {
     await make(doc());
     await openRow('r1');

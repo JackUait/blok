@@ -683,6 +683,15 @@ export class DatabaseCardDrawer {
     return head;
   }
 
+  /** The row menu's "Edit icon": the picker under the open page's icon. */
+  editIcon(): void {
+    const anchor = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-icon], [data-blok-database-drawer-add-icon]');
+
+    if (this.currentRowId !== null && anchor !== null && anchor !== undefined) {
+      this.openIconPicker(this.currentRowId, anchor);
+    }
+  }
+
   private openIconPicker(rowId: string, anchor: HTMLElement): void {
     const onIconChange = this.onIconChange;
     const i18n = this.i18n;

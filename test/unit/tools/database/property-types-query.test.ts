@@ -397,3 +397,55 @@ describe('unique id assignment', () => {
     expect(assignUniqueIds(rows, 'uid')[0]).toBe(rows[0]);
   });
 });
+
+describe('model property operations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const fresh = (): DatabaseModel => new DatabaseModel({
+    schema: [
+      { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'n', name: 'Amount', type: 'number', position: 'a1', config: { options: [] } },
+      { id: 'z', name: 'Zed', type: 'text', position: 'a2' },
+    ],
+    views: [{ id: 'v', name: 'V', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+    activeViewId: 'v',
+  });
+
+  it('merges settings and removes a setting given as undefined', () => {
+    const model = fresh();
+
+    model.updateProperty('n', { number: { format: 'euro' }, description: 'Spend' });
+    model.updateProperty('n', { description: undefined });
+
+    expect(model.getProperty('n')).toMatchObject({ number: { format: 'euro' } });
+    expect(model.getProperty('n')).not.toHaveProperty('description');
+  });
+
+  it('replaces a whole property for a type change, keeping its place', () => {
+    const model = fresh();
+
+    model.replaceProperty({ id: 'n', name: 'Amount', type: 'text', position: 'a1' });
+
+    expect(model.getSchema().map((p) => [p.id, p.type])).toEqual([['title', 'title'], ['n', 'text'], ['z', 'text']]);
+  });
+
+  it('adds a property right after another', () => {
+    const model = fresh();
+    const added = model.addProperty('Owner', 'person', undefined, { afterId: 'n' });
+
+    expect(model.getSchema().map((p) => p.id)).toEqual(['title', 'n', added.id, 'z']);
+  });
+
+  it('adds a property right before another', () => {
+    const model = fresh();
+    const added = model.addProperty('First', 'text', undefined, { beforeId: 'n' });
+
+    expect(model.getSchema().map((p) => p.id)).toEqual(['title', added.id, 'n', 'z']);
+  });
+});

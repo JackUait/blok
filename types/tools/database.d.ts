@@ -317,11 +317,12 @@ export interface DatabaseAdapter {
     type: PropertyType;
     position: string;
     config?: PropertyConfig;
-  }): Promise<PropertyDefinition>;
+  } & PropertySettingsV2): Promise<PropertyDefinition>;
 
   updateProperty(params: {
     propertyId: string;
-    changes: Partial<Pick<PropertyDefinition, 'name' | 'config'>>;
+    /** A settings key given as undefined was removed. `type` comes with a type change. */
+    changes: Partial<Pick<PropertyDefinition, 'name' | 'config' | 'type'>> & Partial<PropertySettingsV2>;
   }): Promise<PropertyDefinition>;
 
   deleteProperty(params: {

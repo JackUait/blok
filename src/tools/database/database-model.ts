@@ -7,6 +7,7 @@ import type {
   DatabaseViewSettingKey,
   PropertyConfig,
   PropertyDefinition,
+  PropertySettingsV2,
   PropertyType,
   PropertyValue,
   SelectOption,
@@ -43,6 +44,9 @@ const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
  * data-option-id as ''. 23 chars, so a default 21-char nanoid option id never equals it.
  */
 export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
+
+/** What `updateProperty` may change. */
+export type PropertyChanges = Partial<Pick<PropertyDefinition, 'name' | 'config'>> & Partial<PropertySettingsV2>;
 
 export interface GroupOptions {
   /** Status only: one group per status group instead of per option. */
@@ -83,26 +87,64 @@ export class DatabaseModel {
     return this.schema.find((p) => p.id === propertyId);
   }
 
-  addProperty(name: string, type: PropertyType, config?: PropertyConfig): PropertyDefinition {
-    const lastPosition = this.schema.length > 0 ? this.schema[this.schema.length - 1].position : null;
+  /**
+   * Adds a property at the end, or beside `at.afterId` / before `at.beforeId`.
+   * Positions stay fractional keys, so two peers adding at once both land.
+   */
+  addProperty(
+    name: string,
+    type: PropertyType,
+    config?: PropertyConfig,
+    at: { afterId?: string; beforeId?: string } = {},
+    settings: PropertySettingsV2 = {}
+  ): PropertyDefinition {
+    const ordered = [...this.schema].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const anchorIndex = ordered.findIndex((p) => p.id === (at.afterId ?? at.beforeId));
+    const neighbours = (): [PropertyDefinition | null, PropertyDefinition | null] => {
+      if (anchorIndex === -1) return [ordered[ordered.length - 1] ?? null, null];
+
+      return at.afterId !== undefined
+        ? [ordered[anchorIndex], ordered[anchorIndex + 1] ?? null]
+        : [ordered[anchorIndex - 1] ?? null, ordered[anchorIndex]];
+    };
+    const [after, before] = neighbours();
     const prop: PropertyDefinition = {
+      ...settings,
       id: nanoid(),
       name,
       type,
-      position: DatabaseModel.positionBetween(lastPosition, null),
+      position: DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null),
       ...(config !== undefined ? { config } : {}),
     };
     this.schema.push(prop);
+    this.schema.sort((a, b) => (a.position < b.position ? -1 : 1));
     this.locallyAdded.add(prop.id);
     return prop;
   }
 
-  updateProperty(propertyId: string, changes: Partial<Pick<PropertyDefinition, 'name' | 'config'>>): void {
+  /**
+   * Changes a property. A settings key given as `undefined` is removed.
+   * `config` merges, not replaces: a newer client's key beside `options`
+   * must outlive every option edit.
+   */
+  updateProperty(propertyId: string, changes: PropertyChanges): void {
     const prop = this.schema.find((p) => p.id === propertyId);
     if (prop === undefined) return;
-    if (changes.name !== undefined) prop.name = changes.name;
-    // Merge, not replace: a newer client's key beside `options` must outlive every option edit.
-    if (changes.config !== undefined) prop.config = { ...prop.config, ...changes.config };
+    const { config, ...rest } = changes;
+
+    for (const [key, value] of Object.entries(rest)) {
+      if (value === undefined) {
+        Reflect.deleteProperty(prop, key);
+      } else {
+        Reflect.set(prop, key, structuredClone(value));
+      }
+    }
+    if (config !== undefined) prop.config = { ...prop.config, ...config };
+  }
+
+  /** Swaps a property for a new definition with the same id, as a type change does. */
+  replaceProperty(next: PropertyDefinition): void {
+    this.schema = this.schema.map((p) => (p.id === next.id ? structuredClone(next) : p));
   }
 
   deleteProperty(propertyId: string): void {

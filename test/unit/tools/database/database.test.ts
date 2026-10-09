@@ -4645,3 +4645,145 @@ describe('DatabaseTool — row metadata and unique IDs', () => {
     expect(row.call).not.toHaveBeenCalledWith('updateProperties', expect.anything());
   });
 });
+
+describe('DatabaseTool — property operations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const schema: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-note', name: 'Note', type: 'text', position: 'a1' },
+    { id: 'prop-n', name: 'Amount', type: 'number', position: 'a2' },
+  ];
+
+  /** A row block backed by the real row tool, so writes land in its data. */
+  const realRow = (id: string, properties: Record<string, PropertyValue>): { block: BlockAPI; tool: DatabaseRowTool } => {
+    const tool = new DatabaseRowTool({ data: { position: 'a0', properties } } as never);
+    const block = {
+      id,
+      name: 'database-row',
+      holder: document.createElement('div'),
+      get preservedData() {
+        return tool.save(document.createElement('div'));
+      },
+      call: vi.fn((method: string, param?: unknown) => (tool as unknown as Record<string, (p?: unknown) => unknown>)[method]?.(param)),
+      dispatchChange: vi.fn(),
+    } as unknown as BlockAPI;
+
+    return { block, tool };
+  };
+
+  const build = (rows: Array<{ block: BlockAPI }>, config: DatabaseConfig = {}): { tool: DatabaseTool; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> } => {
+    const options = createDatabaseOptions({ schema, views: [{ id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }] }, config, { childBlocks: rows.map((r) => r.block) });
+    const tool = new DatabaseTool(options);
+
+    tool.render();
+
+    return { tool, options };
+  };
+
+  const schemaOf = (tool: DatabaseTool): PropertyDefinition[] => (tool as unknown as { model: DatabaseModel }).model.getSchema();
+
+  it('adds a named property of a type, after a given property, as one change', () => {
+    const { tool, options } = build([]);
+    const added = tool.addProperty({ name: 'Stage', type: 'status', afterId: 'prop-title' });
+
+    expect(schemaOf(tool).map((p) => p.id)).toEqual(['prop-title', added?.id, 'prop-note', 'prop-n']);
+    expect(added).toMatchObject({ name: 'Stage', type: 'status' });
+    expect(added?.status?.groups.map((g) => g.id)).toEqual(['todo', 'inProgress', 'complete']);
+    expect(added?.config?.options.map((o) => o.groupId)).toEqual(['todo', 'inProgress', 'complete']);
+    expect(options.block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('names a property after its type when the name field was left empty', () => {
+    const { tool } = build([]);
+
+    expect(tool.addProperty({ name: '', type: 'email' })?.name).toBe('tools.database.propertyTypeEmail');
+  });
+
+  it('refuses a person property without a people directory', () => {
+    const { tool } = build([]);
+
+    expect(tool.addProperty({ name: 'Owner', type: 'person' })).toBeNull();
+  });
+
+  it('changes a type and converts every row, keeping what the new type cannot hold', () => {
+    const one = realRow('r1', { 'prop-title': 'A', 'prop-note': '42' });
+    const two = realRow('r2', { 'prop-title': 'B', 'prop-note': 'lots' });
+    const { tool } = build([one, two]);
+
+    tool.changePropertyType('prop-note', 'number');
+
+    expect(schemaOf(tool).find((p) => p.id === 'prop-note')?.type).toBe('number');
+    expect(one.tool.getProperties()['prop-note']).toBe(42);
+    expect(two.tool.getProperties()['prop-note']).toBeNull();
+    expect(two.tool.save(document.createElement('div')).convertedValues).toEqual({ 'prop-note': { type: 'text', value: 'lots' } });
+    expect(one.tool.save(document.createElement('div')).convertedValues).toBeUndefined();
+  });
+
+  it('never changes the title\'s type', () => {
+    const { tool } = build([]);
+
+    tool.changePropertyType('prop-title', 'text');
+
+    expect(schemaOf(tool)[0].type).toBe('title');
+  });
+
+  it('duplicates a property with its values, right after it', () => {
+    const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+    const { tool } = build([one]);
+    const copy = tool.duplicateProperty('prop-n');
+
+    expect(schemaOf(tool).map((p) => p.id)).toEqual(['prop-title', 'prop-note', 'prop-n', copy?.id]);
+    expect(copy?.type).toBe('number');
+    expect(one.tool.getProperties()[copy?.id ?? '']).toBe(5);
+  });
+
+  it('deletes a property but keeps its row values (D9)', () => {
+    const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+    const { tool } = build([one]);
+
+    tool.deleteProperty('prop-n');
+
+    expect(schemaOf(tool).map((p) => p.id)).toEqual(['prop-title', 'prop-note']);
+    expect(one.tool.getProperties()['prop-n']).toBe(5);
+  });
+
+  it('never deletes the title', () => {
+    const { tool } = build([]);
+
+    tool.deleteProperty('prop-title');
+
+    expect(schemaOf(tool).map((p) => p.id)).toContain('prop-title');
+  });
+
+  it('saves property settings and renames', () => {
+    const { tool, options } = build([]);
+
+    tool.updatePropertySettings('prop-n', { number: { format: 'dollar', decimals: 2 } });
+    tool.renameProperty('prop-n', 'Budget');
+
+    expect(schemaOf(tool).find((p) => p.id === 'prop-n')).toMatchObject({ name: 'Budget', number: { format: 'dollar', decimals: 2 } });
+    expect(tool.save().schema.find((p) => p.id === 'prop-n')).toMatchObject({ name: 'Budget', number: { format: 'dollar', decimals: 2 } });
+    expect(options.block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('tells the backend about a type change with the converted property', async () => {
+    const adapter = {
+      loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
+      updateProperty: vi.fn().mockResolvedValue({}),
+      updateRow: vi.fn().mockResolvedValue({}),
+    } as unknown as DatabaseAdapter;
+    const { tool } = build([], { adapter });
+
+    tool.changePropertyType('prop-note', 'email');
+    await Promise.resolve();
+
+    expect(adapter.updateProperty).toHaveBeenCalledWith(expect.objectContaining({ propertyId: 'prop-note', changes: expect.objectContaining({ type: 'email' }) }));
+  });
+});

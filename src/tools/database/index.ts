@@ -1,8 +1,11 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, DatabaseRowMeta, ViewType, SelectOption, DatabaseViewConfig, PropertyType, PropertyValue } from './types';
-import { assignUniqueIds, personIdsOf } from './property-values';
+import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf } from './property-values';
+import { planTypeChange } from './property-conversion';
+import { DatabasePropertyMenu } from './database-property-menu';
+import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues } from './database-query';
 import { DatabaseBoardView } from './database-board-view';
@@ -114,6 +117,8 @@ export class DatabaseTool implements BlockTool {
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
+  private propertyMenu: DatabasePropertyMenu | null = null;
+  private addPropertyPopover: DatabasePropertyTypePopover | null = null;
   private descriptionPropertyCreation: ReturnType<DatabaseBackendSync['syncCreateProperty']> | null = null;
   private descriptionPropertyNeedsCreate = false;
   private readonly pendingDescriptions = new Map<string, OutputData>();
@@ -121,7 +126,6 @@ export class DatabaseTool implements BlockTool {
   private cardMenuPopover: PopoverDesktop | null = null;
   /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
   private readonly tableStates = new Map<string, TableState>();
-  private propertyTypePopover: DatabasePropertyTypePopover | null = null;
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -343,7 +347,6 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.handleBlockChanged);
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
-    this.propertyTypePopover?.close();
     this.destroyTableView();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
@@ -1168,16 +1171,6 @@ export class DatabaseTool implements BlockTool {
     };
   }
 
-  /**
-   * Opens a column's header menu. The property menu (rename, type, delete)
-   * replaces this and shows `DatabaseTableView.headerItems` after its own rows.
-   */
-  protected openPropertyMenu(propertyId: string, anchor: HTMLElement): void {
-    if (this.view instanceof DatabaseTableView) {
-      this.view.openHeaderMenu(propertyId, anchor);
-    }
-  }
-
   /** Filter, Sort and Group from a column header. Phase 3 owns their panels. */
   protected onTableViewAction(_action: 'filter' | 'sort' | 'group', _propertyId: string, _anchor: HTMLElement): void {
     // Hook only.
@@ -1279,40 +1272,6 @@ export class DatabaseTool implements BlockTool {
     this.block.dispatchChange();
     void this.sync.syncUpdateView({ viewId: this.activeViewId, changes: structuredClone(changes) });
     this.rerenderView({ keepDrawer: true });
-  }
-
-  /**
-   * "+" in the header, or Insert left/right. The property menu branch
-   * replaces this with its own add-property flow.
-   */
-  protected openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }): void {
-    this.propertyTypePopover?.close();
-    this.propertyTypePopover = new DatabasePropertyTypePopover({
-      i18n: this.api.i18n,
-      onSelect: (type) => this.addTableProperty(type, placement),
-    });
-    this.propertyTypePopover.open(anchor);
-  }
-
-  private addTableProperty(type: PropertyType, placement?: { propertyId: string; side: 'left' | 'right' }): void {
-    const prop = this.model.addProperty(this.api.i18n.t('tools.database.tableNewProperty'), type);
-
-    void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position });
-    this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
-    const view = this.model.getView(this.activeViewId);
-
-    if (placement === undefined || view === undefined) {
-      this.block.dispatchChange();
-      this.rerenderView({ keepDrawer: true });
-
-      return;
-    }
-    const schema = this.model.getSchema();
-    const order = resolveViewProperties(view, schema).map((p) => p.id).filter((id) => id !== prop.id);
-    const at = order.indexOf(placement.propertyId);
-    const beforeId = placement.side === 'left' ? placement.propertyId : order[at + 1] ?? null;
-
-    this.updateActiveView({ properties: withPropertyOrder(view, schema, prop.id, beforeId) });
   }
 
   private handleTableRowDrop(result: TableRowDropResult): void {
@@ -2250,6 +2209,213 @@ export class DatabaseTool implements BlockTool {
    *     boardWrapper  (div returned by createBoard / renderActiveBoard)
    *           boardArea  ([data-blok-database-board] — scrollable area with columns)
    */
+  // ---------------------------------------------------------------------------
+  // Property operations. The property menu, the drawer and the views call
+  // these; each writes the database block (and rows) once, so it is one
+  // undo step.
+  // ---------------------------------------------------------------------------
+
+  /** Whether the person property can be offered: the host gave a people directory. */
+  private get hasPeople(): boolean {
+    return this.config.people !== undefined;
+  }
+
+  /** Writes the schema and redraws. */
+  private commitSchema(): void {
+    this.block.dispatchChange();
+    this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /**
+   * Adds a property, named after its type when `name` is empty. Status
+   * starts with Notion's three options in its three groups. Returns null
+   * when the type cannot be added (person without a people directory) or
+   * the block is read-only.
+   */
+  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string }): PropertyDefinition | null {
+    if (this.readOnly || this.destroyed || params.type === 'title' || (params.type === 'person' && !this.hasPeople)) {
+      return null;
+    }
+    const name = params.name.trim() === '' ? this.api.i18n.t(propertyTypeMeta(params.type).labelKey) : params.name.trim();
+    const isStatus = params.type === 'status';
+    const config = isStatus
+      ? {
+        options: createDefaultStatusOptions({
+          notStarted: DATABASE_DEFAULT_TEXT.statusNotStarted,
+          inProgress: DATABASE_DEFAULT_TEXT.statusInProgress,
+          done: DATABASE_DEFAULT_TEXT.statusDone,
+        }),
+      }
+      : undefined;
+    const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, isStatus ? { status: createDefaultStatusSettings() } : {});
+    const view = this.model.getView(this.activeViewId);
+
+    if (view !== undefined && (params.afterId !== undefined || params.beforeId !== undefined)) {
+      const schema = this.model.getSchema();
+      // The view's column order, not the schema's: a user may have dragged the columns.
+      const order = resolveViewProperties(view, schema).map((p) => p.id).filter((id) => id !== prop.id);
+      const beforeId = params.beforeId ?? order[order.indexOf(params.afterId ?? '') + 1] ?? null;
+      const properties = withPropertyOrder(view, schema, prop.id, beforeId);
+
+      this.model.updateView(view.id, { properties });
+      void this.sync.syncUpdateView({ viewId: view.id, changes: { properties } });
+    }
+    void this.sync.syncCreateProperty({
+      id: prop.id,
+      name: prop.name,
+      type: prop.type,
+      position: prop.position,
+      ...(prop.config !== undefined ? { config: prop.config } : {}),
+      ...(prop.status !== undefined ? { status: prop.status } : {}),
+    });
+    this.commitSchema();
+
+    return prop;
+  }
+
+  renameProperty(propertyId: string, name: string): void {
+    if (this.readOnly || this.destroyed || name.trim() === '' || this.model.getProperty(propertyId) === undefined) return;
+    this.model.updateProperty(propertyId, { name: name.trim() });
+    void this.sync.syncUpdateProperty({ propertyId, changes: { name: name.trim() } });
+    this.commitSchema();
+  }
+
+  /** Icon, description, page visibility, and the number, date, status and ID settings. */
+  updatePropertySettings(propertyId: string, patch: Partial<PropertySettingsV2>): void {
+    if (this.readOnly || this.destroyed || this.model.getProperty(propertyId) === undefined) return;
+    this.model.updateProperty(propertyId, patch);
+    void this.sync.syncUpdateProperty({ propertyId, changes: patch });
+    this.commitSchema();
+  }
+
+  /**
+   * Changes a property's type and converts every row's value in the same
+   * step (see planTypeChange). The title never changes type.
+   */
+  changePropertyType(propertyId: string, type: PropertyType): void {
+    const property = this.model.getProperty(propertyId);
+
+    if (this.readOnly || this.destroyed || property === undefined || (type === 'person' && !this.hasPeople)) return;
+    const children = this.api.blocks.getChildren(this.block.id).filter((child) => child.name === 'database-row');
+    const kept = new Map(children.map((child) => {
+      const live: DatabaseRowData[] = [];
+
+      child.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+
+      return [child.id, (live[0] ?? child.preservedData as DatabaseRowData | undefined)?.convertedValues] as const;
+    }));
+    const plan = planTypeChange(property, type, this.model.getOrderedRows().map((row) => ({ ...row, convertedValues: kept.get(row.id) })));
+
+    if (plan === null) return;
+    this.model.replaceProperty(plan.property);
+    for (const write of plan.writes) {
+      const child = children.find((block) => block.id === write.rowId);
+
+      if (child === undefined) continue;
+      child.call('updateProperties', { [propertyId]: write.value });
+      if (write.stash !== undefined) {
+        child.call('updateConvertedValues', { [propertyId]: write.stash });
+      }
+      child.dispatchChange();
+      this.sync.syncUpdateRow({ rowId: write.rowId, properties: { [propertyId]: write.value } });
+    }
+    this.syncRowsFromBlocks();
+    const { id: _id, position: _position, ...changes } = plan.property;
+
+    void this.sync.syncUpdateProperty({ propertyId, changes });
+    this.commitSchema();
+  }
+
+  /** Copies a property and every row's value of it, right after the original. */
+  duplicateProperty(propertyId: string): PropertyDefinition | null {
+    const property = this.model.getProperty(propertyId);
+
+    if (this.readOnly || this.destroyed || property === undefined || property.type === 'title' || property.type === 'uniqueId') return null;
+    const { id: _id, name, type, position: _position, config, ...settings } = structuredClone(property);
+    const copy = this.model.addProperty(
+      this.api.i18n.t('tools.database.duplicatePropertyName').replace('{name}', name),
+      type,
+      config,
+      { afterId: propertyId },
+      settings
+    );
+
+    for (const row of this.model.getOrderedRows()) {
+      const value = row.properties[propertyId];
+
+      if (value !== undefined && value !== null) {
+        this.updateRowBlock(row.id, { [copy.id]: structuredClone(value) });
+        this.sync.syncUpdateRow({ rowId: row.id, properties: { [copy.id]: value } });
+      }
+    }
+    void this.sync.syncCreateProperty({ ...settings, id: copy.id, name: copy.name, type, position: copy.position, ...(config !== undefined ? { config } : {}) });
+    this.commitSchema();
+
+    return copy;
+  }
+
+  /** Removes a property from the schema. Row values stay (D9). The title cannot be deleted. */
+  deleteProperty(propertyId: string): void {
+    const property = this.model.getProperty(propertyId);
+
+    if (this.readOnly || this.destroyed || property === undefined || property.type === 'title') return;
+    this.model.deleteProperty(propertyId);
+    void this.sync.syncDeleteProperty({ propertyId });
+    this.commitSchema();
+  }
+
+  /**
+   * The property menu for a column header or a drawer row. Views call this;
+   * its view-level rows (filter, sort, freeze…) are theirs to add.
+   */
+  openPropertyMenu(propertyId: string, anchor: HTMLElement): void {
+    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
+
+    if (this.readOnly || property === undefined) return;
+    this.propertyMenu ??= new DatabasePropertyMenu({
+      i18n: this.api.i18n,
+      hasPeople: this.hasPeople,
+      onRename: (id, name) => this.renameProperty(id, name),
+      onUpdate: (id, patch) => this.updatePropertySettings(id, patch),
+      onChangeType: (id, type) => this.changePropertyType(id, type),
+      onDuplicate: (id) => { this.duplicateProperty(id); },
+      onDelete: (id) => this.deleteProperty(id),
+    });
+    const saved = this.model.getProperty(propertyId);
+
+    if (saved === undefined) return;
+    // The saved property, shown with its localized name: a settings patch the
+    // menu builds from it must never carry a translated label into the data.
+    const viewItems = this.view instanceof DatabaseTableView ? this.view.headerItems(propertyId, anchor) : [];
+
+    this.propertyMenu.open({ ...saved, name: property.name }, anchor, viewItems);
+  }
+
+  /**
+   * Notion's "+" flow: a name field over the type list. With a placement
+   * (Insert left/right), the new column lands beside that one in the active
+   * view's column order.
+   */
+  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }): void {
+    if (this.readOnly) return;
+    this.addPropertyPopover?.destroy();
+    this.addPropertyPopover = new DatabasePropertyTypePopover({
+      i18n: this.api.i18n,
+      hasPeople: this.hasPeople,
+      withNameField: true,
+      onSelect: (type, name) => {
+        this.addProperty({
+          name,
+          type,
+          ...(placement === undefined ? {} : placement.side === 'left' ? { beforeId: placement.propertyId } : { afterId: placement.propertyId }),
+        });
+      },
+    });
+    this.addPropertyPopover.open(anchor);
+  }
+
+
   private rerenderView(options: { keepDrawer?: boolean } = {}): void {
     if (this.boardContainer === null) {
       return;

@@ -2,7 +2,7 @@ import { describeDatabaseRow } from '../../shared/tool-descriptions/database-row
 import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { SanitizerConfig } from '../../../types';
-import type { DatabaseRowData, PropertyValue } from '../database/types';
+import type { ConvertedValue, DatabaseRowData, PropertyValue } from '../database/types';
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId']);
 
@@ -121,6 +121,25 @@ export class DatabaseRowTool implements BlockTool {
     if (param.titlePropertyId !== '') {
       this._data.properties[param.titlePropertyId] = param.title;
     }
+  }
+
+  /**
+   * Keep or clear the originals a type change could not carry over. `null`
+   * clears one. Stored as a top-level `convertedValues` map keyed by property
+   * id, so two peers' entries merge key by key.
+   */
+  public updateConvertedValues(changes: Record<string, ConvertedValue | null>): void {
+    const before = (this.unknown.convertedValues ?? {}) as Record<string, ConvertedValue>;
+    const added = Object.entries(changes)
+      .filter((entry): entry is [string, ConvertedValue] => entry[1] !== null)
+      .map(([id, value]): [string, ConvertedValue] => [id, structuredClone(value)]);
+    const kept: Record<string, ConvertedValue> = Object.fromEntries([
+      ...Object.entries(before).filter(([propertyId]) => !(propertyId in changes)),
+      ...added,
+    ]);
+    const { convertedValues: _old, ...rest } = this.unknown;
+
+    this.unknown = Object.keys(kept).length === 0 ? rest : { ...rest, convertedValues: kept };
   }
 
   public getTitle(): string | undefined {

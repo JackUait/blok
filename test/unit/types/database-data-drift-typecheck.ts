@@ -47,3 +47,5 @@ assert<Equal<PublishedValue, SourceValue>>();
 assert<Equal<PublishedRow, SourceRow>>();
 assert<Equal<keyof Known<PublishedRowData>, keyof Known<SourceRowData>>>();
 assert<Equal<PublishedConfig, SourceConfig>>();
+assert<Equal<Parameters<PublishedAdapter['createProperty']>[0], Parameters<SourceAdapter['createProperty']>[0]>>();
+assert<Equal<Parameters<PublishedAdapter['updateProperty']>[0], Parameters<SourceAdapter['updateProperty']>[0]>>();

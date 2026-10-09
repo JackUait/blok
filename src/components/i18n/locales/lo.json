@@ -535,6 +535,7 @@
   "tools.database.addView": "ເພີ່ມມຸມມອງ",
   "tools.database.viewTypeBoard": "ກະດານ",
   "tools.database.viewTypeList": "ລາຍການ",
+  "tools.database.viewTypeTable": "ຕາຕະລາງ",
   "tools.database.viewTypeBoardDescription": "ສະແດງລາຍການເປັນຖັນ",
   "tools.database.viewTypeListDescription": "ສະແດງລາຍການເປັນລາຍຊື່ແບບງ່າຍ",
   "tools.database.propertyTypeHeading": "ປະເພດຄຸນສົມບັດ",

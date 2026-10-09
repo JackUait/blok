@@ -533,6 +533,7 @@
   "tools.database.addView": "दृश्य थप्नुहोस्",
   "tools.database.viewTypeBoard": "बोर्ड",
   "tools.database.viewTypeList": "सूची",
+  "tools.database.viewTypeTable": "तालिका",
   "tools.database.viewTypeBoardDescription": "वस्तुहरू स्तम्भहरूमा देखाउनुहोस्",
   "tools.database.viewTypeListDescription": "वस्तुहरू साधारण सूचीमा देखाउनुहोस्",
   "tools.database.propertyTypeHeading": "गुणको प्रकार",

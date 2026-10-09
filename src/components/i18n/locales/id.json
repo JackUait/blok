@@ -524,6 +524,7 @@
   "tools.database.addView": "Tambah tampilan",
   "tools.database.viewTypeBoard": "Papan",
   "tools.database.viewTypeList": "Daftar",
+  "tools.database.viewTypeTable": "Tabel",
   "tools.database.viewTypeBoardDescription": "Tampilkan item dalam kolom",
   "tools.database.viewTypeListDescription": "Tampilkan item dalam daftar sederhana",
   "tools.database.propertyTypeHeading": "Tipe properti",

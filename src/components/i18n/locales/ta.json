@@ -522,6 +522,7 @@
   "tools.database.addView": "காட்சியைச் சேர்",
   "tools.database.viewTypeBoard": "பலகை",
   "tools.database.viewTypeList": "பட்டியல்",
+  "tools.database.viewTypeTable": "அட்டவணை",
   "tools.database.viewTypeBoardDescription": "உருப்படிகளை நெடுவரிசைகளில் காட்டு",
   "tools.database.viewTypeListDescription": "உருப்படிகளை எளிய பட்டியலில் காட்டு",
   "tools.database.propertyTypeHeading": "பண்பு வகை",

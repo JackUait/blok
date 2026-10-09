@@ -522,6 +522,7 @@
   "tools.database.addView": "Ongeza mwonekano",
   "tools.database.viewTypeBoard": "Ubao",
   "tools.database.viewTypeList": "Orodha",
+  "tools.database.viewTypeTable": "Jedwali",
   "tools.database.viewTypeBoardDescription": "Onyesha vipengee katika safu wima",
   "tools.database.viewTypeListDescription": "Onyesha vipengee katika orodha rahisi",
   "tools.database.propertyTypeHeading": "Aina ya sifa",

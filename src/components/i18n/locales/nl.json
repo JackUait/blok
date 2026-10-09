@@ -522,6 +522,7 @@
   "tools.database.addView": "Weergave toevoegen",
   "tools.database.viewTypeBoard": "Bord",
   "tools.database.viewTypeList": "Lijst",
+  "tools.database.viewTypeTable": "Tabel",
   "tools.database.viewTypeBoardDescription": "Items in kolommen weergeven",
   "tools.database.viewTypeListDescription": "Items in een eenvoudige lijst weergeven",
   "tools.database.propertyTypeHeading": "Eigenschapstype",

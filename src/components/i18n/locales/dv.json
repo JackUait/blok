@@ -524,6 +524,7 @@
   "tools.database.addView": "ވިއު އިތުރުކުރޭ",
   "tools.database.viewTypeBoard": "ބޯޑް",
   "tools.database.viewTypeList": "ލިސްޓް",
+  "tools.database.viewTypeTable": "ޓޭބަލް",
   "tools.database.viewTypeBoardDescription": "އައިޓަމްތައް ކޮލަމްތަކުގައި ދައްކާ",
   "tools.database.viewTypeListDescription": "އައިޓަމްތައް ސާދާ ލިސްޓެއްގައި ދައްކާ",
   "tools.database.propertyTypeHeading": "ޕްރޮޕަރޓީ ޓައިޕް",

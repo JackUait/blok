@@ -524,6 +524,7 @@
   "tools.database.addView": "Přidat zobrazení",
   "tools.database.viewTypeBoard": "Tabule",
   "tools.database.viewTypeList": "Seznam",
+  "tools.database.viewTypeTable": "Tabulka",
   "tools.database.viewTypeBoardDescription": "Zobrazit položky ve sloupcích",
   "tools.database.viewTypeListDescription": "Zobrazit položky v jednoduchém seznamu",
   "tools.database.propertyTypeHeading": "Typ vlastnosti",

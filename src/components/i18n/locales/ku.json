@@ -535,6 +535,7 @@
   "tools.database.addView": "بینین زیاد بکە",
   "tools.database.viewTypeBoard": "تەختە",
   "tools.database.viewTypeList": "لیست",
+  "tools.database.viewTypeTable": "خشتە",
   "tools.database.viewTypeBoardDescription": "بڕگەکان لە ستوونەکاندا پیشان بدە",
   "tools.database.viewTypeListDescription": "بڕگەکان لە لیستێکی سادەدا پیشان بدە",
   "tools.database.propertyTypeHeading": "جۆری تایبەتمەندی",

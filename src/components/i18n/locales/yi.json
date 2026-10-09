@@ -522,6 +522,7 @@
   "tools.database.addView": "לייג צו אַן אויסשטעל",
   "tools.database.viewTypeBoard": "ברעט",
   "tools.database.viewTypeList": "רשימה",
+  "tools.database.viewTypeTable": "טאַבעלע",
   "tools.database.viewTypeBoardDescription": "ווײַז זאַכן אין שפּאַלטן",
   "tools.database.viewTypeListDescription": "ווײַז זאַכן אין אַ פּשוטער ליסטע",
   "tools.database.propertyTypeHeading": "אייגנשאפט טיפ",

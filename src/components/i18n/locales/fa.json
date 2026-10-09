@@ -522,6 +522,7 @@
   "tools.database.addView": "افزودن نما",
   "tools.database.viewTypeBoard": "تابلو",
   "tools.database.viewTypeList": "فهرست",
+  "tools.database.viewTypeTable": "جدول",
   "tools.database.viewTypeBoardDescription": "موارد را در ستون‌ها نمایش دهید",
   "tools.database.viewTypeListDescription": "موارد را در یک فهرست ساده نمایش دهید",
   "tools.database.propertyTypeHeading": "نوع ویژگی",

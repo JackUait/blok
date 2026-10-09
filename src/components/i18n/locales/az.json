@@ -524,6 +524,7 @@
   "tools.database.addView": "Görünüş əlavə et",
   "tools.database.viewTypeBoard": "Lövhə",
   "tools.database.viewTypeList": "Siyahı",
+  "tools.database.viewTypeTable": "Cədvəl",
   "tools.database.viewTypeBoardDescription": "Elementləri sütunlarda göstər",
   "tools.database.viewTypeListDescription": "Elementləri sadə siyahıda göstər",
   "tools.database.propertyTypeHeading": "Xüsusiyyət növü",

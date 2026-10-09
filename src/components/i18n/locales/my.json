@@ -533,6 +533,7 @@
   "tools.database.addView": "မြင်ကွင်းထည့်",
   "tools.database.viewTypeBoard": "ဘုတ်",
   "tools.database.viewTypeList": "စာရင်း",
+  "tools.database.viewTypeTable": "ဇယား",
   "tools.database.viewTypeBoardDescription": "အကြောင်းအရာများကို ကော်လံများတွင် ပြရန်",
   "tools.database.viewTypeListDescription": "အကြောင်းအရာများကို ရိုးရှင်းသော စာရင်းတွင် ပြရန်",
   "tools.database.propertyTypeHeading": "ဂုဏ်သတ္တိအမျိုးအစား",

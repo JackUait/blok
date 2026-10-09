@@ -524,6 +524,7 @@
   "tools.database.addView": "Dodaj pogled",
   "tools.database.viewTypeBoard": "Tabla",
   "tools.database.viewTypeList": "Seznam",
+  "tools.database.viewTypeTable": "Tabela",
   "tools.database.viewTypeBoardDescription": "Prikaži elemente v stolpcih",
   "tools.database.viewTypeListDescription": "Prikaži elemente na preprostem seznamu",
   "tools.database.propertyTypeHeading": "Vrsta lastnosti",

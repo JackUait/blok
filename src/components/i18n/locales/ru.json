@@ -524,6 +524,7 @@
   "tools.database.addView": "Добавить представление",
   "tools.database.viewTypeBoard": "Доска",
   "tools.database.viewTypeList": "Список",
+  "tools.database.viewTypeTable": "Таблица",
   "tools.database.viewTypeBoardDescription": "Показывать элементы в колонках",
   "tools.database.viewTypeListDescription": "Показывать элементы простым списком",
   "tools.database.propertyTypeHeading": "Тип свойства",

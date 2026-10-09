@@ -640,6 +640,7 @@
   "tools.database.addView": "新增檢視",
   "tools.database.viewTypeBoard": "看板",
   "tools.database.viewTypeList": "清單",
+  "tools.database.viewTypeTable": "表格",
   "tools.database.viewTypeBoardDescription": "以多欄顯示項目",
   "tools.database.viewTypeListDescription": "在簡單清單中顯示項目",
   "tools.database.propertyTypeHeading": "屬性類型",

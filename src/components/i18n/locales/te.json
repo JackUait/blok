@@ -522,6 +522,7 @@
   "tools.database.addView": "వీక్షణను జోడించు",
   "tools.database.viewTypeBoard": "బోర్డ్",
   "tools.database.viewTypeList": "జాబితా",
+  "tools.database.viewTypeTable": "పట్టిక",
   "tools.database.viewTypeBoardDescription": "అంశాలను నిలువు వరుసల్లో చూపండి",
   "tools.database.viewTypeListDescription": "అంశాలను సరళమైన జాబితాలో చూపండి",
   "tools.database.propertyTypeHeading": "ప్రాపర్టీ రకం",

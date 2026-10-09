@@ -522,6 +522,7 @@
   "tools.database.addView": "Lisää näkymä",
   "tools.database.viewTypeBoard": "Taulu",
   "tools.database.viewTypeList": "Luettelo",
+  "tools.database.viewTypeTable": "Taulukko",
   "tools.database.viewTypeBoardDescription": "Näytä kohteet sarakkeissa",
   "tools.database.viewTypeListDescription": "Näytä kohteet yksinkertaisena luettelona",
   "tools.database.propertyTypeHeading": "Ominaisuuden tyyppi",

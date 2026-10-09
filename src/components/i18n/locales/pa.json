@@ -522,6 +522,7 @@
   "tools.database.addView": "ਦ੍ਰਿਸ਼ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.database.viewTypeBoard": "ਬੋਰਡ",
   "tools.database.viewTypeList": "ਸੂਚੀ",
+  "tools.database.viewTypeTable": "ਟੇਬਲ",
   "tools.database.viewTypeBoardDescription": "ਆਈਟਮਾਂ ਨੂੰ ਕਾਲਮਾਂ ਵਿੱਚ ਦਿਖਾਓ",
   "tools.database.viewTypeListDescription": "ਆਈਟਮਾਂ ਨੂੰ ਸਧਾਰਨ ਸੂਚੀ ਵਿੱਚ ਦਿਖਾਓ",
   "tools.database.propertyTypeHeading": "ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਕਿਸਮ",

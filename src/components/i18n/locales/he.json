@@ -522,6 +522,7 @@
   "tools.database.addView": "הוסף תצוגה",
   "tools.database.viewTypeBoard": "לוח",
   "tools.database.viewTypeList": "רשימה",
+  "tools.database.viewTypeTable": "טבלה",
   "tools.database.viewTypeBoardDescription": "הצג פריטים בעמודות",
   "tools.database.viewTypeListDescription": "הצג פריטים ברשימה פשוטה",
   "tools.database.propertyTypeHeading": "סוג מאפיין",

@@ -524,6 +524,7 @@
   "tools.database.addView": "Ավելացնել տեսք",
   "tools.database.viewTypeBoard": "Տախտակ",
   "tools.database.viewTypeList": "Ցանկ",
+  "tools.database.viewTypeTable": "Աղյուսակ",
   "tools.database.viewTypeBoardDescription": "Տարրերը ցուցադրել սյունակներում",
   "tools.database.viewTypeListDescription": "Տարրերը ցուցադրել պարզ ցուցակում",
   "tools.database.propertyTypeHeading": "Հատկության տեսակ",

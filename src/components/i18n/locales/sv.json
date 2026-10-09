@@ -522,6 +522,7 @@
   "tools.database.addView": "Lägg till vy",
   "tools.database.viewTypeBoard": "Tavla",
   "tools.database.viewTypeList": "Lista",
+  "tools.database.viewTypeTable": "Tabell",
   "tools.database.viewTypeBoardDescription": "Visa objekt i kolumner",
   "tools.database.viewTypeListDescription": "Visa objekt i en enkel lista",
   "tools.database.propertyTypeHeading": "Egenskapstyp",

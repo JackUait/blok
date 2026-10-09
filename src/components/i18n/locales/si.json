@@ -524,6 +524,7 @@
   "tools.database.addView": "දසුනක් එක් කරන්න",
   "tools.database.viewTypeBoard": "පුවරුව",
   "tools.database.viewTypeList": "ලැයිස්තුව",
+  "tools.database.viewTypeTable": "වගුව",
   "tools.database.viewTypeBoardDescription": "අයිතම තීරුවල පෙන්වන්න",
   "tools.database.viewTypeListDescription": "අයිතම සරල ලැයිස්තුවක පෙන්වන්න",
   "tools.database.propertyTypeHeading": "ගුණාංග වර්ගය",

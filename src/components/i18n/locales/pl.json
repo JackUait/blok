@@ -524,6 +524,7 @@
   "tools.database.addView": "Dodaj widok",
   "tools.database.viewTypeBoard": "Tablica",
   "tools.database.viewTypeList": "Lista",
+  "tools.database.viewTypeTable": "Tabela",
   "tools.database.viewTypeBoardDescription": "Pokaż elementy w kolumnach",
   "tools.database.viewTypeListDescription": "Pokaż elementy na prostej liście",
   "tools.database.propertyTypeHeading": "Typ właściwości",

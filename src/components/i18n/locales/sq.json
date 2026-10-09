@@ -524,6 +524,7 @@
   "tools.database.addView": "Shto pamje",
   "tools.database.viewTypeBoard": "Bord",
   "tools.database.viewTypeList": "Listë",
+  "tools.database.viewTypeTable": "Tabelë",
   "tools.database.viewTypeBoardDescription": "Shfaq elementet në kolona",
   "tools.database.viewTypeListDescription": "Shfaq elementet në një listë të thjeshtë",
   "tools.database.propertyTypeHeading": "Lloji i vetisë",

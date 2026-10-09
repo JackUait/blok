@@ -535,6 +535,7 @@
   "tools.database.addView": "Pridėti rodinį",
   "tools.database.viewTypeBoard": "Lenta",
   "tools.database.viewTypeList": "Sąrašas",
+  "tools.database.viewTypeTable": "Lentelė",
   "tools.database.viewTypeBoardDescription": "Rodyti elementus stulpeliuose",
   "tools.database.viewTypeListDescription": "Rodyti elementus paprastame sąraše",
   "tools.database.propertyTypeHeading": "Savybės tipas",

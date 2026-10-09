@@ -524,6 +524,7 @@
   "tools.database.addView": "ዕይታ አክል",
   "tools.database.viewTypeBoard": "ሰሌዳ",
   "tools.database.viewTypeList": "ዝርዝር",
+  "tools.database.viewTypeTable": "ሰንጠረዥ",
   "tools.database.viewTypeBoardDescription": "ንጥሎችን በአምዶች አሳይ",
   "tools.database.viewTypeListDescription": "ንጥሎችን በቀላል ዝርዝር አሳይ",
   "tools.database.propertyTypeHeading": "የንብረት አይነት",

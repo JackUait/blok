@@ -524,6 +524,7 @@
   "tools.database.addView": "Adaugă vizualizare",
   "tools.database.viewTypeBoard": "Panou",
   "tools.database.viewTypeList": "Listă",
+  "tools.database.viewTypeTable": "Tabel",
   "tools.database.viewTypeBoardDescription": "Afișează elementele în coloane",
   "tools.database.viewTypeListDescription": "Afișează elementele într-o listă simplă",
   "tools.database.propertyTypeHeading": "Tip de proprietate",

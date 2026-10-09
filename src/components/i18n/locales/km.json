@@ -524,6 +524,7 @@
   "tools.database.addView": "បន្ថែមទិដ្ឋភាព",
   "tools.database.viewTypeBoard": "ក្ដារ",
   "tools.database.viewTypeList": "បញ្ជី",
+  "tools.database.viewTypeTable": "តារាង",
   "tools.database.viewTypeBoardDescription": "បង្ហាញធាតុជាជួរឈរ",
   "tools.database.viewTypeListDescription": "បង្ហាញបញ្ជីសាមញ្ញ",
   "tools.database.propertyTypeHeading": "ប្រភេទលក្ខណៈ",

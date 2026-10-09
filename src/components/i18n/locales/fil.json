@@ -522,6 +522,7 @@
   "tools.database.addView": "Magdagdag ng view",
   "tools.database.viewTypeBoard": "Board",
   "tools.database.viewTypeList": "Listahan",
+  "tools.database.viewTypeTable": "Talahanayan",
   "tools.database.viewTypeBoardDescription": "Ipakita ang mga item sa mga kolum",
   "tools.database.viewTypeListDescription": "Ipakita ang mga item sa simpleng listahan",
   "tools.database.propertyTypeHeading": "Uri ng property",

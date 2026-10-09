@@ -522,6 +522,7 @@
   "tools.database.addView": "Додати подання",
   "tools.database.viewTypeBoard": "Дошка",
   "tools.database.viewTypeList": "Список",
+  "tools.database.viewTypeTable": "Таблиця",
   "tools.database.viewTypeBoardDescription": "Показати елементи в колонках",
   "tools.database.viewTypeListDescription": "Показати елементи у простому списку",
   "tools.database.propertyTypeHeading": "Тип властивості",

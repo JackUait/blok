@@ -522,6 +522,7 @@
   "tools.database.addView": "दृश्य जोड़ें",
   "tools.database.viewTypeBoard": "बोर्ड",
   "tools.database.viewTypeList": "सूची",
+  "tools.database.viewTypeTable": "तालिका",
   "tools.database.viewTypeBoardDescription": "आइटम को कॉलम में दिखाएँ",
   "tools.database.viewTypeListDescription": "आइटम को सरल सूची में दिखाएं",
   "tools.database.propertyTypeHeading": "प्रॉपर्टी का प्रकार",

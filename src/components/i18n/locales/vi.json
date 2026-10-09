@@ -522,6 +522,7 @@
   "tools.database.addView": "Thêm chế độ xem",
   "tools.database.viewTypeBoard": "Bảng",
   "tools.database.viewTypeList": "Danh sách",
+  "tools.database.viewTypeTable": "Bảng",
   "tools.database.viewTypeBoardDescription": "Hiển thị mục theo cột",
   "tools.database.viewTypeListDescription": "Hiển thị các mục trong một danh sách đơn giản",
   "tools.database.propertyTypeHeading": "Loại thuộc tính",

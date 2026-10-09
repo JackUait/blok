@@ -524,6 +524,7 @@
   "tools.database.addView": "لید اضافه کړئ",
   "tools.database.viewTypeBoard": "بورډ",
   "tools.database.viewTypeList": "لست",
+  "tools.database.viewTypeTable": "جدول",
   "tools.database.viewTypeBoardDescription": "توکي په کالمونو کې وښایئ",
   "tools.database.viewTypeListDescription": "توکي په یوه ساده لیست کې وښایئ",
   "tools.database.propertyTypeHeading": "د ځانګړتیا ډول",

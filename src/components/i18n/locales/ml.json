@@ -533,6 +533,7 @@
   "tools.database.addView": "കാഴ്ച ചേർക്കുക",
   "tools.database.viewTypeBoard": "ബോർഡ്",
   "tools.database.viewTypeList": "ലിസ്റ്റ്",
+  "tools.database.viewTypeTable": "പട്ടിക",
   "tools.database.viewTypeBoardDescription": "ഇനങ്ങൾ കോളങ്ങളിൽ കാണിക്കുക",
   "tools.database.viewTypeListDescription": "ഇനങ്ങൾ ഒരു ലളിതമായ ലിസ്റ്റിൽ കാണിക്കുക",
   "tools.database.propertyTypeHeading": "പ്രോപ്പർട്ടി തരം",

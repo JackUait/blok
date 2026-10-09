@@ -524,6 +524,7 @@
   "tools.database.addView": "ხედის დამატება",
   "tools.database.viewTypeBoard": "დაფა",
   "tools.database.viewTypeList": "სია",
+  "tools.database.viewTypeTable": "ცხრილი",
   "tools.database.viewTypeBoardDescription": "ელემენტების სვეტებად ჩვენება",
   "tools.database.viewTypeListDescription": "ელემენტების მარტივ სიად ჩვენება",
   "tools.database.propertyTypeHeading": "თვისების ტიპი",

@@ -535,6 +535,7 @@
   "tools.database.addView": "뷰 추가",
   "tools.database.viewTypeBoard": "보드",
   "tools.database.viewTypeList": "목록",
+  "tools.database.viewTypeTable": "표",
   "tools.database.viewTypeBoardDescription": "항목을 열로 표시",
   "tools.database.viewTypeListDescription": "항목을 간단한 목록으로 표시",
   "tools.database.propertyTypeHeading": "속성 유형",

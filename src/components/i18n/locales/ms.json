@@ -533,6 +533,7 @@
   "tools.database.addView": "Tambah paparan",
   "tools.database.viewTypeBoard": "Papan",
   "tools.database.viewTypeList": "Senarai",
+  "tools.database.viewTypeTable": "Jadual",
   "tools.database.viewTypeBoardDescription": "Tunjukkan item dalam lajur",
   "tools.database.viewTypeListDescription": "Tunjukkan item dalam senarai ringkas",
   "tools.database.propertyTypeHeading": "Jenis sifat",

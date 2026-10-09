@@ -522,6 +522,7 @@
   "tools.database.addView": "દૃશ્ય ઉમેરો",
   "tools.database.viewTypeBoard": "બોર્ડ",
   "tools.database.viewTypeList": "યાદી",
+  "tools.database.viewTypeTable": "કોષ્ટક",
   "tools.database.viewTypeBoardDescription": "આઇટમ્સને કૉલમમાં બતાવો",
   "tools.database.viewTypeListDescription": "આઇટમ્સને સરળ યાદીમાં બતાવો",
   "tools.database.propertyTypeHeading": "ગુણધર્મનો પ્રકાર",

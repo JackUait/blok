@@ -533,6 +533,7 @@
   "tools.database.addView": "Pievienot skatu",
   "tools.database.viewTypeBoard": "Tāfele",
   "tools.database.viewTypeList": "Saraksts",
+  "tools.database.viewTypeTable": "Tabula",
   "tools.database.viewTypeBoardDescription": "Rādīt vienumus kolonnās",
   "tools.database.viewTypeListDescription": "Rādīt vienumus vienkāršā sarakstā",
   "tools.database.propertyTypeHeading": "Rekvizīta tips",

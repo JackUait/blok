@@ -524,6 +524,7 @@
   "tools.database.addView": "Προσθήκη προβολής",
   "tools.database.viewTypeBoard": "Πίνακας",
   "tools.database.viewTypeList": "Λίστα",
+  "tools.database.viewTypeTable": "Πίνακας",
   "tools.database.viewTypeBoardDescription": "Εμφάνιση στοιχείων σε στήλες",
   "tools.database.viewTypeListDescription": "Εμφάνιση στοιχείων σε απλή λίστα",
   "tools.database.propertyTypeHeading": "Τύπος ιδιότητας",

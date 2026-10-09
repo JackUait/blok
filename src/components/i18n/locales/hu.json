@@ -522,6 +522,7 @@
   "tools.database.addView": "Nézet hozzáadása",
   "tools.database.viewTypeBoard": "Tábla",
   "tools.database.viewTypeList": "Lista",
+  "tools.database.viewTypeTable": "Táblázat",
   "tools.database.viewTypeBoardDescription": "Elemek megjelenítése oszlopokban",
   "tools.database.viewTypeListDescription": "Elemek megjelenítése egyszerű listában",
   "tools.database.propertyTypeHeading": "Tulajdonság típusa",

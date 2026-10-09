@@ -522,6 +522,7 @@
   "tools.database.addView": "Legg til visning",
   "tools.database.viewTypeBoard": "Tavle",
   "tools.database.viewTypeList": "Liste",
+  "tools.database.viewTypeTable": "Tabell",
   "tools.database.viewTypeBoardDescription": "Vis elementer i kolonner",
   "tools.database.viewTypeListDescription": "Vis elementer i en enkel liste",
   "tools.database.propertyTypeHeading": "Egenskapstype",

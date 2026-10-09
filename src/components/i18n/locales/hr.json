@@ -522,6 +522,7 @@
   "tools.database.addView": "Dodaj prikaz",
   "tools.database.viewTypeBoard": "Ploča",
   "tools.database.viewTypeList": "Popis",
+  "tools.database.viewTypeTable": "Tablica",
   "tools.database.viewTypeBoardDescription": "Prikaži stavke u stupcima",
   "tools.database.viewTypeListDescription": "Prikaži stavke na jednostavnom popisu",
   "tools.database.propertyTypeHeading": "Vrsta svojstva",

@@ -522,6 +522,7 @@
   "tools.database.addView": "Lisa vaade",
   "tools.database.viewTypeBoard": "Tahvel",
   "tools.database.viewTypeList": "Loend",
+  "tools.database.viewTypeTable": "Tabel",
   "tools.database.viewTypeBoardDescription": "Kuva üksused veergudes",
   "tools.database.viewTypeListDescription": "Kuva üksused lihtsas loendis",
   "tools.database.propertyTypeHeading": "Omaduse tüüp",

@@ -524,6 +524,7 @@
   "tools.database.addView": "ويو شامل ڪريو",
   "tools.database.viewTypeBoard": "بورڊ",
   "tools.database.viewTypeList": "فهرست",
+  "tools.database.viewTypeTable": "ٽيبل",
   "tools.database.viewTypeBoardDescription": "شيون ڪالمن ۾ ڏيکاريو",
   "tools.database.viewTypeListDescription": "شيون هڪ سادي فهرست ۾ ڏيکاريو",
   "tools.database.propertyTypeHeading": "پراپرٽي جو قسم",

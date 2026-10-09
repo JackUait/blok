@@ -533,6 +533,7 @@
   "tools.database.addView": "दृश्य जोडा",
   "tools.database.viewTypeBoard": "बोर्ड",
   "tools.database.viewTypeList": "यादी",
+  "tools.database.viewTypeTable": "तक्ता",
   "tools.database.viewTypeBoardDescription": "आयटम स्तंभांमध्ये दाखवा",
   "tools.database.viewTypeListDescription": "आयटम साध्या यादीत दाखवा",
   "tools.database.propertyTypeHeading": "गुणधर्म प्रकार",

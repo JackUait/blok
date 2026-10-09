@@ -522,6 +522,7 @@
   "tools.database.addView": "كۆرۈنۈش قوشۇش",
   "tools.database.viewTypeBoard": "تاختا",
   "tools.database.viewTypeList": "تىزىملىك",
+  "tools.database.viewTypeTable": "جەدۋەل",
   "tools.database.viewTypeBoardDescription": "تۈرلەرنى ئىستونلاردا كۆرسىتىش",
   "tools.database.viewTypeListDescription": "تۈرلەرنى ئاددىي تىزىملىكتە كۆرسىتىش",
   "tools.database.propertyTypeHeading": "خاسلىق تىپى",

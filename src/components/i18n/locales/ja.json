@@ -524,6 +524,7 @@
   "tools.database.addView": "ビューを追加",
   "tools.database.viewTypeBoard": "ボード",
   "tools.database.viewTypeList": "リスト",
+  "tools.database.viewTypeTable": "表",
   "tools.database.viewTypeBoardDescription": "アイテムを列で表示",
   "tools.database.viewTypeListDescription": "アイテムをシンプルなリストで表示",
   "tools.database.propertyTypeHeading": "プロパティの種類",

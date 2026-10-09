@@ -524,6 +524,7 @@
   "tools.database.addView": "ভিউ যোগ করুন",
   "tools.database.viewTypeBoard": "বোর্ড",
   "tools.database.viewTypeList": "তালিকা",
+  "tools.database.viewTypeTable": "টেবিল",
   "tools.database.viewTypeBoardDescription": "আইটেমগুলো কলামে দেখান",
   "tools.database.viewTypeListDescription": "আইটেমগুলো একটি সাধারণ তালিকায় দেখান",
   "tools.database.propertyTypeHeading": "বৈশিষ্ট্যের ধরন",

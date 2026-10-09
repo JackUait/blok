@@ -522,6 +522,7 @@
   "tools.database.addView": "添加视图",
   "tools.database.viewTypeBoard": "看板",
   "tools.database.viewTypeList": "列表",
+  "tools.database.viewTypeTable": "表格",
   "tools.database.viewTypeBoardDescription": "按列显示项目",
   "tools.database.viewTypeListDescription": "在简单列表中显示项目",
   "tools.database.propertyTypeHeading": "属性类型",

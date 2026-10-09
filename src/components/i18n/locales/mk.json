@@ -533,6 +533,7 @@
   "tools.database.addView": "Додај приказ",
   "tools.database.viewTypeBoard": "Табла",
   "tools.database.viewTypeList": "Список",
+  "tools.database.viewTypeTable": "Табела",
   "tools.database.viewTypeBoardDescription": "Прикажи ги ставките во колони",
   "tools.database.viewTypeListDescription": "Прикажи ги ставките во едноставен список",
   "tools.database.propertyTypeHeading": "Тип на својство",

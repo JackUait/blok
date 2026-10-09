@@ -524,6 +524,7 @@
   "tools.database.addView": "إضافة عرض",
   "tools.database.viewTypeBoard": "لوحة",
   "tools.database.viewTypeList": "قائمة",
+  "tools.database.viewTypeTable": "جدول",
   "tools.database.viewTypeBoardDescription": "اعرض العناصر في أعمدة",
   "tools.database.viewTypeListDescription": "اعرض العناصر في قائمة بسيطة",
   "tools.database.propertyTypeHeading": "نوع الخاصية",

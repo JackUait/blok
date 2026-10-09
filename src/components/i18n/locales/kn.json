@@ -535,6 +535,7 @@
   "tools.database.addView": "ವೀಕ್ಷಣೆ ಸೇರಿಸಿ",
   "tools.database.viewTypeBoard": "ಬೋರ್ಡ್",
   "tools.database.viewTypeList": "ಪಟ್ಟಿ",
+  "tools.database.viewTypeTable": "ಕೋಷ್ಟಕ",
   "tools.database.viewTypeBoardDescription": "ಐಟಂಗಳನ್ನು ಕಾಲಮ್‌ಗಳಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.viewTypeListDescription": "ಐಟಂಗಳನ್ನು ಸರಳ ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.propertyTypeHeading": "ಗುಣಲಕ್ಷಣ ಪ್ರಕಾರ",

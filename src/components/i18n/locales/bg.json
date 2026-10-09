@@ -524,6 +524,7 @@
   "tools.database.addView": "Добави изглед",
   "tools.database.viewTypeBoard": "Табло",
   "tools.database.viewTypeList": "Списък",
+  "tools.database.viewTypeTable": "Таблица",
   "tools.database.viewTypeBoardDescription": "Показвай елементите в колони",
   "tools.database.viewTypeListDescription": "Показвай елементите в обикновен списък",
   "tools.database.propertyTypeHeading": "Тип на свойството",

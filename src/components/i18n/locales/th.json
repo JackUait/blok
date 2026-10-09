@@ -522,6 +522,7 @@
   "tools.database.addView": "เพิ่มมุมมอง",
   "tools.database.viewTypeBoard": "บอร์ด",
   "tools.database.viewTypeList": "รายการ",
+  "tools.database.viewTypeTable": "ตาราง",
   "tools.database.viewTypeBoardDescription": "แสดงรายการเป็นคอลัมน์",
   "tools.database.viewTypeListDescription": "แสดงข้อมูลเป็นรายการแบบเรียบง่าย",
   "tools.database.propertyTypeHeading": "ประเภทคุณสมบัติ",

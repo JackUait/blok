@@ -533,6 +533,7 @@
   "tools.database.addView": "Харагдац нэмэх",
   "tools.database.viewTypeBoard": "Самбар",
   "tools.database.viewTypeList": "Жагсаалт",
+  "tools.database.viewTypeTable": "Хүснэгт",
   "tools.database.viewTypeBoardDescription": "Зүйлсийг багануудаар харуулах",
   "tools.database.viewTypeListDescription": "Зүйлсийг энгийн жагсаалтаар харуулах",
   "tools.database.propertyTypeHeading": "Шинжийн төрөл",

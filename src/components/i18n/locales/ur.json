@@ -522,6 +522,7 @@
   "tools.database.addView": "ویو شامل کریں",
   "tools.database.viewTypeBoard": "بورڈ",
   "tools.database.viewTypeList": "فہرست",
+  "tools.database.viewTypeTable": "ٹیبل",
   "tools.database.viewTypeBoardDescription": "اشیا کو کالموں میں دکھائیں",
   "tools.database.viewTypeListDescription": "اشیا کو ایک سادہ فہرست میں دکھائیں",
   "tools.database.propertyTypeHeading": "پراپرٹی کی قسم",

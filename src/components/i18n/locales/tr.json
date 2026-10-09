@@ -522,6 +522,7 @@
   "tools.database.addView": "Görünüm ekle",
   "tools.database.viewTypeBoard": "Pano",
   "tools.database.viewTypeList": "Liste",
+  "tools.database.viewTypeTable": "Tablo",
   "tools.database.viewTypeBoardDescription": "Öğeleri sütunlarda göster",
   "tools.database.viewTypeListDescription": "Öğeleri basit bir listede göster",
   "tools.database.propertyTypeHeading": "Özellik türü",

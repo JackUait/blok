@@ -5148,10 +5148,6 @@ span[data-blok-slash-search] {
   background-color: var(--blok-item-hover-bg);
 }
 
-[data-blok-database-drawer-prop-value]:focus {
-  outline: none;
-}
-
 [data-blok-database-cell-editor] {
   display: flex;
   flex-direction: column;

@@ -1332,10 +1332,6 @@
   }
 }
 
-[data-blok-database-drawer-prop-value]:focus {
-  outline: none;
-}
-
 /* Editors */
 [data-blok-database-cell-editor] {
   display: flex;

@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, SelectOption, CalculationFn } from './types';
+import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill } from './cells';
 import { formatDateText, resolveLocale } from './cells/date-format';
@@ -25,19 +25,13 @@ import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { onHover } from '../../components/utils/tooltip';
+import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
 import {
-  IconCalendar,
   IconChevronDown,
-  IconGlobe,
-  IconHash,
-  IconListChecklist,
   IconMenu,
-  IconMultiSelect,
   IconPlus,
-  IconSelect,
   IconSplitView,
-  IconText,
   IconTrash,
   IconDotsHorizontal,
 } from '../../components/icons';
@@ -50,17 +44,6 @@ export const DEFAULT_TITLE_WIDTH = 280;
 export const DEFAULT_COLUMN_WIDTH = 200;
 export const MIN_COLUMN_WIDTH = 32;
 
-const TYPE_ICONS: Readonly<Record<PropertyType, string>> = {
-  title: IconText,
-  text: IconText,
-  richText: IconText,
-  number: IconHash,
-  select: IconSelect,
-  multiSelect: IconMultiSelect,
-  date: IconCalendar,
-  checkbox: IconListChecklist,
-  url: IconGlobe,
-};
 
 export interface TableGroup {
   /** Group key; the model's no-value key for "No ⟨property⟩". */
@@ -436,7 +419,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     icon.setAttribute('data-blok-database-table-column-icon', '');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = TYPE_ICONS[property.type];
+    icon.innerHTML = propertyTypeMeta(property.type).icon;
 
     const name = document.createElement('span');
 

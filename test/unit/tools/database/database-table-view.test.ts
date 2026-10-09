@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseTableView, createTableState } from '../../../../src/tools/database/database-table-view';
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
+import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
@@ -151,6 +152,21 @@ describe('DatabaseTableView', () => {
   });
 
   describe('layout', () => {
+    it('draws each header with the icon the property type menu uses', () => {
+      const types = ['status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId'] as const;
+      const { root } = mount({
+        schema: [schema[0], ...types.map((type, i): PropertyDefinition => ({ id: `p-${type}`, name: type, type, position: `b${i}` }))],
+      });
+      const iconOf = (propertyId: string): string | undefined =>
+        root.querySelector(`[role="columnheader"][data-property-id="${propertyId}"] [data-blok-database-table-column-icon]`)?.innerHTML;
+      const expected = document.createElement('span');
+
+      for (const type of types) {
+        expected.innerHTML = PROPERTY_TYPE_META[type].icon;
+        expect(iconOf(`p-${type}`)).toBe(expected.innerHTML);
+      }
+    });
+
     it('renders a grid whose keyboard belongs to the table', () => {
       const { root } = mount();
 

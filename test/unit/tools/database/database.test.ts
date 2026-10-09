@@ -4490,7 +4490,7 @@ describe('DatabaseTool', () => {
       childBlocks.forEach((block) => {
         const original = vi.mocked(block.call).getMockImplementation();
 
-        vi.mocked(block.call).mockImplementation((method: string, params?: Record<string, unknown>) => {
+        vi.mocked(block.call).mockImplementation((method: string, params?: object) => {
           if (method === 'updatePosition') inside.push(block.id);
           original?.(method, params);
         });

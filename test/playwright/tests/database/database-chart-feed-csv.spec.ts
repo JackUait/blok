@@ -263,4 +263,32 @@ test.describe('CSV', () => {
     expect(rows.filter((p) => p['p-title'] === 'Ship').map((p) => p['p-points'])).toEqual([5, 8]);
     expect(rows.find((p) => p['p-title'] === 'Plan')?.['p-points']).toBe(2);
   });
+
+  // Unverified in Notion (research/05 U4): Blok offers the conversion after a plain-text table paste.
+  test('turns a pasted TSV table into a database on request, keeping markup as text', async ({ page }) => {
+    await mount(page, [{ id: 'p1', type: 'paragraph', data: { text: '' } }]);
+    const paragraph = page.locator('[data-blok-tool="paragraph"] [contenteditable="true"]').first();
+
+    await paragraph.click();
+    await paragraph.evaluate((element: HTMLElement, text: string) => {
+      const event = Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+        clipboardData: { getData: (type: string): string => (type === 'text/plain' ? text : ''), types: ['text/plain'] },
+      });
+
+      element.dispatchEvent(event);
+    }, 'Task\tNote\nShip\t<b>bold</b> & co\nRest\tx');
+
+    await page.getByRole('button', { name: 'Convert to database' }).click();
+
+    await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database').length).toBe(1);
+    const all = await saved(page);
+    const database = all.find((block) => block.type === 'database');
+    const schema = database?.data.schema as Array<{ id: string; name: string; type: string }>;
+    const note = schema.find((p) => p.name === 'Note')?.id ?? '';
+    const rows = all.filter((block) => block.type === 'database-row' && block.parent === database?.id);
+
+    expect(schema.map((p) => [p.name, p.type])).toEqual([['Task', 'title'], ['Note', 'text']]);
+    expect(rows.map((row) => (row.data.properties as Record<string, unknown>)[note])).toEqual(['<b>bold</b> & co', 'x']);
+    expect(all.filter((block) => block.type === 'paragraph' && JSON.stringify(block.data).includes('Ship'))).toHaveLength(0);
+  });
 });

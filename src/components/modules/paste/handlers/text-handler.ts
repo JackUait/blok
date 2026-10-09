@@ -1,7 +1,10 @@
 import type { BlokConfig } from '../../../../../types/configs/blok-config';
 import type { ListItemStyle } from '../../../../tools/list/types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { nanoid } from 'nanoid';
+
 import { Dom } from '../../../dom';
+import { offerCsvDatabase } from '../csv-database-offer';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PasteData } from '../types';
@@ -45,9 +48,26 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
+    const before = this.offersDatabase() ? new Set(this.Blok.BlockManager.blocks.map((block) => block.id)) : null;
+
     await this.insertPasteData(dataToInsert, context.canReplaceCurrentBlock);
+    if (before !== null) {
+      offerCsvDatabase(data, this.Blok.BlockManager.blocks.filter((block) => !before.has(block.id)).map((block) => block.id), {
+        blocks: this.Blok.BlocksAPI.methods,
+        notify: (options) => this.Blok.NotifierAPI.methods.show(options),
+        t: (key) => this.Blok.I18n.t(key),
+        newId: () => nanoid(),
+      });
+    }
 
     return true;
+  }
+
+  /** The CSV-to-database offer needs both database tools. */
+  private offersDatabase(): boolean {
+    const tools = this.Blok.Tools.blockTools;
+
+    return tools.has('database') && tools.has('database-row');
   }
 
   /**

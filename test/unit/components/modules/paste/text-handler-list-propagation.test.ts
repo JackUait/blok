@@ -53,6 +53,7 @@ const createBlok = (currentBlock: unknown): {
   });
 
   const blok = {
+    Tools: { blockTools: new Map() },
     BlockManager: {
       currentBlock,
       paste: pasteMock,

@@ -1,7 +1,9 @@
 import type { BodyBlock } from './row-body';
 import { formatDateDisplay, toIsoDay, toIsoTime } from './cells/date-format';
 import { filesOf, personIdsOf } from './property-values';
-import type { PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import { generateKeyBetween } from 'fractional-indexing';
+
+import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 
 const BOM = '﻿';
@@ -357,5 +359,52 @@ export const planCsvMerge = (
     rows,
     skippedColumns: header.filter((_, column) => columns[column] === undefined),
     newOptions,
+  };
+};
+
+/**
+ * Pasted text read as a table: two or more rows of the same two or more
+ * columns. Anything else is prose and stays as paragraphs.
+ */
+export const pastedTable = (text: string): string[][] | null => {
+  const table = parseCsv(text);
+  const width = table[0]?.length ?? 0;
+
+  return table.length >= 2 && width >= 2 && table.every((row) => row.length === width) ? table : null;
+};
+
+export interface CsvDatabaseBlocks {
+  id: string;
+  data: DatabaseData;
+  rows: Array<{ id: string; data: DatabaseRowData }>;
+}
+
+/** A whole database from a CSV table: the database block's data and its row blocks, ready to insert. */
+export const csvDatabaseBlocks = (
+  table: string[][],
+  options: CsvImportOptions & { viewName: string; title: string }
+): CsvDatabaseBlocks => {
+  const id = options.newId();
+  const imported = buildCsvImport(table, options);
+  const [titleProperty, ...rest] = imported.schema;
+  const viewId = options.newId();
+  const positions = imported.rows.reduce<string[]>((list) => [...list, generateKeyBetween(list.at(-1) ?? null, null)], []);
+
+  return {
+    id,
+    data: {
+      title: options.title,
+      schema: imported.schema,
+      views: [{ id: viewId, name: options.viewName, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: rest.map((p) => p.id) }],
+      activeViewId: viewId,
+    },
+    rows: imported.rows.map((properties, index) => {
+      const title = titleProperty === undefined ? undefined : properties[titleProperty.id];
+
+      return {
+        id: options.newId(),
+        data: { properties, position: positions[index], title: typeof title === 'string' ? title : '' },
+      };
+    }),
   };
 };

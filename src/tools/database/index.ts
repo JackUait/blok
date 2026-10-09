@@ -96,7 +96,7 @@ import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
 import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
-import { buildCsvImport, csvCellText, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
+import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
 
@@ -1733,30 +1733,21 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const imported = buildCsvImport(table, { newId: () => nanoid(), untitled: this.api.i18n.t('tools.database.csvUntitledColumn') });
-    const model = new DatabaseModel({ schema: imported.schema, views: [], activeViewId: '' }, { defaultViewType: 'table' });
-    const views = model.getViews();
-    const data: DatabaseData = { title: fileName.replace(/\.(csv|tsv|txt)$/i, ''), schema: model.getSchema(), views, activeViewId: views[0]?.id ?? '' };
-    const id = nanoid();
-    const titleId = imported.schema[0]?.id ?? '';
+    const built = csvDatabaseBlocks(table, {
+      newId: () => nanoid(),
+      untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
+      viewName: DATABASE_DEFAULT_TEXT.viewTypeTable,
+      title: fileName.replace(/\.(csv|tsv|txt)$/i, ''),
+    });
     const insert = (): void => {
-      this.api.blocks.insertAt('database', data, { position: { after: this.block.id }, id });
-      imported.rows.reduce<string | null>((previous, properties) => {
-        const position = DatabaseModel.positionBetween(previous, null);
-        const title = properties[titleId];
-
-        this.api.blocks.insertAt(
-          'database-row',
-          { properties, position, title: typeof title === 'string' ? title : '' },
-          { parentId: id, position: 'end', id: nanoid() },
-        );
-
-        return position;
-      }, null);
+      this.api.blocks.insertAt('database', built.data, { position: { after: this.block.id }, id: built.id });
+      for (const row of built.rows) {
+        this.api.blocks.insertAt('database-row', row.data, { parentId: built.id, position: 'end', id: row.id });
+      }
     };
 
     this.inOneStep(insert);
-    this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: imported.rows.length }) });
+    this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: built.rows.length }) });
   }
 
   /**

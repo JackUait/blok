@@ -499,6 +499,8 @@ export type BlokMessageKey =
   | 'tools.database.csvImported'
   | 'tools.database.csvMerge'
   | 'tools.database.csvMerged'
+  | 'tools.database.csvPasteConvert'
+  | 'tools.database.csvPasteOffer'
   | 'tools.database.csvSkipped'
   | 'tools.database.csvUntitledColumn'
   | 'tools.database.dateClear'

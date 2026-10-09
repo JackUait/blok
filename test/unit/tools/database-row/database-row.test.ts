@@ -22,6 +22,7 @@ const createMockAPI = (): API => ({
   blocks: {
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
     getBlocksCount: vi.fn().mockReturnValue(1),
+    getChildren: vi.fn().mockReturnValue([]),
   },
   notifier: { show: vi.fn() },
 } as unknown as API);

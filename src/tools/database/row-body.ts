@@ -1,4 +1,4 @@
-import type { OutputData } from '../../../types';
+import type { BlockToolData, OutputData } from '../../../types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
@@ -143,4 +143,49 @@ export const pageContentSourceBlocks = (
       return typeof type === 'string' ? [{ type, data: field(block, 'data') }] : [];
     })
     : [];
+};
+
+export interface BodyBlockInsert {
+  id: string;
+  type: string;
+  data: BlockToolData;
+  /** The new id of its parent, or null for a top-level body block. */
+  parentId: string | null;
+}
+
+/**
+ * The child blocks a legacy body turns into, parents first. Ids derive from
+ * the row id and the blob index, so two peers converting the same row at once
+ * write the same blocks instead of two copies. Blob ids are never reused: a
+ * duplicated row carries the same blob, and its blocks would clash.
+ * @param rowId - the row the body belongs to
+ * @param body - the legacy body
+ */
+export const legacyBodyInserts = (rowId: string, body: OutputData): BodyBlockInsert[] => {
+  const blocks = body.blocks.filter((block) => typeof block.type === 'string' && block.type !== '');
+  const idOf = new Map(blocks.map((block, index) => [block.id ?? `#${index}`, `${rowId}-body-${index}`]));
+  const keyOf = (index: number): string => blocks[index].id ?? `#${index}`;
+  const inserts = blocks.map((block, index): BodyBlockInsert => {
+    const parent = typeof block.parent === 'string' ? idOf.get(block.parent) : undefined;
+
+    return { id: idOf.get(keyOf(index)) ?? `${rowId}-body-${index}`, type: block.type, data: block.data ?? {}, parentId: parent ?? null };
+  });
+  const placed = new Set<string>();
+  const ordered: BodyBlockInsert[] = [];
+  const place = (insert: BodyBlockInsert, seen: Set<string>): void => {
+    if (placed.has(insert.id) || seen.has(insert.id)) {
+      return;
+    }
+    const parent = inserts.find((candidate) => candidate.id === insert.parentId);
+
+    if (parent !== undefined) {
+      place(parent, seen.add(insert.id));
+    }
+    placed.add(insert.id);
+    ordered.push(parent === undefined ? { ...insert, parentId: null } : insert);
+  };
+
+  inserts.forEach((insert) => place(insert, new Set()));
+
+  return ordered;
 };

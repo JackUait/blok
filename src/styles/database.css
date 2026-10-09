@@ -863,6 +863,23 @@
   margin-inline-start: -53px;
 }
 
+/* The row holder is the page body here, not the nested editor: no toolbar gutter to make room for. */
+[data-blok-database-drawer-editor]:has(> [data-blok-element]) {
+  margin-inline-start: 0;
+}
+
+/* An empty page body: a click starts its first paragraph. */
+[data-blok-database-row-body]:not(:empty) ~ [data-blok-database-row-empty] {
+  display: none;
+}
+
+[data-blok-database-row-empty] {
+  padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
+  color: var(--blok-text-secondary);
+  cursor: text;
+  user-select: none;
+}
+
 /**
  * "+ New page" at the column foot: a 40px ring button, text in the group's accent.
  */

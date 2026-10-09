@@ -69,6 +69,8 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks } from '../nested-blocks';
+import { moveElementToEnd } from '../../components/utils/html';
+import { legacyBodyInserts, rowDescription } from './row-body';
 import {
   DATABASE_DEFAULT_TEXT,
   localizeDatabaseSchema,
@@ -744,6 +746,64 @@ export class DatabaseTool implements BlockTool {
 
     mountChildBlocks(this.rowPool, rows.filter((row) => row.id !== openRowId));
     rows.forEach((row) => row.holder.classList.toggle('hidden', row.id !== openRowId));
+  }
+
+  /**
+   * Shows the row's child blocks in `host`. A legacy body blob is turned into
+   * child blocks first. A read-only viewer cannot write, so for an unconverted
+   * blob it gets false and the drawer shows the blob read-only.
+   */
+  private attachRowBody(rowId: string, host: HTMLElement): boolean {
+    const block = this.api.blocks.getById(rowId) ?? undefined;
+    const row = this.model.getRow(rowId);
+
+    if (block === undefined || row === undefined) {
+      return false;
+    }
+    const live: DatabaseRowData[] = [];
+
+    block.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+    const descriptionId = this.model.getSchema().find((property) => property.type === 'richText')?.id;
+    const legacy = live[0]?.bodyBlocks === true ? undefined : rowDescription(row, this.model.getSchema(), descriptionId);
+    const unconverted = legacy !== undefined && legacy.blocks.length > 0 && this.api.blocks.getChildren(rowId).length === 0;
+
+    if (unconverted && this.readOnly) {
+      return false;
+    }
+    if (unconverted) {
+      this.convertLegacyBody(block, legacy);
+    }
+    this.mountRows();
+    moveElementToEnd(host, block.holder);
+
+    return true;
+  }
+
+  /**
+   * One derived step, never an undo step: undo would bring the blob back as
+   * the only body. The blob stays in `properties` because older clients still
+   * read the body from it; a later version removes it. Edits those clients make
+   * to it after this are not carried over.
+   */
+  private convertLegacyBody(block: BlockAPI, legacy: OutputData): void {
+    const inserts = legacyBodyInserts(block.id, legacy);
+    const run = (): void => {
+      for (const insert of inserts) {
+        try {
+          this.api.blocks.insertAt(insert.type, insert.data, { parentId: insert.parentId ?? block.id, position: 'end', id: insert.id });
+        } catch {
+          // A block type this editor does not have stays only in the blob.
+        }
+      }
+      block.call('markBodyBlocks');
+      block.dispatchChange({ derived: true });
+    };
+
+    if (this.api.blocks.transactWithoutCapture !== undefined) {
+      this.api.blocks.transactWithoutCapture(run);
+    } else {
+      run();
+    }
   }
 
   private isOwnRowChange(target: ChangedBlock | undefined): boolean {
@@ -2949,6 +3009,10 @@ export class DatabaseTool implements BlockTool {
           void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options } } });
         },
         savedOptionsOf: (propertyId) => this.model.getProperty(propertyId)?.config?.options,
+        rowBody: {
+          attach: (rowId, host) => this.attachRowBody(rowId, host),
+          detach: () => this.mountRows(),
+        },
         peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,
       });
     }

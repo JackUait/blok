@@ -77,6 +77,15 @@ export interface CardDrawerOptions {
    */
   savedOptionsOf?: (propertyId: string) => SelectOption[] | undefined;
   /**
+   * Shows the row's own child blocks as the page body: moves the row holder
+   * into `host` and returns true. False keeps the nested editor (a host page,
+   * or a legacy body a read-only viewer cannot convert).
+   */
+  rowBody?: {
+    attach(rowId: string, host: HTMLElement): boolean;
+    detach(rowId: string): void;
+  };
+  /**
    * The page beside the side peek (the editor wrapper). It narrows by the part
    * the half-viewport drawer covers, as Notion's page does (research/08).
    */
@@ -158,6 +167,9 @@ export class DatabaseCardDrawer {
   private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
   private readonly onOptionsChange: CardDrawerOptions['onOptionsChange'];
   private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
+  private readonly rowBody: CardDrawerOptions['rowBody'];
+  /** The row whose holder is the shown page body. */
+  private attachedBodyRowId: string | null = null;
   private cellEditor: CellEditorHandle | null = null;
   private readonly events: Pick<Events, 'on' | 'off'> | undefined;
 
@@ -199,6 +211,7 @@ export class DatabaseCardDrawer {
     this.onPropertyValueChange = options.onPropertyValueChange;
     this.onOptionsChange = options.onOptionsChange;
     this.savedOptionsOf = options.savedOptionsOf;
+    this.rowBody = options.rowBody;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -531,7 +544,7 @@ export class DatabaseCardDrawer {
 
   /** Row whose holder the drawer shows as the page body, or null. */
   get bodyRowId(): string | null {
-    return null;
+    return this.attachedBodyRowId;
   }
 
   /** Id of the row the drawer shows, or null when closed. */
@@ -601,6 +614,10 @@ export class DatabaseCardDrawer {
     }
 
     this.refreshSchema(this.schema);
+
+    if (this.attachedBodyRowId === row.id) {
+      return;
+    }
 
     const description = this.descriptionFor(row);
     const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
@@ -904,6 +921,7 @@ export class DatabaseCardDrawer {
 
   private cleanupEditor(): void {
     this.closeCellEditor();
+    this.detachBody();
     this.pageMount?.destroy();
     this.pageMount = null;
     this.mountedPageId = undefined;
@@ -928,6 +946,16 @@ export class DatabaseCardDrawer {
       }
       this.blokInstance = null;
       this.isBodyChanged = null;
+    }
+  }
+
+  private detachBody(): void {
+    const rowId = this.attachedBodyRowId;
+
+    // Cleared first: the detach puts every row but the open one back in the pool.
+    this.attachedBodyRowId = null;
+    if (rowId !== null) {
+      this.rowBody?.detach(rowId);
     }
   }
 
@@ -962,6 +990,13 @@ export class DatabaseCardDrawer {
     if (this.rowPages !== undefined && this.lookupRows.has(row.id)) {
       editorHolder.toggleAttribute('inert', true);
       return;
+    }
+    if (this.rowPages === undefined && this.rowBody !== undefined) {
+      this.attachedBodyRowId = row.id;
+      if (this.rowBody.attach(row.id, editorHolder)) {
+        return;
+      }
+      this.attachedBodyRowId = null;
     }
 
     import('../../blok').then(({ Blok }) => {

@@ -665,6 +665,7 @@
   "tools.database.listView": "List view",
   "tools.database.kanbanBoard": "Kanban board",
   "tools.database.cardDetails": "Card details",
+  "tools.database.rowBodyEmpty": "Press Enter to continue with an empty page",
   "tools.database.cardTitle": "Card title",
   "tools.database.close": "Close",
   "tools.database.defaultTitleProperty": "Title",

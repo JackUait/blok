@@ -17,6 +17,10 @@ export const DATABASE_ROW_DATA = {
       description: 'Row title, mirrored from the title column. Absent on rows written before this key existed.',
     },
     pageId: { type: 'string', minLength: 1, description: 'Id of the separate document that holds the row page body.' },
+    bodyBlocks: {
+      type: 'boolean',
+      description: 'True once the page body lives in the row\'s child blocks. A legacy body blob in a richText property is then ignored.',
+    },
     convertedValues: {
       type: 'object',
       description: 'Values a property type change could not carry over, keyed by property id; restored if the type changes back.',
@@ -31,7 +35,7 @@ export const DATABASE_ROW_DATA = {
 };
 
 export const describeDatabaseRow = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
-  summary: 'One row of a database. An optional pageId points to its separate body document.',
+  summary: 'One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead.',
   guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property.',
   data: DATABASE_ROW_DATA,
   summaryFields: ['title'],

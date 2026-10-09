@@ -6,7 +6,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, PropertyValue } from '../database/types';
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -31,6 +31,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   if (typeof data.pageId === 'string' && data.pageId.length > 0) {
     row.pageId = data.pageId;
   }
+  if (data.bodyBlocks === true) {
+    row.bodyBlocks = true;
+  }
 
   return row;
 };
@@ -53,13 +56,16 @@ export class DatabaseRowTool implements BlockTool {
   private unknown: Record<string, unknown>;
   private readonly api: API | undefined;
   private readonly block: BlockAPI | undefined;
+  private readOnly: boolean;
   private bodySlot: HTMLElement | null = null;
+  private placeholder: HTMLElement | null = null;
 
-  constructor({ data, api, block }: BlockToolConstructorOptions<DatabaseRowData>) {
+  constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<DatabaseRowData>) {
     this._data = toRowData(data);
     this.unknown = unknownKeys(data);
     this.api = api;
     this.block = block;
+    this.readOnly = readOnly;
   }
 
   public render(): HTMLDivElement {
@@ -73,10 +79,50 @@ export class DatabaseRowTool implements BlockTool {
     bodySlot.setAttribute('data-blok-database-row-body', '');
     // The slot holds only the page body; a write on a body holder is not a row edit.
     bodySlot.setAttribute(DATA_ATTR.mutationFree, 'true');
-    el.appendChild(bodySlot);
+    const placeholder = document.createElement('div');
+
+    placeholder.setAttribute('data-blok-database-row-empty', '');
+    // A block dragged over the empty page drops in as its first child.
+    placeholder.setAttribute(DATA_ATTR.dropInto, '');
+    placeholder.setAttribute(DATA_ATTR.childStandIn, '');
+    placeholder.setAttribute(DATA_ATTR.chrome, '');
+    placeholder.setAttribute(DATA_ATTR.mutationFree, 'true');
+    placeholder.setAttribute('contenteditable', 'false');
+    placeholder.textContent = this.api?.i18n.t('tools.database.rowBodyEmpty') ?? '';
+    // database.css hides it once the body slot has a block.
+    placeholder.addEventListener('click', () => this.startBody());
+
+    el.append(bodySlot, placeholder);
     this.bodySlot = bodySlot;
+    this.placeholder = placeholder;
+    this.updatePlaceholder();
 
     return el;
+  }
+
+  /** Adds the first paragraph of an empty page body and puts the caret in it. */
+  public startBody(): void {
+    const api = this.api;
+    const id = this.block?.id;
+
+    if (this.readOnly || api === undefined || id === undefined) {
+      return;
+    }
+    const first = api.blocks.getChildren(id)[0];
+
+    if (first !== undefined) {
+      api.caret.setToBlock(first.id, 'start');
+
+      return;
+    }
+    const paragraph = api.blocks.insertAt(undefined, undefined, { parentId: id, position: 'end' });
+
+    this.bodySlot?.appendChild(paragraph.holder);
+    api.caret.setToBlock(paragraph.id, 'start');
+  }
+
+  private updatePlaceholder(): void {
+    this.placeholder?.classList.toggle('hidden', this.readOnly);
   }
 
   public rendered(): void {
@@ -106,6 +152,9 @@ export class DatabaseRowTool implements BlockTool {
     }
     if (this._data.pageId !== undefined) {
       saved.pageId = this._data.pageId;
+    }
+    if (this._data.bodyBlocks === true) {
+      saved.bodyBlocks = true;
     }
 
     return saved;
@@ -179,6 +228,11 @@ export class DatabaseRowTool implements BlockTool {
     }
   }
 
+  /** The legacy body was turned into child blocks; it must never be turned again. */
+  public markBodyBlocks(): void {
+    this._data.bodyBlocks = true;
+  }
+
   public updatePosition(param: { position: string }): void {
     this._data.position = param.position;
   }
@@ -232,13 +286,9 @@ export class DatabaseRowTool implements BlockTool {
     return { deny: ['database-row'] };
   }
 
-  /**
-   * No-op: DatabaseRowTool renders an invisible div with no interactive elements.
-   * Implementing this method enables the fast-path in-place read-only toggle in
-   * the ReadOnly module (which requires ALL tools to have setReadOnly()).
-   */
-  public setReadOnly(_state: boolean): void {
-    // intentionally empty
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+    this.updatePlaceholder();
   }
 }
 

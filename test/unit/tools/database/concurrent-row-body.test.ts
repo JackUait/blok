@@ -178,10 +178,6 @@ const pump = async (clients: LiveClient[]): Promise<void> => {
   throw new Error('collaboration updates did not settle');
 };
 
-const body = (id: string, text: string): OutputData => ({
-  blocks: [{ id, type: 'paragraph', data: { text } }],
-});
-
 const seedBlocks: OutputBlockData[] = [
   {
     id: 'db-1',
@@ -215,40 +211,32 @@ const seedBlocks: OutputBlockData[] = [
 const dataOf = (client: LiveClient, id: string): Record<string, unknown> =>
   client.core.moduleInstances.YjsManager.toJSON().find((block) => block.id === id)?.data ?? {};
 
-const openRow = async (client: LiveClient, rowId: string): Promise<NestedEditor> => {
+const seedSchema = (): PropertyDefinition[] =>
+  (seedBlocks[0].data as { schema: PropertyDefinition[] }).schema;
+
+const childrenOf = (client: LiveClient, parentId: string): OutputBlockData[] => {
+  const all = client.core.moduleInstances.YjsManager.toJSON();
+  const ids = all.find((block) => block.id === parentId)?.content ?? [];
+
+  return ids.flatMap((id) => all.filter((block) => block.id === id && block.parent === parentId));
+};
+
+const textOf = (data: unknown): string => {
+  const text = (data as { text?: unknown } | undefined)?.text;
+
+  if (typeof text === 'string') {
+    return text.replace(/<[^>]*>/g, '');
+  }
+
+  return Array.isArray(text) ? text.map((segment: { text?: string }) => segment.text ?? '').join('') : '';
+};
+
+const openCard = (client: LiveClient, rowId: string): void => {
   const databaseHolder = client.core.moduleInstances.BlockManager.getBlockById('db-1')?.holder;
   const card = databaseHolder?.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
 
   if (card === null || card === undefined) throw new Error(`card ${rowId} was not rendered`);
   card.click();
-  const editorHolder = databaseHolder?.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
-
-  if (editorHolder === null || editorHolder === undefined) throw new Error('drawer was not rendered');
-  const editorsInHolder = (): NestedEditor[] => nestedEditors.filter(({ config }) => config.holder === editorHolder);
-  const before = editorsInHolder().length;
-
-  await waitFor(
-    () => editorsInHolder().length > before,
-    `nested editor for ${rowId}`,
-  );
-  const editor = editorsInHolder().at(-1);
-
-  if (editor === undefined) throw new Error('nested editor was not constructed');
-  return editor;
-};
-
-const editRow = async (client: LiveClient, rowId: string, next: OutputData): Promise<void> => {
-  const editor = await openRow(client, rowId);
-
-  editor.saved = next;
-  await editor.config.onChange();
-  await waitFor(() => {
-    const schema = dataOf(client, 'db-1').schema as PropertyDefinition[] | undefined;
-    const properties = dataOf(client, rowId).properties as Record<string, unknown> | undefined;
-
-    return schema?.some((property) =>
-      property.type === 'richText' && JSON.stringify(properties?.[property.id]) === JSON.stringify(next)) ?? false;
-  }, `body for ${rowId} to reach the local document`);
 };
 
 const destroyCore = (core: Core): void => {
@@ -286,60 +274,89 @@ describe('concurrent database row bodies', { timeout: 60000 }, () => {
     vi.restoreAllMocks();
   });
 
-  it('reopens both bodies when peers edit different rows before schema sync', async () => {
+  it('keeps both bodies when peers write into different rows', async () => {
     const a = await bootLive();
     const b = await bootLive();
 
     await pump([a, b]);
-    const firstBody = body('body-1', 'First body');
-    const secondBody = body('body-2', 'Second body');
-
-    await editRow(a, 'row-1', firstBody);
-    await editRow(b, 'row-2', secondBody);
+    a.core.moduleInstances.API.methods.blocks.insertAt('paragraph', { text: 'First body' }, { parentId: 'row-1', id: 'body-1' });
+    b.core.moduleInstances.API.methods.blocks.insertAt('paragraph', { text: 'Second body' }, { parentId: 'row-2', id: 'body-2' });
     await pump([a, b]);
 
     const reopened = await bootLive();
 
     await pump([a, b, reopened]);
-    const first = await openRow(reopened, 'row-1');
-    const second = await openRow(reopened, 'row-2');
 
-    expect([first.config.data, second.config.data]).toEqual([firstBody, secondBody]);
+    expect(childrenOf(reopened, 'row-1').map((block) => textOf(block.data))).toEqual(['First body']);
+    expect(childrenOf(reopened, 'row-2').map((block) => textOf(block.data))).toEqual(['Second body']);
   });
 
-  it('keeps a later edit on the row’s existing body property', async () => {
-    const original = body('body-2', 'Second body');
-    const updated = body('body-2', 'Second body edited');
-    const database = server.toJSON().find((block) => block.id === 'db-1');
-    const schema = (database?.data as { schema?: PropertyDefinition[] } | undefined)?.schema;
+  it('merges two peers typing into the same body paragraph', async () => {
+    const a = await bootLive();
 
-    if (schema === undefined) throw new Error('database schema was not seeded');
+    a.core.moduleInstances.API.methods.blocks.insertAt('paragraph', { text: 'Hello' }, { parentId: 'row-1', id: 'body-1' });
+    const b = await bootLive();
+
+    await pump([a, b]);
+    await a.core.moduleInstances.API.methods.blocks.update('body-1', { text: 'Hello from A' });
+    await b.core.moduleInstances.API.methods.blocks.update('body-1', { text: 'B says Hello' });
+    await pump([a, b]);
+
+    const merged = [a, b].map((client) => textOf(childrenOf(client, 'row-1')[0]?.data));
+
+    expect(merged[0]).toBe(merged[1]);
+    expect(merged[0]).toContain('from A');
+    expect(merged[0]).toContain('B says');
+  });
+
+  it('converts a legacy body once when two peers open the row at the same time', async () => {
     server.updateBlockData('db-1', 'schema', [
-      ...schema,
-      { id: 'prop-body-a', name: 'Details', type: 'richText', position: 'a2' },
-      { id: 'prop-body-b', name: 'Details', type: 'richText', position: 'a3' },
+      ...seedSchema(),
+      { id: 'prop-body', name: 'Details', type: 'richText', position: 'a2' },
     ]);
-    server.updateBlockData('row-2', 'properties', {
-      'prop-title': 'Second',
+    server.updateBlockData('row-1', 'properties', {
+      'prop-title': 'First',
       'prop-status': 'opt-todo',
-      'prop-body-b': original,
+      'prop-body': { blocks: [{ id: 'x', type: 'paragraph', data: { text: 'Legacy' } }, { id: 'y', type: 'paragraph', data: { text: 'Body' } }] },
     });
+    const a = await bootLive();
+    const b = await bootLive();
 
-    const client = await bootLive();
-    const editor = await openRow(client, 'row-2');
+    await pump([a, b]);
+    openCard(a, 'row-1');
+    openCard(b, 'row-1');
+    await pump([a, b]);
 
-    editor.saved = updated;
-    await editor.config.onChange();
-    await waitFor(() => {
-      const properties = dataOf(client, 'row-2').properties as Record<string, unknown> | undefined;
-      const saved = JSON.stringify(updated);
+    for (const client of [a, b]) {
+      expect(childrenOf(client, 'row-1').map((block) => textOf(block.data))).toEqual(['Legacy', 'Body']);
+      expect(dataOf(client, 'row-1').bodyBlocks).toBe(true);
+      expect((dataOf(client, 'row-1').properties as Record<string, unknown>)['prop-body']).toBeDefined();
+    }
+  });
 
-      return JSON.stringify(properties?.['prop-body-a']) === saved
-        || JSON.stringify(properties?.['prop-body-b']) === saved;
-    }, 'edited body to reach the row');
-    const properties = dataOf(client, 'row-2').properties as Record<string, unknown>;
+  it('keeps a row a peer adds while another peer converts a legacy body', async () => {
+    server.updateBlockData('db-1', 'schema', [
+      ...seedSchema(),
+      { id: 'prop-body', name: 'Details', type: 'richText', position: 'a2' },
+    ]);
+    server.updateBlockData('row-1', 'properties', {
+      'prop-title': 'First',
+      'prop-status': 'opt-todo',
+      'prop-body': { blocks: [{ id: 'x', type: 'paragraph', data: { text: 'Legacy' } }] },
+    });
+    const a = await bootLive();
+    const b = await bootLive();
 
-    expect(properties['prop-body-b']).toEqual(updated);
-    expect(properties['prop-body-a']).toBeUndefined();
+    await pump([a, b]);
+    openCard(a, 'row-1');
+    b.core.moduleInstances.API.methods.blocks.insertAt('database-row', {
+      position: 'a2', title: 'Third', properties: { 'prop-title': 'Third', 'prop-status': 'opt-todo' },
+    }, { parentId: 'db-1', id: 'row-3' });
+    await pump([a, b]);
+
+    for (const client of [a, b]) {
+      expect(childrenOf(client, 'db-1').map((block) => block.id)).toEqual(['row-1', 'row-2', 'row-3']);
+      expect(childrenOf(client, 'row-1').map((block) => textOf(block.data))).toEqual(['Legacy']);
+    }
   });
 });

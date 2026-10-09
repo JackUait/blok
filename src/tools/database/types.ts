@@ -262,6 +262,11 @@ export interface DatabaseRowData extends BlockToolData {
   pageId?: string;
   /** Values a type change could not carry over, by property id. */
   convertedValues?: Record<string, ConvertedValue>;
+  /**
+   * The page body is the row's child blocks. Set when a legacy body blob was
+   * turned into child blocks, so deleting them all never brings the blob back.
+   */
+  bodyBlocks?: boolean;
 }
 
 // ─── View config ───

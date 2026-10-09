@@ -791,6 +791,7 @@ export type BlokMessageKey =
   | 'tools.database.rollupFunction'
   | 'tools.database.rollupProperty'
   | 'tools.database.rollupRelation'
+  | 'tools.database.rowBodyEmpty'
   | 'tools.database.rowTitlePlaceholder'
   | 'tools.database.searchLabel'
   | 'tools.database.searchPlaceholder'

@@ -2849,6 +2849,10 @@
           "minLength": 1,
           "description": "Id of the separate document that holds the row page body."
         },
+        "bodyBlocks": {
+          "type": "boolean",
+          "description": "True once the page body lives in the row's child blocks. A legacy body blob in a richText property is then ignored."
+        },
         "convertedValues": {
           "type": "object",
           "description": "Values a property type change could not carry over, keyed by property id; restored if the type changes back.",

@@ -71,6 +71,48 @@ const holderOf = (id: string): HTMLElement | null =>
 
 const databaseHolder = (): HTMLElement | null => holderOf('db');
 
+const drawerBody = (): HTMLElement | null =>
+  holder?.querySelector<HTMLElement>('[data-blok-database-drawer-editor]') ?? null;
+
+const openRow = async (rowId: string): Promise<void> => {
+  const button = holder?.querySelector<HTMLElement>(`[data-row-id="${rowId}"] [data-blok-database-table-open]`)
+    ?? holder?.querySelector<HTMLElement>(`[data-blok-database-table-open][data-row-id="${rowId}"]`);
+
+  button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await quiet();
+};
+
+const pressEscape = async (): Promise<void> => {
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await quiet();
+};
+
+const legacyDoc = (): OutputBlockData[] => [
+  {
+    ...databaseBlock(),
+    data: {
+      ...databaseBlock().data,
+      schema: [
+        { id: 't', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'd', name: 'Card details', type: 'richText', position: 'a1' },
+      ],
+    },
+    content: ['r1'],
+  },
+  {
+    id: 'r1',
+    type: 'database-row',
+    parent: 'db',
+    data: {
+      properties: {
+        t: 'Old',
+        d: { blocks: [{ id: 'x', type: 'paragraph', data: { text: 'legacy one' } }, { id: 'y', type: 'paragraph', data: { text: 'legacy two' } }] },
+      },
+      position: 'a0',
+    },
+  },
+];
+
 describe('row bodies are child blocks of the row', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,6 +191,71 @@ describe('row bodies are child blocks of the row', () => {
     expect(holderOf('r1')?.contains(holderOf('c1'))).toBe(true);
     expect(holderOf('r1')?.classList.contains('hidden')).toBe(true);
     expect((await editor?.save())?.blocks.find((block) => block.id === 'c1')?.parent).toBe('r1');
+  });
+
+  it('shows the opened row holder as the page body and puts it back on close', async () => {
+    await make(docWithBodies());
+    await openRow('r1');
+
+    expect(drawerBody()?.contains(holderOf('r1'))).toBe(true);
+    expect(holderOf('r1')?.classList.contains('hidden')).toBe(false);
+    expect(drawerBody()?.textContent).toContain('first body');
+
+    await pressEscape();
+
+    expect(holder?.querySelector('[data-blok-database-row-pool]')?.contains(holderOf('r1'))).toBe(true);
+    expect(holderOf('r1')?.classList.contains('hidden')).toBe(true);
+  });
+
+  it('turns a legacy body into child blocks on open, keeps the blob, and adds no undo step', async () => {
+    await make(legacyDoc());
+    await openRow('r1');
+
+    const saved = await editor?.save();
+    const row = saved?.blocks.find((block) => block.id === 'r1');
+    const body = saved?.blocks.filter((block) => block.parent === 'r1');
+
+    expect(body?.map((block) => block.id)).toEqual(['r1-body-0', 'r1-body-1']);
+    expect(row?.content).toEqual(['r1-body-0', 'r1-body-1']);
+    expect((row?.data as { bodyBlocks?: boolean }).bodyBlocks).toBe(true);
+    expect((row?.data as { properties: Record<string, unknown> }).properties.d).toEqual(expect.objectContaining({ blocks: expect.any(Array) }));
+    expect(drawerBody()?.textContent).toContain('legacy two');
+
+    editor?.history.undo();
+    await quiet();
+
+    expect((await editor?.save())?.blocks.filter((block) => block.parent === 'r1')).toHaveLength(2);
+  });
+
+  it('never converts a legacy body again once its blocks were removed', async () => {
+    await make(legacyDoc());
+    await openRow('r1');
+    await editor?.blocks.delete(editor.blocks.getBlockIndex('r1-body-1'));
+    await editor?.blocks.delete(editor.blocks.getBlockIndex('r1-body-0'));
+    await pressEscape();
+    await openRow('r1');
+
+    expect((await editor?.save())?.blocks.filter((block) => block.parent === 'r1')).toHaveLength(0);
+  });
+
+  it('offers an empty page body as a placeholder that starts the first paragraph', async () => {
+    await make(docWithBodies());
+    await openRow('r2');
+
+    const placeholder = drawerBody()?.querySelector<HTMLElement>('[data-blok-database-row-empty]');
+    const shown = (): boolean | undefined =>
+      placeholder?.matches('[data-blok-database-row-body]:empty ~ [data-blok-database-row-empty]:not(.hidden)');
+
+    expect(shown()).toBe(true);
+    expect((await editor?.save())?.blocks.filter((block) => block.parent === 'r2')).toHaveLength(0);
+
+    placeholder?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await quiet();
+
+    const body = (await editor?.save())?.blocks.filter((block) => block.parent === 'r2');
+
+    expect(body?.map((block) => block.type)).toEqual(['paragraph']);
+    expect(shown()).toBe(false);
   });
 
   it('declares the row a layout container that never nests another row', () => {

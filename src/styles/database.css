@@ -1584,6 +1584,61 @@
   white-space: nowrap;
 }
 
+/* Property menu and editors. Layout unmeasured: Blok tokens. */
+[data-blok-database-property-menu-name],
+[data-blok-database-files-link],
+[data-blok-database-property-menu-field] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-property-menu-icon] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-property-description] {
+  min-height: 60px;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  resize: vertical;
+}
+
+[data-blok-database-files-input] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+[data-blok-database-person-option][aria-selected="true"],
+[data-blok-database-file-row] {
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-file-row] > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-property-name-input] {
+  margin: var(--blok-space-1) var(--blok-space-2);
+}
+
 /* Drawer value: a button that opens the cell editor. */
 [data-blok-database-drawer-prop-value] {
   flex: 1;
@@ -1645,6 +1700,8 @@
 }
 
 [data-blok-database-select-chip-remove],
+[data-blok-database-person-remove],
+[data-blok-database-file-remove],
 [data-blok-database-select-option-handle],
 [data-blok-database-select-option-menu] {
   display: inline-flex;
@@ -1659,12 +1716,20 @@
   border-radius: var(--blok-radius-control-sm);
 }
 
-[data-blok-database-select-chip-remove] svg {
+[data-blok-database-select-chip-remove] svg,
+[data-blok-database-person-remove] svg,
+[data-blok-database-file-remove] svg {
   width: 12px;
   height: 12px;
 }
 
 [data-blok-database-select-search],
+[data-blok-database-person-search],
+[data-blok-database-files-link-input],
+[data-blok-database-property-name-input],
+[data-blok-database-property-menu-name-input],
+[data-blok-database-property-menu-field] input,
+[data-blok-database-property-description],
 [data-blok-database-option-name],
 [data-blok-database-date-input],
 [data-blok-database-date-time] {
@@ -1694,6 +1759,9 @@
 
 /* A selected option shows a check mark only: no fill, primary ink (no blue selected states). */
 [data-blok-database-select-option],
+[data-blok-database-person-option],
+[data-blok-database-file-row],
+[data-blok-database-files-upload],
 [data-blok-database-select-create] {
   display: flex;
   align-items: center;
@@ -1706,12 +1774,16 @@
 }
 
 [data-blok-database-select-option][data-active],
+[data-blok-database-person-option][data-active],
 [data-blok-database-select-create][data-active] {
   background-color: var(--blok-item-hover-bg);
 }
 
 @media (hover: hover) {
   [data-blok-database-select-option]:hover,
+  [data-blok-database-person-option]:hover,
+  [data-blok-database-files-upload]:hover,
+  [data-blok-database-drawer-prop-label][role="button"]:hover,
   [data-blok-database-select-create]:hover {
     background-color: var(--blok-item-hover-bg);
   }

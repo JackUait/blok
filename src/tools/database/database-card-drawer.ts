@@ -4,7 +4,8 @@ import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseRow, DatabaseRowPages, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { openCellEditor, renderCellValue } from './cells';
-import type { CellEditorHandle } from './cells';
+import type { CellContext , CellEditorHandle } from './cells';
+import { isReadOnlyType, readPropertyValue } from './property-values';
 import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -56,7 +57,14 @@ export interface CardDrawerOptions {
   onTitleChange: (rowId: string, title: string) => void;
   onDescriptionChange: (rowId: string, description: OutputData) => void;
   onClose: () => void;
-  onAddProperty?: (type: PropertyType) => void;
+  /** "+ Add a property": the chosen type and the name typed above it ('' when left empty). */
+  onAddProperty?: (type: PropertyType, name: string) => void;
+  /** A property label was clicked: open its property menu under `anchor`. */
+  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement) => void;
+  /** Offer Person when adding a property. */
+  hasPeople?: boolean;
+  /** What every cell needs from the host beyond i18n: people, uploads, locale. */
+  cellContext?: () => Partial<CellContext>;
   /** A property value edited in the drawer. Without it, values stay read-only. */
   onPropertyValueChange?: (rowId: string, propertyId: string, value: PropertyValue) => void;
   /** The whole new option list of a select property, with saved labels. */
@@ -68,6 +76,16 @@ export interface CardDrawerOptions {
    */
   savedOptionsOf?: (propertyId: string) => SelectOption[] | undefined;
 }
+
+const isEmptyValue = (value: PropertyValue): boolean =>
+  value === null || value === '' || (Array.isArray(value) && value.length === 0);
+
+/** Notion's per-property page visibility: always show, hide when empty, always hide. */
+const isShownOnPage = (property: PropertyDefinition, value: PropertyValue): boolean => {
+  if (property.pageVisibility === 'hidden') return false;
+
+  return property.pageVisibility !== 'hideWhenEmpty' || !isEmptyValue(value);
+};
 
 /**
  * Rich fields of the body editor's tools, as the editor's adapter reads them:
@@ -124,7 +142,10 @@ export class DatabaseCardDrawer {
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
-  private readonly onAddProperty: ((type: PropertyType) => void) | undefined;
+  private readonly onAddProperty: CardDrawerOptions['onAddProperty'];
+  private readonly onOpenPropertyMenu: CardDrawerOptions['onOpenPropertyMenu'];
+  private readonly hasPeople: boolean;
+  private readonly cellContext: () => Partial<CellContext>;
   private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
   private readonly onOptionsChange: CardDrawerOptions['onOptionsChange'];
   private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
@@ -162,6 +183,9 @@ export class DatabaseCardDrawer {
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
     this.onAddProperty = options.onAddProperty;
+    this.onOpenPropertyMenu = options.onOpenPropertyMenu;
+    this.hasPeople = options.hasPeople === true;
+    this.cellContext = options.cellContext ?? ((): Partial<CellContext> => ({}));
     this.onPropertyValueChange = options.onPropertyValueChange;
     this.onOptionsChange = options.onOptionsChange;
     this.savedOptionsOf = options.savedOptionsOf;
@@ -623,22 +647,28 @@ export class DatabaseCardDrawer {
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
     for (const def of renderableSchema) {
-      propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null));
+      const value = readPropertyValue(row, def) ?? null;
+
+      if (isShownOnPage(def, value)) {
+        propsSection.appendChild(this.createPropertyRow(def, value));
+      }
     }
 
     if (!this.readOnly) {
       const addBtn = document.createElement('button');
 
       addBtn.setAttribute('data-blok-database-drawer-add-prop', '');
-      addBtn.textContent = '+ Add a property';
+      addBtn.textContent = this.t('tools.database.addProperty');
       addBtn.addEventListener('click', () => {
         if (this.propertyTypePopover === null) {
           this.propertyTypePopover = new DatabasePropertyTypePopover({
-            onSelect: (type) => {
-              this.onAddProperty?.(type);
+            onSelect: (type, name) => {
+              this.onAddProperty?.(type, name);
               this.propertyTypePopover?.close();
             },
             i18n: this.i18n,
+            hasPeople: this.hasPeople,
+            withNameField: true,
           });
         }
 
@@ -676,7 +706,7 @@ export class DatabaseCardDrawer {
 
   /** Draws a value into its slot. The drawer pill attribute shipped in v1.16.1, so it stays. */
   private paintValue(slot: HTMLElement, def: PropertyDefinition, value: PropertyValue | undefined): void {
-    const cell = renderCellValue(def, value, { i18n: { t: (key) => this.t(key) }, readOnly: this.readOnly });
+    const cell = renderCellValue(def, value, { ...this.cellContext(), i18n: { t: (key) => this.t(key) }, readOnly: this.readOnly });
 
     cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));
     if (cell.hasAttribute('data-empty')) {
@@ -711,7 +741,8 @@ export class DatabaseCardDrawer {
     const shownOptions = { list: def.config?.options ?? [] };
     const onOptionsChange = this.onOptionsChange;
 
-    this.cellEditor = openCellEditor(def, row.properties[propertyId], slot, {
+    this.cellEditor = openCellEditor(def, readPropertyValue(row, def), slot, {
+      ...this.cellContext(),
       i18n: { t: (key) => this.t(key) },
       readOnly: this.readOnly,
       options: shownOptions.list,
@@ -778,7 +809,21 @@ export class DatabaseCardDrawer {
     const label = document.createElement('span');
 
     label.setAttribute('data-blok-database-drawer-prop-label', '');
+    label.setAttribute('data-property-id', def.id);
     label.textContent = def.name;
+    if (!this.readOnly && this.onOpenPropertyMenu !== undefined) {
+      const openMenu = this.onOpenPropertyMenu;
+
+      label.setAttribute('role', 'button');
+      label.tabIndex = 0;
+      label.addEventListener('click', () => openMenu(def.id, label));
+      label.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openMenu(def.id, label);
+        }
+      });
+    }
     row.appendChild(label);
 
     const valueEl = document.createElement('div');
@@ -787,7 +832,7 @@ export class DatabaseCardDrawer {
     valueEl.setAttribute('data-property-id', def.id);
     this.paintValue(valueEl, def, value);
 
-    if (!this.readOnly && this.onPropertyValueChange !== undefined) {
+    if (!this.readOnly && this.onPropertyValueChange !== undefined && !isReadOnlyType(def.type)) {
       valueEl.setAttribute('role', 'button');
       valueEl.tabIndex = 0;
       valueEl.setAttribute('aria-label', def.name);

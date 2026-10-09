@@ -1,9 +1,10 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf } from './property-values';
 import { planTypeChange } from './property-conversion';
+import type { CellContext } from './cells';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
@@ -193,6 +194,7 @@ export class DatabaseTool implements BlockTool {
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
     this.element = wrapper;
+    this.loadPeople();
 
     const titleEl = this.createTitleElement();
     this.titleElement = titleEl;
@@ -345,6 +347,10 @@ export class DatabaseTool implements BlockTool {
   destroy(): void {
     this.destroyed = true;
     this.api.events.off('block changed', this.handleBlockChanged);
+    this.propertyMenu?.destroy();
+    this.propertyMenu = null;
+    this.addPropertyPopover?.destroy();
+    this.addPropertyPopover = null;
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
     this.destroyTableView();
@@ -1728,18 +1734,14 @@ export class DatabaseTool implements BlockTool {
           }
         },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
-        onAddProperty: (type) => {
-          const prop = this.model.addProperty('Property', type);
-          void this.sync.syncCreateProperty({
-            id: prop.id,
-            name: prop.name,
-            type: prop.type,
-            position: prop.position,
-          });
-          this.cardDrawer?.refreshSchema(
-            localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
-          );
+        onAddProperty: (type, name) => {
+          if (this.addProperty({ name, type }) !== null) {
+            this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+          }
         },
+        onOpenPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
+        hasPeople: this.hasPeople,
+        cellContext: () => this.cellContext(),
         onPropertyValueChange: (rowId, propertyId, value) => {
           if (this.readOnly || this.destroyed) return;
           // Deleting an option already emptied this row through clearRemovedOptions.
@@ -2214,6 +2216,40 @@ export class DatabaseTool implements BlockTool {
   // these; each writes the database block (and rows) once, so it is one
   // undo step.
   // ---------------------------------------------------------------------------
+
+  /** People from the host directory, once loaded. */
+  private people: DatabasePerson[] | undefined;
+  private peopleLoad: Promise<void> | null = null;
+
+  /** Loads the host's people once, then redraws so names replace placeholders. */
+  private loadPeople(): void {
+    const directory = this.config.people;
+
+    if (directory === undefined || this.peopleLoad !== null) return;
+    this.peopleLoad = directory.list().then((people) => {
+      if (this.destroyed) return;
+      this.people = people;
+      this.rerenderView({ keepDrawer: true });
+    }).catch(() => undefined);
+  }
+
+  /** What cells need from the host: people, the current user, file uploads. */
+  private cellContext(): Partial<CellContext> {
+    const uploader = this.api.uploader;
+    const canUpload = !this.readOnly && uploader !== undefined && uploader.isConfigured('file', 'uploadByFile');
+    const me = this.config.people?.me?.();
+
+    return {
+      ...(this.people !== undefined ? { people: this.people } : {}),
+      ...(typeof me === 'string' ? { me } : {}),
+      ...(canUpload
+        ? {
+          uploadFile: (file: File) => uploader.uploadByFile(file, { kind: 'file', tool: 'database' })
+            .then((asset) => ({ url: asset.url, ...(asset.fileName !== undefined ? { name: asset.fileName } : {}) })),
+        }
+        : {}),
+    };
+  }
 
   /** Whether the person property can be offered: the host gave a people directory. */
   private get hasPeople(): boolean {

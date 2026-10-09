@@ -1701,7 +1701,7 @@ describe('DatabaseCardDrawer', () => {
       expect(addPropBtn).not.toBeNull();
     });
 
-    it('button label is "+ Add a property"', () => {
+    it('button label comes from tools.database.addProperty', () => {
       const schema: PropertyDefinition[] = [
         makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
       ];
@@ -1713,7 +1713,7 @@ describe('DatabaseCardDrawer', () => {
 
       const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
 
-      expect(addPropBtn!.textContent).toBe('+ Add a property');
+      expect(addPropBtn!.textContent).toBe('tools.database.addProperty');
     });
 
     it('does NOT render [data-blok-database-drawer-add-prop] button in read-only mode', () => {
@@ -1780,7 +1780,7 @@ describe('DatabaseCardDrawer', () => {
 
       textOption.click();
 
-      expect(onAddProperty).toHaveBeenCalledWith('text');
+      expect(onAddProperty).toHaveBeenCalledWith('text', '');
 
       drawer.destroy();
     });

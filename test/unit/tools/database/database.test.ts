@@ -2749,7 +2749,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('onAddProperty wiring in DatabaseTool', () => {
-    it('model.addProperty is called with ("Property", type) when onAddProperty fires', () => {
+    it('model.addProperty is called with the type name when onAddProperty fires with an empty name', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       tool.render();
 
@@ -2771,15 +2771,15 @@ describe('DatabaseTool', () => {
 
       // Access the onAddProperty callback stored in the drawer
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
+      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string, name: string) => void) | undefined;
 
       // If this is undefined, the callback was NOT wired — test fails (TDD red phase)
       expect(onAddProperty).toBeDefined();
 
       // Invoke the callback
-      onAddProperty!('text');
+      onAddProperty!('text', '');
 
-      expect(addPropertySpy).toHaveBeenCalledWith('Property', 'text');
+      expect(addPropertySpy).toHaveBeenCalledWith('tools.database.propertyTypeText', 'text', undefined, { afterId: undefined, beforeId: undefined }, {});
 
       tool.destroy();
     });
@@ -2805,11 +2805,11 @@ describe('DatabaseTool', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
+      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string, name: string) => void) | undefined;
 
       expect(onAddProperty).toBeDefined();
 
-      onAddProperty!('text');
+      onAddProperty!('text', 'Notes');
 
       expect(mockAdapter.createProperty).toHaveBeenCalledTimes(1);
       const callArg = mockAdapter.createProperty.mock.calls[0][0] as {
@@ -2819,7 +2819,7 @@ describe('DatabaseTool', () => {
         position: string;
       };
 
-      expect(callArg.name).toBe('Property');
+      expect(callArg.name).toBe('Notes');
       expect(callArg.type).toBe('text');
       expect(callArg.id).toBeDefined();
       expect(callArg.position).toBeDefined();
@@ -2837,11 +2837,11 @@ describe('DatabaseTool', () => {
       const refreshSchemaSpy = vi.spyOn(cardDrawer, 'refreshSchema');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
+      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string, name: string) => void) | undefined;
 
       expect(onAddProperty).toBeDefined();
 
-      onAddProperty!('text');
+      onAddProperty!('text', '');
 
       expect(refreshSchemaSpy).toHaveBeenCalledTimes(1);
 

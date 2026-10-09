@@ -64,6 +64,8 @@ export class DatabaseModel {
   /** Today, for relative dates. Tests pin it. */
   private readonly now: () => Date;
   private readonly me: () => string | null;
+  /** Formula and rollup as their result type (ComputedProperties.valueProperty). */
+  private valueOf: (property: PropertyDefinition) => PropertyDefinition = (property) => property;
 
   constructor(data?: Partial<DatabaseData>, options: DatabaseModelOptions = {}) {
     this.now = options.now ?? ((): Date => new Date());
@@ -91,6 +93,18 @@ export class DatabaseModel {
 
   getProperty(propertyId: string): PropertyDefinition | undefined {
     return this.schema.find((p) => p.id === propertyId);
+  }
+
+  setValueProperty(valueOf: (property: PropertyDefinition) => PropertyDefinition): void {
+    this.valueOf = valueOf;
+  }
+
+  /**
+   * The schema as values show: a formula or rollup as its result type. Filter,
+   * sort, group and calculation read this one. Never save it.
+   */
+  getValueSchema(): PropertyDefinition[] {
+    return this.schema.map((property) => this.valueOf(property));
   }
 
   /**
@@ -224,7 +238,8 @@ export class DatabaseModel {
     propertyId: string,
     options: GroupOptions & { settings?: GroupSettings; now?: Date } = {}
   ): (row: DatabaseRow) => string[] {
-    const property = this.getProperty(propertyId);
+    const saved = this.getProperty(propertyId);
+    const property = saved === undefined ? undefined : this.valueOf(saved);
 
     if (property === undefined) {
       return (row) => this.toGroupKeys(row.properties[propertyId]);
@@ -265,7 +280,8 @@ export class DatabaseModel {
    * rows fall in. `hideEmptyGroups` drops groups with no row.
    */
   listGroups(view: DatabaseViewConfig, options: { search?: string } = {}): GroupCount[] {
-    const property = view.groupBy === undefined ? undefined : this.getProperty(view.groupBy);
+    const saved = view.groupBy === undefined ? undefined : this.getProperty(view.groupBy);
+    const property = saved === undefined ? undefined : this.valueOf(saved);
 
     if (property === undefined) return [];
     const settings = view.groupSettings ?? {};
@@ -286,7 +302,7 @@ export class DatabaseModel {
     const now = this.now();
 
     return {
-      schema: this.schema,
+      schema: this.getValueSchema(),
       rows: this.rows,
       now,
       me: this.me(),

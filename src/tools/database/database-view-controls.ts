@@ -39,6 +39,8 @@ export interface ViewControlsHost {
   me?: () => string | null;
   /** People the host lists, for person filters. */
   people?: () => Array<{ id: string; name: string }>;
+  /** Rows a relation can point at, for relation filters. */
+  relatedRows?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
   setLayout: (type: ViewType) => void;
@@ -296,6 +298,7 @@ export class DatabaseViewControls {
       copyViewLink: () => this.host.copyViewLink(),
       groups: (sub) => this.host.groups(sub),
       people: () => this.host.people?.() ?? [],
+      ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),
       ...(this.host.layoutItems !== undefined ? { layoutItems: this.host.layoutItems } : {}),
     };
   }
@@ -390,12 +393,12 @@ export class DatabaseViewControls {
       const property = schema.find((p) => p.id === filter.propertyId);
 
       if (property === undefined) continue;
-      const label = filterPillLabel(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name);
+      const label = filterPillLabel(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name, (id) => this.host.relatedRows?.(property).find((row) => row.id === id)?.title);
       const pill = button(`database-filter-pill-${filter.id}`, label, { text: label });
 
       pill.setAttribute('data-blok-database-filter-pill', '');
       pill.setAttribute('data-filter-id', filter.id);
-      pill.toggleAttribute('data-active', filterValueText(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name) !== '');
+      pill.toggleAttribute('data-active', filterValueText(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name, (id) => this.host.relatedRows?.(property).find((row) => row.id === id)?.title) !== '');
       pill.addEventListener('click', () => this.openPill(filter.id, pill));
       pills.push(pill);
     }

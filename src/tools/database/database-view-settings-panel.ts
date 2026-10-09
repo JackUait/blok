@@ -503,7 +503,7 @@ export class ViewSettingsPages {
           return [{
             id: filter.id,
             element: panelRow({
-              label: filterPillLabel(filter, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id)),
+              label: filterPillLabel(filter, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id), (id) => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title),
               testId: `database-filter-row-${filter.id}`,
               opensPage: true,
               onClick: () => panel.push(this.simpleFilter(filter.id)),
@@ -887,7 +887,7 @@ export class ViewSettingsPages {
 
       line.setAttribute('data-blok-database-filter-rule', '');
       line.append(prefix, panelRow({
-        label: property === undefined ? this.t('filterGone') : filterPillLabel(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id)),
+        label: property === undefined ? this.t('filterGone') : filterPillLabel(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id), (id) => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title),
         testId: `database-filter-rule-${node.id}`,
         opensPage: true,
         onClick: () => panel.push(this.ruleEditor({
@@ -1309,7 +1309,7 @@ export class ViewSettingsPages {
           card.setAttribute('data-blok-testid', `database-color-rule-${rule.id}`);
           card.append(
             panelRow({
-              label: property === undefined ? this.t('filterGone') : filterPillLabel(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id)),
+              label: property === undefined ? this.t('filterGone') : filterPillLabel(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id), (id) => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title),
               testId: `database-color-condition-${rule.id}`,
               opensPage: true,
               disabled,

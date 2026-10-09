@@ -2,7 +2,9 @@ import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
 import { createOptionPill, renderCellValue } from './cells';
+import type { CellContext } from './cells';
 import { createCardPreview } from './database-card-preview';
+import { readPropertyValue } from './property-values';
 import type { BodyBlock } from './row-body';
 import { resolveCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
@@ -51,6 +53,8 @@ export interface DatabaseGalleryViewOptions {
   bodyOf: (rowId: string) => BodyBlock[];
   handlers?: GalleryHandlers;
   locale?: string;
+  /** What cells need from the host: relation titles, computed result types. */
+  cellContext?: Partial<CellContext>;
 }
 
 /** Pixels the pointer must travel before a press becomes a drag. */
@@ -218,13 +222,14 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     list.setAttribute('data-blok-database-gallery-properties', '');
     for (const setting of shown) {
       const property = this.options.schema.find((p) => p.id === setting.id);
-      const value = row.properties[setting.id];
 
       if (property === undefined) {
         continue;
       }
 
-      const cell = renderCellValue(property, value, { i18n: this.options.i18n, readOnly: true, locale: this.options.locale });
+      const cell = renderCellValue(property, readPropertyValue(row, property), {
+        ...this.options.cellContext, i18n: this.options.i18n, readOnly: true, locale: this.options.locale,
+      });
 
       if (cell.hasAttribute('data-empty')) {
         continue;

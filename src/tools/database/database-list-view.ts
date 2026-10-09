@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { readPropertyValue } from './property-values';
 import { IconChevronDown } from '../../components/icons';
 
 interface DatabaseListViewOptions {
@@ -260,8 +261,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
         continue;
       }
 
-      const value = row.properties[propId];
-      const badge = this.createPropertyBadge(propDef, value);
+      const value = readPropertyValue(row, propDef);
+      const badge = value === undefined ? null : this.createPropertyBadge(propDef, value);
 
       if (badge !== null) {
         propertiesEl.appendChild(badge);

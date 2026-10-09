@@ -1246,7 +1246,7 @@
   "tools.database.filterOperator.every": "Every",
   "tools.database.filterOperator.none": "None",
   "tools.database.relationUntitled": "Untitled",
-  "tools.database.relationSearchPlaceholder": "Link or create a page…",
+  "tools.database.relationSearchPlaceholder": "Search for a page…",
   "tools.database.relationHint": "Select as many pages as you like",
   "tools.database.relationHintOne": "Select one page"
 }

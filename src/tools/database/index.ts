@@ -6,6 +6,9 @@ import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSetting
 import { planTypeChange } from './property-conversion';
 import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
+import { ComputedProperties } from './computed-properties';
+import type { DatabaseSource } from './computed-properties';
+import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
@@ -146,6 +149,8 @@ export class DatabaseTool implements BlockTool {
   private seeded: boolean;
   private activeViewId: string;
   private model: DatabaseModel;
+  /** Formula, rollup and relation values, worked out on every row sync. */
+  private readonly computedValues: ComputedProperties;
   private view!: DatabaseViewRenderer;
   private sync!: DatabaseBackendSync;
 
@@ -207,6 +212,8 @@ export class DatabaseTool implements BlockTool {
     const me = (): string | null => this.config.people?.me?.() ?? null;
 
     this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id, me } : { me });
+    this.computedValues = new ComputedProperties(block.id);
+    this.model.setValueProperty((property) => this.computedValues.valueProperty(property));
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
@@ -582,9 +589,57 @@ export class DatabaseTool implements BlockTool {
       .filter((property) => property.type === 'uniqueId')
       .reduce((acc, property) => assignUniqueIds(acc, property.id), rows);
 
-    this.model.setRows(numbered);
+    this.model.setRows(this.computedValues.apply(this.model.getSchema(), numbered, {
+      databaseId: this.block.id,
+      now: new Date(),
+      resolveDatabase: (databaseId) => this.readDatabaseSource(databaseId),
+    }));
     if (!this.readOnly) {
       this.storeUniqueIds(rows, numbered, children);
+    }
+  }
+
+  /**
+   * Another database block of this document, as relations and rollups read
+   * it. Asks the block's tool for its live rows; a block whose tool is not
+   * built yet answers from its saved data.
+   */
+  private readDatabaseSource(databaseId: string): DatabaseSource | undefined {
+    const target = this.api.blocks.getById(databaseId);
+
+    if (target === null || target.name !== 'database') return undefined;
+    const received: DatabaseSource[] = [];
+
+    target.call('readRelationSource', { receive: (source: DatabaseSource) => received.push(source) });
+    if (received[0] !== undefined) return received[0];
+    const saved = target.preservedData as Partial<DatabaseData> | undefined;
+    const rows = this.api.blocks.getChildren(databaseId)
+      .filter((child) => child.name === 'database-row')
+      .map((child): DatabaseRow => {
+        const live: DatabaseRowData[] = [];
+
+        child.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+        const data = live[0] ?? child.preservedData as Partial<DatabaseRowData> | undefined;
+
+        return { id: child.id, position: data?.position ?? '', properties: { ...(data?.properties ?? {}) } };
+      });
+
+    return { schema: Array.isArray(saved?.schema) ? saved.schema : [], rows };
+  }
+
+  /** Read by another database of this document: this database's schema and computed rows. */
+  readRelationSource(param: { receive: (source: DatabaseSource) => void }): void {
+    param.receive({
+      schema: this.model.getSchema(),
+      rows: this.model.getOrderedRows(),
+      valueProperty: (property) => this.computedValues.valueProperty(property),
+    });
+  }
+
+  /** Opens one of this database's rows: a relation chip in another database asks for it. */
+  openRow(param: { rowId: string }): void {
+    if (this.model.getRow(param.rowId) !== undefined) {
+      this.handleRowClick(param.rowId);
     }
   }
 
@@ -615,7 +670,9 @@ export class DatabaseTool implements BlockTool {
    * so they compare equal and redraw nothing.
    */
   private readonly handleBlockChanged = (payload: unknown): void => {
-    if (this.reprojectQueued || !this.isOwnRowChange(changedBlock(payload))) {
+    const target = changedBlock(payload);
+
+    if (this.reprojectQueued || !(this.isOwnRowChange(target) || this.isRelatedChange(target))) {
       return;
     }
 
@@ -642,6 +699,21 @@ export class DatabaseTool implements BlockTool {
     return typeof target.id === 'string' && this.model.getRow(target.id) !== undefined;
   }
 
+  /**
+   * A row or the schema of a database this one relates to: its titles and
+   * values feed this database's relation chips and rollups.
+   */
+  private isRelatedChange(target: ChangedBlock | undefined): boolean {
+    const related = this.model.getSchema()
+      .flatMap((property) => (property.type === 'relation' && property.relation?.targetDocumentId === undefined ? [property.relation?.targetDatabaseId] : []))
+      .filter((id): id is string => id !== undefined && id !== this.block.id);
+
+    if (related.length === 0 || target === undefined) return false;
+    if (target.name === 'database') return typeof target.id === 'string' && related.includes(target.id);
+
+    return target.name === 'database-row' && typeof target.parentId === 'string' && related.includes(target.parentId);
+  }
+
   private reprojectRows(): void {
     if (this.boardContainer === null) {
       return;
@@ -666,7 +738,11 @@ export class DatabaseTool implements BlockTool {
       }
     }
 
-    if (retitled === null || (retitled.length > 0 && this.activeViewQueries(this.titlePropertyId()))) {
+    // A self-relation chip or a formula can show a row's title: a rename redraws them.
+    const titleShownElsewhere = this.model.getSchema().some((property) => property.type === 'formula'
+      || (property.type === 'relation' && property.relation?.targetDatabaseId === this.block.id));
+
+    if (retitled === null || (retitled.length > 0 && (titleShownElsewhere || this.activeViewQueries(this.titlePropertyId())))) {
       this.redrawWhenIdle();
 
       return;
@@ -816,10 +892,20 @@ export class DatabaseTool implements BlockTool {
 
   private deleteRowBlock(rowId: string): void {
     this.pendingDescriptions.delete(rowId);
-    const blockIndex = this.api.blocks.getBlockIndex(rowId);
+    const remove = (): void => {
+      this.unlinkDeletedRow(rowId);
+      const blockIndex = this.api.blocks.getBlockIndex(rowId);
 
-    if (blockIndex !== undefined) {
-      void this.api.blocks.delete(blockIndex);
+      if (blockIndex !== undefined) {
+        void this.api.blocks.delete(blockIndex);
+      }
+    };
+    const linked = this.model.getSchema().some((property) => property.type === 'relation');
+
+    if (linked && this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(remove);
+    } else {
+      remove();
     }
 
     this.syncRowsFromBlocks();
@@ -828,9 +914,16 @@ export class DatabaseTool implements BlockTool {
   private updateRowBlock(rowId: string, propertyChanges: Record<string, PropertyValue>): void {
     const children = this.api.blocks.getChildren(this.block.id);
     const rowBlock = children.find((child) => child.id === rowId);
+    // Formula and rollup values are computed: a write to one (a drop into a
+    // formula group, a paste) would shadow the result with stale data.
+    const stored = Object.fromEntries(Object.entries(propertyChanges).filter(([propertyId]) => {
+      const type = this.model.getProperty(propertyId)?.type;
 
-    if (rowBlock !== undefined) {
-      rowBlock.call('updateProperties', propertyChanges);
+      return type !== 'formula' && type !== 'rollup';
+    }));
+
+    if (rowBlock !== undefined && Object.keys(stored).length > 0) {
+      rowBlock.call('updateProperties', stored);
       rowBlock.dispatchChange();
     }
 
@@ -1208,7 +1301,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Conditional color: a data attribute on each matching row, card or (table) cell. */
   private paintRowColors(viewEl: HTMLElement, view: DatabaseViewConfig): void {
-    const colors = resolveRowColors(this.model.getOrderedRows(), view, this.model.getSchema());
+    const colors = resolveRowColors(this.model.getOrderedRows(), view, this.model.getValueSchema());
     const rowSelector = ':is([data-blok-database-table-row], [data-blok-database-card], [data-blok-database-list-row])';
     const paint = (rowEl: HTMLElement, color: { row?: string; cells: Record<string, string> }): void => {
       if (color.row !== undefined) rowEl.setAttribute('data-blok-database-color', color.row);
@@ -1254,6 +1347,7 @@ export class DatabaseTool implements BlockTool {
       grouped,
       titlePropertyId: titlePropId,
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
+      cellContext: this.cellContext(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         addRow: (groupKey) => {
@@ -1366,6 +1460,7 @@ export class DatabaseTool implements BlockTool {
       today,
       weekStart,
       locale,
+      cellContext: this.cellContext(),
       ...(focusDay !== undefined ? { focusDay } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
@@ -1643,7 +1738,8 @@ export class DatabaseTool implements BlockTool {
         set: (key, value) => this.api.viewState.set(this.block.id, key, value),
       },
       savedView: () => this.model.getView(this.activeViewId),
-      schema: () => localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      // Filters and sorts read a formula or rollup as its result type.
+      schema: () => localizeDatabaseSchema(this.model.getValueSchema(), this.api.i18n),
       rowCount: () => this.model.getOrderedRows().length,
       locked: () => this.model.isDatabaseLocked(),
       readOnly: () => this.readOnly,
@@ -1651,6 +1747,7 @@ export class DatabaseTool implements BlockTool {
       layouts: RENDERED_LAYOUTS,
       me: () => this.config.people?.me?.() ?? null,
       people: () => this.people ?? [],
+      relatedRows: (property) => this.relationCandidates(property),
       updateView: (changes) => this.updateActiveView(changes),
       setLayout: (type) => this.setActiveLayout(type),
       setLocked: (locked) => this.setDatabaseLocked(locked),
@@ -1857,6 +1954,7 @@ export class DatabaseTool implements BlockTool {
       ...(groups !== undefined ? { groups } : {}),
       titlePropertyId: titlePropId,
       state,
+      cellContext: this.cellContext(),
       ...(this.readOnly ? {} : { handlers: this.tableHandlers() }),
     });
 
@@ -1953,6 +2051,11 @@ export class DatabaseTool implements BlockTool {
 
   private commitTableCell(rowId: string, propertyId: string, input: PropertyValue): void {
     if (this.readOnly || this.destroyed) return;
+    if (this.model.getProperty(propertyId)?.type === 'relation') {
+      this.commitRelation(rowId, propertyId, input);
+
+      return;
+    }
     const value = this.knownOptionsOnly(propertyId, input);
 
     if (JSON.stringify(this.model.getRow(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
@@ -2086,7 +2189,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderListView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig): HTMLDivElement {
-    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    // List badges draw a formula or rollup as its result type.
+    const schema = localizeDatabaseSchema(this.model.getValueSchema(), this.api.i18n);
 
     if (groupByPropId !== undefined) {
       const options = this.shownGroupOptions(groupByPropId, viewConfig);
@@ -2740,6 +2844,12 @@ export class DatabaseTool implements BlockTool {
         cellContext: () => this.cellContext(),
         onPropertyValueChange: (rowId, propertyId, input) => {
           if (this.readOnly || this.destroyed) return;
+          if (this.model.getProperty(propertyId)?.type === 'relation') {
+            this.commitRelation(rowId, propertyId, input);
+            this.rerenderView({ keepDrawer: true });
+
+            return;
+          }
           const value = this.knownOptionsOnly(propertyId, input);
 
           // Deleting an option already emptied this row through clearRemovedOptions.
@@ -3407,6 +3517,179 @@ export class DatabaseTool implements BlockTool {
     }).catch(() => undefined);
   }
 
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+
+  /** Titles of rows in another document, from the host's `relations.resolve`. */
+  private readonly remoteTitles = new Map<string, string>();
+  private readonly remoteRequested = new Set<string>();
+
+  /** The database a relation points at: this one, another block of this document, or none. */
+  private relatedSource(property: PropertyDefinition): DatabaseSource | undefined {
+    const databaseId = property.relation?.targetDatabaseId;
+
+    if (databaseId === undefined || property.relation?.targetDocumentId !== undefined) return undefined;
+
+    return databaseId === this.block.id
+      ? { schema: this.model.getSchema(), rows: this.model.getOrderedRows() }
+      : this.readDatabaseSource(databaseId);
+  }
+
+  private static titleOf(source: DatabaseSource, row: DatabaseRow): string {
+    const titleId = source.schema.find((p) => p.type === 'title')?.id;
+    const title = titleId === undefined ? undefined : row.properties[titleId];
+
+    return typeof title === 'string' ? title : '';
+  }
+
+  private relatedTitle(property: PropertyDefinition, rowId: string): string | undefined {
+    const settings = property.relation;
+
+    if (settings?.targetDocumentId !== undefined) {
+      this.requestRemoteTitles(property, [rowId]);
+
+      return this.remoteTitles.get(rowId);
+    }
+    const source = this.relatedSource(property);
+    const row = source?.rows.find((r) => r.id === rowId);
+
+    return source === undefined || row === undefined ? undefined : DatabaseTool.titleOf(source, row);
+  }
+
+  /** Asks the host once per row for titles in another document, then redraws. */
+  private requestRemoteTitles(property: PropertyDefinition, rowIds: string[]): void {
+    const settings = property.relation;
+    const resolver = this.config.relations;
+    const missing = rowIds.filter((id) => !this.remoteRequested.has(id));
+
+    if (settings?.targetDocumentId === undefined || resolver === undefined || missing.length === 0) return;
+    missing.forEach((id) => this.remoteRequested.add(id));
+    void resolver.resolve({ documentId: settings.targetDocumentId, databaseId: settings.targetDatabaseId, rowIds: missing })
+      .then((rows) => {
+        if (this.destroyed) return;
+        rows.forEach((row) => this.remoteTitles.set(row.id, row.title));
+        this.rerenderView({ keepDrawer: true });
+      })
+      .catch(() => undefined);
+  }
+
+  private relationCandidates(property: PropertyDefinition): Array<{ id: string; title: string }> {
+    const source = this.relatedSource(property);
+
+    return (source?.rows ?? []).map((row) => ({ id: row.id, title: source === undefined ? '' : DatabaseTool.titleOf(source, row) }));
+  }
+
+  private openRelated(property: PropertyDefinition, rowId: string): void {
+    const databaseId = property.relation?.targetDatabaseId;
+
+    if (databaseId === undefined || property.relation?.targetDocumentId !== undefined) return;
+    if (databaseId === this.block.id) {
+      this.handleRowClick(rowId);
+
+      return;
+    }
+    this.api.blocks.getById(databaseId)?.call('openRow', { rowId });
+  }
+
+  /** Writes one row's relation values on another database's row block. */
+  private writeForeignRow(databaseId: string, rowId: string, changes: Record<string, PropertyValue>): void {
+    if (databaseId === this.block.id) {
+      this.updateRowBlock(rowId, changes);
+
+      return;
+    }
+    const rowBlock = this.api.blocks.getChildren(databaseId).find((child) => child.id === rowId);
+
+    if (rowBlock !== undefined) {
+      rowBlock.call('updateProperties', changes);
+      rowBlock.dispatchChange();
+    }
+  }
+
+  private storedRelationOf(databaseId: string, rowId: string, propertyId: string): PropertyValue | undefined {
+    const source = databaseId === this.block.id
+      ? { rows: this.model.getOrderedRows() }
+      : this.readDatabaseSource(databaseId);
+
+    return source?.rows.find((r) => r.id === rowId)?.properties[propertyId];
+  }
+
+  /**
+   * A relation cell's new list. Writes the row's stored ids and, in one undo
+   * step, the other side: the synced property of a two-way relation, or the
+   * row that points here on a one-way self-relation.
+   */
+  private commitRelation(rowId: string, propertyId: string, input: PropertyValue): void {
+    const property = this.model.getProperty(propertyId);
+    const row = this.model.getRow(rowId);
+    const settings = property?.relation;
+
+    if (property === undefined || row === undefined || settings === undefined) return;
+    const shown = relationIdsOf(row.computed?.[propertyId] ?? row.properties[propertyId]);
+    const next = relationIdsOf(input);
+    const added = next.filter((id) => !shown.includes(id));
+    const removed = shown.filter((id) => !next.includes(id));
+
+    if (added.length === 0 && removed.length === 0) return;
+    const stored = relationIdsOf(row.properties[propertyId]);
+    const kept = [...stored.filter((id) => !removed.includes(id)), ...added.filter((id) => !stored.includes(id))];
+    const own = (settings.limit === 1 ? kept.slice(-1) : kept).map((id) => ({ id }));
+    const target = settings.targetDatabaseId;
+    const synced = settings.twoWay === true ? settings.syncedPropertyId : undefined;
+    const write = (): void => {
+      this.updateRowBlock(rowId, { [propertyId]: own });
+      if (synced !== undefined) {
+        added.forEach((id) => this.writeForeignRow(target, id, { [synced]: addRelatedIds(this.storedRelationOf(target, id, synced), rowId, null) }));
+        removed.forEach((id) => this.writeForeignRow(target, id, { [synced]: removeRelatedIds(this.storedRelationOf(target, id, synced), rowId) }));
+      } else if (target === this.block.id) {
+        // A one-way self-relation shows both ways: drop the pointer on the other row too.
+        removed
+          .filter((id) => relationIdsOf(this.model.getRow(id)?.properties[propertyId]).includes(rowId))
+          .forEach((id) => this.updateRowBlock(id, { [propertyId]: removeRelatedIds(this.model.getRow(id)?.properties[propertyId], rowId) }));
+      }
+    };
+
+    if (this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(write);
+    } else {
+      write();
+    }
+    this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: own } });
+    if (this.cardDrawer?.openRowId === rowId) {
+      this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+    }
+  }
+
+  /**
+   * Before a row block goes: take it out of the relations that point at it
+   * from this database, so the saved JSON stays clean and one undo brings
+   * both back. Rows elsewhere that still name it are skipped on read.
+   */
+  private unlinkDeletedRow(rowId: string): void {
+    const row = this.model.getRow(rowId);
+
+    if (row === undefined || this.readOnly) return;
+    for (const property of this.model.getSchema()) {
+      const settings = property.relation;
+
+      if (property.type !== 'relation' || settings === undefined) continue;
+      const synced = settings.twoWay === true ? settings.syncedPropertyId : undefined;
+
+      if (synced !== undefined) {
+        relationIdsOf(row.properties[property.id])
+          .forEach((id) => this.writeForeignRow(settings.targetDatabaseId, id, {
+            [synced]: removeRelatedIds(this.storedRelationOf(settings.targetDatabaseId, id, synced), rowId),
+          }));
+      }
+      if (settings.targetDatabaseId === this.block.id) {
+        this.model.getOrderedRows()
+          .filter((other) => other.id !== rowId && relationIdsOf(other.properties[property.id]).includes(rowId))
+          .forEach((other) => this.updateRowBlock(other.id, { [property.id]: removeRelatedIds(other.properties[property.id], rowId) }));
+      }
+    }
+  }
+
   /** What cells need from the host: people, the current user, file uploads. */
   private cellContext(): Partial<CellContext> {
     const uploader = this.api.uploader;
@@ -3414,6 +3697,10 @@ export class DatabaseTool implements BlockTool {
     const me = this.config.people?.me?.();
 
     return {
+      valueProperty: (property) => this.computedValues.valueProperty(property),
+      relationTitle: (property, rowId) => this.relatedTitle(property, rowId),
+      relationCandidates: (property) => this.relationCandidates(property),
+      openRelated: (property, rowId) => this.openRelated(property, rowId),
       ...(this.people !== undefined ? { people: this.people } : {}),
       ...(typeof me === 'string' ? { me } : {}),
       ...(canUpload

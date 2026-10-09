@@ -784,7 +784,7 @@ export class DatabaseCardDrawer {
         const current = this.schema.find((p) => p.id === propertyId);
 
         if (slot.isConnected && current !== undefined && this.currentRow?.id === rowId) {
-          this.paintValue(slot, current, this.currentRow.properties[propertyId]);
+          this.paintValue(slot, current, readPropertyValue(this.currentRow, current));
         }
       },
     });

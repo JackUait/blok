@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import { openCellEditor } from './cells';
-import type { CellEditorHandle } from './cells';
+import type { CellContext, CellEditorHandle } from './cells';
+import { readPropertyValue } from './property-values';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 
 export interface CellRef {
@@ -63,6 +64,8 @@ export interface GridOptions {
   rows: Map<string, DatabaseRow>;
   titlePropertyId: string;
   callbacks: GridCallbacks;
+  /** Host extras for the cell editors, such as the rows a relation can pick. */
+  cellContext?: Partial<CellContext>;
 }
 
 /** The value a cleared cell takes, per type. Undefined: the cell cannot be cleared. */
@@ -77,6 +80,7 @@ export const emptyValueOf = (property: PropertyDefinition): PropertyValue | unde
     case 'multiSelect':
     case 'person':
     case 'files':
+    case 'relation':
       return [];
     case 'checkbox':
       return false;
@@ -91,6 +95,8 @@ export const emptyValueOf = (property: PropertyDefinition): PropertyValue | unde
     case 'lastEditedTime':
     case 'createdBy':
     case 'lastEditedBy':
+    case 'formula':
+    case 'rollup':
       return undefined;
     default:
       // A type from a newer client: its empty shape is unknown.
@@ -116,6 +122,7 @@ export class DatabaseTableGrid {
   private readonly rows: Map<string, DatabaseRow>;
   private readonly titlePropertyId: string;
   private readonly callbacks: GridCallbacks;
+  private readonly cellContext: Partial<CellContext>;
   private editor: CellEditorHandle | null = null;
   private destroyed = false;
   /** The key being handled while an editor closes: tells Enter and Escape from an outside press. */
@@ -130,6 +137,7 @@ export class DatabaseTableGrid {
     this.rows = options.rows;
     this.titlePropertyId = options.titlePropertyId;
     this.callbacks = options.callbacks;
+    this.cellContext = options.cellContext ?? {};
 
     this.root.addEventListener('keydown', this.handleKeydown);
     this.root.addEventListener('focusin', this.handleFocus);
@@ -204,7 +212,8 @@ export class DatabaseTableGrid {
     // Registered before the editor's own window listener, so it runs first.
     window.addEventListener('keydown', this.recordKey, true);
 
-    const handle = openCellEditor(property, row.properties[ref.propertyId], anchor, {
+    const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
+      ...this.cellContext,
       i18n: this.i18n,
       readOnly: false,
       options: property.config?.options ?? [],
@@ -223,7 +232,12 @@ export class DatabaseTableGrid {
     const row = this.rows.get(ref.rowId);
 
     if (row !== undefined) {
-      this.rows.set(ref.rowId, { ...row, properties: { ...row.properties, [ref.propertyId]: value } });
+      // A relation shows its computed list; repaint from the new value until the next redraw.
+      const computed = row.computed !== undefined && Object.hasOwn(row.computed, ref.propertyId)
+        ? { computed: { ...row.computed, [ref.propertyId]: value } }
+        : {};
+
+      this.rows.set(ref.rowId, { ...row, properties: { ...row.properties, [ref.propertyId]: value }, ...computed });
     }
     if (ref.rowId === this.state.freshRowId) {
       this.state.freshRowId = undefined;

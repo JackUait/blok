@@ -3,6 +3,8 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill } from './cells';
+import type { CellContext } from './cells';
+import { readPropertyValue } from './property-values';
 import { formatDateText, resolveLocale } from './cells/date-format';
 import { computeCalculation } from './database-calculations';
 import type { CalculationResult } from './database-calculations';
@@ -100,6 +102,8 @@ export interface DatabaseTableViewOptions {
   state?: TableState;
   handlers?: TableHandlers;
   locale?: string;
+  /** What cells need from the host: relation titles, computed result types. */
+  cellContext?: Partial<CellContext>;
 }
 
 interface Column {
@@ -250,6 +254,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       columns: this.columns.map((c) => c.property),
       rows: this.rowMap,
       titlePropertyId: this.options.titlePropertyId,
+      ...(this.options.cellContext !== undefined ? { cellContext: this.options.cellContext } : {}),
       callbacks: {
         commitCell: (rowId, propertyId, value) => this.handlers?.commitCell(rowId, propertyId, value),
         editEnded: () => this.handlers?.editEnded(),
@@ -616,7 +621,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (column === undefined || row === undefined) {
       return;
     }
-    const value = renderCellValue(column.property, row.properties[propertyId], {
+    const value = renderCellValue(column.property, readPropertyValue(row, column.property), {
+      ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: this.options.readOnly,
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
@@ -724,11 +730,20 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.handlers?.groupToggled?.(key, collapse);
   }
 
+  /** A formula or rollup as its result type, for calculations; any other property as is. */
+  private shown(property: PropertyDefinition): PropertyDefinition {
+    return this.options.cellContext?.valueProperty?.(property) ?? property;
+  }
+
+  private shownSchema(): PropertyDefinition[] {
+    return this.options.schema.map((property) => this.shown(property));
+  }
+
   // ─── Footer ───
 
   private createFooter(rows: DatabaseRow[]): HTMLElement {
     const footer = document.createElement('div');
-    const calculations = resolveCalculations(this.options.view, this.options.schema);
+    const calculations = resolveCalculations(this.options.view, this.shownSchema());
 
     footer.setAttribute('data-blok-database-table-footer', '');
     if (this.editable) {
@@ -754,7 +769,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         placeholder.textContent = this.t('tools.database.tableCalculate');
         cell.appendChild(placeholder);
       } else {
-        const result = computeCalculation(fn, rows.map((row) => row.properties[column.property.id]), column.property);
+        const result = computeCalculation(fn, rows.map((row) => readPropertyValue(row, column.property)), this.shown(column.property));
         const label = document.createElement('span');
         const value = document.createElement('span');
 
@@ -1015,9 +1030,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (property === undefined) {
       return;
     }
-    const current = resolveCalculations(this.options.view, this.options.schema).get(propertyId);
+    const current = resolveCalculations(this.options.view, this.shownSchema()).get(propertyId);
 
-    this.showMenu(anchor, calculationItems(property, current, this.options.i18n, (fn: CalculationFn | null) => {
+    this.showMenu(anchor, calculationItems(this.shown(property), current, this.options.i18n, (fn: CalculationFn | null) => {
       this.handlers?.updateView({ calculations: withCalculation(this.options.view, propertyId, fn) });
     }));
   }
@@ -1073,10 +1088,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     return headerViewItems({
       i18n: this.options.i18n,
-      property: column.property,
+      property: this.shown(column.property),
       frozenHere: frozen === index + 1,
       wrapped: column.wrap,
-      calculation: resolveCalculations(view, schema).get(propertyId),
+      calculation: resolveCalculations(view, this.shownSchema()).get(propertyId),
       onFilter: () => handlers.viewAction('filter', propertyId, anchor),
       onSort: () => handlers.viewAction('sort', propertyId, anchor),
       onGroup: () => handlers.viewAction('group', propertyId, anchor),

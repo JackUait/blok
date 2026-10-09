@@ -2,6 +2,8 @@ import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from './types';
 import { renderCellValue } from './cells';
+import type { CellContext } from './cells';
+import { readPropertyValue } from './property-values';
 import { resolveLocale, toLocalDate } from './cells/date-format';
 import {
   addDays,
@@ -48,6 +50,8 @@ export interface DatabaseCalendarViewOptions {
   weekStart: number;
   handlers?: CalendarHandlers;
   locale?: string;
+  /** What cells need from the host: relation titles, computed result types. */
+  cellContext?: Partial<CellContext>;
   /** A day to focus once drawn: keyboard navigation that crossed into a new range. */
   focusDay?: string;
 }
@@ -386,7 +390,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     el.appendChild(titleEl);
 
     for (const property of this.visibleProperties()) {
-      const cell = renderCellValue(property, row?.properties[property.id], {
+      const cell = renderCellValue(property, row === undefined ? undefined : readPropertyValue(row, property), {
+        ...this.options.cellContext,
         i18n: this.options.i18n,
         readOnly: true,
         locale: this.options.locale,

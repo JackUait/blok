@@ -224,9 +224,10 @@ export const filterPillLabel = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
   property: PropertyDefinition,
   t: Translate,
-  personName?: (id: string) => string | undefined
+  personName?: (id: string) => string | undefined,
+  rowTitle?: (id: string) => string | undefined
 ): string => {
-  const value = filterValueText(filter, property, t, personName);
+  const value = filterValueText(filter, property, t, personName, rowTitle);
 
   return value === '' ? property.name : `${property.name}: ${value}`;
 };

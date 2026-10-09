@@ -1,7 +1,6 @@
 import type { I18n } from '../../../types';
 import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
-import { readPropertyValue } from './property-values';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import { cellText, gridToClipboard, parseClipboard, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';

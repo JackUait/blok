@@ -700,7 +700,10 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  /** Opens one of this database's rows: a relation chip in another database asks for it. */
+  /**
+   * Opens one of this database's rows: a relation chip in another database
+   * asks for it, and so does a row block when find-in-page reveals a match in it.
+   */
   openRow(param: { rowId: string }): void {
     if (this.model.getRow(param.rowId) !== undefined) {
       this.handleRowClick(param.rowId);
@@ -3842,11 +3845,6 @@ export class DatabaseTool implements BlockTool {
       });
     }
   };
-
-  /** Opens a row's page; its row block calls this when find-in-page reveals a match inside it. */
-  public openRow(param: { rowId: string }): void {
-    this.handleRowClick(param.rowId);
-  }
 
   /** The active view's rows in the order it shows them, groups in board order. */
   private viewRowOrder(): DatabaseRow[] {

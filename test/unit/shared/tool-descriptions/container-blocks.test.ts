@@ -104,7 +104,7 @@ const CONTAINER_DESCRIPTIONS: Array<{
     describeTool: describeDatabaseRow,
     data: DATABASE_ROW_DATA,
     expected: {
-      summary: 'One row of a database. An optional pageId points to its separate body document.',
+      summary: 'One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead.',
       guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property.',
       summaryFields: ['title'],
     },
@@ -600,7 +600,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('3efb253659070fb961875911274927d3db2cf1804316c5431336d16f309574b1');
+      .toBe('1591e3cd10b67a25626046f5333b5ced1a627e3ecdc04d165534c1ede62864ef');
 
     const published: unknown = JSON.parse(snapshot);
 

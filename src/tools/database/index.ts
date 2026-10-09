@@ -912,7 +912,7 @@ export class DatabaseTool implements BlockTool {
       return this.renderListView(titlePropId, groupByPropId, viewConfig);
     }
 
-    return this.renderBoardView(titlePropId, groupByPropId);
+    return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
   }
 
   /**
@@ -930,9 +930,16 @@ export class DatabaseTool implements BlockTool {
     return [noValue, ...localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)];
   }
 
-  private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
+  /** Each group's rows, queried once per render. */
+  private queryGroupRows(viewConfig: DatabaseViewConfig, optionIds: string[]): Map<string, DatabaseRow[]> {
+    return new Map(optionIds.map((id) => [id, this.model.queryRows({ view: viewConfig, group: id }).rows]));
+  }
+
+  private renderBoardView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
     const options = groupByPropId !== undefined ? this.groupOptions(groupByPropId) : [];
-    const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
+    const groups = viewConfig !== undefined && groupByPropId !== undefined
+      ? this.queryGroupRows(viewConfig, options.map((o) => o.id))
+      : new Map<string, DatabaseRow[]>();
 
     this.view = new DatabaseBoardView({
       readOnly: this.readOnly,
@@ -955,7 +962,7 @@ export class DatabaseTool implements BlockTool {
 
     if (groupByPropId !== undefined) {
       const options = this.groupOptions(groupByPropId);
-      const groups = this.model.getRowsGroupedBy(groupByPropId);
+      const groups = this.queryGroupRows(viewConfig, options.map((o) => o.id));
 
       this.view = new DatabaseListView({
         readOnly: this.readOnly,
@@ -971,7 +978,7 @@ export class DatabaseTool implements BlockTool {
       this.view = new DatabaseListView({
         readOnly: this.readOnly,
         i18n: this.api.i18n,
-        rows: this.model.getOrderedRows(),
+        rows: this.model.queryRows({ view: viewConfig }).rows,
         titlePropertyId: titlePropId,
         schema,
         visiblePropertyIds: viewConfig.visibleProperties,
@@ -1240,12 +1247,13 @@ export class DatabaseTool implements BlockTool {
     const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
     const descriptionPropId = descriptionProp?.id;
 
-    if (isList) {
+    // GATED ON D7: a sorted view has no manual order to drag into.
+    if (isList && (viewConfig?.sorts.length ?? 0) === 0) {
       this.listRowDrag = new DatabaseListRowDrag({
         wrapper: boardEl,
         onDrop: (result) => this.handleListRowDrop(result),
       });
-    } else {
+    } else if (!isList) {
       this.cardDrag = new DatabaseCardDrag({
         wrapper: boardEl,
         onDrop: (result) => this.handleRowDrop(result),
@@ -1476,6 +1484,18 @@ export class DatabaseTool implements BlockTool {
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined) {
+      return;
+    }
+
+    // GATED ON D7: neighbours arrive in sort order, not key order, so
+    // positionBetween would throw. Only the group value may change.
+    if (viewConfig !== undefined && viewConfig.sorts.length > 0) {
+      if (this.model.getRow(rowId)?.properties[groupByPropId] !== toOptionId) {
+        this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
+        this.rerenderView();
+        this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
+      }
+
       return;
     }
 

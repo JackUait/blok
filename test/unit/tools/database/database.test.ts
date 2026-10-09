@@ -3571,4 +3571,137 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
   });
+
+  describe('saved filters and sorts apply to the rendered view', () => {
+    const titlesIn = (element: HTMLElement, attr: string): string[] =>
+      queryAllByData(element, attr).map((el) => el.textContent ?? '');
+
+    it('hides a card that a saved filter excludes, and keeps every column', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-keep', properties: { 'prop-title': 'Keep me', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-drop', properties: { 'prop-title': 'Drop me', 'prop-status': 'opt-todo' }, position: 'a1' }),
+      ];
+      const data = makeDefaultData({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
+          filters: [{ propertyId: 'prop-title', operator: 'contains', value: 'keep' }] }],
+      });
+      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      expect(queryByData(element, 'data-row-id', 'row-drop')).toBeNull();
+      expect(queryByData(element, 'data-row-id', 'row-keep')).not.toBeNull();
+      // 3 options plus the no-value column.
+      expect(queryAllByData(element, 'data-blok-database-column')).toHaveLength(4);
+    });
+
+    it('orders list rows by a saved sort instead of by position', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-c', properties: { 'prop-title': 'Cherry' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'Apple' }, position: 'a1' }),
+        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'Banana' }, position: 'a2' }),
+      ];
+      const data = makeDefaultData({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [],
+          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
+        activeViewId: 'view-list',
+      });
+      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      expect(titlesIn(element, 'data-blok-database-list-row-title')).toEqual(['Apple', 'Banana', 'Cherry']);
+    });
+
+    it('still clears the group of a row a filter hides when its column is deleted', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-shown', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-hidden', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-todo' }, position: 'a1' }),
+      ];
+      const data = makeDefaultData({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
+          filters: [{ propertyId: 'prop-title', operator: 'equals', value: 'shown' }] }],
+      });
+      const options = createDatabaseOptions(data, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      queryAllByData(element, 'data-blok-database-delete-column')
+        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!
+        .click();
+
+      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
+      expect(options.api.blocks.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drag in a sorted view (GATED ON D7)', () => {
+    const sortedBoard = (): { tool: DatabaseTool; childBlocks: BlockAPI[] } => {
+      // Sort order (A, B) is the reverse of position order (B at a0, A at a1).
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-status': 'opt-todo' }, position: 'a1' }),
+        createMockRowBlock({ id: 'row-x', properties: { 'prop-title': 'X', 'prop-status': 'opt-todo' }, position: 'a2' }),
+      ];
+      const data = makeDefaultData({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [],
+          sorts: [{ propertyId: 'prop-title', direction: 'asc' }] }],
+      });
+      const tool = new DatabaseTool(createDatabaseOptions(data, {}, { childBlocks }));
+
+      tool.render();
+      tool.rendered();
+
+      return { tool, childBlocks };
+    };
+
+    const dropCard = (tool: DatabaseTool, result: CardDragResult): void => {
+      const cardDrag = (tool as unknown as { cardDrag: DatabaseCardDrag }).cardDrag;
+
+      (cardDrag as unknown as { onDrop: (r: CardDragResult) => void }).onDrop(result);
+    };
+
+    const callsNamed = (block: BlockAPI, name: string): unknown[][] =>
+      (block.call as ReturnType<typeof vi.fn>).mock.calls.filter((args) => args[0] === name);
+
+    it('ignores a reorder inside the same column', () => {
+      const { tool, childBlocks } = sortedBoard();
+      const rowX = childBlocks[2];
+
+      // Neighbours arrive in sort order (A then B), so their keys are out of order.
+      expect(() => dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' })).not.toThrow();
+      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
+    });
+
+    it('moves a card to another column by its group value only', () => {
+      const { tool, childBlocks } = sortedBoard();
+      const rowX = childBlocks[2];
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-doing', beforeRowId: null, afterRowId: null });
+
+      expect(callsNamed(rowX, 'updateProperties')).toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
+      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
+    });
+
+    it('turns list row drag off while the list is sorted', () => {
+      const childBlocks = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One' }, position: 'a0' })];
+      const listView = (sorts: DatabaseViewConfig['sorts']): Partial<DatabaseData> => ({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', filters: [], visibleProperties: [], sorts }],
+        activeViewId: 'view-list',
+      });
+      const sorted = new DatabaseTool(createDatabaseOptions(listView([{ propertyId: 'prop-title', direction: 'asc' }]), {}, { childBlocks }));
+      const unsorted = new DatabaseTool(createDatabaseOptions(listView([]), {}, { childBlocks }));
+
+      sorted.render();
+      sorted.rendered();
+      unsorted.render();
+      unsorted.rendered();
+
+      expect((sorted as unknown as { listRowDrag: unknown }).listRowDrag).toBeNull();
+      expect((unsorted as unknown as { listRowDrag: unknown }).listRowDrag).not.toBeNull();
+    });
+  });
 });

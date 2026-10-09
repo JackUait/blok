@@ -12,6 +12,8 @@ import type {
   ViewType,
 } from './types';
 import { DATABASE_DEFAULT_TEXT } from './database-localization';
+import { queryGroups, queryRows } from './database-query';
+import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
 const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
@@ -121,6 +123,27 @@ export class DatabaseModel {
       }
     }
     return groups;
+  }
+
+  /** The groups a row belongs to under `propertyId`. The query engine groups only through this. */
+  groupKeysOf(propertyId: string): (row: DatabaseRow) => string[] {
+    return (row) => this.toGroupKeys(row.properties[propertyId]);
+  }
+
+  queryRows(request: QueryRowsRequest): QueryRowsResult {
+    return queryRows(this.querySource(request.view), request);
+  }
+
+  queryGroups(view: DatabaseViewConfig): GroupCount[] {
+    return queryGroups(this.querySource(view), view);
+  }
+
+  private querySource(view: DatabaseViewConfig): QuerySource {
+    return {
+      schema: this.schema,
+      rows: this.rows,
+      ...(view.groupBy !== undefined ? { groupKeysOf: this.groupKeysOf(view.groupBy) } : {}),
+    };
   }
 
   getSelectOptions(propertyId: string): SelectOption[] {

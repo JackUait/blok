@@ -189,6 +189,19 @@ describe('database view settings — two peers editing one view', () => {
     expect(viewsOf(storeB)[0].tableProperties).toEqual(viewsOf(storeA)[0].tableProperties);
   });
 
+  it('keeps both table panel columns on a table view switched to a timeline', () => {
+    const [storeA, storeB] = seed(bornView());
+
+    edit(storeA, () => ({ type: 'timeline', tableProperties: [] }));
+    sync(storeA, storeB);
+    edit(storeA, (view) => ({ tableProperties: [...(view.tableProperties ?? []), { id: 'p-status', visible: true }] }));
+    edit(storeB, (view) => ({ tableProperties: [...(view.tableProperties ?? []), { id: 'p-due', visible: true }] }));
+    sync(storeA, storeB);
+
+    expect((viewsOf(storeA)[0].tableProperties ?? []).map((p) => p.id).sort()).toEqual(['p-due', 'p-status']);
+    expect(viewsOf(storeB)[0].tableProperties).toEqual(viewsOf(storeA)[0].tableProperties);
+  });
+
   // Known gap: a view saved before `properties` existed has no key to merge
   // into, so two first writes race on creating it.
   it.fails('keeps both widths on a view written before properties existed', () => {

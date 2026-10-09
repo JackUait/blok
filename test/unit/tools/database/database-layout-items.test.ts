@@ -141,6 +141,17 @@ describe('database layout items', () => {
     });
   });
   describe('timeline', () => {
+    it('names every row and choice, so the settings panel can show them', () => {
+      const names = (items: PopoverItemParams[]): unknown[] => items.flatMap((item) => {
+        const record = item as unknown as { name?: unknown; children?: { items: PopoverItemParams[] } };
+
+        return [record.name, ...(record.children !== undefined ? names(record.children.items) : [])];
+      });
+
+      expect(names(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, vi.fn())).every((name) => typeof name === 'string' && name !== '')).toBe(true);
+      expect(names(boardLayoutItems(view({ type: 'board' }), schema, i18n, vi.fn())).every((name) => typeof name === 'string' && name !== '')).toBe(true);
+    });
+
     it('shows the timeline by a date property, the current one marked', () => {
       const update = vi.fn();
       const showBy = find(flat(timelineLayoutItems(view({ type: 'timeline', timelineBy: 'p-start' }), schema, i18n, update)), 'tools.database.timelineShowBy');

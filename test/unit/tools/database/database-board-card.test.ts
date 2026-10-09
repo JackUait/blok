@@ -128,6 +128,7 @@ describe('DatabaseBoardView card parity', () => {
         getRows: (id) => (id === 'o1' ? [{ id: 'r9', position: 'a0', properties: { title: 'X', files: 'javascript:alert(1)' } }] : []),
       });
 
+      expect(card(board, 'r9').querySelector('[data-blok-database-card-preview]')?.hasAttribute('data-empty')).toBe(true);
       expect(card(board, 'r9').querySelector('[data-blok-database-card-image]')).toBeNull();
     });
 

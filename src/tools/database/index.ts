@@ -1689,7 +1689,10 @@ export class DatabaseTool implements BlockTool {
       : undefined;
 
     if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return;
-    this.updateActiveView({ type, ...(groupBy !== undefined ? { groupBy } : {}) });
+    // Born empty with the switch: two peers adding the first column would race to create the key.
+    const tableProperties = type === 'timeline' && !Array.isArray(view.tableProperties) ? { tableProperties: [] } : {};
+
+    this.updateActiveView({ type, ...(groupBy !== undefined ? { groupBy } : {}), ...tableProperties });
     this.rebuildTabBar();
   }
 
@@ -3083,6 +3086,13 @@ export class DatabaseTool implements BlockTool {
     const boardEl = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
 
     if (boardEl === null || boardEl === undefined) {
+      return;
+    }
+
+    // Lanes repeat every column; a redraw keeps them all in the new order.
+    if (boardEl.hasAttribute('data-sub-grouped')) {
+      this.rerenderView({ keepDrawer: true });
+
       return;
     }
 

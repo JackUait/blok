@@ -5542,6 +5542,19 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      it('gives a view switched to a timeline an empty table panel list, so two first columns merge', () => {
+        const options = createDatabaseOptions({ schema: dateSchema, views: [{ ...timelineView, type: 'table' }], activeViewId: 'view-tl' }, {}, { childBlocks: rowsWithDates() });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+        const internals = tool as unknown as { setActiveLayout: (type: string) => void };
+
+        internals.setActiveLayout('timeline');
+
+        expect(tool.save(element).views[0]).toMatchObject({ type: 'timeline', tableProperties: [] });
+
+        tool.destroy();
+      });
+
       it('validates a timeline view without groupBy', () => {
         const tool = new DatabaseTool(createDatabaseOptions());
 
@@ -5632,6 +5645,19 @@ describe('DatabaseTool — board card parity', () => {
     expect(lanes[0].querySelectorAll('[data-blok-database-column]')).toHaveLength(lanes[1].querySelectorAll('[data-blok-database-column]').length);
     expect([...lanes[0].querySelectorAll('[data-blok-database-card]')].map((c) => c.getAttribute('data-row-id'))).toEqual(['row-1']);
     expect([...lanes[1].querySelectorAll('[data-blok-database-card]')].map((c) => c.getAttribute('data-row-id'))).toEqual(['row-2']);
+
+    tool.destroy();
+  });
+
+  it('keeps every lane\'s columns in the new order after a column drag', () => {
+    const { tool, element } = mount({ subGroupBy: 'prop-team' });
+    const internals = tool as unknown as { handleGroupDrop: (result: { optionId: string; beforeOptionId: string | null; afterOptionId: string | null }) => void };
+
+    internals.handleGroupDrop({ optionId: 'opt-done', beforeOptionId: 'opt-todo', afterOptionId: null });
+
+    for (const lane of queryAllByData(element, 'data-blok-database-board-lane')) {
+      expect([...lane.querySelectorAll('[data-blok-database-column]')].slice(0, 2).map((c) => c.getAttribute('data-option-id'))).toEqual(['opt-done', 'opt-todo']);
+    }
 
     tool.destroy();
   });

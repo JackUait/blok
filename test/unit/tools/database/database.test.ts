@@ -2987,6 +2987,78 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('read-only after a rerender', () => {
+    const makeBoardRows = (): BlockAPI[] => [
+      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+    ];
+
+    const getCard = (element: HTMLElement): HTMLElement => {
+      const card = queryByData(element, 'data-row-id', 'row-1');
+
+      if (card === null) {
+        throw new Error('card missing');
+      }
+
+      return card;
+    };
+
+    it('entering read-only leaves cards inert: no drag start, no drawer', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: makeBoardRows() }));
+      const element = tool.render();
+
+      tool.rendered();
+      tool.setReadOnly(true);
+
+      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
+
+      getCard(element).click();
+
+      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
+      expect(notPrevented).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('rows that arrive after a read-only boot stay inert: no drag start, no drawer', () => {
+      const options = createDatabaseOptions({}, {}, { readOnly: true });
+
+      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce([])
+        .mockReturnValue(makeBoardRows());
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
+
+      getCard(element).click();
+
+      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
+      expect(notPrevented).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('leaving read-only wires cards again', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true, childBlocks: makeBoardRows() }));
+      const element = tool.render();
+
+      tool.rendered();
+      tool.setReadOnly(false);
+
+      const notPrevented = fireEvent.pointerDown(getCard(element), { clientX: 0, clientY: 0 });
+
+      getCard(element).click();
+
+      expect(queryByData(element, 'data-blok-database-drawer')).not.toBeNull();
+      expect(notPrevented).toBe(false);
+
+      tool.destroy();
+    });
+  });
+
   describe('getToolbarAnchorElement', () => {
     it('returns the database title element so the toolbar vertically centers on the title line', () => {
       const tool = new DatabaseTool(createDatabaseOptions());

@@ -909,5 +909,92 @@ describe('DatabaseTabBar', () => {
       expect(el.querySelector('[data-blok-database-add-view]')).not.toBeNull();
       el.remove();
     });
+
+    const twoViews = (): DatabaseViewConfig[] => [
+      makeView({ id: 'v1', position: 'a0' }),
+      makeView({ id: 'v2', position: 'a1' }),
+    ];
+
+    // The tool flips a live bar with setReadOnly, so both ways must hold.
+    const readOnlyBars: Array<[string, () => DatabaseTabBar]> = [
+      ['constructed read-only', () => new DatabaseTabBar({
+        views: twoViews(),
+        activeViewId: 'v1',
+        onTabClick,
+        onAddView,
+        onRename,
+        onDuplicate,
+        onDelete,
+        onReorder,
+        readOnly: true,
+      })],
+      ['switched to read-only', () => {
+        const bar = createTabBar(twoViews(), 'v1');
+
+        bar.setReadOnly(true);
+
+        return bar;
+      }],
+    ];
+
+    it.each(readOnlyBars)('%s: right-click opens no tab menu', (_label, makeBar) => {
+      const bar = makeBar();
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
+      bar.destroy();
+      el.remove();
+    });
+
+    it.each(readOnlyBars)('%s: double-click opens no tab menu', (_label, makeBar) => {
+      const bar = makeBar();
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
+      bar.destroy();
+      el.remove();
+    });
+
+    it.each(readOnlyBars)('%s: dragging a tab does not reorder', (_label, makeBar) => {
+      const bar = makeBar();
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 15 }));
+      expect(onReorder).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-database-tab-ghost]')).toBeNull();
+      bar.destroy();
+      el.remove();
+    });
+
+    it.each(readOnlyBars)('%s: clicking a tab still switches views', (_label, makeBar) => {
+      const bar = makeBar();
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v2"]') as HTMLElement;
+      tab.click();
+      expect(onTabClick).toHaveBeenCalledWith('v2');
+      bar.destroy();
+      el.remove();
+    });
+
+    it('leaving read-only brings the tab menu back', () => {
+      const bar = createTabBar(twoViews(), 'v1');
+      bar.setReadOnly(true);
+      bar.setReadOnly(false);
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      expect(document.querySelector('[data-blok-database-tab-context]')).not.toBeNull();
+      bar.destroy();
+      el.remove();
+    });
   });
 });

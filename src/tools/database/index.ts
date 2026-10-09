@@ -1771,7 +1771,11 @@ export class DatabaseTool implements BlockTool {
       newBoardArea.scrollLeft = savedScrollLeft;
     }
 
-    this.attachViewListeners(newBoardWrapper);
-    this.initSubsystems(newBoardWrapper);
+    // Same gate as render() and switchView(): rows arriving after boot,
+    // undo/peer reprojection and setReadOnly all rerender through here.
+    if (!this.readOnly) {
+      this.attachViewListeners(newBoardWrapper);
+      this.initSubsystems(newBoardWrapper);
+    }
   }
 }

@@ -148,7 +148,11 @@ export class DatabaseTabBar {
       this.activateTab(viewId, false);
     });
 
+    // Read-only is read at event time: setReadOnly flips a live bar.
     bar.addEventListener('contextmenu', (e: MouseEvent) => {
+      if (this.readOnly) {
+        return;
+      }
       const target = e.target as HTMLElement;
       const tab = target.closest('[data-blok-database-tab]');
       if (!(tab instanceof HTMLElement)) {
@@ -163,6 +167,9 @@ export class DatabaseTabBar {
     });
 
     bar.addEventListener('dblclick', (e: MouseEvent) => {
+      if (this.readOnly) {
+        return;
+      }
       const target = e.target as HTMLElement;
       const tab = target.closest('[data-blok-database-tab]');
       if (!(tab instanceof HTMLElement)) {
@@ -176,6 +183,9 @@ export class DatabaseTabBar {
     });
 
     bar.addEventListener('pointerdown', (e) => {
+      if (this.readOnly) {
+        return;
+      }
       const target = e.target as HTMLElement;
       const tab = target.closest<HTMLElement>('[data-blok-database-tab]');
       if (tab === null) return;

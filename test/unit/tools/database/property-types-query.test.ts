@@ -331,3 +331,69 @@ describe('property types — formulas', () => {
     expect(await run('dateBetween(prop("Created"), prop("Created"), "days")', r)).toBe(0);
   });
 });
+
+describe('unique id assignment', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const idOf = (rows: DatabaseRow[], id: string): PropertyValue | undefined => rows.find((r) => r.id === id)?.properties.uid;
+
+  it('numbers rows without an id in creation order, after the highest stored one', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const rows = [
+      row('c', 'a2', {}, { createdAt: 30 }),
+      row('a', 'a0', { uid: 4 }, { createdAt: 10 }),
+      row('b', 'a1', {}, { createdAt: 20 }),
+    ];
+    const out = assignUniqueIds(rows, 'uid');
+
+    expect([idOf(out, 'a'), idOf(out, 'b'), idOf(out, 'c')]).toEqual([4, 5, 6]);
+  });
+
+  it('numbers rows made before creation stamps existed first, by position', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const out = assignUniqueIds([row('new', 'a0', {}, { createdAt: 5 }), row('old2', 'a2'), row('old1', 'a1')], 'uid');
+
+    expect([idOf(out, 'old1'), idOf(out, 'old2'), idOf(out, 'new')]).toEqual([1, 2, 3]);
+  });
+
+  it('gives the later of two rows two peers numbered alike the next free number, the same on every peer', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const rows = [
+      row('mine', 'a1', { uid: 5 }, { createdAt: 200 }),
+      row('theirs', 'a2', { uid: 5 }, { createdAt: 100 }),
+      row('x', 'a0', { uid: 4 }, { createdAt: 50 }),
+    ];
+    const a = assignUniqueIds(rows, 'uid');
+    const b = assignUniqueIds([...rows].reverse(), 'uid');
+
+    expect([idOf(a, 'theirs'), idOf(a, 'mine')]).toEqual([5, 6]);
+    expect([idOf(b, 'theirs'), idOf(b, 'mine')]).toEqual([5, 6]);
+  });
+
+  it('breaks a creation-time tie by row id, so peers agree', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const out = assignUniqueIds([row('zz', 'a0', { uid: 1 }, { createdAt: 9 }), row('aa', 'a0', { uid: 1 }, { createdAt: 9 })], 'uid');
+
+    expect([idOf(out, 'aa'), idOf(out, 'zz')]).toEqual([1, 2]);
+  });
+
+  it('keeps every stored number after a row is deleted', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const out = assignUniqueIds([row('a', 'a0', { uid: 1 }, { createdAt: 1 }), row('c', 'a2', { uid: 3 }, { createdAt: 3 })], 'uid');
+
+    expect([idOf(out, 'a'), idOf(out, 'c')]).toEqual([1, 3]);
+  });
+
+  it('returns the same row objects when nothing changes', async () => {
+    const { assignUniqueIds } = await import('../../../../src/tools/database/property-values');
+    const rows = [row('a', 'a0', { uid: 1 }, { createdAt: 1 })];
+
+    expect(assignUniqueIds(rows, 'uid')[0]).toBe(rows[0]);
+  });
+});

@@ -4582,3 +4582,66 @@ describe('DatabaseTool', () => {
     });
   });
 });
+
+describe('DatabaseTool — row metadata and unique IDs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const idSchema: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-id', name: 'Code', type: 'uniqueId', position: 'a1', uniqueId: { prefix: 'T' } },
+  ];
+
+  const stampedRow = (id: string, position: string, createdAt: number, properties: Record<string, unknown> = {}): BlockAPI => {
+    const block = createMockRowBlock({ id, position, properties: { 'prop-title': id, ...properties } });
+
+    return Object.assign(block, { createdAt, createdBy: 'u1', lastEditedAt: createdAt + 1, lastEditedBy: 'u2' });
+  };
+
+  it('reads each row block\'s creation and edit metadata', () => {
+    const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [stampedRow('r1', 'a0', 100)] }));
+
+    tool.render();
+    const model = (tool as unknown as { model: DatabaseModel }).model;
+
+    expect(model.getRow('r1')?.meta).toEqual({ createdAt: 100, createdBy: 'u1', lastEditedAt: 101, lastEditedBy: 'u2' });
+  });
+
+  it('numbers rows in creation order and stores each number as a derived write', () => {
+    const first = stampedRow('r1', 'a1', 100);
+    const second = stampedRow('r2', 'a0', 200);
+    const tool = new DatabaseTool(createDatabaseOptions({ schema: idSchema }, {}, { childBlocks: [second, first] }));
+
+    tool.render();
+
+    expect(first.call).toHaveBeenCalledWith('updateProperties', { 'prop-id': 1 });
+    expect(second.call).toHaveBeenCalledWith('updateProperties', { 'prop-id': 2 });
+    expect(first.dispatchChange).toHaveBeenCalledWith({ derived: true });
+  });
+
+  it('writes nothing for a row that already holds its number', () => {
+    const row = stampedRow('r1', 'a0', 100, { 'prop-id': 1 });
+    const tool = new DatabaseTool(createDatabaseOptions({ schema: idSchema }, {}, { childBlocks: [row] }));
+
+    tool.render();
+
+    expect(row.call).not.toHaveBeenCalledWith('updateProperties', expect.anything());
+    expect(row.dispatchChange).not.toHaveBeenCalled();
+  });
+
+  it('shows the computed number read-only, without writing', () => {
+    const row = stampedRow('r1', 'a0', 100);
+    const tool = new DatabaseTool(createDatabaseOptions({ schema: idSchema }, {}, { childBlocks: [row], readOnly: true }));
+
+    tool.render();
+    const model = (tool as unknown as { model: DatabaseModel }).model;
+
+    expect(model.getRow('r1')?.properties['prop-id']).toBe(1);
+    expect(row.call).not.toHaveBeenCalledWith('updateProperties', expect.anything());
+  });
+});

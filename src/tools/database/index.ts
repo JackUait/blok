@@ -1,8 +1,8 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyType, PropertyValue } from './types';
-import { personIdsOf } from './property-values';
+import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, DatabaseRowMeta, ViewType, SelectOption, DatabaseViewConfig, PropertyType, PropertyValue } from './types';
+import { assignUniqueIds, personIdsOf } from './property-values';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { newRowValues } from './database-query';
 import { DatabaseBoardView } from './database-board-view';
@@ -76,6 +76,14 @@ const unknownKeys = (data: DatabaseData | undefined): Record<string, unknown> =>
  * Orchestrates a single DatabaseModel (schema + rows + view configs), DatabaseView (DOM),
  * DatabaseBackendSync (adapter), and a DatabaseTabBar for view switching.
  */
+/** A row block's creation and edit metadata, without absent fields. */
+const rowMetaOf = (child: BlockAPI): DatabaseRowMeta => ({
+  ...(typeof child.createdAt === 'number' ? { createdAt: child.createdAt } : {}),
+  ...(typeof child.createdBy === 'string' ? { createdBy: child.createdBy } : {}),
+  ...(typeof child.lastEditedAt === 'number' ? { lastEditedAt: child.lastEditedAt } : {}),
+  ...(typeof child.lastEditedBy === 'string' ? { lastEditedBy: child.lastEditedBy } : {}),
+});
+
 export class DatabaseTool implements BlockTool {
   public static describe = describeDatabase;
 
@@ -461,14 +469,43 @@ export class DatabaseTool implements BlockTool {
           }
         }
 
+        const meta = rowMetaOf(child);
+
         return {
           id: child.id,
           position: rowData?.position ?? '',
           properties,
           ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
+          ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });
-    this.model.setRows(rows);
+    const numbered = this.model.getSchema()
+      .filter((property) => property.type === 'uniqueId')
+      .reduce((acc, property) => assignUniqueIds(acc, property.id), rows);
+
+    this.model.setRows(numbered);
+    if (!this.readOnly) {
+      this.storeUniqueIds(rows, numbered, children);
+    }
+  }
+
+  /**
+   * Store the IDs `assignUniqueIds` worked out. Derived: every peer computes
+   * the same numbers, so this is not anyone's edit and not an undo step.
+   */
+  private storeUniqueIds(before: DatabaseRow[], after: DatabaseRow[], children: BlockAPI[]): void {
+    const idProperties = this.model.getSchema().filter((property) => property.type === 'uniqueId').map((property) => property.id);
+
+    after.forEach((row, index) => {
+      const changes = Object.fromEntries(idProperties
+        .filter((id) => before[index]?.properties[id] !== row.properties[id])
+        .map((id) => [id, row.properties[id]]));
+      const child = children.find((block) => block.id === row.id);
+
+      if (Object.keys(changes).length === 0 || child === undefined) return;
+      child.call('updateProperties', changes);
+      child.dispatchChange({ derived: true });
+    });
   }
 
   /**

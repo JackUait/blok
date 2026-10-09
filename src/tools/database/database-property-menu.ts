@@ -8,6 +8,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
+import { ROLLUP_FUNCTIONS, rollupFunctionsFor, rollupResultType } from './rollup';
 import type {
   DateDisplay,
   DateFormat,
@@ -17,6 +18,7 @@ import type {
   PropertyDefinition,
   PropertySettingsV2,
   PropertyType,
+  RelationSettings,
   TimeFormat,
 } from './types';
 
@@ -26,7 +28,9 @@ export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'd
 const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'displayAs', 'changeType']);
 
 /** Types whose "Edit property" panel holds settings Blok has. */
-const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>(['number', 'date', 'createdTime', 'lastEditedTime', 'uniqueId']);
+const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
+  'number', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula',
+]);
 
 /**
  * The property-level rows of a column header menu, per type, in Notion's
@@ -41,6 +45,8 @@ export const propertyMenuEntries = (property: PropertyDefinition): PropertyMenuE
   }
 
   const isId = property.type === 'uniqueId';
+  // research/08: a relation's header menu has no Duplicate.
+  const noDuplicate = isId || property.type === 'relation';
 
   return [
     ...(EDITABLE_SETTINGS.has(property.type) ? ['editProperty' as const] : []),
@@ -48,7 +54,7 @@ export const propertyMenuEntries = (property: PropertyDefinition): PropertyMenuE
     ...(isId ? [] : ['changeType' as const]),
     'description',
     'visibility',
-    ...(isId ? [] : ['duplicate' as const]),
+    ...(noDuplicate ? [] : ['duplicate' as const]),
     'delete',
   ];
 };
@@ -63,10 +69,25 @@ export interface PropertyMenuCallbacks {
   onClose?: () => void;
 }
 
+/** What the formula, relation and rollup settings ask of the database. */
+export interface ComputedMenuHost {
+  /** This database's schema. */
+  schema: () => PropertyDefinition[];
+  /** Database blocks a relation can point at, this one included. */
+  databases: () => Array<{ id: string; title: string }>;
+  /** The schema of a database in this document. */
+  targetSchema: (databaseId: string) => PropertyDefinition[];
+  onEditFormula: (propertyId: string) => void;
+  /** Turns a relation's mirroring property on the target database on or off. */
+  onSetTwoWay: (propertyId: string, twoWay: boolean) => void;
+}
+
 export interface PropertyMenuOptions extends PropertyMenuCallbacks {
   i18n: I18n;
   /** Offer Person in Change type. */
   hasPeople: boolean;
+  /** Without it, formula, relation and rollup show no settings. */
+  computed?: ComputedMenuHost;
 }
 
 const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
@@ -83,6 +104,8 @@ const timeZones = (): string[] => {
     return [];
   }
 };
+
+const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 
 /** A copy of the settings with one key left out. */
 const without = <T extends NumberDisplay | DateDisplay, K extends keyof T>(value: T, key: K): Omit<T, K> =>
@@ -211,6 +234,10 @@ export class DatabasePropertyMenu {
 
     switch (entry) {
       case 'editProperty':
+        if (property.type === 'formula') {
+          return { name: entry, title: this.t('tools.database.editProperty'), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(id) };
+        }
+
         return { name: entry, title: this.t('tools.database.editProperty'), icon: IconPencil, children: { items: this.editItems(property, update) } };
       case 'displayAs': {
         const status = property.status;
@@ -287,6 +314,107 @@ export class DatabasePropertyMenu {
     }
   }
 
+  /** "Related to", "Limit" and the two-way toggle of research/08's "New relation" panel. */
+  private relationItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
+    const host = this.options.computed;
+    const settings = property.relation ?? { targetDatabaseId: '' };
+    const limit = settings.limit === 1 ? 'one' : 'none';
+
+    return [
+      {
+        name: 'relatedTo',
+        title: this.t('tools.database.relationRelatedTo'),
+        children: {
+          items: (host?.databases() ?? []).map((database) => ({
+            name: `relatedTo-${database.id}`,
+            title: database.title === '' ? this.t('tools.database.relationUntitledDatabase') : database.title,
+            isActive: settings.targetDatabaseId === database.id,
+            closeOnActivate: true,
+            // A new target starts one-way: the old mirror belongs to the old target.
+            onActivate: () => update({ relation: { targetDatabaseId: database.id } }),
+          })),
+        },
+      },
+      {
+        name: 'limit',
+        title: this.t('tools.database.relationLimit'),
+        children: {
+          items: (['none', 'one'] as const).map((choice) => ({
+            name: `limit-${choice}`,
+            title: this.t(choice === 'one' ? 'tools.database.relationLimitOne' : 'tools.database.relationLimitNone'),
+            isActive: limit === choice,
+            closeOnActivate: true,
+            onActivate: () => update({ relation: choice === 'one' ? { ...settings, limit: 1 } : withoutLimit(settings) }),
+          })),
+        },
+      },
+      {
+        name: 'twoWay',
+        title: this.t('tools.database.relationTwoWay'),
+        isActive: settings.twoWay === true,
+        closeOnActivate: true,
+        onActivate: () => host?.onSetTwoWay(property.id, settings.twoWay !== true),
+      },
+    ];
+  }
+
+  /** Relation › Property › Calculate (H-rr), then the number format when the result is a number. */
+  private rollupItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
+    const host = this.options.computed;
+    const settings = property.rollup ?? { relationPropertyId: '', targetPropertyId: '', function: 'show_original' as const };
+    const relations = (host?.schema() ?? []).filter((p) => p.type === 'relation');
+    const relation = relations.find((p) => p.id === settings.relationPropertyId);
+    const targets = relation?.relation === undefined ? [] : (host?.targetSchema(relation.relation.targetDatabaseId) ?? []);
+    const target = targets.find((p) => p.id === settings.targetPropertyId);
+    const set = (patch: Partial<typeof settings>): void => update({ rollup: { ...settings, ...patch } });
+
+    return [
+      {
+        name: 'rollupRelation',
+        title: this.t('tools.database.rollupRelation'),
+        children: {
+          items: relations.map((p) => ({
+            name: `rollupRelation-${p.id}`,
+            title: p.name,
+            isActive: p.id === settings.relationPropertyId,
+            closeOnActivate: true,
+            onActivate: () => set({ relationPropertyId: p.id }),
+          })),
+        },
+      },
+      {
+        name: 'rollupProperty',
+        title: this.t('tools.database.rollupProperty'),
+        children: {
+          // H-rr: a rollup of a rollup is not offered.
+          items: targets.filter((p) => p.type !== 'rollup').map((p) => ({
+            name: `rollupProperty-${p.id}`,
+            title: p.name,
+            isActive: p.id === settings.targetPropertyId,
+            closeOnActivate: true,
+            onActivate: () => set({ targetPropertyId: p.id }),
+          })),
+        },
+      },
+      {
+        name: 'rollupFunction',
+        title: this.t('tools.database.rollupFunction'),
+        children: {
+          items: (target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target)).map((fn) => ({
+            name: `rollupFunction-${fn}`,
+            title: this.t(`tools.database.rollupFn.${fn}`),
+            isActive: fn === settings.function,
+            closeOnActivate: true,
+            onActivate: () => set({ function: fn }),
+          })),
+        },
+      },
+      ...(target !== undefined && rollupResultType(settings.function, target).type === 'number'
+        ? this.numberItems(property.number ?? {}, (number) => update({ number }))
+        : []),
+    ];
+  }
+
   private descriptionField(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
     const area = document.createElement('textarea');
 
@@ -306,6 +434,12 @@ export class DatabasePropertyMenu {
   }
 
   private editItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
+    if (property.type === 'relation') {
+      return this.relationItems(property, update);
+    }
+    if (property.type === 'rollup') {
+      return this.rollupItems(property, update);
+    }
     if (property.type === 'number') {
       return this.numberItems(property.number ?? {}, (number) => update({ number }));
     }

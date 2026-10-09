@@ -1946,6 +1946,7 @@
 }
 
 [data-blok-database-person-option][aria-selected="true"],
+[data-blok-database-relation-option][aria-selected="true"],
 [data-blok-database-file-row] {
   color: var(--blok-text-primary);
 }
@@ -2084,6 +2085,7 @@
 /* A selected option shows a check mark only: no fill, primary ink (no blue selected states). */
 [data-blok-database-select-option],
 [data-blok-database-person-option],
+[data-blok-database-relation-option],
 [data-blok-database-file-row],
 [data-blok-database-files-upload],
 [data-blok-database-select-create] {
@@ -2099,6 +2101,7 @@
 
 [data-blok-database-select-option][data-active],
 [data-blok-database-person-option][data-active],
+[data-blok-database-relation-option][data-active],
 [data-blok-database-select-create][data-active] {
   background-color: var(--blok-item-hover-bg);
 }
@@ -2106,6 +2109,7 @@
 @media (hover: hover) {
   [data-blok-database-select-option]:hover,
   [data-blok-database-person-option]:hover,
+  [data-blok-database-relation-option]:hover,
   [data-blok-database-files-upload]:hover,
   [data-blok-database-drawer-prop-label][role="button"]:hover,
   [data-blok-database-select-create]:hover {
@@ -4665,4 +4669,120 @@
   [data-blok-database-calendar-no-date-item] {
     transition: none;
   }
+}
+
+/* ─── Relation, rollup and formula (Phase 6) ───
+   Notion's chip, picker and formula editor were not measured: Blok tokens. */
+
+[data-blok-database-relation-chip] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  margin-inline-end: var(--blok-space-1-5);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: var(--blok-text-tertiary);
+  text-underline-offset: 2px;
+}
+
+[data-blok-database-relation-chip][role="link"] {
+  cursor: pointer;
+}
+
+[data-blok-database-relation-option][aria-selected="true"]::after {
+  content: "✓";
+  margin-inline-start: auto;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-relation-search] {
+  width: 100%;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+[data-blok-database-relation-editor] [role="listbox"] {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--blok-space-1) var(--blok-space-1);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+[data-blok-database-formula-editor] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-2);
+}
+
+[data-blok-database-formula-input] {
+  width: 100%;
+  resize: vertical;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border: 1px solid var(--blok-border-primary);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  color: inherit;
+  outline: none;
+}
+
+[data-blok-database-formula-preview],
+[data-blok-database-formula-error] {
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-formula-error-message] {
+  color: var(--blok-color-danger);
+}
+
+[data-blok-database-formula-error-range] {
+  margin-inline-start: var(--blok-space-1);
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  text-decoration: underline wavy;
+}
+
+[data-blok-database-formula-reference] {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+[data-blok-database-formula-reference-item] {
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  cursor: pointer;
+}
+
+[data-blok-database-formula-reference-item="property"] {
+  font-weight: 500;
+}
+
+@media (hover: hover) {
+  [data-blok-database-formula-reference-item]:hover {
+    background-color: var(--blok-item-hover-bg);
+  }
+}
+
+[data-blok-database-formula-done] {
+  align-self: flex-end;
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: var(--blok-item-hover-bg);
+  font: inherit;
+  color: var(--blok-text-primary);
+  cursor: pointer;
+}
+
+[data-blok-database-cell="formula"],
+[data-blok-database-cell="rollup"] {
+  color: var(--blok-text-primary);
 }

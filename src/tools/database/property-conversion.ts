@@ -91,6 +91,8 @@ export const valueToText = (value: PropertyValue | undefined, property: Property
     case 'person':
     case 'createdBy':
     case 'lastEditedBy':
+    // A relation has no titles here: its row ids, as a person gives its ids.
+    case 'relation':
       return personIdsOf(value).join(LIST_SEPARATOR);
     case 'files':
       return filesOf(value).map((file) => file.url).join(LIST_SEPARATOR);
@@ -113,6 +115,9 @@ export const valueToText = (value: PropertyValue | undefined, property: Property
     case 'number':
     case 'date':
     case 'richText':
+    // The computed value, in the shape of its result type.
+    case 'formula':
+    case 'rollup':
     default:
       if (typeof value === 'string') return value;
       if (typeof value === 'number') return String(value);
@@ -175,6 +180,9 @@ const textToValue = (text: string, to: PropertyDefinition, ensure: EnsureOption,
     case 'lastEditedTime':
     case 'createdBy':
     case 'lastEditedBy':
+    case 'relation':
+    case 'formula':
+    case 'rollup':
       return null;
     case 'title':
     case 'text':
@@ -198,6 +206,9 @@ export const convertValue = (
   mint: () => string = nanoid
 ): PropertyValue => {
   if (isEmptyValue(value) || value === undefined) return to.type === 'checkbox' ? false : null;
+  // Text cannot name a row, and formula and rollup are computed: the old
+  // value is kept in `convertedValues` for a change back.
+  if (to.type === 'relation' || to.type === 'formula' || to.type === 'rollup') return null;
 
   if (OPTION_TYPES.has(from.type) && OPTION_TYPES.has(to.type)) {
     const ids = personIdsOf(value);

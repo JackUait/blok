@@ -1,12 +1,14 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+import type { DatabaseData, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, PropertyDefinition, PropertySettingsV2, PropertyType, RelationSettings, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, statusGroupsOf } from './property-values';
 import { planTypeChange } from './property-conversion';
 import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import { ComputedProperties } from './computed-properties';
+import { openFormulaEditor } from './database-formula-editor';
+import type { FormulaEditorHandle } from './database-formula-editor';
 import type { DatabaseSource } from './computed-properties';
 import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
 import { DatabasePropertyMenu } from './database-property-menu';
@@ -90,6 +92,15 @@ interface ChangedBlock {
 /** The block a 'block changed' payload is about, if the payload carries one. */
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
   (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
+
+/** A computed value as one line of text, for the formula editor's preview. */
+const formatPreview = (value: PropertyValue): string => {
+  if (Array.isArray(value)) {
+    return (value as unknown[]).map((item) => (typeof item === 'object' && item !== null && 'id' in item ? String(item.id) : String(item))).join(', ');
+  }
+
+  return typeof value === 'object' && value !== null ? '' : String(value);
+};
 
 /** Events that can end an inline edit or a drag. */
 const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
@@ -443,6 +454,7 @@ export class DatabaseTool implements BlockTool {
     this.unregisterGroupToggle?.();
     this.unregisterGroupToggle = null;
     this.propertyMenu?.destroy();
+    this.formulaEditor?.close();
     this.propertyMenu = null;
     this.addPropertyPopover?.destroy();
     this.addPropertyPopover = null;
@@ -3745,7 +3757,11 @@ export class DatabaseTool implements BlockTool {
         }),
       }
       : undefined;
-    const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, isStatus ? { status: createDefaultStatusSettings() } : {});
+    // A relation starts as a self-relation; "Related to" then picks the database.
+    const settings: PropertySettingsV2 = isStatus ? { status: createDefaultStatusSettings() } : {};
+
+    if (params.type === 'relation') settings.relation = { targetDatabaseId: this.block.id };
+    const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);
     const view = this.model.getView(this.activeViewId);
 
     if (view !== undefined && (params.afterId !== undefined || params.beforeId !== undefined)) {
@@ -3765,6 +3781,7 @@ export class DatabaseTool implements BlockTool {
       position: prop.position,
       ...(prop.config !== undefined ? { config: prop.config } : {}),
       ...(prop.status !== undefined ? { status: prop.status } : {}),
+      ...(prop.relation !== undefined ? { relation: prop.relation } : {}),
     });
     this.commitSchema();
 
@@ -3805,6 +3822,9 @@ export class DatabaseTool implements BlockTool {
     const plan = planTypeChange(property, type, this.model.getOrderedRows().map((row) => ({ ...row, convertedValues: kept.get(row.id) })));
 
     if (plan === null) return;
+    if (type === 'relation' && plan.property.relation === undefined) {
+      plan.property.relation = { targetDatabaseId: this.block.id };
+    }
     this.model.replaceProperty(plan.property);
     for (const write of plan.writes) {
       const child = children.find((block) => block.id === write.rowId);
@@ -3866,6 +3886,150 @@ export class DatabaseTool implements BlockTool {
    * The property menu for a column header or a drawer row. Views call this;
    * its view-level rows (filter, sort, freeze…) are theirs to add.
    */
+  /** The header the property menu opened from: the formula editor opens there too. */
+  private propertyMenuAnchor: HTMLElement | null = null;
+  private formulaEditor: FormulaEditorHandle | null = null;
+
+  /** Every database block of this document, this one first, by title. */
+  private documentDatabases(): Array<{ id: string; title: string }> {
+    const others = Array.from({ length: this.api.blocks.getBlocksCount() }, (_, index) => this.api.blocks.getBlockByIndex(index))
+      .filter((block): block is BlockAPI => block !== undefined && block.name === 'database' && block.id !== this.block.id)
+      .map((block) => {
+        const title = (block.preservedData as Partial<DatabaseData> | undefined)?.title;
+
+        return { id: block.id, title: typeof title === 'string' ? title : '' };
+      });
+
+    return [{ id: this.block.id, title: this.title }, ...others];
+  }
+
+  /** Notion's formula editor, from "Edit property". Saves the stored (id) form. */
+  openFormulaEditor(propertyId: string, anchor: HTMLElement | null): void {
+    const property = this.model.getProperty(propertyId);
+    const at = anchor?.isConnected === true ? anchor : this.element;
+
+    if (this.readOnly || property === undefined || property.type !== 'formula' || at === null) return;
+    this.formulaEditor?.close();
+    const schema = this.model.getSchema();
+    const draft = (source: string): PropertyDefinition => ({ ...property, formula: { expression: source } });
+    const sample = this.cardDrawer?.openRowId ?? this.model.getOrderedRows()[0]?.id;
+    const relatedSchema = schema
+      .flatMap((p) => (p.type === 'relation' && p.relation !== undefined && p.relation.targetDatabaseId !== this.block.id
+        ? this.readDatabaseSource(p.relation.targetDatabaseId)?.schema ?? []
+        : []));
+
+    this.formulaEditor = openFormulaEditor(at, {
+      i18n: this.api.i18n,
+      property,
+      schema: localizeDatabaseSchema(schema, this.api.i18n),
+      relatedSchema,
+      compile: (source) => this.computedValues.compile(draft(source), schema.map((p) => (p.id === propertyId ? draft(source) : p))),
+      preview: (source) => {
+        if (sample === undefined) return null;
+        const trial = new ComputedProperties(this.block.id);
+        const trialSchema = schema.map((p) => (p.id === propertyId ? draft(source) : p));
+        const rows = trial.apply(trialSchema, this.model.getOrderedRows(), {
+          databaseId: this.block.id,
+          now: new Date(),
+          resolveDatabase: (databaseId) => this.readDatabaseSource(databaseId),
+        });
+        const value = rows.find((row) => row.id === sample)?.computed?.[propertyId];
+
+        return value === undefined || value === null ? '' : formatPreview(value);
+      },
+      onSave: (stored) => this.updatePropertySettings(propertyId, { formula: { expression: stored } }),
+      onClose: () => {
+        this.formulaEditor = null;
+      },
+    });
+  }
+
+  /**
+   * Two-way on: a mirroring relation on the target database (a second one on
+   * this database for a self-relation), filled from this side, all in one
+   * undo step. Off: the mirror stays as a one-way relation, as Notion leaves
+   * the other property in place.
+   */
+  setRelationTwoWay(propertyId: string, twoWay: boolean): void {
+    const property = this.model.getProperty(propertyId);
+    const settings = property?.relation;
+
+    if (this.readOnly || property === undefined || settings === undefined || settings.targetDocumentId !== undefined) return;
+    if (!twoWay) {
+      const { twoWay: _twoWay, syncedPropertyId: _synced, ...oneWay } = settings;
+
+      this.updatePropertySettings(propertyId, { relation: oneWay });
+
+      return;
+    }
+    const target = settings.targetDatabaseId;
+    const write = (): void => {
+      const reverseName = this.api.i18n.t('tools.database.relationReverseName', { name: this.title === '' ? property.name : this.title });
+      const reverseRelation = { targetDatabaseId: this.block.id, twoWay: true, syncedPropertyId: propertyId };
+      const reverseId = target === this.block.id
+        ? this.model.addProperty(reverseName, 'relation', undefined, {}, { relation: reverseRelation }).id
+        : this.addForeignRelation(target, reverseName, reverseRelation);
+
+      if (reverseId === null) return;
+      this.model.updateProperty(propertyId, { relation: { ...settings, twoWay: true, syncedPropertyId: reverseId } });
+      this.block.dispatchChange();
+      // Fill the mirror from this side's stored ids.
+      this.model.getOrderedRows().forEach((row) => relationIdsOf(row.properties[propertyId]).forEach((id) => {
+        this.writeForeignRow(target, id, { [reverseId]: addRelatedIds(this.storedRelationOf(target, id, reverseId), row.id, null) });
+      }));
+    };
+
+    if (this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(write);
+    } else {
+      write();
+    }
+    this.syncRowsFromBlocks();
+    void this.sync.syncUpdateProperty({ propertyId, changes: { relation: this.model.getProperty(propertyId)?.relation } });
+    this.commitSchema();
+  }
+
+  /** "Related to": the databases of this document, this one first. Picking one retargets the relation. */
+  private openRelatedToPicker(propertyId: string, anchor: HTMLElement): void {
+    if (!anchor.isConnected) return;
+    const popover = new PopoverDesktop({
+      items: this.documentDatabases().map((database) => ({
+        name: `relatedTo-${database.id}`,
+        title: database.title === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : database.title,
+        closeOnActivate: true,
+        onActivate: (): void => this.updatePropertySettings(propertyId, { relation: { targetDatabaseId: database.id } }),
+      })),
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '240px',
+      flippable: true,
+      autoFocusFirstItem: false,
+    });
+
+    popover.getElement().setAttribute('data-blok-database-related-to', '');
+    popover.on(PopoverEvent.Closed, () => queueMicrotask(() => popover.destroy()));
+    popover.show();
+  }
+
+  /** Adds a relation property to another database block through its tool. */
+  private addForeignRelation(databaseId: string, name: string, relation: RelationSettings): string | null {
+    const created: string[] = [];
+
+    this.api.blocks.getById(databaseId)?.call('addSyncedRelation', { name, relation, receive: (id: string) => created.push(id) });
+
+    return created[0] ?? null;
+  }
+
+  /** Called by another database turning on a two-way relation to this one. */
+  addSyncedRelation(param: { name: string; relation: RelationSettings; receive: (propertyId: string) => void }): void {
+    if (this.readOnly || this.destroyed) return;
+    const prop = this.model.addProperty(param.name, 'relation', undefined, {}, { relation: param.relation });
+
+    void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position, relation: param.relation });
+    this.commitSchema();
+    param.receive(prop.id);
+  }
+
   openPropertyMenu(propertyId: string, anchor: HTMLElement): void {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
 
@@ -3884,7 +4048,15 @@ export class DatabaseTool implements BlockTool {
       onChangeType: (id, type) => this.changePropertyType(id, type),
       onDuplicate: (id) => { this.duplicateProperty(id); },
       onDelete: (id) => this.deleteProperty(id),
+      computed: {
+        schema: () => this.model.getSchema(),
+        databases: () => this.documentDatabases(),
+        targetSchema: (databaseId) => (databaseId === this.block.id ? this.model.getSchema() : this.readDatabaseSource(databaseId)?.schema ?? []),
+        onEditFormula: (id) => this.openFormulaEditor(id, this.propertyMenuAnchor),
+        onSetTwoWay: (id, twoWay) => this.setRelationTwoWay(id, twoWay),
+      },
     });
+    this.propertyMenuAnchor = anchor;
     const saved = this.model.getProperty(propertyId);
 
     if (saved === undefined) return;
@@ -3909,8 +4081,10 @@ export class DatabaseTool implements BlockTool {
       withNameField: true,
       onSelect: (type, name) => {
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
+        const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) });
 
-        this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) });
+        // research/08: Relation opens "Related to" right away.
+        if (created?.type === 'relation') this.openRelatedToPicker(created.id, anchor);
       },
     });
     this.addPropertyPopover.open(anchor);

@@ -224,6 +224,53 @@ describe('row page peek modes', () => {
     expect((saved?.data as { properties: Record<string, unknown> }).properties.n).toBe('Draft');
   });
 
+  it('Escape deletes a new row left empty in its peek, and keeps one that got a title', async () => {
+    const blocks = doc({ filters: [{ propertyId: 'n', operator: 'is_not_empty', value: null }] });
+
+    (blocks[0].data as { schema: unknown[] }).schema.push({ id: 'n', name: 'Notes', type: 'text', position: 'a1' });
+    await make(blocks);
+    const rowCount = async (): Promise<number> => ((await editor?.save())?.blocks ?? []).filter((block) => block.type === 'database-row').length;
+
+    await click(q('[data-blok-database-table-add-row]'));
+    expect(await rowCount()).toBe(4);
+    await key({ key: 'Escape' });
+
+    expect(await rowCount()).toBe(3);
+
+    await click(q('[data-blok-database-table-add-row]'));
+    const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+    if (title !== null) {
+      title.value = 'Kept';
+      title.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    await key({ key: 'Escape' });
+
+    expect(await rowCount()).toBe(4);
+  });
+
+  it('Escape on a board deletes the card + New just made while it is still empty', async () => {
+    const blocks = doc();
+
+    blocks[0].data = {
+      ...blocks[0].data,
+      schema: [
+        { id: 't', name: 'Name', type: 'title', position: 'a0' },
+        { id: 's', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'Todo', position: 'a0' }] } },
+      ],
+      views: [{ id: 'v', name: 'Board', type: 'board', groupBy: 's', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+    };
+    await make(blocks);
+    const rowCount = async (): Promise<number> => ((await editor?.save())?.blocks ?? []).filter((block) => block.type === 'database-row').length;
+
+    await click(q('[data-blok-database-add-card][data-option-id="o1"]'));
+    expect(await rowCount()).toBe(4);
+    q('[data-blok-database-board]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await quiet();
+
+    expect(await rowCount()).toBe(3);
+  });
+
   it('switches the mode from the peek header and saves it on the view', async () => {
     await make(doc());
     await openRow('r1');

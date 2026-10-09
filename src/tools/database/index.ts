@@ -230,6 +230,8 @@ export class DatabaseTool implements BlockTool {
   private unregisterGroupToggle: (() => void) | null = null;
   /** Per board view: how many groups show before "Load more groups". Session only. */
   private readonly groupLimits = new Map<string, number>();
+  /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
+  private freshRow: { id: string; properties: string } | null = null;
 
   constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
@@ -2276,8 +2278,42 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position });
     this.rerenderView({ keepDrawer: true });
 
+    this.markFresh(rowData.id);
+
     // The page opens instead of the inline title edit.
     return this.openIfFiltered(rowData.id) ? null : rowData.id;
+  }
+
+  /**
+   * Escape deletes an accidental empty new row (Notion, R:2022-04-14): one
+   * "+ New" just made that still has no title, no body and only the values it
+   * was born with.
+   */
+  private dropFreshRow(rowId: string): boolean {
+    const fresh = this.freshRow;
+    const row = this.model.getRow(rowId);
+
+    this.freshRow = null;
+    if (this.readOnly || fresh?.id !== rowId || row === undefined) {
+      return false;
+    }
+    const title = row.properties[this.titlePropertyId()];
+    const untouched = JSON.stringify(row.properties) === fresh.properties;
+
+    if ((typeof title === 'string' && title !== '') || !untouched || this.api.blocks.getChildren(rowId).length > 0) {
+      return false;
+    }
+    this.deleteRowBlock(rowId);
+    void this.sync.syncDeleteRow({ rowId });
+    this.rerenderView({ keepDrawer: true });
+
+    return true;
+  }
+
+  private markFresh(rowId: string): void {
+    const row = this.model.getRow(rowId);
+
+    this.freshRow = row === undefined ? null : { id: rowId, properties: JSON.stringify(row.properties) };
   }
 
   /**
@@ -2566,12 +2602,17 @@ export class DatabaseTool implements BlockTool {
       wrapper: boardEl,
       onEscape: () => {
         if (this.cardDrawer?.isOpen) {
+          const rowId = this.cardDrawer.openRowId;
+
           this.cardDrawer.close();
+          if (rowId !== null) {
+            this.dropFreshRow(rowId);
+          }
 
           return true;
         }
 
-        return false;
+        return this.freshRow !== null && this.dropFreshRow(this.freshRow.id);
       },
     });
     this.keyboard.attach();
@@ -2779,6 +2820,7 @@ export class DatabaseTool implements BlockTool {
       properties: rowData.properties,
       position: rowData.position,
     });
+    this.markFresh(rowData.id);
     this.openIfFiltered(rowData.id);
   }
 
@@ -2859,6 +2901,7 @@ export class DatabaseTool implements BlockTool {
       properties: rowData.properties,
       position: rowData.position,
     });
+    this.markFresh(rowData.id);
     this.openIfFiltered(rowData.id);
   }
 
@@ -3038,6 +3081,7 @@ export class DatabaseTool implements BlockTool {
           start: (rowId) => this.api.blocks.getById(rowId)?.call('startBody'),
         },
         adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
+        onEscapeClose: (rowId) => this.dropFreshRow(rowId),
         onIconChange: (rowId, icon) => {
           if (this.readOnly || this.destroyed) return;
           const row = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
@@ -3582,6 +3626,10 @@ export class DatabaseTool implements BlockTool {
 
   private handleRowClick(rowId: string): void {
     const row = this.model.getRow(rowId);
+
+    if (this.freshRow !== null && this.freshRow.id !== rowId) {
+      this.freshRow = null;
+    }
 
     // Already shown: a fresh lookup would drop the open editor unsaved.
     if (row === undefined || this.cardDrawer?.openRowId === rowId) {

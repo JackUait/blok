@@ -111,6 +111,8 @@ export interface CardDrawerOptions {
     /** Puts the caret in the body, adding its first paragraph when it is empty. */
     start(rowId: string): void;
   };
+  /** Escape closed the page of this row. */
+  onEscapeClose?: (rowId: string) => void;
   /** A page icon picked (an emoji) or removed (null). */
   onIconChange?: (rowId: string, icon: string | null) => void;
   /** The row before (-1) or after (1) the open one in the view, if any. */
@@ -206,6 +208,7 @@ export class DatabaseCardDrawer {
   private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
+  private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
   private emojiPicker: EmojiPicker | null = null;
   /** The properties section is folded away. Session only. */
   private propsCollapsed = false;
@@ -261,6 +264,7 @@ export class DatabaseCardDrawer {
     this.adjacentRow = options.adjacentRow;
     this.onModeChange = options.onModeChange;
     this.onIconChange = options.onIconChange;
+    this.onEscapeClose = options.onEscapeClose;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -447,8 +451,12 @@ export class DatabaseCardDrawer {
       if (target && activeHolder?.contains(target)) {
         return;
       }
+      const rowId = this.currentRowId;
 
       this.close();
+      if (rowId !== null) {
+        this.onEscapeClose?.(rowId);
+      }
     };
     document.addEventListener('keydown', this.escapeHandler);
 

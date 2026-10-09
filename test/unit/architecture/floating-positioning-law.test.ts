@@ -215,6 +215,7 @@ const POPOVER_DESKTOP_CONSUMERS = [
   'components/ui/toolbox.ts',
   'tools/code/index.ts',
   'tools/database/cells/cell-popover.ts',
+  'tools/database/database-card-drawer.ts',
   'tools/database/database-property-menu.ts',
   'tools/database/database-tab-bar.ts',
   'tools/database/database-table-menus.ts',

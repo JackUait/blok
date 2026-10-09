@@ -5297,6 +5297,22 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    it('changes the card size from the layout items and redraws', () => {
+      const { tool, element } = galleryTool();
+      const size = tool.layoutItems().find((item) => 'title' in item && item.title === 'tools.database.galleryCardSize');
+      const large = size !== undefined && 'children' in size ? size.children?.items?.[2] : undefined;
+
+      if (large !== undefined && 'onActivate' in large) {
+        large.onActivate?.(large as never);
+      }
+
+      expect(tool.save(element).views[0].cardSize).toBe('large');
+      expect(queryByData(element, 'data-blok-database-gallery')?.getAttribute('data-card-size')).toBe('large');
+      expect(new DatabaseTool(createDatabaseOptions()).layoutItems()).toEqual([]);
+
+      tool.destroy();
+    });
+
     describe('calendar', () => {
       const calendarTool = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = {}, childBlocks: BlockAPI[] = rowsWithDates()): ReturnType<typeof galleryTool> =>
         galleryTool({ ...calendarView, ...view }, childBlocks, config);

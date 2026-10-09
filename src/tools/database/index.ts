@@ -18,6 +18,8 @@ import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
+import { calendarLayoutItems, galleryLayoutItems } from './database-layout-items';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { pageContentSourceBlocks } from './row-body';
 import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
 import type { TableGroup, TableHandlers, TableState } from './database-table-view';
@@ -1260,6 +1262,19 @@ export class DatabaseTool implements BlockTool {
     const row = this.model.getRow(rowId);
 
     return row === undefined ? [] : pageContentSourceBlocks(row, this.model.getSchema(), descriptionId);
+  }
+
+  /** The active view's gallery or calendar layout rows, for the view settings panel. Empty for other layouts. */
+  layoutItems(): PopoverItemParams[] {
+    const view = this.model.getView(this.activeViewId);
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    const update = (changes: ViewChanges): void => this.updateActiveView(changes);
+
+    if (view?.type === 'gallery') {
+      return galleryLayoutItems(view, schema, this.api.i18n, update);
+    }
+
+    return view?.type === 'calendar' ? calendarLayoutItems(view, schema, this.api.i18n, update) : [];
   }
 
   private calendarStorageKey(viewId: string): string {

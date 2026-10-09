@@ -125,6 +125,23 @@ export const removeFromTopLayer = (el: HTMLElement): void => {
 };
 
 /**
+ * Hides the popover but keeps the `popover` attribute and the marker, so a
+ * `display`/`overlay` `allow-discrete` transition can keep it painted in the
+ * Top Layer while it animates out. Finish with {@link removeFromTopLayer}.
+ */
+export const hideTopLayerKeepingPaint = (el: HTMLElement): void => {
+  if (!supportsPopoverAPI()) {
+    return;
+  }
+
+  try {
+    el.hidePopover();
+  } catch {
+    // Not open: nothing to hide.
+  }
+};
+
+/**
  * @returns `true` if the element is currently tagged as Top-Layer-promoted by
  * this helper. Used by positioning math that needs to know whether the
  * containing block is the viewport (Top Layer) or the document (regular flow).

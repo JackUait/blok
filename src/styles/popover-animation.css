@@ -46,6 +46,12 @@
   transform: scale(0.98);
 }
 
+/* animateClose: hidden but still painted until its transition ends. */
+[data-blok-popover][popover][data-state='closed'] > [data-blok-popover-container] {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Inline toolbar skips the shared transition; it has its own entrance below.
    Direct child only, so nested inline popovers keep their animation. */
 [data-blok-popover-inline] > [data-blok-popover-container],

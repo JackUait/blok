@@ -190,6 +190,15 @@ export interface PopoverParamsBase {
    * element). Lets an external combobox trigger reference it via `aria-controls`.
    */
   listboxId?: string;
+
+  /**
+   * When true, a root popover in the top layer stays painted while its
+   * container's CSS close transition plays, and leaves the top layer when it
+   * ends. It is closed at once in every other way: `Closed` fires, `isShown`
+   * is false and focus leaves it. Reduced motion closes it at once.
+   * Defaults to false.
+   */
+  animateClose?: boolean;
 }
 
 /**

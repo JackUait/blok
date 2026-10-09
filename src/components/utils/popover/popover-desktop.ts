@@ -586,6 +586,9 @@ export class PopoverDesktop extends PopoverAbstract {
    * Open popover
    */
   public show(): void {
+    // Before placement: settling a close clears top/left.
+    this.settleClose();
+
     const mountTarget = this.getMountElement();
     const hasAnchor = this.hasRootAnchor();
 
@@ -887,12 +890,17 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Clear any externally-supplied anchor rect so the next show() falls back
     // to the trigger element unless the caller explicitly sets a new one.
-    // Also clear inline position so a stale top/left from a previous open
-    // cannot render the popover at an unexpected location if it ever becomes
-    // visible before calculatePosition() runs again.
     this.params.position = undefined;
     this.explicitPositionAnchor = undefined;
     this.positionContext = undefined;
+  }
+
+  /**
+   * Clears the inline position so a stale top/left from a previous open
+   * cannot render the popover at an unexpected location if it ever becomes
+   * visible before calculatePosition() runs again.
+   */
+  protected override onCloseSettled(): void {
     this.nodes.popover.style.top = '';
     this.nodes.popover.style.left = '';
   }

@@ -3,7 +3,7 @@ import { EventsDispatcher } from '../events';
 import { Listeners } from '../listeners';
 import { syncPortalDirection } from '../portal-direction';
 import { prefersReducedMotion } from '../reduced-motion';
-import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../top-layer';
+import { hideTopLayerKeepingPaint, isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../top-layer';
 import { twMerge } from '../tw';
 
 import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
@@ -213,6 +213,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public show(): void {
     const mountTarget = this.nodes.popover;
 
+    this.settleClose();
     this.syncDirection();
 
     if (mountTarget !== null && !mountTarget.isConnected) {
@@ -294,8 +295,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public hide(): void {
     const mountTarget = this.nodes.popover;
+    const alreadyClosing = this.closing !== null;
+    const isPromoted = mountTarget !== null && supportsPopoverAPI() && isPromotedToTopLayer(mountTarget);
+    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && !prefersReducedMotion();
 
-    if (mountTarget !== null && supportsPopoverAPI() && isPromotedToTopLayer(mountTarget)) {
+    if (animates) {
+      // Hide now, so the UA's own close steps run at once; the attribute and
+      // marker stay until the motion ends (settleClose).
+      hideTopLayerKeepingPaint(mountTarget);
+    } else if (isPromoted && !alreadyClosing) {
       // Centralized helper hides the popover, strips the `popover` attribute
       // (so UA `[popover]:not(:popover-open)` display:none no longer applies)
       // and removes the `data-blok-top-layer` marker so the CSS reset rule
@@ -308,7 +316,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
     this.nodes.popover.setAttribute('data-state', 'closed');
-    this.nodes.popoverContainer.className = css.popoverContainer;
+    // Resetting the container collapses it (max-h-0), so a closing card keeps
+    // its open classes; popover-animation.css fades it out instead.
+    if (!animates && !alreadyClosing) {
+      this.nodes.popoverContainer.className = css.popoverContainer;
+    }
 
     this.itemsDefault.forEach(item => item.reset());
 
@@ -324,7 +336,86 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     PopoverRegistry.instance.unregister(this);
 
+    // Before Closed: its handlers may destroy() or reopen this popover, and
+    // must see the close motion already in place.
+    if (animates) {
+      this.playCloseMotion();
+    } else if (!alreadyClosing) {
+      this.onCloseSettled();
+    }
+
     this.emit(PopoverEvent.Closed);
+  }
+
+  /**
+   * The close motion still playing after {@link hide}, if any. While it is set
+   * the card is closed for every purpose but paint.
+   */
+  private closing: { settle: () => void; removeWhenSettled: boolean } | null = null;
+
+  /**
+   * Waits for the card's close transitions, then takes it out of the top layer.
+   * A card with no running transition (no CSS for it, reduced motion, jsdom)
+   * settles at once.
+   */
+  private playCloseMotion(): void {
+    const popover = this.nodes.popover;
+    const container = this.nodes.popoverContainer;
+    const timer: { id?: number } = {};
+    const closing = {
+      removeWhenSettled: false,
+      settle: (): void => {
+        if (this.closing !== closing) {
+          return;
+        }
+        this.closing = null;
+        window.clearTimeout(timer.id);
+        removeFromTopLayer(popover);
+        container.className = css.popoverContainer;
+        this.onCloseSettled();
+
+        if (closing.removeWhenSettled) {
+          popover.remove();
+        }
+      },
+    };
+
+    this.closing = closing;
+
+    // The card stays in the DOM while it fades; focus must not stay on it.
+    if (document.activeElement instanceof HTMLElement && popover.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+
+    const animations = container.getAnimations?.() ?? [];
+
+    if (animations.length === 0) {
+      closing.settle();
+
+      return;
+    }
+
+    timer.id = window.setTimeout(closing.settle, PopoverAbstract.EXIT_ANIMATION_TIMEOUT_MS);
+
+    // A reopen cancels the transitions; settle() then sees a stale token and stops.
+    void Promise.all(animations.map(animation => animation.finished)).then(closing.settle, closing.settle);
+  }
+
+  /**
+   * Ends a close motion now. Called before any reopen, so the next open starts
+   * from a clean, closed card.
+   */
+  protected settleClose(): void {
+    this.closing?.settle();
+  }
+
+  /**
+   * Subclass hook run once the card has left the top layer: right after
+   * {@link hide}, or when its close motion ends. Undo placement here, not in
+   * {@link onHide}, or the card jumps while it fades.
+   */
+  protected onCloseSettled(): void {
+    // No-op in base class.
   }
 
   /**
@@ -401,6 +492,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     popover.setAttribute('data-state', 'closed');
     popover.removeAttribute(DATA_ATTR.popoverOpened);
+
+    if (this.closing !== null) {
+      this.closing.removeWhenSettled = true;
+
+      return;
+    }
 
     if (!this.hasVisibleExitBox(popover)) {
       popover.remove();

@@ -7,7 +7,7 @@ import type { ViewStateFallback } from './database-view-state';
 import { defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
 import { openFilterPill, openViewSettings } from './database-view-settings-panel';
-import type { ViewGroupEntry, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
+import type { ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
 import type {
@@ -53,6 +53,8 @@ export interface ViewControlsHost {
   rerender: () => void;
   /** The active gallery or calendar view's layout rows. */
   layoutItems?: () => PopoverItemParams[];
+  /** One-shot actions for the settings root page. */
+  actions?: () => ViewSettingsAction[];
 }
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
@@ -300,6 +302,7 @@ export class DatabaseViewControls {
       people: () => this.host.people?.() ?? [],
       ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),
       ...(this.host.layoutItems !== undefined ? { layoutItems: this.host.layoutItems } : {}),
+      ...(this.host.actions !== undefined ? { actions: this.host.actions } : {}),
     };
   }
 

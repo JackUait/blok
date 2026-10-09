@@ -150,6 +150,23 @@ describe('view settings panel', () => {
     expect(pickLarge).toHaveBeenCalledTimes(1);
   });
 
+  it('lists the tool actions on the root page; a click closes the panel and runs it', () => {
+    const h = harness();
+    const exportCsv = vi.fn();
+
+    h.ctx.actions = () => [
+      { testId: 'database-settings-csv-export', label: 'Export as CSV', icon: '', onClick: exportCsv },
+      { testId: 'database-settings-csv-merge', label: 'Merge with CSV', icon: '', onClick: vi.fn(), disabled: true },
+    ];
+    const panel = h.open();
+    const close = vi.spyOn(panel, 'close');
+
+    expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-settings-csv-merge"]')?.disabled).toBe(true);
+    click('database-settings-csv-export');
+    expect(exportCsv).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalled();
+  });
+
   it('disables the mounted layout rows while the database is locked', () => {
     const h = harness({ type: 'gallery' });
 

@@ -107,6 +107,16 @@ export interface ViewSettingsContext {
    * Each item needs a `name`: it is the row's test id.
    */
   layoutItems?: () => PopoverItemParams[];
+  /** One-shot tool actions on the root page (CSV export and import, saving a chart). */
+  actions?: () => ViewSettingsAction[];
+}
+
+export interface ViewSettingsAction {
+  testId: string;
+  label: string;
+  icon: string;
+  disabled?: boolean;
+  onClick: () => void;
 }
 
 interface LayoutItem {
@@ -232,6 +242,18 @@ export class ViewSettingsPages {
             value: String(view.colorRules?.length ?? 0),
             opensPage: true,
             onClick: () => panel.push(this.colors()),
+          }));
+        }
+        for (const action of this.ctx.actions?.() ?? []) {
+          rows.push(panelRow({
+            label: action.label,
+            testId: action.testId,
+            icon: action.icon,
+            disabled: action.disabled === true,
+            onClick: () => {
+              panel.close();
+              action.onClick();
+            },
           }));
         }
         rows.push(

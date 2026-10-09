@@ -25,6 +25,7 @@ import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { onHover } from '../../components/utils/tooltip';
+import type { PopoverDesktop } from '../../components/utils/popover';
 import {
   IconCalendar,
   IconChevronDown,
@@ -161,6 +162,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   private root: HTMLDivElement | null = null;
   private gridEl: HTMLDivElement | null = null;
   private bar: HTMLElement | null = null;
+  /** The menu this table opened. Its anchor dies with a redraw, so the menu must too. */
+  private menu: PopoverDesktop | null = null;
 
   constructor(options: DatabaseTableViewOptions) {
     this.options = options;
@@ -330,6 +333,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   destroy(): void {
+    this.menu?.destroy();
+    this.menu = null;
     this.grid?.destroy();
     this.resize?.destroy();
     this.columnDrag?.destroy();
@@ -973,6 +978,20 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
   }
 
+  private showMenu(anchor: HTMLElement, items: PopoverItemParams[], options: { searchable?: boolean } = {}): void {
+    this.menu?.destroy();
+    const menu = openMenu(anchor, items, {
+      ...options,
+      onClose: () => {
+        if (this.menu === menu) {
+          this.menu = null;
+        }
+      },
+    });
+
+    this.menu = menu;
+  }
+
   private openCalculationMenu(anchor: HTMLElement): void {
     const propertyId = anchor.getAttribute('data-property-id') ?? '';
     const property = this.columns.find((c) => c.property.id === propertyId)?.property;
@@ -982,7 +1001,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     const current = resolveCalculations(this.options.view, this.options.schema).get(propertyId);
 
-    openMenu(anchor, calculationItems(property, current, this.options.i18n, (fn: CalculationFn | null) => {
+    this.showMenu(anchor, calculationItems(property, current, this.options.i18n, (fn: CalculationFn | null) => {
       this.handlers?.updateView({ calculations: withCalculation(this.options.view, propertyId, fn) });
     }));
   }
@@ -994,7 +1013,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     this.grid?.selectRows([rowId]);
-    openMenu(anchor, rowMenuItems({
+    this.showMenu(anchor, rowMenuItems({
       i18n: this.options.i18n,
       properties: this.columns.map((c) => c.property).filter((p) => p.type !== 'title'),
       onEditIcon: () => handlers.editRowIcon(rowId),
@@ -1058,7 +1077,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const items = this.headerItems(propertyId, anchor);
 
     if (items.length > 0) {
-      openMenu(anchor, items);
+      this.showMenu(anchor, items);
     }
   }
 

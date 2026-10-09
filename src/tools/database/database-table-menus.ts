@@ -107,8 +107,15 @@ export const openMenu = (
     ...(options.searchable === true ? { searchable: true } : {}),
   });
 
+  const state = { closed: false };
+
   anchor.setAttribute('data-popover-open', '');
+  // destroy() emits Closed again; the flag stops that from looping.
   popover.on(PopoverEvent.Closed, () => {
+    if (state.closed) {
+      return;
+    }
+    state.closed = true;
     anchor.removeAttribute('data-popover-open');
     options.onClose?.();
     // Destroying inside the popover's own Closed emit would re-enter it.

@@ -603,6 +603,18 @@ describe('DatabaseTableView', () => {
   });
 
   describe('calculation menu', () => {
+    it('closes its open menu when the table is torn down, so a redraw leaves no stray popover', async () => {
+      const { root, view } = mount();
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"]')?.click();
+      expect(document.querySelector('[data-blok-popover-opened], [data-blok-popover]')).not.toBeNull();
+
+      view.destroy();
+      await Promise.resolve();
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
     it('offers None, Count and Percent, plus More options on a number column', () => {
       const titles = (type: PropertyDefinition['type']): Array<string | undefined> =>
         (calculationItems({ type }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ title?: string }>).map((item) => item.title);

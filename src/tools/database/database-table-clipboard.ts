@@ -44,7 +44,6 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
       return Array.isArray(value)
         ? value.flatMap((file) => (typeof file === 'object' && file !== null && 'url' in file ? [String(file.url)] : [])).join(', ')
         : '';
-    case 'checkbox':
     case 'title':
     case 'text':
     case 'url':

@@ -73,6 +73,7 @@ export class DatabaseViewControls {
   private readonly filterButton: HTMLButtonElement;
   private readonly sortButton: HTMLButtonElement;
   private readonly searchButton: HTMLButtonElement;
+  /** In the DOM only while the person searches: a hidden input still reads as a caret slot. */
   private readonly searchInput: HTMLInputElement;
   private readonly settingsButton: HTMLButtonElement;
   private readonly lockBadge: HTMLElement;
@@ -128,7 +129,7 @@ export class DatabaseViewControls {
     this.searchInput.addEventListener('blur', () => {
       if (this.query === '') this.hideSearch();
     });
-    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.searchInput, this.settingsButton);
+    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton);
 
     this.filterBar = document.createElement('div');
     this.filterBar.setAttribute('data-blok-database-filter-bar', '');
@@ -343,11 +344,13 @@ export class DatabaseViewControls {
   private showSearch(): void {
     this.searchButton.hidden = true;
     this.searchInput.hidden = false;
+    this.searchButton.after(this.searchInput);
     this.searchInput.focus();
   }
 
   private hideSearch(): void {
     this.searchInput.hidden = true;
+    this.searchInput.remove();
     this.searchInput.value = '';
     this.setSearch('');
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS;

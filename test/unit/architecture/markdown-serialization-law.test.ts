@@ -30,8 +30,6 @@ const SOURCE_PATH = resolve(__dirname, '../../../src/markdown/blocks-to-markdown
  */
 const EXEMPT_TOOLS: Record<string, string> = {
   paragraph: 'A paragraph IS plain Markdown text: the default branch emits its inline text (bold/italic/links included). A dedicated case would be a no-op.',
-  database: 'A database block stores schema + view configs; its rows are child `database-row` blocks. A GFM pipe table cannot express schemas, views or property types, and a lossy half-table would be worse than the current omission. Deliberately not serialized.',
-  'database-row': 'Row values live in `data.properties`, whose meaning depends on the parent database schema. Serialized only if/when the database block gains a Markdown representation.',
 };
 
 /**

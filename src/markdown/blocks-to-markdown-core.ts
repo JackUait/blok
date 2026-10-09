@@ -16,6 +16,7 @@
 import type { BlockToolData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
+import { databaseRowTitle, inRowOrder, titlePropertyIdOf } from '../shared/database-rows';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
@@ -370,6 +371,8 @@ const CONTAINER_TOOLS = new Set([
   'column',
   'tabs',
   'tab',
+  'database',
+  'database-row',
 ]);
 
 /**
@@ -969,6 +972,18 @@ const childrenToMarkdown = (
 };
 
 /**
+ * A database row: its bold title, then its page body.
+ * @param row - the row block
+ * @param context - the serialization context
+ * @param title - the row title
+ */
+const databaseRowToMarkdown = (row: SerializableBlock, context: SerializationContext, title: string): string => {
+  const heading = title === '' ? '' : `**${escapePlainText(title)}**`;
+
+  return [heading, childrenToMarkdown(row, context)].filter((part) => part !== '').join('\n\n');
+};
+
+/**
  * Whether a block sits inside a list item. Four leading spaces continue a list
  * item, but outside one they are an indented code block — so a non-list block
  * only carries a flat indent when a list actually owns it.
@@ -1212,6 +1227,17 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       }
 
       return childrenToMarkdown(block, context);
+    case 'database': {
+      const children = context.childrenOf.get(block.id ?? '') ?? [];
+      const titleId = titlePropertyIdOf(data);
+      const rows = inRowOrder(children.filter((child) => child.tool === 'database-row'))
+        .map((row) => databaseRowToMarkdown(row, context, databaseRowTitle(row, titleId)));
+      const title = asString(data.title);
+
+      return [title === '' ? '' : `**${escapePlainText(title)}**`, ...rows].filter((part) => part !== '').join('\n\n');
+    }
+    case 'database-row':
+      return databaseRowToMarkdown(block, context, databaseRowTitle(block, undefined));
     case 'tab': {
       const label = escapePlainText([asString(data.icon), asString(data.title)].filter((part) => part !== '').join(' '));
       const body = childrenToMarkdown(block, context);

@@ -217,11 +217,9 @@ export interface HtmlRenderer {
  * @param options - render options
  */
 /**
- * Tool types whose emitter renders children bare (no root element of their
- * own — {@link builtinEmitters} maps them to `childrenOnly`). Stamping the
- * `data-blok-tool` marker onto their output would land it on the first CHILD's
- * element, mislabeling it, so they are skipped. A new bare emitter must be
- * added here.
+ * Tool types never stamped and never given a direction holder. The database
+ * and its rows are not editor blocks a reader can link to or style as one:
+ * their sections only group the row bodies. A new bare emitter must be added here.
  */
 const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
 

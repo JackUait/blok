@@ -13,6 +13,7 @@
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
 import { isSafeCssColor } from '../shared/css-color';
+import { databaseRowTitle, inRowOrder, titlePropertyIdOf } from '../shared/database-rows';
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
@@ -182,12 +183,24 @@ const childrenDiv = (block: ViewBlock, env: EmitterEnv): string => {
 };
 
 /**
- * Children rendered bare (no own markup) — database blocks' minimal fallback.
+ * Children rendered bare (no own markup).
  * @param block - container block
  * @param env - emitter environment
  */
 const childrenOnly = (block: ViewBlock, env: EmitterEnv): string => {
   return env.renderList(env.childrenOf(block.id));
+};
+
+/**
+ * A database row as a titled section holding its page body.
+ * @param block - the row
+ * @param env - emitter environment
+ * @param title - the row title
+ */
+const emitDatabaseRow = (block: ViewBlock, env: EmitterEnv, title: string): string => {
+  const heading = title === '' ? '' : `<h4 data-blok-database-row-title>${env.escape(title)}</h4>`;
+
+  return `<section data-blok-database-row>${heading}${env.renderList(env.childrenOf(block.id))}</section>`;
 };
 
 /**
@@ -764,8 +777,18 @@ export const builtinEmitters: Record<string, Emitter> = {
     return `<section data-blok-tab>${heading}${env.renderList(env.childrenOf(block.id))}</section>`;
   },
 
-  database: childrenOnly,
-  'database-row': childrenOnly,
+  database: (block, env) => {
+    const title = str(block.data, 'title');
+    const heading = title === '' ? '' : `<h3 data-blok-database-title>${env.escape(title)}</h3>`;
+    const titleId = titlePropertyIdOf(block.data);
+    const children = env.childrenOf(block.id);
+    const rows = inRowOrder(children.filter((child) => child.type === 'database-row'))
+      .map((row) => emitDatabaseRow(row, env, databaseRowTitle(row, titleId)))
+      .join('');
+
+    return `<section data-blok-database>${heading}${rows}${env.renderList(children.filter((child) => child.type !== 'database-row'))}</section>`;
+  },
+  'database-row': (block, env) => emitDatabaseRow(block, env, databaseRowTitle(block, undefined)),
 
   page: emitPage,
   'page-link': emitPage,

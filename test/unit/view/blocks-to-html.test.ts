@@ -839,7 +839,7 @@ describe('blocksToHtml', () => {
   });
 
   describe('database', () => {
-    it('renders row children as blocks (minimal fallback)', () => {
+    it('renders each row as a section holding its body blocks', () => {
       const html = blocksToHtml(doc([
         { id: 'db', type: 'database', data: { schema: [], views: [], activeViewId: 'v1' } },
         { id: 'r1', type: 'database-row', parent: 'db', data: { properties: {}, position: 'a' } },
@@ -848,7 +848,8 @@ describe('blocksToHtml', () => {
         { id: 'p2', type: 'paragraph', parent: 'r2', data: { text: 'R2' } },
       ]));
 
-      expect(html).toBe('<p>R1</p><p>R2</p>');
+      expect(html).toBe('<section data-blok-database><section data-blok-database-row><p>R1</p></section>'
+        + '<section data-blok-database-row><p>R2</p></section></section>');
     });
   });
 
@@ -1280,9 +1281,8 @@ describe('blocksToHtml', () => {
         { toolAttributes: true }
       );
 
-      // database renders its children bare — the child paragraph must carry its
-      // OWN tool marker, never the parent's.
-      expect(html).toBe('<p data-blok-tool="paragraph">row</p>');
+      // The child paragraph carries its OWN tool marker, never the parent's.
+      expect(html).toBe('<section data-blok-database><p data-blok-tool="paragraph">row</p></section>');
       expect(html).not.toContain('data-blok-tool="database"');
     });
   });
@@ -1337,7 +1337,7 @@ describe('blocksToHtml', () => {
         { blockIds: true }
       );
 
-      expect(html).toBe('<p data-blok-id="p">row</p>');
+      expect(html).toBe('<section data-blok-database><p data-blok-id="p">row</p></section>');
     });
 
     it('leaves an id-less block unstamped', () => {
@@ -1682,13 +1682,13 @@ describe('blocksToHtml', () => {
       expect(html).toContain('<ul data-blok-tool="list">');
     });
 
-    it('does not stamp bare containers, which emit no root of their own', () => {
+    it('does not stamp bare containers', () => {
       const html = blocksToHtml(
         doc([{ id: 'db', type: 'database', data: {} }]),
         { classes: true }
       );
 
-      expect(html).toBe('');
+      expect(html).toBe('<section data-blok-database></section>');
     });
   });
 });

@@ -6,6 +6,7 @@
  *
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
+import { databaseRowTitle, inRowOrder, titlePropertyIdOf } from '../shared/database-rows';
 import { buildDocumentModel } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { createHtmlRenderer } from './blocks-to-html';
@@ -218,6 +219,8 @@ const readPlainText = (
    * The block's own text line (no children).
    * @param block - block to read
    */
+  /** Title property id of each row's database, filled as the walk enters a database. */
+  const rowTitleIds = new Map<string, string>();
   const ownText = (block: ViewBlock): string => {
     switch (block.type) {
       case 'paragraph':
@@ -238,6 +241,10 @@ const readPlainText = (
       /** A tab title is plain text, so it is read raw rather than as HTML. */
       case 'tab':
         return typeof block.data.title === 'string' ? block.data.title : '';
+      case 'database':
+        return typeof block.data.title === 'string' ? block.data.title : '';
+      case 'database-row':
+        return databaseRowTitle(block, block.id === undefined ? undefined : rowTitleIds.get(block.id));
       case 'image':
         return mediaText(block.data, ['caption'], ['caption', 'alt']);
       case 'video':
@@ -393,6 +400,24 @@ const readPlainText = (
    * @param segments - accumulator
    */
   const order = { value: 0 };
+  /** A database reads its rows in their manual order, each titled from the database's title property. */
+  const childrenInReadingOrder = (block: ViewBlock): ViewBlock[] => {
+    const children = model.childrenOf(block.id);
+
+    if (block.type !== 'database') {
+      return children;
+    }
+    const titleId = titlePropertyIdOf(block.data);
+    const rows = inRowOrder(children.filter((child) => child.type === 'database-row'));
+
+    rows.forEach((row) => {
+      if (row.id !== undefined && titleId !== undefined) {
+        rowTitleIds.set(row.id, titleId);
+      }
+    });
+
+    return [...rows, ...children.filter((child) => child.type !== 'database-row')];
+  };
   const visit = (block: ViewBlock, segments: Segment[]): void => {
     if (block.id !== undefined && active.has(block.id)) {
       return;
@@ -422,7 +447,7 @@ const readPlainText = (
         return;
       }
 
-      model.childrenOf(block.id)
+      childrenInReadingOrder(block)
         .filter((child) => referenced === undefined || child.id === undefined || !referenced.has(child.id))
         .forEach((child) => visit(child, segments));
     } finally {

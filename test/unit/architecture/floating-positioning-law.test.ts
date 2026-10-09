@@ -102,6 +102,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/callout/index.ts': 'Mount owner for the tracked emoji-picker root surface.',
   'tools/database/database-card-drag.ts': 'Pointer-following database card ghost refreshed on every pointer move.',
   'tools/database/database-column-drag.ts': 'Pointer-following database column ghost refreshed on every pointer move.',
+  'tools/database/database-drop-line.ts': 'Fixed database drop line the drag code places on every pointer move.',
   'tools/database/database-list-row-drag.ts': 'Pointer-following database row ghost refreshed on every pointer move.',
   'tools/database/database-table-column-drag.ts': 'Pointer-following table header ghost refreshed on every pointer move.',
   'tools/database/database-table-row-drag.ts': 'Pointer-following table row ghost refreshed on every pointer move.',

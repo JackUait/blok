@@ -102,6 +102,9 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'tools/database/database-table-column-drag.ts': {
     reason: 'ghost styled inline; cloned table header styled by unscoped attribute CSS (database.css), not utilities',
   },
+  'tools/database/database-drop-line.ts': {
+    reason: 'drop line styled inline (position, size, resolved colour) plus unscoped attribute CSS (database.css), no utilities',
+  },
   'tools/image/ui.ts': {
     reason: 'lightbox styled by authored blok-image-lightbox BEM classes (unscoped) + colors.css tokens via data-blok-top-layer',
   },

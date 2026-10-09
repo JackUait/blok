@@ -18,7 +18,8 @@ const ruleBody = (selector: string): string =>
     .map((match) => match[2] ?? '')
     .join(';');
 
-const timelineCss = css.slice(css.indexOf('[data-blok-database-timeline] {'));
+const timelineStart = css.indexOf('[data-blok-database-timeline] {');
+const timelineCss = css.slice(timelineStart, css.indexOf('[data-blok-database-card]:focus-visible', timelineStart));
 
 const TOKENS = [
   '--blok-database-timeline-bar-bg',

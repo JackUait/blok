@@ -757,6 +757,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GALLERY_CALENDAR_BYTES = 18_209;
     // database.css: the timeline view, and its tokens in all three themes.
     const DATABASE_TIMELINE_BYTES = 12_069;
+    // database.css: board card previews, properties and sub-group lanes, and the calendar "No date" list.
+    const DATABASE_BOARD_CARD_BYTES = 4_554;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -819,7 +821,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + POPOVER_CLOSE_MOTION_BYTES
       + DATABASE_VIEW_SETTINGS_BYTES
       + DATABASE_GALLERY_CALENDAR_BYTES
-      + DATABASE_TIMELINE_BYTES;
+      + DATABASE_TIMELINE_BYTES
+      + DATABASE_BOARD_CARD_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

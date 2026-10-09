@@ -4466,3 +4466,180 @@
     transition: none;
   }
 }
+
+/* ─── Board card parity ───
+   Measured (research/07): property rows 28px, 12px/18px text, 5px padding,
+   0 6px margin, 5px radius. Unmeasured: the board preview heights per card
+   size (the gallery's 146px stands in for medium). */
+
+[data-blok-database-board] {
+  --blok-database-card-preview-height: 146px;
+}
+
+[data-blok-database-board][data-card-size="small"] {
+  --blok-database-card-preview-height: 104px;
+}
+
+[data-blok-database-board][data-card-size="medium"] {
+  --blok-database-card-preview-height: 146px;
+}
+
+[data-blok-database-board][data-card-size="large"] {
+  --blok-database-card-preview-height: 190px;
+}
+
+[data-blok-database-card]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-database-card-preview] {
+  margin: -10px -12px 8px;
+  block-size: var(--blok-database-card-preview-height);
+  overflow: hidden;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background-color: var(--blok-database-gallery-preview-bg);
+  border-block-end: 1px solid var(--blok-database-gallery-preview-border);
+}
+
+[data-blok-database-card-preview][data-preview="content"] {
+  padding: var(--blok-space-2) var(--blok-space-2) 0;
+  color: var(--blok-database-gallery-preview-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+[data-blok-database-card-preview-line] {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-card-image] {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+[data-blok-database-board][data-fit-image] [data-blok-database-card-image] {
+  object-fit: contain;
+}
+
+[data-blok-database-card-properties] {
+  display: flex;
+  flex-direction: column;
+  margin-block-start: var(--blok-space-1);
+  margin-inline: -6px;
+}
+
+[data-blok-database-card-property] {
+  display: flex;
+  align-items: center;
+  min-block-size: 28px;
+  box-sizing: border-box;
+  padding: 5px;
+  border-radius: var(--blok-radius-control-sm);
+  font-size: 12px;
+  line-height: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background-color 0.1s ease-out;
+}
+
+[data-blok-database-card-property][data-wrap="false"] {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-card-property]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-board][data-sub-grouped] {
+  flex-direction: column;
+}
+
+[data-blok-database-board-lane] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  padding-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-board-lane-header] {
+  position: sticky;
+  inset-inline-start: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-blok-database-board-lane-count] {
+  color: var(--blok-database-table-header-text);
+  font-weight: 400;
+}
+
+[data-blok-database-board-lane-columns] {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Measured (research/08): "No date (2)" is 28px, 6px padding, 6px radius, muted ink. The list is unmeasured. */
+[data-blok-database-calendar-nav] [data-blok-database-calendar-no-date] {
+  block-size: 28px;
+  padding: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-calendar-nav-icon);
+}
+
+[data-blok-database-calendar-no-date-list] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-1-5);
+  padding-block-end: var(--blok-space-2);
+}
+
+[data-blok-database-calendar-no-date-item] {
+  display: inline-flex;
+  align-items: center;
+  block-size: 28px;
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-calendar-event-bg);
+  box-shadow: var(--blok-database-calendar-event-shadow);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  transition: background-color 0.02s ease-in, opacity 0.2s ease;
+}
+
+[data-blok-database-calendar-no-date-item]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-database-calendar-muted-text);
+}
+
+[data-blok-database-calendar-no-date-item]:hover {
+  background-color: var(--blok-database-calendar-event-hover-bg);
+}
+
+[data-blok-database-calendar-no-date-item]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+}
+
+[data-blok-database-calendar-no-date-item][data-dragging] {
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-card-property],
+  [data-blok-database-calendar-no-date-item] {
+    transition: none;
+  }
+}

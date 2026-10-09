@@ -302,6 +302,7 @@
  * Column title text — uppercase status-label style, never truncate.
  */
 [data-blok-database-column-title],
+[data-blok-database-no-value-label],
 [data-blok-database-column-title-input] {
   white-space: nowrap;
   font-size: 14px;

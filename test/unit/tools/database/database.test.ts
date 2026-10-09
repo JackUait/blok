@@ -390,8 +390,8 @@ describe('DatabaseTool', () => {
 
       expect(titleEl?.getAttribute('data-placeholder')).toBe('Neue Datenbank');
       expect(viewName?.textContent).toBe('Tafel');
+      expect(queryByData(element, 'data-blok-database-no-value-label')?.textContent).toBe('tools.database.noValueGroup');
       expect(columnTitles.map((column) => column.textContent)).toEqual([
-        'tools.database.noValueGroup',
         'Nicht begonnen',
         'In Arbeit',
         'Erledigt',
@@ -3286,7 +3286,9 @@ describe('DatabaseTool', () => {
       expect(column).not.toBeNull();
       expect(column?.contains(card ?? null)).toBe(true);
       expect(queryAllByData(element, 'data-blok-database-column')[0]).toBe(column);
-      expect(queryByData(column ?? element, 'data-blok-database-column-title')?.textContent).toBe('No Status');
+      expect(queryByData(column ?? element, 'data-blok-database-no-value-label')?.textContent).toBe('No Status');
+      // Only real options are rename targets; the first column-title on a board must be a renameable option.
+      expect(queryByData(column ?? element, 'data-blok-database-column-title')).toBeNull();
 
       tool.destroy();
     });

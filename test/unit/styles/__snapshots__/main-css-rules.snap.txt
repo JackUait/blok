@@ -4177,7 +4177,7 @@ span[data-blok-slash-search] {
   flex-shrink: 0;
 }
 
-[data-blok-database-column-title], [data-blok-database-column-title-input] {
+[data-blok-database-column-title], [data-blok-database-no-value-label], [data-blok-database-column-title-input] {
   white-space: nowrap;
   font-size: 14px;
   font-weight: 400;

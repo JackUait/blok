@@ -200,7 +200,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     const titleEl = document.createElement('div');
 
-    titleEl.setAttribute('data-blok-database-column-title', '');
+    // The no-value label is not a rename target: column controls and rename lookups find the first column-title.
+    titleEl.setAttribute(option.id === NO_VALUE_GROUP_KEY ? 'data-blok-database-no-value-label' : 'data-blok-database-column-title', '');
     titleEl.textContent = option.label;
     pill.appendChild(titleEl);
 

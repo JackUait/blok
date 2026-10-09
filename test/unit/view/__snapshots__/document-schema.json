@@ -2250,6 +2250,45 @@
                   "full"
                 ],
                 "description": "Where a row page opens. Default side; center for gallery."
+              },
+              "noValueGroupPosition": {
+                "type": "string",
+                "description": "Where the no-value group sits among the groups. Absent means last."
+              },
+              "hiddenGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Option id of the group."
+                    }
+                  }
+                }
+              },
+              "collapsedGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Option id of the group."
+                    }
+                  }
+                }
+              },
+              "hideGroupAggregation": {
+                "type": "boolean"
               }
             }
           }

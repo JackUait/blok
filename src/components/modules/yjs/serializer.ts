@@ -76,7 +76,7 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
  * the same keys AND defer to the wrapper the same way, or a server-seeded
  * container is a plain array where a client-seeded one is a Y.Array.
  */
-const EAGER_ARRAY_KEYS = new Set(['blocks', 'filters', 'sorts', 'calculations']);
+const EAGER_ARRAY_KEYS = new Set(['blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups']);
 
 /**
  * Whether a NESTED data key is always stored as a Y.Array, empty included.

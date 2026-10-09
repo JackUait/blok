@@ -264,11 +264,25 @@ export interface DatabaseViewConfig {
   calculations?: ViewCalculation[];
   /** Default 'side', or 'center' for a gallery. */
   openPagesIn?: OpenPagesIn;
+  /** Where the no-value group sits among the option groups. Absent means last. */
+  noValueGroupPosition?: string;
+  /** Groups this view hides, by option id. */
+  hiddenGroups?: GroupRef[];
+  /** Groups this view shows collapsed, by option id. */
+  collapsedGroups?: GroupRef[];
+  /** Hides the row count beside each group's name. */
+  hideGroupAggregation?: boolean;
+}
+
+/** An entry in a per-view group list. */
+export interface GroupRef {
+  id: string;
 }
 
 /** View fields a caller may set when creating or changing a view. */
 export type DatabaseViewSettingKey =
-  | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn';
+  | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
+  | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation';
 
 // ─── Top-level saved data ───
 

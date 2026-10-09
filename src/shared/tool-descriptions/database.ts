@@ -65,6 +65,17 @@ const PROPERTY_SETTINGS = {
   uniqueId: { type: 'object', additionalProperties: false, properties: { prefix: { type: 'string' } } },
 };
 
+/** Per-view group lists hold id objects so two peers' entries merge. */
+const GROUP_REFS = {
+  type: 'array',
+  items: {
+    type: 'object',
+    required: ['id'],
+    additionalProperties: false,
+    properties: { id: { type: 'string', description: 'Option id of the group.' } },
+  },
+};
+
 export const DATABASE_DATA = {
   type: 'object',
   description: 'Schema and view configuration only — rows are child `database-row` blocks.',
@@ -203,6 +214,10 @@ export const DATABASE_DATA = {
             },
           },
           openPagesIn: { type: 'string', enum: ['side', 'center', 'full'], description: 'Where a row page opens. Default side; center for gallery.' },
+          noValueGroupPosition: { type: 'string', description: 'Where the no-value group sits among the groups. Absent means last.' },
+          hiddenGroups: GROUP_REFS,
+          collapsedGroups: GROUP_REFS,
+          hideGroupAggregation: { type: 'boolean' },
         },
       },
     },

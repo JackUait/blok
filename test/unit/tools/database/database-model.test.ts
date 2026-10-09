@@ -356,6 +356,44 @@ describe('DatabaseModel', () => {
       expect(view.groupBy).toBe('prop-status');
     });
 
+    it('starts every new view with empty group lists, so two peers grow one shared array', () => {
+      const model = new DatabaseModel();
+      const added = model.addView('Board 2', 'board', { groupBy: 'prop-status' });
+
+      expect(model.getViews()[0].hiddenGroups).toEqual([]);
+      expect(model.getViews()[0].collapsedGroups).toEqual([]);
+      expect(added.hiddenGroups).toEqual([]);
+      expect(added.collapsedGroups).toEqual([]);
+    });
+
+    it('keeps per-view group state through a reload', () => {
+      const v1 = makeView({
+        id: 'v1',
+        noValueGroupPosition: 'a5',
+        hiddenGroups: [{ id: 'o1' }],
+        collapsedGroups: [{ id: 'o2' }],
+        hideGroupAggregation: true,
+      });
+      const model = new DatabaseModel(makeData({ views: [v1] }));
+      const reloaded = new DatabaseModel(model.snapshot());
+
+      expect(reloaded.getView('v1')).toMatchObject({
+        noValueGroupPosition: 'a5',
+        hiddenGroups: [{ id: 'o1' }],
+        collapsedGroups: [{ id: 'o2' }],
+        hideGroupAggregation: true,
+      });
+    });
+
+    it('updateView writes per-view group state', () => {
+      const model = new DatabaseModel(makeData({ views: [makeView({ id: 'v1' })] }));
+
+      model.updateView('v1', { hiddenGroups: [{ id: 'o1' }], noValueGroupPosition: 'a3' });
+
+      expect(model.getView('v1')?.hiddenGroups).toEqual([{ id: 'o1' }]);
+      expect(model.getView('v1')?.noValueGroupPosition).toBe('a3');
+    });
+
     it('updateView merges partial changes', () => {
       const v1 = makeView({ id: 'v1', name: 'Old name' });
       const model = new DatabaseModel(makeData({ views: [v1] }));

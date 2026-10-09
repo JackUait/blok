@@ -500,6 +500,8 @@ export class DatabaseModel {
       filters: seed.filters ?? [],
       visibleProperties: seed.visibleProperties ?? [],
       calculations: seed.calculations ?? [],
+      hiddenGroups: seed.hiddenGroups ?? [],
+      collapsedGroups: seed.collapsedGroups ?? [],
     };
     const properties = seed.properties ?? resolveViewProperties(base, this.schema).map(({ id, visible }) => ({ id, visible }));
 

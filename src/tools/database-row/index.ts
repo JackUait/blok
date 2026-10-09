@@ -6,7 +6,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, PropertyValue } from '../database/types';
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -33,6 +33,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (data.bodyBlocks === true) {
     row.bodyBlocks = true;
+  }
+  if (typeof data.icon === 'string' && data.icon !== '') {
+    row.icon = data.icon;
   }
 
   return row;
@@ -156,6 +159,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.bodyBlocks === true) {
       saved.bodyBlocks = true;
     }
+    if (this._data.icon !== undefined) {
+      saved.icon = this._data.icon;
+    }
 
     return saved;
   }
@@ -225,6 +231,15 @@ export class DatabaseRowTool implements BlockTool {
   public updatePageId(param: { pageId: string }): void {
     if (param.pageId.length > 0) {
       this._data.pageId = param.pageId;
+    }
+  }
+
+  /** Sets the page icon (an emoji); null removes it. */
+  public updateIcon(param: { icon: string | null }): void {
+    if (param.icon === null || param.icon === '') {
+      delete this._data.icon;
+    } else {
+      this._data.icon = param.icon;
     }
   }
 

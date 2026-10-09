@@ -762,8 +762,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: relation chips and picker, and the formula editor.
     const DATABASE_COMPUTED_PROPERTIES_BYTES = 3_040;
     // database.css: Phase 4 row page: the empty body hint, center and full
-    // page modes, the peek header controls, and their tokens.
-    const DATABASE_ROW_PAGE_BYTES = 3_826;
+    // page modes, the peek header controls, the page icon and the properties
+    // panel, and their tokens.
+    const DATABASE_ROW_PAGE_BYTES = 6_107;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

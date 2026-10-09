@@ -926,6 +926,96 @@
   color: var(--blok-database-add-text);
 }
 
+/* Page icon above the title (icon size unmeasured: Blok's page title icon scale). */
+[data-blok-database-drawer-page-head] {
+  display: flex;
+  min-height: var(--blok-space-6);
+  margin-bottom: var(--blok-space-1);
+}
+
+[data-blok-database-drawer-icon] {
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  font-size: 56px;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+[data-blok-database-drawer-icon]:disabled {
+  cursor: default;
+}
+
+[data-blok-database-drawer-add-icon],
+[data-blok-database-drawer-props-toggle],
+[data-blok-database-drawer-hidden-props] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* "Add icon" shows on hover of the page head, as Notion's page controls do. */
+[data-blok-database-drawer-add-icon] {
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+[data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-icon],
+[data-blok-database-drawer-add-icon]:focus-visible {
+  opacity: 1;
+}
+
+[data-blok-database-drawer-props-toggle] {
+  margin-inline-start: calc(-1 * var(--blok-space-1-5));
+  margin-bottom: var(--blok-space-1);
+}
+
+[data-blok-database-drawer-props-toggle] svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 200ms ease-out;
+}
+
+[data-blok-database-drawer-props-toggle][aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+[dir="rtl"] [data-blok-database-drawer-props-toggle][aria-expanded="false"] svg {
+  transform: rotate(90deg);
+}
+
+[data-blok-database-drawer-props][hidden] {
+  display: none;
+}
+
+[data-blok-database-drawer-hidden-props] {
+  align-self: flex-start;
+}
+
+@media (hover: hover) {
+  [data-blok-database-drawer-add-icon]:hover,
+  [data-blok-database-drawer-props-toggle]:hover,
+  [data-blok-database-drawer-hidden-props]:hover,
+  [data-blok-database-drawer-icon]:not(:disabled):hover {
+    background-color: var(--blok-database-drawer-border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-drawer-add-icon],
+  [data-blok-database-drawer-props-toggle] svg {
+    transition: none;
+  }
+}
+
 /**
  * Drawer properties section.
  */

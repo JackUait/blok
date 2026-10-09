@@ -21,6 +21,7 @@ export const DATABASE_ROW_DATA = {
       type: 'boolean',
       description: 'True once the page body lives in the row\'s child blocks. A legacy body blob in a richText property is then ignored.',
     },
+    icon: { type: 'string', description: 'The row page icon, an emoji.' },
     convertedValues: {
       type: 'object',
       description: 'Values a property type change could not carry over, keyed by property id; restored if the type changes back.',

@@ -238,6 +238,8 @@ export interface DatabaseRow {
   position: string;
   properties: Record<string, PropertyValue>;
   pageId?: string;
+  /** The page icon, an emoji. */
+  icon?: string;
   /** Row block metadata, for the read-only time and person properties. */
   meta?: DatabaseRowMeta;
   /**
@@ -267,6 +269,11 @@ export interface DatabaseRowData extends BlockToolData {
    * OutputData blob in a richText property) was turned into child blocks.
    */
   bodyBlocks?: boolean;
+  /**
+   * The page icon, an emoji. A plain leaf, so two people picking at once
+   * converge on one pick instead of a mix of both.
+   */
+  icon?: string;
 }
 
 // ─── View config ───

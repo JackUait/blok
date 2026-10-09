@@ -306,9 +306,98 @@ describe('row bodies are child blocks of the row', () => {
     expect((await editor?.save())?.blocks.filter((block) => block.parent === 'r2').map((block) => block.type)).toEqual(['paragraph']);
   });
 
+  it('keeps a row icon on the row and shows it above the title', async () => {
+    const blocks = docWithBodies();
+
+    blocks[2] = { ...blocks[2], data: { ...blocks[2].data, icon: '🚀' } };
+    await make(blocks);
+    await openRow('r1');
+
+    expect(holder?.querySelector('[data-blok-database-drawer-icon]')?.textContent).toBe('🚀');
+    expect((await editor?.save())?.blocks.find((block) => block.id === 'r1')?.data.icon).toBe('🚀');
+  });
+
+  it('offers "Add icon" on a page with none, never to a read-only viewer', async () => {
+    await make(docWithBodies());
+    await openRow('r2');
+
+    expect(holder?.querySelector('[data-blok-database-drawer-add-icon]')).not.toBeNull();
+
+    editor?.destroy();
+    holder?.replaceChildren();
+    await make(docWithBodies(), true);
+    await openRow('r2');
+
+    expect(holder?.querySelector('[data-blok-database-drawer-add-icon]')).toBeNull();
+  });
+
   it('declares the row a layout container that never nests another row', () => {
     expect(DatabaseRowTool.isLayout).toBe(true);
     expect(DatabaseRowTool.deletesChildren).toBe(true);
     expect(DatabaseRowTool.childTools).toEqual({ deny: ['database-row'] });
+  });
+});
+
+describe('row page properties panel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    vi.restoreAllMocks();
+  });
+
+  const withProperties = (): OutputBlockData[] => {
+    const blocks = docWithBodies();
+
+    blocks[1] = {
+      ...blocks[1],
+      data: {
+        ...blocks[1].data,
+        schema: [
+          { id: 't', name: 'Name', type: 'title', position: 'a0' },
+          { id: 'n', name: 'Notes', type: 'text', position: 'a1' },
+          { id: 'h', name: 'Secret', type: 'text', position: 'a2', pageVisibility: 'hidden' },
+          { id: 'e', name: 'Maybe', type: 'text', position: 'a3', pageVisibility: 'hideWhenEmpty' },
+        ],
+      },
+    };
+
+    return blocks;
+  };
+
+  const shownProperties = (): string[] =>
+    [...(holder?.querySelectorAll('[data-blok-database-drawer-prop-label]') ?? [])].map((label) => label.textContent ?? '');
+
+  it('gathers hidden properties into one "N hidden properties" item that shows them', async () => {
+    await make(withProperties());
+    await openRow('r1');
+
+    expect(shownProperties()).toEqual(['Notes']);
+
+    const reveal = holder?.querySelector<HTMLElement>('[data-blok-database-drawer-hidden-props]');
+
+    expect(reveal?.textContent).toContain('2');
+    reveal?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(shownProperties()).toEqual(['Notes', 'Secret', 'Maybe']);
+  });
+
+  it('collapses and expands the properties section', async () => {
+    await make(withProperties());
+    await openRow('r1');
+
+    const toggle = holder?.querySelector<HTMLElement>('[data-blok-database-drawer-props-toggle]');
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(holder?.querySelector<HTMLElement>('[data-blok-database-drawer-props]')?.hidden).toBe(true);
   });
 });

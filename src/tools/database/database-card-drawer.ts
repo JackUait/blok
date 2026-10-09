@@ -12,6 +12,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { EmojiPicker } from '../callout/emoji-picker';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -110,6 +111,8 @@ export interface CardDrawerOptions {
     /** Puts the caret in the body, adding its first paragraph when it is empty. */
     start(rowId: string): void;
   };
+  /** A page icon picked (an emoji) or removed (null). */
+  onIconChange?: (rowId: string, icon: string | null) => void;
   /** The row before (-1) or after (1) the open one in the view, if any. */
   adjacentRow?: (rowId: string, direction: 1 | -1) => DatabaseRow | undefined;
   /**
@@ -202,6 +205,12 @@ export class DatabaseCardDrawer {
   private readonly rowBody: CardDrawerOptions['rowBody'];
   private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
+  private readonly onIconChange: CardDrawerOptions['onIconChange'];
+  private emojiPicker: EmojiPicker | null = null;
+  /** The properties section is folded away. Session only. */
+  private propsCollapsed = false;
+  /** Properties the page hides are shown for now. Reset per opened row. */
+  private showHiddenProps = false;
   private mode: OpenPagesIn = 'side';
   private backdrop: HTMLElement | null = null;
   private modeMenu: PopoverDesktop | null = null;
@@ -251,6 +260,7 @@ export class DatabaseCardDrawer {
     this.rowBody = options.rowBody;
     this.adjacentRow = options.adjacentRow;
     this.onModeChange = options.onModeChange;
+    this.onIconChange = options.onIconChange;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -346,6 +356,8 @@ export class DatabaseCardDrawer {
 
     content.setAttribute('data-blok-database-drawer-content', '');
 
+    content.appendChild(this.buildPageHead(row));
+
     // --- Title input ---
     const titleInput = document.createElement('textarea');
 
@@ -376,6 +388,8 @@ export class DatabaseCardDrawer {
     // --- Properties section ---
     const renderableSchema = this.getRenderableSchema();
 
+    this.showHiddenProps = false;
+    content.appendChild(this.buildPropsToggle());
     content.appendChild(this.buildPropsSection(renderableSchema, row));
 
     // --- Divider ---
@@ -501,6 +515,9 @@ export class DatabaseCardDrawer {
       }
     }
 
+    this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
+    this.showHiddenProps = false;
+
     // Replace properties section
     this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
 
@@ -531,6 +548,9 @@ export class DatabaseCardDrawer {
     this.cleanupListeners();
     this.cleanupEditor();
     this.closeModeMenu();
+    this.emojiPicker?.close();
+    this.emojiPicker?.getElement().remove();
+    this.emojiPicker = null;
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
 
@@ -613,6 +633,79 @@ export class DatabaseCardDrawer {
     this.peekHost?.removeAttribute('data-blok-database-peek');
     this.peekHost?.style.removeProperty('--_blok-peek-inset');
     this.peekHost = null;
+  }
+
+  /** Icon row above the title: the page icon, or "Add icon" for a writer. */
+  private buildPageHead(row: DatabaseRow): HTMLElement {
+    const head = document.createElement('div');
+
+    head.setAttribute('data-blok-database-drawer-page-head', '');
+    if (row.icon !== undefined) {
+      const icon = document.createElement('button');
+
+      icon.type = 'button';
+      icon.setAttribute('data-blok-database-drawer-icon', '');
+      icon.setAttribute('aria-label', this.label('tools.database.changeIcon'));
+      icon.textContent = row.icon;
+      icon.disabled = this.readOnly;
+      icon.addEventListener('click', () => this.openIconPicker(row.id, icon));
+      head.appendChild(icon);
+    } else if (!this.readOnly && this.onIconChange !== undefined) {
+      const add = document.createElement('button');
+
+      add.type = 'button';
+      add.setAttribute('data-blok-database-drawer-add-icon', '');
+      add.textContent = this.label('tools.database.addIcon');
+      add.addEventListener('click', () => this.openIconPicker(row.id, add));
+      head.appendChild(add);
+    }
+
+    return head;
+  }
+
+  private openIconPicker(rowId: string, anchor: HTMLElement): void {
+    const onIconChange = this.onIconChange;
+    const i18n = this.i18n;
+
+    if (this.readOnly || onIconChange === undefined || i18n === undefined) {
+      return;
+    }
+    const handlers = {
+      onSelect: (native: string): void => onIconChange(rowId, native),
+      onRemove: (): void => onIconChange(rowId, null),
+    };
+
+    if (this.emojiPicker === null) {
+      this.emojiPicker = new EmojiPicker({ ...handlers, i18n, locale: i18n.getLocale() });
+    }
+    const element = this.emojiPicker.getElement();
+
+    if (!element.isConnected) {
+      document.body.appendChild(element);
+    }
+    void this.emojiPicker.open(anchor, undefined, handlers);
+  }
+
+  /** "Properties" with a caret that folds the section away. */
+  private buildPropsToggle(): HTMLElement {
+    const toggle = document.createElement('button');
+
+    toggle.type = 'button';
+    toggle.setAttribute('data-blok-database-drawer-props-toggle', '');
+    toggle.setAttribute('aria-expanded', String(!this.propsCollapsed));
+    toggle.innerHTML = IconChevronDown;
+    toggle.append(this.label('tools.database.propertiesSection'));
+    toggle.addEventListener('click', () => {
+      this.propsCollapsed = !this.propsCollapsed;
+      toggle.setAttribute('aria-expanded', String(!this.propsCollapsed));
+      const section = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-props]');
+
+      if (section !== null && section !== undefined) {
+        section.hidden = this.propsCollapsed;
+      }
+    });
+
+    return toggle;
   }
 
   /** Header controls after close: expand to full page, the mode menu, previous and next row. */
@@ -857,6 +950,7 @@ export class DatabaseCardDrawer {
     }
 
     this.refreshSchema(this.schema);
+    this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
 
     if (this.attachedBodyRowId === row.id) {
       return;
@@ -922,12 +1016,29 @@ export class DatabaseCardDrawer {
 
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
+    propsSection.hidden = this.propsCollapsed;
+    const hidden = renderableSchema.filter((def) => !isShownOnPage(def, readPropertyValue(row, def) ?? null));
+
     for (const def of renderableSchema) {
       const value = readPropertyValue(row, def) ?? null;
 
-      if (isShownOnPage(def, value)) {
+      if (this.showHiddenProps || !hidden.includes(def)) {
         propsSection.appendChild(this.createPropertyRow(def, value));
       }
+    }
+
+    // Notion gathers hidden properties into one item at the bottom; a click shows them.
+    if (!this.showHiddenProps && hidden.length > 0) {
+      const reveal = document.createElement('button');
+
+      reveal.type = 'button';
+      reveal.setAttribute('data-blok-database-drawer-hidden-props', '');
+      reveal.textContent = this.i18n?.t('tools.database.hiddenProperties', { count: hidden.length }) ?? `${hidden.length}`;
+      reveal.addEventListener('click', () => {
+        this.showHiddenProps = true;
+        this.refreshSchema(this.schema);
+      });
+      propsSection.appendChild(reveal);
     }
 
     if (!this.readOnly) {

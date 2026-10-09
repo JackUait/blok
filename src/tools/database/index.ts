@@ -628,6 +628,7 @@ export class DatabaseTool implements BlockTool {
           position: rowData?.position ?? '',
           properties,
           ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
+          ...(typeof rowData?.icon === 'string' && rowData.icon !== '' ? { icon: rowData.icon } : {}),
           ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });
@@ -3002,6 +3003,14 @@ export class DatabaseTool implements BlockTool {
           start: (rowId) => this.api.blocks.getById(rowId)?.call('startBody'),
         },
         adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
+        onIconChange: (rowId, icon) => {
+          if (this.readOnly || this.destroyed) return;
+          const row = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
+
+          row?.call('updateIcon', { icon });
+          row?.dispatchChange();
+          this.syncRowsFromBlocks();
+        },
         onModeChange: (mode) => this.changeOpenMode(mode),
         peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,
       });

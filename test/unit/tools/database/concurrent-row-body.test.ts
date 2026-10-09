@@ -359,4 +359,27 @@ describe('concurrent database row bodies', { timeout: 60000 }, () => {
       expect(childrenOf(client, 'row-1').map((block) => textOf(block.data))).toEqual(['Legacy']);
     }
   });
+
+  it('converges on one icon when two peers pick at once, and keeps a concurrent title edit', async () => {
+    const a = await bootLive();
+    const b = await bootLive();
+
+    await pump([a, b]);
+    const rowOf = (client: LiveClient): ReturnType<typeof client.core.moduleInstances.API.methods.blocks.getById> =>
+      client.core.moduleInstances.API.methods.blocks.getById('row-1');
+
+    rowOf(a)?.call('updateIcon', { icon: '🚀' });
+    rowOf(a)?.dispatchChange();
+    rowOf(b)?.call('updateIcon', { icon: '🌱' });
+    rowOf(b)?.call('updateTitle', { title: 'First edited', titlePropertyId: 'prop-title' });
+    rowOf(b)?.dispatchChange();
+    await settle();
+    await pump([a, b]);
+
+    const icons = [a, b].map((client) => dataOf(client, 'row-1').icon);
+
+    expect(icons[0]).toBe(icons[1]);
+    expect(['🚀', '🌱']).toContain(icons[0]);
+    expect(dataOf(a, 'row-1').title).toBe('First edited');
+  });
 });

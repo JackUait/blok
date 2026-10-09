@@ -41,6 +41,17 @@ export interface CellContext {
   uploadFile?: (file: File) => Promise<{ url: string; name?: string }>;
   /** Anchors the relative date format. Defaults to the current time. */
   now?: Date;
+  /**
+   * Formula and rollup: the property their value shows as (its result type).
+   * Without it they show as text.
+   */
+  valueProperty?: (property: PropertyDefinition) => PropertyDefinition;
+  /** A related row's title, '' when untitled, undefined when unknown. */
+  relationTitle?: (property: PropertyDefinition, rowId: string) => string | undefined;
+  /** Opens a related row. Without it a relation chip is plain text. */
+  openRelated?: (property: PropertyDefinition, rowId: string) => void;
+  /** Rows a relation cell can pick, for the relation editor. */
+  relationCandidates?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
 }
 
 /**

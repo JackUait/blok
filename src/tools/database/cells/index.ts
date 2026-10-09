@@ -2,6 +2,7 @@ import type { PropertyDefinition, PropertyValue } from '../types';
 import { openDateEditor } from './date-editor';
 import { openFilesEditor } from './files-editor';
 import { openPersonEditor } from './person-editor';
+import { openRelationEditor } from './relation-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
@@ -53,11 +54,15 @@ export const openCellEditor = (
       return openPersonEditor(property, value, anchor, ctx) ?? CLOSED;
     case 'files':
       return openFilesEditor(property, value, anchor, ctx);
+    case 'relation':
+      return openRelationEditor(property, value, anchor, ctx);
     case 'createdTime':
     case 'lastEditedTime':
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
+    case 'formula':
+    case 'rollup':
       return CLOSED;
     default:
       // A type from a newer client has no editor.

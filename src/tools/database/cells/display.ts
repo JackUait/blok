@@ -2,6 +2,7 @@ import { IconCheck } from '../../../components/icons';
 import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
+import { relationIdsOf } from '../relation-values';
 import { formatDateDisplay, resolveLocale } from './date-format';
 import { formatNumberValue, numberFill } from './number-format';
 import { optionColorOf } from './option-colors';
@@ -177,6 +178,28 @@ const renderFiles = (cell: HTMLElement, value: PropertyValue | undefined, ctx: C
   }
 };
 
+const renderRelation = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {
+  for (const id of relationIdsOf(value)) {
+    const title = ctx.relationTitle?.(property, id);
+    const chip = document.createElement('span');
+    const open = ctx.openRelated;
+
+    chip.setAttribute('data-blok-database-relation-chip', '');
+    chip.setAttribute('data-row-id', id);
+    chip.textContent = title === undefined || title === '' ? ctx.i18n.t('tools.database.relationUntitled') : title;
+    if (open !== undefined) {
+      chip.setAttribute('role', 'link');
+      chip.tabIndex = -1;
+      chip.addEventListener('click', (event) => {
+        // The chip opens the row; the cell around it must not open its editor.
+        event.stopPropagation();
+        open(property, id);
+      });
+    }
+    cell.appendChild(chip);
+  }
+};
+
 const isEmpty = (value: PropertyValue | undefined): boolean =>
   value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
@@ -186,6 +209,15 @@ const isEmpty = (value: PropertyValue | undefined): boolean =>
  * there is no value.
  */
 export const renderCellValue = (property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): HTMLElement => {
+  if (property.type === 'formula' || property.type === 'rollup') {
+    const shown = ctx.valueProperty?.(property) ?? { ...property, type: 'text' };
+    const computed = renderCellValue(shown.type === property.type ? { ...shown, type: 'text' } : shown, value, ctx);
+
+    computed.setAttribute('data-blok-database-cell', property.type);
+    computed.setAttribute('data-result-type', shown.type);
+
+    return computed;
+  }
   const cell = document.createElement('span');
 
   cell.setAttribute('data-blok-database-cell', property.type);
@@ -241,6 +273,9 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
       break;
     case 'files':
       renderFiles(cell, value, ctx);
+      break;
+    case 'relation':
+      renderRelation(cell, property, value, ctx);
       break;
     case 'uniqueId': {
       const n = toNumber(value);

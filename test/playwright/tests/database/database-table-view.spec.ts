@@ -321,9 +321,7 @@ test.describe('columns', () => {
 
     const before = await cell(page, 'r1', 'p-title').boundingBox();
 
-    await page.locator('[data-blok-database-table-scroller]').evaluate((el) => {
-      el.scrollLeft = 300;
-    });
+    await page.locator('[data-blok-database-table-scroller]').evaluate((el) => el.scrollTo({ left: 300, behavior: 'instant' }));
     const after = await cell(page, 'r1', 'p-title').boundingBox();
 
     expect(after?.x).toBeGreaterThanOrEqual((before?.x ?? 0) - 300 + 1);

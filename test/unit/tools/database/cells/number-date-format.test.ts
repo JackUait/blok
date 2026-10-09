@@ -138,3 +138,11 @@ describe('formatDateDisplay', () => {
     expect(formatDateDisplay('soon', 'en-US', {}, now)).toBeNull();
   });
 });
+
+describe('number format schema', () => {
+  it('lists exactly the formats the formatter knows', async () => {
+    const { NUMBER_FORMAT_ENUM } = await import('../../../../../src/shared/tool-descriptions/database');
+
+    expect(NUMBER_FORMAT_ENUM).toEqual([...NUMBER_FORMATS]);
+  });
+});

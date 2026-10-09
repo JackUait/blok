@@ -183,6 +183,7 @@ export const databaseRowSanitize = (): SanitizerConfig => {
     properties: PLAINTEXT,
     position: PLAINTEXT,
     pageId: PLAINTEXT,
+    convertedValues: PLAINTEXT,
   };
 };
 

@@ -224,6 +224,42 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'every Phase 2 property type with its settings',
+    data: {
+      activeViewId: 'v',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0', description: 'The task', icon: '📌' },
+        {
+          id: 'st', name: 'Progress', type: 'status', position: 'a1', pageVisibility: 'hideWhenEmpty',
+          config: { options: [{ id: 's1', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' }] },
+          status: { groups: [{ id: 'todo', kind: 'todo', name: 'To-do', color: 'gray', position: 'a0' }], showAs: 'checkbox' },
+        },
+        { id: 'n', name: 'Amount', type: 'number', position: 'a2', number: { format: 'dollar', decimals: 2, showAs: 'bar', color: 'green', divideBy: 500 } },
+        { id: 'd', name: 'Due', type: 'date', position: 'a3', date: { dateFormat: 'relative', timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } },
+        { id: 'm', name: 'Mail', type: 'email', position: 'a4' },
+        { id: 't', name: 'Tel', type: 'phone', position: 'a5' },
+        { id: 'p', name: 'Owner', type: 'person', position: 'a6' },
+        { id: 'f', name: 'Files', type: 'files', position: 'a7' },
+        { id: 'ct', name: 'Created', type: 'createdTime', position: 'a8' },
+        { id: 'et', name: 'Edited', type: 'lastEditedTime', position: 'a9' },
+        { id: 'cb', name: 'Creator', type: 'createdBy', position: 'b0' },
+        { id: 'eb', name: 'Editor', type: 'lastEditedBy', position: 'b1' },
+        { id: 'id', name: 'Code', type: 'uniqueId', position: 'b2', uniqueId: { prefix: 'TASK' } },
+      ],
+      views: [{ id: 'v', name: 'Board', type: 'board', position: 'a0', groupBy: 'st', groupByStatus: 'group', sorts: [], filters: [], visibleProperties: [] }],
+    },
+  },
+  {
+    name: 'database-row',
+    scenario: 'person and file values, and a value kept by a type change',
+    data: {
+      properties: { p: [{ id: 'u1' }], f: [{ id: 'f1', name: 'a.pdf', url: 'https://x.io/a.pdf' }], id: 7 },
+      position: 'a0',
+      convertedValues: { n: { type: 'text', value: '007' } },
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'a legacy row with no top-level title or pageId',
     data: {
@@ -295,6 +331,24 @@ const INVALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data:
         sorts: [], filters: [], visibleProperties: ['name'],
       }],
       activeViewId: 'view-table',
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a number format Notion does not have',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }, { id: 'n', name: 'N', type: 'number', position: 'a1', number: { format: 'doubloon' } }],
+      views: [{ id: 'v', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'v',
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a page visibility Notion does not have',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0', pageVisibility: 'sometimes' }],
+      views: [{ id: 'v', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'v',
     },
   },
   {
@@ -372,7 +426,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('75967d073500f1ba38d499d6798622265804c3531b735a7177f2d5b795df6d81');
+      .toBe('b2d8fed8a41d3b53d8845e706a875dfb7f0c693c728c60ae76837871143039b6');
 
     const published: unknown = JSON.parse(snapshot);
 

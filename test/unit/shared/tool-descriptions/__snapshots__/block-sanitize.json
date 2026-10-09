@@ -181,7 +181,8 @@
     "title": "plaintext",
     "properties": "plaintext",
     "position": "plaintext",
-    "pageId": "plaintext"
+    "pageId": "plaintext",
+    "convertedValues": "plaintext"
   },
   "tab": {
     "title": false,

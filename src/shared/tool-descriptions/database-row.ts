@@ -17,6 +17,16 @@ export const DATABASE_ROW_DATA = {
       description: 'Row title, mirrored from the title column. Absent on rows written before this key existed.',
     },
     pageId: { type: 'string', minLength: 1, description: 'Id of the separate document that holds the row page body.' },
+    convertedValues: {
+      type: 'object',
+      description: 'Values a property type change could not carry over, keyed by property id; restored if the type changes back.',
+      additionalProperties: {
+        type: 'object',
+        required: ['type', 'value'],
+        additionalProperties: false,
+        properties: { type: { type: 'string' }, value: { description: 'The value as the old type stored it.' } },
+      },
+    },
   },
 };
 

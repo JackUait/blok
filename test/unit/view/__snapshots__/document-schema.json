@@ -1929,7 +1929,111 @@
                 "type": "array",
                 "items": {
                   "type": "string"
+                },
+                "description": "Visible non-title property ids, in order. Kept in step with `properties` for older readers."
+              },
+              "properties": {
+                "type": "array",
+                "description": "Per-property settings in this view; array order is column order. Wins over visibleProperties.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Property id."
+                    },
+                    "visible": {
+                      "type": "boolean"
+                    },
+                    "width": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "Column width in pixels."
+                    },
+                    "wrap": {
+                      "type": "boolean"
+                    }
+                  }
                 }
+              },
+              "wrapCells": {
+                "type": "boolean",
+                "description": "Wrap every cell. Default false."
+              },
+              "frozenColumnCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Columns from the start that stay put on horizontal scroll. Default 0."
+              },
+              "showVerticalLines": {
+                "type": "boolean",
+                "description": "Default true."
+              },
+              "loadLimit": {
+                "type": "integer",
+                "enum": [
+                  10,
+                  25,
+                  50,
+                  100
+                ],
+                "description": "Rows shown before \"Load more\"."
+              },
+              "calculations": {
+                "type": "array",
+                "description": "Footer calculations, one per property.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "fn"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Property id."
+                    },
+                    "fn": {
+                      "type": "string",
+                      "enum": [
+                        "count",
+                        "count_values",
+                        "unique",
+                        "empty",
+                        "not_empty",
+                        "percent_empty",
+                        "percent_not_empty",
+                        "sum",
+                        "average",
+                        "median",
+                        "min",
+                        "max",
+                        "range",
+                        "earliest_date",
+                        "latest_date",
+                        "date_range",
+                        "checked",
+                        "unchecked",
+                        "percent_checked",
+                        "percent_unchecked"
+                      ]
+                    }
+                  }
+                }
+              },
+              "openPagesIn": {
+                "type": "string",
+                "enum": [
+                  "side",
+                  "center",
+                  "full"
+                ],
+                "description": "Where a row page opens. Default side; center for gallery."
               }
             }
           }

@@ -122,7 +122,7 @@ export { SpacerData } from './tools/spacer';
 export { TableOfContentsData } from './tools/table-of-contents';
 export { CalloutData, CalloutConfig } from './tools/callout';
 export { QuoteData, QuoteToolData } from './tools/quote';
-export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
+export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData, ViewPropertySetting, ViewCalculation, CalculationFn, LoadLimit, OpenPagesIn, DatabaseViewSettingKey } from './tools/database';
 export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, ImageFrame, ImageCrop, ImageCropShape, ImageRotation, ImageFilterPreset, ImageFilterDefinition, ImageAdjust } from './tools/image';
 export { FileData, FileConfig, FileUploader, FileUploadContext, FileUploadResult } from './tools/file';
 export { AudioData, AudioConfig, AudioUploader, AudioUploadContext, AudioAlignment } from './tools/audio';

@@ -7,6 +7,8 @@
 
 import type { DatabaseData as PublishedDatabaseData } from '../../../types/tools/database';
 import type { DatabaseData as SourceDatabaseData } from '../../../src/tools/database/types';
+import type { DatabaseAdapter as PublishedAdapter, DatabaseViewConfig as PublishedView } from '../../../types/tools/database';
+import type { DatabaseAdapter as SourceAdapter, DatabaseViewConfig as SourceView } from '../../../src/tools/database/types';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
 const assert = <T extends true>(): T | undefined => undefined;
@@ -16,3 +18,8 @@ type Known<T> = { [K in keyof T as string extends K ? never : number extends K ?
 
 assert<Equal<keyof Known<PublishedDatabaseData>, keyof Known<SourceDatabaseData>>>();
 assert<Equal<PublishedDatabaseData['title'], SourceDatabaseData['title']>>();
+
+// Every view field, and the adapter's view writes, carry the same shape on both sides.
+assert<Equal<PublishedView, SourceView>>();
+assert<Equal<Parameters<PublishedAdapter['createView']>[0], Parameters<SourceAdapter['createView']>[0]>>();
+assert<Equal<Parameters<PublishedAdapter['updateView']>[0], Parameters<SourceAdapter['updateView']>[0]>>();

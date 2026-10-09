@@ -197,6 +197,33 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'a table view with per-property settings, calculations and layout options',
+    data: {
+      activeViewId: 'view-table',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'due', name: 'Due', type: 'date', position: 'a1' },
+      ],
+      views: [{
+        id: 'view-table',
+        name: 'Table',
+        type: 'table',
+        position: 'a0',
+        sorts: [],
+        filters: [],
+        visibleProperties: ['due'],
+        properties: [{ id: 'name', visible: true, width: 280, wrap: false }, { id: 'due' }],
+        wrapCells: true,
+        frozenColumnCount: 1,
+        showVerticalLines: false,
+        loadLimit: 25,
+        calculations: [{ id: 'due', fn: 'earliest_date' }],
+        openPagesIn: 'center',
+      }],
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'a legacy row with no top-level title or pageId',
     data: {
@@ -282,6 +309,51 @@ const INVALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data:
     },
   },
   {
+    name: 'database',
+    scenario: 'a load limit Notion does not offer',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'view-table', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], loadLimit: 30 }],
+      activeViewId: 'view-table',
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'an unknown calculation',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'view-table', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], calculations: [{ id: 'name', fn: 'mode' }] }],
+      activeViewId: 'view-table',
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a property setting without an id',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'view-table', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], properties: [{ visible: true }] }],
+      activeViewId: 'view-table',
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'an unknown place to open pages',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'view-table', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], openPagesIn: 'tab' }],
+      activeViewId: 'view-table',
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a negative frozen column count',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'view-table', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], frozenColumnCount: -1 }],
+      activeViewId: 'view-table',
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'an empty pageId',
     data: { properties: { name: 'Ship it' }, position: 'a0', pageId: '' },
@@ -300,7 +372,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('a3d0176da40248e476edc84e80496042b63809f60e8d7372d49ecc6c0fcc719b');
+      .toBe('75967d073500f1ba38d499d6798622265804c3531b735a7177f2d5b795df6d81');
 
     const published: unknown = JSON.parse(snapshot);
 

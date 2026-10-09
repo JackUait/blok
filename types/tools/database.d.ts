@@ -70,6 +70,36 @@ export interface FilterConfig {
   value: PropertyValue;
 }
 
+/** Footer calculation names, as in Notion's API. */
+export type CalculationFn =
+  | 'count' | 'count_values' | 'unique' | 'empty' | 'not_empty' | 'percent_empty' | 'percent_not_empty'
+  | 'sum' | 'average' | 'median' | 'min' | 'max' | 'range'
+  | 'earliest_date' | 'latest_date' | 'date_range'
+  | 'checked' | 'unchecked' | 'percent_checked' | 'percent_unchecked';
+
+/** Rows an inline view shows before "Load more". */
+export type LoadLimit = 10 | 25 | 50 | 100;
+
+/** Where a row's page opens. */
+export type OpenPagesIn = 'side' | 'center' | 'full';
+
+/** One property's settings in one view. The array order is the column order. */
+export interface ViewPropertySetting {
+  /** The property id. */
+  id: string;
+  visible?: boolean;
+  /** Column width in pixels. */
+  width?: number;
+  wrap?: boolean;
+}
+
+/** A footer calculation on one column. */
+export interface ViewCalculation {
+  /** The property id. */
+  id: string;
+  fn: CalculationFn;
+}
+
 export interface DatabaseViewConfig {
   id: string;
   name: string;
@@ -78,8 +108,28 @@ export interface DatabaseViewConfig {
   groupBy?: string;
   sorts: SortConfig[];
   filters: FilterConfig[];
+  /**
+   * Visible non-title property ids, in order. Kept in step with `properties`
+   * for readers that predate it.
+   */
   visibleProperties: string[];
+  /** Per-property visibility, order, width and wrap. Wins over `visibleProperties`. */
+  properties?: ViewPropertySetting[];
+  /** Wrap every cell. Default false. */
+  wrapCells?: boolean;
+  /** Columns, from the start, that stay put on horizontal scroll. Default 0. */
+  frozenColumnCount?: number;
+  /** Default true. */
+  showVerticalLines?: boolean;
+  loadLimit?: LoadLimit;
+  calculations?: ViewCalculation[];
+  /** Default 'side', or 'center' for a gallery. */
+  openPagesIn?: OpenPagesIn;
 }
+
+/** View fields a caller may set when creating or changing a view. */
+export type DatabaseViewSettingKey =
+  | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn';
 
 // ─── Top-level saved data ───
 
@@ -148,12 +198,12 @@ export interface DatabaseAdapter {
     sorts?: SortConfig[];
     filters?: FilterConfig[];
     visibleProperties?: string[];
-  }): Promise<DatabaseViewConfig>;
+  } & Partial<Pick<DatabaseViewConfig, DatabaseViewSettingKey>>): Promise<DatabaseViewConfig>;
 
   updateView(params: {
     viewId: string;
     changes: Partial<Pick<DatabaseViewConfig,
-      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'
+      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey
     >>;
   }): Promise<DatabaseViewConfig>;
 
@@ -245,6 +295,12 @@ export declare class Database implements BlockTool {
    * Toggle read-only mode
    */
   setReadOnly(state: boolean): void;
+
+  /**
+   * Apply data from the document (undo, redo or a collaborator) in place.
+   * Returns false when the block must be rendered again instead.
+   */
+  setData(data: DatabaseData): boolean;
 
   /**
    * Add a new view of the given type

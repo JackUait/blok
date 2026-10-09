@@ -37,7 +37,7 @@ const renderCheckbox = (cell: HTMLElement, value: PropertyValue | undefined, ctx
   cell.append(box, state);
 };
 
-const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
+function renderUrl(cell: HTMLElement, url: string, ctx: CellContext): void {
   const href = safeHref(url);
 
   if (href === null) {
@@ -60,7 +60,7 @@ const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
     }
   });
   cell.appendChild(link);
-};
+}
 
 const isEmpty = (value: PropertyValue | undefined): boolean =>
   value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);

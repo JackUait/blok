@@ -6263,6 +6263,22 @@ describe('DatabaseTool — property menu and insert placement', () => {
       tool.destroy();
     });
 
+    it('opens a feed card\'s row in a center peek by default, and as the view says otherwise', () => {
+      const center = mount({ type: 'feed' });
+      const drawerOf = (tool: DatabaseTool): { openRowId: string | null; openMode: string } | null =>
+        (tool as unknown as { cardDrawer: { openRowId: string | null; openMode: string } | null }).cardDrawer;
+
+      queryAllByData(center.element, 'data-blok-database-feed-title')[1].click();
+      expect(drawerOf(center.tool)).toMatchObject({ openRowId: 'row-2', openMode: 'center' });
+      center.tool.destroy();
+
+      const side = mount({ type: 'feed', openPagesIn: 'side' });
+
+      queryAllByData(side.element, 'data-blok-database-feed-title')[0].click();
+      expect(drawerOf(side.tool)).toMatchObject({ openRowId: 'row-1', openMode: 'side' });
+      side.tool.destroy();
+    });
+
     it('stacks the rows as feed cards', () => {
       const { tool, element } = mount({ type: 'feed' });
 

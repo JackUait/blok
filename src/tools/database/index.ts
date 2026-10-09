@@ -102,6 +102,9 @@ const formatPreview = (value: PropertyValue): string => {
   return typeof value === 'object' && value !== null ? '' : String(value);
 };
 
+/** Emitted on the editor's own event bus when a database block has rendered. */
+const DATABASE_RENDERED_EVENT = 'database rendered';
+
 /** Events that can end an inline edit or a drag. */
 const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
 
@@ -230,6 +233,7 @@ export class DatabaseTool implements BlockTool {
 
     this.activateView(this.activeViewId);
     this.api.events.on('block changed', this.handleBlockChanged);
+    this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
   }
 
   /** Toolbar, filter bar, settings panel and the person's unsaved filters and sorts. Built on first use, after the constructor. */
@@ -400,6 +404,8 @@ export class DatabaseTool implements BlockTool {
     const hadRows = this.model.getOrderedRows().length > 0;
 
     this.syncRowsFromBlocks();
+    // A database that rendered first read this one before its tool existed.
+    this.api.events.emit(DATABASE_RENDERED_EVENT, { databaseId: this.block.id });
 
     if (!hadRows && this.model.getOrderedRows().length > 0) {
       this.rerenderView();
@@ -450,6 +456,7 @@ export class DatabaseTool implements BlockTool {
   destroy(): void {
     this.destroyed = true;
     this.api.events.off('block changed', this.handleBlockChanged);
+    this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.viewControls?.destroy();
     this.unregisterGroupToggle?.();
     this.unregisterGroupToggle = null;
@@ -719,6 +726,14 @@ export class DatabaseTool implements BlockTool {
 
     return typeof target.id === 'string' && this.model.getRow(target.id) !== undefined;
   }
+
+  /** Another database of this editor rendered: re-read it if this one relates to it. */
+  private readonly handleDatabaseRendered = (payload: unknown): void => {
+    const databaseId = (payload as { databaseId?: unknown } | undefined)?.databaseId;
+
+    if (this.destroyed || typeof databaseId !== 'string' || !this.isRelatedChange({ id: databaseId, name: 'database' })) return;
+    this.reprojectRows();
+  };
 
   /**
    * A row or the schema of a database this one relates to: its titles and

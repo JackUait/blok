@@ -74,10 +74,15 @@ const makeDoc = (rows: FakeRow[]): Doc => {
   const order = rows.map((r) => r.block.id);
   const transact = vi.fn((fn: () => void) => fn());
   const deleted: string[] = [];
+  const listeners = new Map<string, Array<(data?: unknown) => void>>();
   const api = {
     styles: { block: 'blok-block' },
     i18n: { t: (key: string) => key },
-    events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+    events: {
+      on: vi.fn((name: string, cb: (data?: unknown) => void) => listeners.set(name, [...(listeners.get(name) ?? []), cb])),
+      off: vi.fn(),
+      emit: vi.fn((name: string, data?: unknown) => (listeners.get(name) ?? []).forEach((cb) => cb(data))),
+    },
     blocks: {
       getChildren: vi.fn((parentId: string) => order.filter((id) => !deleted.includes(id)).map((id) => map.get(id)?.block).filter((b): b is BlockAPI => b !== undefined && (b as unknown as { parentId: string }).parentId === parentId)),
       getBlocksCount: vi.fn(() => 1),
@@ -247,6 +252,42 @@ describe('DatabaseTool — computed properties', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('re-reads a related database that rendered after it, so a rollup of its formula fills in', () => {
+    const doc = makeDoc([fakeRow('p1', 'projects', { title: 'Launch', tasks: [{ id: 't1' }] }, 'a0')]);
+    const projectsSchema: PropertyDefinition[] = [
+      { id: 'title', name: 'Project', type: 'title', position: 'a0' },
+      { id: 'tasks', name: 'Tasks', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'tasks-db' } },
+      { id: 'effort', name: 'Effort', type: 'rollup', position: 'a2', rollup: { relationPropertyId: 'tasks', targetPropertyId: 'double', function: 'sum' } },
+    ];
+    const projects = new DatabaseTool({
+      data: { schema: projectsSchema, views: [{ id: 'v', name: 'T', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['tasks', 'effort'] }], activeViewId: 'v' },
+      config: {}, api: doc.api, readOnly: false, block: { id: 'projects', dispatchChange: vi.fn() } as never,
+    });
+    const el = projects.render();
+
+    document.body.appendChild(el);
+    projects.rendered();
+    expect(cell(el, 'p1', 'effort')?.textContent).toBe('');
+
+    // The Tasks database renders now, with a formula Projects rolls up.
+    const tasksBlock = {
+      id: 'tasks-db',
+      name: 'database',
+      call: (method: string, param: { receive: (source: unknown) => void }) => {
+        if (method !== 'readRelationSource') return;
+        param.receive({
+          schema: [{ id: 't-title', name: 'Task', type: 'title', position: 'a0' }, { id: 'double', name: 'Double', type: 'number', position: 'a1' }],
+          rows: [{ id: 't1', position: 'a0', properties: { 'double': 6 } }],
+        });
+      },
+    };
+
+    vi.mocked(doc.api.blocks.getById).mockImplementation(((id: string) => (id === 'tasks-db' ? tasksBlock : null)) as never);
+    doc.api.events.emit('database rendered', { databaseId: 'tasks-db' });
+
+    expect(cell(el, 'p1', 'effort')?.textContent).toBe('6');
   });
 
   it('answers another database with its schema and computed rows', () => {

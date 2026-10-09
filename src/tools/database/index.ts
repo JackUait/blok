@@ -1657,9 +1657,19 @@ export class DatabaseTool implements BlockTool {
     };
 
     if (property !== undefined && view !== undefined && !OPTION_GROUP_TYPES.includes(property.type)) {
+      // A formula or rollup groups, and so labels, as its result type; a relation group is a related row.
+      const shown = this.computedValues.valueProperty(property);
+      const label = (key: string): string => {
+        if (key === NO_VALUE_GROUP_KEY) return noValue.label;
+        if (shown.type !== 'relation') return groupLabel(shown, key, this.api.i18n, view.groupSettings);
+        const title = this.relatedTitle(shown, key);
+
+        return title === undefined || title === '' ? this.api.i18n.t('tools.database.relationUntitled') : title;
+      };
+
       return this.model.listGroups({ ...view, groupBy: groupByPropId }, { search: this.controls.search }).map((group, index) => ({
         id: group.key,
-        label: group.key === NO_VALUE_GROUP_KEY ? noValue.label : groupLabel(property, group.key, this.api.i18n, view.groupSettings),
+        label: label(group.key),
         position: String(index),
       }));
     }

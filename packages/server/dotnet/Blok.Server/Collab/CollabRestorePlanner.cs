@@ -404,7 +404,7 @@ internal static class CollabRestorePlanner
     // list would be written as contentIds and linked twice.
     var inserted = new JsonObject();
 
-    foreach (var key in (string[])["type", "data", "tunes", "lastEditedAt", "lastEditedBy"])
+    foreach (var key in (string[])["type", "data", "tunes", "lastEditedAt", "lastEditedBy", "createdAt", "createdBy"])
     {
       if (block.TryGetPropertyValue(key, out var value))
       {

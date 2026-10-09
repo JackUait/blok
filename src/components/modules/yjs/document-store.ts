@@ -327,6 +327,24 @@ export class DocumentStore {
 
     this.rewriteOptionalField(yblock, 'lastEditedAt', block.lastEditedAt);
     this.rewriteOptionalField(yblock, 'lastEditedBy', stripNulIfString(block.lastEditedBy));
+    this.rewriteOptionalField(yblock, 'createdAt', block.createdAt);
+    this.rewriteOptionalField(yblock, 'createdBy', stripNulIfString(block.createdBy));
+  }
+
+  /**
+   * A block's creation stamp as the document holds it.
+   * @param id - Block id
+   * @returns the stamp; fields the block lacks are undefined
+   */
+  public blockCreation(id: string): { createdAt?: number; createdBy?: string } {
+    const yblock = this.yBlocksMap.get(id);
+    const createdAt: unknown = yblock?.get('createdAt');
+    const createdBy: unknown = yblock?.get('createdBy');
+
+    return {
+      ...(typeof createdAt === 'number' ? { createdAt } : {}),
+      ...(typeof createdBy === 'string' ? { createdBy } : {}),
+    };
   }
 
   /**

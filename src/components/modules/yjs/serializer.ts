@@ -479,6 +479,14 @@ export class YBlockSerializer {
       yblock.set('lastEditedBy', stripNulIfString(blockData.lastEditedBy));
     }
 
+    if (typeof blockData.createdAt === 'number') {
+      yblock.set('createdAt', blockData.createdAt);
+    }
+
+    if (typeof blockData.createdBy === 'string') {
+      yblock.set('createdBy', stripNul(blockData.createdBy));
+    }
+
     return yblock;
   }
 
@@ -545,6 +553,18 @@ export class YBlockSerializer {
 
     if (typeof lastEditedBy === 'string') {
       block.lastEditedBy = lastEditedBy;
+    }
+
+    const createdAt = yblock.get('createdAt');
+
+    if (typeof createdAt === 'number') {
+      block.createdAt = createdAt;
+    }
+
+    const createdBy = yblock.get('createdBy');
+
+    if (typeof createdBy === 'string') {
+      block.createdBy = createdBy;
     }
 
     return block;

@@ -757,6 +757,7 @@ export class BlockManager extends Module {
         ...(Object.keys(tunes).length > 0 && { tunes }),
         ...(block.parentId !== null && { parent: block.parentId }),
         ...(block.contentIds.length > 0 && { content: block.contentIds }),
+        ...block.creation,
       };
     });
 

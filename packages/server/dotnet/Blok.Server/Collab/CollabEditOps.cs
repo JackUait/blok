@@ -287,7 +287,9 @@ internal static class CollabEditOps
         "data",
         "tunes",
         "lastEditedAt",
-        "lastEditedBy");
+        "lastEditedBy",
+        "createdAt",
+        "createdBy");
 
     if (block.ContainsKey("id") && RequiredString(block, "id", index) != id)
     {
@@ -311,6 +313,17 @@ internal static class CollabEditOps
     if (block.ContainsKey("lastEditedBy"))
     {
       RequiredString(block, "lastEditedBy", index);
+    }
+
+    if (block["createdAt"] is { } createdAt &&
+        createdAt.GetValueKind() != JsonValueKind.Number)
+    {
+      throw Refused(index, "the block's \"createdAt\" must be a number");
+    }
+
+    if (block.ContainsKey("createdBy"))
+    {
+      RequiredString(block, "createdBy", index);
     }
 
     return block;

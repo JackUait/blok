@@ -47,9 +47,9 @@ function normalizeOutputBlock(block: OutputBlockData | LooseOutputBlockData): Ou
  * mints a fresh id whenever content arrives without one, so an id-less origin
  * document must still compare equal to its saved echo.
  *
- * Edit metadata (`lastEditedAt`/`lastEditedBy`) never participates: it records
- * WHO touched the block and WHEN, not what it says, so a document whose only
- * delta is a stamp is not a content change.
+ * Edit metadata (`lastEditedAt`/`lastEditedBy`, `createdAt`/`createdBy`) never
+ * participates: it records WHO touched the block and WHEN, not what it says, so
+ * a document whose only delta is a stamp is not a content change.
  * @param a - first block to compare
  * @param b - second block to compare
  * @returns true when the blocks are structurally equal
@@ -58,8 +58,8 @@ function equalsOutputBlock(
   a: OutputBlockData | LooseOutputBlockData,
   b: OutputBlockData | LooseOutputBlockData
 ): boolean {
-  const { id: idA, lastEditedAt: _editedAtA, lastEditedBy: _editedByA, ...restA } = normalizeOutputBlock(a);
-  const { id: idB, lastEditedAt: _editedAtB, lastEditedBy: _editedByB, ...restB } = normalizeOutputBlock(b);
+  const { id: idA, lastEditedAt: _editedAtA, lastEditedBy: _editedByA, createdAt: _createdAtA, createdBy: _createdByA, ...restA } = normalizeOutputBlock(a);
+  const { id: idB, lastEditedAt: _editedAtB, lastEditedBy: _editedByB, createdAt: _createdAtB, createdBy: _createdByB, ...restB } = normalizeOutputBlock(b);
 
   const hasIdA = typeof idA === 'string' && idA !== '';
   const hasIdB = typeof idB === 'string' && idB !== '';

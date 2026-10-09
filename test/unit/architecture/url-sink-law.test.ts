@@ -47,6 +47,8 @@ const SAFE_HELPERS = [
  * Every entry MUST carry a reason.
  */
 const EXEMPT_SINKS: Record<string, string> = {
+  'tools/database/cells/display.ts » href':
+    'renderLink takes an href every caller already gated: safeHref(url), or mailtoHref/telHref, which build the URL and return safeHref of it',
   'tools/image/index.ts » src':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
   'tools/image/tone-sampler.ts » src':

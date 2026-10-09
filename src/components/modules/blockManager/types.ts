@@ -43,6 +43,10 @@ export interface ComposeBlockOptions {
   lastEditedAt?: number;
   /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
+  /** Stored creation time (milliseconds since epoch) */
+  createdAt?: number;
+  /** Stored creator id */
+  createdBy?: string;
   /**
    * Why this Block is being composed — a creation the author just made, or a
    * re-materialisation of a block the document already describes. Handed to the

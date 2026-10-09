@@ -2672,6 +2672,18 @@ internal static class YDocConverter
         entries.Add(Pair("lastEditedBy", Atomic(lastEditedBy, 1)));
       }
 
+      // LOCKSTEP with serializer.ts outputDataToYBlock: written only when the
+      // type is right, so a malformed stamp never reaches the client.
+      if (block["createdAt"] is { } createdAt && createdAt.GetValueKind() == JsonValueKind.Number)
+      {
+        entries.Add(Pair("createdAt", Atomic(createdAt, 1)));
+      }
+
+      if (block["createdBy"] is { } createdBy && createdBy.GetValueKind() == JsonValueKind.String)
+      {
+        entries.Add(Pair("createdBy", Atomic(createdBy, 1)));
+      }
+
       return new YMap(entries);
     }
 
@@ -3538,6 +3550,20 @@ internal static class YDocConverter
       if (Value(entry.Map, "lastEditedBy") is string lastEditedBy)
       {
         block["lastEditedBy"] = lastEditedBy;
+      }
+
+      var createdAt = Value(entry.Map, "createdAt");
+
+      if (createdAt is double or BigInteger)
+      {
+        Enter("createdAt");
+        block["createdAt"] = ToPlainOrNull(createdAt, 1);
+        Leave();
+      }
+
+      if (Value(entry.Map, "createdBy") is string createdBy)
+      {
+        block["createdBy"] = createdBy;
       }
 
       return block;

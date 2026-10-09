@@ -7,7 +7,8 @@ import {
   type ConvertibleRow,
 } from '../../../../src/tools/database/property-conversion';
 import { isComputedType } from '../../../../src/tools/database/property-values';
-import type { DatabaseRow, OutputData, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
+import type { OutputData } from '../../../../types';
+import type { DatabaseRow, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
 const OPTIONS = [
   { id: 'o-idea', label: 'Idea', color: 'gray', position: 'a0' },

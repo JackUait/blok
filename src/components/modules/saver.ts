@@ -49,6 +49,10 @@ type SaverValidatedData = ValidatedData & {
    * Identifier of the user who last edited this block
    */
   lastEditedBy?: string | null;
+  /** When the block was created, from the document */
+  createdAt?: number;
+  /** Who created the block, from the document */
+  createdBy?: string;
 };
 
 type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'>;
@@ -1051,6 +1055,8 @@ export class Saver extends Module {
       contentIds: derivedContentIds,
       lastEditedAt: block.lastEditedAt,
       lastEditedBy: block.lastEditedBy,
+      ...block.creation,
+      ...this.Blok.YjsManager.getBlockCreation(block.id),
     };
   }
 
@@ -1157,7 +1163,7 @@ export class Saver extends Module {
   private makeOutput(allExtractedData: SaverValidatedData[], dialect: 'host' | 'internal'): OutputData {
     const extractedBlocks: OutputData['blocks'] = [];
 
-    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy }) => {
+    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy, createdAt, createdBy }) => {
       const hasParent = parentId !== undefined && parentId !== null;
       const hasContent = contentIds !== undefined && contentIds.length > 0;
 
@@ -1209,6 +1215,12 @@ export class Saver extends Module {
         },
         ...hasLastEditedBy && {
           lastEditedBy,
+        },
+        ...createdAt !== undefined && {
+          createdAt,
+        },
+        ...createdBy !== undefined && {
+          createdBy,
         },
       };
 

@@ -105,6 +105,19 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
    * Set from the `user.id` config option. Omit if no user is configured.
    */
   lastEditedBy?: string;
+
+  /**
+   * Timestamp (milliseconds since epoch) the block was created. Stamped once,
+   * by the editor that creates the block. Omit for blocks created before
+   * this field existed.
+   */
+  createdAt?: number;
+
+  /**
+   * ID of the user who created this block, from the `user.id` config option.
+   * Omit if no user was configured.
+   */
+  createdBy?: string;
 }
 
 export interface OutputData {

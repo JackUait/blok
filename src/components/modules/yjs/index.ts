@@ -409,7 +409,34 @@ export class YjsManager extends Module {
     this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
-    return this.documentStore.addBlock(blockData, index);
+    return this.documentStore.addBlock(this.withCreationStamp(blockData), index);
+  }
+
+  /**
+   * Stamp a block this editor creates. Only the creating peer stamps, inside
+   * the transaction that adds the block, so the stamp rides that undo step and
+   * a peer or a reload reads it rather than minting its own. A stamp the data
+   * already carries (a host's saved block) wins.
+   * @param blockData - the new block
+   * @returns the block with `createdAt`, and `createdBy` when a user is configured
+   */
+  private withCreationStamp(blockData: YjsOutputBlockData): YjsOutputBlockData {
+    const userId = this.config.user?.id;
+
+    return {
+      ...blockData,
+      createdAt: blockData.createdAt ?? Date.now(),
+      ...(blockData.createdBy === undefined && typeof userId === 'string' && userId !== '' ? { createdBy: userId } : {}),
+    };
+  }
+
+  /**
+   * A block's creation stamp, read from the document.
+   * @param id - Block id
+   * @returns the stamp; absent fields are undefined
+   */
+  public getBlockCreation(id: string): { createdAt?: number; createdBy?: string } {
+    return this.documentStore.blockCreation(id);
   }
 
   /**
@@ -422,7 +449,7 @@ export class YjsManager extends Module {
     this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
-    return this.documentStore.addBlockAt(blockData, placement);
+    return this.documentStore.addBlockAt(this.withCreationStamp(blockData), placement);
   }
 
   /**

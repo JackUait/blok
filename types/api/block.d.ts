@@ -105,6 +105,18 @@ export interface BlockAPI {
    */
   readonly preservedTunes: { [name: string]: BlockTuneData };
 
+  /** When the block was created (ms since epoch). Undefined for a block created before this was recorded. */
+  readonly createdAt?: number;
+
+  /** Id of the user who created the block, when a user was configured. */
+  readonly createdBy?: string;
+
+  /** When the block was last edited (ms since epoch). Undefined until its first edit. */
+  readonly lastEditedAt?: number;
+
+  /** Id of the user who last edited the block, when a user was configured. */
+  readonly lastEditedBy?: string;
+
   /**
    * The url a copy of this block links to, from its tool's `copyAsLink`
    * (a page block gives its page url). Null for every other block.

@@ -88,7 +88,7 @@ const richFieldsOf = (tools: ToolsConfig['tools']): FieldsResolver => (type) => 
  */
 const bodyKey = (data: OutputData | undefined, fieldsOf: FieldsResolver): string =>
   JSON.stringify(outputBlocksToSegments(data?.blocks ?? [], fieldsOf, htmlToSegmentsDom)
-    .map(({ lastEditedAt: _at, lastEditedBy: _by, ...block }) => block));
+    .map(({ lastEditedAt: _at, lastEditedBy: _by, createdAt: _cat, createdBy: _cby, ...block }) => block));
 
 /**
  * Returns a check that is true when a saved body differs from the last one

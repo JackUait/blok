@@ -135,6 +135,22 @@ const BlockAPIConstructor = function BlockAPI(
       return block.preservedTunes;
     },
 
+    get createdAt(): number | undefined {
+      return api.blockCreation(block.id).createdAt ?? block.creation.createdAt;
+    },
+
+    get createdBy(): string | undefined {
+      return api.blockCreation(block.id).createdBy ?? block.creation.createdBy;
+    },
+
+    get lastEditedAt(): number | undefined {
+      return block.lastEditedAt;
+    },
+
+    get lastEditedBy(): string | undefined {
+      return block.lastEditedBy ?? undefined;
+    },
+
     /**
      * The url a copy of this block links to (tools with `copyAsLink`), else null
      * @returns {string | null}

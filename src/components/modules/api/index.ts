@@ -26,6 +26,14 @@ export class API extends Module {
   }
 
   /**
+   * A block's creation stamp from the document. BlockAPI reads it here.
+   * @param id - the block id
+   */
+  public blockCreation(id: string): { createdAt?: number; createdBy?: string } {
+    return this.Blok.YjsManager.getBlockCreation(id);
+  }
+
+  /**
    * Host block data the way the tool reads it: segment fields become HTML.
    * @param tool - the block's tool
    * @param data - block data as a host passes it

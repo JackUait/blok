@@ -271,6 +271,30 @@ public sealed class YDocConverterLawTests
   }
 
   [Fact]
+  public void SeedAndExportKeepTheCreationStamp()
+  {
+    // LOCKSTEP with serializer.ts outputDataToYBlock / yBlockToOutputData:
+    // createdAt is a number and createdBy a string, both on the block map.
+    var doc = new YDoc();
+
+    RichTextRuntime.Seed(doc, Blocks(
+        """{ "id": "a", "type": "paragraph", "data": {}, "createdAt": 1735689600000, "createdBy": "u1" }""",
+        """{ "id": "b", "type": "paragraph", "data": {} }"""));
+
+    var block = BlockOf(doc, "a");
+
+    Assert.IsType<double>(Entry(block, "createdAt"));
+    Assert.Equal("u1", Entry(block, "createdBy"));
+    Assert.ThrowsAny<Exception>(() => Entry(BlockOf(doc, "b"), "createdAt"));
+
+    var exported = RichTextRuntime.Export(doc);
+
+    Assert.Equal("1735689600000", BlockNamed(exported, "a")["createdAt"]!.ToJsonString());
+    Assert.Equal("u1", (string?)BlockNamed(exported, "a")["createdBy"]);
+    Assert.False(BlockNamed(exported, "b").ContainsKey("createdAt"));
+  }
+
+  [Fact]
   public void ExportWritesIntegralNumbersAsIntegersAndReadsBigIntegersToo()
   {
     var doc = BuildDoc(

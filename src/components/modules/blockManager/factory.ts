@@ -86,6 +86,8 @@ export class BlockFactory {
       bindEventsImmediately = false,
       lastEditedAt,
       lastEditedBy,
+      createdAt,
+      createdBy,
       origin = 'api',
       replaySource,
     } = options;
@@ -129,6 +131,8 @@ export class BlockFactory {
       bindMutationWatchersImmediately: bindEventsImmediately,
       lastEditedAt,
       lastEditedBy,
+      createdAt,
+      createdBy,
       origin,
       replaySource,
     }, this.dependencies.eventsDispatcher);

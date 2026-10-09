@@ -98,6 +98,12 @@ interface BlockConstructorOptions {
   /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
 
+  /** When the block was created, as the stored data says (ms since epoch) */
+  createdAt?: number;
+
+  /** Who created the block, as the stored data says */
+  createdBy?: string;
+
   /**
    * Why this Block is being constructed — a creation the author just made, or a
    * re-materialisation of a block the document already describes. Handed
@@ -179,6 +185,14 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
   /** ID of the user who last edited. Updated by BlockManager on mutation. */
   public lastEditedBy: string | null;
+
+  /**
+   * The persisted creation stamp the block was loaded with. Distinct from
+   * `createdAt` above, which is this instance's construction time and never
+   * saved. A block made in this editor gets its stamp in the document instead
+   * (YjsManager.addBlock), so the saver reads the document first.
+   */
+  public readonly creation: { createdAt?: number; createdBy?: string };
 
   /**
    * Block Tool`s name
@@ -308,6 +322,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
     bindMutationWatchersImmediately = false,
     lastEditedAt,
     lastEditedBy,
+    createdAt,
+    createdBy,
     origin = 'api',
     replaySource,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
@@ -329,6 +345,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.contentIds = Array.isArray(contentIds) ? [ ...contentIds ] : [];
     this.lastEditedAt = lastEditedAt;
     this.lastEditedBy = lastEditedBy ?? null;
+    this.creation = {
+      ...(typeof createdAt === 'number' ? { createdAt } : {}),
+      ...(typeof createdBy === 'string' ? { createdBy } : {}),
+    };
     this.settings = tool.settings;
     this.config = this.settings;
     this.blokEventBus = eventBus || null;

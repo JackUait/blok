@@ -267,7 +267,7 @@ test.describe('CSV', () => {
   // Unverified in Notion (research/05 U4): Blok offers the conversion after a plain-text table paste.
   test('turns a pasted TSV table into a database on request, keeping markup as text', async ({ page }) => {
     await mount(page, [{ id: 'p1', type: 'paragraph', data: { text: '' } }]);
-    const paragraph = page.locator('[data-blok-tool="paragraph"] [contenteditable="true"]').first();
+    const paragraph = page.locator('[data-blok-testid="block-wrapper"] [contenteditable]').first();
 
     await paragraph.click();
     await paragraph.evaluate((element: HTMLElement, text: string) => {

@@ -1,6 +1,6 @@
 /**
- * The page drawer slides in by growing its width. The "Add property" button
- * moves with it, so a type menu opened mid-slide must follow the button.
+ * The page drawer slides in with translateX. The "Add property" button moves
+ * with it, so a type menu opened mid-slide must follow the button.
  */
 
 import type { Page } from '@playwright/test';
@@ -60,14 +60,14 @@ const createBlok = async (page: Page, direction: 'ltr' | 'rtl'): Promise<void> =
 };
 
 /**
- * Opens the drawer and holds its width slide-in at the halfway point.
+ * Opens the drawer and holds its slide-in at the halfway point.
  */
 const openDrawerHeldMidSlide = async (page: Page): Promise<void> => {
   await page.locator('[data-blok-database-card]').first().click();
   // The slide-in starts one frame after the drawer mounts.
   await page.waitForFunction(() => {
     const transition = document.querySelector('[data-blok-database-drawer]')?.getAnimations()
-      .find((animation) => animation instanceof CSSTransition && animation.transitionProperty === 'width');
+      .find((animation) => animation instanceof CSSTransition && animation.transitionProperty === 'transform');
 
     if (transition === undefined) {
       return false;

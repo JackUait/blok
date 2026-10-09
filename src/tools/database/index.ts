@@ -40,6 +40,7 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import {
   DATABASE_DEFAULT_TEXT,
   localizeDatabaseSchema,
@@ -2009,6 +2010,7 @@ export class DatabaseTool implements BlockTool {
           void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options } } });
         },
         savedOptionsOf: (propertyId) => this.model.getProperty(propertyId)?.config?.options,
+        peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,
       });
     }
 

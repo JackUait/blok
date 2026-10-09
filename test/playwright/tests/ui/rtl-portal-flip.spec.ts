@@ -170,12 +170,12 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
   test('the database property type menu moves to where a fresh RTL menu opens', async ({ page }) => {
     const { fresh, flipped, ltr } = await freshAndFlipped(page, database('إصلاح الخطأ'), async () => {
       await page.locator('[data-blok-database-card]').first().click();
-      // The drawer slides in by growing its width, set one frame after mount.
+      // The drawer slides in once data-open lands, one frame after mount.
       // Measure the menu only once the button has stopped moving.
       await page.waitForFunction(() => {
         const drawer = document.querySelector<HTMLElement>('[data-blok-database-drawer]');
 
-        return drawer !== null && drawer.style.width !== '' && drawer.getAnimations().length === 0;
+        return drawer !== null && drawer.hasAttribute('data-open') && drawer.getAnimations().length === 0;
       });
       await page.locator('[data-blok-database-drawer-add-prop]').click();
       const menu = page.locator('[data-blok-database-property-type-popover]');

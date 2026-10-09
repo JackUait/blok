@@ -2436,6 +2436,37 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('side peek', () => {
+    it('narrows the editor the database sits in while a card page is open, and restores it on close', () => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+
+      const editor = document.createElement('div');
+
+      editor.setAttribute('data-blok-editor', '');
+      document.body.appendChild(editor);
+
+      const childBlocks = [createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' }, position: 'a0' })];
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks }));
+      const element = tool.render();
+
+      editor.appendChild(element);
+      tool.rendered();
+
+      queryAllByData(element, 'data-row-id', 'row-1').find((el) => el.hasAttribute('data-blok-database-card'))?.click();
+
+      expect(editor.hasAttribute('data-blok-database-peek')).toBe(true);
+
+      tool.destroy();
+
+      expect(editor.hasAttribute('data-blok-database-peek')).toBe(false);
+      editor.remove();
+    });
+  });
+
   describe('switching the view tab', () => {
     it('hands the active background from the old tab to the new one, so it can fade over 100ms', async () => {
       const options = createDatabaseOptions({

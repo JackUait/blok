@@ -577,14 +577,16 @@
 }
 
 /**
- * Drawer — base layout (fixed panel at the inline end) with slide-in animation.
+ * Side peek: half the viewport at the inline end, sliding in with translateX
+ * over 200ms ease (research/08). database-card-drawer.ts sets data-open a
+ * frame after mount and waits for this transition before removing it.
  */
 [data-blok-database-drawer] {
   position: fixed;
   top: 0;
   inset-inline-end: 0;
   height: 100%;
-  width: 0;
+  width: 50vw;
   z-index: var(--blok-z-drawer);
   overflow: hidden;
   display: flex;
@@ -592,7 +594,22 @@
   border-inline-start: 1px solid var(--blok-popover-border);
   background-color: var(--blok-popover-bg);
   box-shadow: var(--blok-shadow-drawer-side);
-  transition: width 200ms ease;
+  transform: translateX(100%);
+  transition: transform 200ms ease;
+}
+
+[dir="rtl"] [data-blok-database-drawer] {
+  transform: translateX(-100%);
+}
+
+[data-blok-database-drawer][data-open] {
+  transform: none;
+}
+
+/* The page beside the side peek narrows with it; the drawer sets the inset. */
+[data-blok-database-peek] {
+  padding-inline-end: var(--_blok-peek-inset, 0px);
+  transition: padding-inline-end 200ms ease;
 }
 
 /**
@@ -1551,6 +1568,7 @@
   }
 
   [data-blok-database-drawer],
+  [data-blok-database-peek],
   [data-blok-database-drop-line],
   [data-blok-database-column-actions],
   [data-blok-database-list-group-toggle] svg,

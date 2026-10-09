@@ -15,14 +15,14 @@ import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
 
-/** Must stay longer than the drawer's `transition: width` in database.css. */
+/** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
 
 /**
- * Runs `done` once, when the drawer's width transition ends. Reduced motion
- * turns that transition off, and then no transitionend ever comes.
+ * Runs `done` once, when the drawer's slide ends. Reduced motion turns that
+ * transition off, and then no transitionend ever comes.
  */
-const afterWidthTransition = (drawer: HTMLElement, done: () => void): void => {
+const afterSlide = (drawer: HTMLElement, done: () => void): void => {
   const state = { finished: false };
   const finish = (): void => {
     if (state.finished) {
@@ -75,6 +75,11 @@ export interface CardDrawerOptions {
    * so a translation never lands in saved data.
    */
   savedOptionsOf?: (propertyId: string) => SelectOption[] | undefined;
+  /**
+   * The page beside the side peek (the editor wrapper). It narrows by the part
+   * the half-viewport drawer covers, as Notion's page does (research/08).
+   */
+  peekHost?: () => HTMLElement | null;
 }
 
 const isEmptyValue = (value: PropertyValue): boolean =>
@@ -132,6 +137,9 @@ const createBodyChangeCheck = (initial: OutputData | undefined, fieldsOf: Fields
  */
 export class DatabaseCardDrawer {
   private readonly wrapper: HTMLElement;
+  private readonly findPeekHost: (() => HTMLElement | null) | undefined;
+  /** The element the open drawer inset, so close and destroy undo that one. */
+  private peekHost: HTMLElement | null = null;
   private readonly readOnly: boolean;
   private readonly i18n: I18n | undefined;
   private readonly toolsConfig: ToolsConfig | undefined;
@@ -172,6 +180,7 @@ export class DatabaseCardDrawer {
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
+    this.findPeekHost = options.peekHost;
     this.readOnly = options.readOnly;
     this.i18n = options.i18n;
     this.toolsConfig = options.toolsConfig;
@@ -358,8 +367,9 @@ export class DatabaseCardDrawer {
     this.drawer = drawer;
 
     requestAnimationFrame(() => {
-      drawer.style.width = '45%';
-      afterWidthTransition(drawer, () => {
+      drawer.setAttribute('data-open', '');
+      this.narrowPeekHost();
+      afterSlide(drawer, () => {
         this.autoResizeTitle(titleInput);
 
         if (!title) {
@@ -482,9 +492,15 @@ export class DatabaseCardDrawer {
       const drawer = this.drawer;
 
       this.drawer = null;
-      drawer.style.width = '0px';
-      afterWidthTransition(drawer, () => {
+      drawer.removeAttribute('data-open');
+      this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
+      afterSlide(drawer, () => {
         drawer.remove();
+
+        // A drawer opened meanwhile owns the inset now.
+        if (this.drawer === null) {
+          this.releasePeekHost();
+        }
       });
     }
 
@@ -498,6 +514,7 @@ export class DatabaseCardDrawer {
 
   destroy(): void {
     this.events?.off('i18n:changed', this.followOuterDirection);
+    this.releasePeekHost();
     this.cancelCellEditor();
     this.cleanupListeners();
     this.cleanupEditor();
@@ -516,6 +533,31 @@ export class DatabaseCardDrawer {
 
     this.currentRowId = null;
     this.currentRow = null;
+  }
+
+  /**
+   * Insets the page by the part the drawer (half the viewport, at the inline
+   * end) covers. database.css turns the inset into padding that eases with the slide.
+   */
+  private narrowPeekHost(): void {
+    const host = this.findPeekHost?.() ?? null;
+
+    if (host === null) {
+      return;
+    }
+    const half = window.innerWidth / 2;
+    const rect = host.getBoundingClientRect();
+    const covered = getElementDirection(this.wrapper) === 'rtl' ? half - rect.left : rect.right - half;
+
+    this.peekHost = host;
+    host.setAttribute('data-blok-database-peek', '');
+    host.style.setProperty('--_blok-peek-inset', `${Math.max(0, Math.round(covered))}px`);
+  }
+
+  private releasePeekHost(): void {
+    this.peekHost?.removeAttribute('data-blok-database-peek');
+    this.peekHost?.style.removeProperty('--_blok-peek-inset');
+    this.peekHost = null;
   }
 
   /** Id of the row the drawer shows, or null when closed. */

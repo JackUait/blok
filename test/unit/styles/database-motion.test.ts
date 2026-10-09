@@ -74,3 +74,31 @@ describe('view tab switch', () => {
     expect(body(reducedMotion, '[data-blok-database-tab]')).toContain('transition: none');
   });
 });
+
+describe('side peek', () => {
+  it('is half the viewport and slides with translateX over 200ms ease', () => {
+    const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');
+
+    expect(drawer).toContain('width: 50vw');
+    expect(drawer).toContain('transform: translateX(100%)');
+    expect(drawer).toContain('transition: transform 200ms ease');
+    expect(drawer).not.toMatch(/transition: width/);
+    expect(body(outsideReducedMotion, '[data-blok-database-drawer][data-open]')).toContain('transform: none');
+  });
+
+  it('slides in from the left in RTL', () => {
+    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
+  });
+
+  it('narrows the page beside it over the same 200ms', () => {
+    const host = body(outsideReducedMotion, '[data-blok-database-peek]');
+
+    expect(host).toContain('padding-inline-end: var(--_blok-peek-inset, 0px)');
+    expect(host).toContain('transition: padding-inline-end 200ms ease');
+  });
+
+  it('neither slides nor narrows gradually under reduced motion', () => {
+    expect(body(reducedMotion, '[data-blok-database-drawer]')).toContain('transition: none');
+    expect(body(reducedMotion, '[data-blok-database-peek]')).toContain('transition: none');
+  });
+});

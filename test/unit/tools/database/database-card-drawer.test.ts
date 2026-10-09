@@ -174,7 +174,7 @@ describe('DatabaseCardDrawer', () => {
       expect(options.wrapper.querySelector('[data-blok-database-drawer-editor]')).not.toBeNull();
     });
 
-    it('drawer opens to 45% width after animation frame', () => {
+    it('slides the drawer in one frame after mount by marking it open, with no width animation', () => {
       const rafCallbacks: FrameRequestCallback[] = [];
 
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -189,11 +189,96 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      rafCallbacks.forEach((cb) => cb(0));
-
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      expect(el.style.width).toBe('45%');
+      expect(el.hasAttribute('data-open')).toBe(false);
+
+      rafCallbacks.forEach((cb) => cb(0));
+
+      expect(el.hasAttribute('data-open')).toBe(true);
+      expect(el.style.width).toBe('');
+    });
+  });
+
+  describe('side peek narrows the page beside it', () => {
+    const openWithHost = (hostRect: { left: number; right: number }): { host: HTMLElement; drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
+
+      const host = document.createElement('div');
+
+      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(hostRect.left, 0, hostRect.right - hostRect.left, 800));
+      document.body.appendChild(host);
+
+      const options = createOptions({ peekHost: () => host });
+      const drawer = new DatabaseCardDrawer(options);
+
+      host.appendChild(options.wrapper);
+      drawer.open(makeRow());
+
+      return { host, drawer, options };
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('insets the page by the part the half-viewport drawer covers', () => {
+      const { host, drawer } = openWithHost({ left: 100, right: 900 });
+
+      // The drawer covers x 500..1000; the page reaches 900, so 400px is under it.
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('400px');
+
+      drawer.destroy();
+    });
+
+    it('insets nothing when the page ends before the drawer starts', () => {
+      const { host, drawer } = openWithHost({ left: 0, right: 450 });
+
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('0px');
+
+      drawer.destroy();
+    });
+
+    it('measures from the left edge in RTL, where the drawer sits on the left', () => {
+      const { host, drawer, options } = { ...openWithHost({ left: 100, right: 900 }) };
+
+      drawer.close();
+      options.wrapper.setAttribute('dir', 'rtl');
+      drawer.open(makeRow());
+
+      // The drawer covers x 0..500; the page starts at 100, so 400px is under it.
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('400px');
+
+      drawer.destroy();
+    });
+
+    it('widens the page back as the drawer slides out, then drops its marks', () => {
+      const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
+
+      drawer.close();
+
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('0px');
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+
+      options.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
+    });
+
+    it('drops its marks at once on destroy', () => {
+      const { host, drawer } = openWithHost({ left: 100, right: 900 });
+
+      drawer.destroy();
+
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
     });
   });
 
@@ -1584,7 +1669,13 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('close animation', () => {
-    it('sets drawer width to 0 on close for exit animation', () => {
+    it('slides the drawer out on close by dropping its open mark', () => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow();
@@ -1595,7 +1686,8 @@ describe('DatabaseCardDrawer', () => {
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
       expect(el).not.toBeNull();
-      expect(el.style.width).toBe('0px');
+      expect(el.hasAttribute('data-open')).toBe(false);
+      expect(el.style.width).toBe('');
     });
 
     it('keeps drawer in DOM until transitionend fires', () => {

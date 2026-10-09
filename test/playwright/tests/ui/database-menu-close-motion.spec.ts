@@ -90,19 +90,14 @@ declare global {
 }
 
 /**
- * Presses Escape and samples the menu in the same task as the key, before any
- * frame of the close can finish. A bubble listener on window runs after
- * Blok's own Escape handling.
+ * Samples the menu in the same task as the closing gesture, before any frame
+ * of the close can finish. A bubble listener on window runs after Blok's own
+ * handling.
  */
-const escapeAndSample = async (page: Page): Promise<CloseSample> => {
-  await page.evaluate((menu) => {
-    window.closeSample = undefined;
-    window.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') {
-        return;
-      }
-
-      const root = document.querySelector<HTMLElement>(menu);
+const armSample = (page: Page, type: 'keydown' | 'click'): Promise<void> => page.evaluate(({ menu, eventType }) => {
+  window.closeSample = undefined;
+  window.addEventListener(eventType, () => {
+    const root = document.querySelector<HTMLElement>(menu);
       const container = root?.querySelector<HTMLElement>('[data-blok-popover-container]');
       const transitions = (container?.getAnimations() ?? [])
         .filter((animation): animation is CSSTransition => animation instanceof CSSTransition)
@@ -127,17 +122,39 @@ const escapeAndSample = async (page: Page): Promise<CloseSample> => {
         focusInMenu: root?.contains(document.activeElement) === true,
         pointerEvents: container === null || container === undefined ? '' : getComputedStyle(container).pointerEvents,
       };
-    }, { once: true });
-  }, MENU);
-  await page.keyboard.press('Escape');
+  }, { once: true });
+}, { menu: MENU, eventType: type });
 
+const readSample = async (page: Page): Promise<CloseSample> => {
   const sample = await page.evaluate(() => window.closeSample);
 
   if (sample === undefined) {
-    throw new Error('Escape never reached window');
+    throw new Error('the gesture never reached window');
   }
 
   return sample;
+};
+
+const escapeAndSample = async (page: Page): Promise<CloseSample> => {
+  await armSample(page, 'keydown');
+  await page.keyboard.press('Escape');
+
+  return readSample(page);
+};
+
+const expectNotionClose = (sample: CloseSample): void => {
+  const opacity = sample.transitions.find((t) => t.property === 'opacity');
+  const transform = sample.transitions.find((t) => t.property === 'transform');
+
+  expect(opacity).toEqual({ property: 'opacity', duration: 200, easing: 'ease', from: '1', to: '0' });
+  expect(transform?.duration).toBe(200);
+  expect(transform?.easing).toBe('ease');
+  expect(transform?.to).toBe('scale(0.96)');
+  // Still painted in the top layer while it fades, but no longer open or hit-testable.
+  expect(sample.inTopLayer).toBe(true);
+  expect(sample.open).toBe(false);
+  expect(sample.pointerEvents).toBe('none');
+  expect(sample.focusInMenu).toBe(false);
 };
 
 test.beforeAll(ensureBlokBundleBuilt);
@@ -152,22 +169,40 @@ test('a database menu fades and scales out over 200ms ease on Escape', async ({ 
   await createBlok(page);
   await openGroupMenu(page);
 
-  const sample = await escapeAndSample(page);
-  const opacity = sample.transitions.find((t) => t.property === 'opacity');
-  const transform = sample.transitions.find((t) => t.property === 'transform');
-
-  expect(opacity).toEqual({ property: 'opacity', duration: 200, easing: 'ease', from: '1', to: '0' });
-  expect(transform?.duration).toBe(200);
-  expect(transform?.easing).toBe('ease');
-  expect(transform?.to).toBe('scale(0.96)');
-  // Still painted in the top layer while it fades, but no longer open or hit-testable.
-  expect(sample.inTopLayer).toBe(true);
-  expect(sample.open).toBe(false);
-  expect(sample.pointerEvents).toBe('none');
-  expect(sample.focusInMenu).toBe(false);
+  expectNotionClose(await escapeAndSample(page));
 
   // Once the fade ends, the menu leaves the top layer and the DOM.
   await expect(page.locator(MENU)).toHaveCount(0);
+});
+
+test('an outside click closes it with the same motion', async ({ page }) => {
+  await createBlok(page);
+  await openGroupMenu(page);
+  await armSample(page, 'click');
+  await page.mouse.click(5, 5);
+
+  expectNotionClose(await readSample(page));
+  await expect(page.locator(MENU)).toHaveCount(0);
+});
+
+test('a click on the fading card does not run its items', async ({ page }) => {
+  await createBlok(page);
+  await openGroupMenu(page);
+
+  const hide = page.locator(`${MENU} [data-blok-item-name='hide-group']`);
+  const box = await hide.boundingBox();
+
+  if (box === null) {
+    throw new Error('hide-group item has no box');
+  }
+  const headers = page.locator('[data-blok-database-column-header]');
+  const shown = await headers.count();
+
+  await page.keyboard.press('Escape');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+  await expect(page.locator(MENU)).toHaveCount(0);
+  await expect(headers).toHaveCount(shown);
 });
 
 test('reopening during the close cancels it and the new menu stays open', async ({ page }) => {

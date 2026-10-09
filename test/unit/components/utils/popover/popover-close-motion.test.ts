@@ -85,6 +85,8 @@ const setReducedMotion = (reduce: boolean): void => {
   });
 };
 
+const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+
 describe('PopoverDesktop close motion (animateClose)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,7 +99,11 @@ describe('PopoverDesktop close motion (animateClose)', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     disablePopoverApi();
-    Reflect.deleteProperty(window, 'matchMedia');
+    if (originalMatchMedia === undefined) {
+      Reflect.deleteProperty(window, 'matchMedia');
+    } else {
+      Object.defineProperty(window, 'matchMedia', originalMatchMedia);
+    }
     document.body.innerHTML = '';
   });
 

@@ -30,3 +30,7 @@ Each item names the phase that owns it. Tick an item when its test-first commit 
 - [ ] P4: A new row in a filtered view opens in a peek, prefilled with what the filters allow (date "this week" → today).
 - [ ] P4: Open pages in: Side peek (default for Board) / Center peek / Full page, with the descriptions measured in research/08.
 - [ ] P1: Edit-mode right-click on a view tab opens the view menu, then core's block menu (ui.ts:700 contextmenu) replaces it. The view menu must win (verify0/3d).
+- [ ] P1 (core): PopoverDesktop hide() leaves the top layer at once, so every menu closes instantly. Notion closes with opacity 1→0 and scale 1→0.96 over 200ms ease. Fix this in shared popover code, with a reduced-motion fallback.
+- [ ] P1: The board column tint rounds all four corners. Notion rounds only the bottom (0 0 10px 10px).
+- [ ] P1: The measured yellow (~2.2:1) and brown (~3.0:1) column accents are below WCAG AA. Blok's a11y law wins, so this is a documented divergence: use AA-safe text.
+- [ ] P3: "Remove sorting" rewrites shared row positions. Check that this matches Notion when other views have their own manual order.

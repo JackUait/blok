@@ -3537,7 +3537,7 @@
 [data-blok-database-gallery-grid] {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--blok-database-gallery-card-min)), 1fr));
-  gap: 16px;
+  gap: var(--blok-space-4);
 }
 
 [data-blok-database-gallery-group-header] {
@@ -3617,7 +3617,7 @@
 }
 
 [data-blok-database-gallery-preview][data-preview="content"] {
-  padding: 8px 8px 0;
+  padding: var(--blok-space-2) var(--blok-space-2) 0;
   color: var(--blok-database-gallery-preview-text);
   font-size: 12px;
   line-height: 18px;
@@ -3657,7 +3657,7 @@
 }
 
 [data-blok-database-gallery-title] {
-  padding: 8px 10px;
+  padding: var(--blok-space-2) var(--blok-space-2-5);
   min-height: 38px;
   font-size: 15px;
   line-height: 22.5px;
@@ -3676,7 +3676,7 @@
 [data-blok-database-gallery-properties] {
   display: flex;
   flex-direction: column;
-  padding-inline: 10px;
+  padding-inline: var(--blok-space-2-5);
   font-size: 12px;
   line-height: 18px;
   color: var(--blok-database-gallery-title-text);
@@ -3747,6 +3747,11 @@
 [data-blok-database-calendar] {
   --blok-database-calendar-number-row: 32px;
   --blok-database-calendar-lane-pitch: 30px;
+  /* The view sets these inline per grid, week row and event. */
+  --blok-database-calendar-columns: 7;
+  --blok-database-calendar-lanes: 0;
+  --blok-database-calendar-lane: 0;
+  --blok-database-calendar-span: 1;
   display: flex;
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
@@ -3760,7 +3765,7 @@
 }
 
 [data-blok-database-calendar-title] {
-  margin-inline: 8px;
+  margin-inline: var(--blok-space-2);
   font-size: 14px;
   line-height: 14px;
   font-weight: 600;
@@ -3779,7 +3784,7 @@
   justify-content: center;
   min-inline-size: 24px;
   block-size: 24px;
-  padding: 0 6px;
+  padding: 0 var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
@@ -3864,7 +3869,7 @@
   inset-inline-end: 10px;
   min-inline-size: 24px;
   block-size: 24px;
-  padding-inline: 4px;
+  padding-inline: var(--blok-space-1);
   font-size: 14px;
   line-height: 24px;
   text-align: center;
@@ -3929,7 +3934,7 @@
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  padding: 2px 6px;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
   overflow: hidden;
   white-space: nowrap;
   border-radius: var(--blok-radius-control);

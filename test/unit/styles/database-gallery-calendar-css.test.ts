@@ -50,7 +50,7 @@ describe('database gallery and calendar styles', () => {
   });
 
   it('uses the measured gallery grid gap, cover height and title type', () => {
-    expect(ruleBody('[data-blok-database-gallery-grid]')).toMatch(/gap:\s*16px/);
+    expect(ruleBody('[data-blok-database-gallery-grid]')).toContain('gap: var(--blok-space-4)');
     expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toMatch(/--blok-database-gallery-preview-height:\s*146px/);
     expect(ruleBody('[data-blok-database-gallery-preview]')).toContain('block-size: var(--blok-database-gallery-preview-height)');
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-size:\s*15px/);

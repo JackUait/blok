@@ -3,6 +3,7 @@ import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdat
 import { planFind, planMarkdownExport, planMarkdownInsert, planRead, planSetIcon, planSetTitle } from './plan-doc';
 import { PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
+import { planToolAction } from './tool-action-context';
 
 import type { AgentBatch, AgentWarning } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
@@ -94,8 +95,9 @@ export const planBatch = (input: {
     }
 
     const handler = Object.prototype.hasOwnProperty.call(HANDLERS, command.name) ? HANDLERS[command.name] : undefined;
+    const entry = input.ctx.commands.get(command.name);
 
-    if (handler === undefined) {
+    if (handler === undefined && (entry === undefined || typeof entry.source !== 'object')) {
       throw failure('UNKNOWN_COMMAND', `"${command.name}" has no planner.`, {
         commandIndex: index, path: `/commands/${index}/name`,
       });
@@ -105,7 +107,7 @@ export const planBatch = (input: {
     const existing = command.ref === undefined ? undefined : new Set(state.draft.ids());
     const result = (() => {
       try {
-        return handler(state, command.args);
+        return handler === undefined ? planToolAction(state, command.name, command.args) : handler(state, command.args);
       } catch (error) {
         if (error instanceof AgentFailure && error.error.commandIndex === undefined) {
           throw new AgentFailure({

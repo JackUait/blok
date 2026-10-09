@@ -8,8 +8,13 @@ import type { PlanState } from './plan-state';
 import type { SnapBlock } from './snapshot';
 import type { JsonSchema, PlannerTool } from './types';
 
-type Parent = { id: string | null } | { type: string; inCell: boolean };
+type Parent = { id: string | null } | { type: string; inCell: boolean; actionScoped?: boolean };
 type ReservedLocation = { type: string; inCell: boolean; parent: Parent };
+interface ActionInsertOptions {
+  allowSelfPlaced?: boolean;
+  tool: string;
+  isScopedContainer(id: string): boolean;
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -282,11 +287,16 @@ const buildBlock = (
   demote: boolean,
   coreInsert: boolean,
   pending: boolean,
-  extra?: Record<string, unknown>
+  extra?: Record<string, unknown>,
+  options?: ActionInsertOptions
 ): PlannedBlock => {
   const parentType = parentTypeOf(state, parent);
+  const scopedParent = options !== undefined && ('id' in parent
+    ? parent.id !== null && options.isScopedContainer(parent.id)
+    : parent.actionScoped === true);
 
-  if (coreInsert && parentType !== undefined && state.tool(parentType)?.entry.selfPlacesChildren === true) {
+  if ((coreInsert || (options !== undefined && !(options.allowSelfPlaced === true && scopedParent))) &&
+      parentType !== undefined && state.tool(parentType)?.entry.selfPlacesChildren === true) {
     const actions = state.actionsOf(parentType);
 
     state.fail('PLACEMENT_REFUSED', `"${parentType}" places its own children. Use one of: ${actions.join(', ')}.`, 'id' in parent ? '/parentId' : path, {
@@ -308,13 +318,25 @@ const buildBlock = (
     });
   }
 
+  for (const field of options === undefined ? [] : tool.entry.viewState) {
+    if (Object.hasOwn(spec.data ?? {}, field)) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" is view state. Agents do not set it.`, `${path}/data/${pointerKey(field)}`, {
+        reason: 'view-state', field,
+      });
+    }
+  }
+
   const id = state.newBlockId(spec.id, `${path}/id`);
   const data = state.prepareData(type, { ...(spec.data ?? tool.entry.defaultData ?? {}), ...(extra ?? {}) }, `${path}/data`, id, { normalize: !pending });
   const inCell = 'type' in parent ? parent.inCell : parent.id !== null && state.draft.cellOf(parent.id) !== null;
   const childSpecs = spec.children ?? (tool.runtime.defaultChildren ?? []).map((child, index) =>
     readInsertSpec(state, child, `${path}/children/${index}`));
+  const childParent: Parent = {
+    type, inCell,
+    ...(options !== undefined && { actionScoped: scopedParent || type === options.tool }),
+  };
   const children = childSpecs.map((child, index) =>
-    buildBlock(state, child, { type, inCell }, `${path}/children/${index}`, demote, coreInsert, pending));
+    buildBlock(state, child, childParent, `${path}/children/${index}`, demote, coreInsert, pending, undefined, options));
 
   if (type !== spec.type) {
     state.warn('DEMOTED', `"${spec.type}" is not allowed here and was inserted as "${type}".`);
@@ -329,13 +351,14 @@ export const buildPlannedBlock = (
   parent: Parent,
   path: string,
   demote: boolean,
-  extra?: Record<string, unknown>
+  extra?: Record<string, unknown>,
+  options?: ActionInsertOptions
 ): PlannedBlock => {
   const parsed = readInsertSpec(state, spec, path);
 
   reserveBlockIds(state, parsed, parent, path, demote, false);
 
-  return buildBlock(state, parsed, parent, path, demote, false, state.ctx.prepared.get(state.index) === PREPARE_PENDING, extra);
+  return buildBlock(state, parsed, parent, path, demote, false, state.ctx.prepared.get(state.index) === PREPARE_PENDING, extra, options);
 };
 
 export const planInsert = (state: PlanState, args: Record<string, unknown>): unknown => {
@@ -403,23 +426,47 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>): unk
     }
   }
 
-  const written = args.data === undefined ? {} : state.prepareData(
-    block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null)),
+  emitPatch(state, block, args.data === undefined ? undefined : patch, tunes);
+
+  return { id: block.id };
+};
+
+export const emitPatch = (
+  state: PlanState,
+  block: SnapBlock,
+  input: Record<string, unknown> | undefined,
+  tunes?: Record<string, unknown>
+): void => {
+  const tool = requireTool(state, block);
+  const patch = input === undefined ? {} : input;
+
+  if (!isRecord(patch)) {
+    state.fail('INVALID_ARGS', 'Block data must be a record.', '/data');
+  }
+  for (const field of Object.keys(patch)) {
+    if (tool.entry.viewState.includes(field)) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" is view state. Agents do not set it.`, `/data/${pointerKey(field)}`, {
+        reason: 'view-state', field,
+      });
+    }
+  }
+
+  const removed = Object.entries(patch).filter(([, value]) => value === null || value === undefined).map(([key]) => key);
+  const written = input === undefined ? {} : state.prepareData(
+    block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null && value !== undefined)),
     '/data', block.id, { normalize: false }
   );
   const merged = { ...structuredClone(block.data), ...written };
 
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === null) {
-      Reflect.deleteProperty(merged, key);
-    }
-  }
+  removed.forEach(key => Reflect.deleteProperty(merged, key));
 
   const normalized = tool.runtime.normalize === undefined ? merged : tool.runtime.normalize(structuredClone(merged));
 
   if (!isRecord(normalized)) {
     state.fail('INVALID_ARGS', 'Normalized block data must be a record.', '/data');
   }
+  // Explicit removals must survive normalizer defaults.
+  removed.forEach(key => Reflect.deleteProperty(normalized, key));
 
   const rich = tool.entry.richTextFields;
   const produced: Record<string, unknown> = Object.fromEntries(rich
@@ -431,6 +478,8 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>): unk
       block.type, produced, '/data', block.id, { normalize: false }
     )),
   };
+
+  removed.forEach(key => Reflect.deleteProperty(effective, key));
 
   for (const field of tool.entry.viewState) {
     if (!sameField(block.data, effective, field)) {
@@ -468,13 +517,24 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>): unk
     edits.push({ op: 'setTunes', id: block.id, tunes });
   }
   state.emit(...edits);
-
-  return { id: block.id };
 };
 
 export const planMove = (state: PlanState, args: Record<string, unknown>): unknown => {
   const block = state.requireBlock(args.id, '/id');
-  const position = args.position;
+
+  emitMove(state, block.id, args.parentId, args.position, { allowSelfPlaced: false });
+
+  return { id: block.id };
+};
+
+export const emitMove = (
+  state: PlanState,
+  blockId: string,
+  parentArg: unknown,
+  position: unknown,
+  options: { allowSelfPlaced: boolean; isScopedContainer?: (id: string) => boolean }
+): void => {
+  const block = state.requireBlock(blockId, '/id');
   const refKey = isRecord(position) && 'before' in position ? 'before' : 'after';
   const refId = isRecord(position) ? state.resolveId(position[refKey], `/position/${refKey}`) : undefined;
 
@@ -482,10 +542,12 @@ export const planMove = (state: PlanState, args: Record<string, unknown>): unkno
     state.fail('INVALID_ARGS', `Cannot place "${block.id}" relative to itself.`, '/position');
   }
 
-  const placement = state.place(args.parentId, position);
+  const placement = state.place(parentArg, position);
   const parentType = placement.parentId === null ? undefined : state.draft.get(placement.parentId)?.type;
+  const isScoped = (id: string): boolean => options.allowSelfPlaced && options.isScopedContainer?.(id) === true;
 
-  if (parentType !== undefined && state.tool(parentType)?.entry.selfPlacesChildren === true) {
+  if (parentType !== undefined && state.tool(parentType)?.entry.selfPlacesChildren === true &&
+      (placement.parentId === null || !isScoped(placement.parentId))) {
     const actions = state.actionsOf(parentType);
 
     state.fail('PLACEMENT_REFUSED', `"${parentType}" places its own children. Use one of: ${actions.join(', ')}.`, '/parentId', {
@@ -493,7 +555,15 @@ export const planMove = (state: PlanState, args: Record<string, unknown>): unkno
     });
   }
 
-  const refusal = checkMove(state.tree(), block.id, placement.parentId, refId, { allowColumnMoves: true });
+  const tree = state.tree();
+  const refusal = checkMove({
+    ...tree,
+    containerFacts: id => {
+      const facts = tree.containerFacts(id);
+
+      return isScoped(id) ? { ...facts, ownedByTool: false } : facts;
+    },
+  }, block.id, placement.parentId, refId, { allowColumnMoves: true });
 
   if (refusal !== null) {
     state.fail('PLACEMENT_REFUSED', `${refusal.message}.`, '/parentId', {
@@ -507,8 +577,6 @@ export const planMove = (state: PlanState, args: Record<string, unknown>): unkno
   const afterId = placement.afterId === block.id ? previousId : placement.afterId;
 
   state.emit({ op: 'move', id: block.id, parentId: placement.parentId, afterId });
-
-  return { id: block.id };
 };
 
 export const planConvert = (state: PlanState, args: Record<string, unknown>): unknown => {

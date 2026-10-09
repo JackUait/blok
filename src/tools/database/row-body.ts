@@ -127,3 +127,20 @@ export const coverImageOf = (blocks: BodyBlock[]): string | undefined => {
 
   return undefined;
 };
+
+/** The legacy body column as body blocks. A malformed value reads as no body. */
+export const pageContentSourceBlocks = (
+  row: DatabaseRow,
+  schema: PropertyDefinition[],
+  descriptionPropertyId: string | undefined
+): BodyBlock[] => {
+  const blocks: unknown = rowDescription(row, schema, descriptionPropertyId)?.blocks;
+
+  return Array.isArray(blocks)
+    ? blocks.flatMap((block: unknown) => {
+      const type = field(block, 'type');
+
+      return typeof type === 'string' ? [{ type, data: field(block, 'data') }] : [];
+    })
+    : [];
+};

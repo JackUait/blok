@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { coverImageOf, pageContentPreview, rowDescription } from '../../../../src/tools/database/row-body';
+import { coverImageOf, pageContentPreview, pageContentSourceBlocks, rowDescription } from '../../../../src/tools/database/row-body';
 import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
 
 const schema: PropertyDefinition[] = [
@@ -36,6 +36,19 @@ describe('row-body', () => {
       const orphan = { blocks: [{ type: 'paragraph', data: { text: 'Old' } }] };
 
       expect(rowDescription(row({ gone: orphan }), schema, 'p-body')).toEqual(orphan);
+    });
+  });
+
+  describe('pageContentSourceBlocks', () => {
+    it('reads the legacy body column as body blocks', () => {
+      const body = { blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'Hi' } }] };
+
+      expect(pageContentSourceBlocks(row({ 'p-body': body }), schema, 'p-body')).toEqual([{ type: 'paragraph', data: { text: 'Hi' } }]);
+    });
+
+    it('gives no blocks for a row with no body', () => {
+      expect(pageContentSourceBlocks(row({}), schema, 'p-body')).toEqual([]);
+      expect(pageContentSourceBlocks(row({ 'p-body': { nope: true } as never }), schema, 'p-body')).toEqual([]);
     });
   });
 

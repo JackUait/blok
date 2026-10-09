@@ -22,4 +22,10 @@ export interface DatabaseViewRenderer {
 
   /** Removes a group container by its option ID. Optional. */
   removeGroup?(wrapper: HTMLElement, optionId: string): void;
+
+  /** Drops document listeners. The tool calls it before it replaces or removes the view. */
+  destroy?(): void;
+
+  /** True while a drag or edit runs, so the tool holds off a redraw. */
+  readonly interacting?: boolean;
 }

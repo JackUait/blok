@@ -152,7 +152,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const nav = document.createElement('div');
 
     nav.setAttribute('data-blok-database-calendar-nav', '');
-    const unit = this.range === 'week' ? 'Week' : 'Month';
+    const week = this.range === 'week';
     const button = (attr: string, label: string, icon?: string): HTMLButtonElement => {
       const el = document.createElement('button');
 
@@ -169,9 +169,17 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return el;
     };
 
-    button('data-blok-database-calendar-prev', this.t(`tools.database.calendarPrevious${unit}`), IconChevronLeft);
+    button(
+      'data-blok-database-calendar-prev',
+      this.t(week ? 'tools.database.calendarPreviousWeek' : 'tools.database.calendarPreviousMonth'),
+      IconChevronLeft
+    );
     button('data-blok-database-calendar-today', this.t('tools.database.calendarToday'));
-    button('data-blok-database-calendar-next', this.t(`tools.database.calendarNext${unit}`), IconChevronRight);
+    button(
+      'data-blok-database-calendar-next',
+      this.t(week ? 'tools.database.calendarNextWeek' : 'tools.database.calendarNextMonth'),
+      IconChevronRight
+    );
     bar.append(title, nav);
 
     return bar;

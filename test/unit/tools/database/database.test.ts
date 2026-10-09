@@ -5166,6 +5166,233 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
   });
+
+  describe('gallery and calendar views', () => {
+    const dateSchema: PropertyDefinition[] = [
+      { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+      { id: 'prop-due', name: 'Due', type: 'date', position: 'a1' },
+    ];
+    const galleryView: DatabaseViewConfig = { id: 'view-gallery', name: 'Gallery', type: 'gallery', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+    const calendarView: DatabaseViewConfig = { id: 'view-cal', name: 'Calendar', type: 'calendar', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+    const rowsWithDates = (): BlockAPI[] => [
+      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'First', 'prop-due': '2026-10-09' }, position: 'a0' }),
+      createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Second', 'prop-due': '2026-10-12/2026-10-13' }, position: 'a1' }),
+    ];
+    const galleryTool = (view: Partial<DatabaseViewConfig> = {}, childBlocks: BlockAPI[] = rowsWithDates(), config: DatabaseConfig = {}): { tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> } => {
+      const options = createDatabaseOptions({ schema: dateSchema, views: [{ ...galleryView, ...view }], activeViewId: view.id ?? 'view-gallery' }, config, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      return { tool, element, options };
+    };
+    const storageKey = 'blok:database-calendar:test-block-id:view-cal';
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 9, 12));
+      window.localStorage.removeItem(storageKey);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      document.body.innerHTML = '';
+    });
+
+    it('renders a gallery view as cards, with no board subsystems', () => {
+      const { tool, element } = galleryTool();
+      const internals = tool as unknown as { cardDrag: unknown; columnDrag: unknown; columnControls: unknown };
+
+      expect(queryByData(element, 'data-blok-database-gallery')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).toBeNull();
+      expect(queryAllByData(element, 'data-blok-database-gallery-card').map((card) => card.getAttribute('data-row-id'))).toEqual(['row-1', 'row-2']);
+      expect(internals.cardDrag).toBeNull();
+      expect(internals.columnDrag).toBeNull();
+      expect(internals.columnControls).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('still renders a view type it does not know as a board', () => {
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-x', name: 'Timeline', type: 'timeline' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'view-x',
+      });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      expect(queryByData(element, 'data-blok-database-board')).not.toBeNull();
+
+      tool.destroy();
+    });
+
+    it('names new gallery and calendar views', () => {
+      const { tool, element } = galleryTool();
+
+      tool.addView('gallery');
+      tool.addView('calendar');
+
+      expect(tool.save(element).views.slice(1).map((v) => [v.name, v.type])).toEqual([['Gallery', 'gallery'], ['Calendar', 'calendar']]);
+      expect(queryByData(element, 'data-blok-database-calendar')).not.toBeNull();
+
+      tool.destroy();
+    });
+
+    it('adds a row from the trailing "+ New" card', () => {
+      const { tool, element, options } = galleryTool();
+
+      queryByData(element, 'data-blok-database-gallery-new')?.click();
+
+      expect(options.api.blocks.insertAt).toHaveBeenCalledWith('database-row', expect.objectContaining({ title: '' }), expect.objectContaining({ parentId: 'test-block-id' }));
+
+      tool.destroy();
+    });
+
+    it('shows the load limit, then more on "Load more"', () => {
+      const many = Array.from({ length: 12 }, (_, i) =>
+        createMockRowBlock({ id: `row-${i}`, properties: { 'prop-title': `Row ${i}` }, position: `a${String(i).padStart(2, '0')}` }));
+      const { tool, element } = galleryTool({ loadLimit: 10 }, many);
+
+      expect(queryAllByData(element, 'data-blok-database-gallery-card')).toHaveLength(10);
+      queryByData(element, 'data-blok-database-gallery-load-more')?.click();
+      expect(queryAllByData(element, 'data-blok-database-gallery-card')).toHaveLength(12);
+      expect(queryByData(element, 'data-blok-database-gallery-load-more')).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('previews a row page from its child blocks', () => {
+      const rows = rowsWithDates();
+      const options = createDatabaseOptions({ schema: dateSchema, views: [galleryView], activeViewId: 'view-gallery' }, {}, { childBlocks: rows });
+      const body = { id: 'b1', name: 'paragraph', preservedData: { text: 'Row one body' } } as unknown as BlockAPI;
+
+      vi.mocked(options.api.blocks.getChildren).mockImplementation((parentId: string) => {
+        if (parentId === 'row-1') return [body];
+        if (parentId === 'test-block-id') return rows;
+
+        return [];
+      });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+      const [first] = queryAllByData(element, 'data-blok-database-gallery-card');
+
+      expect(queryByData(first, 'data-blok-database-gallery-preview')?.textContent).toBe('Row one body');
+
+      tool.destroy();
+    });
+
+    it('moves a dropped gallery card between its neighbours', () => {
+      const children = rowsWithDates();
+      const { tool } = galleryTool({}, children);
+      const internals = tool as unknown as { view: { options: { handlers: { moveRow: (r: unknown) => void } } } };
+
+      internals.view.options.handlers.moveRow({ rowId: 'row-1', afterRowId: 'row-2', beforeRowId: null, groupKey: '', fromGroupKey: '' });
+
+      const moved = vi.mocked(children[0].call).mock.calls.find(([method]) => method === 'updatePosition')?.[1] as { position: string } | undefined;
+
+      expect(moved !== undefined && moved.position > 'a1').toBe(true);
+
+      tool.destroy();
+    });
+
+    describe('calendar', () => {
+      const calendarTool = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = {}, childBlocks: BlockAPI[] = rowsWithDates()): ReturnType<typeof galleryTool> =>
+        galleryTool({ ...calendarView, ...view }, childBlocks, config);
+
+      it('renders the current month with each row on its date', () => {
+        const { tool, element } = calendarTool();
+        const event = queryAllByData(element, 'data-blok-database-calendar-event').find((el) => el.getAttribute('data-row-id') === 'row-1');
+
+        expect(event?.closest('[data-blok-database-calendar-day]')?.getAttribute('data-day')).toBe('2026-10-09');
+        expect(queryAllByData(element, 'data-blok-database-calendar-day')[0].getAttribute('data-day')).toBe('2026-09-27');
+
+        tool.destroy();
+      });
+
+      it('starts the week on config.weekStart', () => {
+        const { tool, element } = calendarTool({}, { weekStart: 1 });
+
+        expect(queryAllByData(element, 'data-blok-database-calendar-day')[0].getAttribute('data-day')).toBe('2026-09-28');
+
+        tool.destroy();
+      });
+
+      it('remembers the shown month per person, in local storage', () => {
+        const first = calendarTool();
+
+        queryByData(first.element, 'data-blok-database-calendar-next')?.click();
+        expect(queryAllByData(first.element, 'data-blok-database-calendar-day').some((el) => el.getAttribute('data-day') === '2026-11-15')).toBe(true);
+        expect(first.tool.save(first.element).views[0]).not.toHaveProperty('anchor');
+        first.tool.destroy();
+
+        const again = calendarTool();
+
+        expect(queryAllByData(again.element, 'data-blok-database-calendar-day').some((el) => el.getAttribute('data-day') === '2026-11-15')).toBe(true);
+        again.tool.destroy();
+      });
+
+      it('shows today when local storage throws', () => {
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+          throw new Error('blocked');
+        });
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+          throw new Error('blocked');
+        });
+        const { tool, element } = calendarTool();
+
+        expect(queryAllByData(element, 'data-blok-database-calendar-day').some((el) => el.hasAttribute('data-today'))).toBe(true);
+        queryByData(element, 'data-blok-database-calendar-next')?.click();
+        expect(queryAllByData(element, 'data-blok-database-calendar-day').some((el) => el.getAttribute('data-day') === '2026-11-15')).toBe(true);
+
+        tool.destroy();
+      });
+
+      it('adds a row on the day whose "+" is clicked', () => {
+        const { tool, element, options } = calendarTool();
+        const cell = queryAllByData(element, 'data-blok-database-calendar-day').find((el) => el.getAttribute('data-day') === '2026-10-20');
+
+        cell?.querySelector<HTMLElement>('[data-blok-database-calendar-add]')?.click();
+
+        expect(options.api.blocks.insertAt).toHaveBeenCalledWith(
+          'database-row',
+          expect.objectContaining({ properties: expect.objectContaining({ 'prop-due': '2026-10-20' }) }),
+          expect.objectContaining({ parentId: 'test-block-id' }),
+        );
+
+        tool.destroy();
+      });
+
+      it('writes a dragged date to the row block', () => {
+        const children = rowsWithDates();
+        const { tool } = calendarTool({}, {}, children);
+        const internals = tool as unknown as { view: { options: { handlers: { setDate: (rowId: string, value: string) => void } } } };
+
+        internals.view.options.handlers.setDate('row-1', '2026-10-14');
+
+        expect(children[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-due': '2026-10-14' });
+
+        tool.destroy();
+      });
+
+      it('shows a message when no date property exists', () => {
+        const options = createDatabaseOptions({ views: [calendarView], activeViewId: 'view-cal' });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        expect(queryByData(element, 'data-blok-database-calendar-empty')).not.toBeNull();
+
+        tool.destroy();
+      });
+
+      it('validates a calendar view without groupBy', () => {
+        const tool = new DatabaseTool(createDatabaseOptions());
+
+        expect(tool.validate(makeDefaultData({ schema: dateSchema, views: [calendarView], activeViewId: 'view-cal' }))).toBe(true);
+      });
+    });
+  });
 });
 
 describe('DatabaseTool — row metadata and unique IDs', () => {

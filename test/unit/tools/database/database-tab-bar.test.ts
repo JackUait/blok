@@ -126,7 +126,7 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 });
 
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
-import { IconTable } from '../../../../src/components/icons';
+import { IconCalendar, IconGallery, IconTable } from '../../../../src/components/icons';
 import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
@@ -202,6 +202,22 @@ describe('DatabaseTabBar', () => {
 
       expected.innerHTML = IconTable;
       expect(tab?.firstElementChild?.innerHTML).toBe(expected.innerHTML);
+    });
+
+    it('gives gallery and calendar view tabs their icons', () => {
+      const gallery = makeView({ id: 'g', type: 'gallery' });
+      const calendar = makeView({ id: 'c', type: 'calendar', position: 'a2' });
+      const el = createTabBar([gallery, calendar], gallery.id).render();
+      const icons = [...el.querySelectorAll('[data-blok-database-tab-name]')].map((name) => name.parentElement?.firstElementChild?.innerHTML);
+      const expected = [IconGallery, IconCalendar].map((icon) => {
+        const span = document.createElement('span');
+
+        span.innerHTML = icon;
+
+        return span.innerHTML;
+      });
+
+      expect(icons).toEqual(expected);
     });
 
     it('creates tab bar element with data-blok-database-tab-bar attribute', () => {

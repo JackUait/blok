@@ -15,11 +15,16 @@ import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
+import { DatabaseGalleryView } from './database-gallery-view';
+import type { GalleryGroup } from './database-gallery-view';
+import { DatabaseCalendarView } from './database-calendar-view';
+import { pageContentSourceBlocks } from './row-body';
+import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
 import type { TableGroup, TableHandlers, TableState } from './database-table-view';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import type { ViewChanges } from './database-model';
-import { resolveViewProperties, visibleRowPropertyIds, withPropertyOrder } from './view-settings';
+import { resolveCalendarBy, resolveLoadLimit, resolveViewProperties, visibleRowPropertyIds, withPropertyOrder } from './view-settings';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { firstStrongDirection } from '../../shared/text-direction';
 import { equalsOutputData } from '../../shared/output-data';
@@ -150,6 +155,12 @@ export class DatabaseTool implements BlockTool {
   /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
   private readonly tableStates = new Map<string, TableState>();
   private groupMenuPopover: PopoverDesktop | null = null;
+  /** Per gallery view and group: how many cards "Load more" has revealed. Session only. */
+  private readonly galleryShown = new Map<string, Map<string, number>>();
+  /** Per calendar view: the shown range, for when local storage is blocked. */
+  private readonly calendarAnchors = new Map<string, string>();
+  /** A day to focus after the calendar redraws into a new range. */
+  private calendarFocusDay: string | undefined;
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -409,7 +420,7 @@ export class DatabaseTool implements BlockTool {
     this.addPropertyPopover = null;
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
-    this.destroyTableView();
+    this.destroyView();
     this.groupMenuPopover?.destroy();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
@@ -707,18 +718,16 @@ export class DatabaseTool implements BlockTool {
       return true;
     }
 
-    if (this.view instanceof DatabaseTableView && this.view.interacting) {
+    if (this.view?.interacting === true) {
       return true;
     }
 
     return this.cardDrag?.active === true || this.columnDrag?.active === true || this.listRowDrag?.active === true;
   }
 
-  /** Detach the table's listeners before its DOM goes, so its focus and editor do not fire into the next one. */
-  private destroyTableView(): void {
-    if (this.view instanceof DatabaseTableView) {
-      this.view.destroy();
-    }
+  /** Detach the view's listeners before its DOM goes, so its focus, editor or drag do not fire into the next one. */
+  private destroyView(): void {
+    this.view?.destroy?.();
   }
 
   /**
@@ -949,7 +958,7 @@ export class DatabaseTool implements BlockTool {
     this.columnControls = null;
     this.listRowDrag = null;
     this.keyboard = null;
-    this.destroyTableView();
+    this.destroyView();
 
     this.sync.flushPendingUpdates();
     this.sync.flushPendingPropertyUpdates();
@@ -1001,6 +1010,8 @@ export class DatabaseTool implements BlockTool {
     const defaultNames: Partial<Record<ViewType, string>> = {
       list: DATABASE_DEFAULT_TEXT.viewTypeList,
       table: DATABASE_DEFAULT_TEXT.viewTypeTable,
+      gallery: DATABASE_DEFAULT_TEXT.viewTypeGallery,
+      calendar: DATABASE_DEFAULT_TEXT.viewTypeCalendar,
     };
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
       groupBy: type === 'board' ? statusProp?.id : undefined,
@@ -1151,7 +1162,14 @@ export class DatabaseTool implements BlockTool {
       if (viewConfig?.type === 'table') {
         return this.renderTableView(titlePropId, viewConfig);
       }
+      if (viewConfig?.type === 'gallery') {
+        return this.renderGalleryView(titlePropId, viewConfig);
+      }
+      if (viewConfig?.type === 'calendar') {
+        return this.renderCalendarView(titlePropId, viewConfig);
+      }
 
+      // Unknown types (a newer client's layout) fall back to a board.
       return this.renderBoardView(titlePropId, groupByPropId, viewConfig);
     })();
 
@@ -1182,6 +1200,158 @@ export class DatabaseTool implements BlockTool {
     const type = propertyId === undefined ? undefined : this.model.getProperty(propertyId)?.type;
 
     return type !== undefined && OPTION_GROUP_TYPES.includes(type);
+  }
+
+  private renderGalleryView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const groupBy = viewConfig.groupBy;
+    const grouped = groupBy !== undefined && this.model.getProperty(groupBy) !== undefined;
+    const optionGroup = this.isOptionGroup(groupBy);
+    const limit = resolveLoadLimit(viewConfig);
+    const shown = this.galleryShown.get(viewConfig.id) ?? new Map<string, number>();
+    const query = (key: string, group?: string): Pick<GalleryGroup, 'rows' | 'total'> => {
+      const result = this.model.queryRows({ view: viewConfig, ...(group !== undefined ? { group } : {}), limit: shown.get(key) ?? limit });
+
+      return { rows: result.rows, total: result.total ?? result.rows.length };
+    };
+    const groups: GalleryGroup[] = grouped
+      ? this.shownGroupOptions(groupBy, viewConfig).map((option) => ({
+        key: option.id,
+        label: option.label,
+        ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
+        ...query(option.id, option.id),
+      }))
+      : [{ key: '', label: '', ...query('') }];
+    const descriptionId = this.model.getSchema().find((p) => p.type === 'richText')?.id;
+
+    this.view = new DatabaseGalleryView({
+      readOnly: this.readOnly,
+      i18n: this.api.i18n,
+      view: viewConfig,
+      schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      groups,
+      grouped,
+      titlePropertyId: titlePropId,
+      bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
+      handlers: {
+        openRow: (rowId) => this.handleRowClick(rowId),
+        addRow: (groupKey) => {
+          this.addTableRow(groupKey);
+        },
+        moveRow: (result) => this.handleTableRowDrop(result),
+        loadMore: (groupKey) => {
+          shown.set(groupKey, (shown.get(groupKey) ?? limit) + limit);
+          this.galleryShown.set(viewConfig.id, shown);
+          this.rerenderView({ keepDrawer: true });
+        },
+      },
+    });
+
+    return this.view.createView();
+  }
+
+  /** A row page's body: its child blocks, else the legacy body column. A host `rowPages` body is not readable here. */
+  private rowBodyBlocks(rowId: string, descriptionId: string | undefined): Array<{ type: string; data: unknown }> {
+    const children = this.api.blocks.getChildren(rowId).filter((child) => child.name !== 'database-row');
+
+    if (children.length > 0) {
+      return children.map((child) => ({ type: child.name, data: child.preservedData }));
+    }
+
+    const row = this.model.getRow(rowId);
+
+    return row === undefined ? [] : pageContentSourceBlocks(row, this.model.getSchema(), descriptionId);
+  }
+
+  private calendarStorageKey(viewId: string): string {
+    return `blok:database-calendar:${this.block.id}:${viewId}`;
+  }
+
+  /** The person's last shown range. Local only: Notion keeps it per user (H-calendars). */
+  private calendarAnchor(viewId: string, today: string): string {
+    try {
+      const stored = window.localStorage.getItem(this.calendarStorageKey(viewId));
+
+      if (stored !== null && /^\d{4}-\d{2}-\d{2}$/.test(stored)) {
+        return stored;
+      }
+    } catch {
+      // Blocked storage: fall back to this session's value.
+    }
+
+    return this.calendarAnchors.get(viewId) ?? today;
+  }
+
+  private setCalendarAnchor(viewId: string, anchor: string): void {
+    this.calendarAnchors.set(viewId, anchor);
+    try {
+      window.localStorage.setItem(this.calendarStorageKey(viewId), anchor);
+    } catch {
+      // Blocked storage: the session map still holds it.
+    }
+  }
+
+  private renderCalendarView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const schema = this.model.getSchema();
+    const dateId = resolveCalendarBy(viewConfig, schema);
+    const locale = resolveLocale(undefined);
+    const today = toIsoDay(new Date());
+    const configured = this.config.weekStart;
+    const weekStart = typeof configured === 'number' && Number.isInteger(configured) && configured >= 0 && configured <= 6
+      ? configured
+      : resolveWeekStart(locale);
+    const focusDay = this.calendarFocusDay;
+
+    this.calendarFocusDay = undefined;
+    this.view = new DatabaseCalendarView({
+      readOnly: this.readOnly,
+      i18n: this.api.i18n,
+      view: viewConfig,
+      schema: localizeDatabaseSchema(schema, this.api.i18n),
+      rows: this.model.queryRows({ view: viewConfig }).rows,
+      titlePropertyId: titlePropId,
+      datePropertyId: dateId,
+      anchor: this.calendarAnchor(viewConfig.id, today),
+      today,
+      weekStart,
+      locale,
+      ...(focusDay !== undefined ? { focusDay } : {}),
+      handlers: {
+        openRow: (rowId) => this.handleRowClick(rowId),
+        addRow: (day) => {
+          if (dateId !== undefined) {
+            this.addCalendarRow(dateId, day);
+          }
+        },
+        setDate: (rowId, value) => {
+          if (dateId !== undefined) {
+            this.commitTableCell(rowId, dateId, value);
+            this.rerenderView({ keepDrawer: true });
+          }
+        },
+        navigate: (anchor, focus) => {
+          this.setCalendarAnchor(viewConfig.id, anchor);
+          this.calendarFocusDay = focus;
+          this.rerenderView({ keepDrawer: true });
+        },
+      },
+    });
+
+    return this.view.createView();
+  }
+
+  /** "+" on a day: a new row dated that day, plus what the view's filters ask for. */
+  private addCalendarRow(dateId: string, day: string): void {
+    if (this.readOnly) return;
+    const titlePropId = this.titlePropertyId();
+    const rowData = this.model.createRowData({ ...this.newRowProperties(titlePropId, undefined, NO_VALUE_GROUP_KEY), [dateId]: day });
+
+    this.api.blocks.insertAt(
+      'database-row',
+      { properties: rowData.properties, position: rowData.position, title: '' },
+      { parentId: this.block.id, position: 'end', id: rowData.id },
+    );
+    void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
+    this.rerenderView({ keepDrawer: true });
   }
 
   /**
@@ -2154,7 +2324,9 @@ export class DatabaseTool implements BlockTool {
     const savedView = this.model.getView(this.activeViewId);
     const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
     const isList = viewConfig?.type === 'list';
-    const isBoard = !isList && viewConfig?.type !== 'table';
+    // Table, gallery and calendar own their gestures. Unknown types render as a board.
+    const ownsGestures = viewConfig?.type === 'table' || viewConfig?.type === 'gallery' || viewConfig?.type === 'calendar';
+    const isBoard = !isList && !ownsGestures;
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
@@ -2231,7 +2403,9 @@ export class DatabaseTool implements BlockTool {
           this.updateRowTitleBlock(rowId, titlePropId, title);
           const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
             ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-table]');
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-table]')
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-gallery]')
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-calendar]');
 
           if (currentView !== null && currentView !== undefined) {
             this.view.updateRowTitle(currentView, rowId, title);
@@ -3153,7 +3327,7 @@ export class DatabaseTool implements BlockTool {
     this.listRowDrag?.destroy();
     this.listRowDrag = null;
     this.keyboard?.destroy();
-    this.destroyTableView();
+    this.destroyView();
 
     // The drawer hangs off the outer wrapper, not the board, so it can stay.
     if (options.keepDrawer !== true) {

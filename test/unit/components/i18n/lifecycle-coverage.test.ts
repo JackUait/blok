@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 853 + 117 + 314 + 4 closure for all 1288 keys', () => {
+  it('rebuilds a disjoint 867 + 117 + 313 + 4 closure for all 1301 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1288);
+    expect(lifecycle.size).toBe(1301);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -331,7 +331,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +23: the timeline view calls its tools.database.timeline* and viewTypeTimeline* keys by literal.
       // +1: the calendar's "No date (N)" button calls tools.database.calendarNoDate by literal.
       // +21: relation, rollup and formula call their type names, relation*, rollup* and formula* keys by literal.
-      'executable-literal': 853,
+      // +14: the row page drawer calls its 13 new keys (peek*, icon, cover, properties, rowBodyEmpty) and
+      // tools.database.settingsOpenPagesIn by literal.
+      'executable-literal': 867,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -350,7 +352,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +115: the database view settings panel builds its tools.database.* keys from a short name.
       // +57: formula error codes (formulaErrorKey), the 24 rollup functions (rollupFn.<fn>) and
       // the any/every/none rollup filter operators are composed from tools.database.* namespaces.
-      'registered-namespace-compatible': 314,
+      // -1: tools.database.settingsOpenPagesIn moved to executable-literal (see above).
+      'registered-namespace-compatible': 313,
       'catalog-only': 4,
     });
     expect(

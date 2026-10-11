@@ -1,5 +1,4 @@
 import { findByRole, fireEvent, queryAllByAttribute, queryByRole, within } from '@testing-library/dom';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../src/blok';
@@ -55,6 +54,51 @@ const mount = async (withRow = false): Promise<void> => {
   await instance.isReady;
   if (holder === undefined) throw new Error('Missing editor holder');
   await findByRole(holder, 'columnheader', { name: 'Text' });
+};
+
+const FOCUSABLE = 'a[href], area[href], button, input, select, textarea, iframe, summary, [contenteditable=""], [contenteditable="true"], [tabindex]';
+
+// A browser focuses the nearest focusable ancestor on mousedown, or blurs to body when there is none.
+const focusTarget = (target: Element): HTMLElement | null => {
+  const found = target.closest(FOCUSABLE);
+
+  if (!(found instanceof HTMLElement)) return null;
+  if (found.matches(':disabled')) return null;
+
+  return found;
+};
+
+// fireEvent.click never moves focus. The dialog's focus trap reacts to the focus a real press makes.
+const user = {
+  click: async (target: Element): Promise<void> => {
+    const init = { bubbles: true, cancelable: true, composed: true, button: 0 };
+
+    fireEvent.pointerDown(target, init);
+    if (fireEvent.mouseDown(target, init)) {
+      const next = focusTarget(target);
+
+      if (next !== null) {
+        next.focus();
+      } else if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+    // A real press lasts a moment. The menu tears down in that gap, which is when the trap bug bites.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // jsdom cannot hit-test. If the press removed the target, the release and the click land on body, as in a browser.
+    const release = target.isConnected ? target : document.body;
+
+    fireEvent.pointerUp(release, init);
+    fireEvent.mouseUp(release, init);
+    fireEvent.click(release, init);
+  },
+  press: async (key: string): Promise<void> => {
+    const active = document.activeElement ?? document.body;
+
+    fireEvent.keyDown(active, { key, code: key, bubbles: true, cancelable: true });
+    fireEvent.keyUp(document.activeElement ?? document.body, { key, code: key, bubbles: true, cancelable: true });
+    await Promise.resolve();
+  },
 };
 
 const savedBlocks = async (): Promise<OutputBlockData[]> => {
@@ -147,9 +191,7 @@ describe('Basic AI setup through the Text property menu', () => {
 
     // jsdom lacks it, and rectangle selection reads it on every mousedown.
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
-    const user = userEvent.setup();
 
-    // user-event, not fireEvent: a real press focuses the menu, and the dialog's focus trap sees that.
     await user.click(within(dialog).getByRole('button', { name: `${label} None` }));
     await user.click(await findByRole(document.body, 'menuitemcheckbox', { name: 'Autofill' }));
 
@@ -172,7 +214,6 @@ describe('Basic AI setup through the Text property menu', () => {
     const dialog = await openBasic();
 
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
-    const user = userEvent.setup();
 
     await user.click(within(dialog).getByRole('button', { name: trigger }));
     await user.click(await findByRole(document.body, role, { name: item }));
@@ -189,17 +230,16 @@ describe('Basic AI setup through the Text property menu', () => {
     const dialog = await openBasic();
 
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
-    const user = userEvent.setup();
 
     await user.click(within(dialog).getByRole('button', { name: trigger }));
     await findByRole(document.body, role, { name: item });
-    await user.keyboard('{Escape}');
+    await user.press('Escape');
 
     expect(dialog).toBeInTheDocument();
     await vi.waitFor(() => expect(queryByRole(document.body, role, { name: item })).toBeNull());
     expect(within(dialog).getByRole('button', { name: trigger })).toHaveFocus();
 
-    await user.keyboard('{Escape}');
+    await user.press('Escape');
 
     expect(dialog).not.toBeInTheDocument();
   });

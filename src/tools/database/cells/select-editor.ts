@@ -1,13 +1,13 @@
 import { nanoid } from 'nanoid';
 
-import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconTrash } from '../../../components/icons';
-import { getTabbables } from '../../../components/utils/modal-dialog';
+import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconPencil } from '../../../components/icons';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
-import { OPTION_COLORS, optionColorLabelKey, optionColorOf, pickOptionColor } from './option-colors';
+import { pickOptionColor } from './option-colors';
+import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
@@ -29,13 +29,6 @@ const iconButton = (attribute: string, icon: string, label: string): HTMLButtonE
   return button;
 };
 
-interface DragState {
-  id: string;
-  others: SelectOption[];
-  index: number;
-  moved: boolean;
-}
-
 /**
  * Search-or-create option picker for select and multi-select. Single select
  * commits once and closes; multi-select commits each change and stays open.
@@ -49,7 +42,6 @@ class SelectEditor {
   private query = '';
   private activeIndex = -1;
   private open = true;
-  private drag: DragState | null = null;
   private readonly listId = `blok-database-select-${++listIds.next}`;
   private readonly root = document.createElement('div');
   private readonly chips = document.createElement('div');
@@ -57,6 +49,20 @@ class SelectEditor {
   private readonly body = document.createElement('div');
   private readonly popover: CellPopover;
   private panelOptionId: string | null = null;
+  private readonly drag = new OptionDrag(
+    this.body,
+    () => this.options,
+    (id, others, index) => {
+      const dragged = this.options.find((option) => option.id === id);
+
+      if (dragged !== undefined) {
+        const placed = placeDroppedOption(this.property, others, index, dragged);
+
+        this.setOptions(this.options.map((option) => (option.id === id ? placed : option)));
+      }
+    },
+    () => this.renderList()
+  );
   private deletePromptOpen = false;
 
   constructor(
@@ -98,7 +104,8 @@ class SelectEditor {
     this.popover = new CellPopover({
       anchor,
       content: this.root,
-      minWidth: `${Math.max(anchor.getBoundingClientRect().width, 280)}px`,
+      // Notion: 300 wide beside a 200px cell (research/08:306).
+      minWidth: `${Math.max(anchor.getBoundingClientRect().width, 300)}px`,
       onEscape: () => {
         if (this.deletePromptOpen) {
           this.renderPanel();
@@ -136,7 +143,7 @@ class SelectEditor {
     }
     this.open = false;
     this.setDeletePromptOpen(false);
-    this.endDrag();
+    this.drag.stop();
     if (closePopover) {
       this.popover.close();
     }
@@ -375,7 +382,28 @@ class SelectEditor {
       list.appendChild(create);
     }
 
-    this.body.replaceChildren(hint, list);
+    this.body.replaceChildren(hint, list, ...this.editPropertyFooter());
+  }
+
+  /** research/08: the status editor ends with "Edit property". */
+  private editPropertyFooter(): HTMLElement[] {
+    const onEditProperty = this.ctx.onEditProperty;
+
+    if (this.property.type !== 'status' || onEditProperty === undefined) {
+      return [];
+    }
+    const footer = document.createElement('button');
+
+    footer.type = 'button';
+    footer.setAttribute('data-blok-database-select-edit-property', '');
+    footer.innerHTML = IconPencil;
+    footer.append(this.t('tools.database.editProperty'));
+    footer.addEventListener('click', () => {
+      this.finish(true);
+      onEditProperty();
+    });
+
+    return [footer];
   }
 
   private renderOptionRow(option: SelectOption): HTMLElement {
@@ -390,7 +418,7 @@ class SelectEditor {
     if (this.canEditOptions) {
       const handle = iconButton('data-blok-database-select-option-handle', IconMenu, this.t('tools.database.dragOption'));
 
-      handle.addEventListener('pointerdown', (event) => this.startDrag(event, option.id));
+      handle.addEventListener('pointerdown', (event) => this.drag.start(event, option.id));
       handle.addEventListener('click', (event) => event.stopPropagation());
       row.appendChild(handle);
     }
@@ -459,211 +487,39 @@ class SelectEditor {
 
       return;
     }
-
-    const panel = document.createElement('div');
-
-    panel.setAttribute('data-blok-database-option-panel', option.id);
-
-    const name = document.createElement('input');
-
-    name.type = 'text';
-    name.value = option.label;
-    name.setAttribute('data-blok-database-option-name', '');
-    name.setAttribute('aria-label', this.t('tools.database.optionName'));
-    const rename = (): void => {
-      const label = name.value.trim();
-      const current = this.options.find((o) => o.id === option.id);
-
-      if (label !== '' && current !== undefined && label !== current.label) {
-        this.updateOption(option.id, { label });
-      }
-    };
-
-    name.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.isComposing) {
-        event.preventDefault();
-        rename();
-      }
-    });
-    name.addEventListener('change', rename);
-
-    const del = document.createElement('button');
-
-    del.type = 'button';
-    del.setAttribute('data-blok-database-option-delete', '');
-    del.innerHTML = IconTrash;
-    del.append(this.t('tools.database.optionDelete'));
-    del.addEventListener('click', () => this.confirmDelete(option.id));
-
-    const heading = document.createElement('div');
-
-    heading.setAttribute('data-blok-database-option-colors-heading', '');
-    heading.textContent = this.t('tools.database.optionColors');
-
-    const colors = document.createElement('div');
-
-    colors.setAttribute('role', 'menu');
-    colors.setAttribute('aria-label', this.t('tools.database.optionColors'));
-    const current = optionColorOf(option);
-
-    for (const color of OPTION_COLORS) {
-      const item = document.createElement('button');
-
-      item.type = 'button';
-      item.setAttribute('role', 'menuitemradio');
-      item.setAttribute('aria-checked', String(color === current));
-      item.setAttribute('data-blok-database-option-color', color);
-
-      const swatch = document.createElement('span');
-
-      swatch.setAttribute('data-blok-database-option-swatch', '');
-      swatch.setAttribute('data-color', color);
-      item.append(swatch, this.t(optionColorLabelKey(color)));
-      if (color === current) {
-        const check = document.createElement('span');
-
-        check.setAttribute('data-blok-database-select-option-check', '');
-        check.setAttribute('aria-hidden', 'true');
-        check.innerHTML = IconCheck;
-        item.appendChild(check);
-      }
-      item.addEventListener('click', () => {
+    const { panel, name } = buildOptionPanel(option, {
+      t: (key) => this.t(key),
+      onRename: (label) => this.updateOption(option.id, { label }),
+      onRecolor: (color) => {
         this.updateOption(option.id, { color });
         this.renderPanel();
-      });
-      colors.appendChild(item);
-    }
+      },
+      onDelete: () => this.confirmDelete(option.id),
+    });
 
-    panel.append(name, del, heading, colors);
     this.body.replaceChildren(panel);
     name.focus();
   }
 
-  /** Notion asks before deleting an option (research/08); rows keep existing, the value is cleared. */
   private confirmDelete(optionId: string): void {
-    const prompt = document.createElement('div');
-    const text = document.createElement('p');
-    const confirm = document.createElement('button');
-    const cancel = document.createElement('button');
-
-    prompt.setAttribute('data-blok-database-option-delete-prompt', '');
-    prompt.setAttribute('role', 'alertdialog');
-    prompt.setAttribute('aria-modal', 'true');
-    text.textContent = this.t('tools.database.optionDeleteConfirm');
-    prompt.setAttribute('aria-label', text.textContent);
-    confirm.type = 'button';
-    confirm.setAttribute('data-blok-database-option-delete-confirm', '');
-    confirm.textContent = this.t('tools.database.optionDelete');
-    cancel.type = 'button';
-    cancel.setAttribute('data-blok-database-option-delete-cancel', '');
-    cancel.textContent = this.t('tools.database.optionDeleteCancel');
-    confirm.addEventListener('click', () => {
-      this.setOptions(this.options.filter((o) => o.id !== optionId));
-      if (this.selected.includes(optionId)) {
-        this.selected = this.selected.filter((id) => id !== optionId);
-        this.commit();
-      }
-      this.closePanel();
+    const { prompt, confirm } = buildDeletePrompt({
+      t: (key) => this.t(key),
+      onConfirm: () => {
+        this.setOptions(this.options.filter((o) => o.id !== optionId));
+        if (this.selected.includes(optionId)) {
+          this.selected = this.selected.filter((id) => id !== optionId);
+          this.commit();
+        }
+        this.closePanel();
+      },
+      onCancel: () => this.renderPanel(),
     });
-    cancel.addEventListener('click', () => this.renderPanel());
-    prompt.addEventListener('keydown', (event) => {
-      if (event.key !== 'Tab') {
-        return;
-      }
-      const tabbables = getTabbables(prompt);
-      const first = tabbables[0];
-      const last = tabbables[tabbables.length - 1];
 
-      if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
-        event.preventDefault();
-        (event.shiftKey ? last : first)?.focus();
-      }
-    });
-    prompt.append(text, confirm, cancel);
     this.body.replaceChildren(prompt);
     this.setDeletePromptOpen(true);
     confirm.focus();
   }
-
-  // ─── Drag to reorder ───
-
-  private startDrag(event: PointerEvent, id: string): void {
-    if (event.button !== 0) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const others = this.options.filter((option) => option.id !== id);
-
-    this.drag = { id, others, index: this.options.findIndex((option) => option.id === id), moved: false };
-    this.body.querySelector(`[data-blok-database-select-option="${id}"]`)?.setAttribute('data-dragging', '');
-    document.addEventListener('pointermove', this.handleDragMove);
-    document.addEventListener('pointerup', this.handleDragEnd);
-    document.addEventListener('pointercancel', this.handleDragCancel);
-  }
-
-  private readonly handleDragMove = (event: PointerEvent): void => {
-    const drag = this.drag;
-
-    if (drag === null) {
-      return;
-    }
-    drag.moved = true;
-    drag.index = drag.others.filter((option) => {
-      const row = this.body.querySelector(`[data-blok-database-select-option="${option.id}"]`);
-      const rect = row?.getBoundingClientRect();
-
-      return rect !== undefined && rect.top + rect.height / 2 < event.clientY;
-    }).length;
-    this.body.querySelectorAll('[data-drop-before], [data-drop-after]').forEach((row) => {
-      row.removeAttribute('data-drop-before');
-      row.removeAttribute('data-drop-after');
-    });
-    const before = drag.others[drag.index];
-    const after = drag.others[drag.index - 1];
-
-    if (before !== undefined) {
-      this.body.querySelector(`[data-blok-database-select-option="${before.id}"]`)?.setAttribute('data-drop-before', '');
-    } else if (after !== undefined) {
-      this.body.querySelector(`[data-blok-database-select-option="${after.id}"]`)?.setAttribute('data-drop-after', '');
-    }
-  };
-
-  private readonly handleDragEnd = (): void => {
-    const drag = this.drag;
-
-    this.endDrag();
-    if (drag === null || !drag.moved) {
-      this.renderList();
-
-      return;
-    }
-    const after = drag.others[drag.index - 1] ?? null;
-    const before = drag.others[drag.index] ?? null;
-    const dragged = this.options.find((option) => option.id === drag.id);
-    const unmoved = this.options.findIndex((option) => option.id === drag.id) === drag.index;
-
-    if (dragged !== undefined && !unmoved) {
-      const position = DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null);
-
-      this.setOptions(this.options.map((option) => (option.id === drag.id ? { ...option, position } : option)));
-    }
-    this.renderList();
-  };
-
-  private readonly handleDragCancel = (): void => {
-    this.endDrag();
-    this.renderList();
-  };
-
-  private endDrag(): void {
-    this.drag = null;
-    document.removeEventListener('pointermove', this.handleDragMove);
-    document.removeEventListener('pointerup', this.handleDragEnd);
-    document.removeEventListener('pointercancel', this.handleDragCancel);
-  }
 }
-
 export const openSelectEditor = (
   property: PropertyDefinition,
   value: PropertyValue | undefined,

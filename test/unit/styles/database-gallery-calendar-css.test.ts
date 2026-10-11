@@ -109,3 +109,9 @@ describe('database gallery and calendar styles', () => {
     expect(calendarCss).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
   });
 });
+
+describe('gallery drop into an empty group', () => {
+  it('rings the empty grid with the drop line color (Notion unmeasured)', () => {
+    expect(ruleBody('[data-blok-database-gallery-grid][data-drop="inside"]')).toContain('var(--blok-database-table-drop-line)');
+  });
+});

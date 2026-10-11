@@ -2,6 +2,7 @@ import type { BlockToolData, OutputData } from '../../../types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
+import { isOutputData } from './tier3-values';
 
 /** A body block as the gallery reads it: legacy OutputData or a child block's data. */
 export interface BodyBlock {
@@ -10,8 +11,7 @@ export interface BodyBlock {
 }
 
 const hasBody = (value: PropertyValue | undefined): value is OutputData =>
-  value !== undefined && value !== null && typeof value === 'object' && !Array.isArray(value)
-  && Array.isArray(value.blocks) && value.blocks.length > 0;
+  isOutputData(value) && value.blocks.length > 0;
 
 /**
  * A row's legacy body (the richText "Card details" column). The drawer and
@@ -170,6 +170,7 @@ export const legacyBodyInserts = (rowId: string, body: OutputData): BodyBlockIns
 
     return { id: idOf.get(keyOf(index)) ?? `${rowId}-body-${index}`, type: block.type, data: block.data ?? {}, parentId: parent ?? null };
   });
+  const contentById = new Map(inserts.map((insert, index) => [insert.id, blocks[index].content ?? []]));
   const placed = new Set<string>();
   const ordered: BodyBlockInsert[] = [];
   const place = (insert: BodyBlockInsert, seen: Set<string>): void => {
@@ -181,10 +182,21 @@ export const legacyBodyInserts = (rowId: string, body: OutputData): BodyBlockIns
     if (parent !== undefined) {
       place(parent, seen.add(insert.id));
     }
+    if (placed.has(insert.id)) return;
     placed.add(insert.id);
     ordered.push(parent === undefined ? { ...insert, parentId: null } : insert);
+    const children = inserts.filter((candidate) => candidate.parentId === insert.id);
+    const content = (contentById.get(insert.id) ?? []).map((id) => idOf.get(id));
+    const ranked = [
+      ...content.flatMap((id) => children.filter((child) => child.id === id)),
+      ...children.filter((child) => !content.includes(child.id)),
+    ];
+
+    ranked.forEach((child) => place(child, new Set([...seen, insert.id])));
   };
 
+  inserts.filter((insert) => !inserts.some((parent) => parent.id === insert.parentId))
+    .forEach((insert) => place(insert, new Set()));
   inserts.forEach((insert) => place(insert, new Set()));
 
   return ordered;

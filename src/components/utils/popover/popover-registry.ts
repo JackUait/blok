@@ -219,6 +219,22 @@ export class PopoverRegistry {
   }
 
   /**
+   * The trigger of the open popover that holds a node.
+   * @param node - node to look up
+   * @returns that popover's trigger, or null when no open popover holds the node
+   */
+  public triggerOf(node: Node): HTMLElement | null {
+    return this.stack.find(entry => entry.popover.hasNode(node))?.triggerElement ?? null;
+  }
+
+  /**
+   * @returns the trigger of the topmost open popover, or null when none is open
+   */
+  public topmostTrigger(): HTMLElement | null {
+    return this.stack[this.stack.length - 1]?.triggerElement ?? null;
+  }
+
+  /**
    * Cleans up the registry: removes the document listeners and clears the stack
    */
   public destroy(): void {

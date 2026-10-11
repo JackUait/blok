@@ -8,7 +8,7 @@ import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import { DatabaseTableView } from '../../../../src/tools/database/database-table-view';
 import type { TableHandlers } from '../../../../src/tools/database/database-table-view';
-import { resolveCalculations, resolveViewProperties, withCalculation, withPropertyOrder, withPropertySetting } from '../../../../src/tools/database/view-settings';
+import { resolveCalculations, resolveViewProperties, withCalculation, withCalculationCap, withPropertyOrder, withPropertySetting } from '../../../../src/tools/database/view-settings';
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
 
@@ -117,6 +117,20 @@ describe('database view settings — two peers editing one view', () => {
     expect(viewsOf(storeB)[0].calculations).toEqual(viewsOf(storeA)[0].calculations);
   });
 
+  it('keeps a 99+ cap one person sets while the other changes the function of another column', () => {
+    const [storeA, storeB] = seed({ ...bornView(), calculations: [{ id: 'p-status', fn: 'count' }, { id: 'p-due', fn: 'count' }] });
+
+    edit(storeA, (view) => ({ calculations: withCalculationCap(view, 'p-status', true) }));
+    edit(storeB, (view) => ({ calculations: withCalculation(view, 'p-due', 'earliest_date') }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0].calculations).toEqual(expect.arrayContaining([
+      { id: 'p-status', fn: 'count', capCounts: true },
+      { id: 'p-due', fn: 'earliest_date' },
+    ]));
+    expect(viewsOf(storeB)[0].calculations).toEqual(viewsOf(storeA)[0].calculations);
+  });
+
   it('settles on one calculation when two people pick one for the same column', () => {
     const [storeA, storeB] = seed(bornView());
 
@@ -173,6 +187,17 @@ describe('database view settings — two peers editing one view', () => {
     sync(storeA, storeB);
 
     expect(viewsOf(storeA)[0]).toMatchObject({ timelineZoom: 'week', timelineBy: 'p-due', showTimelineTable: true });
+    expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
+  });
+
+  it('keeps a shared timeline centre one person wrote while the other changed the zoom', () => {
+    const [storeA, storeB] = seed({ ...bornView(), type: 'timeline' });
+
+    edit(storeA, () => ({ timelineCenter: '2027-02-01' }));
+    edit(storeB, () => ({ timelineZoom: 'year' }));
+    sync(storeA, storeB);
+
+    expect(viewsOf(storeA)[0]).toMatchObject({ timelineCenter: '2027-02-01', timelineZoom: 'year' });
     expect(viewsOf(storeB)[0]).toEqual(viewsOf(storeA)[0]);
   });
 

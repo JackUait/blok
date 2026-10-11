@@ -88,21 +88,6 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'tools/spacer/alignment-guide.ts': {
     reason: 'guide line styled 100% inline (accent color resolved to a literal beforehand)',
   },
-  'tools/database/database-card-drag.ts': {
-    reason: 'ghost styled inline; cloned card content styled by unscoped attribute CSS (database.css), not utilities',
-  },
-  'tools/database/database-list-row-drag.ts': {
-    reason: 'ghost styled inline; cloned row content styled by unscoped attribute CSS (database.css), not utilities',
-  },
-  'tools/database/database-column-drag.ts': {
-    reason: 'ghost styled inline; cloned column content styled by unscoped attribute CSS (database.css), not utilities',
-  },
-  'tools/database/database-table-row-drag.ts': {
-    reason: 'ghost styled inline; cloned table row styled by unscoped attribute CSS (database.css), not utilities',
-  },
-  'tools/database/database-table-column-drag.ts': {
-    reason: 'ghost styled inline; cloned table header styled by unscoped attribute CSS (database.css), not utilities',
-  },
   'tools/database/database-drop-line.ts': {
     reason: 'drop line styled inline (position, size, resolved colour) plus unscoped attribute CSS (database.css), no utilities',
   },

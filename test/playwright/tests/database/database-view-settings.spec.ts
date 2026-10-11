@@ -7,9 +7,14 @@
 
 import type { Locator, Page } from '@playwright/test';
 
+import { generateKeyBetween } from 'fractional-indexing';
+
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+
+/** Valid fractional keys. `a000`-style keys are ones the library rejects. */
+const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
 
 declare global {
   interface Window {
@@ -53,7 +58,7 @@ const blocks = (view: Record<string, unknown> = {}): OutputBlockData[] => [
   ...ROWS.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: `a${String(i).padStart(3, '0')}`, properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties },
   })),
 ];
 
@@ -224,6 +229,56 @@ test.describe('database view settings', () => {
     });
 
     expect(locked).toBe(true);
+  });
+
+  test('A1a Active switch reads differently on and off without painting its row', async ({ page }) => {
+    await page.evaluate(() => document.documentElement.setAttribute('data-blok-theme', 'light'));
+    const data = blocks().map((block) => block.id === 'db-1' ? {
+      ...block,
+      data: {
+        ...block.data,
+        automations: {
+          version: 1,
+          definitions: [{
+            id: 'active-switch', name: 'Active switch', status: 'active',
+            scope: { type: 'database' }, triggerMode: 'any',
+            triggers: [{ id: 'added', type: 'pageAdded' }],
+            actions: [{
+              id: 'set-amount', type: 'editProperty', target: 'triggerRow',
+              propertyId: 'p-amount', value: 42,
+            }],
+          }],
+        },
+      },
+    } : block);
+
+    await mount(page, data);
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-automations').click();
+    await byTestId(page, 'database-automation-open-active-switch').click();
+    await page.mouse.move(0, 0);
+    const active = byTestId(page, 'database-automation-active');
+    const read = () => active.evaluate((control) => {
+      const track = control.querySelector('[data-blok-database-switch-track]');
+
+      if (!(track instanceof HTMLElement)) throw new Error('missing Active switch track');
+      const style = getComputedStyle(control);
+
+      return { trackFill: getComputedStyle(track).backgroundColor, rowFill: style.backgroundColor, ink: style.color };
+    });
+
+    await expect(active).toHaveAttribute('aria-checked', 'true');
+    const on = await read();
+
+    await active.click();
+    await page.mouse.move(0, 0);
+    await expect(active).toHaveAttribute('aria-checked', 'false');
+    const off = await read();
+
+    expect(on.trackFill).not.toBe(off.trackFill);
+    expect(on.rowFill).toBe('rgba(0, 0, 0, 0)');
+    expect(off.rowFill).toBe(on.rowFill);
+    expect(off.ink).toBe(on.ink);
   });
 
   test('toggle switch knob moves 12px over 200ms ease-out', async ({ page }) => {

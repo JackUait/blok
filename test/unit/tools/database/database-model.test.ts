@@ -214,6 +214,26 @@ describe('DatabaseModel', () => {
       expect(newRow.properties).toEqual({});
     });
 
+    it('creates every person, files and relation value as an empty list', () => {
+      const schema = [
+        makeProperty({ id: 'title', type: 'title' }),
+        makeProperty({ id: 'who', type: 'person' }),
+        makeProperty({ id: 'att', type: 'files' }),
+        makeProperty({ id: 'rel', type: 'relation' }),
+        makeProperty({ id: 'tags', type: 'multiSelect' }),
+      ];
+      const model = new DatabaseModel(makeData({ schema }));
+
+      model.setRows([]);
+
+      expect(model.createRowData({ title: 'New', who: [{ id: 'u1' }] }).properties).toEqual({
+        title: 'New',
+        who: [{ id: 'u1' }],
+        att: [],
+        rel: [],
+      });
+    });
+
     it('should create row data with initial properties', () => {
       const model = new DatabaseModel(makeData());
       model.setRows([]);

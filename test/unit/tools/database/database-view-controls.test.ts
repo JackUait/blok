@@ -6,6 +6,7 @@ import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/too
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
   { id: 'num', name: 'Amount', type: 'number', position: 'a1' },
+  { id: 'act', name: 'Act', type: 'button', position: 'a2' },
 ];
 
 const q = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="${id}"]`);
@@ -62,6 +63,28 @@ describe('DatabaseViewControls', () => {
     vi.restoreAllMocks();
   });
 
+  it('draws Filter, Sort, search and settings as named icon buttons, as Notion does (research/07:53)', () => {
+    setup();
+
+    for (const id of ['database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-search', 'database-toolbar-settings']) {
+      const el = q(id);
+
+      expect(el?.hasAttribute('data-blok-database-toolbar-icon')).toBe(true);
+      expect(el?.textContent?.trim()).toBe('');
+      expect(el?.querySelector('svg')).not.toBeNull();
+    }
+    expect(q('database-toolbar-filter')?.getAttribute('aria-label')).toBe('tools.database.settingsFilter');
+    expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
+  });
+
+  it('never offers a button property in "+ Filter"', () => {
+    setup();
+    click('database-toolbar-filter');
+
+    expect(q('database-pick-property-num')).not.toBeNull();
+    expect(q('database-pick-property-act')).toBeNull();
+  });
+
   it('keeps a filter personal until Save for everyone', () => {
     const { controls, host, saved } = setup();
     const anchor = document.createElement('button');
@@ -78,6 +101,28 @@ describe('DatabaseViewControls', () => {
     click('database-view-save');
 
     expect(host.updateView).toHaveBeenCalledWith({ filters: [expect.objectContaining({ propertyId: 'num' })] });
+    expect(controls.hasPersonalEdits('v1')).toBe(false);
+    expect(q('database-view-save')).toBeNull();
+  });
+
+  it('standalone Save for everyone keeps authorized combined personal filters and sorts', () => {
+    const { controls, host, saved } = setup();
+    const anchor = document.createElement('button');
+
+    document.body.appendChild(anchor);
+    controls.filterBy('num', anchor);
+    controls.sortBy('num', anchor);
+    click('database-header-sort-desc');
+    const personal = structuredClone(controls.effective(saved.view));
+
+    if (personal.filters.length !== 1 || personal.sorts.length !== 1) {
+      throw new Error('standalone save fixture did not create both personal edits');
+    }
+    click('database-view-save');
+
+    expect(saved.view.filters).toEqual(personal.filters);
+    expect(saved.view.sorts).toEqual(personal.sorts);
+    expect(host.updateView).toHaveBeenCalledWith({ filters: personal.filters, sorts: personal.sorts });
     expect(controls.hasPersonalEdits('v1')).toBe(false);
     expect(q('database-view-save')).toBeNull();
   });
@@ -144,6 +189,16 @@ describe('DatabaseViewControls', () => {
     expect(q('database-view-save')).toBeNull();
     expect(q('database-view-reset')).not.toBeNull();
     expect(q('database-toolbar-locked')?.hidden).toBe(false);
+  });
+
+  it('opens the filter of an old id-less pill, not a "deleted property" one', () => {
+    const { controls, saved } = setup();
+
+    saved.view = { ...saved.view, filters: [{ propertyId: 'num', operator: 'greater_than', value: 5 }] };
+    controls.refresh();
+    document.querySelector<HTMLElement>('[data-blok-database-filter-pill][data-filter-id]')?.click();
+
+    expect((q('database-filter-value') as HTMLInputElement | null)?.value).toBe('5');
   });
 
   it('marks an active filter pill only once it has a value', () => {

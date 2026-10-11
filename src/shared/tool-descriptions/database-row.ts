@@ -23,6 +23,19 @@ export const DATABASE_ROW_DATA = {
     },
     icon: { type: 'string', description: 'The row page icon, an emoji.' },
     cover: { type: 'string', description: 'The row page cover, an image URL.' },
+    template: { type: 'boolean', description: 'A page template, not a row. Views and exports skip it.' },
+    repeat: {
+      type: 'object',
+      description: 'Templates only: a repeating schedule. The host runs it.',
+      required: ['frequency', 'start'],
+      additionalProperties: false,
+      properties: {
+        frequency: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'yearly'] },
+        interval: { type: 'integer', minimum: 1 },
+        start: { type: 'string', description: 'ISO date-time of the first run.' },
+        lastRunAt: { type: 'string' },
+      },
+    },
     convertedValues: {
       type: 'object',
       description: 'Values a property type change could not carry over, keyed by property id; restored if the type changes back.',

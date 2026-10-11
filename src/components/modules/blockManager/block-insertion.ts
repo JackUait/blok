@@ -188,7 +188,13 @@ export class BlockInsertion {
       this.repository.getBlockByIndex(targetIndex)?.unwatchBlockMutations();
     }
 
-    const resolvedToolName = this.toolForIndexInsert(tool, targetIndex, replace, impliedParent, exited, forceTopLevel);
+    // A caller that names the parent (a table or database placing a child)
+    // decides demotion by that parent. The flat predecessor can sit in another
+    // child's subtree, such as a row's page body under `childTools` deny.
+    const namedParent = impliedParent === undefined && eventParentId !== undefined && eventParentId !== null
+      ? this.repository.getBlockById(eventParentId)
+      : undefined;
+    const resolvedToolName = this.toolForIndexInsert(tool, targetIndex, replace, impliedParent ?? namedParent, exited, forceTopLevel);
 
     // Bind events immediately for user-created blocks so mutations are tracked right away
     const block = this.factory.composeBlock({

@@ -6,6 +6,7 @@ import { openRelationEditor } from './relation-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
+import { placeText, verificationStatus } from '../tier3-values';
 
 export { renderCellValue, createOptionPill } from './display';
 export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer } from './types';
@@ -56,6 +57,19 @@ export const openCellEditor = (
       return openFilesEditor(property, value, anchor, ctx);
     case 'relation':
       return openRelationEditor(property, value, anchor, ctx);
+    case 'place':
+      return openTextEditor({ ...property, type: 'text' }, placeText(value), anchor, {
+        ...ctx,
+        onCommit: (text) => ctx.onCommit(typeof text === 'string' && text.trim() !== '' ? { address: text.trim() } : null),
+      });
+    case 'verification':
+      // Expired verifies again, as Notion's "Verify" does.
+      ctx.onCommit(verificationStatus(value) === 'verified'
+        ? { state: 'unverified' }
+        : { state: 'verified', ...(ctx.me !== undefined ? { verifiedBy: ctx.me } : {}) });
+      ctx.onClose?.();
+
+      return CLOSED;
     case 'createdTime':
     case 'lastEditedTime':
     case 'createdBy':
@@ -63,6 +77,7 @@ export const openCellEditor = (
     case 'uniqueId':
     case 'formula':
     case 'rollup':
+    case 'button':
       return CLOSED;
     default:
       // A type from a newer client has no editor.

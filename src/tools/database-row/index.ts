@@ -4,9 +4,9 @@ import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tool
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
-import type { ConvertedValue, DatabaseRowData, PropertyValue } from '../database/types';
+import type { ConvertedValue, DatabaseRowData, PropertyValue, TemplateRepeat } from '../database/types';
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'template', 'repeat']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -39,6 +39,12 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (typeof data.cover === 'string' && data.cover !== '') {
     row.cover = data.cover;
+  }
+  if (data.template === true) {
+    row.template = true;
+  }
+  if (typeof data.repeat === 'object' && data.repeat !== null) {
+    row.repeat = structuredClone(data.repeat);
   }
 
   return row;
@@ -182,6 +188,12 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.cover !== undefined) {
       saved.cover = this._data.cover;
     }
+    if (this._data.template === true) {
+      saved.template = true;
+    }
+    if (this._data.repeat !== undefined) {
+      saved.repeat = structuredClone(this._data.repeat);
+    }
 
     return saved;
   }
@@ -204,6 +216,11 @@ export class DatabaseRowTool implements BlockTool {
 
   public updateProperties(changes: Record<string, PropertyValue>): void {
     Object.assign(this._data.properties, changes);
+  }
+
+  /** All values at once: the row moved to a database with another schema. */
+  public replaceProperties(param: { properties: Record<string, PropertyValue> }): void {
+    this._data.properties = { ...param.properties };
   }
 
   /**
@@ -269,6 +286,15 @@ export class DatabaseRowTool implements BlockTool {
       delete this._data.cover;
     } else {
       this._data.cover = param.cover;
+    }
+  }
+
+  /** A template's repeat schedule; null stops it. */
+  public updateRepeat(param: { repeat: TemplateRepeat | null }): void {
+    if (param.repeat === null) {
+      delete this._data.repeat;
+    } else {
+      this._data.repeat = structuredClone(param.repeat);
     }
   }
 

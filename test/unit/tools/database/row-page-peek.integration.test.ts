@@ -89,6 +89,12 @@ const savedView = async (): Promise<Record<string, unknown> | undefined> => {
 describe('row page peek modes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // jsdom has no matchMedia; the emoji picker reads it for its theme when the icon picker opens.
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    });
     holder = document.createElement('div');
     document.body.appendChild(holder);
   });
@@ -99,6 +105,15 @@ describe('row page peek modes', () => {
     holder?.remove();
     document.querySelectorAll('[data-blok-popover]').forEach((el) => el.remove());
     vi.restoreAllMocks();
+  });
+
+  it('opens the row page body inert when the host denies editContent', async () => {
+    await make(doc(), { permissions: { can: (action: string) => action !== 'editContent' } });
+    await openRow('r1');
+    const body = drawer()?.querySelector('[data-blok-database-drawer-editor]');
+
+    expect(body).not.toBeNull();
+    expect(body?.closest('[inert]')).not.toBeNull();
   });
 
   it('opens a table row in a side peek by default', async () => {
@@ -155,6 +170,23 @@ describe('row page peek modes', () => {
     expect(drawer()).toBeNull();
   });
 
+  it('opens the row a copied link points at (#rowId) when the page loads, and only once', async () => {
+    window.history.replaceState(null, '', '#r2');
+    try {
+      await make(doc());
+
+      expect(shownTitle()).toBe('Two');
+
+      await key({ key: 'Escape' });
+      editor?.destroy();
+      await make(doc());
+
+      expect(q('[data-blok-database-drawer][data-open]')).toBeNull();
+    } finally {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  });
+
   it('steps to the next and previous row with the header arrows', async () => {
     await make(doc());
     await openRow('r1');
@@ -185,6 +217,24 @@ describe('row page peek modes', () => {
     expect(shownTitle()).toBe('One');
   });
 
+  it('steps rows with Ctrl+Shift+J and Ctrl+Shift+K on a Mac, and ignores plain Ctrl+J there', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+    await make(doc());
+    await openRow('r2');
+    await key({ key: 'j', code: 'KeyJ', ctrlKey: true });
+
+    expect(shownTitle()).toBe('Two');
+
+    await key({ key: 'J', code: 'KeyJ', ctrlKey: true, shiftKey: true });
+
+    expect(shownTitle()).toBe('Three');
+
+    await key({ key: 'K', code: 'KeyK', ctrlKey: true, shiftKey: true });
+    await key({ key: 'K', code: 'KeyK', ctrlKey: true, shiftKey: true });
+
+    expect(shownTitle()).toBe('One');
+  });
+
   it('leaves Ctrl+K to the text when the caret is in an editable field', async () => {
     await make(doc());
     await openRow('r2');
@@ -205,6 +255,25 @@ describe('row page peek modes', () => {
     expect(q('[data-blok-database-wrapper]')?.hasAttribute('data-blok-database-full-page')).toBe(true);
   });
 
+  it('hands the expand button to the host navigate lever when there is one', async () => {
+    const navigate = vi.fn();
+
+    await make(doc(), {
+      rowPages: {
+        lookup: vi.fn().mockResolvedValue(null),
+        copyFromLegacy: vi.fn(),
+        reconcileLegacy: vi.fn(),
+        mount: vi.fn(() => ({ destroy: vi.fn() })),
+        navigate,
+      },
+    });
+    await openRow('r1');
+    await click(q('[data-blok-database-peek-expand]'));
+
+    expect(navigate).toHaveBeenCalledWith('r1');
+    expect(q('[data-blok-database-wrapper]')?.hasAttribute('data-blok-database-full-page')).toBe(false);
+  });
+
   it('opens a new row of a filtered view in its peek, prefilled so it passes the filter', async () => {
     const blocks = doc({ filters: [{ propertyId: 'n', operator: 'equals', value: 'Draft' }] });
 
@@ -222,6 +291,54 @@ describe('row page peek modes', () => {
     const saved = (await editor?.save())?.blocks.find((block) => block.id === rowId);
 
     expect((saved?.data as { properties: Record<string, unknown> }).properties.n).toBe('Draft');
+  });
+
+  it('opens and prefills a new row of a view filtered only by an advanced filter', async () => {
+    const blocks = doc({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r1', propertyId: 'n', operator: 'equals', value: 'Draft' }] } });
+
+    (blocks[0].data as { schema: unknown[] }).schema.push({ id: 'n', name: 'Notes', type: 'text', position: 'a1' });
+    await make(blocks);
+    await click(q('[data-blok-database-table-add-row]'));
+
+    const saved = (await editor?.save())?.blocks.filter((block) => block.type === 'database-row').at(-1);
+
+    expect(drawer()?.getAttribute('data-peek-mode')).toBe('side');
+    expect((saved?.data as { properties: Record<string, unknown> }).properties.n).toBe('Draft');
+  });
+
+  it('opens a new row of a view filtered only by a personal (unsaved) filter in its peek', async () => {
+    const blocks = doc();
+
+    (blocks[0].data as { schema: unknown[] }).schema.push({ id: 'n', name: 'Notes', type: 'text', position: 'a1' });
+    await make(blocks);
+    await click(q('[data-blok-testid="database-toolbar-filter"]'));
+    await click(document.querySelector('[data-blok-testid="database-pick-property-n"]'));
+    const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
+
+    if (input !== null) {
+      input.value = 'Draft';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    await quiet();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await quiet();
+
+    expect(((await editor?.save())?.blocks[0].data as { views: Array<{ filters: unknown[] }> }).views[0].filters).toEqual([]);
+    await click(q('[data-blok-database-table-add-row]'));
+
+    expect(drawer()?.getAttribute('data-peek-mode')).toBe('side');
+  });
+
+  it('prefills a "Me" person filter with the signed-in person id from config.people.me', async () => {
+    const blocks = doc({ filters: [{ propertyId: 'own', operator: 'contains', value: ['me'] }] });
+
+    (blocks[0].data as { schema: unknown[] }).schema.push({ id: 'own', name: 'Owner', type: 'person', position: 'a1' });
+    await make(blocks, { people: { me: () => 'u-ada', list: async () => [{ id: 'u-ada', name: 'Ada' }] } });
+    await click(q('[data-blok-database-table-add-row]'));
+
+    const saved = (await editor?.save())?.blocks.filter((block) => block.type === 'database-row').at(-1);
+
+    expect((saved?.data as { properties: Record<string, unknown> }).properties.own).toEqual([{ id: 'u-ada' }]);
   });
 
   it('Escape deletes a new row left empty in its peek, and keeps one that got a title', async () => {

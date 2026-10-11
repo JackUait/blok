@@ -1,3 +1,4 @@
+import { mountGhost } from './copy-ghost-radius';
 import type { TableState } from './database-table-grid';
 
 const THRESHOLD = 5;
@@ -84,7 +85,7 @@ export class DatabaseTableColumnDrag {
     ghost.style.top = `${rect.top}px`;
     ghost.style.width = `${rect.width}px`;
     ghost.style.height = `${rect.height}px`;
-    document.body.appendChild(ghost);
+    mountGhost(header, ghost);
     this.ghost = ghost;
 
     const line = document.createElement('div');

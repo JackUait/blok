@@ -5,17 +5,23 @@ import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
+  IconArrowDiagonal,
+  IconCheck,
   IconCopy,
+  IconExpandFullscreen,
   IconEmojiSmile,
   IconInsertLeft,
   IconInsertRight,
   IconLink,
+  IconMessage,
   IconPencil,
+  IconPreview,
   IconSplitView,
   IconTrash,
 } from '../../components/icons';
 import { beautifyShortcut } from '../../components/utils/string';
-import type { CalculationFn, PropertyDefinition } from './types';
+import { CALCULATIONS_FOR_TYPE } from './database-calculations';
+import type { CalculationFn, OpenPagesIn, PropertyDefinition } from './types';
 
 type T = Pick<I18n, 't'>;
 
@@ -50,15 +56,23 @@ const DATE_FNS: readonly CalculationFn[] = ['earliest_date', 'latest_date', 'dat
 const CHECKBOX_COUNT_FNS: readonly CalculationFn[] = ['count', 'checked', 'unchecked'];
 const CHECKBOX_PERCENT_FNS: readonly CalculationFn[] = ['percent_checked', 'percent_unchecked'];
 
+/** The column's "Show large counts as 99+" state and its toggle. */
+export interface CountCap {
+  capCounts: boolean;
+  onCapCounts: (cap: boolean) => void;
+}
+
 /**
  * The calculation menu for one column (research/08): None, Count ›,
- * Percent ›, then More options › for numbers or Date › for dates.
+ * Percent ›, then More options › for numbers or Date › for dates and
+ * created/edited time. Count opens with the 99+ toggle, except on a checkbox.
  */
 export const calculationItems = (
   property: Pick<PropertyDefinition, 'type'>,
   current: CalculationFn | undefined,
   i18n: T,
-  onPick: (fn: CalculationFn | null) => void
+  onPick: (fn: CalculationFn | null) => void,
+  cap?: CountCap
 ): PopoverItemParams[] => {
   const leaf = (fn: CalculationFn): PopoverItemParams => ({
     type: PopoverItemType.Default,
@@ -66,13 +80,22 @@ export const calculationItems = (
     isActive: current === fn,
     onActivate: () => onPick(fn),
   });
-  const group = (titleKey: string, fns: readonly CalculationFn[]): PopoverItemParams => ({
+  const group = (titleKey: string, fns: readonly CalculationFn[], lead: PopoverItemParams[] = []): PopoverItemParams => ({
     type: PopoverItemType.Default,
     title: i18n.t(titleKey),
     isActive: current !== undefined && fns.includes(current),
-    children: { items: fns.map(leaf) },
+    children: { items: [...lead, ...fns.map(leaf)] },
   });
   const checkbox = property.type === 'checkbox';
+  const offered = CALCULATIONS_FOR_TYPE[property.type] ?? [];
+  const capToggle: PopoverItemParams[] = cap === undefined || checkbox
+    ? []
+    : [{
+      type: PopoverItemType.Default,
+      title: i18n.t('tools.database.calcShowLargeCounts'),
+      isActive: cap.capCounts,
+      onActivate: () => cap.onCapCounts(!cap.capCounts),
+    }];
   const items: PopoverItemParams[] = [
     {
       type: PopoverItemType.Default,
@@ -80,14 +103,14 @@ export const calculationItems = (
       isActive: current === undefined,
       onActivate: () => onPick(null),
     },
-    group('tools.database.calcCount', checkbox ? CHECKBOX_COUNT_FNS : COUNT_FNS),
+    group('tools.database.calcCount', checkbox ? CHECKBOX_COUNT_FNS : COUNT_FNS, capToggle),
     group('tools.database.calcPercent', checkbox ? CHECKBOX_PERCENT_FNS : PERCENT_FNS),
   ];
 
-  if (property.type === 'number') {
+  if (offered.includes('sum')) {
     items.push(group('tools.database.calcMoreOptions', NUMBER_FNS));
   }
-  if (property.type === 'date') {
+  if (offered.includes('earliest_date')) {
     items.push(group('tools.database.calcDate', DATE_FNS));
   }
 
@@ -98,7 +121,7 @@ export const calculationItems = (
 export const openMenu = (
   anchor: HTMLElement,
   items: PopoverItemParams[],
-  options: { searchable?: boolean; onClose?: () => void } = {}
+  options: { searchable?: boolean; searchPlaceholder?: string; onClose?: () => void } = {}
 ): PopoverDesktop => {
   const popover = new PopoverDesktop({
     class: DATABASE_MENU_CLASS,
@@ -109,6 +132,7 @@ export const openMenu = (
     minWidth: '220px',
     autoFocusFirstItem: false,
     ...(options.searchable === true ? { searchable: true } : {}),
+    ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),
   });
 
   const state = { closed: false };
@@ -136,7 +160,9 @@ export interface HeaderMenuContext {
   /** True when this column ends the frozen block. */
   frozenHere: boolean;
   wrapped: boolean;
+  showPageIcon: boolean;
   calculation: CalculationFn | undefined;
+  countCap?: CountCap;
   onFilter: () => void;
   onSort: () => void;
   onGroup: () => void;
@@ -145,8 +171,12 @@ export interface HeaderMenuContext {
   onUnfreeze: () => void;
   onHide: () => void;
   onWrap: (wrap: boolean) => void;
+  onShowPageIcon: (show: boolean) => void;
   onInsert: (side: 'left' | 'right') => void;
 }
+
+/** The property menu puts AI Autofill right after this row (research/08). */
+export const SHOW_PAGE_ICON_ITEM = 'database-show-page-icon';
 
 /**
  * The VIEW-level rows of a column header menu, in Notion's order (research/08).
@@ -155,6 +185,8 @@ export interface HeaderMenuContext {
  */
 export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => {
   const { i18n, property } = ctx;
+  // Personal edits can clone the view backing this menu.
+  const state = { showPageIcon: ctx.showPageIcon };
   const item = (titleKey: string, onActivate: () => void, icon?: string): PopoverItemParams => ({
     type: PopoverItemType.Default,
     title: i18n.t(titleKey),
@@ -162,15 +194,44 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     onActivate,
   });
   const isTitle = property.type === 'title';
-  const items: PopoverItemParams[] = [
-    item('tools.database.tableFilter', ctx.onFilter),
-    item('tools.database.tableSort', ctx.onSort),
-    item('tools.database.tableGroup', ctx.onGroup),
-    {
+  // A button holds no value: nothing to filter, sort, group or calculate.
+  const queryable = property.type !== 'button';
+  const calculate: PopoverItemParams = {
+    type: PopoverItemType.Default,
+    title: i18n.t('tools.database.tableCalculate'),
+    children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap) },
+  };
+  // research/08: Files and ID offer no Group; neither can group a view.
+  const groupable = property.type !== 'files' && property.type !== 'uniqueId';
+  const queries: PopoverItemParams[] = queryable
+    ? [
+      item('tools.database.tableFilter', ctx.onFilter),
+      item('tools.database.tableSort', ctx.onSort),
+      ...(groupable ? [item('tools.database.tableGroup', ctx.onGroup)] : []),
+      calculate,
+    ]
+    : [];
+  // research/08: Title starts with Show page icon, before Filter.
+  const lead: PopoverItemParams[] = isTitle
+    ? [{
       type: PopoverItemType.Default,
-      title: i18n.t('tools.database.tableCalculate'),
-      children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate) },
-    },
+      name: SHOW_PAGE_ICON_ITEM,
+      title: i18n.t('tools.database.settingsShowPageIcon'),
+      icon: IconEmojiSmile,
+      trailingIcon: IconCheck,
+      isActive: () => state.showPageIcon,
+      closeOnActivate: false,
+      onActivate: () => {
+        const next = !state.showPageIcon;
+
+        ctx.onShowPageIcon(next);
+        state.showPageIcon = next;
+      },
+    }]
+    : [];
+  const items: PopoverItemParams[] = [
+    ...lead,
+    ...queries,
     ctx.frozenHere
       ? item('tools.database.tableUnfreeze', ctx.onUnfreeze)
       : item('tools.database.tableFreeze', ctx.onFreeze),
@@ -179,8 +240,8 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
   if (!isTitle) {
     items.push(item('tools.database.tableHide', ctx.onHide));
   }
-  // Notion offers no wrap toggle on a checkbox column.
-  if (property.type !== 'checkbox') {
+  // Notion offers no wrap toggle on a checkbox or a button column.
+  if (property.type !== 'checkbox' && property.type !== 'button') {
     items.push(ctx.wrapped
       ? item('tools.database.tableUnwrap', () => ctx.onWrap(false))
       : item('tools.database.tableWrap', () => ctx.onWrap(true)));
@@ -199,15 +260,46 @@ export interface RowMenuContext {
   properties: PropertyDefinition[];
   onEditIcon: () => void;
   onEditProperty: (propertyId: string) => void;
-  onOpenSidePeek: () => void;
+  onOpenIn: (mode: OpenPagesIn) => void;
   onCopyLink: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** The host's comments lever. Without it there is no Comment row. */
+  onComment?: () => void;
+  /** Other databases of this document. Without any there is no Move to row. */
+  moveTargets?: Array<{ id: string; title: string }>;
+  onMoveTo?: (databaseId: string) => void;
+  /** Who edited the row last, and when, already formatted. Without it there is no footer. */
+  lastEdited?: { name?: string; time: string };
 }
 
-/** The row ⋮⋮ menu (research/08), without Add to Favorites, Comment and Move to. */
+const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> = [
+  { mode: 'side', icon: IconSplitView, key: 'tools.database.openPagesSide' },
+  { mode: 'center', icon: IconPreview, key: 'tools.database.openPagesCenter' },
+  { mode: 'full', icon: IconExpandFullscreen, key: 'tools.database.openPagesFull' },
+];
+
+/** research/08's footer: "Last edited by ⟨name⟩", then the time. */
+const lastEditedFooter = (i18n: T, lastEdited: { name?: string; time: string }): PopoverItemParams => {
+  const footer = document.createElement('div');
+  const who = document.createElement('div');
+  const when = document.createElement('div');
+
+  footer.setAttribute('data-blok-database-row-menu-footer', '');
+  who.textContent = lastEdited.name === undefined
+    ? i18n.t('tools.database.rowLastEdited')
+    : i18n.t('tools.database.rowLastEditedBy', { name: lastEdited.name });
+  when.textContent = lastEdited.time;
+  footer.append(who, when);
+
+  return { type: PopoverItemType.Html, element: footer, name: 'last-edited' };
+};
+
+/** The row ⋮⋮ menu (research/08), without Add to Favorites. Comment needs the host's lever. */
 export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
   const { i18n } = ctx;
+  const targets = ctx.moveTargets ?? [];
+  const onMoveTo = ctx.onMoveTo;
 
   return [
     { type: PopoverItemType.Default, title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: ctx.onEditIcon },
@@ -228,12 +320,31 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
       title: i18n.t('tools.database.tableOpenIn'),
       icon: IconSplitView,
       children: {
-        items: [{ type: PopoverItemType.Default, title: i18n.t('tools.database.tableSidePeek'), icon: IconSplitView, onActivate: ctx.onOpenSidePeek }],
+        items: OPEN_IN.map(({ mode, icon, key }) => ({ type: PopoverItemType.Default, title: i18n.t(key), icon, onActivate: () => ctx.onOpenIn(mode) })),
       },
     },
     { type: PopoverItemType.Separator },
+    ...(ctx.onComment !== undefined
+      ? [{ type: PopoverItemType.Default as const, title: i18n.t('tools.database.tableComment'), icon: IconMessage, onActivate: ctx.onComment }]
+      : []),
     { type: PopoverItemType.Default, title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
     { type: PopoverItemType.Default, title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
-    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: 'Del', onActivate: ctx.onDelete },
+    ...(onMoveTo !== undefined && targets.length > 0
+      ? [{
+        type: PopoverItemType.Default as const,
+        title: i18n.t('tools.database.tableMoveTo'),
+        icon: IconArrowDiagonal,
+        children: {
+          searchable: true,
+          items: targets.map((target) => ({
+            type: PopoverItemType.Default as const,
+            title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
+            onActivate: () => onMoveTo(target.id),
+          })),
+        },
+      }]
+      : []),
+    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: beautifyShortcut('DELETE'), onActivate: ctx.onDelete },
+    ...(ctx.lastEdited !== undefined ? [{ type: PopoverItemType.Separator } as const, lastEditedFooter(i18n, ctx.lastEdited)] : []),
   ];
 };

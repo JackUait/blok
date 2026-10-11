@@ -16,7 +16,7 @@
 import type { BlockToolData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
-import { databaseRowTitle, inRowOrder, titlePropertyIdOf } from '../shared/database-rows';
+import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
@@ -1230,7 +1230,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     case 'database': {
       const children = context.childrenOf.get(block.id ?? '') ?? [];
       const titleId = titlePropertyIdOf(data);
-      const rows = inRowOrder(children.filter((child) => child.tool === 'database-row'))
+      const rows = inRowOrder(children.filter((child) => child.tool === 'database-row' && !isTemplateRow(child)))
         .map((row) => databaseRowToMarkdown(row, context, databaseRowTitle(row, titleId)));
       const title = asString(data.title);
 

@@ -8,9 +8,14 @@ import { readFileSync } from 'node:fs';
 
 import type { Download, Locator, Page } from '@playwright/test';
 
+import { generateKeyBetween } from 'fractional-indexing';
+
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+
+/** Valid fractional keys. `a000`-style keys are ones the library rejects. */
+const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
 
 declare global {
   interface Window {
@@ -38,7 +43,7 @@ const ROWS = [
   { id: 'r3', properties: { 'p-title': 'Rest', 'p-status': 'o-done', 'p-points': 1, 'p-owner': 'o-ann' } },
 ];
 
-const blocks = (view: Record<string, unknown>): OutputBlockData[] => [
+const blocks = (view: Record<string, unknown>, rows: Array<{ id: string; properties: Record<string, unknown> }> = ROWS): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
@@ -48,12 +53,12 @@ const blocks = (view: Record<string, unknown>): OutputBlockData[] => [
       views: [{ id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...view }],
       activeViewId: 'v1',
     },
-    content: ROWS.map((row) => row.id),
+    content: rows.map((row) => row.id),
   },
-  ...ROWS.map((row, i) => ({
+  ...rows.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: `a${String(i).padStart(3, '0')}`, properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties },
   })),
 ];
 
@@ -114,6 +119,76 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('chart view', () => {
+  test('rescales signed axes when a legend series is hidden', async ({ page }) => {
+    await mount(page, blocks({
+      type: 'chart', groupBy: 'p-status', subGroupBy: 'p-owner', chartMeasure: 'sum:p-points',
+      groupSettings: { hideEmptyGroups: true },
+    }, [
+      { id: 'sale', properties: { 'p-title': 'Sale', 'p-status': 'o-todo', 'p-points': 60, 'p-owner': 'o-ann' } },
+      { id: 'refund', properties: { 'p-title': 'Refund', 'p-status': 'o-todo', 'p-points': -40, 'p-owner': 'o-bo' } },
+    ]));
+    const ticks = (): Promise<number[]> => page.locator('[data-blok-database-chart-tick]').evaluateAll((els) => els.map((el) => Number(el.textContent)));
+    const ann = page.locator('[data-blok-database-chart-legend-entry][data-key="o-ann"]');
+    const bo = page.locator('[data-blok-database-chart-legend-entry][data-key="o-bo"]');
+
+    await expect.poll(async () => Math.min(...await ticks())).toBeLessThanOrEqual(-40);
+    await expect.poll(async () => Math.max(...await ticks())).toBeGreaterThanOrEqual(60);
+    await ann.click();
+
+    await expect.poll(async () => Math.max(...await ticks())).toBe(0);
+    await expect.poll(async () => Math.min(...await ticks())).toBeLessThanOrEqual(-40);
+    await expect(page.locator('[data-blok-database-chart-mark][data-series="o-bo"]')).toHaveCount(1);
+    await ann.click();
+    await bo.click();
+
+    await expect.poll(async () => Math.min(...await ticks())).toBe(0);
+    await expect.poll(async () => Math.max(...await ticks())).toBeGreaterThanOrEqual(60);
+  });
+
+  for (const chartType of ['column', 'bar'] as const) {
+    for (const grouped of [false, true]) {
+      test(`a ${chartType} chart draws refunds opposite sales with grouping ${grouped}`, async ({ page }) => {
+        await mount(page, blocks({
+          type: 'chart', chartType, chartMeasure: 'sum:p-points', groupBy: 'p-status',
+          ...(grouped ? { subGroupBy: 'p-owner' } : {}),
+          groupSettings: { hideEmptyGroups: true },
+        }, [
+          { id: 'sale', properties: { 'p-title': 'Sale', 'p-status': 'o-todo', 'p-points': 60, 'p-owner': 'o-ann' } },
+          { id: 'refund', properties: { 'p-title': 'Refund', 'p-status': grouped ? 'o-todo' : 'o-done', 'p-points': -40, 'p-owner': 'o-bo' } },
+        ]));
+        const positive = page.locator(grouped
+          ? '[data-blok-database-chart-mark][data-series="o-ann"]'
+          : '[data-blok-database-chart-mark][data-key="o-todo"]');
+        const negative = page.locator(grouped
+          ? '[data-blok-database-chart-mark][data-series="o-bo"]'
+          : '[data-blok-database-chart-mark][data-key="o-done"]');
+
+        await expect(negative).toBeVisible();
+        const bounds = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => locator.evaluate((el) => {
+          if (!(el instanceof SVGGraphicsElement)) throw new Error('not a chart mark');
+          const box = el.getBBox();
+
+          return { x: box.x, y: box.y, width: box.width, height: box.height };
+        });
+        const sale = await bounds(positive);
+        const refund = await bounds(negative);
+        const baseline = Number(await page.locator('[data-blok-database-chart-axis]').getAttribute(chartType === 'bar' ? 'x1' : 'y1'));
+
+        if (chartType === 'bar') {
+          expect(refund.x + refund.width).toBeLessThanOrEqual(baseline + 0.5);
+          expect(refund.x).toBeLessThan(baseline);
+          expect(sale.x).toBeGreaterThanOrEqual(baseline - 0.5);
+          expect(sale.width).toBeGreaterThan(0);
+        } else {
+          expect(refund.y).toBeGreaterThanOrEqual(baseline - 0.5);
+          expect(refund.y + refund.height).toBeGreaterThan(baseline);
+          expect(sale.y + sale.height).toBeLessThanOrEqual(baseline + 0.5);
+          expect(sale.height).toBeGreaterThan(0);
+        }
+      });
+    }
+  }
+
   test('draws a column per status group and shows the value on hover', async ({ page }) => {
     await mount(page, blocks({ type: 'chart', groupBy: 'p-status', groupSettings: { hideEmptyGroups: true } }));
 

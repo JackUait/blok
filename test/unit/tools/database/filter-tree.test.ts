@@ -126,5 +126,13 @@ describe('filter-tree', () => {
       expect(typeof result[1].id).toBe('string');
       expect(result[1].id.length).toBeGreaterThan(0);
     });
+
+    it('gives an id-less entry the same id on every read, so a pill can find its filter again', () => {
+      const entries = [{ propertyId: 'a' }, { id: 'keep', propertyId: 'b' }, { propertyId: 'c' }];
+      const first = withEntryIds(entries).map((entry) => entry.id);
+
+      expect(withEntryIds(entries).map((entry) => entry.id)).toEqual(first);
+      expect(new Set(first).size).toBe(3);
+    });
   });
 });

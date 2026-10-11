@@ -296,6 +296,26 @@ describe('DatabaseGalleryView', () => {
       expect(first.hasAttribute('data-dragging')).toBe(false);
     });
 
+    it('drops a card into an empty group', () => {
+      const groups: GalleryGroup[] = [
+        { key: 'g1', label: 'One', rows: [row('r1', 'Alpha'), row('r2', 'Bravo')], total: 2 },
+        { key: 'g2', label: 'Two', rows: [], total: 0 },
+      ];
+      const { root, handlers } = mount({ groups, grouped: true });
+      const [first] = layOut(root);
+      const empty = root.querySelector<HTMLElement>('[data-blok-database-gallery-grid][data-group-key="g2"]');
+
+      if (empty === null) throw new Error('no empty grid');
+      rect(empty, 0, 300, 600, 120);
+      pointer('pointerdown', first, 10, 10);
+      pointer('pointermove', document, 50, 340);
+      expect(empty.getAttribute('data-drop')).toBe('inside');
+      pointer('pointerup', document, 50, 340);
+
+      expect(empty.hasAttribute('data-drop')).toBe(false);
+      expect(handlers.moveRow).toHaveBeenCalledWith({ rowId: 'r1', afterRowId: null, beforeRowId: null, groupKey: 'g2', fromGroupKey: 'g1' });
+    });
+
     it('cancels on Escape', () => {
       const { root, handlers } = mount({ groups: three() });
       const [first] = layOut(root);

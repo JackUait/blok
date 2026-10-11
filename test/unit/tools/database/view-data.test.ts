@@ -3,6 +3,7 @@ import {
   COLOR_RULE_TYPES,
   isGroupCollapsed,
   isGroupHidden,
+  COLOR_RULE_LAYOUTS,
   resolveRowColors,
   sortFromHeader,
   withGroupFlags,
@@ -34,8 +35,10 @@ describe('view-data', () => {
   });
 
   describe('conditional color', () => {
-    it('allows the property types Notion lists', () => {
-      expect(COLOR_RULE_TYPES).toEqual(['title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox']);
+    it('allows the property types Notion lists (research/05 §6.2)', () => {
+      expect(COLOR_RULE_TYPES).toEqual([
+        'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'checkbox', 'formula', 'relation', 'rollup',
+      ]);
     });
 
     it('tints matching rows; the first matching rule wins', () => {
@@ -56,6 +59,40 @@ describe('view-data', () => {
 
       expect(resolveRowColors(rows, view({ colorRules: [rule] }), schema).get('a')).toEqual({ cells: { num: 'blue' } });
       expect(resolveRowColors(rows, view({ type: 'list', colorRules: [rule] }), schema).get('a')).toEqual({ row: 'blue', cells: {} });
+    });
+
+    it('colors by status, person, relation, formula and rollup, as Notion does (research/05 §6.2)', () => {
+      const typed: PropertyDefinition[] = [
+        ...schema,
+        { id: 'st', name: 'Stage', type: 'status', position: 'a2', config: { options: [{ id: 's1', label: 'Done', position: 'a0', groupId: 'complete' }] } },
+        { id: 'own', name: 'Owner', type: 'person', position: 'a3' },
+        { id: 'rel', name: 'Rel', type: 'relation', position: 'a4' },
+      ];
+      const row: DatabaseRow = { id: 'a', position: 'a0', properties: { st: 's1', own: [{ id: 'u1' }], rel: ['r9'] } };
+      const rule = (propertyId: string, operator: string, value: unknown): DatabaseViewConfig => view({
+        colorRules: [{ id: 'c', propertyId, operator, value: value as never, color: 'pink' }],
+      });
+
+      expect(resolveRowColors([row], rule('st', 'equals', 's1'), typed).get('a')).toEqual({ row: 'pink', cells: {} });
+      expect(resolveRowColors([row], rule('own', 'is_not_empty', null), typed).get('a')).toEqual({ row: 'pink', cells: {} });
+      expect(resolveRowColors([row], rule('rel', 'is_not_empty', null), typed).get('a')).toEqual({ row: 'pink', cells: {} });
+      expect(COLOR_RULE_TYPES).toEqual(expect.arrayContaining(['status', 'person', 'relation', 'formula', 'rollup']));
+    });
+
+    it('resolves a "Me" person rule to the signed-in person', () => {
+      const typed: PropertyDefinition[] = [...schema, { id: 'own', name: 'Owner', type: 'person', position: 'a2' }];
+      const row: DatabaseRow = { id: 'a', position: 'a0', properties: { own: [{ id: 'u1' }] } };
+      const v = view({ colorRules: [{ id: 'c', propertyId: 'own', operator: 'contains', value: ['me'], color: 'red' }] });
+
+      expect(resolveRowColors([row], v, typed, new Date(), 'u1').get('a')).toEqual({ row: 'red', cells: {} });
+      expect(resolveRowColors([row], v, typed, new Date(), 'u2').has('a')).toBe(false);
+    });
+
+    it.each(['calendar', 'timeline', 'feed'] as const)('colors a %s view (research/05 §6.2)', (type) => {
+      const rule = { id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'blue' };
+
+      expect(COLOR_RULE_LAYOUTS).toContain(type);
+      expect(resolveRowColors(rows, view({ type, colorRules: [rule] }), schema).get('a')).toEqual({ row: 'blue', cells: {} });
     });
 
     it('skips a rule on a property it cannot read', () => {

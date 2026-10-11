@@ -7,9 +7,14 @@
 
 import type { Locator, Page } from '@playwright/test';
 
+import { generateKeyBetween } from 'fractional-indexing';
+
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+
+/** Valid fractional keys. `a000`-style keys are ones the library rejects. */
+const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
 
 declare global {
   interface Window {
@@ -68,7 +73,7 @@ const blocks = (view: ViewOverrides = {}, rows = ROWS): OutputBlockData[] => [
   ...rows.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: `a${String(i).padStart(3, '0')}`, properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties },
   })),
 ];
 
@@ -87,7 +92,7 @@ const mount = async (page: Page, data: OutputBlockData[], readOnly = false): Pro
     window.blokInstance = new window.Blok({ holder, data: { blocks: input }, readOnly: ro });
     await window.blokInstance.isReady;
   }, { data, readOnly });
-  await expect(page.getByRole('grid')).toBeVisible();
+  await expect(page.getByRole('grid').first()).toBeVisible();
 };
 
 const savedRow = async (page: Page, rowId: string): Promise<Record<string, unknown>> => page.evaluate(async (id) => {
@@ -291,6 +296,18 @@ test.describe('columns', () => {
     expect(notes?.width).toBe(280);
   });
 
+  test('double-click auto-fit shrinks a widened column to its content', async ({ page }) => {
+    await mount(page, blocks({ properties: [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true, width: 500 }] }));
+    const notes = header(page, 'p-notes');
+
+    await expect(notes).toHaveCSS('width', '500px');
+    await notes.locator('[data-blok-database-table-resize]').dblclick();
+    await expect.poll(async () => (await notes.boundingBox())?.width ?? 500).toBeLessThan(250);
+    expect((await savedView(page)).properties).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'p-notes', width: expect.any(Number) }),
+    ]));
+  });
+
   test('dragging a header reorders the columns', async ({ page }) => {
     await mount(page, blocks());
     const from = await header(page, 'p-stage').boundingBox();
@@ -309,6 +326,47 @@ test.describe('columns', () => {
     const order = ((await savedView(page)).properties as Array<{ id: string }>).map((p) => p.id);
 
     expect(order.indexOf('p-stage')).toBeLessThan(order.indexOf('p-notes'));
+  });
+
+  test('dragging a row lands it, even on keys the fractional-index library rejects', async ({ page }) => {
+    // `a000` keys: a drop used to throw inside positionBetween and was lost.
+    const legacy = blocks().map((block) => (block.type === 'database-row'
+      ? { ...block, data: { ...block.data, position: `a${String(ROWS.findIndex((r) => r.id === block.id)).padStart(3, '0')}` } }
+      : block));
+    const savedOrder = async (): Promise<string[]> => page.evaluate(async () => {
+      const output = await window.blokInstance?.save();
+
+      return (output?.blocks ?? [])
+        .filter((block) => block.type === 'database-row')
+        .sort((a, b) => {
+          const [x, y] = [(a.data as { position: string }).position, (b.data as { position: string }).position];
+
+          return x < y ? -1 : 1;
+        })
+        .map((block) => block.id ?? '');
+    });
+    const dragRow = async (rowId: string, targetId: string, edge: 'top' | 'bottom'): Promise<void> => {
+      await row(page, rowId).hover();
+      await row(page, rowId).locator('[data-blok-database-table-row-handle]').hover();
+      const target = await row(page, targetId).boundingBox();
+
+      if (target === null) {
+        throw new Error('no row');
+      }
+      await page.mouse.down();
+      await page.mouse.move(target.x + 40, edge === 'top' ? target.y + 4 : target.y + target.height - 4, { steps: 8 });
+      await page.mouse.up();
+    };
+
+    await mount(page, legacy);
+
+    await dragRow('r3', 'r2', 'top');
+    await expect(page.locator('[data-blok-database-table-row]').nth(1)).toHaveAttribute('data-row-id', 'r3');
+    expect(await savedOrder()).toEqual(['r1', 'r3', 'r2']);
+
+    await dragRow('r2', 'r1', 'top');
+    await expect(page.locator('[data-blok-database-table-row]').first()).toHaveAttribute('data-row-id', 'r2');
+    expect(await savedOrder()).toEqual(['r2', 'r1', 'r3']);
   });
 
   test('Freeze up to this column keeps it in place on horizontal scroll', async ({ page }) => {
@@ -374,6 +432,129 @@ test.describe('load more and groups', () => {
     await idea.locator('[data-blok-database-table-group-toggle]').click();
     await expect(idea.locator('[data-blok-database-table-row]')).toHaveCount(0);
     await expect(idea.locator('[data-blok-database-table-group-toggle]')).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+test.describe('property and row menus', () => {
+  interface SavedOption { id: string; label?: string; color?: string; position?: string }
+  const savedSchema = async (page: Page, databaseId = 'db-1'): Promise<Array<{ id: string; config?: { options: SavedOption[] } }>> => page.evaluate(async (id) => {
+    const output = await window.blokInstance?.save();
+    const db = output?.blocks.find((block) => block.id === id);
+
+    return (db?.data as { schema: Array<{ id: string; config?: { options: SavedOption[] } }> }).schema;
+  }, databaseId);
+  const openMenu = (page: Page): Locator => page.locator('[data-blok-popover-opened="true"]');
+
+  test('Edit property on a select recolours an option and the menu stays open', async ({ page }) => {
+    await mount(page, blocks());
+    await header(page, 'p-stage').click();
+    await openMenu(page).getByRole('menuitem', { name: 'Edit property' }).click();
+    const list = page.locator('[data-blok-database-options-editor]');
+
+    await expect(list.locator('[data-blok-database-select-option]')).toHaveCount(2);
+    await expect(page.getByText('Changes apply to all views showing this property.')).toBeVisible();
+    await list.locator('[data-blok-database-select-option="o-build"]').hover();
+    await list.locator('[data-blok-database-select-option="o-build"] [data-blok-database-select-option-menu]').click();
+    await list.locator('[data-blok-database-option-color="red"]').click();
+
+    await expect.poll(async () => (await savedSchema(page)).find((p) => p.id === 'p-stage')?.config?.options.find((o) => o.id === 'o-build')?.color).toBe('red');
+    await expect(list).toBeVisible();
+    await expect(cell(page, 'r2', 'p-stage').locator('[data-blok-database-option-pill]')).toHaveAttribute('data-color', 'red');
+  });
+
+  test('the options list keeps its own keys: add, rename, Escape and drag, with the menu open', async ({ page }) => {
+    await mount(page, blocks());
+    await header(page, 'p-stage').click();
+    await openMenu(page).getByRole('menuitem', { name: 'Edit property' }).click();
+    const list = page.locator('[data-blok-database-options-editor]');
+    const options = async (): Promise<SavedOption[]> => (await savedSchema(page)).find((p) => p.id === 'p-stage')?.config?.options ?? [];
+
+    await list.getByRole('button', { name: 'Add an option' }).click();
+    await list.getByPlaceholder('Add an option').fill('Review');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await options()).map((o) => o.label)).toContain('Review');
+    await expect(list).toBeVisible();
+
+    await list.locator('[data-blok-database-select-option="o-idea"]').hover();
+    await list.locator('[data-blok-database-select-option="o-idea"] [data-blok-database-select-option-menu]').click();
+    await list.getByRole('textbox', { name: 'Option name' }).fill('Spark');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await options()).find((o) => o.id === 'o-idea')?.label).toBe('Spark');
+
+    await page.keyboard.press('Escape');
+    await expect(list.locator('[data-blok-database-option-panel]')).toHaveCount(0);
+    await expect(list.locator('[data-blok-database-select-option]')).toHaveCount(3);
+    await expect(list).toBeVisible();
+
+    const from = await list.locator('[data-blok-database-select-option="o-build"] [data-blok-database-select-option-handle]').boundingBox();
+    const to = await list.locator('[data-blok-database-select-option="o-idea"]').boundingBox();
+
+    if (from === null || to === null) {
+      throw new Error('no option rows');
+    }
+    await list.locator('[data-blok-database-select-option="o-build"]').hover();
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + 40, to.y + 2, { steps: 6 });
+    await page.mouse.up();
+    await expect.poll(async () => {
+      const saved = await options();
+      const idea = saved.find((o) => o.id === 'o-idea');
+      const build = saved.find((o) => o.id === 'o-build');
+
+      return (build?.position ?? 'z') < (idea?.position ?? '');
+    }).toBe(true);
+  });
+
+  test('the status editor\'s "Edit property" opens the property menu on its options', async ({ page }) => {
+    const withStatus = blocks().map((block) => (block.id === 'db-1'
+      ? { ...block, data: { ...(block.data), schema: [...SCHEMA, { id: 'p-progress', name: 'Progress', type: 'status', position: 'a8' }] } }
+      : block));
+
+    await mount(page, withStatus);
+    await cell(page, 'r1', 'p-progress').click();
+    await editor(page).locator('[data-blok-database-select-edit-property]').click();
+
+    await expect(editor(page)).toHaveCount(0);
+    await openMenu(page).getByRole('menuitem', { name: 'Edit property' }).click();
+    await expect(page.locator('[data-blok-database-options-editor="status"] [data-blok-database-status-group-heading]')).toHaveCount(3);
+  });
+
+  test('row ⋮⋮ › Move to sends the row to another database, and one undo brings it back', async ({ page }) => {
+    const second: OutputBlockData[] = [
+      {
+        id: 'db-2',
+        type: 'database',
+        data: {
+          title: 'Archive',
+          schema: [{ id: 'q-title', name: 'Name', type: 'title', position: 'a0' }, { id: 'q-notes', name: 'Notes', type: 'text', position: 'a1' }],
+          views: [{ id: 'w1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+          activeViewId: 'w1',
+        },
+        content: [],
+      },
+    ];
+
+    await mount(page, [...blocks(), ...second]);
+    const first = page.locator('[data-blok-id="db-1"]');
+
+    await first.locator('[data-row-id="r1"]').hover();
+    await first.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]').click();
+    await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
+    await openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Archive' }).click();
+
+    const moved = page.locator('[data-blok-id="db-2"] [data-blok-database-table-row][data-row-id="r1"]');
+
+    await expect(moved).toBeVisible();
+    await expect(first.locator('[data-blok-database-table-row][data-row-id="r1"]')).toHaveCount(0);
+    expect(await savedRow(page, 'r1')).toEqual({ 'q-title': 'Alpha', 'q-notes': 'short' });
+
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect(first.locator('[data-blok-database-table-row][data-row-id="r1"]')).toBeVisible();
+    await expect(moved).toHaveCount(0);
+    expect(await savedRow(page, 'r1')).toMatchObject({ 'p-title': 'Alpha', 'p-notes': 'short', 'p-amount': 1200, 'p-stage': 'o-idea' });
   });
 });
 

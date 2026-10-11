@@ -9,6 +9,7 @@ import { DataPersistenceManager } from '../../../../src/components/block/data-pe
 import { NO_VALUE_GROUP_KEY, type DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
+import type { TableRowDropResult } from '../../../../src/tools/database/database-table-row-drag';
 
 interface NestedEditorConfig {
   holder: HTMLElement;
@@ -215,16 +216,17 @@ describe('DatabaseTool', () => {
   });
 
   describe('static getters', () => {
-    it('toolbox returns array of 2 entries with database and board names', () => {
+    it('toolbox returns database, board and linked view entries', () => {
       const toolbox = DatabaseTool.toolbox;
 
       expect(Array.isArray(toolbox)).toBe(true);
 
       const entries = toolbox as Array<{ name: string; title: string; titleKey: string; searchTerms: string[] }>;
 
-      expect(entries).toHaveLength(2);
+      expect(entries).toHaveLength(3);
       expect(entries[0].name).toBe('database');
       expect(entries[1].name).toBe('board');
+      expect(entries[2].name).toBe('linkedDatabase');
       expect(entries[0].titleKey).toBeDefined();
       expect(entries[1].titleKey).toBeDefined();
       expect(entries[0].searchTerms).toBeDefined();
@@ -4359,6 +4361,71 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('board load limit (research/08: 10/25/50/100, board default 25)', () => {
+    const boardWith = (count: number, view: Partial<DatabaseViewConfig> = {}): { tool: DatabaseTool; element: HTMLElement } => {
+      const rows = Array.from({ length: count }, (_, i) =>
+        createMockRowBlock({ id: `row-${i}`, properties: { 'prop-title': `Row ${i}`, 'prop-status': 'opt-todo' }, position: `a${String(i).padStart(2, '0')}` }));
+      const options = createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [], ...view }],
+      }, {}, { childBlocks: rows });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      return { tool, element };
+    };
+    const todo = (element: HTMLElement): HTMLElement | null => element.querySelector('[data-blok-database-column][data-option-id="opt-todo"]');
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('shows 25 cards per column by default, the full count, and more on "Load more"', () => {
+      const { tool, element } = boardWith(30);
+
+      expect(todo(element)?.querySelectorAll('[data-blok-database-card]')).toHaveLength(25);
+      expect(todo(element)?.querySelector('[data-blok-database-column-count]')?.textContent).toBe('30');
+      todo(element)?.querySelector<HTMLElement>('[data-blok-database-column-load-more]')?.click();
+      expect(todo(element)?.querySelectorAll('[data-blok-database-card]')).toHaveLength(30);
+      expect(todo(element)?.querySelector('[data-blok-database-column-load-more]')).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('shows ten groups, then "Load more groups" adds ten more', () => {
+      const optionsList = Array.from({ length: 12 }, (_, i) => ({ id: `o${i}`, label: `O${i}`, color: 'gray' as const, position: `a${String(i).padStart(2, '0')}` }));
+      const options = createDatabaseOptions({
+        schema: [
+          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+          { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: optionsList } },
+        ],
+      });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+      const columns = (): number => element.querySelectorAll('[data-blok-database-column]').length;
+
+      document.body.appendChild(element);
+      tool.rendered();
+
+      expect(columns()).toBe(10);
+      queryByData(element, 'data-blok-database-load-more-groups')?.click();
+      expect(columns()).toBe(13);
+      expect(queryByData(element, 'data-blok-database-load-more-groups')).toBeNull();
+
+      tool.destroy();
+    });
+
+    it('takes the view\'s load limit', () => {
+      const { tool, element } = boardWith(12, { loadLimit: 10 });
+
+      expect(todo(element)?.querySelectorAll('[data-blok-database-card]')).toHaveLength(10);
+
+      tool.destroy();
+    });
+  });
+
   describe('drag in a sorted view asks to remove sorting (D7)', () => {
     const positionRow = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
       const block = createMockRowBlock({ id, properties, position });
@@ -4374,7 +4441,11 @@ describe('DatabaseTool', () => {
       return block;
     };
 
-    const sortedTool = (type: 'board' | 'list'): {
+    const sortedTool = (
+      type: 'board' | 'list' | 'table',
+      otherViews: DatabaseViewConfig[] = [],
+      setup: { sorts?: DatabaseViewConfig['sorts']; personal?: Record<string, unknown>; groupBy?: string } = {},
+    ): {
       tool: DatabaseTool;
       element: HTMLElement;
       childBlocks: BlockAPI[];
@@ -4390,14 +4461,22 @@ describe('DatabaseTool', () => {
       ];
       const data = makeDefaultData({
         views: [{
-          id: 'view-1', name: 'View', type, position: 'a0', groupBy: type === 'board' ? 'prop-status' : undefined,
-          filters: [], visibleProperties: [], sorts: [{ propertyId: 'prop-title', direction: 'asc' }],
-        }],
+          id: 'view-1', name: 'View', type, position: 'a0', groupBy: setup.groupBy ?? (type === 'board' ? 'prop-status' : undefined),
+          filters: [], visibleProperties: [], sorts: setup.sorts ?? [{ propertyId: 'prop-title', direction: 'asc' }],
+        }, ...otherViews],
       });
       const options = createDatabaseOptions(data, {}, { childBlocks });
       const transact = vi.fn((fn: () => void) => fn());
+      // The per-browser fallback for personal edits (D4), seeded with this person's sort.
+      const personal = new Map<string, unknown>(setup.personal === undefined ? [] : [['view:view-1', setup.personal]]);
 
       Object.assign(options.api.blocks, { transact });
+      Object.assign(options.api, {
+        viewState: {
+          get: (_blockId: string, key: string) => personal.get(key),
+          set: (_blockId: string, key: string, value: unknown) => personal.set(key, value),
+        },
+      });
 
       const tool = new DatabaseTool(options);
       const element = tool.render();
@@ -4476,6 +4555,28 @@ describe('DatabaseTool', () => {
       // Sorted order was A, B, X, empty (D8: empties last); X lands between A and B.
       expect(manualOrder(childBlocks)).toEqual(['row-a', 'row-x', 'row-b', 'row-e']);
       expect(transact).toHaveBeenCalledTimes(1);
+
+      tool.destroy();
+    });
+
+    /**
+     * Rows keep ONE shared manual order (`position`). Whether Notion keeps a
+     * separate manual order per view is unmeasured (research/03 "unverified",
+     * research/08 measured one view only), so "Remove" re-orders every
+     * unsorted view and leaves the other views' sorts alone.
+     */
+    it('"Remove" in one view re-orders the shared manual order and keeps the other views\' sorts', async () => {
+      const other: DatabaseViewConfig = {
+        id: 'view-2', name: 'Other', type: 'list', position: 'a1', filters: [], visibleProperties: [], sorts: [{ propertyId: 'prop-status', direction: 'desc' }],
+      };
+      const { tool, element, childBlocks } = sortedTool('board', [other]);
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(manualOrder(childBlocks)).toEqual(['row-a', 'row-x', 'row-b', 'row-e']);
+      expect(tool.save(element).views.find((view) => view.id === 'view-2')?.sorts).toEqual([{ propertyId: 'prop-status', direction: 'desc' }]);
 
       tool.destroy();
     });
@@ -4569,6 +4670,84 @@ describe('DatabaseTool', () => {
 
       expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
       expect(tool.save(element).views[0].sorts).toEqual([]);
+
+      tool.destroy();
+    });
+
+    const dropTableRow = (tool: DatabaseTool, result: TableRowDropResult): void => {
+      (tool as unknown as { onSortedRowDrop: (r: TableRowDropResult) => void }).onSortedRowDrop(result);
+    };
+
+    const effectiveSorts = (tool: DatabaseTool): unknown => {
+      const controls = (tool as unknown as { controls: { effective: (v: DatabaseViewConfig) => DatabaseViewConfig } }).controls;
+      const model = (tool as unknown as { model: DatabaseModel }).model;
+      const view = model.getView('view-1');
+
+      return view === undefined ? undefined : controls.effective(view).sorts;
+    };
+
+    it('asks the same question when a row is dropped in a sorted table, and "Remove" lands it', async () => {
+      const { tool, element, childBlocks } = sortedTool('table');
+
+      dropTableRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a', groupKey: '', fromGroupKey: '' });
+
+      expect(confirmTitle()).toBe('tools.database.removeSortingTitle');
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(tool.save(element).views[0].sorts).toEqual([]);
+      expect(manualOrder(childBlocks)).toEqual(['row-a', 'row-x', 'row-b', 'row-e']);
+
+      tool.destroy();
+    });
+
+    it('moves a row to another group of a sorted table by its group value only, without asking', () => {
+      const { tool, childBlocks } = sortedTool('table', [], { groupBy: 'prop-status' });
+      const rowX = childBlocks[3];
+
+      dropTableRow(tool, { rowId: 'row-x', beforeRowId: null, afterRowId: null, groupKey: 'opt-doing', fromGroupKey: 'opt-todo' });
+
+      expect(confirmTitle()).toBeUndefined();
+      expect(callsNamed(rowX, 'updateProperties')).toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
+      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
+
+      tool.destroy();
+    });
+
+    it('asks in a list sorted only by this person, and "Remove" drops the personal sort, not the saved view', async () => {
+      const { tool, element, childBlocks } = sortedTool('list', [], {
+        sorts: [],
+        personal: { sorts: [{ id: 's-me', propertyId: 'prop-title', direction: 'asc' }] },
+      });
+
+      dropListRow(tool, { rowId: 'row-a', beforeRowId: null, afterRowId: 'row-x' });
+
+      expect(confirmTitle()).toBe('tools.database.removeSortingTitle');
+
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(effectiveSorts(tool)).toEqual([]);
+      expect(tool.save(element).views[0].sorts).toEqual([]);
+      expect(manualOrder(childBlocks)).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+
+      tool.destroy();
+    });
+
+    it('"Remove" in a locked database drops the sort for this person only and keeps the saved sort', async () => {
+      const { tool, element, childBlocks } = sortedTool('board');
+      const model = (tool as unknown as { model: DatabaseModel }).model;
+
+      model.setDatabaseLocked(true);
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(tool.save(element).views[0].sorts).toEqual([{ propertyId: 'prop-title', direction: 'asc' }]);
+      expect(effectiveSorts(tool)).toEqual([]);
+      expect(manualOrder(childBlocks)).toEqual(['row-a', 'row-x', 'row-b', 'row-e']);
 
       tool.destroy();
     });
@@ -5219,7 +5398,7 @@ describe('DatabaseTool', () => {
 
     it('still renders a view type it does not know as a board', () => {
       const options = createDatabaseOptions({
-        views: [{ id: 'view-x', name: 'Map', type: 'map' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+        views: [{ id: 'view-x', name: 'Whiteboard', type: 'whiteboard' as never, position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
         activeViewId: 'view-x',
       });
       const tool = new DatabaseTool(options);
@@ -5488,6 +5667,21 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      it('picks a table panel calculation from its footer cell and stores it on the view', () => {
+        const { tool, element } = timelineTool({ showTimelineTable: true, calculations: [{ id: 'prop-title', fn: 'count' }] });
+
+        queryByData(element, 'data-blok-database-timeline-table-footer')?.querySelector<HTMLElement>('[data-property-id="prop-title"]')?.click();
+
+        const none = queryByData(document.body, 'data-mock-popover-action', 'tools.database.calcnone');
+
+        expect(none).not.toBeNull();
+        none?.click();
+        expect(tool.save(element).views[0].calculations).toEqual([]);
+
+        tool.destroy();
+        queryByData(document.body, 'data-mock-popover')?.remove();
+      });
+
       it('lists every zoom level in the zoom menu and stores a pick', () => {
         const { tool, element } = timelineTool();
 
@@ -5508,7 +5702,6 @@ describe('DatabaseTool', () => {
 
         handlersOf(first.tool).navigate('2027-02-01' as never);
         expect(window.localStorage.getItem(centerKey)).toBe('2027-02-01');
-        expect(first.tool.save(first.element).views[0]).not.toHaveProperty('center');
         first.tool.destroy();
 
         const again = timelineTool();
@@ -5516,6 +5709,23 @@ describe('DatabaseTool', () => {
         expect(queryAllByData(again.element, 'data-blok-database-timeline-units').length).toBe(1);
         expect(queryByData(again.element, 'data-blok-database-timeline-units')?.querySelector('[data-day="2027-02-01"]')).not.toBeNull();
         again.tool.destroy();
+      });
+
+      it('stores the centre on the view too (Notion\'s center_timestamp) as a derived change', () => {
+        const { tool, element, options } = timelineTool();
+
+        handlersOf(tool).navigate('2027-02-01' as never);
+
+        expect(tool.save(element).views[0].timelineCenter).toBe('2027-02-01');
+        expect(vi.mocked(options.block.dispatchChange)).toHaveBeenLastCalledWith({ derived: true });
+        tool.destroy();
+      });
+
+      it('opens on the view\'s shared centre when this person has none of their own', () => {
+        const { tool, element } = timelineTool({ timelineCenter: '2027-03-01' });
+
+        expect(queryByData(element, 'data-blok-database-timeline-units')?.querySelector('[data-day="2027-03-01"]')).not.toBeNull();
+        tool.destroy();
       });
 
       it('adds a row dated today from "+ New"', () => {
@@ -5729,6 +5939,27 @@ describe('DatabaseTool — board sub-group lanes', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  it('leaves out a sub-group the view hid, and its cards from the column count', () => {
+    const { tool, element } = mount({ hiddenGroups: [{ id: 'sub:team-b' }] });
+
+    expect(lane(element, 'team-a')).toBeDefined();
+    expect(lane(element, 'team-b')).toBeUndefined();
+    expect(element.querySelector('[data-row-id="row-2"]')).toBeNull();
+    expect(element.querySelector('[data-blok-database-board-heads] [data-option-id="opt-todo"] [data-blok-database-column-count]')?.textContent).toBe('1');
+
+    tool.destroy();
+  });
+
+  it('draws no lanes and no cards when every sub-group is hidden, not an ungrouped board', () => {
+    const { tool, element } = mount({ hiddenGroups: [{ id: 'sub:team-a' }, { id: 'sub:team-b' }, { id: 'sub:__blok-no-value-group__' }] });
+
+    expect(queryAllByData(element, 'data-blok-database-board-lane')).toHaveLength(0);
+    expect(element.querySelectorAll('[data-blok-database-card]')).toHaveLength(0);
+    expect(queryByData(element, 'data-blok-database-board-heads')).not.toBeNull();
+
+    tool.destroy();
   });
 
   it('shows the column headers once, above the lanes', () => {
@@ -5960,6 +6191,91 @@ describe('DatabaseTool — property operations', () => {
     expect(options.block.dispatchChange).toHaveBeenCalled();
   });
 
+  it('writes an empty list into every row when a files property is added', () => {
+    const one = realRow('r1', { 'prop-title': 'A' });
+    const { tool } = build([one]);
+    const added = tool.addProperty({ name: 'Docs', type: 'files' });
+
+    expect(one.tool.getProperties()[added?.id ?? '']).toEqual([]);
+    expect(one.block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('writes an empty list into every row when a property becomes a relation', () => {
+    const one = realRow('r1', { 'prop-title': 'A', 'prop-note': 'x' });
+    const two = realRow('r2', { 'prop-title': 'B' });
+    const { tool } = build([one, two]);
+
+    tool.changePropertyType('prop-note', 'relation');
+
+    expect(one.tool.getProperties()['prop-note']).toEqual([]);
+    expect(two.tool.getProperties()['prop-note']).toEqual([]);
+  });
+
+  it('copies a files property onto rows that have no value for it as an empty list', () => {
+    const one = realRow('r1', { 'prop-title': 'A' });
+    const files: PropertyDefinition = { id: 'prop-files', name: 'Docs', type: 'files', position: 'a9' };
+    const tool = new DatabaseTool(createDatabaseOptions(
+      { schema: [...schema, files], views: [{ id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }] },
+      {},
+      { childBlocks: [one.block] },
+    ));
+
+    tool.render();
+    const copy = tool.duplicateProperty('prop-files');
+
+    expect(one.tool.getProperties()[copy?.id ?? '']).toEqual([]);
+  });
+
+  it('gives a duplicated row an empty list for a files property the original has no value for', () => {
+    const one = realRow('r1', { 'prop-title': 'A' });
+    const files: PropertyDefinition = { id: 'prop-files', name: 'Docs', type: 'files', position: 'a9' };
+    const options = createDatabaseOptions(
+      { schema: [...schema, files], views: [{ id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }] },
+      {},
+      { childBlocks: [one.block] },
+    );
+
+    // A duplicate copies the row's own children too; only the database has rows.
+    vi.mocked(options.api.blocks.getChildren).mockImplementation((parentId: string) => (parentId === 'test-block-id' ? [one.block] : []));
+    const tool = new DatabaseTool(options);
+    const root = tool.render();
+
+    document.body.appendChild(root);
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+    root.querySelector<HTMLElement>('[role="grid"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true, cancelable: true }));
+    root.remove();
+
+    const inserted = (options.api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls.filter(([type]) => type === 'database-row').at(-1)?.[1] as { properties?: Record<string, PropertyValue> } | undefined;
+
+    expect(inserted?.properties?.['prop-files']).toEqual([]);
+  });
+
+  it('writes an empty list into its own rows when another database adds the synced relation', () => {
+    const one = realRow('r1', { 'prop-title': 'A' });
+    const { tool, options } = build([one]);
+    const created: string[] = [];
+
+    tool.addSyncedRelation({ name: 'Back', relation: { targetDatabaseId: options.block.id }, receive: (id) => created.push(id) });
+
+    expect(one.tool.getProperties()[created[0] ?? '']).toEqual([]);
+  });
+
+  it('stores a cleared files value as an empty list, never null', () => {
+    const one = realRow('r1', { 'prop-title': 'A', 'prop-files': [{ id: 'f1', name: 'a.pdf', url: 'https://x.io/a.pdf' }] });
+    const files: PropertyDefinition = { id: 'prop-files', name: 'Docs', type: 'files', position: 'a9' };
+    const tool = new DatabaseTool(createDatabaseOptions(
+      { schema: [...schema, files], views: [{ id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }] },
+      {},
+      { childBlocks: [one.block] },
+    ));
+
+    tool.render();
+    tool.writeRelatedRow({ rowId: 'r1', changes: { 'prop-files': null, 'prop-n': null } });
+
+    expect(one.tool.getProperties()['prop-files']).toEqual([]);
+    expect(one.tool.getProperties()['prop-n']).toBeNull();
+  });
+
   it('names a property after its type when the name field was left empty', () => {
     const { tool } = build([]);
 
@@ -6045,6 +6361,26 @@ describe('DatabaseTool — property operations', () => {
     await Promise.resolve();
 
     expect(adapter.updateProperty).toHaveBeenCalledWith(expect.objectContaining({ propertyId: 'prop-note', changes: expect.objectContaining({ type: 'email' }) }));
+  });
+
+  it('tells the backend the AI autofill is gone when the new type has none', async () => {
+    const updateProperty = vi.fn().mockResolvedValue({});
+    const adapter = {
+      loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
+      updateProperty,
+      updateRow: vi.fn().mockResolvedValue({}),
+    } as unknown as DatabaseAdapter;
+    const { tool } = build([], { adapter });
+
+    tool.updatePropertySettings('prop-note', { autofill: { mode: 'summary', onEdit: true } });
+    tool.changePropertyType('prop-note', 'files');
+    await Promise.resolve();
+    // The adapter contract: a settings key given as undefined was removed.
+    const changes = (updateProperty.mock.calls.at(-1)?.[0] as Parameters<DatabaseAdapter['updateProperty']>[0] | undefined)?.changes;
+
+    expect(changes !== undefined && Object.hasOwn(changes, 'autofill')).toBe(true);
+    expect(changes?.autofill).toBeUndefined();
+    expect(changes?.type).toBe('files');
   });
 });
 
@@ -6360,5 +6696,69 @@ describe('DatabaseTool — property menu and insert placement', () => {
 
       tool.destroy();
     });
+  });
+});
+
+describe('DatabaseTool — board grouped by a non-option property', () => {
+  const schema: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-done', name: 'Done', type: 'checkbox', position: 'a1' },
+    { id: 'prop-owner', name: 'Owner', type: 'person', position: 'a2' },
+    { id: 'prop-est', name: 'Estimate', type: 'number', position: 'a3' },
+  ];
+  const children = (): BlockAPI[] => [
+    createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-done': true, 'prop-owner': [{ id: 'u1' }], 'prop-est': 3 }, position: 'a0' }),
+    createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-done': false, 'prop-owner': [], 'prop-est': 15 }, position: 'a1' }),
+  ];
+  const mount = (groupBy: string): { tool: DatabaseTool; element: HTMLElement } => {
+    const tool = new DatabaseTool(createDatabaseOptions({
+      schema,
+      views: [{ id: 'v', name: 'Board', type: 'board', position: 'a0', groupBy, sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'v',
+    }, {}, { childBlocks: children() }));
+    const element = tool.render();
+
+    document.body.appendChild(element);
+    tool.rendered();
+
+    return { tool, element };
+  };
+  const cardsByColumn = (element: HTMLElement): string[][] =>
+    queryAllByData(element, 'data-blok-database-column')
+      .map((column) => [...column.querySelectorAll('[data-blok-database-card]')].map((card) => card.getAttribute('data-row-id') ?? ''));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('draws a checkbox board as two columns, each card in its own', () => {
+    const { tool, element } = mount('prop-done');
+
+    expect(cardsByColumn(element)).toEqual(expect.arrayContaining([['row-1'], ['row-2']]));
+    expect(queryAllByData(element, 'data-blok-database-column')).toHaveLength(2);
+
+    tool.destroy();
+  });
+
+  it('draws a person board with a column per person and a no-value column', () => {
+    const { tool, element } = mount('prop-owner');
+
+    expect(cardsByColumn(element)).toEqual(expect.arrayContaining([['row-1'], ['row-2']]));
+    expect(element.querySelector('[data-blok-database-column][data-option-id="u1"]')).not.toBeNull();
+
+    tool.destroy();
+  });
+
+  it('draws a number board in ranges, each card in its own', () => {
+    const { tool, element } = mount('prop-est');
+
+    expect(cardsByColumn(element).filter((ids) => ids.length > 0)).toEqual([['row-1'], ['row-2']]);
+
+    tool.destroy();
   });
 });

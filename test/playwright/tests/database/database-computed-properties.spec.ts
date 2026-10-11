@@ -8,9 +8,14 @@
 
 import type { Locator, Page } from '@playwright/test';
 
+import { generateKeyBetween } from 'fractional-indexing';
+
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+
+/** Valid fractional keys. `a000`-style keys are ones the library rejects. */
+const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
 
 declare global {
   interface Window {
@@ -48,7 +53,7 @@ const blocks = (): OutputBlockData[] => [
   ...ROWS.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: `a${String(i).padStart(3, '0')}`, properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties },
   })),
 ];
 
@@ -131,14 +136,16 @@ test.describe('formula', () => {
     expect((await savedSchema(page)).find((p) => p.id === 'p-double')?.formula?.expression).toBe('{{property:p-amount}} + 100');
 
     await header(page, 'p-amount').click();
-    const name = page.locator('[data-blok-database-property-menu-name-input]');
+    // The menu that just closed fades out for 200ms beside the new one; take the open one.
+    const name = page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]');
 
     await name.fill('Price');
     await name.press('Enter');
 
     await expect(cell(page, 'r3', 'p-double')).toHaveText('104');
     await header(page, 'p-double').click();
-    await page.getByRole('menuitem', { name: 'Edit property' }).click();
+    // Playwright's role query still sees the inert, fading menu.
+    await page.locator('[data-blok-popover-opened="true"]').getByRole('menuitem', { name: 'Edit property' }).click();
     await expect(page.locator('[data-blok-database-formula-input]')).toHaveValue('prop("Price") + 100');
   });
 

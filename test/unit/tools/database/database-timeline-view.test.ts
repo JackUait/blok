@@ -30,6 +30,7 @@ const makeHandlers = (): TimelineHandlers => ({
   navigate: vi.fn(),
   toggleTable: vi.fn(),
   loadMore: vi.fn(),
+  openCalculationMenu: vi.fn(),
 });
 
 const i18n = { t: (key: string) => key } as unknown as DatabaseTimelineViewOptions['i18n'];
@@ -250,6 +251,28 @@ describe('DatabaseTimelineView', () => {
       expect(root.querySelector('[data-blok-database-timeline-table-toggle]')?.getAttribute('aria-pressed')).toBe('true');
     });
 
+    it('ends with a calculation footer that reuses the table footer cells', () => {
+      const { root } = mount({ view: timelineView({ showTimelineTable: true, calculations: [{ id: 'p-title', fn: 'count' }] }) });
+      const footer = root.querySelector('[data-blok-database-timeline-table] [data-blok-database-timeline-table-footer]');
+      const title = footer?.querySelector('[data-blok-database-table-calc][data-property-id="p-title"]');
+
+      expect(title?.querySelector('[data-blok-database-table-calc-label]')?.textContent).toBe('tools.database.calcCountAll');
+      expect(title?.querySelector('[data-blok-database-table-calc-value]')?.textContent).toBe('3');
+    });
+
+    it('asks to pick a calculation from an empty footer cell, and not when read-only', () => {
+      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true, tableProperties: [{ id: 'p-due', visible: true }] }) });
+      const cell = root.querySelector<HTMLElement>('[data-blok-database-timeline-table-footer] [data-property-id="p-due"]');
+
+      expect(cell?.querySelector('[data-blok-database-table-calc-placeholder]')?.textContent).toBe('tools.database.tableCalculate');
+      cell?.click();
+      expect(handlers.openCalculationMenu).toHaveBeenCalledWith(cell, 'p-due');
+
+      const readOnly = mount({ readOnly: true, view: timelineView({ showTimelineTable: true }) });
+
+      expect(readOnly.root.querySelector('[data-blok-database-timeline-table-footer] button')).toBeNull();
+    });
+
     it('opens a row from its title in the table panel', () => {
       const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
 
@@ -397,6 +420,26 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerup', document, xOf('2026-10-14'), 50);
 
       expect(handlers.writeDates).toHaveBeenCalledWith('r2', { start: '2026-10-14/2026-10-16' });
+    });
+
+    it('moves a timed bar by the hours it is dragged when zoomed to hours', () => {
+      const hoursStart = timelineWindow(CENTER, 'hours').start;
+      const hourPx = TIMELINE_DAY_WIDTH.hours / 24;
+      const xAt = (hour: number): number => daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours + hour * hourPx + 5;
+      const { root, handlers } = mount({
+        view: timelineView({ timelineZoom: 'hours' }),
+        groups: single([row('r1', 'Call', '2026-10-09T09:00')]),
+      });
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'hours').days * TIMELINE_DAY_WIDTH.hours, 400);
+
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours + 9 * hourPx}px`);
+
+      pointer('pointerdown', bar(root, 'r1'), xAt(9), 50);
+      pointer('pointermove', document, xAt(12), 50);
+      pointer('pointerup', document, xAt(12), 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T12:00' });
     });
 
     it('drags the end edge to a later day', () => {

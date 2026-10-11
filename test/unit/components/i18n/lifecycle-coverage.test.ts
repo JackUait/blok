@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 889 + 117 + 356 + 4 closure for all 1366 keys', () => {
+  it('rebuilds a disjoint 1009 + 118 + 410 + 4 closure for all 1541 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1366);
+    expect(lifecycle.size).toBe(1541);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -334,13 +334,20 @@ describe('current English catalog lifecycle coverage', () => {
       // +14: the row page drawer calls its 13 new keys (peek*, icon, cover, properties, rowBodyEmpty) and
       // tools.database.settingsOpenPagesIn by literal.
       // +22: the chart, feed and CSV actions and the CSV paste offer call their tools.database.chart*, csv* and viewType* keys by literal.
-      'executable-literal': 889,
+      // +29 / +35: Phase 6 (buttons, templates, sub-items, dependencies, linked views) keys, by literal
+      // or composed from a short name in a registered namespace.
+      // +30: the row page layout builder calls its tools.database.layout* keys by literal.
+      // +18: Tier 3 (D6) calls its place, verification, form, map, dashboard and comment keys by literal.
+      // +14: the peek's hidden properties fold, "Default for", tab "Display as", 99+, the row menu
+      // (Move to, search, last edited) and Edit property options call their keys by literal.
+      'executable-literal': 1009,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.
       // +3: toolNames.tabs (titleKey), searchTerms.tabs, toolNames.tab (block name).
-      'finite-dynamic': 117,
+      // +1: the "Linked view of database" toolbox entry's toolNames.linkedDatabase.
+      'finite-dynamic': 118,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.
@@ -355,7 +362,7 @@ describe('current English catalog lifecycle coverage', () => {
       // the any/every/none rollup filter operators are composed from tools.database.* namespaces.
       // -1: tools.database.settingsOpenPagesIn moved to executable-literal (see above).
       // +43: the chart settings rows build their tools.database.chart* keys from a short name.
-      'registered-namespace-compatible': 356,
+      'registered-namespace-compatible': 410,
       'catalog-only': 4,
     });
     expect(

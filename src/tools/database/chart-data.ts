@@ -59,6 +59,7 @@ export interface ChartData {
   series: ChartSeries[];
   /** Bars stack their series; otherwise they stand side by side. */
   stacked: boolean;
+  min: number;
   /** The highest bar, stack or point among the shown ones. */
   max: number;
   /** The measure over every row: the number chart and the donut center. */
@@ -145,18 +146,22 @@ export const buildChartData = (input: ChartDataInput): ChartData => {
   const points: ChartPoint[] = kept.slice(0, CHART_MAX_GROUPS).map(({ sortKey: _sortKey, ...point }) => point);
   const stacked = measure.kind === 'count' || ADDITIVE.has(measure.fn);
   const shownSeries = series.filter((s) => !s.hidden);
-  const heightOf = (point: ChartPoint): number => {
-    if (series.length === 0) return point.value;
-    const parts = shownSeries.map((s) => point.values[s.key] ?? 0);
+  const bounds = points.filter((p) => !p.hidden).map((point) => {
+    const parts = series.length === 0 ? [point.value] : shownSeries.map((s) => point.values[s.key] ?? 0);
 
-    return stacked ? parts.reduce((sum, part) => sum + part, 0) : Math.max(0, ...parts);
-  };
-  const max = Math.max(0, ...points.filter((p) => !p.hidden).map(heightOf));
+    return {
+      min: stacked ? parts.reduce((sum, part) => sum + Math.min(0, part), 0) : Math.min(0, ...parts),
+      max: stacked ? parts.reduce((sum, part) => sum + Math.max(0, part), 0) : Math.max(0, ...parts),
+    };
+  });
+  const min = Math.min(0, ...bounds.map((bound) => bound.min));
+  const max = Math.max(0, ...bounds.map((bound) => bound.max));
 
   return {
     points,
     series,
     stacked,
+    min,
     max,
     // A multi-select row sits in several groups; count it once.
     total: measureRows([...new Map(input.groups.flatMap((g) => g.rows).map((row) => [row.id, row])).values()], measure, schema),

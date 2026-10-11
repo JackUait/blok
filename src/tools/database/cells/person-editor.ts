@@ -119,6 +119,7 @@ class PersonEditor implements CellEditorHandle {
   }
 
   private toggle(id: string): void {
+    if (!this.selected.includes(id) && this.ctx.maxSelections !== undefined && this.selected.length >= this.ctx.maxSelections) return;
     this.selected = this.selected.includes(id) ? this.selected.filter((s) => s !== id) : [...this.selected, id];
     this.search.value = '';
     this.query = '';

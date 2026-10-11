@@ -43,6 +43,52 @@ describe('buildChartData', () => {
     expect(data.total).toBe(3);
   });
 
+  it('includes refunds in the automatic value range', () => {
+    const data = buildChartData({
+      ...base,
+      measure: SUM,
+      groups: [
+        { key: 'sales', label: 'Sales', sortKey: 'Sales', rows: [row('sale', 60)] },
+        { key: 'refunds', label: 'Refunds', sortKey: 'Refunds', rows: [row('refund', -40)] },
+      ],
+    });
+
+    expect(data).toMatchObject({ min: -40, max: 60 });
+  });
+
+  it('ranges a mixed-sign stack by each side of zero, not its net total', () => {
+    const data = buildChartData({
+      ...base,
+      measure: SUM,
+      groups: [{ key: 'all', label: 'All', sortKey: 'All', rows: [row('sale', 60), row('refund', -40)] }],
+      series: [
+        { key: 'sales', label: 'Sales', rowIds: new Set(['sale']) },
+        { key: 'refunds', label: 'Refunds', rowIds: new Set(['refund']) },
+      ],
+    });
+
+    expect(data).toMatchObject({ min: -40, max: 60 });
+    expect(data.total).toBe(20);
+  });
+
+  it.each([
+    { hidden: 'sales', min: -40, max: 0 },
+    { hidden: 'refunds', min: 0, max: 60 },
+  ])('ranges only the series still shown after hiding $hidden', ({ hidden, min, max }) => {
+    const data = buildChartData({
+      ...base,
+      measure: SUM,
+      groups: [{ key: 'all', label: 'All', sortKey: 'All', rows: [row('sale', 60), row('refund', -40)] }],
+      series: [
+        { key: 'sales', label: 'Sales', rowIds: new Set(['sale']) },
+        { key: 'refunds', label: 'Refunds', rowIds: new Set(['refund']) },
+      ],
+      hidden: new Set([hidden]),
+    });
+
+    expect(data).toMatchObject({ min, max });
+  });
+
   it('aggregates a property with the database calculations', () => {
     expect(buildChartData({ ...base, groups: groups(), measure: SUM }).points.map((p) => p.value)).toEqual([7, 10, 0]);
     expect(buildChartData({ ...base, groups: groups(), measure: AVERAGE }).points.map((p) => p.value)).toEqual([3.5, 10, 0]);

@@ -140,6 +140,8 @@ export declare const IconVideo: string;
 export declare const IconMusic: string;
 export declare const IconMap: string;
 export declare const IconChart: string;
+export declare const IconFilter: string;
+export declare const IconSort: string;
 export declare const IconMessage: string;
 export declare const IconFile: string;
 export declare const IconPage: string;

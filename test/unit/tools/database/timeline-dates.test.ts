@@ -4,6 +4,7 @@ import {
   TIMELINE_DAY_WIDTH,
   barGeometry,
   headerUnits,
+  hourBarGeometry,
   moveBar,
   offscreenSide,
   resizeBar,
@@ -124,6 +125,41 @@ describe('timeline-dates', () => {
 
     it('leaves an empty end empty', () => {
       expect(moveBar({ start: '2026-10-05', end: null }, 1)).toEqual({ start: '2026-10-06' });
+    });
+  });
+
+  describe('hours zoom: bars move and sit by the hour', () => {
+    it('moves a timed value by whole hours', () => {
+      expect(moveBar({ start: '2026-10-05T09:30', end: undefined }, 0, 5)).toEqual({ start: '2026-10-05T14:30' });
+    });
+
+    it('carries a timed range across midnight and keeps its length', () => {
+      expect(moveBar({ start: '2026-10-05T22:00/2026-10-05T23:15', end: undefined }, 0, 3)).toEqual({ start: '2026-10-06T01:00/2026-10-06T02:15' });
+    });
+
+    it('moves both timed properties of a two-property bar back by hours', () => {
+      expect(moveBar({ start: '2026-10-05T01:00', end: '2026-10-05T04:00' }, -1, -2)).toEqual({ start: '2026-10-04T23:00', end: '2026-10-05T02:00' });
+    });
+
+    it('moves a value with no time by the day count only', () => {
+      expect(moveBar({ start: '2026-10-05', end: undefined }, 1, 30)).toEqual({ start: '2026-10-06' });
+    });
+
+    it('keeps the zone text of an older full timestamp', () => {
+      expect(moveBar({ start: '2026-10-05T15:00:00.000Z', end: undefined }, 0, 2)).toEqual({ start: '2026-10-05T17:00:00.000Z' });
+    });
+
+    it('places a timed bar at its hour, one hour wide when it has no end time', () => {
+      expect(hourBarGeometry({ start: '2026-10-01T09:30', end: undefined }, '2026-10-01')).toEqual({ offset: 570, width: 60 });
+    });
+
+    it('spans a timed range from its start time to its end time', () => {
+      expect(hourBarGeometry({ start: '2026-10-01T09:00/2026-10-01T12:00', end: undefined }, '2026-10-01')).toEqual({ offset: 540, width: 180 });
+      expect(hourBarGeometry({ start: '2026-10-02T01:00', end: '2026-10-02T03:00' }, '2026-10-01')).toEqual({ offset: 1500, width: 120 });
+    });
+
+    it('leaves a value with no time to the day geometry', () => {
+      expect(hourBarGeometry({ start: '2026-10-02', end: undefined }, '2026-10-01')).toBeNull();
     });
   });
 

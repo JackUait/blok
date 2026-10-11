@@ -166,6 +166,15 @@ describe('property types — query', () => {
     it('gives a new row the person a contains filter asks for', () => {
       expect(newRowValues([{ propertyId: 'who', operator: 'contains', value: 'u1' }], schema)).toEqual({ who: [{ id: 'u1' }] });
     });
+
+    it('gives a new row the signed-in person for a "Me" filter, never the literal "me"', () => {
+      expect(newRowValues([{ propertyId: 'who', operator: 'contains', value: ['me'] }], schema, 'u7')).toEqual({ who: [{ id: 'u7' }] });
+    });
+
+    it('fills nothing for a "Me" filter when nobody is signed in', () => {
+      expect(newRowValues([{ propertyId: 'who', operator: 'contains', value: ['me'] }], schema, null)).toEqual({});
+      expect(newRowValues([{ propertyId: 'who', operator: 'contains', value: ['me'] }], schema)).toEqual({});
+    });
   });
 
   describe('files', () => {

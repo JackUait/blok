@@ -75,7 +75,17 @@ const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
   // A formula or rollup filters by its result type: callers pass that property.
   formula: TEXT,
   rollup: TEXT,
+  button: [],
+  place: TEXT,
+  verification: EMPTY,
 };
+
+/**
+ * Types "+ Filter" offers: every type with an operator. Rich text holds a
+ * document, which the toolbar picker leaves out too.
+ */
+export const FILTERABLE_TYPES: readonly PropertyType[] = (Object.keys(OPERATORS) as PropertyType[])
+  .filter((type) => type !== 'richText' && OPERATORS[type].length > 0);
 
 /** A rollup that shows a list: Notion's API filters it with any / every / none. */
 const QUANTIFIED = [op('any', 'any'), op('every', 'every'), op('none', 'none'), ...EMPTY];
@@ -169,12 +179,15 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
     case 'files':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'verification':
       return { ...base, operator: 'is_not_empty', value: null };
     case 'title':
     case 'text':
     case 'url':
     case 'email':
     case 'phone':
+    case 'place':
       return { ...base, operator: 'contains', value: '' };
   }
 };
@@ -249,6 +262,7 @@ export const sortDirectionLabelKey = (type: PropertyType, direction: SortConfig[
     case 'url':
     case 'email':
     case 'phone':
+    case 'place':
       return asc ? 'tools.database.sortAZ' : 'tools.database.sortZA';
     // Measured for select (research/08); status sorts by its group and option order the same way.
     // Checkbox, people and files were not measured: the plain words are the safe reading.
@@ -264,6 +278,8 @@ export const sortDirectionLabelKey = (type: PropertyType, direction: SortConfig[
     case 'relation':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'verification':
       return asc ? 'tools.database.sortAscending' : 'tools.database.sortDescending';
   }
 };

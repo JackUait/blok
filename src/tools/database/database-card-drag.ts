@@ -1,4 +1,4 @@
-import { copyGhostRadius } from './copy-ghost-radius';
+import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
@@ -184,7 +184,7 @@ export class DatabaseCardDrag {
       style.top = `${e.clientY}px`;
     }
 
-    document.body.appendChild(ghost);
+    mountGhost(this.sourceCard ?? this.wrapper, ghost);
     this.ghostEl = ghost;
   }
 

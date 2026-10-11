@@ -350,6 +350,7 @@ export class EmojiPicker {
     if (this._allEmojis.length === 0) {
       this._allEmojis = await loadEmojiGrid();
     }
+    if (!this._open) return;
 
     if (this._hasFullGrid) {
       // Identical markup to what a rebuild would produce — only the tone (which

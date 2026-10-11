@@ -48,6 +48,21 @@ describe('database export', () => {
     expect(blocksToMarkdown(doc)).toBe('**Tasks**\n\n**First**\n\nfirst body\n\n**Second**');
   });
 
+  it('leaves page templates out of every export', () => {
+    const withTemplate: OutputData = {
+      blocks: [
+        { ...doc.blocks[0], content: ['r2', 'r1', 'tpl'] },
+        ...doc.blocks.slice(1),
+        { id: 'tpl', type: 'database-row', parent: 'db', data: { title: 'Template', properties: { t: 'Template' }, position: 'a2', template: true }, content: ['tb'] },
+        { id: 'tb', type: 'paragraph', parent: 'tpl', data: { text: 'template body' } },
+      ],
+    };
+
+    expect(blocksToHtml(withTemplate)).toBe(blocksToHtml(doc));
+    expect(blocksToMarkdown(withTemplate)).toBe(blocksToMarkdown(doc));
+    expect(blocksToPlainText(withTemplate)).toBe(blocksToPlainText(doc));
+  });
+
   it('reads the database and row titles as plain text', () => {
     expect(blocksToPlainText(doc).split('\n').filter((line) => line !== '')).toEqual(['Tasks', 'First', 'first body', 'Second']);
   });

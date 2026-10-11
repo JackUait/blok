@@ -4,6 +4,7 @@ import type { API, BlockAPI, BlockToolConstructorOptions, OutputData } from '../
 import type { DatabaseAdapter, DatabaseData, DatabaseRowData, DatabaseRowPages } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { isOutputData } from '../../../../src/tools/database/tier3-values';
 import { equalsOutputData } from '../../../../src/shared/output-data';
 
 interface NestedEditorConfig {
@@ -350,7 +351,7 @@ describe('database row page migration', () => {
         await write.promise;
         const savedBody = properties['prop-body'];
 
-        if (savedBody === null || typeof savedBody !== 'object' || Array.isArray(savedBody)) {
+        if (!isOutputData(savedBody)) {
           throw new Error('row body was not sent');
         }
         authoritativeBody = savedBody;
@@ -401,7 +402,7 @@ describe('database row page migration', () => {
       updateRow: vi.fn(async ({ rowId, properties }: Parameters<DatabaseAdapter['updateRow']>[0]) => {
         const savedBody = properties['prop-body'];
 
-        if (savedBody === null || typeof savedBody !== 'object' || Array.isArray(savedBody)) {
+        if (!isOutputData(savedBody)) {
           throw new Error('row body was not sent');
         }
         authoritativeRow.body = savedBody;
@@ -463,7 +464,7 @@ describe('database row page migration', () => {
         await write.promise;
         const savedBody = bodyPropertyId === undefined ? undefined : properties[bodyPropertyId];
 
-        if (savedBody === null || typeof savedBody !== 'object' || Array.isArray(savedBody)) {
+        if (!isOutputData(savedBody)) {
           throw new Error('created body property was not sent');
         }
         authoritativeBody = savedBody;
@@ -838,7 +839,7 @@ describe('database row page migration', () => {
     const harness = await openLegacyRowWithBody(rowPages, legacy, (data) => {
       const savedBody = data.properties['prop-body'];
 
-      if (savedBody !== null && typeof savedBody === 'object' && !Array.isArray(savedBody)) {
+      if (isOutputData(savedBody)) {
         authoritativeRow.body = savedBody;
       }
     });
@@ -894,7 +895,7 @@ describe('database row page migration', () => {
     const harness = await openLegacyRowWithBody(rowPages, legacy, (data) => {
       const savedBody = data.properties['prop-body'];
 
-      if (savedBody === null || typeof savedBody !== 'object' || Array.isArray(savedBody)) return;
+      if (!isOutputData(savedBody)) return;
       localWrites += 1;
       authoritativeRow.body = localWrites === 1 ? peer : savedBody;
     });
@@ -984,7 +985,7 @@ describe('database row page migration', () => {
     const harness = await openLegacyRowWithBody(rowPages, legacy, (data) => {
       const savedBody = data.properties['prop-body'];
 
-      if (savedBody !== null && typeof savedBody === 'object' && !Array.isArray(savedBody)) {
+      if (isOutputData(savedBody)) {
         authoritativeRow.body = savedBody;
       }
     });
@@ -1040,7 +1041,7 @@ describe('database row page migration', () => {
       if (data.pageId !== undefined) return;
       const savedBody = data.properties['prop-body'];
 
-      if (savedBody !== null && typeof savedBody === 'object' && !Array.isArray(savedBody)) {
+      if (isOutputData(savedBody)) {
         writeLegacy(savedBody);
       }
     });

@@ -138,6 +138,31 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('templates', () => {
+    it('saves the template flag and its repeat schedule', () => {
+      const repeat = { frequency: 'weekly' as const, start: '2026-10-12T09:00:00.000Z' };
+      const tool = new DatabaseRowTool(createRowOptions({ template: true, repeat }));
+
+      expect(tool.save(document.createElement('div'))).toMatchObject({ template: true, repeat });
+    });
+
+    it('sets and clears the repeat schedule', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ template: true }));
+      const repeat = { frequency: 'daily' as const, start: '2026-10-12T09:00:00.000Z' };
+
+      tool.updateRepeat({ repeat });
+      expect(tool.save(document.createElement('div')).repeat).toEqual(repeat);
+      tool.updateRepeat({ repeat: null });
+      expect(tool.save(document.createElement('div')).repeat).toBeUndefined();
+    });
+
+    it('never adds a template flag to a plain row', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      expect('template' in tool.save(document.createElement('div'))).toBe(false);
+    });
+  });
+
   describe('updateTitle()', () => {
     it('writes the top-level title AND the properties mirror', () => {
       const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': '', 'p-status': 'o1' }, title: '' }));

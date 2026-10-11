@@ -4,6 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
+import { IconSplitView } from '../../../../src/components/icons';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -152,6 +153,20 @@ describe('DatabaseTableView', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
+  it('keeps the selected title cell fill handle when its title is repainted', () => {
+    const { root, view } = mount();
+
+    selectCell(root, 'r1', 'p-title');
+    const handle = cell(root, 'r1', 'p-title').querySelector('[data-blok-database-table-fill-handle]');
+
+    if (handle === null) throw new Error('selected title cell has no fill handle');
+    view.updateRowTitle(root, 'r1', 'Renamed');
+
+    expect(cell(root, 'r1', 'p-title').querySelector('[data-blok-database-table-fill-handle]')).toBe(handle);
+    expect(cell(root, 'r1', 'p-title').textContent).toContain('Renamed');
+    view.destroy();
+  });
+
   describe('layout', () => {
     it('draws each header with the icon the property type menu uses', () => {
       const types = ['status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId'] as const;
@@ -166,6 +181,14 @@ describe('DatabaseTableView', () => {
         expected.innerHTML = PROPERTY_TYPE_META[type].icon;
         expect(iconOf(`p-${type}`)).toBe(expected.innerHTML);
       }
+    });
+
+    it('draws a property\'s own icon in its header instead of the type icon (research/04, R-2022-11-17)', () => {
+      const { root } = mount({ schema: [schema[0], { id: 'p-mood', name: 'Mood', type: 'text', position: 'b0', icon: '🙂' }] });
+      const icon = root.querySelector('[role="columnheader"][data-property-id="p-mood"] [data-blok-database-table-column-icon]');
+
+      expect(icon?.textContent).toBe('🙂');
+      expect(icon?.querySelector('svg')).toBeNull();
     });
 
     it('renders a grid whose keyboard belongs to the table', () => {
@@ -253,6 +276,27 @@ describe('DatabaseTableView', () => {
       expect(handlers.editFilters).toHaveBeenCalled();
     });
 
+    it('shows a count over 99 as 99+ when the column caps counts', () => {
+      const many = Array.from({ length: 120 }, (_, i) => row(`r${String(i).padStart(3, '1')}`, `Row ${i}`));
+      const { root } = mount({ rows: many, view: tableView({ calculations: [{ id: 'p-notes', fn: 'count', capCounts: true }, { id: 'p-title', fn: 'count' }] }) });
+      const value = (id: string): string | null | undefined =>
+        root.querySelector(`[data-blok-database-table-calc][data-property-id="${id}"] [data-blok-database-table-calc-value]`)?.textContent;
+
+      expect(value('p-notes')).toBe('99+');
+      expect(value('p-title')).toBe('120');
+    });
+
+    // Unverified: Notion's footer format was not recorded. Blok shows the column's own number format.
+    it('formats a number calculation with the column number format', () => {
+      const dollars = schema.map((p) => (p.id === 'p-amount' ? { ...p, number: { format: 'dollar' as const } } : p));
+      const { root } = mount({ schema: dollars, view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }, { id: 'p-notes', fn: 'count' }] }), locale: 'en-US' });
+      const value = (id: string): string | null | undefined =>
+        root.querySelector(`[data-blok-database-table-calc][data-property-id="${id}"] [data-blok-database-table-calc-value]`)?.textContent;
+
+      expect(value('p-amount')).toBe('$1,235.50');
+      expect(value('p-notes')).toBe('3');
+    });
+
     it('renders a calculation footer and leaves empty footer cells marked', () => {
       const view = tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] });
       const { root } = mount({ view });
@@ -312,6 +356,33 @@ describe('DatabaseTableView', () => {
       expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
     });
 
+    it('puts the selection bar in the toolbar row slot and marks the slot while rows are selected', () => {
+      const slot = document.createElement('div');
+
+      document.body.appendChild(slot);
+      const { root, view } = mount({ selectionBarSlot: () => slot });
+
+      cell(root, 'r1', 'p-notes').click();
+      press(editorField(), 'Escape');
+      press(grid(root), 'Escape');
+
+      expect(slot.querySelector('[data-blok-database-table-selection-bar]')).not.toBeNull();
+      expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+      expect(slot.hasAttribute('data-blok-database-selecting')).toBe(true);
+
+      press(grid(root), 'Escape');
+      expect(slot.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+      expect(slot.hasAttribute('data-blok-database-selecting')).toBe(false);
+
+      cell(root, 'r1', 'p-notes').click();
+      press(editorField(), 'Escape');
+      press(grid(root), 'Escape');
+      view.destroy();
+
+      expect(slot.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+      expect(slot.hasAttribute('data-blok-database-selecting')).toBe(false);
+    });
+
     it('arrows move the selected cell and stop at the edges', () => {
       const { root } = mount();
 
@@ -350,6 +421,27 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'longer');
       expect(editor()).toBeNull();
       expect(anchorCell(root)).toBe('r2/p-notes');
+    });
+
+    it('Tab in the last row still moves right along the row', () => {
+      const { root } = mount();
+
+      selectCell(root, 'r3', 'p-amount');
+      press(grid(root), 'Tab');
+      expect(anchorCell(root)).toBe('r3/p-stage');
+    });
+
+    it('Enter in an editor in the last row commits and keeps the same cell selected, with no new row', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r3', 'p-notes');
+      press(grid(root), 'Enter');
+      editorField().value = 'end';
+      press(editorField(), 'Enter');
+
+      expect(handlers.commitCell).toHaveBeenCalledWith('r3', 'p-notes', 'end');
+      expect(anchorCell(root)).toBe('r3/p-notes');
+      expect(handlers.addRow).not.toHaveBeenCalled();
     });
 
     it('a press on another cell while editing keeps the table until the click opens that cell', async () => {
@@ -396,13 +488,17 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBe('r3/p-notes');
     });
 
-    it('typing a character opens the editor with that character replacing the value', () => {
-      const { root } = mount();
+    it.each(['Z', ' '])('typing %j opens the editor with that character replacing the value', (key) => {
+      const { root, view } = mount();
 
-      selectCell(root, 'r1', 'p-notes');
-      press(grid(root), 'Z');
+      try {
+        selectCell(root, 'r1', 'p-notes');
+        press(grid(root), key, { isComposing: false });
 
-      expect(editorField().value).toBe('Z');
+        expect(editorField().value).toBe(key);
+      } finally {
+        view.destroy();
+      }
     });
 
     it('Backspace clears the selected cell and keeps the selection', () => {
@@ -511,6 +607,93 @@ describe('DatabaseTableView', () => {
       expect(handlers.duplicateRow).toHaveBeenCalledWith('r2');
     });
 
+    it('bulk person editing uses the configured directory for every selected row', () => {
+      const { root, handlers } = mount({
+        schema: [schema[0], { id: 'p-owner', name: 'Owner', type: 'person', position: 'a1' }],
+        cellContext: { people: [{ id: 'sam', name: 'Sam' }] },
+      });
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-select-all]')?.click();
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-owner"]')?.click();
+      const option = document.querySelector<HTMLElement>('[data-blok-database-person-option="sam"]');
+
+      expect(option).not.toBeNull();
+      option?.click();
+      expect(handlers.commitCells).toHaveBeenCalledWith([
+        { rowId: 'r1', propertyId: 'p-owner', value: [{ id: 'sam' }] },
+        { rowId: 'r2', propertyId: 'p-owner', value: [{ id: 'sam' }] },
+        { rowId: 'r3', propertyId: 'p-owner', value: [{ id: 'sam' }] },
+      ], []);
+    });
+
+    it('bulk relation editing uses the configured related rows', () => {
+      const { root, handlers } = mount({
+        schema: [schema[0], { id: 'p-related', name: 'Related', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'other' } }],
+        cellContext: { relationCandidates: () => [{ id: 'linked', title: 'Linked page' }] },
+      });
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-select-all]')?.click();
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-related"]')?.click();
+      const option = document.querySelector<HTMLElement>('[data-blok-database-relation-option="linked"]');
+
+      expect(option).not.toBeNull();
+      option?.click();
+      expect(handlers.commitCells).toHaveBeenCalledWith([
+        { rowId: 'r1', propertyId: 'p-related', value: [{ id: 'linked' }] },
+        { rowId: 'r2', propertyId: 'p-related', value: [{ id: 'linked' }] },
+        { rowId: 'r3', propertyId: 'p-related', value: [{ id: 'linked' }] },
+      ], []);
+    });
+
+    it('bulk status editing can open its property settings', () => {
+      const handlers = { ...makeHandlers(), editProperty: vi.fn() };
+      const { root, view } = mount({
+        handlers,
+        schema: [schema[0], { ...schema[3], type: 'status' }],
+      });
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-select-all]')?.click();
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-stage"]')?.click();
+      const edit = document.querySelector<HTMLElement>('[data-blok-database-select-edit-property]');
+
+      expect(edit).not.toBeNull();
+      edit?.click();
+      expect(handlers.editProperty).toHaveBeenCalledWith('p-stage');
+      view.destroy();
+    });
+
+    it('bulk select editing saves a newly created option', () => {
+      const { root, handlers, view } = mount();
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-select-all]')?.click();
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-stage"]')?.click();
+      const search = document.querySelector<HTMLInputElement>('[data-blok-database-select-search]');
+
+      if (search === null) throw new Error('no select search');
+      search.value = 'Review';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      press(search, 'Enter');
+
+      expect(handlers.optionsChange).toHaveBeenCalledWith('p-stage', expect.arrayContaining([
+        expect.objectContaining({ label: 'Review' }),
+      ]));
+      view.destroy();
+    });
+
+    it('destroy closes an open bulk editor', () => {
+      const { root, view } = mount({
+        schema: [schema[0], { id: 'p-owner', name: 'Owner', type: 'person', position: 'a1' }],
+        cellContext: { people: [{ id: 'sam', name: 'Sam' }] },
+      });
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-select-all]')?.click();
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-owner"]')?.click();
+      if (document.querySelector('[data-blok-database-cell-editor]') === null) throw new Error('no bulk editor');
+      view.destroy();
+
+      expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
+    });
+
     it('the selection bar deletes the selected rows', () => {
       const { root, handlers } = mount();
 
@@ -520,12 +703,41 @@ describe('DatabaseTableView', () => {
       expect(handlers.deleteRows).toHaveBeenCalledWith(['r2']);
     });
 
+    it('the OPEN button shows the side-peek icon before its label', () => {
+      const { root } = mount();
+      const open = root.querySelector('[data-row-id="r1"] [data-blok-database-table-open]');
+
+      const expected = document.createElement('span');
+
+      expected.innerHTML = IconSplitView;
+      expect(open?.firstElementChild?.innerHTML).toBe(expected.innerHTML);
+      expect(open?.lastElementChild?.textContent).toBe('tools.database.tableOpen');
+    });
+
     it('the OPEN button opens the row', () => {
       const { root, handlers } = mount();
 
       root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-open]')?.click();
 
       expect(handlers.openRow).toHaveBeenCalledWith('r1');
+    });
+
+    it.each(['Enter', 'Space'])('leaves %s on New page to the button after selecting a cell', (key) => {
+      const { root, view } = mount();
+
+      try {
+        selectCell(root, 'r1', 'p-notes');
+        const add = root.querySelector<HTMLButtonElement>('[data-blok-database-table-add-row]');
+
+        if (add === null) throw new Error('no add-row button');
+        add.focus();
+        const event = press(add, key === 'Space' ? ' ' : key, { isComposing: false });
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(editor()).toBeNull();
+      } finally {
+        view.destroy();
+      }
     });
 
     it('+ New page adds a row and opens its title editor after the redraw', () => {
@@ -552,6 +764,38 @@ describe('DatabaseTableView', () => {
       press(editorField(), 'Escape');
 
       expect(handlers.deleteRows).toHaveBeenCalledWith(['r-new']);
+    });
+
+    it('Enter in the select editor picks the option and moves the selection down', () => {
+      const { root, handlers } = mount();
+
+      cell(root, 'r1', 'p-stage').click();
+      const search = document.querySelector<HTMLInputElement>('[data-blok-database-select-search]');
+
+      if (search === null) throw new Error('no select search');
+      search.value = 'Build';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      press(search, 'Enter');
+
+      expect(anchorCell(root)).toBe('r2/p-stage');
+      expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-stage', 'o-build');
+    });
+
+    it('Enter on a new row title commits it and keeps that title cell selected', async () => {
+      const state = createTableState();
+      const [first, ...rest] = rows();
+
+      state.freshRowId = 'r-new';
+      state.pendingEdit = { rowId: 'r-new', propertyId: 'p-title' };
+      const { root, handlers } = mount({ state, rows: [first, row('r-new', ''), ...rest] });
+
+      await Promise.resolve();
+      editorField().value = 'Fresh';
+      press(editorField(), 'Enter');
+
+      expect(anchorCell(root)).toBe('r-new/p-title');
+      expect(handlers.commitCell).toHaveBeenCalledWith('r-new', 'p-title', 'Fresh');
+      expect(editor()).toBeNull();
     });
   });
   describe('columns', () => {
@@ -755,6 +999,55 @@ describe('DatabaseTableView', () => {
       expect(titles('text')).toEqual(['tools.database.calcNone', 'tools.database.calcCount', 'tools.database.calcPercent']);
       expect(titles('number')).toContain('tools.database.calcMoreOptions');
       expect(titles('date')).toContain('tools.database.calcDate');
+    });
+
+    it('gives created and edited time the Date › group, like a date column (research/08)', () => {
+      const titles = (type: PropertyDefinition['type']): Array<string | undefined> =>
+        (calculationItems({ type }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ title?: string }>).map((item) => item.title);
+
+      expect(titles('createdTime')).toContain('tools.database.calcDate');
+      expect(titles('lastEditedTime')).toContain('tools.database.calcDate');
+      expect(titles('createdTime')).not.toContain('tools.database.calcMoreOptions');
+    });
+
+    it('starts the Count list with "Show large counts as 99+", which toggles the cap', () => {
+      const onCap = vi.fn();
+      const items = calculationItems({ type: 'text' }, 'count', { t: (key: string) => key }, vi.fn(), { capCounts: false, onCapCounts: onCap }) as Array<{
+        title?: string;
+        children?: { items?: Array<{ title?: string; isActive?: boolean; onActivate?: () => void }> };
+      }>;
+      const count = items.find((item) => item.title === 'tools.database.calcCount')?.children?.items ?? [];
+
+      expect(count.map((item) => item.title)).toEqual([
+        'tools.database.calcShowLargeCounts',
+        'tools.database.calcCountAll',
+        'tools.database.calcCountValues',
+        'tools.database.calcCountUnique',
+        'tools.database.calcCountEmpty',
+        'tools.database.calcCountNotEmpty',
+      ]);
+      expect(count[0].isActive).toBe(false);
+      count[0].onActivate?.();
+      expect(onCap).toHaveBeenCalledWith(true);
+    });
+
+    it('has no 99+ toggle on a checkbox column (research/08)', () => {
+      const items = calculationItems({ type: 'checkbox' }, undefined, { t: (key: string) => key }, vi.fn(), { capCounts: false, onCapCounts: vi.fn() }) as Array<{ title?: string; children?: { items?: Array<{ title?: string }> } }>;
+      const count = items.find((item) => item.title === 'tools.database.calcCount');
+
+      expect(count?.children?.items?.map((item) => item.title)).not.toContain('tools.database.calcShowLargeCounts');
+    });
+
+    it('a button column has no footer menu: Notion offers no Calculate there', () => {
+      const withButton: PropertyDefinition[] = [...schema, { id: 'p-act', name: 'Act', type: 'button', position: 'a5' }];
+      const { root } = mount({ schema: withButton });
+      const cell = root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-act"]');
+
+      expect(cell).not.toBeNull();
+      expect(cell?.tagName).not.toBe('BUTTON');
+      expect(cell?.textContent).toBe('');
+      cell?.click();
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     });
 
     it('gives a checkbox column Checked and Unchecked under Count', () => {

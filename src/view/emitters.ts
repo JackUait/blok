@@ -13,7 +13,7 @@
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
 import { isSafeCssColor } from '../shared/css-color';
-import { databaseRowTitle, inRowOrder, titlePropertyIdOf } from '../shared/database-rows';
+import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
@@ -782,7 +782,7 @@ export const builtinEmitters: Record<string, Emitter> = {
     const heading = title === '' ? '' : `<h3 data-blok-database-title>${env.escape(title)}</h3>`;
     const titleId = titlePropertyIdOf(block.data);
     const children = env.childrenOf(block.id);
-    const rows = inRowOrder(children.filter((child) => child.type === 'database-row'))
+    const rows = inRowOrder(children.filter((child) => child.type === 'database-row' && !isTemplateRow(child)))
       .map((row) => emitDatabaseRow(row, env, databaseRowTitle(row, titleId)))
       .join('');
 

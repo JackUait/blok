@@ -1,5 +1,6 @@
-import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage } from '../../components/icons';
+import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
 import { PopoverEvent } from '../../../types/utils/popover/popover-event';
@@ -7,8 +8,13 @@ import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey } from './cells/option-colors';
+import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import { ROLLUP_FUNCTIONS, rollupFunctionsFor, rollupResultType } from './rollup';
+import { buttonEditItems } from './database-button-menu';
+import { createOptionsEditor } from './cells/options-editor';
+import { offersAutofill } from './database-autofill-setup';
+import { SHOW_PAGE_ICON_ITEM } from './database-table-menus';
 import type {
   DateDisplay,
   DateFormat,
@@ -19,6 +25,7 @@ import type {
   PropertySettingsV2,
   PropertyType,
   RelationSettings,
+  SelectOption,
   TimeFormat,
 } from './types';
 
@@ -27,10 +34,16 @@ export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'd
 /** Rows that come before the view's own rows; the rest come after. */
 const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'displayAs', 'changeType']);
 
-/** Types whose "Edit property" panel holds settings Blok has. */
+/** Types whose "Edit property" panel holds settings Blok has. Person is in Notion's list too, but what its panel holds is unmeasured. */
 const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
-  'number', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula',
+  'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button',
 ]);
+
+/** Types whose Edit property is the options list. */
+const OPTION_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['select', 'multiSelect', 'status']);
+
+/** Types whose Edit property ends with research/08's "Changes apply to all views showing this property." */
+const ALL_VIEWS_NOTE: ReadonlySet<PropertyType> = new Set<PropertyType>(['number', 'select', 'multiSelect', 'status']);
 
 /**
  * The property-level rows of a column header menu, per type, in Notion's
@@ -66,6 +79,8 @@ export interface PropertyMenuCallbacks {
   onChangeType: (propertyId: string, type: PropertyType) => void;
   onDuplicate: (propertyId: string) => void;
   onDelete: (propertyId: string) => void;
+  /** The whole option list after an edit in Edit property (select, multi-select, status). */
+  onOptionsChange?: (propertyId: string, options: SelectOption[]) => void;
   onClose?: () => void;
 }
 
@@ -80,14 +95,22 @@ export interface ComputedMenuHost {
   onEditFormula: (propertyId: string) => void;
   /** Turns a relation's mirroring property on the target database on or off. */
   onSetTwoWay: (propertyId: string, twoWay: boolean) => void;
+  /** The host set `config.buttons.onAction`: buttons may call it. */
+  hasHostActions?: boolean;
 }
 
 export interface PropertyMenuOptions extends PropertyMenuCallbacks {
+  onIconUpdate?: PropertyMenuCallbacks['onUpdate'];
   i18n: I18n;
   /** Offer Person in Change type. */
   hasPeople: boolean;
   /** Without it, formula, relation and rollup show no settings. */
   computed?: ComputedMenuHost;
+  /** The host gave `config.ai.autofill`. Without it there is no AI Autofill row. */
+  autofill?: {
+    hasDraft: (propertyId: string) => boolean;
+    open: (propertyId: string) => void;
+  };
 }
 
 const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
@@ -119,9 +142,28 @@ const without = <T extends NumberDisplay | DateDisplay, K extends keyof T>(value
  */
 export class DatabasePropertyMenu {
   private popover: PopoverDesktop | null = null;
+  /** The open property with localized option and group names, for display only. Patches come from the saved one. */
+  private shown: PropertyDefinition | null = null;
   private emojiPicker: EmojiPicker | null = null;
 
   constructor(private readonly options: PropertyMenuOptions) {}
+
+  get isOpen(): boolean {
+    return this.popover !== null;
+  }
+
+  get isIconPickerOpen(): boolean {
+    return this.emojiPicker?.isOpen() === true;
+  }
+
+  syncPageIcon(show: boolean): void {
+    const item = this.popover?.getElement().querySelector<HTMLElement>('[data-blok-item-name="database-show-page-icon"]');
+
+    if (item === null || item === undefined) return;
+    item.setAttribute('aria-checked', String(show));
+    if (show) item.setAttribute(DATA_ATTR.popoverItemActive, 'true');
+    else item.removeAttribute(DATA_ATTR.popoverItemActive);
+  }
 
   private t(key: string): string {
     return this.options.i18n.t(key);
@@ -131,19 +173,25 @@ export class DatabasePropertyMenu {
    * @param viewItems - the hosting view's own rows (filter, sort, freeze…),
    * placed after Change type as in Notion's header menu
    */
-  open(property: PropertyDefinition, anchor: HTMLElement, viewItems: PopoverItemParams[] = []): void {
+  open(property: PropertyDefinition, anchor: HTMLElement, viewItems: PopoverItemParams[] = [], shown: PropertyDefinition = property): void {
     this.close();
+    this.shown = shown;
     const entries = propertyMenuEntries(property);
     const head = entries.filter((entry) => HEAD_ENTRIES.has(entry));
     const tail = entries.filter((entry) => !HEAD_ENTRIES.has(entry));
+    // research/08: Title reads "Show page icon, AI Autofill, Filter…".
+    const lead = viewItems.filter((item) => item.type === PopoverItemType.Default && item.name === SHOW_PAGE_ICON_ITEM);
+    const rest = viewItems.filter((item) => !lead.includes(item));
     const items: PopoverItemParams[] = [
       { type: PopoverItemType.Html, element: this.nameField(property), name: 'name' },
       { type: PopoverItemType.Separator },
       ...head.map((entry) => this.entry(entry, property)),
-      ...(viewItems.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...viewItems, { type: PopoverItemType.Separator } as const] : []),
+      ...lead,
+      ...this.autofillItem(property),
+      ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, { type: PopoverItemType.Separator } as const] : []),
       ...tail.map((entry) => this.entry(entry, property)),
     ];
-    const popover = new PopoverDesktop({ items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
+    const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
 
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
@@ -156,11 +204,37 @@ export class DatabasePropertyMenu {
     popover.show();
   }
 
+  /** research/08: after Change type. Once set up or drafted, it opens the setup directly. */
+  private autofillItem(property: PropertyDefinition): PopoverItemParams[] {
+    const host = this.options.autofill;
+
+    if (host === undefined || !offersAutofill(property.type)) return [];
+    const open = (): void => host.open(property.id);
+
+    if (property.autofill !== undefined || host.hasDraft(property.id)) {
+      return [{
+        name: 'aiAutofill',
+        title: this.options.i18n.t('tools.database.aiAutofillProperty', { name: property.name }),
+        icon: IconWand,
+        closeOnActivate: true,
+        onActivate: open,
+      }];
+    }
+
+    return [{
+      name: 'aiAutofill',
+      title: this.t('tools.database.aiAutofill'),
+      icon: IconWand,
+      children: { items: [{ name: 'aiAutofill-basic', title: this.t('tools.database.aiAutofillBasic'), closeOnActivate: true, onActivate: open }] },
+    }];
+  }
+
   close(): void {
     const popover = this.popover;
 
     this.popover = null;
     popover?.destroy();
+    if (popover !== null) this.options.onClose?.();
   }
 
   destroy(): void {
@@ -212,9 +286,11 @@ export class DatabasePropertyMenu {
   }
 
   private openIconPicker(property: PropertyDefinition, anchor: HTMLElement): void {
+    if (!this.isOpen) return;
+    const update = this.options.onIconUpdate ?? this.options.onUpdate;
     const handlers = {
-      onSelect: (native: string): void => this.options.onUpdate(property.id, { icon: native }),
-      onRemove: (): void => this.options.onUpdate(property.id, { icon: undefined }),
+      onSelect: (native: string): void => update(property.id, { icon: native }),
+      onRemove: (): void => update(property.id, { icon: undefined }),
     };
 
     if (this.emojiPicker === null) {
@@ -434,11 +510,48 @@ export class DatabasePropertyMenu {
   }
 
   private editItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
+    const items = this.settingsItems(property, update);
+
+    return ALL_VIEWS_NOTE.has(property.type) ? [...items, this.allViewsNote()] : items;
+  }
+
+  private allViewsNote(): PopoverItemParams {
+    const note = document.createElement('div');
+
+    note.setAttribute('data-blok-database-property-menu-note', '');
+    note.textContent = this.t('tools.database.changesApplyToAllViews');
+
+    return { type: PopoverItemType.Html, element: note, name: 'all-views-note' };
+  }
+
+  private optionsItem(property: PropertyDefinition): PopoverItemParams {
+    const shown = this.shown?.id === property.id ? this.shown : property;
+    const element = createOptionsEditor({
+      property: shown,
+      i18n: this.options.i18n,
+      onChange: (options) => this.options.onOptionsChange?.(property.id, options),
+    });
+
+    return { type: PopoverItemType.Html, element, name: 'options' };
+  }
+
+  private settingsItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
+    if (OPTION_TYPES.has(property.type)) {
+      return [this.optionsItem(property)];
+    }
     if (property.type === 'relation') {
       return this.relationItems(property, update);
     }
     if (property.type === 'rollup') {
       return this.rollupItems(property, update);
+    }
+    if (property.type === 'button') {
+      return buttonEditItems(property, {
+        i18n: this.options.i18n,
+        schema: () => this.options.computed?.schema() ?? [],
+        hasHostActions: this.options.computed?.hasHostActions === true,
+        update,
+      });
     }
     if (property.type === 'number') {
       return this.numberItems(property.number ?? {}, (number) => update({ number }));

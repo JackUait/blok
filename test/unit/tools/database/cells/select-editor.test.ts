@@ -65,6 +65,12 @@ describe('select cell editor', () => {
     document.body.innerHTML = '';
   });
 
+  it('opens at least 300px wide, as Notion measured beside a 200px cell (research/08:306)', () => {
+    openSelect('o2');
+
+    expect(editorRoot()?.closest<HTMLElement>('[data-blok-popover]')?.style.getPropertyValue('--width')).toBe('300px');
+  });
+
   it('lists options in position order and marks the selected one with a check', () => {
     openSelect('o2');
 

@@ -123,7 +123,7 @@ describe('property type conversion', () => {
       ['text', 'date', 'next week', null, true],
       ['text', 'url', 'https://a.io', 'https://a.io', false],
       ['text', 'email', 'a@b.io', 'a@b.io', false],
-      ['text', 'person', 'u1', null, true],
+      ['text', 'person', 'u1', [], true],
       ['text', 'files', 'https://cdn.example.com/a.pdf', [{ id: 'new-1', name: 'a.pdf', url: 'https://cdn.example.com/a.pdf' }], false],
       ['text', 'richText', 'Hello', { blocks: [{ id: 'new-1', type: 'paragraph', data: { text: 'Hello' } }] }, false],
       ['select', 'text', 'o-build', 'Build', false],
@@ -154,6 +154,38 @@ describe('property type conversion', () => {
     });
   });
 
+  /**
+   * A person, files or relation list is written as `[]` on every row it has no
+   * value on, so the list exists before two peers fill it at once (see
+   * LIST_SLOT_MAP_KEY in the yjs serializer).
+   */
+  it.each<PropertyType>(['person', 'files', 'relation'])('writes an empty list on every row a change to %s leaves without a value', (to) => {
+    const rows: ConvertibleRow[] = [
+      { ...row('nobody'), id: 'r1' },
+      { ...row(null), id: 'r2' },
+      { id: 'r3', position: 'a1', properties: {} },
+    ];
+    const plan = planTypeChange(prop('text'), to, rows, mint);
+    const valueOf = (id: string): PropertyValue | undefined => plan?.writes.find((write) => write.rowId === id)?.value;
+
+    expect(valueOf('r1')).toEqual([]);
+    expect(valueOf('r2')).toEqual([]);
+    expect(valueOf('r3')).toEqual([]);
+    expect(plan?.writes.find((write) => write.rowId === 'r1')?.stash).toEqual({ type: 'text', value: 'nobody' });
+  });
+
+  it('keeps a value a change to a list type converts', () => {
+    const plan = planTypeChange(prop('createdBy'), 'person', [row(null, { createdBy: 'u1' })], mint);
+
+    expect(plan?.writes[0]?.value).toEqual([{ id: 'u1' }]);
+  });
+
+  it('writes no empty list when the new type is not a list', () => {
+    const plan = planTypeChange(prop('text'), 'multiSelect', [{ id: 'r3', position: 'a1', properties: {} }], mint);
+
+    expect(plan?.writes).toEqual([]);
+  });
+
   it('creates an option per new label when text becomes a select, and reuses existing ones ignoring case', () => {
     const rows = [row('build'), { ...row('Ship'), id: 'r2' }, { ...row('ship'), id: 'r3' }];
     const plan = planTypeChange(prop('text', { config: { options: [{ id: 'o-build', label: 'Build', position: 'a0' }] } }), 'select', rows, mint);
@@ -167,6 +199,18 @@ describe('property type conversion', () => {
     const plan = planTypeChange(prop('select'), 'status', [], mint);
 
     expect(plan?.property.status?.groups.map((g) => g.id)).toEqual(['todo', 'inProgress', 'complete']);
+  });
+
+  it.each<PropertyType>(['files', 'createdTime', 'formula', 'rollup'])('drops AI autofill on a change to %s, which has no AI Autofill', (to) => {
+    const plan = planTypeChange(prop('text', { autofill: { mode: 'summary', onEdit: true } }), to, [], mint);
+
+    expect(plan?.property).not.toHaveProperty('autofill');
+  });
+
+  it('keeps AI autofill on a change to a type that offers it', () => {
+    const plan = planTypeChange(prop('text', { autofill: { mode: 'summary', onEdit: true } }), 'number', [], mint);
+
+    expect(plan?.property.autofill).toEqual({ mode: 'summary', onEdit: true });
   });
 
   it('turns created time into a date the row stores', () => {
@@ -189,6 +233,20 @@ describe('property type conversion', () => {
     const back = planTypeChange(prop('number'), 'text', [{ ...row(8), convertedValues: { p: { type: 'text', value: '007' } } }], mint);
 
     expect(back?.writes[0]).toEqual({ rowId: 'r1', value: '8', stash: null });
+  });
+
+  it.each<{ label: string; type: PropertyType; value: PropertyValue; text: string }>([
+    { label: 'a true formula', type: 'formula', value: true, text: 'true' },
+    { label: 'a false formula', type: 'formula', value: false, text: 'false' },
+    { label: 'a formula person list', type: 'formula', value: [{ id: 'u1' }, { id: 'u2' }], text: 'u1, u2' },
+    { label: 'a rollup option list', type: 'rollup', value: ['o-idea', 'o-build'], text: 'o-idea, o-build' },
+    { label: 'a rollup relation list', type: 'rollup', value: [{ id: 'r2' }, { id: 'r3' }], text: 'r2, r3' },
+    { label: 'a rollup file list', type: 'rollup', value: [{ id: 'f1', name: 'Notes.pdf', url: 'https://files.test/notes.pdf' }], text: 'https://files.test/notes.pdf' },
+  ])('keeps the result of $label when converting to text', ({ type, value, text }) => {
+    const computedRow: ConvertibleRow = { ...row(null), computed: { p: value } };
+
+    expect(planTypeChange(prop(type), 'text', [computedRow], mint)?.writes)
+      .toEqual([{ rowId: 'r1', value: text }]);
   });
 
   it('writes nothing for an empty value', () => {

@@ -1,6 +1,8 @@
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import { parseDateValue } from './cells/date-value';
+import type { CellContext } from './cells/types';
 import { personIdsOf } from './property-values';
+import { placeText, verificationStatus } from './tier3-values';
 import type { PropertyDefinition, PropertyValue } from './types';
 
 /**
@@ -18,8 +20,29 @@ const escapeHtml = (text: string): string =>
 const tsvField = (text: string): string =>
   /[\t\n\r"]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 
+const listField = (text: string, forceQuote = false): string =>
+  forceQuote || /[,\n\r"]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+
+const listText = (labels: string[]): string =>
+  labels.map((label, index) => listField(label, labels.length > 1 && index === 0)).join(', ');
+
+const relationId = (candidates: Array<{ id: string; title: string }>, text: string): string | undefined => {
+  const label = text.trim();
+  const byId = candidates.find((candidate) => candidate.id === label);
+
+  if (byId !== undefined) return byId.id;
+  const matches = candidates.filter((candidate) => candidate.title.trim().toLowerCase() === label.toLowerCase());
+
+  return matches.length === 1 ? matches[0].id : undefined;
+};
+
 /** The text a cell copies as. */
-export const cellText = (property: PropertyDefinition, value: PropertyValue | undefined): string => {
+export const cellText = (property: PropertyDefinition, value: PropertyValue | undefined, context: Partial<CellContext> = {}): string => {
+  if (property.type === 'formula' || property.type === 'rollup') {
+    const shown: PropertyDefinition = context.valueProperty?.(property) ?? { ...property, type: 'text' };
+
+    return cellText(shown.type === property.type ? { ...shown, type: 'text' } : shown, value, context);
+  }
   // A checkbox with no value is unchecked.
   if (property.type === 'checkbox') {
     return value === true ? 'Yes' : 'No';
@@ -34,12 +57,26 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
     case 'select':
     case 'status':
       return typeof value === 'string' ? labelOf(value) : '';
-    case 'multiSelect':
-      return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string').map(labelOf).filter((label) => label !== '').join(', ') : '';
+    case 'multiSelect': {
+      const labels = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string').map(labelOf).filter((label) => label !== '') : [];
+
+      return listText(labels);
+    }
     case 'number':
       return typeof value === 'number' ? String(value) : '';
     case 'person':
       return personIdsOf(value).join(', ');
+    case 'relation': {
+      const candidates = context.relationCandidates?.(property) ?? [];
+
+      const labels = personIdsOf(value).map((id) => {
+        const title = context.relationTitle?.(property, id) ?? candidates.find((candidate) => candidate.id === id)?.title;
+
+        return title !== undefined && title.trim() !== '' && relationId(candidates, title) === id ? title : id;
+      });
+
+      return listText(labels);
+    }
     case 'files':
       return Array.isArray(value)
         ? value.flatMap((file) => (typeof file === 'object' && file !== null && 'url' in file ? [String(file.url)] : [])).join(', ')
@@ -56,11 +93,13 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
     case 'createdBy':
     case 'lastEditedBy':
     case 'uniqueId':
-    case 'formula':
-    case 'relation':
-    case 'rollup':
+    case 'button':
     default:
       return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    case 'place':
+      return placeText(value);
+    case 'verification':
+      return verificationStatus(value);
   }
 };
 
@@ -71,7 +110,7 @@ export const gridToClipboard = (grid: string[][]): { text: string; html: string 
 });
 
 /** Splits TSV text into rows of fields, honouring quoted fields. */
-const parseTsv = (text: string): string[][] => {
+const parseTsv = (text: string, separator = '\t'): string[][] => {
   const rows: string[][] = [[]];
   const state = { field: '', quoted: false, skip: false };
   const pushField = (): void => {
@@ -89,9 +128,10 @@ const parseTsv = (text: string): string[][] => {
     }
   };
   const plainChar = (char: string, next: string | undefined): void => {
-    if (char === '"' && state.field === '') {
+    if (char === '"' && (state.field === '' || (separator === ',' && state.field.trim() === ''))) {
+      state.field = '';
       state.quoted = true;
-    } else if (char === '\t') {
+    } else if (char === separator) {
       pushField();
     } else if (char === '\n' || char === '\r') {
       state.skip = char === '\r' && next === '\n';
@@ -127,7 +167,11 @@ export const parseClipboard = (data: { html?: string; text?: string }): string[]
   const rows = table === null
     ? []
     : [...table.querySelectorAll('tr')]
-      .map((tr) => [...tr.querySelectorAll('td, th')].map((cell) => (cell.textContent ?? '').trim()))
+      .map((tr) => [...tr.querySelectorAll('td, th')].map((cell) => {
+        cell.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+
+        return cell.textContent ?? '';
+      }))
       .filter((row) => row.length > 0);
 
   if (rows.length > 0) {
@@ -142,10 +186,10 @@ export const parseClipboard = (data: { html?: string; text?: string }): string[]
  * cannot hold it (an unknown option label, a non-number, a read-only type).
  * An empty text clears the cell.
  */
-export const valueFromText = (property: PropertyDefinition, text: string): PropertyValue | undefined => {
+export const valueFromText = (property: PropertyDefinition, text: string, context: Partial<CellContext> = {}): PropertyValue | undefined => {
   const trimmed = text.trim();
 
-  if (trimmed === '') {
+  if (text === '' || (trimmed === '' && !['title', 'text', 'url', 'email', 'phone'].includes(property.type))) {
     return property.type === 'checkbox' ? false : null;
   }
   const options = property.config?.options ?? [];
@@ -170,12 +214,20 @@ export const valueFromText = (property: PropertyDefinition, text: string): Prope
     case 'status':
       return optionId(trimmed);
     case 'multiSelect': {
-      const ids = trimmed.split(',').map(optionId).filter((id): id is string => id !== undefined);
+      const whole = trimmed.startsWith('"') ? undefined : optionId(trimmed);
+      const ids = whole === undefined ? parseTsv(trimmed, ',').flat().map(optionId) : [whole];
 
-      return ids.length > 0 ? ids : undefined;
+      return ids.length > 0 && ids.every((id): id is string => id !== undefined) ? ids : undefined;
     }
     case 'date':
       return parseDateValue(trimmed) === null ? undefined : trimmed;
+    case 'relation': {
+      const candidates = context.relationCandidates?.(property) ?? [];
+      const whole = trimmed.startsWith('"') ? undefined : relationId(candidates, trimmed);
+      const ids = whole === undefined ? parseTsv(trimmed, ',').flat().map((label) => relationId(candidates, label)) : [whole];
+
+      return ids.every((id): id is string => id !== undefined) ? ids.map((id) => ({ id })) : undefined;
+    }
     case 'richText':
     case 'person':
     case 'files':
@@ -185,9 +237,13 @@ export const valueFromText = (property: PropertyDefinition, text: string): Prope
     case 'lastEditedBy':
     case 'uniqueId':
     case 'formula':
-    case 'relation':
     case 'rollup':
+    case 'button':
+    case 'verification':
     default:
       return undefined;
+    // Blok never geocodes: the host fills the coordinates.
+    case 'place':
+      return trimmed === '' ? null : { address: trimmed };
   }
 };

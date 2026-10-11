@@ -1,4 +1,4 @@
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap } from '../../components/icons';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -13,6 +13,7 @@ interface ViewTypeOption {
   descriptionKey: string;
 }
 
+/** Notion's add-view order (research/08:113). */
 const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'table', icon: IconTable, labelKey: 'tools.database.viewTypeTable', descriptionKey: 'tools.database.viewTypeTableDescription' },
   { type: 'board', icon: IconBoard, labelKey: 'tools.database.viewTypeBoard', descriptionKey: 'tools.database.viewTypeBoardDescription' },
@@ -21,7 +22,10 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'chart', icon: IconChart, labelKey: 'tools.database.viewTypeChart', descriptionKey: 'tools.database.viewTypeChartDescription' },
   { type: 'timeline', icon: IconTimeline, labelKey: 'tools.database.viewTypeTimeline', descriptionKey: 'tools.database.viewTypeTimelineDescription' },
   { type: 'feed', icon: IconMessage, labelKey: 'tools.database.viewTypeFeed', descriptionKey: 'tools.database.viewTypeFeedDescription' },
+  // Form and map are Tier 3 (D6). Dashboard, after Chart in Notion, is a data slot only, so it is not offered.
+  { type: 'map', icon: IconMap, labelKey: 'tools.database.viewTypeMap', descriptionKey: 'tools.database.viewTypeMapDescription' },
   { type: 'calendar', icon: IconCalendar, labelKey: 'tools.database.viewTypeCalendar', descriptionKey: 'tools.database.viewTypeCalendarDescription' },
+  { type: 'form', icon: IconListChecklist, labelKey: 'tools.database.viewTypeForm', descriptionKey: 'tools.database.viewTypeFormDescription' },
 ];
 
 export interface ViewPopoverOptions {

@@ -1,4 +1,5 @@
 import { openModalDialog } from '../../components/utils/modal-dialog';
+import type { DialogRole } from '../../components/utils/modal-dialog';
 
 export interface DatabaseConfirmOptions {
   title: string;
@@ -8,6 +9,12 @@ export interface DatabaseConfirmOptions {
   destructive?: boolean;
   /** An element in the editor whose direction the dialog takes. */
   directionSource?: Element | null;
+  /** Defaults to `alertdialog`. */
+  role?: DialogRole;
+  /** Over another modal: mount inside its surface, or the two focus traps pull focus back and forth forever. */
+  container?: HTMLElement;
+  /** Aborting closes the dialog as a cancel: the modal it sits in is going away. */
+  signal?: AbortSignal;
 }
 
 const counter = { next: 0 };
@@ -22,6 +29,8 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
   const title = document.createElement('div');
 
   backdrop.setAttribute('data-blok-database-confirm', '');
+  // Mounted on body: the popover scope brings the editor font and preflight.
+  backdrop.setAttribute('data-blok-popover', '');
   panel.setAttribute('data-blok-database-confirm-dialog', '');
   title.setAttribute('data-blok-database-confirm-title', '');
   counter.next += 1;
@@ -51,10 +60,11 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
   const handle = openModalDialog({
     content: backdrop,
     surface: panel,
-    role: 'alertdialog',
+    role: options.role ?? 'alertdialog',
     labelledBy: title.id,
     initialFocus: () => cancelButton,
     directionSource: options.directionSource ?? null,
+    ...(options.container === undefined ? {} : { container: options.container, topLayer: false }),
     onDismiss: () => finish(false),
   });
 
@@ -69,6 +79,7 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
     resolve(answer);
   }
 
+  options.signal?.addEventListener('abort', () => finish(false), { once: true });
   confirmButton.addEventListener('click', () => finish(true));
   cancelButton.addEventListener('click', () => finish(false));
 });

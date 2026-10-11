@@ -59,6 +59,8 @@ export interface GridCallbacks {
   deleteRows: (rowIds: string[]) => void;
   duplicateRows: (rowIds: string[]) => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
+  /** A cell editor's "Edit property" footer. */
+  editProperty?: (propertyId: string) => void;
   /** Selection changed: the view repaints checkboxes and the selection bar. */
   selectionChanged: () => void;
   /** A paste or fill: cell writes, then new rows (property values by id). One undo step. */
@@ -103,6 +105,8 @@ export const emptyValueOf = (property: PropertyDefinition): PropertyValue | unde
     case 'status':
     case 'date':
     case 'richText':
+    case 'place':
+    case 'verification':
       return null;
     case 'uniqueId':
     case 'createdTime':
@@ -111,6 +115,7 @@ export const emptyValueOf = (property: PropertyDefinition): PropertyValue | unde
     case 'lastEditedBy':
     case 'formula':
     case 'rollup':
+    case 'button':
       return undefined;
     default:
       // A type from a newer client: its empty shape is unknown.
@@ -141,6 +146,8 @@ export class DatabaseTableGrid {
   private destroyed = false;
   /** The key being handled while an editor closes: tells Enter and Escape from an outside press. */
   private keyInFlight: string | null = null;
+  /** The new row whose title was just committed; commit clears freshRowId before the editor closes. */
+  private committedFreshRowId: string | undefined;
 
   constructor(options: GridOptions) {
     this.root = options.root;
@@ -242,6 +249,7 @@ export class DatabaseTableGrid {
       ...(this.callbacks.optionsChange !== undefined
         ? { onOptionsChange: (next: SelectOption[]) => this.callbacks.optionsChange?.(ref.propertyId, next) }
         : {}),
+      ...(this.callbacks.editProperty !== undefined ? { onEditProperty: () => this.callbacks.editProperty?.(ref.propertyId) } : {}),
       onCommit: (value) => this.commit(ref, value),
       onClose: () => this.editorClosed(ref),
     });
@@ -261,6 +269,7 @@ export class DatabaseTableGrid {
       this.rows.set(ref.rowId, { ...row, properties: { ...row.properties, [ref.propertyId]: value }, ...computed });
     }
     if (ref.rowId === this.state.freshRowId) {
+      this.committedFreshRowId = ref.rowId;
       this.state.freshRowId = undefined;
     }
     this.callbacks.commitCell(ref.rowId, ref.propertyId, value);
@@ -286,7 +295,11 @@ export class DatabaseTableGrid {
       return;
     }
 
-    const target = key === 'Enter' ? this.offset(ref, 1, 0) : ref;
+    // Notion: Enter on a new row's title commits and stays; elsewhere it moves down.
+    const fresh = ref.rowId === this.state.freshRowId || ref.rowId === this.committedFreshRowId;
+
+    this.committedFreshRowId = undefined;
+    const target = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
 
     this.state.selection = { kind: 'cell', anchor: target, focus: target };
     this.paint();
@@ -513,7 +526,7 @@ export class DatabaseTableGrid {
     const bounds = this.bounds();
     const rows = selection.kind === 'rows' ? rowIds.filter((id) => selection.rowIds.includes(id)) : rowIds.slice(bounds?.r0 ?? 0, (bounds?.r1 ?? -1) + 1);
     const columns = selection.kind === 'rows' ? this.columns : this.columns.slice(bounds?.c0 ?? 0, (bounds?.c1 ?? -1) + 1);
-    const { text, html } = gridToClipboard(rows.map((rowId) => columns.map((property) => cellText(property, this.valueAt(rowId, property)))));
+    const { text, html } = gridToClipboard(rows.map((rowId) => columns.map((property) => cellText(property, this.valueAt(rowId, property), this.cellContext))));
 
     event.preventDefault();
     event.stopPropagation();
@@ -559,7 +572,7 @@ export class DatabaseTableGrid {
       if (property === undefined || text === undefined || isReadOnlyType(property.type)) {
         return null;
       }
-      const value = valueFromText(property, text);
+      const value = valueFromText(property, text, this.cellContext);
 
       return value === undefined ? null : [property.id, value];
     };
@@ -586,7 +599,7 @@ export class DatabaseTableGrid {
       return;
     }
     const newRows = lines.map((line) => Object.fromEntries(mapped.flatMap((property, index) => {
-      const value = property === undefined || isReadOnlyType(property.type) ? undefined : valueFromText(property, line[index] ?? '');
+      const value = property === undefined || isReadOnlyType(property.type) ? undefined : valueFromText(property, line[index] ?? '', this.cellContext);
 
       return property === undefined || value === undefined ? [] : [[property.id, value]];
     }))).filter((values) => Object.keys(values).length > 0);
@@ -627,7 +640,7 @@ export class DatabaseTableGrid {
         const value = this.valueAt(rowId, source);
 
         targets.forEach((property) => {
-          const next = property.type === source.type ? value : valueFromText(property, cellText(source, value));
+          const next = property.type === source.type ? value : valueFromText(property, cellText(source, value, this.cellContext), this.cellContext);
 
           if (next !== undefined && !isReadOnlyType(property.type)) {
             changes.push({ rowId, propertyId: property.id, value: next });
@@ -739,6 +752,9 @@ export class DatabaseTableGrid {
       return;
     }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (event.target instanceof HTMLButtonElement && (event.key === 'Enter' || event.key === ' ')) {
       return;
     }
 

@@ -1,0 +1,579 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
+import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
+import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
+import { PAGE_LAYOUT_PIN_LIMIT, pageLayoutOf } from '../../../../src/tools/database/page-layout';
+import type { PageLayoutData } from '../../../../src/tools/database/page-layout';
+import type { DatabaseRow, PageLayoutFields, PropertyDefinition } from '../../../../src/tools/database/types';
+
+vi.mock('../../../../src/blok', () => ({
+  Blok: vi.fn(function stubBlok() {
+    return {
+      isReady: Promise.resolve(),
+      save: vi.fn().mockResolvedValue({ blocks: [] }),
+      destroy: vi.fn(),
+    };
+  }),
+}));
+
+const schemaWith = (layout: PageLayoutFields = {}): PropertyDefinition[] => [
+  { id: 'p-title', name: 'Title', type: 'title', position: 'a0', ...layout },
+  { id: 'p-status', name: 'Status', type: 'text', position: 'a1' },
+  { id: 'p-due', name: 'Due', type: 'text', position: 'a2' },
+  { id: 'p-owner', name: 'Owner', type: 'text', position: 'a3' },
+  { id: 'p-rel', name: 'Tasks', type: 'relation', position: 'a4', relation: { targetDatabaseId: 'other' } },
+];
+
+const ROW: DatabaseRow = {
+  id: 'row-1',
+  position: 'a0',
+  properties: { 'p-title': 'Card', 'p-status': 'Open', 'p-due': 'Friday', 'p-owner': 'Ada' },
+};
+
+const createOptions = (overrides: Partial<CardDrawerOptions> = {}): CardDrawerOptions => {
+  const wrapper = document.createElement('div');
+
+  document.body.appendChild(wrapper);
+
+  return {
+    wrapper,
+    readOnly: false,
+    titlePropertyId: 'p-title',
+    schema: schemaWith(),
+    onTitleChange: vi.fn(),
+    onDescriptionChange: vi.fn(),
+    onClose: vi.fn(),
+    onPropertyValueChange: vi.fn(),
+    onPageLayoutChange: vi.fn(),
+    onPageLayoutBirth: vi.fn(),
+    ...overrides,
+  };
+};
+
+const q = <T extends Element = HTMLElement>(selector: string): T | null => document.querySelector<T>(selector);
+const all = (selector: string): HTMLElement[] => [...document.querySelectorAll<HTMLElement>(selector)];
+const idsIn = (selector: string): string[] =>
+  all(`${selector} [data-blok-database-drawer-prop-value]`).map((el) => el.getAttribute('data-property-id') ?? '');
+
+/** What the tool would save: the drawer's edit applied to the model's layout. */
+const written = (options: CardDrawerOptions, base: PageLayoutFields = {}): PageLayoutData | undefined => {
+  const edit = vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0];
+
+  return edit?.(pageLayoutOf({ id: 'p-title', name: 'Title', type: 'title', position: 'a0', ...base }));
+};
+
+const clickItem = (name: string): void => {
+  const item = q(`[data-blok-popover-item][data-blok-item-name="${name}"]`);
+
+  if (item === null) throw new Error(`no menu item ${name}`);
+  item.click();
+};
+
+const openItemMenu = (propertyId: string): void => {
+  const button = q(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`);
+
+  if (button === null) throw new Error(`no layout menu for ${propertyId}`);
+  button.click();
+};
+
+describe('DatabaseCardDrawer — page layout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('shows pinned properties in the heading and not again in the group', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) });
+
+    new DatabaseCardDrawer(options).open(ROW);
+
+    expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
+    expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-owner', 'p-rel']);
+  });
+
+  it('draws no layout chrome for a database without a layout', () => {
+    new DatabaseCardDrawer(createOptions()).open(ROW);
+
+    expect(q('[data-blok-database-drawer-pins]')).toBeNull();
+    expect(q('[data-blok-database-drawer-details]')).toBeNull();
+    expect(q('[data-blok-database-drawer-tabs]')).toBeNull();
+    expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
+  });
+
+  it('draws named sections that fold away', () => {
+    const options = createOptions({
+      schema: schemaWith({
+        pageLayoutSections: [{ id: 's1', name: 'Planning' }],
+        pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }],
+      }),
+    });
+
+    new DatabaseCardDrawer(options).open(ROW);
+    const toggle = q('[data-blok-database-drawer-section-toggle][data-section-id="s1"]');
+
+    expect(toggle?.textContent).toContain('Planning');
+    expect(idsIn('[data-blok-database-drawer-section][data-section-id="s1"]')).toEqual(['p-due']);
+    toggle?.click();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(q('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-section-body]')?.hidden).toBe(true);
+  });
+
+  it('draws modules in the page and in a details panel that View details closes', () => {
+    const options = createOptions({
+      schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-owner', place: 'page' }, { id: 'p-due', place: 'panel' }] }),
+    });
+
+    new DatabaseCardDrawer(options).open(ROW);
+
+    expect(idsIn('[data-blok-database-drawer-modules]')).toEqual(['p-owner']);
+    expect(idsIn('[data-blok-database-drawer-details]')).toEqual(['p-due']);
+    const toggle = q('[data-blok-database-drawer-details-toggle]');
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    toggle?.click();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
+  });
+
+  it('moves the property group into the details panel', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutGroupIn: 'panel' }) });
+
+    new DatabaseCardDrawer(options).open(ROW);
+
+    expect(q('[data-blok-database-drawer-details] [data-blok-database-drawer-props]')).not.toBeNull();
+  });
+
+  it('draws a Tabbed page: a Content tab, and a relation tab that hides the body', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }) });
+
+    new DatabaseCardDrawer(options).open(ROW);
+    const tabs = all('[data-blok-database-drawer-tabs] [role="tab"]');
+
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Content', 'Tasks']);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    tabs[1].click();
+
+    expect(q('[data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"]')?.textContent).toBe('Tasks');
+    expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
+    expect(q('[data-blok-database-drawer-editor]')?.hidden).toBe(true);
+    expect(q('[data-blok-database-drawer-props]')).toBeNull();
+  });
+
+  describe('customizing', () => {
+    it('offers Customize layout, which bears the layout lists and shows the builder bar', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+
+      expect(options.onPageLayoutBirth).toHaveBeenCalledTimes(1);
+      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')).not.toBeNull();
+    });
+
+    it('hides Customize layout when read-only or locked', () => {
+      new DatabaseCardDrawer(createOptions({ readOnly: true })).open(ROW);
+      expect(q('[data-blok-database-drawer-customize]')).toBeNull();
+      document.body.innerHTML = '';
+
+      new DatabaseCardDrawer(createOptions({ databaseLocked: () => true })).open(ROW);
+      expect(q('[data-blok-database-drawer-customize]')).toBeNull();
+    });
+
+    it('searches property names live, including hidden properties and folded sections', () => {
+      const options = createOptions({
+        schema: schemaWith({
+          pageLayoutSections: [{ id: 's1', name: 'Planning' }],
+          pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }],
+        }).map((property) => property.id === 'p-status' ? { ...property, pageVisibility: 'hidden' as const } : property),
+      });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-section-toggle][data-section-id="s1"]')?.click();
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      expect(search).not.toBeNull();
+      if (search === null) throw new Error('missing property search');
+      search.value = 'STAT';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status']);
+      search.value = 'uE';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due']);
+      expect(q('[data-blok-database-drawer-section-body]')?.hidden).toBe(false);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('clearing property search restores every builder property without changing page visibility', () => {
+      const options = createOptions({
+        schema: schemaWith().map((property) => property.id === 'p-status' ? { ...property, pageVisibility: 'hidden' as const } : property),
+      });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      expect(search).not.toBeNull();
+      if (search === null) throw new Error('missing property search');
+      search.value = 'missing';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual([]);
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due', 'p-owner', 'p-rel']);
+      expect(options.schema.find((property) => property.id === 'p-status')?.pageVisibility).toBe('hidden');
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('keeps the selected relation tab when property search hides its value', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({
+        schema: schemaWith({ pageLayoutStructure: 'tabbed' }),
+      }));
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-tabs] [data-tab-id="p-rel"]')?.click();
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      search.value = 'due';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
+      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual([]);
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
+      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
+      drawer.destroy();
+    });
+
+    it('searches pins and page and panel modules without changing their saved placement', () => {
+      const layout: PageLayoutFields = {
+        pageLayoutPlacements: [
+          { id: 'p-due', place: 'heading' },
+          { id: 'p-owner', place: 'page' },
+          { id: 'p-status', place: 'panel' },
+        ],
+      };
+      const options = createOptions({ schema: schemaWith(layout) });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      for (const [query, region, id] of [
+        ['due', '[data-blok-database-drawer-pins]', 'p-due'],
+        ['owner', '[data-blok-database-drawer-modules]', 'p-owner'],
+        ['status', '[data-blok-database-drawer-panel-modules]', 'p-status'],
+        ['tasks', '[data-blok-database-drawer-props]', 'p-rel'],
+      ]) {
+        search.value = query;
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+
+        expect(idsIn(region)).toEqual([id]);
+        expect(idsIn('[data-blok-database-drawer-content]')).toEqual([id]);
+      }
+      expect(options.schema.find((property) => property.type === 'title')?.pageLayoutPlacements).toEqual(layout.pageLayoutPlacements);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
+      expect(idsIn('[data-blok-database-drawer-modules]')).toEqual(['p-owner']);
+      expect(idsIn('[data-blok-database-drawer-panel-modules]')).toEqual(['p-status']);
+      drawer.destroy();
+    });
+
+    it('opens a collapsed property group in Customize and restores it on Cancel', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-props-toggle]')?.click();
+      q('[data-blok-database-drawer-customize]')?.click();
+
+      expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      search.value = 'status';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-status"]')?.closest('[hidden]')).toBeNull();
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status']);
+      expect(q('[data-blok-database-drawer-props-toggle]')?.getAttribute('aria-expanded')).toBe('true');
+      q('[data-blok-database-drawer-props-toggle]')?.click();
+
+      expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
+      search.value = 'status';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(true);
+      expect(q('[data-blok-database-drawer-props-toggle]')?.getAttribute('aria-expanded')).toBe('false');
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('opens a closed details panel in Customize and restores it on Cancel', () => {
+      const layout: PageLayoutFields = { pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] };
+      const options = createOptions({ schema: schemaWith(layout) });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-details-toggle]')?.click();
+      q('[data-blok-database-drawer-customize]')?.click();
+
+      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      search.value = 'due';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.closest('[hidden]')).toBeNull();
+      expect(idsIn('[data-blok-database-drawer-panel-modules]')).toEqual(['p-due']);
+      expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('true');
+      q('[data-blok-database-drawer-details-toggle]')?.click();
+
+      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
+      search.value = 'due';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
+      expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('false');
+      expect(options.schema.find((property) => property.type === 'title')?.pageLayoutPlacements).toEqual(layout.pageLayoutPlacements);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('shows searched content beside a relation tab and restores the tab on clear', () => {
+      const options = createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }) });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-tabs] [data-tab-id="p-rel"]')?.click();
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      search.value = 'due';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.closest('[hidden]')).toBeNull();
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due']);
+      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
+      expect(q('[data-blok-database-drawer-editor]')?.hidden).toBe(true);
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
+      expect(q('[data-blok-database-drawer-props]')).toBeNull();
+      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
+      search.value = 'due';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
+      expect(q('[data-blok-database-drawer-props]')).toBeNull();
+      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('previews a pin and writes nothing until Apply to all pages', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      q('[data-blok-database-layout-apply]')?.click();
+
+      expect(options.onPageLayoutChange).toHaveBeenCalledTimes(1);
+      expect(written(options)?.placements).toEqual([{ id: 'p-due', place: 'heading' }]);
+      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    });
+
+    it('drops the draft on Cancel', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-drawer-pins]')).toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+    });
+
+    it('keeps the draft across a remote schema refresh and applies it over the newest layout', () => {
+      const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [], pageLayoutSections: [] }) });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+      drawer.refreshSchema(schemaWith({ pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }], pageLayoutSections: [] }));
+
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-status', 'p-due']);
+      q('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options, { pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }] })?.placements)
+        .toEqual([{ id: 'p-status', place: 'heading' }, { id: 'p-due', place: 'heading' }]);
+    });
+
+    it('disables Pin to heading at the pin limit', () => {
+      const many: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT + 1 }, (_, i) =>
+        ({ id: `x${i}`, name: `X${i}`, type: 'text' as const, position: `b${String(i).padStart(2, '0')}` }));
+      const options = createOptions({
+        schema: [
+          { id: 'p-title', name: 'Title', type: 'title', position: 'a0', pageLayoutPlacements: many.slice(0, PAGE_LAYOUT_PIN_LIMIT).map((p) => ({ id: p.id, place: 'heading' as const })) },
+          ...many,
+        ],
+      });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu(`x${PAGE_LAYOUT_PIN_LIMIT}`);
+
+      expect(q('[data-blok-popover-item][data-blok-item-name="pin"]')?.getAttribute('aria-disabled')).toBe('true');
+    });
+
+    it('keeps Pin to heading disabled when search hides all 15 existing pins', () => {
+      const pins: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT }, (_, i) =>
+        ({ id: `pin-${i}`, name: `Pinned ${i}`, type: 'text', position: `b${String(i).padStart(2, '0')}` }));
+      const options = createOptions({
+        schema: [
+          {
+            id: 'p-title', name: 'Title', type: 'title', position: 'a0',
+            pageLayoutPlacements: pins.map((property) => ({ id: property.id, place: 'heading' })),
+          },
+          ...pins,
+          { id: 'candidate', name: 'Candidate', type: 'text', position: 'c0' },
+        ],
+      });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      search.value = 'candidate';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      openItemMenu('candidate');
+
+      expect(q('[data-blok-popover-item][data-blok-item-name="pin"]')?.getAttribute('aria-disabled')).toBe('true');
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual([]);
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['candidate']);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('never offers the details panel for a relation', () => {
+      new DatabaseCardDrawer(createOptions()).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-rel');
+
+      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-panel"]')).toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
+    });
+
+    it('adds and names a section, then moves a property into it', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-layout-add-section]')?.click();
+      const name = q<HTMLInputElement>('[data-blok-database-layout-section-name]');
+
+      if (name === null) throw new Error('no section name field');
+      name.value = 'Planning';
+      name.dispatchEvent(new Event('change'));
+      openItemMenu('p-due');
+      const move = all('[data-blok-popover-item]').find((item) => item.textContent?.includes('Planning'));
+
+      move?.click();
+      q('[data-blok-database-layout-apply]')?.click();
+      const layout = written(options);
+
+      expect(layout?.sections).toEqual([{ id: expect.any(String), name: 'Planning' }]);
+      expect(layout?.placements).toEqual([{ id: 'p-due', place: 'section', sectionId: layout?.sections[0]?.id }]);
+    });
+
+    it('sets the structure from Page settings and resets to the original layout at once', () => {
+      const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }) });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-layout-settings]')?.click();
+      clickItem('structure-tabbed');
+
+      expect(q('[data-blok-database-drawer-tabs]')).not.toBeNull();
+      q('[data-blok-database-layout-settings]')?.click();
+      clickItem('reset');
+
+      expect(written(options, { pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutStructure: 'tabbed' }))
+        .toEqual({ structure: 'simple', groupIn: 'page', placements: [], sections: [] });
+      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    });
+
+    it('drops the draft when the page closes', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+      drawer.close();
+      drawer.open(ROW);
+
+      expect(q('[data-blok-database-drawer-pins]')).toBeNull();
+      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    });
+  });
+});

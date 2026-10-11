@@ -23,16 +23,20 @@
  *   2. applies `inert` to the sibling body subtrees while open (the same trick
  *      that `src/tools/video/controls.ts` uses on its parked menu pane);
  *   3. traps Tab focus with a complete tabbable selector and pulls focus back
- *      via a capture-phase `focusin` guard;
+ *      via a capture-phase `focusin` guard. Focus in a menu the dialog opened
+ *      (its trigger is inside the surface) is left alone: the menu lives on
+ *      body, and pulling focus back closes it before its click;
  *   4. captures `document.activeElement` on open — falling back to the control
  *      the opening press landed on, since WebKit leaves `<body>` focused after
  *      a click on a button — and restores it on close when still connected;
  *   5. registers Escape / outside-pointer dismissal through the shared
- *      dismissable-layer stack instead of a bespoke listener;
+ *      dismissable-layer stack instead of a bespoke listener. Escape closes
+ *      such a menu first, so one press peels one layer;
  *   6. runs one shared exit-animation settle before teardown.
  */
 
 import { registerLayer } from './dismissable-layer';
+import { PopoverRegistry } from './popover/popover-registry';
 import { syncPortalDirection } from './portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 
@@ -386,6 +390,9 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     }
   };
 
+  // A menu belongs to this dialog when its trigger is inside the surface.
+  const ownsMenu = (trigger: HTMLElement | null): boolean => trigger !== null && surface.contains(trigger);
+
   const onFocusIn = (event: FocusEvent): void => {
     if (state.closed || !surface.isConnected) {
       return;
@@ -394,6 +401,11 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     const target = event.target;
 
     if (target instanceof Node && surface.contains(target)) {
+      return;
+    }
+
+    // A menu the dialog opened lives on body. Pulling focus back closes it on mousedown, before its item's click.
+    if (target instanceof Node && ownsMenu(PopoverRegistry.instance.triggerOf(target))) {
       return;
     }
 
@@ -412,6 +424,12 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     escape: options.escape ?? true,
     outside: options.outside ?? true,
     onDismiss: (reason?: ModalDismissReason) => {
+      // The layer stack consumes Escape, so the menu's own Escape never runs.
+      if (reason === 'escape' && ownsMenu(PopoverRegistry.instance.topmostTrigger())) {
+        PopoverRegistry.instance.closeTopmost();
+
+        return;
+      }
       options.onDismiss(reason ?? 'outside');
     },
   });

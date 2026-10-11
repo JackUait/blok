@@ -39,14 +39,14 @@ export interface ResolvedViewProperty {
   wrap: boolean;
 }
 
-export type ViewPropertyPatch = Partial<Pick<ViewPropertySetting, 'visible' | 'width' | 'wrap'>>;
+export type ViewPropertyPatch = Partial<Pick<ViewPropertySetting, 'visible' | 'width' | 'wrap' | 'required' | 'description' | 'questionName' | 'longAnswer' | 'maxSelections'>>;
 
 const bySchemaPosition = (schema: PropertyDefinition[]): PropertyDefinition[] =>
   [...schema].sort((a, b) => (a.position < b.position ? -1 : 1));
 
 /** A property the view does not mention: shown in a table, hidden elsewhere. The title always shows. */
 const defaultVisible = (view: DatabaseViewConfig, property: PropertyDefinition): boolean =>
-  property.type === 'title' || view.type === 'table';
+  property.type === 'title' || view.type === 'table' || view.type === 'form';
 
 /** Stored entries merged by id. The first occurrence keeps its place; later fields win. */
 const mergeDuplicates = (entries: ViewPropertySetting[]): ViewPropertySetting[] => {
@@ -211,9 +211,11 @@ export const resolveLoadLimit = (view: DatabaseViewConfig): LoadLimit =>
 const OPEN_PAGES_IN: readonly OpenPagesIn[] = ['side', 'center', 'full'];
 
 /** Notion's per-layout defaults: gallery, calendar and feed open in a center peek, the rest in a side peek. */
+export const defaultOpenPagesIn = (type: DatabaseViewConfig['type']): OpenPagesIn =>
+  type === 'gallery' || type === 'calendar' || type === 'feed' ? 'center' : 'side';
+
 export const resolveOpenPagesIn = (view: DatabaseViewConfig): OpenPagesIn =>
-  OPEN_PAGES_IN.find((mode) => mode === view.openPagesIn)
-  ?? (view.type === 'gallery' || view.type === 'calendar' || view.type === 'feed' ? 'center' : 'side');
+  OPEN_PAGES_IN.find((mode) => mode === view.openPagesIn) ?? defaultOpenPagesIn(view.type);
 
 const CARD_SIZES: readonly CardSize[] = ['small', 'medium', 'large'];
 
@@ -322,6 +324,30 @@ export const resolveCalculations = (view: DatabaseViewConfig, schema: PropertyDe
   }
 
   return resolved;
+};
+
+/** Columns whose counts show as "99+" above 99. */
+export const resolveCountCaps = (view: DatabaseViewConfig): Set<string> =>
+  new Set((view.calculations ?? []).filter((entry) => entry.capCounts === true).map((entry) => entry.id));
+
+/**
+ * The `calculations` list after turning one column's 99+ cap on or off. The
+ * toggle sits in the Count list, so a column with no function gets Count.
+ */
+export const withCalculationCap = (view: DatabaseViewConfig, propertyId: string, cap: boolean): ViewCalculation[] => {
+  const entries = (view.calculations ?? []).map((entry) => ({ ...entry }));
+  const entry = entries.find((e) => e.id === propertyId);
+
+  if (entry === undefined) {
+    return cap ? [...entries, { id: propertyId, fn: 'count', capCounts: true }] : entries;
+  }
+  if (cap) {
+    entry.capCounts = true;
+  } else {
+    delete entry.capCounts;
+  }
+
+  return entries;
 };
 
 /** The `calculations` list after setting one column's function, or clearing it with null. */

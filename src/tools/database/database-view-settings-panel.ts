@@ -12,6 +12,7 @@ import {
 } from './database-panel';
 import type { PanelPage } from './database-panel';
 import {
+  FILTERABLE_TYPES,
   WITHIN_OPERATORS,
   defaultFilterFor,
   filterPillLabel,
@@ -43,6 +44,7 @@ import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } f
 import {
   LOAD_LIMITS,
   resolveLoadLimit,
+  defaultOpenPagesIn,
   resolveOpenPagesIn,
   resolveShowVerticalLines,
   resolveViewProperties,
@@ -54,6 +56,7 @@ import type { ViewChanges } from './database-model';
 import type {
   ColorRule,
   DatabaseViewConfig,
+  DependencySettings,
   FilterConfig,
   FilterGroup,
   FilterRule,
@@ -64,10 +67,15 @@ import type {
   PropertyDefinition,
   PropertyType,
   SortConfig,
+  SubItemsDisplay,
+  SubItemsFilter,
   ViewType,
 } from './types';
 import { nanoid } from 'nanoid';
+import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './sub-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import { automationListPage } from './database-automations-panel';
+import type { AutomationSettings } from './database-automations-panel';
 
 export interface ViewGroupEntry {
   key: string;
@@ -107,8 +115,21 @@ export interface ViewSettingsContext {
    * Each item needs a `name`: it is the row's test id.
    */
   layoutItems?: () => PopoverItemParams[];
+  /** Database settings: sub-items and dependencies. Without it, neither row shows. */
+  structure?: StructureSettings;
   /** One-shot tool actions on the root page (CSV export and import, saving a chart). */
   actions?: () => ViewSettingsAction[];
+  automations?: AutomationSettings;
+}
+
+/** Database-level sub-item and dependency settings (research/05 §11). */
+export interface StructureSettings {
+  subItems: () => boolean;
+  setSubItems: (on: boolean) => void;
+  /** The "Blocked by" settings, or undefined while dependencies are off. */
+  dependencies: () => DependencySettings | undefined;
+  setDependencies: (on: boolean) => void;
+  updateDependency: (patch: Partial<DependencySettings>) => void;
 }
 
 export interface ViewSettingsAction {
@@ -153,6 +174,7 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
 
 /** The option colors Notion offers (research/08). */
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
+
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 
@@ -244,6 +266,41 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.colors()),
           }));
         }
+        const automations = this.ctx.automations;
+
+        if (automations !== undefined) {
+          const control = panelRow({
+            label: this.t('automationTitle'),
+            testId: 'database-settings-automations',
+            opensPage: true,
+            disabled: !automations.writable(),
+            onClick: () => {
+              if (control.isConnected && automations.writable()) panel.push(automationListPage(automations, this.ctx.i18n));
+            },
+          });
+
+          rows.push(control);
+        }
+        const structure = this.ctx.structure;
+
+        if (structure !== undefined) {
+          rows.push(
+            panelRow({
+              label: this.t('settingsSubItems'),
+              testId: 'database-settings-subitems',
+              value: this.t(structure.subItems() ? 'settingsOn' : 'settingsOff'),
+              opensPage: true,
+              onClick: () => panel.push(this.subItems(structure)),
+            }),
+            panelRow({
+              label: this.t('settingsDependencies'),
+              testId: 'database-settings-dependencies',
+              value: this.t(structure.dependencies() !== undefined ? 'settingsOn' : 'settingsOff'),
+              opensPage: true,
+              onClick: () => panel.push(this.dependencies(structure)),
+            })
+          );
+        }
         for (const action of this.ctx.actions?.() ?? []) {
           rows.push(panelRow({
             label: action.label,
@@ -288,6 +345,104 @@ export class ViewSettingsPages {
               panel.close();
               this.ctx.deleteView();
             },
+          })
+        );
+
+        return rows;
+      },
+    };
+  }
+
+  // ─── Sub-items and dependencies ───
+
+  private subItems(structure: StructureSettings): PanelPage {
+    return {
+      title: this.t('settingsSubItems'),
+      build: (panel) => {
+        const view = this.ctx.view();
+        const on = structure.subItems();
+        const rows: HTMLElement[] = [
+          panelSwitch({
+            label: this.t('settingsSubItemsOn'),
+            testId: 'database-settings-subitems-switch',
+            checked: on,
+            disabled: !this.shared,
+            onToggle: (next) => {
+              structure.setSubItems(next);
+              panel.refresh();
+            },
+          }),
+        ];
+
+        if (!on) return rows;
+        const display = resolveSubItemsDisplay(view);
+        const displays: SubItemsDisplay[] = display === 'card' || CARD_LAYOUTS.has(view.type) ? ['card', 'flattened'] : ['nested', 'flattened'];
+        const filters: SubItemsFilter[] = display === 'card' ? ['parents'] : ['parents', 'parentsAndSubItems', 'subItems'];
+        const filter = resolveSubItemsFilter(view);
+
+        rows.push(
+          panelSeparator(),
+          panelLabel(this.t('settingsSubItemsDisplay')),
+          ...displays.map((choice) => panelRow({
+            label: this.t(`settingsSubItemsDisplay${capital(choice)}`),
+            testId: `database-settings-subitems-display-${choice}`,
+            checked: display === choice,
+            disabled: !this.shared,
+            onClick: () => this.ctx.updateView({ subItemsDisplay: choice }),
+          })),
+          panelSeparator(),
+          panelLabel(this.t('settingsSubItemsFilter')),
+          ...filters.map((choice) => panelRow({
+            label: this.t(`settingsSubItemsFilter${capital(choice)}`),
+            testId: `database-settings-subitems-filter-${choice}`,
+            checked: filter === choice,
+            disabled: !this.shared,
+            onClick: () => this.ctx.updateView({ subItemsFilter: choice }),
+          }))
+        );
+
+        return rows;
+      },
+    };
+  }
+
+  private dependencies(structure: StructureSettings): PanelPage {
+    return {
+      title: this.t('settingsDependencies'),
+      build: (panel) => {
+        const settings = structure.dependencies();
+        const rows: HTMLElement[] = [
+          panelSwitch({
+            label: this.t('settingsDependenciesOn'),
+            testId: 'database-settings-dependencies-switch',
+            checked: settings !== undefined,
+            disabled: !this.shared,
+            onToggle: (next) => {
+              structure.setDependencies(next);
+              panel.refresh();
+            },
+          }),
+        ];
+
+        if (settings === undefined) return rows;
+        const shift = settings.shift ?? 'none';
+
+        rows.push(
+          panelSeparator(),
+          panelLabel(this.t('settingsDependencyShift')),
+          ...(['overlap', 'maintain', 'none'] as const).map((choice) => panelRow({
+            label: this.t(`settingsDependencyShift${capital(choice)}`),
+            testId: `database-settings-dependencies-shift-${choice}`,
+            checked: shift === choice,
+            disabled: !this.shared,
+            onClick: () => structure.updateDependency({ shift: choice }),
+          })),
+          panelSwitch({
+            label: this.t('settingsDependencyWeekends'),
+            testId: 'database-settings-dependencies-weekends',
+            checked: settings.avoidWeekends === true,
+            disabled: !this.shared,
+            onToggle: (next) => structure.updateDependency({ avoidWeekends: next }),
           })
         );
 
@@ -418,6 +573,9 @@ export class ViewSettingsPages {
 
   private openPagesIn(): PanelPage {
     const modes: OpenPagesIn[] = ['side', 'center', 'full'];
+    const type = this.ctx.view().type;
+    // A dashboard (D6) has no layout label, so it gets no "Default for" line.
+    const defaultMode = type === 'dashboard' ? null : defaultOpenPagesIn(type);
 
     return {
       title: this.t('settingsOpenPagesIn'),
@@ -433,6 +591,7 @@ export class ViewSettingsPages {
           },
         }),
         panelText(this.t(`openPages${capital(mode)}Description`)),
+        ...(mode === defaultMode ? [panelText(this.t('openPagesDefaultFor', { layout: this.t(`viewType${capital(type)}`) }))] : []),
       ]),
     };
   }
@@ -555,7 +714,7 @@ export class ViewSettingsPages {
             label: this.t('filterAdd'),
             testId: 'database-filter-add',
             icon: IconPlus,
-            onClick: () => panel.push(this.pickProperty(this.t('filterAdd'), GROUPABLE_TYPES, (property) => {
+            onClick: () => panel.push(this.pickProperty(this.t('filterAdd'), FILTERABLE_TYPES, (property) => {
               const filter = defaultFilterFor(property);
 
               this.ctx.updatePersonal({ filters: [...withEntryIds(this.ctx.view().filters), filter] });
@@ -580,7 +739,7 @@ export class ViewSettingsPages {
 
   /** The editor of one simple filter. Also the root page of a filter pill's popover. */
   simpleFilter(filterId: string): PanelPage {
-    const current = (): FilterConfig | undefined => this.ctx.view().filters.find((f) => f.id === filterId);
+    const current = (): FilterConfig | undefined => withEntryIds(this.ctx.view().filters).find((f) => f.id === filterId);
     const write = (next: (filters: Array<FilterConfig & { id: string }>) => FilterConfig[]): void =>
       this.ctx.updatePersonal({ filters: next(withEntryIds(this.ctx.view().filters)) });
 
@@ -731,6 +890,8 @@ export class ViewSettingsPages {
       case 'files':
       case 'formula':
       case 'rollup':
+      case 'button':
+      case 'verification':
         return [];
       case 'date':
       case 'createdTime':
@@ -771,6 +932,7 @@ export class ViewSettingsPages {
       case 'richText':
       case 'email':
       case 'phone':
+      case 'place':
         return [panelInput({
           value: typeof value === 'string' ? value : '',
           placeholder: this.t('filterValuePlaceholder'),
@@ -848,10 +1010,14 @@ export class ViewSettingsPages {
   // ─── Advanced filter ───
 
   private advanced(): PanelPage {
-    // A view from before filterTree existed gets one tree for the page's life, so ids stay put.
-    const fallback = emptyFilterTree();
+    // Keep rule ids stable until the first edit saves the tree.
+    const view = this.ctx.view();
+    const fallback = { ...emptyFilterTree(), filterRules: withEntryIds(view.filters) };
     const tree = (): FilterGroup => this.ctx.view().filterTree ?? fallback;
-    const write = (next: FilterGroup): void => this.ctx.updatePersonal({ filterTree: next });
+    const write = (next: FilterGroup): void => this.ctx.updatePersonal({
+      ...(view.filterTree === undefined ? { filters: [] } : {}),
+      filterTree: next,
+    });
 
     return {
       title: this.t('filterAdvanced'),
@@ -925,7 +1091,7 @@ export class ViewSettingsPages {
       label: this.t('filterAddRule'),
       testId: `database-filter-add-rule-${group.id}`,
       icon: IconPlus,
-      onClick: () => panel.push(this.pickProperty(this.t('filterAddRule'), GROUPABLE_TYPES, (property) => {
+      onClick: () => panel.push(this.pickProperty(this.t('filterAddRule'), FILTERABLE_TYPES, (property) => {
         const { id: _id, ...condition } = defaultFilterFor(property);
 
         write(addFilterRule(tree(), group.id, { id: nanoid(), ...condition }));
@@ -1306,6 +1472,9 @@ export class ViewSettingsPages {
       // The panel gets formula and rollup as their result type.
       case 'formula':
       case 'rollup':
+      case 'button':
+      case 'place':
+      case 'verification':
         return [];
     }
   }
@@ -1449,9 +1618,8 @@ const groupSortChoices = (type: PropertyType): Array<readonly [GroupSort, string
     case 'email':
     case 'phone':
       return [['manual', 'groupSortManual'], ['ascending', 'groupSortAlphabetical'], ['descending', 'groupSortReverse']];
-    // research/08: status shows only its default ("Ascending" = group and option order);
-    // checkbox and person groups have no sort row.
     case 'status':
+      return [['manual', 'groupSortManual'], ['ascending', 'groupSortAscending'], ['descending', 'groupSortDescending']];
     case 'checkbox':
     case 'person':
     case 'createdBy':
@@ -1464,6 +1632,9 @@ const groupSortChoices = (type: PropertyType): Array<readonly [GroupSort, string
     case 'richText':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'place':
+    case 'verification':
       return [];
   }
 };

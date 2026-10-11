@@ -11,6 +11,7 @@ import type { EventSpan } from './calendar-dates';
 import {
   TIMELINE_DAY_WIDTH,
   barGeometry,
+  hourBarGeometry,
   headerUnits,
   moveBar,
   offscreenSide,
@@ -20,8 +21,9 @@ import {
   visibleRange,
   zoomStep,
 } from './timeline-dates';
-import type { BarWrite, TimelineWindow } from './timeline-dates';
-import { resolveShowTimelineTable, resolveTimelineTableProperties, resolveTimelineZoom, resolveViewProperties } from './view-settings';
+import type { BarValues, BarWrite, TimelineWindow } from './timeline-dates';
+import { resolveCalculations, resolveCountCaps, resolveShowTimelineTable, resolveTimelineTableProperties, resolveTimelineZoom, resolveViewProperties } from './view-settings';
+import { fillCalculationCell } from './database-table-view';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
@@ -51,6 +53,10 @@ export interface TimelineHandlers {
   navigate: (day: string) => void;
   toggleTable: () => void;
   loadMore: (groupKey: string) => void;
+  /** A link drawn from one bar's handle onto another: `from` now blocks `to`. */
+  link?: (fromRowId: string, toRowId: string) => void;
+  /** A table panel footer cell was clicked: pick its calculation. */
+  openCalculationMenu?: (anchor: HTMLElement, propertyId: string) => void;
 }
 
 export interface DatabaseTimelineViewOptions {
@@ -73,6 +79,10 @@ export interface DatabaseTimelineViewOptions {
   locale?: string;
   /** What cells need from the host: relation titles, computed result types. */
   cellContext?: Partial<CellContext>;
+  /** Dependency arrows (the view's `arrowsBy`), from the blocking row to the blocked one. */
+  arrows?: Array<{ from: string; to: string }>;
+  /** Sub-item depth of a row, for the indent of nested rows. */
+  depthOf?: (rowId: string) => number;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -100,10 +110,21 @@ interface BarDrag {
   rowId: string;
   mode: 'move' | 'start' | 'end';
   grabDay: string;
+  /** Hours from the canvas start; only read at hours zoom. */
+  grabHour: number;
   startX: number;
   startY: number;
   active: boolean;
   overDay: string;
+  overHour: number;
+}
+
+interface LinkDrag {
+  kind: 'link';
+  rowId: string;
+  startX: number;
+  startY: number;
+  active: boolean;
 }
 
 interface RowDrag {
@@ -126,7 +147,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private readonly window: TimelineWindow;
   private root: HTMLElement | null = null;
   private scroller: HTMLElement | null = null;
-  private drag: BarDrag | RowDrag | null = null;
+  private drag: BarDrag | RowDrag | LinkDrag | null = null;
   private suppressClick = false;
   private recentring = false;
 
@@ -285,8 +306,37 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         panel.appendChild(this.createSpacer());
       }
     }
+    panel.appendChild(this.createTableFooter(properties));
 
     return panel;
+  }
+
+  private createTableFooter(properties: PropertyDefinition[]): HTMLElement {
+    const footer = document.createElement('div');
+    const shown = (property: PropertyDefinition): PropertyDefinition => this.options.cellContext?.valueProperty?.(property) ?? property;
+    const calculations = resolveCalculations(this.options.view, this.options.schema.map(shown));
+    const caps = resolveCountCaps(this.options.view);
+    const rows = this.sections.flatMap((group) => group.rows);
+    const handlers = this.options.handlers;
+
+    footer.setAttribute('data-blok-database-timeline-table-footer', '');
+    for (const property of properties) {
+      const cell = document.createElement(this.canEdit && property.type !== 'button' ? 'button' : 'div');
+
+      cell.setAttribute('data-blok-database-table-calc', '');
+      cell.setAttribute('data-property-id', property.id);
+      cell.setAttribute('data-type', property.type);
+      if (cell instanceof HTMLButtonElement) {
+        cell.type = 'button';
+        cell.addEventListener('click', () => handlers?.openCalculationMenu?.(cell, property.id));
+      }
+      fillCalculationCell(cell, {
+        fn: calculations.get(property.id), property, shown: shown(property), rows, i18n: this.options.i18n, locale: this.options.locale, capCounts: caps.has(property.id),
+      });
+      footer.appendChild(cell);
+    }
+
+    return footer;
   }
 
   private createTableRow(row: DatabaseRow, properties: PropertyDefinition[]): HTMLElement {
@@ -294,6 +344,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     line.setAttribute('data-blok-database-timeline-table-row', '');
     line.setAttribute('data-row-id', row.id);
+    const depth = this.options.depthOf?.(row.id) ?? 0;
+
+    if (depth > 0) {
+      line.setAttribute('data-subitem-depth', String(depth));
+      line.style.setProperty('--blok-database-subitem-depth', String(depth));
+    }
     for (const property of properties) {
       const cell = document.createElement('div');
 
@@ -359,9 +415,71 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         canvas.appendChild(more);
       }
     }
+    if ((this.options.arrows ?? []).length > 0) {
+      canvas.appendChild(this.createArrows());
+    }
     scroller.appendChild(canvas);
 
     return scroller;
+  }
+
+  /**
+   * One elbow per dependency: out of the blocker's end, down (or up) to the
+   * blocked row, into its start. Days place it across; rows place it down,
+   * once the canvas has a layout. An arrow into an item that starts before
+   * its blocker ends is a conflict.
+   */
+  private createArrows(): HTMLElement {
+    const layer = document.createElement('div');
+
+    layer.setAttribute('data-blok-database-timeline-arrows', '');
+    layer.setAttribute('aria-hidden', 'true');
+    for (const { from, to } of this.options.arrows ?? []) {
+      const source = this.findRow(from);
+      const target = this.findRow(to);
+      const fromSpan = source === undefined ? null : this.spanOf(source);
+      const toSpan = target === undefined ? null : this.spanOf(target);
+
+      if (fromSpan === null || toSpan === null) continue;
+      const out = barGeometry(fromSpan, this.window.start, this.zoom);
+      const into = barGeometry(toSpan, this.window.start, this.zoom);
+      const arrow = document.createElement('div');
+
+      arrow.setAttribute('data-blok-database-timeline-arrow', '');
+      arrow.setAttribute('data-from', from);
+      arrow.setAttribute('data-to', to);
+      arrow.toggleAttribute('data-conflict', toSpan.start <= fromSpan.end);
+      arrow.style.setProperty('--blok-database-arrow-from', `${out.offset + out.width}px`);
+      arrow.style.setProperty('--blok-database-arrow-to', `${into.offset}px`);
+      for (const part of ['out', 'cross', 'in', 'head']) {
+        const segment = document.createElement('div');
+
+        segment.setAttribute('data-blok-database-timeline-arrow-part', part);
+        arrow.appendChild(segment);
+      }
+      layer.appendChild(arrow);
+    }
+    queueMicrotask(() => this.placeArrows(layer));
+
+    return layer;
+  }
+
+  /** The rows' vertical middles, read from the layout. */
+  private placeArrows(layer: HTMLElement): void {
+    const middle = (rowId: string | null): number | null => {
+      const line = this.rowsOf('[data-blok-database-timeline-row]').find((el) => el.getAttribute('data-row-id') === rowId);
+
+      return line === undefined ? null : line.offsetTop + line.offsetHeight / 2;
+    };
+
+    layer.querySelectorAll<HTMLElement>('[data-blok-database-timeline-arrow]').forEach((arrow) => {
+      const y1 = middle(arrow.getAttribute('data-from'));
+      const y2 = middle(arrow.getAttribute('data-to'));
+
+      if (y1 === null || y2 === null) return;
+      arrow.style.setProperty('--blok-database-arrow-y1', `${y1}px`);
+      arrow.style.setProperty('--blok-database-arrow-y2', `${y2}px`);
+    });
   }
 
   private createHeader(): HTMLElement {
@@ -525,7 +643,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private createBar(row: DatabaseRow, span: EventSpan, tabbable: boolean): HTMLElement {
     const el = document.createElement('div');
-    const { offset, width } = barGeometry(span, this.window.start, this.zoom);
+    const { offset, width } = this.geometryOf(span, this.valuesOf(row));
     const title = this.titleOf(row);
 
     el.setAttribute('data-blok-database-timeline-bar', '');
@@ -568,6 +686,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     if (this.canEdit) {
       el.appendChild(this.createHandle('end'));
+    }
+    if (this.canEdit && this.options.handlers?.link !== undefined) {
+      const link = document.createElement('span');
+
+      // Just past the end edge, so it never takes the resize zone.
+      link.setAttribute('data-blok-database-timeline-link-handle', '');
+      link.setAttribute('aria-hidden', 'true');
+      el.appendChild(link);
     }
 
     return el;
@@ -787,13 +913,33 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   };
 
-  /** The day under a pointer, from the canvas box. */
-  private dayAt(x: number): string {
+  /** Pixels from the canvas start to a pointer, from the canvas box. */
+  private canvasOffset(x: number): number {
     const box = this.root?.querySelector('[data-blok-database-timeline-canvas]')?.getBoundingClientRect();
     const edge = this.rtl ? (box?.right ?? 0) - x : x - (box?.left ?? 0);
-    const fromStart = box === undefined ? 0 : edge;
 
-    return addDays(this.window.start, Math.floor(fromStart / this.dayWidth));
+    return box === undefined ? 0 : edge;
+  }
+
+  /** The day under a pointer. */
+  private dayAt(x: number): string {
+    return addDays(this.window.start, Math.floor(this.canvasOffset(x) / this.dayWidth));
+  }
+
+  /** The hour under a pointer, counted from the canvas start. */
+  private hourAt(x: number): number {
+    return Math.floor(this.canvasOffset(x) / (this.dayWidth / 24));
+  }
+
+  /** Hours zoom places a timed value by its time; every other case by whole days. */
+  private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
+    return (this.zoom === 'hours' ? hourBarGeometry(values, this.window.start) : null) ?? barGeometry(span, this.window.start, this.zoom);
+  }
+
+  private valuesOf(row: DatabaseRow): BarValues {
+    const endId = this.options.endPropertyId;
+
+    return { start: this.options.startPropertyId === undefined ? undefined : row.properties[this.options.startPropertyId], end: endId === undefined ? undefined : row.properties[endId] ?? null };
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
@@ -827,18 +973,28 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return;
     }
 
+    if (event.target.closest('[data-blok-database-timeline-link-handle]') !== null) {
+      this.drag = { kind: 'link', rowId, startX: event.clientX, startY: event.clientY, active: false };
+      this.listen();
+
+      return;
+    }
+
     const edge = event.target.closest('[data-blok-database-timeline-resize]')?.getAttribute('data-blok-database-timeline-resize');
     const grabDay = this.dayAt(event.clientX);
+    const grabHour = this.hourAt(event.clientX);
 
     this.drag = {
       kind: 'bar',
       rowId,
       mode: edge === 'start' || edge === 'end' ? edge : 'move',
       grabDay,
+      grabHour,
       startX: event.clientX,
       startY: event.clientY,
       active: false,
       overDay: grabDay,
+      overHour: grabHour,
     };
     this.listen();
   };
@@ -862,13 +1018,19 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         return;
       }
       drag.active = true;
-      this.root?.setAttribute('data-dragging', drag.kind === 'bar' ? drag.mode : 'row');
+      this.root?.setAttribute('data-dragging', drag.kind === 'bar' ? drag.mode : drag.kind);
       this.partsOf(drag.rowId).forEach((el) => el.setAttribute('data-dragging', ''));
     }
 
     if (drag.kind === 'bar') {
       drag.overDay = this.dayAt(event.clientX);
+      drag.overHour = this.hourAt(event.clientX);
       this.previewBar(drag);
+
+      return;
+    }
+    if (drag.kind === 'link') {
+      this.setLinkTarget(this.linkTargetAt(event.clientX, event.clientY, drag.rowId));
 
       return;
     }
@@ -884,13 +1046,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   /** Writes the bar's would-be place on the bar itself while dragging. */
   private previewBar(drag: BarDrag): void {
     const span = this.spanAfter(drag);
+    const values = this.valuesAfter(drag);
     const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === drag.rowId);
 
-    if (span === null || barEl === undefined) {
+    if (span === null || values === null || barEl === undefined) {
       return;
     }
 
-    const { offset, width } = barGeometry(span, this.window.start, this.zoom);
+    const { offset, width } = this.geometryOf(span, values);
 
     barEl.style.insetInlineStart = `${offset}px`;
     barEl.style.width = `${width}px`;
@@ -916,11 +1079,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     return drag.mode === 'move'
-      ? moveBar(values, daysBetween(drag.grabDay, drag.overDay))
+      ? moveBar(values, daysBetween(drag.grabDay, drag.overDay), this.zoom === 'hours' ? drag.overHour - drag.grabHour : undefined)
       : resizeBar(values, drag.mode, drag.overDay);
   }
 
-  private spanAfter(drag: BarDrag): EventSpan | null {
+  private valuesAfter(drag: BarDrag): BarValues | null {
     const values = this.barValues(drag.rowId);
     const write = this.writeFor(drag);
 
@@ -928,7 +1091,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return null;
     }
 
-    return timelineSpan(write.start ?? values.start, values.end === undefined ? undefined : write.end ?? values.end);
+    return { start: write.start ?? values.start, end: values.end === undefined ? undefined : write.end ?? values.end };
+  }
+
+  private spanAfter(drag: BarDrag): EventSpan | null {
+    const values = this.valuesAfter(drag);
+
+    return values === null ? null : timelineSpan(values.start, values.end);
   }
 
   private rowTargetAt(drag: RowDrag, y: number): RowDrag['target'] {
@@ -954,7 +1123,19 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     target?.row.setAttribute('data-drop', target.side);
   }
 
-  private readonly onPointerUp = (): void => {
+  /** The other bar under the pointer while a link is drawn. */
+  private linkTargetAt(x: number, y: number, fromRowId: string): HTMLElement | null {
+    const bar = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-blok-database-timeline-bar]') ?? null;
+
+    return bar === null || bar.getAttribute('data-row-id') === fromRowId || !(this.root?.contains(bar) ?? false) ? null : bar;
+  }
+
+  private setLinkTarget(bar: HTMLElement | null): void {
+    this.rowsOf('[data-blok-database-timeline-bar][data-link-target]').forEach((el) => el.removeAttribute('data-link-target'));
+    bar?.setAttribute('data-link-target', '');
+  }
+
+  private readonly onPointerUp = (event: PointerEvent): void => {
     const drag = this.drag;
 
     this.endDrag();
@@ -964,6 +1145,17 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     this.guardNextClick(true);
+
+    if (drag.kind === 'link') {
+      const to = this.linkTargetAt(event.clientX, event.clientY, drag.rowId)?.getAttribute('data-row-id');
+
+      this.setLinkTarget(null);
+      if (typeof to === 'string') {
+        this.options.handlers?.link?.(drag.rowId, to);
+      }
+
+      return;
+    }
 
     if (drag.kind === 'bar') {
       const write = this.writeFor(drag);
@@ -1012,7 +1204,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       const span = values === null ? null : timelineSpan(values.start, values.end);
 
       if (span !== null) {
-        this.previewBar({ ...drag, mode: 'move', overDay: drag.grabDay });
+        this.previewBar({ ...drag, mode: 'move', overDay: drag.grabDay, overHour: drag.grabHour });
       }
     }
     this.guardNextClick(wasActive);
@@ -1023,6 +1215,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     if (drag !== null) {
       this.partsOf(drag.rowId).forEach((el) => el.removeAttribute('data-dragging'));
+      if (drag.kind === 'link') {
+        this.setLinkTarget(null);
+      }
       if (drag.kind === 'row') {
         drag.target?.row.removeAttribute('data-drop');
       }

@@ -7,9 +7,14 @@
 
 import type { Locator, Page } from '@playwright/test';
 
+import { generateKeyBetween } from 'fractional-indexing';
+
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+
+/** Valid fractional keys. `a000`-style keys are ones the library rejects. */
+const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
 
 declare global {
   interface Window {
@@ -50,7 +55,7 @@ const blocks = (view: Record<string, unknown>, rows: RowSeed[] = ROWS): OutputBl
   ...rows.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: `a${String(i).padStart(3, '0')}`, properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties },
   })),
 ];
 

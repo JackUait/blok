@@ -3,6 +3,7 @@ import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
 import { relationIdsOf } from '../relation-values';
+import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
 import { formatDateDisplay, resolveLocale } from './date-format';
 import { formatNumberValue, numberFill } from './number-format';
 import { optionColorOf } from './option-colors';
@@ -201,7 +202,14 @@ const renderRelation = (cell: HTMLElement, property: PropertyDefinition, value: 
 };
 
 const isEmpty = (value: PropertyValue | undefined): boolean =>
-  value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+  value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+  || (isPlaceValue(value) && placeText(value) === '');
+
+const VERIFICATION_LABEL_KEYS = {
+  verified: 'tools.database.verificationVerified',
+  expired: 'tools.database.verificationExpired',
+  unverified: 'tools.database.verificationUnverified',
+} as const;
 
 /**
  * Read-only display of one cell value. Never parses the value as HTML. The
@@ -289,6 +297,30 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
     case 'richText':
       cell.textContent = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
       break;
+    case 'button': {
+      // The database tool runs the actions from one delegated click listener.
+      const button = document.createElement('button');
+      const label = property.button?.label;
+
+      button.type = 'button';
+      button.setAttribute('data-blok-database-button', '');
+      button.setAttribute('data-property-id', property.id);
+      button.textContent = label !== undefined && label !== '' ? label : property.name;
+      button.disabled = ctx.readOnly;
+      cell.removeAttribute('data-empty');
+      cell.appendChild(button);
+      break;
+    }
+    case 'place':
+      cell.textContent = placeText(value);
+      break;
+    case 'verification': {
+      const status = verificationStatus(value, ctx.now);
+
+      cell.setAttribute('data-verification', status);
+      cell.textContent = ctx.i18n.t(VERIFICATION_LABEL_KEYS[status]);
+      break;
+    }
     default:
       // A type from a newer client shows empty.
       break;

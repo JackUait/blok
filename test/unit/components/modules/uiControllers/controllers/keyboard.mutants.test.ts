@@ -15,6 +15,7 @@ import {
   findCommonNestedContainer,
   scheduleCaretIntoNestedContainer,
 } from '../../../../../../src/components/utils/nested-container-caret';
+import { registerLayer } from '../../../../../../src/components/utils/dismissable-layer';
 import { deliverOnSubmit } from '../../../../../../src/components/utils/on-submit';
 import { PopoverRegistry } from '../../../../../../src/components/utils/popover/popover-registry';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
@@ -1309,6 +1310,21 @@ describe('KeyboardController — mutation coverage', () => {
 
       expect(closeTopmost).toHaveBeenCalledTimes(1);
       expect(harness.blok.Toolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('closing a popover over a modal layer keeps the layer: one Escape peels one layer', () => {
+      const harness = enabledHarness();
+      const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => true);
+      const onDismiss = vi.fn();
+      // Registered after enable(), as a modal opened over the editor is.
+      const unregister = registerLayer({ element: harness.outside, onDismiss });
+
+      vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
+      harness.press(harness.inside, { key: 'Escape' });
+      unregister();
+
+      expect(onDismiss).not.toHaveBeenCalled();
+      expect(closeTopmost).toHaveBeenCalledTimes(1);
     });
 
     it('returns a caret to the editor when escaping a select-all', () => {

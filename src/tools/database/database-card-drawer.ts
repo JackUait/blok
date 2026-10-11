@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PropertyDefinition, Pr
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSplitView } from '../../components/icons';
+import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconInsertAbove, IconMinus, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -24,6 +24,26 @@ import { outputBlocksToHtml, outputBlocksToSegments } from '../../shared/rich-te
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
+import type { PopoverItemParams } from '../../components/utils/popover/components/popover-item';
+import {
+  PAGE_LAYOUT_PIN_LIMIT,
+  addModule,
+  addSection,
+  canPlaceInPanel,
+  deleteSection,
+  moveInPlace,
+  moveToSection,
+  pageLayoutOf,
+  pin,
+  removeFromLayout,
+  renameSection,
+  resetPageLayout,
+  resolvePageLayout,
+  setGroupIn,
+  setStructure,
+} from './page-layout';
+import type { PageLayoutOp, ResolvedPageLayout } from './page-layout';
+import { nanoid } from 'nanoid';
 
 /** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
@@ -131,11 +151,22 @@ export interface CardDrawerOptions {
    * also take the page away from the drawer (a host's full page).
    */
   onModeChange?: (mode: OpenPagesIn) => void;
+  /** The expand button. True when the host took the page (its full page); else the drawer goes full. */
+  onExpand?: (rowId: string) => boolean;
   /**
    * The page beside the side peek (the editor wrapper). It narrows by the part
    * the half-viewport drawer covers, as Notion's page does (research/08).
    */
   peekHost?: () => HTMLElement | null;
+  /**
+   * "Apply to all pages" or a reset. The tool applies the edit to the model's
+   * own layout, so a peer's change the drawer has not seen yet survives.
+   */
+  onPageLayoutChange?: (edit: PageLayoutOp) => void;
+  /** Customize layout opened: write the empty layout lists before any edit. */
+  onPageLayoutBirth?: () => void;
+  /** A locked database keeps its layout. */
+  databaseLocked?: () => boolean;
 }
 
 const isEmptyValue = (value: PropertyValue): boolean =>
@@ -217,10 +248,21 @@ export class DatabaseCardDrawer {
   private readonly rowBody: CardDrawerOptions['rowBody'];
   private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
+  private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
   private readonly onCoverChange: CardDrawerOptions['onCoverChange'];
   private readonly uploadCover: CardDrawerOptions['uploadCover'];
+  private readonly onPageLayoutChange: CardDrawerOptions['onPageLayoutChange'];
+  private readonly onPageLayoutBirth: CardDrawerOptions['onPageLayoutBirth'];
+  private readonly databaseLocked: () => boolean;
+  /** The edits of an open Customize layout, or null when not customizing. */
+  private layoutDraft: PageLayoutOp[] | null = null;
+  private layoutMenu: PopoverDesktop | null = null;
+  private detailsOpen = true;
+  private readonly collapsedSections = new Set<string>();
+  /** The open tab of a Tabbed page: 'content' or a relation property id. */
+  private activeTab = 'content';
   private coverPicker: CoverPickerHandle | null = null;
   private emojiPicker: EmojiPicker | null = null;
   /** The properties section is folded away. Session only. */
@@ -279,10 +321,14 @@ export class DatabaseCardDrawer {
     this.rowBody = options.rowBody;
     this.adjacentRow = options.adjacentRow;
     this.onModeChange = options.onModeChange;
+    this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
     this.onEscapeClose = options.onEscapeClose;
     this.onCoverChange = options.onCoverChange;
     this.uploadCover = options.uploadCover;
+    this.onPageLayoutChange = options.onPageLayoutChange;
+    this.onPageLayoutBirth = options.onPageLayoutBirth;
+    this.databaseLocked = options.databaseLocked ?? ((): boolean => false);
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -408,12 +454,8 @@ export class DatabaseCardDrawer {
     });
     content.appendChild(titleInput);
 
-    // --- Properties section ---
-    const renderableSchema = this.getRenderableSchema();
-
     this.showHiddenProps = false;
-    content.appendChild(this.buildPropsToggle());
-    content.appendChild(this.buildPropsSection(renderableSchema, row));
+    this.activeTab = 'content';
 
     // --- Divider ---
     const divider = document.createElement('hr');
@@ -432,6 +474,7 @@ export class DatabaseCardDrawer {
     drawer.appendChild(content);
     this.wrapper.appendChild(drawer);
     this.drawer = drawer;
+    this.renderRegions(row);
     this.applyMode(mode);
 
     requestAnimationFrame(() => {
@@ -544,17 +587,7 @@ export class DatabaseCardDrawer {
 
     this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
     this.showHiddenProps = false;
-
-    // Replace properties section
-    this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
-
-    const renderableSchema = this.getRenderableSchema();
-    const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
-    const divider = content?.querySelector('hr') ?? null;
-
-    if (content !== null) {
-      content.insertBefore(this.buildPropsSection(renderableSchema, row), divider);
-    }
+    this.activeTab = 'content';
 
     // Reinitialize editor
     const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
@@ -566,6 +599,7 @@ export class DatabaseCardDrawer {
       editorHolder.replaceWith(nextHolder);
       this.initNestedEditor(nextHolder, row);
     }
+    this.renderRegions(row);
   }
 
   close(): void {
@@ -582,6 +616,9 @@ export class DatabaseCardDrawer {
     this.cleanupListeners();
     this.cleanupEditor();
     this.closeModeMenu();
+    this.closeLayoutMenu();
+    this.layoutDraft = null;
+    this.drawer?.querySelector('[data-blok-database-drawer-layout-bar]')?.remove();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
     this.emojiPicker = null;
@@ -625,6 +662,12 @@ export class DatabaseCardDrawer {
     this.events?.off('i18n:changed', this.followOuterDirection);
     this.releasePeekHost();
     this.closeModeMenu();
+    this.closeLayoutMenu();
+    this.emojiPicker?.close();
+    this.emojiPicker?.getElement().remove();
+    this.emojiPicker = null;
+    this.coverPicker?.close();
+    this.coverPicker = null;
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
     this.cancelCellEditor();
@@ -726,6 +769,9 @@ export class DatabaseCardDrawer {
       add.addEventListener('click', () => this.openIconPicker(row.id, add));
       head.appendChild(add);
     }
+    if (this.customizable) {
+      head.appendChild(this.textButton('data-blok-database-drawer-customize', 'tools.database.layoutCustomize', () => this.startCustomizing()));
+    }
 
     return head;
   }
@@ -812,7 +858,8 @@ export class DatabaseCardDrawer {
 
     toggle.type = 'button';
     toggle.setAttribute('data-blok-database-drawer-props-toggle', '');
-    toggle.setAttribute('aria-expanded', String(!this.propsCollapsed));
+    toggle.disabled = this.layoutDraft !== null;
+    toggle.setAttribute('aria-expanded', String(this.layoutDraft !== null || !this.propsCollapsed));
     toggle.innerHTML = IconChevronDown;
     toggle.append(this.label('tools.database.propertiesSection'));
     toggle.addEventListener('click', () => {
@@ -843,7 +890,7 @@ export class DatabaseCardDrawer {
     };
 
     return [
-      button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandFullscreen, () => this.switchMode('full', false)),
+      button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandFullscreen, () => this.expand()),
       button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconSplitView, (el) => this.openModeMenu(el)),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
@@ -870,6 +917,15 @@ export class DatabaseCardDrawer {
         el.disabled = rowId === null || this.adjacentRow?.(rowId, which === 'next' ? 1 : -1) === undefined;
       }
     });
+  }
+
+  private expand(): void {
+    const rowId = this.currentRowId;
+
+    if (rowId !== null && this.onExpand?.(rowId) === true) {
+      return;
+    }
+    this.switchMode('full', false);
   }
 
   /**
@@ -1045,6 +1101,23 @@ export class DatabaseCardDrawer {
    * when the row is gone. A stale title or body would be written back over
    * the change on the next keystroke.
    */
+  /**
+   * Marks the open page as a template being edited: a banner above the page
+   * head, as Notion shows. Null takes it away.
+   */
+  setTemplateBanner(text: string | null): void {
+    const content = this.drawer?.querySelector('[data-blok-database-drawer-content]');
+
+    content?.querySelector('[data-blok-database-template-banner]')?.remove();
+    if (content === null || content === undefined || text === null) return;
+    const banner = document.createElement('div');
+
+    banner.setAttribute('data-blok-database-template-banner', '');
+    banner.setAttribute('role', 'status');
+    banner.textContent = text;
+    content.prepend(banner);
+  }
+
   syncOpenRow(row: DatabaseRow | undefined): void {
     if (this.drawer === null || (row !== undefined && row.id !== this.currentRowId)) {
       return;
@@ -1116,49 +1189,50 @@ export class DatabaseCardDrawer {
       return;
     }
 
-    this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
-
-    const renderableSchema = this.getRenderableSchema();
-    const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
-    const divider = content?.querySelector('hr') ?? null;
-
-    if (content !== null) {
-      content.insertBefore(this.buildPropsSection(renderableSchema, this.currentRow), divider);
-    }
+    this.renderRegions(this.currentRow);
   }
 
   /**
-   * Builds a `[data-blok-database-drawer-props]` section element with one row per
-   * renderable schema property.
+   * Builds a `[data-blok-database-drawer-props]` section: the property group,
+   * its loose properties first, then each named section.
    */
-  private buildPropsSection(renderableSchema: PropertyDefinition[], row: DatabaseRow): HTMLDivElement {
+  private buildPropsSection(layout: ResolvedPageLayout, row: DatabaseRow): HTMLDivElement {
     const propsSection = document.createElement('div');
 
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
-    propsSection.hidden = this.propsCollapsed;
-    const hidden = renderableSchema.filter((def) => !isShownOnPage(def, readPropertyValue(row, def) ?? null));
+    propsSection.hidden = this.layoutDraft === null && this.propsCollapsed;
+    const hidden = (def: PropertyDefinition): boolean => !isShownOnPage(def, readPropertyValue(row, def) ?? null);
+    const shown = (def: PropertyDefinition): boolean => this.layoutDraft !== null || this.showHiddenProps || !hidden(def);
+    const hiddenCount = [...layout.group, ...layout.sections.flatMap((s) => s.properties)].filter(hidden).length;
 
-    for (const def of renderableSchema) {
-      const value = readPropertyValue(row, def) ?? null;
-
-      if (this.showHiddenProps || !hidden.includes(def)) {
-        propsSection.appendChild(this.createPropertyRow(def, value));
-      }
+    for (const def of layout.group.filter(shown)) {
+      propsSection.appendChild(this.createPropertyRow(def, readPropertyValue(row, def) ?? null));
+    }
+    for (const { section, properties } of layout.sections) {
+      propsSection.appendChild(this.buildSection(section.id, section.name, properties.filter(shown), row));
     }
 
-    // Notion gathers hidden properties into one item at the bottom; a click shows them.
-    if (!this.showHiddenProps && hidden.length > 0) {
+    // Notion gathers hidden properties into one item at the bottom; a click shows them, another folds them back.
+    if (hiddenCount > 0) {
       const reveal = document.createElement('button');
+      const key = this.showHiddenProps ? 'tools.database.hideHiddenProperties' : 'tools.database.hiddenProperties';
 
       reveal.type = 'button';
       reveal.setAttribute('data-blok-database-drawer-hidden-props', '');
-      reveal.textContent = this.i18n?.t('tools.database.hiddenProperties', { count: hidden.length }) ?? `${hidden.length}`;
+      reveal.setAttribute('aria-expanded', String(this.showHiddenProps));
+      reveal.textContent = this.i18n?.t(key, { count: hiddenCount }) ?? `${hiddenCount}`;
       reveal.addEventListener('click', () => {
-        this.showHiddenProps = true;
+        this.showHiddenProps = !this.showHiddenProps;
         this.refreshSchema(this.schema);
       });
       propsSection.appendChild(reveal);
+    }
+
+    if (this.layoutDraft !== null) {
+      propsSection.appendChild(this.textButton('data-blok-database-layout-add-section', 'tools.database.layoutAddSection', () => {
+        this.editLayout(addSection(nanoid(), this.label('tools.database.layoutNewSection')));
+      }));
     }
 
     if (!this.readOnly) {
@@ -1190,6 +1264,447 @@ export class DatabaseCardDrawer {
     }
 
     return propsSection;
+  }
+
+  /** A named section of the property group. Folding it is this viewer's own. */
+  private buildSection(id: string, name: string, properties: PropertyDefinition[], row: DatabaseRow): HTMLElement {
+    const section = document.createElement('div');
+    const header = document.createElement('div');
+    const body = document.createElement('div');
+    const collapsed = this.collapsedSections.has(id) && this.layoutDraft === null;
+
+    section.setAttribute('data-blok-database-drawer-section', '');
+    section.setAttribute('data-section-id', id);
+    header.setAttribute('data-blok-database-drawer-section-header', '');
+    body.setAttribute('data-blok-database-drawer-section-body', '');
+    body.hidden = collapsed;
+
+    if (this.layoutDraft !== null) {
+      const input = document.createElement('input');
+
+      input.type = 'text';
+      input.value = name;
+      input.setAttribute('data-blok-database-layout-section-name', '');
+      input.setAttribute('aria-label', this.label('tools.database.layoutSectionName'));
+      input.addEventListener('change', () => this.editLayout(renameSection(id, input.value)));
+      const remove = this.iconButton('data-blok-database-layout-section-delete', 'tools.database.layoutDeleteSection', IconTrash, () => {
+        this.editLayout(deleteSection(id));
+      });
+
+      header.append(input, remove);
+    } else {
+      const toggle = document.createElement('button');
+
+      toggle.type = 'button';
+      toggle.setAttribute('data-blok-database-drawer-section-toggle', '');
+      toggle.setAttribute('data-section-id', id);
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.innerHTML = IconChevronDown;
+      toggle.append(name);
+      toggle.addEventListener('click', () => {
+        const open = body.hidden;
+
+        body.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) {
+          this.collapsedSections.delete(id);
+        } else {
+          this.collapsedSections.add(id);
+        }
+      });
+      header.appendChild(toggle);
+    }
+    for (const def of properties) {
+      body.appendChild(this.createPropertyRow(def, readPropertyValue(row, def) ?? null));
+    }
+    section.append(header, body);
+
+    return section;
+  }
+
+  // ─── Page layout ───
+
+  private get customizable(): boolean {
+    return !this.readOnly && this.onPageLayoutChange !== undefined && !this.databaseLocked();
+  }
+
+  /** The saved layout, with an open draft's edits replayed on top. */
+  private resolvedLayout(): ResolvedPageLayout {
+    const saved = pageLayoutOf(this.schema.find((p) => p.type === 'title'));
+    const layout = (this.layoutDraft ?? []).reduce((acc, op) => op(acc), saved);
+
+    return resolvePageLayout(layout, this.getRenderableSchema());
+  }
+
+  /**
+   * Draws every layout region between the title and the body divider. With no
+   * layout the regions are the "Properties" toggle and the property group.
+   */
+  private renderRegions(row: DatabaseRow): void {
+    const content = this.drawer?.querySelector('[data-blok-database-drawer-content]') ?? null;
+    const divider = content?.querySelector<HTMLElement>(':scope > hr') ?? null;
+
+    if (content === null || divider === null) {
+      return;
+    }
+    content.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
+    const resolved = this.resolvedLayout();
+    const search = this.layoutDraft === null ? '' : this.drawer?.querySelector<HTMLInputElement>('[data-blok-database-layout-search]')?.value.trim().toLowerCase() ?? '';
+    const matches = (def: PropertyDefinition): boolean => def.name.toLowerCase().includes(search);
+    const layout: ResolvedPageLayout = {
+      ...resolved,
+      heading: resolved.heading.filter(matches),
+      pageModules: resolved.pageModules.filter(matches),
+      panelModules: resolved.panelModules.filter(matches),
+      group: resolved.group.filter(matches),
+      sections: resolved.sections.map((entry) => ({ ...entry, properties: entry.properties.filter(matches) })),
+    };
+    const regions: HTMLElement[] = [];
+    const tabs = resolved.structure === 'tabbed' ? this.tabProperties(resolved) : [];
+
+    if (!tabs.some((def) => def.id === this.activeTab)) {
+      this.activeTab = 'content';
+    }
+    if (layout.heading.length > 0) {
+      regions.push(this.moduleList('data-blok-database-drawer-pins', 'heading', layout.heading, row));
+    }
+    if (layout.structure === 'tabbed') {
+      regions.push(this.buildTabs(tabs));
+    }
+    const onContent = this.activeTab === 'content';
+
+    divider.hidden = !onContent;
+    const editor = content.querySelector<HTMLElement>(':scope > [data-blok-database-drawer-editor]');
+
+    if (editor !== null) {
+      editor.hidden = !onContent;
+    }
+    if (!onContent) {
+      regions.push(this.tabPanel(tabs.find((def) => def.id === this.activeTab && matches(def)), row));
+    }
+    if (onContent || search !== '') {
+      const group = [this.buildPropsToggle(), this.buildPropsSection(layout, row)];
+
+      if (layout.groupIn === 'page') {
+        regions.push(...group);
+      }
+      if (layout.pageModules.length > 0) {
+        regions.push(this.moduleList('data-blok-database-drawer-modules', 'page', layout.pageModules, row));
+      }
+      if (layout.groupIn === 'panel' || layout.panelModules.length > 0) {
+        regions.push(...this.buildDetails(layout, layout.groupIn === 'panel' ? group : [], row));
+      }
+    }
+    for (const region of regions) {
+      region.setAttribute('data-blok-database-drawer-region', '');
+      content.insertBefore(region, divider);
+    }
+    this.renderLayoutBar();
+  }
+
+  /**
+   * Notion's tabs hold views of other databases. A relation is how a row
+   * reaches another database here, so each one gets a tab.
+   */
+  private tabProperties(layout: ResolvedPageLayout): PropertyDefinition[] {
+    const placed = [...layout.heading, ...layout.pageModules, ...layout.panelModules, ...layout.group, ...layout.sections.flatMap((s) => s.properties)];
+
+    return this.getRenderableSchema().filter((def) => def.type === 'relation' && placed.includes(def));
+  }
+
+  private buildTabs(tabs: PropertyDefinition[]): HTMLElement {
+    const bar = document.createElement('div');
+
+    bar.setAttribute('data-blok-database-drawer-tabs', '');
+    bar.setAttribute('role', 'tablist');
+    const tab = (id: string, text: string): HTMLButtonElement => {
+      const el = document.createElement('button');
+
+      el.type = 'button';
+      el.setAttribute('role', 'tab');
+      el.setAttribute('data-tab-id', id);
+      el.setAttribute('aria-selected', String(this.activeTab === id));
+      el.tabIndex = this.activeTab === id ? 0 : -1;
+      el.textContent = text;
+      el.addEventListener('click', () => {
+        this.activeTab = id;
+        if (this.currentRow !== null) this.renderRegions(this.currentRow);
+        this.drawer?.querySelector<HTMLElement>(`[data-blok-database-drawer-tabs] [data-tab-id="${CSS.escape(id)}"]`)?.focus();
+      });
+      el.addEventListener('keydown', (event) => {
+        const step = ({ ArrowRight: 1, ArrowLeft: -1 } as Record<string, number>)[event.key];
+
+        if (step === undefined) return;
+        event.preventDefault();
+        const all = [...bar.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+        const rtl = getElementDirection(bar) === 'rtl' ? -1 : 1;
+
+        all[(all.indexOf(el) + step * rtl + all.length) % all.length]?.click();
+      });
+
+      return el;
+    };
+
+    bar.append(tab('content', this.label('tools.database.layoutContentTab')), ...tabs.map((def) => tab(def.id, def.name)));
+
+    return bar;
+  }
+
+  private tabPanel(def: PropertyDefinition | undefined, row: DatabaseRow): HTMLElement {
+    const panel = document.createElement('div');
+
+    panel.setAttribute('data-blok-database-drawer-tab-panel', '');
+    panel.setAttribute('role', 'tabpanel');
+    if (def !== undefined) {
+      panel.appendChild(this.createPropertyRow(def, readPropertyValue(row, def) ?? null));
+    }
+
+    return panel;
+  }
+
+  /** Pins in the heading, or single-property modules in the page or the panel. */
+  private moduleList(attr: string, place: 'heading' | 'page' | 'panel', properties: PropertyDefinition[], row: DatabaseRow): HTMLElement {
+    const list = document.createElement('div');
+
+    list.setAttribute(attr, '');
+    for (const def of properties) {
+      const item = this.createPropertyRow(def, readPropertyValue(row, def) ?? null);
+
+      item.setAttribute(place === 'heading' ? 'data-blok-database-drawer-pin' : 'data-blok-database-drawer-module', '');
+      list.appendChild(item);
+    }
+
+    return list;
+  }
+
+  /** "View details" and the panel it opens and closes. Open or closed is this viewer's own. */
+  private buildDetails(layout: ResolvedPageLayout, group: HTMLElement[], row: DatabaseRow): HTMLElement[] {
+    const toggle = document.createElement('button');
+    const panel = document.createElement('div');
+
+    toggle.type = 'button';
+    toggle.setAttribute('data-blok-database-drawer-details-toggle', '');
+    toggle.disabled = this.layoutDraft !== null;
+    toggle.setAttribute('aria-expanded', String(this.layoutDraft !== null || this.detailsOpen));
+    toggle.innerHTML = IconSplitView;
+    toggle.append(this.label('tools.database.layoutViewDetails'));
+    panel.setAttribute('data-blok-database-drawer-details', '');
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', this.label('tools.database.layoutDetailsPanel'));
+    panel.hidden = this.layoutDraft === null && !this.detailsOpen;
+    panel.append(...group);
+    if (layout.panelModules.length > 0) {
+      panel.appendChild(this.moduleList('data-blok-database-drawer-panel-modules', 'panel', layout.panelModules, row));
+    }
+    toggle.addEventListener('click', () => {
+      this.detailsOpen = !this.detailsOpen;
+      toggle.setAttribute('aria-expanded', String(this.detailsOpen));
+      panel.hidden = !this.detailsOpen;
+    });
+
+    return [toggle, panel];
+  }
+
+  private startCustomizing(): void {
+    if (!this.customizable || this.layoutDraft !== null || this.currentRow === null) {
+      return;
+    }
+    this.onPageLayoutBirth?.();
+    this.layoutDraft = [];
+    this.renderRegions(this.currentRow);
+  }
+
+  private editLayout(op: PageLayoutOp): void {
+    if (this.layoutDraft === null || this.currentRow === null) {
+      return;
+    }
+    this.layoutDraft.push(op);
+    this.renderRegions(this.currentRow);
+  }
+
+  /** Leaves Customize layout. With `apply`, replays the edits on the newest saved layout. */
+  private finishCustomizing(apply: boolean): void {
+    const draft = this.layoutDraft;
+
+    this.closeLayoutMenu();
+    this.layoutDraft = null;
+    if (apply && draft !== null && draft.length > 0) {
+      this.onPageLayoutChange?.((layout) => draft.reduce((acc, op) => op(acc), layout));
+    }
+    if (this.currentRow !== null) this.renderRegions(this.currentRow);
+  }
+
+  /** The builder bar at the top of the page while customizing. */
+  private renderLayoutBar(): void {
+    const content = this.drawer?.querySelector('[data-blok-database-drawer-content]') ?? null;
+    const existing = content?.querySelector(':scope > [data-blok-database-drawer-layout-bar]') ?? null;
+
+    if (this.layoutDraft === null || content === null) {
+      existing?.remove();
+
+      return;
+    }
+    if (existing !== null) {
+      return;
+    }
+    const bar = document.createElement('div');
+    const title = document.createElement('span');
+
+    bar.setAttribute('data-blok-database-drawer-layout-bar', '');
+    bar.setAttribute('role', 'toolbar');
+    bar.setAttribute('aria-label', this.label('tools.database.layoutCustomize'));
+    title.setAttribute('data-blok-database-layout-bar-title', '');
+    title.textContent = this.label('tools.database.layoutCustomizing');
+    const search = document.createElement('input');
+
+    search.type = 'search';
+    search.setAttribute('data-blok-database-layout-search', '');
+    search.setAttribute('data-blok-database-search-input', '');
+    search.setAttribute('aria-label', this.label('tools.database.searchLabel'));
+    search.placeholder = this.label('tools.database.searchPlaceholder');
+    search.addEventListener('input', () => {
+      if (this.currentRow !== null) this.renderRegions(this.currentRow);
+    });
+    const settings = this.textButton('data-blok-database-layout-settings', 'tools.database.layoutPageSettings', () => this.openPageSettings(settings));
+
+    bar.append(
+      title,
+      search,
+      settings,
+      this.textButton('data-blok-database-layout-cancel', 'tools.database.layoutCancel', () => this.finishCustomizing(false)),
+      this.textButton('data-blok-database-layout-apply', 'tools.database.layoutApply', () => this.finishCustomizing(true))
+    );
+    content.prepend(bar);
+  }
+
+  private textButton(attr: string, key: string, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute(attr, '');
+    button.textContent = this.label(key);
+    button.addEventListener('click', onClick);
+
+    return button;
+  }
+
+  private iconButton(attr: string, key: string, icon: string, onClick: (el: HTMLButtonElement) => void): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute(attr, '');
+    button.setAttribute('aria-label', this.label(key));
+    button.innerHTML = icon;
+    button.addEventListener('click', () => onClick(button));
+
+    return button;
+  }
+
+  private openPageSettings(anchor: HTMLElement): void {
+    const layout = this.resolvedLayout();
+    const check = (on: boolean): Partial<PopoverItemParams> => (on ? { trailingIcon: IconCheck } : {});
+
+    this.openLayoutMenu(anchor, [
+      { type: PopoverItemType.Default, name: 'structure-simple', title: this.label('tools.database.layoutStructureSimple'), icon: IconSplitView, ...check(layout.structure === 'simple'), closeOnActivate: true, onActivate: () => this.editLayout(setStructure('simple')) },
+      { type: PopoverItemType.Default, name: 'structure-tabbed', title: this.label('tools.database.layoutStructureTabbed'), icon: IconTabs, ...check(layout.structure === 'tabbed'), closeOnActivate: true, onActivate: () => this.editLayout(setStructure('tabbed')) },
+      { type: PopoverItemType.Separator },
+      { type: PopoverItemType.Default, name: 'group-in-page', title: this.label('tools.database.layoutGroupInPage'), ...check(layout.groupIn === 'page'), closeOnActivate: true, onActivate: () => this.editLayout(setGroupIn('page')) },
+      { type: PopoverItemType.Default, name: 'group-in-panel', title: this.label('tools.database.layoutGroupInPanel'), ...check(layout.groupIn === 'panel'), closeOnActivate: true, onActivate: () => this.editLayout(setGroupIn('panel')) },
+      { type: PopoverItemType.Separator },
+      {
+        type: PopoverItemType.Default,
+        name: 'reset',
+        title: this.label('tools.database.layoutReset'),
+        secondaryLabel: this.label('tools.database.layoutResetDescription'),
+        closeOnActivate: true,
+        onActivate: () => this.resetLayout(),
+      },
+    ] as PopoverItemParams[]);
+  }
+
+  /** "Reset to original page layout" writes at once. No property is deleted. */
+  private resetLayout(): void {
+    this.layoutDraft = null;
+    this.onPageLayoutChange?.(resetPageLayout());
+    if (this.currentRow !== null) this.renderRegions(this.currentRow);
+  }
+
+  /** The ⋯ menu on a property while customizing; its items depend on where it sits. */
+  private openItemMenu(def: PropertyDefinition, anchor: HTMLElement): void {
+    const layout = this.resolvedLayout();
+    const pinned = layout.heading.some((p) => p.id === def.id);
+    const inPage = layout.pageModules.some((p) => p.id === def.id);
+    const inPanel = layout.panelModules.some((p) => p.id === def.id);
+    const placedIn = { page: inPage, panel: inPanel };
+    const module = (['page', 'panel'] as const).find((place) => placedIn[place]) ?? null;
+    const sectionOf = layout.sections.find((s) => s.properties.some((p) => p.id === def.id))?.section;
+    const item = (name: string, key: string, op: PageLayoutOp, extra: Partial<PopoverItemParams> = {}): PopoverItemParams => ({
+      type: PopoverItemType.Default,
+      name,
+      title: this.label(key),
+      closeOnActivate: true,
+      onActivate: () => this.editLayout(op),
+      ...extra,
+    } as PopoverItemParams);
+    const moves = [item('move-up', 'tools.database.layoutMoveUp', moveInPlace(def.id, -1), { icon: IconArrowUp }), item('move-down', 'tools.database.layoutMoveDown', moveInPlace(def.id, 1))];
+    const items: PopoverItemParams[] = [];
+
+    if (pinned) {
+      items.push(item('unpin', 'tools.database.layoutUnpin', removeFromLayout(def.id), { icon: IconMinus }), ...moves);
+    } else if (module !== null) {
+      items.push(...moves);
+      if (module === 'page' && canPlaceInPanel(def)) items.push(item('move-to-panel', 'tools.database.layoutMoveToPanel', addModule(def.id, 'panel', def), { icon: IconSplitView }));
+      if (module === 'panel') items.push(item('move-to-page', 'tools.database.layoutMoveToPage', addModule(def.id, 'page', def)));
+      items.push(item('remove', 'tools.database.layoutRemove', removeFromLayout(def.id), { icon: IconMinus }));
+    } else {
+      items.push(
+        item('pin', 'tools.database.layoutPin', pin(def.id), { icon: IconInsertAbove, isDisabled: layout.heading.length >= PAGE_LAYOUT_PIN_LIMIT }),
+        item('add-to-page', 'tools.database.layoutAddToPage', addModule(def.id, 'page', def), { icon: IconPlus })
+      );
+      if (canPlaceInPanel(def)) items.push(item('add-to-panel', 'tools.database.layoutAddToPanel', addModule(def.id, 'panel', def), { icon: IconSplitView }));
+      const targets = layout.sections.filter((s) => s.section.id !== sectionOf?.id);
+
+      if (targets.length > 0 || sectionOf !== undefined) items.push({ type: PopoverItemType.Separator });
+      for (const { section } of targets) {
+        items.push({
+          type: PopoverItemType.Default,
+          name: `move-to-section-${section.id}`,
+          title: this.i18n?.t('tools.database.layoutMoveToSection', { name: section.name }) ?? section.name,
+          closeOnActivate: true,
+          onActivate: () => this.editLayout(moveToSection(def.id, section.id)),
+        });
+      }
+      if (sectionOf !== undefined) items.push(item('leave-section', 'tools.database.layoutLeaveSection', moveToSection(def.id, null)));
+    }
+    this.openLayoutMenu(anchor, items);
+  }
+
+  private openLayoutMenu(anchor: HTMLElement, items: PopoverItemParams[]): void {
+    this.closeLayoutMenu();
+    const menu = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '220px',
+      autoFocusFirstItem: false,
+      items,
+    });
+
+    menu.on(PopoverEvent.Closed, () => {
+      if (this.layoutMenu === menu) {
+        this.layoutMenu = null;
+        menu.destroy();
+      }
+    });
+    this.layoutMenu = menu;
+    menu.show();
+  }
+
+  private closeLayoutMenu(): void {
+    const menu = this.layoutMenu;
+
+    this.layoutMenu = null;
+    menu?.destroy();
   }
 
   /**
@@ -1370,6 +1885,12 @@ export class DatabaseCardDrawer {
     }
 
     row.appendChild(valueEl);
+    if (this.layoutDraft !== null) {
+      const more = this.iconButton('data-blok-database-layout-item-menu', 'tools.database.layoutItemOptions', IconDotsHorizontal, (el) => this.openItemMenu(def, el));
+
+      more.setAttribute('data-property-id', def.id);
+      row.appendChild(more);
+    }
 
     return row;
   }

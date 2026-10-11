@@ -15,14 +15,14 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean };
 }
 
-const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean }> } => ({ popovers: [] }));
+const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown> }> } => ({ popovers: [] }));
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class {
-    readonly record: { items: CapturedItem[]; destroyed: boolean };
+    readonly record: { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown> };
 
     constructor(params: { items: CapturedItem[] }) {
-      this.record = { items: params.items, destroyed: false };
+      this.record = { items: params.items, destroyed: false, params };
       captured.popovers.push(this.record);
     }
 
@@ -45,6 +45,7 @@ const prop = (type: PropertyType, extra: Partial<PropertyDefinition> = {}): Prop
 const callbacks = () => ({
   onRename: vi.fn(),
   onUpdate: vi.fn(),
+  onOptionsChange: vi.fn(),
   onChangeType: vi.fn(),
   onDuplicate: vi.fn(),
   onDelete: vi.fn(),
@@ -72,8 +73,9 @@ describe('property menu entries (research/08 header menus, property-level items)
     ['title', ['description']],
     ['text', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['number', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['select', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['status', ['displayAs', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
+    ['select', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
+    ['multiSelect', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
+    ['status', ['editProperty', 'displayAs', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['date', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['checkbox', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['files', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
@@ -103,6 +105,40 @@ describe('DatabasePropertyMenu', () => {
 
     return cb;
   };
+
+  it('opens and closes with the database menu motion, like the other database menus', () => {
+    open(prop('text'));
+
+    const params = captured.popovers[captured.popovers.length - 1]?.params;
+
+    expect(params?.class).toBe('blok-database-menu');
+    expect(params?.animateClose).toBe(true);
+  });
+
+  it.each(['close', 'Enter'] as const)('notifies its host once when closed through %s', (method) => {
+    const onClose = vi.fn();
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string) => key, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...callbacks(),
+      onClose,
+    });
+
+    menu.open(prop('title'), document.createElement('button'));
+    if (method === 'close') {
+      menu.close();
+    } else {
+      const field = byName(lastItems(), 'name').element?.querySelector('input');
+
+      if (field === null || field === undefined) throw new Error('no name field');
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    }
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    menu.close();
+    menu.destroy();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('renames from the name field on Enter', () => {
     const cb = open(prop('text'));
@@ -227,6 +263,40 @@ describe('DatabasePropertyMenu', () => {
     it('offers color and divide-by only for a bar or ring', () => {
       expect(editItems(prop('number')).map((i) => i.name)).not.toContain('color');
       expect(editItems(prop('number', { number: { showAs: 'bar' } })).map((i) => i.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
+    });
+  });
+
+  describe('Edit property: Notion\'s note under the settings', () => {
+    it.each<PropertyType>(['number', 'select', 'multiSelect', 'status'])('%s ends with "Changes apply to all views"', (type) => {
+      open(prop(type, type === 'status' ? { status: createDefaultStatusSettings() } : {}));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(items[items.length - 1]?.element?.textContent).toBe('tools.database.changesApplyToAllViews');
+    });
+  });
+
+  describe('Edit property for select, multi-select and status: the options list', () => {
+    const options = [
+      { id: 'o1', label: 'Idea', color: 'yellow', position: 'a0' },
+      { id: 'o2', label: 'Build', color: 'blue', position: 'a1' },
+    ];
+
+    it('shows the options and sends an edit out whole', () => {
+      const cb = open(prop('select', { config: { options } }));
+      const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
+
+      expect([...(list?.querySelectorAll('[data-blok-database-select-option]') ?? [])].map((row) => row.textContent?.trim())).toEqual(['Idea', 'Build']);
+      list?.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
+      list?.querySelector<HTMLElement>('[data-blok-database-option-color="red"]')?.click();
+
+      expect(cb.onOptionsChange).toHaveBeenCalledWith('p', [options[0], { ...options[1], color: 'red' }]);
+    });
+
+    it('keeps its keys away from the menu', () => {
+      open(prop('select', { config: { options } }));
+      const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
+
+      expect(list?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
     });
   });
 

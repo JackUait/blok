@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DatabaseChartView } from '../../../../src/tools/database/database-chart-view';
+import { buildChartData } from '../../../../src/tools/database/chart-data';
 import type { ChartViewOptions } from '../../../../src/tools/database/database-chart-view';
 import type { ChartData, ChartPoint } from '../../../../src/tools/database/chart-data';
 import { resolveChartSettings } from '../../../../src/tools/database/chart-settings';
@@ -22,11 +23,35 @@ const data = (overrides: Partial<ChartData> = {}): ChartData => ({
   points: [point('a', 2), point('b', 5), point('c', 1)],
   series: [],
   stacked: true,
+  min: 0,
   max: 5,
   total: 8,
   truncated: false,
   ...overrides,
 });
+
+const signedData = (grouped: boolean): ChartData => {
+  const sale = { id: 'sale', position: 'a0', properties: { amount: 60 } };
+  const refund = { id: 'refund', position: 'a1', properties: { amount: -40 } };
+
+  return buildChartData({
+    schema: [{ id: 'amount', name: 'Amount', type: 'number', position: 'a0' }],
+    measure: { kind: 'property', propertyId: 'amount', fn: 'sum' },
+    groups: grouped
+      ? [{ key: 'all', label: 'All', sortKey: 'All', rows: [sale, refund] }]
+      : [
+        { key: 'sales', label: 'Sales', sortKey: 'Sales', rows: [sale] },
+        { key: 'refunds', label: 'Refunds', sortKey: 'Refunds', rows: [refund] },
+      ],
+    ...(grouped ? { series: [
+      { key: 'sales', label: 'Sales', rowIds: new Set(['sale']) },
+      { key: 'refunds', label: 'Refunds', rowIds: new Set(['refund']) },
+    ] } : {}),
+    sort: 'manual',
+    omitZero: false,
+    cumulative: false,
+  });
+};
 
 const chartView = (fields: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
   id: 'v1', name: 'Chart', type: 'chart', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...fields,
@@ -70,6 +95,28 @@ describe('DatabaseChartView', () => {
     expect(svg?.getAttribute('role')).toBe('img');
     expect(svg?.getAttribute('aria-label')).toContain('Status');
     expect(marks(el).map((m) => m.getAttribute('data-key'))).toEqual(['a', 'b', 'c']);
+  });
+
+  it.each(['column', 'bar'] as const)('draws refunds in an ungrouped %s chart', (chartType) => {
+    const el = render({ chartType }, signedData(false));
+
+    expect(marks(el).map((mark) => mark.getAttribute('data-key'))).toEqual(['sales', 'refunds']);
+  });
+
+  it.each(['column', 'bar'] as const)('draws both sides of a grouped %s chart', (chartType) => {
+    const el = render({ chartType, chartDataLabels: true }, signedData(true));
+
+    expect(marks(el).map((mark) => mark.getAttribute('data-series'))).toEqual(['sales', 'refunds']);
+    expect(el.querySelector('[data-blok-database-chart-data-label]')?.textContent).toBe('20');
+  });
+
+  it.each([false, true])('automatically labels both sides of zero with grouping %s', (grouped) => {
+    const el = render({}, signedData(grouped));
+    const ticks = [...el.querySelectorAll('[data-blok-database-chart-tick]')].map((tick) => Number(tick.textContent));
+
+    expect(Math.min(...ticks)).toBeLessThanOrEqual(-40);
+    expect(Math.max(...ticks)).toBeGreaterThanOrEqual(60);
+    expect(ticks).toContain(0);
   });
 
   it('opens a drilldown when a group is clicked, and from the keyboard', () => {
@@ -139,6 +186,31 @@ describe('DatabaseChartView', () => {
 
     expect(el.getAttribute('data-chart-type')).toBe('bar');
     expect(marks(el)).toHaveLength(3);
+  });
+
+  it.each([false, true])('places refunds below zero on a line with smoothing %s', (smooth) => {
+    const input = signedData(false);
+
+    input.points.push(point('zero', 0));
+    const el = render({ chartType: 'line', chartSmooth: smooth, chartGradient: true }, input);
+    const refund = el.querySelector<SVGCircleElement>('[data-blok-database-chart-mark][data-key="refunds"]');
+    const sale = el.querySelector<SVGCircleElement>('[data-blok-database-chart-mark][data-key="sales"]');
+    const zero = el.querySelector<SVGCircleElement>('[data-blok-database-chart-mark][data-key="zero"]');
+    const axis = el.querySelector<SVGLineElement>('[data-blok-database-chart-axis]');
+
+    if (refund === null || sale === null || zero === null || axis === null) throw new Error('missing signed line geometry');
+    const refundY = Number(refund.getAttribute('cy'));
+    const saleY = Number(sale.getAttribute('cy'));
+    const baseline = Number(axis.getAttribute('y1'));
+
+    expect(refundY).toBeGreaterThan(baseline);
+    expect((refundY - baseline) / (baseline - saleY)).toBeCloseTo(2 / 3, 6);
+    expect(Number(zero.getAttribute('cy'))).toBeCloseTo(baseline, 6);
+    const path = el.querySelector('[data-blok-database-chart-line]')?.getAttribute('d') ?? '';
+    const ys = [...path.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((match) => Number(match[2]));
+
+    expect(Math.max(...ys)).toBeCloseTo(refundY, 6);
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(saleY - 0.001);
   });
 
   it('draws a line with a marker per point and an area when gradient is on', () => {

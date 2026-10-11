@@ -82,6 +82,24 @@ const PROPERTY_SETTINGS = {
       limit: { enum: [1, null], description: '1 keeps one related row. Absent or null means no limit.' },
       twoWay: { type: 'boolean' },
       syncedPropertyId: { type: 'string', description: 'Two-way: the mirroring property on the target database.' },
+      role: {
+        type: 'string',
+        enum: ['parentItem', 'subItems', 'blockedBy', 'blocking'],
+        description: 'A self-relation that drives sub-items (parentItem/subItems) or dependencies (blockedBy/blocking).',
+      },
+    },
+  },
+  autofill: {
+    type: 'object',
+    description: 'AI autofill. Blok has no AI: the host config.ai.autofill lever fills the value.',
+    required: ['mode'],
+    additionalProperties: false,
+    properties: {
+      mode: { type: 'string', enum: ['summary', 'translate', 'keyInfo', 'custom'] },
+      instruction: { type: 'string' },
+      language: { type: 'string', description: 'Translate: the target language, a BCP 47 tag.' },
+      onCreate: { type: 'boolean', description: 'Fill when a row is added. Default false.' },
+      onEdit: { type: 'boolean', description: 'Fill again when another value of the row changes. Default false.' },
     },
   },
   rollup: {
@@ -99,6 +117,49 @@ const PROPERTY_SETTINGS = {
           'checked', 'unchecked', 'percent_checked', 'percent_unchecked', 'count_per_group', 'percent_per_group',
         ],
       },
+    },
+  },
+  button: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      label: { type: 'string' },
+      buttonActions: {
+        type: 'array',
+        description: 'Run in order on a click, as one undo step.',
+        items: {
+          type: 'object',
+          required: ['id', 'type'],
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string', enum: ['editProperty', 'insertBlocks', 'openPage', 'callback'] },
+            propertyId: { type: 'string', description: 'editProperty: the property to set.' },
+            value: { description: 'editProperty: the new value. [{ "id": "@me" }] and "@today" are filled in on click.' },
+            blocks: {
+              type: 'array',
+              description: 'insertBlocks: added at the end of the row page body.',
+              items: {
+                type: 'object',
+                required: ['id', 'type', 'data'],
+                additionalProperties: false,
+                properties: { id: { type: 'string' }, type: { type: 'string' }, data: { type: 'object' } },
+              },
+            },
+            url: { type: 'string', description: 'openPage: a URL. Absent opens the row page.' },
+            name: { type: 'string', description: 'callback: what the host should do.' },
+          },
+        },
+      },
+    },
+  },
+  dependency: {
+    type: 'object',
+    description: 'Read on the blockedBy relation only.',
+    additionalProperties: false,
+    properties: {
+      shift: { type: 'string', enum: ['overlap', 'maintain', 'none'], description: 'How a date change moves blocked items. Default none.' },
+      avoidWeekends: { type: 'boolean' },
     },
   },
 };
@@ -158,6 +219,67 @@ const GROUP_SETTINGS = {
   },
 };
 
+/** Tier 3 (D6) view slots. Blok stores them; the host levers act on them. */
+const TIER3_VIEW_FIELDS = {
+  form: {
+    type: 'object',
+    description: 'Form view settings. The public link is the host\'s.',
+    additionalProperties: false,
+    properties: {
+      closed: { type: 'boolean', description: 'The form takes no answers. Default false.' },
+      anonymous: { type: 'boolean', description: 'Answers carry no respondent. Default false.' },
+      submitLabel: { type: 'string' },
+      confirmation: { type: 'string', description: 'Text shown after a submit.' },
+    },
+  },
+  mapBy: { type: 'string', description: 'Map: the place property id. Default the first place property.' },
+  dashboard: {
+    type: 'object',
+    description: 'Dashboard slot. Blok draws no dashboard yet.',
+    required: ['rows'],
+    additionalProperties: false,
+    properties: {
+      rows: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['id', 'widgets'],
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string' },
+            height: { type: 'integer', minimum: 1, description: 'Row height in pixels.' },
+            widgets: {
+              type: 'array',
+              maxItems: 4,
+              items: {
+                type: 'object',
+                required: ['id', 'viewId', 'width'],
+                additionalProperties: false,
+                properties: {
+                  id: { type: 'string' },
+                  viewId: { type: 'string', description: 'The view the widget shows.' },
+                  databaseId: { type: 'string', description: 'The database holding the view. Omit for this database.' },
+                  width: { type: 'integer', minimum: 1, maximum: 12, description: 'Columns of a 12-column grid.' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  calendarSync: {
+    type: 'object',
+    description: 'Calendar sync slot, for the host. Blok syncs nothing.',
+    additionalProperties: false,
+    properties: {
+      enabled: { type: 'boolean' },
+      calendarId: { type: 'string' },
+    },
+  },
+  dataSourceId: { type: 'string', description: 'Multi-source slot: the database block whose rows this view shows. Absent means this database. Blok reads only its own rows yet.' },
+};
+
 export const DATABASE_DATA = {
   type: 'object',
   description: 'Schema and view configuration only — rows are child `database-row` blocks.',
@@ -165,7 +287,93 @@ export const DATABASE_DATA = {
   additionalProperties: false,
   properties: {
     title: { type: 'string' },
+    source: {
+      type: 'object',
+      description: 'A linked database: shows the rows and schema of this database block. Its own schema is a stand-in for older readers.',
+      required: ['databaseId'],
+      additionalProperties: false,
+      properties: {
+        databaseId: { type: 'string' },
+        documentId: { type: 'string', description: 'A database in another document, read through the host.' },
+      },
+    },
     activeViewId: { type: 'string', description: 'Id of the view shown by default.' },
+    automations: {
+      type: 'object',
+      required: ['version', 'definitions'],
+      additionalProperties: false,
+      properties: {
+        version: { type: 'integer', const: 1 },
+        definitions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'name', 'status', 'scope', 'triggerMode', 'triggers', 'actions'],
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              status: { type: 'string', enum: ['active', 'paused'] },
+              scope: {
+                oneOf: [
+                  {
+                    type: 'object',
+                    required: ['type'],
+                    additionalProperties: false,
+                    properties: { type: { const: 'database' } },
+                  },
+                  {
+                    type: 'object',
+                    required: ['type', 'viewId'],
+                    additionalProperties: false,
+                    properties: { type: { const: 'view' }, viewId: { type: 'string' } },
+                  },
+                ],
+              },
+              triggerMode: { type: 'string', enum: ['any', 'all'] },
+              triggers: {
+                type: 'array',
+                items: {
+                  oneOf: [
+                    {
+                      type: 'object',
+                      required: ['id', 'type'],
+                      additionalProperties: false,
+                      properties: { id: { type: 'string' }, type: { const: 'pageAdded' } },
+                    },
+                    {
+                      type: 'object',
+                      required: ['id', 'type', 'propertyId'],
+                      additionalProperties: false,
+                      properties: {
+                        id: { type: 'string' },
+                        type: { const: 'propertyEdited' },
+                        propertyId: { type: 'string' },
+                      },
+                    },
+                  ],
+                },
+              },
+              actions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'type', 'target', 'propertyId', 'value'],
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: 'string' },
+                    type: { const: 'editProperty' },
+                    target: { const: 'triggerRow' },
+                    propertyId: { type: 'string' },
+                    value: { description: 'The literal property value to write.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     schema: {
       type: 'array',
       description: 'Column definitions. Exactly one must have type "title".',
@@ -181,11 +389,39 @@ export const DATABASE_DATA = {
             enum: [
               'title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url', 'richText',
               'status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId',
-              'relation', 'rollup', 'formula',
+              'relation', 'rollup', 'formula', 'button',
+              'place', 'verification',
             ],
           },
           position: { type: 'string', description: 'Fractional-index sort key.' },
           databaseLocked: { type: 'boolean', description: 'Read on the title property only: locks the schema and views. Data entry still works.' },
+          defaultTemplateId: { type: 'string', description: 'Read on the title property only: the template row new rows start from.' },
+          pageLayoutStructure: { type: 'string', enum: ['simple', 'tabbed'], description: 'Read on the title property only: the row page structure. Default simple.' },
+          pageLayoutGroupIn: { type: 'string', enum: ['page', 'panel'], description: 'Read on the title property only: where the row page property group sits. Default page.' },
+          pageLayoutPlacements: {
+            type: 'array',
+            description: 'Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.',
+            items: {
+              type: 'object',
+              required: ['id', 'place'],
+              additionalProperties: false,
+              properties: {
+                id: { type: 'string', description: 'The property id.' },
+                place: { type: 'string', enum: ['heading', 'page', 'panel', 'section'], description: 'heading pins it under the title; page and panel give it a module of its own.' },
+                sectionId: { type: 'string', description: 'With place "section": the section it sits in.' },
+              },
+            },
+          },
+          pageLayoutSections: {
+            type: 'array',
+            description: 'Read on the title property only: named sections of the row page property group.',
+            items: {
+              type: 'object',
+              required: ['id', 'name'],
+              additionalProperties: false,
+              properties: { id: { type: 'string' }, name: { type: 'string' } },
+            },
+          },
           config: {
             type: 'object',
             description: 'Type-specific options; select/multiSelect carry their choices here.',
@@ -223,7 +459,7 @@ export const DATABASE_DATA = {
         properties: {
           id: { type: 'string' },
           name: { type: 'string' },
-          type: { type: 'string', enum: ['board', 'table', 'gallery', 'list', 'calendar', 'timeline', 'chart', 'feed'] },
+          type: { type: 'string', enum: ['board', 'table', 'gallery', 'list', 'calendar', 'timeline', 'chart', 'feed', 'form', 'map', 'dashboard'] },
           position: { type: 'string' },
           groupBy: { type: 'string', description: 'Property id. Required for a board view.' },
           groupByStatus: { type: 'string', enum: ['group', 'option'], description: 'Grouping by a status: one group per status group or per option. Default option.' },
@@ -271,6 +507,11 @@ export const DATABASE_DATA = {
                 visible: { type: 'boolean' },
                 width: { type: 'number', exclusiveMinimum: 0, description: 'Column width in pixels.' },
                 wrap: { type: 'boolean' },
+                required: { type: 'boolean', description: 'Form: the question must be answered.' },
+                description: { type: 'string', description: 'Form: help text under the question.' },
+                questionName: { type: 'string', description: 'Form: a detached question label; absent follows the property name.' },
+                longAnswer: { type: 'boolean', description: 'Form: long or short text; absent keeps the long-text field.' },
+                maxSelections: { type: 'integer', minimum: 1, description: 'Form: maximum multi-select, people or relation selections.' },
               },
             },
           },
@@ -296,6 +537,7 @@ export const DATABASE_DATA = {
                     'checked', 'unchecked', 'percent_checked', 'percent_unchecked',
                   ],
                 },
+                capCounts: { type: 'boolean', description: 'Show a count above 99 as "99+". Default false.' },
               },
             },
           },
@@ -317,6 +559,7 @@ export const DATABASE_DATA = {
             enum: ['hours', 'day', 'week', 'bi_week', 'month', 'quarter', 'year', '5_years'],
             description: 'Timeline zoom. Default month.',
           },
+          timelineCenter: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', description: "Timeline: the shared centre day (YYYY-MM-DD). A person's own last centre wins over it." },
           showTimelineTable: { type: 'boolean', description: 'Timeline: show the table panel. Default false.' },
           tableProperties: {
             type: 'array',
@@ -382,6 +625,13 @@ export const DATABASE_DATA = {
             },
           },
           showPageIcon: { type: 'boolean', description: 'Default true.' },
+          subItemsDisplay: {
+            type: 'string',
+            enum: ['nested', 'card', 'flattened'],
+            description: 'Sub-items: nested (table, list, timeline) or card (board, calendar, gallery) by default, or flattened.',
+          },
+          subItemsFilter: { type: 'string', enum: ['parents', 'parentsAndSubItems', 'subItems'], description: 'Sub-items: which rows show. Default parents.' },
+          ...TIER3_VIEW_FIELDS,
         },
       },
     },

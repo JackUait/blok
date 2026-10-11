@@ -3,7 +3,10 @@ import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { readPropertyValue } from './property-values';
+import { renderCellValue } from './cells';
+import type { CellContext } from './cells';
 import { IconChevronDown } from '../../components/icons';
+import { startInlineRename } from '../../components/utils/inline-rename';
 
 interface DatabaseListViewOptions {
   readOnly: boolean;
@@ -19,7 +22,29 @@ interface DatabaseListViewOptions {
   onToggleCollapse?: (optionId: string, collapsed: boolean) => void;
   /** Show each row's page icon before its title. Default true. */
   showPageIcon?: boolean;
+  /** What cells need from the host: people, computed result types, relation titles. */
+  cellContext?: Partial<CellContext>;
+  locale?: string;
+  /** A click or Enter on an editable property: edit it in place. */
+  onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
+  /** Shift+Enter on a row: a new item below it, in the same group (`null` when ungrouped). */
+  onNewBelow?: (rowId: string, groupKey: string | null) => void;
+  onTitleEdit?: (rowId: string, title: string) => void;
+  /** Rows the flat list holds in all, when `rows` is only the first page (load limit). */
+  total?: number;
+  /** A group's full row count when `getRows` gives only the first page. */
+  getTotal?: (optionId: string) => number;
+  /** "Load more" for a group, or `''` for the flat list. */
+  onLoadMore?: (groupKey: string) => void;
 }
+
+/** Types without an editor: computed, or written by Blok itself. */
+const NOT_EDITABLE = new Set<PropertyDefinition['type']>([
+  'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId', 'formula', 'rollup', 'button',
+]);
+
+const ROW_SELECTOR = '[data-blok-database-list-row]';
+const EDITABLE_SLOT_SELECTOR = '[data-blok-database-list-row-property][data-editable]';
 
 /**
  * DOM rendering layer for the flat list view.
@@ -38,8 +63,12 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly collapsedGroupIds: ReadonlySet<string>;
   private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
+  private readonly settings: Pick<DatabaseListViewOptions,
+    'cellContext' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'total' | 'getTotal' | 'onLoadMore'>;
+  private wrapper: HTMLDivElement | null = null;
 
-  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon }: DatabaseListViewOptions) {
+  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon, ...settings }: DatabaseListViewOptions) {
+    this.settings = settings;
     this.showPageIcon = showPageIcon !== false;
     this.readOnly = readOnly;
     this.i18n = i18n;
@@ -61,6 +90,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-database-list', '');
+    // Tab and Shift+Enter belong to the list, not to Blok's block indent and split.
+    wrapper.setAttribute('data-blok-keyboard-owner', '');
 
     if (this.groupOptions !== undefined && this.groupOptions.length > 0 && this.getGroupRows !== undefined) {
       for (const option of this.groupOptions) {
@@ -70,13 +101,21 @@ export class DatabaseListView implements DatabaseViewRenderer {
         wrapper.appendChild(groupEl);
       }
     } else {
-      wrapper.setAttribute('role', 'list');
-      wrapper.setAttribute('aria-label', this.i18n.t('tools.database.listView'));
+      // role="list" may hold list items only, so the buttons go after it.
+      const rowsEl = document.createElement('div');
 
+      rowsEl.setAttribute('data-blok-database-list-rows', '');
+      rowsEl.setAttribute('role', 'list');
+      rowsEl.setAttribute('aria-label', this.i18n.t('tools.database.listView'));
       for (const row of this.rows) {
-        const rowEl = this.createRowElement(row);
+        rowsEl.appendChild(this.createRowElement(row));
+      }
+      wrapper.appendChild(rowsEl);
 
-        wrapper.appendChild(rowEl);
+      const more = this.createLoadMore('', this.rows.length, this.settings.total);
+
+      if (more !== null) {
+        wrapper.appendChild(more);
       }
 
       if (!this.readOnly) {
@@ -86,7 +125,188 @@ export class DatabaseListView implements DatabaseViewRenderer {
       }
     }
 
+    wrapper.querySelector(ROW_SELECTOR)?.setAttribute('tabindex', '0');
+    wrapper.addEventListener('click', this.onClick);
+    wrapper.addEventListener('keydown', this.onKeyDown);
+    this.wrapper = wrapper;
+
     return wrapper;
+  }
+
+  /** Swaps a row's title for an input; Enter or blur commits through `onTitleEdit`. */
+  editTitle(rowId: string): void {
+    const rowEl = this.rowElement(rowId);
+    const titleEl = rowEl?.querySelector<HTMLElement>('[data-blok-database-list-row-title]');
+
+    if (this.readOnly || rowEl === null || rowEl === undefined || titleEl === null || titleEl === undefined) {
+      return;
+    }
+    const original = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
+
+    startInlineRename({
+      target: titleEl,
+      currentValue: original,
+      allowEmpty: true,
+      label: this.i18n.t('tools.database.editCardTitle'),
+      configureInput: (input) => {
+        input.setAttribute('data-blok-database-list-title-input', '');
+      },
+      buildRestored: (title) => this.createTitleElement(title),
+      onCommit: (title) => {
+        if (title !== original) {
+          this.settings.onTitleEdit?.(rowId, title);
+        }
+        this.focusRow(rowEl);
+      },
+      onCancel: () => this.focusRow(rowEl),
+    });
+  }
+
+  private rowElement(rowId: string): HTMLElement | null {
+    return this.wrapper?.querySelector<HTMLElement>(`${ROW_SELECTOR}[data-row-id="${CSS.escape(rowId)}"]`) ?? null;
+  }
+
+  private createLoadMore(groupKey: string, shown: number, total: number | undefined): HTMLButtonElement | null {
+    if (total === undefined || total <= shown || this.settings.onLoadMore === undefined) {
+      return null;
+    }
+    const more = document.createElement('button');
+
+    more.type = 'button';
+    more.setAttribute('data-blok-database-list-load-more', '');
+    more.setAttribute('data-group-key', groupKey);
+    more.textContent = this.i18n.t('tools.database.tableLoadMore');
+
+    return more;
+  }
+
+  private readonly onClick = (event: MouseEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+    const more = target?.closest<HTMLElement>('[data-blok-database-list-load-more]');
+
+    if (more !== null && more !== undefined) {
+      this.settings.onLoadMore?.(more.getAttribute('data-group-key') ?? '');
+
+      return;
+    }
+    const slot = target?.closest<HTMLElement>(EDITABLE_SLOT_SELECTOR);
+
+    // A link inside the value keeps its own click.
+    if (slot === null || slot === undefined || target?.closest('a[href]') !== null) {
+      return;
+    }
+    event.stopPropagation();
+    this.editSlot(slot);
+  };
+
+  private editSlot(slot: HTMLElement): void {
+    const rowId = slot.closest(ROW_SELECTOR)?.getAttribute('data-row-id');
+    const propertyId = slot.getAttribute('data-property-id');
+
+    if (rowId !== null && rowId !== undefined && propertyId !== null) {
+      this.settings.onPropertyEdit?.(rowId, propertyId, slot);
+    }
+  }
+
+  /** Notion's list keys (research/03 §5): Tab walks a row's properties, Shift+Enter adds an item below. */
+  private readonly onKeyDown = (event: KeyboardEvent): void => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const slot = target?.matches(EDITABLE_SLOT_SELECTOR) === true ? target : null;
+    const rowEl = target?.matches(ROW_SELECTOR) === true ? target : slot?.closest<HTMLElement>(ROW_SELECTOR) ?? null;
+
+    if (rowEl === null || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+    const handled = slot === null ? this.onRowKey(rowEl, event) : this.onSlotKey(rowEl, slot, event);
+
+    // Immediate: the tool's own Escape listener sits on this same element.
+    if (handled) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  };
+
+  private onRowKey(rowEl: HTMLElement, event: KeyboardEvent): boolean {
+    if (event.key === 'Enter' && event.shiftKey) {
+      return this.newBelow(rowEl);
+    }
+    if (event.key === 'Enter') {
+      rowEl.click();
+
+      return true;
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const rows = this.visibleRows();
+      const next = rows[rows.indexOf(rowEl) + (event.key === 'ArrowDown' ? 1 : -1)];
+
+      if (next !== undefined) {
+        this.focusRow(next);
+      }
+
+      return true;
+    }
+    if (event.key === 'Tab' && !event.shiftKey) {
+      const first = this.slotsOf(rowEl)[0];
+
+      first?.focus();
+
+      return first !== undefined;
+    }
+
+    return false;
+  }
+
+  private onSlotKey(rowEl: HTMLElement, slot: HTMLElement, event: KeyboardEvent): boolean {
+    if (event.key === 'Enter' && event.shiftKey) {
+      return this.newBelow(rowEl);
+    }
+    if (event.key === 'Enter') {
+      this.editSlot(slot);
+
+      return true;
+    }
+    if (event.key === 'Escape') {
+      this.focusRow(rowEl);
+
+      return true;
+    }
+    if (event.key === 'Tab') {
+      const slots = this.slotsOf(rowEl);
+      const next = event.shiftKey ? slots[slots.indexOf(slot) - 1] ?? rowEl : slots[slots.indexOf(slot) + 1];
+
+      next?.focus();
+
+      return next !== undefined;
+    }
+
+    return false;
+  }
+
+  private newBelow(rowEl: HTMLElement): boolean {
+    const rowId = rowEl.getAttribute('data-row-id');
+
+    if (this.readOnly || rowId === null || this.settings.onNewBelow === undefined) {
+      return false;
+    }
+    this.settings.onNewBelow(rowId, rowEl.closest('[data-blok-database-list-group]')?.getAttribute('data-option-id') ?? null);
+
+    return true;
+  }
+
+  private focusRow(rowEl: HTMLElement): void {
+    this.wrapper?.querySelectorAll(ROW_SELECTOR).forEach((el) => el.setAttribute('tabindex', el === rowEl ? '0' : '-1'));
+    rowEl.setAttribute('tabindex', '0');
+    rowEl.focus();
+  }
+
+  /** Rows of expanded groups, in order. */
+  private visibleRows(): HTMLElement[] {
+    return [...(this.wrapper?.querySelectorAll<HTMLElement>(ROW_SELECTOR) ?? [])]
+      .filter((el) => el.closest('[data-blok-database-list-group][data-collapsed]') === null);
+  }
+
+  private slotsOf(rowEl: HTMLElement): HTMLElement[] {
+    return [...rowEl.querySelectorAll<HTMLElement>(EDITABLE_SLOT_SELECTOR)];
   }
 
   /**
@@ -124,7 +344,9 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const count = document.createElement('span');
 
     count.setAttribute('data-blok-database-list-group-count', '');
-    count.textContent = String(rows.length);
+    const total = this.settings.getTotal?.(option.id);
+
+    count.textContent = String(total ?? rows.length);
 
     header.appendChild(toggle);
     header.appendChild(dot);
@@ -143,6 +365,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
       rowsContainer.appendChild(rowEl);
     }
 
+    const more = this.createLoadMore(option.id, rows.length, total);
+
     // Add-row button
     const addRowBtn = this.readOnly ? null : this.createAddRowButton(option.id);
 
@@ -150,6 +374,9 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const setCollapsed = (collapsed: boolean): void => {
       rowsContainer.style.display = collapsed ? 'none' : '';
       groupEl.toggleAttribute('data-collapsed', collapsed);
+      if (more !== null) {
+        more.style.display = collapsed ? 'none' : '';
+      }
 
       if (addRowBtn !== null) {
         addRowBtn.style.display = collapsed ? 'none' : '';
@@ -169,6 +396,9 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     groupEl.appendChild(header);
     groupEl.appendChild(rowsContainer);
+    if (more !== null) {
+      groupEl.appendChild(more);
+    }
 
     if (addRowBtn !== null) {
       groupEl.appendChild(addRowBtn);
@@ -182,12 +412,14 @@ export class DatabaseListView implements DatabaseViewRenderer {
    */
   appendRow(container: HTMLElement, row: DatabaseRow): void {
     const rowEl = this.createRowElement(row);
-    const addRowBtn = container.querySelector('[data-blok-database-add-row]');
+    // The flat list's wrapper holds its rows in a role="list" child.
+    const target = container.querySelector<HTMLElement>(':scope > [data-blok-database-list-rows]') ?? container;
+    const addRowBtn = target.querySelector(':scope > [data-blok-database-add-row]');
 
     if (addRowBtn !== null) {
-      container.insertBefore(rowEl, addRowBtn);
+      target.insertBefore(rowEl, addRowBtn);
     } else {
-      container.appendChild(rowEl);
+      target.appendChild(rowEl);
     }
   }
 
@@ -230,7 +462,23 @@ export class DatabaseListView implements DatabaseViewRenderer {
     rowEl.setAttribute('data-blok-database-list-row', '');
     rowEl.setAttribute('data-row-id', row.id);
     rowEl.setAttribute('role', 'listitem');
+    rowEl.setAttribute('tabindex', '-1');
 
+    const icon = this.showPageIcon ? pageIconElement(row) : null;
+
+    if (icon !== null) {
+      rowEl.appendChild(icon);
+    }
+    rowEl.appendChild(this.createTitleElement(title));
+
+    const propertiesEl = this.createPropertiesElement(row);
+
+    rowEl.appendChild(propertiesEl);
+
+    return rowEl;
+  }
+
+  private createTitleElement(title: string): HTMLDivElement {
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-list-row-title', '');
@@ -242,18 +490,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       titleEl.setAttribute('data-placeholder', '');
     }
 
-    const icon = this.showPageIcon ? pageIconElement(row) : null;
-
-    if (icon !== null) {
-      rowEl.appendChild(icon);
-    }
-    rowEl.appendChild(titleEl);
-
-    const propertiesEl = this.createPropertiesElement(row);
-
-    rowEl.appendChild(propertiesEl);
-
-    return rowEl;
+    return titleEl;
   }
 
   /**
@@ -271,8 +508,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
         continue;
       }
 
-      const value = readPropertyValue(row, propDef);
-      const badge = value === undefined ? null : this.createPropertyBadge(propDef, value);
+      const badge = this.createPropertyBadge(propDef, readPropertyValue(row, propDef));
 
       if (badge !== null) {
         propertiesEl.appendChild(badge);
@@ -299,67 +535,47 @@ export class DatabaseListView implements DatabaseViewRenderer {
   }
 
   /**
-   * Creates a property badge span for a given property definition and value.
-   * Returns null if the value is undefined/null or if the select option is not found.
+   * One property slot: the shared cell display, or null when it shows
+   * nothing (the list shows only filled properties, as the board does).
    */
-  private createPropertyBadge(propDef: PropertyDefinition, value: PropertyValue): HTMLSpanElement | null {
-    if (value === undefined || value === null) {
+  private createPropertyBadge(propDef: PropertyDefinition, value: PropertyValue | undefined): HTMLSpanElement | null {
+    const cell = renderCellValue(propDef, value, {
+      ...this.settings.cellContext,
+      i18n: this.i18n,
+      readOnly: true,
+      ...(this.settings.locale !== undefined ? { locale: this.settings.locale } : {}),
+    });
+
+    // A stale option id or a value of the wrong type draws nothing, though it is not empty.
+    if (cell.hasAttribute('data-empty') || !cell.hasChildNodes()) {
       return null;
     }
+    // Notion's list shows a person as the avatar alone; the name stays for screen readers.
+    cell.querySelectorAll('[data-blok-database-person-chip]').forEach((chip) => {
+      chip.childNodes.forEach((node) => {
+        if (node.nodeType !== Node.TEXT_NODE) return;
+        const name = document.createElement('span');
+
+        name.setAttribute('data-blok-database-sr-only', '');
+        name.textContent = node.textContent;
+        node.replaceWith(name);
+      });
+    });
 
     const badge = document.createElement('span');
 
     badge.setAttribute('data-blok-database-list-row-property', '');
     badge.setAttribute('data-property-id', propDef.id);
-
-    if (propDef.type === 'select') {
-      const options = propDef.config?.options ?? [];
-      const option = options.find(o => o.id === value);
-
-      if (option === undefined) {
-        return null;
+    if (!this.readOnly && !NOT_EDITABLE.has(propDef.type)) {
+      badge.setAttribute('data-editable', '');
+      badge.setAttribute('tabindex', '-1');
+      // A value with its own link stays a plain slot: a button around a link is a nested control.
+      if (cell.querySelector('a[href], button, [role="link"], [role="button"]') === null) {
+        badge.setAttribute('role', 'button');
+        badge.setAttribute('aria-label', `${propDef.name}: ${(cell.textContent ?? '').trim()}`);
       }
-
-      badge.textContent = option.label;
-
-      if (option.color !== undefined) {
-        badge.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
-        badge.style.color = `var(--blok-color-${option.color}-text)`;
-      }
-    } else if (propDef.type === 'checkbox') {
-      const isChecked = value === true;
-
-      // Display-only in the list view — an aria-hidden glyph carries the visual
-      // tick, and a visually-hidden text node conveys the state to assistive tech
-      // (a real <input> would announce as an operable control it is not).
-      const glyph = document.createElement('span');
-
-      glyph.setAttribute('data-blok-database-checkbox-glyph', '');
-      glyph.setAttribute('aria-hidden', 'true');
-      glyph.setAttribute('data-state', isChecked ? 'checked' : 'unchecked');
-      glyph.textContent = isChecked ? '✓' : '';
-      badge.appendChild(glyph);
-
-      const stateText = document.createElement('span');
-
-      stateText.style.position = 'absolute';
-      stateText.style.width = '1px';
-      stateText.style.height = '1px';
-      stateText.style.padding = '0';
-      stateText.style.margin = '-1px';
-      stateText.style.overflow = 'hidden';
-      stateText.style.clipPath = 'inset(50%)';
-      stateText.style.whiteSpace = 'nowrap';
-      stateText.style.border = '0';
-      stateText.textContent = this.i18n.t(
-        isChecked ? 'tools.database.checkboxChecked' : 'tools.database.checkboxUnchecked'
-      );
-      badge.appendChild(stateText);
-    } else if (typeof value === 'string' || typeof value === 'number') {
-      badge.textContent = String(value);
-    } else {
-      return null;
     }
+    badge.appendChild(cell);
 
     return badge;
   }
@@ -373,7 +589,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     addRowBtn.setAttribute('data-blok-database-add-row', '');
     addRowBtn.setAttribute('aria-label', this.i18n.t('tools.database.addRow'));
-    addRowBtn.textContent = '+ ' + this.i18n.t('tools.database.newRow');
+    addRowBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
 
     if (optionId !== undefined) {
       addRowBtn.setAttribute('data-option-id', optionId);

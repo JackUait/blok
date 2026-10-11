@@ -15,11 +15,41 @@ import type {
 const COMPUTED_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'formula', 'rollup']);
 
 /** Types a person cannot edit in a cell. */
-const READ_ONLY_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([...COMPUTED_TYPES, 'uniqueId']);
+const READ_ONLY_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([...COMPUTED_TYPES, 'uniqueId', 'button']);
 
 export const isComputedType = (type: PropertyType): boolean => COMPUTED_TYPES.has(type);
 
 export const isReadOnlyType = (type: PropertyType): boolean => READ_ONLY_TYPES.has(type);
+
+/** research/08: the header menus that list AI Autofill. Checkbox is read off its row ("as Select, minus…"). */
+const AUTOFILL_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([
+  'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'relation', 'checkbox',
+]);
+
+export const offersAutofill = (type: PropertyType): boolean => AUTOFILL_TYPES.has(type);
+
+/**
+ * Types whose value is a list of `{ id }` objects. The tool writes `[]` for
+ * them when it creates a row or the property, so ONE peer creates the list
+ * and two peers' first adds then merge by id. Two peers each creating the key
+ * is last-writer-wins: see LIST_SLOT_MAP_KEY in the yjs serializer.
+ */
+const LIST_VALUE_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['person', 'files', 'relation']);
+
+export const isListValueType = (type: PropertyType): boolean => LIST_VALUE_TYPES.has(type);
+
+/** `properties`, plus `[]` for every list property it holds no value for. */
+export const withEmptyLists = (schema: PropertyDefinition[], properties: Record<string, PropertyValue>): Record<string, PropertyValue> => {
+  const result = { ...properties };
+
+  for (const property of schema) {
+    if (isListValueType(property.type) && (result[property.id] === undefined || result[property.id] === null)) {
+      result[property.id] = [];
+    }
+  }
+
+  return result;
+};
 
 const isoOf = (ms: number | undefined): string | null =>
   typeof ms === 'number' && Number.isFinite(ms) ? new Date(ms).toISOString() : null;

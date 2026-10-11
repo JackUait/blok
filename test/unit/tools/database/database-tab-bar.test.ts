@@ -375,6 +375,13 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    it('owns right-click on its tabs, so the editor\'s block menu does not replace the view menu', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+
+      expect(el.querySelector('[data-view-id="v1"]')?.closest('[data-blok-context-menu-owner]')).not.toBeNull();
+    });
+
     it('opens the context popover with the database menu motion', () => {
       const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
       const el = bar.render();

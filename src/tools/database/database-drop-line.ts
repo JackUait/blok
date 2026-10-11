@@ -12,7 +12,8 @@ const THICKNESS = 4;
  */
 export class DatabaseDropLine {
   private el: HTMLElement | null = null;
-  private readonly leaving = new Set<HTMLElement>();
+  /** Lines fading out, each with the timer that removes it. */
+  private readonly leaving = new Map<HTMLElement, number>();
 
   /** @param tokenSource - an element inside the editor, where the colour token resolves */
   constructor(private readonly tokenSource?: HTMLElement) {}
@@ -40,27 +41,44 @@ export class DatabaseDropLine {
       return;
     }
     el.style.opacity = '0';
-    this.leaving.add(el);
-    window.setTimeout(() => {
+    this.leaving.set(el, window.setTimeout(() => {
       el.remove();
       this.leaving.delete(el);
-    }, DROP_LINE_FADE_MS);
+    }, DROP_LINE_FADE_MS));
   }
 
   public destroy(): void {
     this.el?.remove();
     this.el = null;
-    this.leaving.forEach((el) => el.remove());
+    this.leaving.forEach((timer, el) => {
+      window.clearTimeout(timer);
+      el.remove();
+    });
     this.leaving.clear();
   }
 
   private place(left: number, top: number, width: number, height: number): void {
-    const el = this.el ?? this.create();
+    const el = this.el ?? this.revive() ?? this.create();
 
     el.style.left = `${left}px`;
     el.style.top = `${top}px`;
     el.style.width = `${width}px`;
     el.style.height = `${height}px`;
+  }
+
+  /** A line still fading out comes back instead of a second line next to it. */
+  private revive(): HTMLElement | null {
+    const last = [...this.leaving.keys()].at(-1);
+
+    if (last === undefined) {
+      return null;
+    }
+    window.clearTimeout(this.leaving.get(last));
+    this.leaving.delete(last);
+    last.style.opacity = '';
+    this.el = last;
+
+    return last;
   }
 
   private create(): HTMLElement {

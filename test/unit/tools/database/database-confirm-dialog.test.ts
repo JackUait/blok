@@ -34,6 +34,13 @@ describe('openDatabaseConfirm', () => {
       .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  // Mounted on body, outside the editor: without the popover scope it renders in the browser's serif font.
+  it('mounts the dialog under a data-blok-popover root', () => {
+    void open();
+
+    expect(dialog()?.closest('[data-blok-popover]')).not.toBeNull();
+  });
+
   it('names the dialog by its title for assistive tech', () => {
     void open();
 

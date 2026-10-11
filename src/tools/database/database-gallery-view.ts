@@ -68,7 +68,8 @@ interface DragState {
   startX: number;
   startY: number;
   active: boolean;
-  target: { card: HTMLElement; side: 'before' | 'after' } | null;
+  /** A card and a side, or an empty group's grid (`inside`). */
+  target: { card: HTMLElement; side: 'before' | 'after' | 'inside' } | null;
 }
 
 /**
@@ -396,6 +397,15 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       return { card, side: firstHalf !== rtl ? 'before' : 'after' };
     }
 
+    for (const grid of root.querySelectorAll<HTMLElement>('[data-blok-database-gallery-grid]')) {
+      const box = grid.getBoundingClientRect();
+      const empty = [...grid.querySelectorAll('[data-blok-database-gallery-card]')].every((card) => card === dragged);
+
+      if (empty && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) {
+        return { card: grid, side: 'inside' };
+      }
+    }
+
     return null;
   }
 
@@ -427,10 +437,10 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     }
 
     const groupKey = target.card.getAttribute('data-group-key') ?? '';
-    const grid = target.card.parentElement;
+    const grid = target.side === 'inside' ? target.card : target.card.parentElement;
     const siblings = [...(grid?.querySelectorAll<HTMLElement>('[data-blok-database-gallery-card]') ?? [])]
       .filter((card) => card !== drag.card);
-    const at = siblings.indexOf(target.card) + (target.side === 'after' ? 1 : 0);
+    const at = target.side === 'inside' ? siblings.length : siblings.indexOf(target.card) + (target.side === 'after' ? 1 : 0);
 
     this.options.handlers?.moveRow({
       rowId: drag.rowId,

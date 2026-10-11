@@ -10,11 +10,13 @@ import type {
   ViewType,
 } from './types';
 
-/** Notion's list minus the types Blok lacks (research/05 §6.2, research/08). */
-export const COLOR_RULE_TYPES: readonly PropertyType[] = ['title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox'];
+/** Notion's list (research/05 §6.2); formulas, relations and rollups since 2025-11-17. */
+export const COLOR_RULE_TYPES: readonly PropertyType[] = [
+  'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'checkbox', 'formula', 'relation', 'rollup',
+];
 
-/** Layouts Notion colors (research/05 §6.2) that Blok renders. */
-export const COLOR_RULE_LAYOUTS: readonly ViewType[] = ['table', 'list', 'board'];
+/** Layouts Notion colors (research/05 §6.2). */
+export const COLOR_RULE_LAYOUTS: readonly ViewType[] = ['table', 'list', 'board', 'calendar', 'timeline', 'feed'];
 
 export interface RowColor {
   row?: string;
@@ -30,7 +32,8 @@ export const resolveRowColors = (
   rows: DatabaseRow[],
   view: DatabaseViewConfig,
   schema: PropertyDefinition[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  me: string | null = null
 ): Map<string, RowColor> => {
   const rules = (view.colorRules ?? []).filter((rule) =>
     schema.some((p) => p.id === rule.propertyId && COLOR_RULE_TYPES.includes(p.type)));
@@ -40,7 +43,7 @@ export const resolveRowColors = (
 
   const paint = (row: DatabaseRow): RowColor => {
     const color: RowColor = { cells: {} };
-    const matching = rules.filter((rule) => matchCondition(row, rule, schema, now) === true);
+    const matching = rules.filter((rule) => matchCondition(row, rule, schema, now, me) === true);
 
     for (const rule of matching) {
       const isCell = rule.applyTo === 'property' && view.type === 'table';

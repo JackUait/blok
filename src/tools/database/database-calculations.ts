@@ -1,4 +1,5 @@
 import { personIdsOf } from './property-values';
+import { isEmptyObjectValue } from './tier3-values';
 import type { CalculationFn, PropertyDefinition, PropertyType, PropertyValue } from './types';
 
 export type CalculationResult =
@@ -43,12 +44,15 @@ export const CALCULATIONS_FOR_TYPE: Readonly<Record<PropertyType, readonly Calcu
   // A formula or rollup calculates as its result type: callers ask with that property.
   formula: GENERIC,
   rollup: GENERIC,
+  button: [],
+  place: GENERIC,
+  verification: GENERIC,
 };
 
 const isEmpty = (value: PropertyValue | undefined): boolean => {
   if (value === undefined || value === null || value === '') return true;
   if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return value.blocks.length === 0;
+  if (typeof value === 'object') return isEmptyObjectValue(value);
 
   return false;
 };

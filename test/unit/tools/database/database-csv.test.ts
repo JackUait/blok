@@ -63,6 +63,10 @@ describe('database CSV', () => {
       config: { options: [{ id: 'o1', label: 'Red', position: 'a0' }, { id: 'o2', label: 'Blue', position: 'a1' }] },
     };
 
+    it('writes a button cell as empty text: it holds no value', () => {
+      expect(csvCellText({ id: 'b', name: 'Act', type: 'button', position: 'a0', button: { label: 'Go' } }, 'stray', { locale: 'en-US' })).toBe('');
+    });
+
     it('writes computed values as text and relations as the related titles', () => {
       const prop = (id: string, type: PropertyDefinition['type']): PropertyDefinition => ({ id, name: id, type, position: 'a0' });
       const titles: Record<string, string> = { r1: 'Alpha', r2: 'Bravo' };
@@ -167,6 +171,22 @@ describe('database CSV', () => {
 
       return plan.rows[0]?.[property.id];
     };
+
+    it('writes a place as its name or address and reads the text back as an address', () => {
+      const place: PropertyDefinition = { id: 'pl', name: 'Where', type: 'place', position: 'a' };
+
+      expect(csvCellText(place, { name: 'Office', address: '1 Main St', lat: 1, lon: 2 }, ctx)).toBe('Office');
+      expect(roundTrip(place, { address: '1 Main St' })).toEqual({ address: '1 Main St' });
+      expect(roundTrip(place, null)).toBeNull();
+    });
+
+    it('writes a verification as its status and never imports one', () => {
+      const verification: PropertyDefinition = { id: 'v', name: 'Verified', type: 'verification', position: 'a' };
+
+      expect(csvCellText(verification, { state: 'verified' }, ctx)).toBe('verified');
+      expect(csvCellText(verification, { state: 'verified', expiresAt: '2000-01-01' }, ctx)).toBe('expired');
+      expect(roundTrip(verification, { state: 'verified' })).toBeUndefined();
+    });
 
     it('keeps numbers, whatever their display format', () => {
       expect(roundTrip({ id: 'n', name: 'N', type: 'number', position: 'a', number: { format: 'dollar' } }, 1234.5)).toBe(1234.5);

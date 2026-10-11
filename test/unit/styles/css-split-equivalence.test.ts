@@ -13,7 +13,7 @@
  *   3. @keyframes name uniqueness (silent shadow = silent breakage).
  *   4. Total authored CSS byte budget.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { Declaration } from 'postcss';
@@ -21,6 +21,9 @@ import postcss from 'postcss';
 
 const STYLES_ROOT = resolve(__dirname, '../../../src/styles');
 const ENTRY = resolve(STYLES_ROOT, 'main.css');
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 /**
  * Recursively inline local @import statements (./ or ../) starting from the
@@ -768,6 +771,31 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROW_PAGE_BYTES = 8_972;
     // database.css: the chart, drilldown and feed views, and their tokens in all three themes.
     const DATABASE_CHART_FEED_BYTES = 10_935;
+    // database.css: Phase 6 structure: the button cell, the "New" split button,
+    // the template banner, sub-item nesting, dependency arrows and the link
+    // handle, the linked-view states, and their tokens.
+    const DATABASE_STRUCTURE_BYTES = 10_030;
+    // database.css: backlog fixes: the lane column body radius, the timeline table footer, the empty gallery group drop ring, the AA yellow and brown accents, the board column "Load more".
+    const DATABASE_BACKLOG_BYTES = 825;
+    // database.css: the row page layout (pins, sections, modules, details panel, tabs, builder bar).
+    const DATABASE_ROW_PAGE_LAYOUT_BYTES = 5_720;
+    // database.css: Tier 3 (D6) form, map and dashboard views.
+    const DATABASE_TIER3_VIEWS_BYTES = 2_255;
+    // database.css: the side peek narrowing past the isolation reset, its 34px property rows, the selection bar in the toolbar row, the gray fill handle ring.
+    const DATABASE_PEEK_SELECTION_BYTES = 975;
+    // database.css: Notion look parity (research/07, 08): tabs and "Display as", toolbar icon buttons,
+    // card action pill, cell links, 37px file/button rows, peek labels, select head, dark pills, their tokens.
+    const DATABASE_LOOK_PARITY_BYTES = 4_097;
+    // database.css: Edit property's options list, its "all views" note and the status editor footer.
+    const DATABASE_OPTIONS_EDITOR_BYTES = 1_899;
+    // database.css: list view parity (research/07): 30px rows, property slots, list pills, keyboard focus rings, "Load more";
+    // conditional color reaches calendar events, timeline bars and feed cards (research/05 §6.2); the flat rows list is not indented.
+    const DATABASE_LIST_VIEW_BYTES = 2_254;
+    // Measured database.css additions, not the total budget overage.
+    const DATABASE_TITLE_ICON_MENU_BYTES = 696;
+    const DATABASE_FORM_PROVIDER_BUILDER_BYTES = 749;
+    // database.css: the AI Autofill setup dialog.
+    const DATABASE_AI_AUTOFILL_BYTES = 2_772;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -834,7 +862,18 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BOARD_CARD_BYTES
       + DATABASE_COMPUTED_PROPERTIES_BYTES
       + DATABASE_ROW_PAGE_BYTES
-      + DATABASE_CHART_FEED_BYTES;
+      + DATABASE_CHART_FEED_BYTES
+      + DATABASE_STRUCTURE_BYTES
+      + DATABASE_BACKLOG_BYTES
+      + DATABASE_ROW_PAGE_LAYOUT_BYTES
+      + DATABASE_TIER3_VIEWS_BYTES
+      + DATABASE_PEEK_SELECTION_BYTES
+      + DATABASE_LOOK_PARITY_BYTES
+      + DATABASE_OPTIONS_EDITOR_BYTES
+      + DATABASE_LIST_VIEW_BYTES
+      + DATABASE_TITLE_ICON_MENU_BYTES
+      + DATABASE_FORM_PROVIDER_BUILDER_BYTES
+      + DATABASE_AI_AUTOFILL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

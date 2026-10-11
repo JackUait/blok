@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { Blok } from '../../../../src/blok';
+import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { Paragraph } from '../../../../src/tools/paragraph';
 import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
@@ -53,6 +58,22 @@ const row = (id: string, title: string, properties: Record<string, PropertyValue
 describe('database relations — two peers', () => {
   let storeA: DocumentStore;
   let storeB: DocumentStore;
+  let holder: HTMLElement | undefined;
+  let editor: { isReady: Promise<unknown>; blocks: API['blocks']; save: () => Promise<OutputData>; destroy: () => void } | undefined;
+
+  const makeEditor = async (blocks: OutputBlockData[]): Promise<NonNullable<typeof editor>> => {
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as NonNullable<typeof editor>;
+    await editor.isReady;
+
+    return editor;
+  };
 
   const start = (blocks: Array<Record<string, unknown>>): void => {
     storeA.fromJSON([
@@ -75,6 +96,9 @@ describe('database relations — two peers', () => {
   });
 
   afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
     vi.restoreAllMocks();
   });
 
@@ -89,13 +113,19 @@ describe('database relations — two peers', () => {
     expect(ids(propertiesOf(storeB, 'a').next)).toEqual(['b', 'c', 'z']);
   });
 
-  /**
-   * KNOWN LIMIT, pinned so a fix shows up here. The brief's rule says a list
-   * that starts empty needs EAGER_ARRAY_KEYS, but a nanoid property id can
-   * never be in that set. Two peers adding the FIRST related row at the same
-   * instant each write a new list over the key; the later write wins.
-   */
-  it('last writer wins when two peers relate the first row of an empty list (known limit)', () => {
+  it('keeps both rows when two peers relate the first row of a list born empty', () => {
+    start([row('a', 'Alpha', { next: [] }), row('b', 'Bravo'), row('c', 'Charlie')]);
+
+    write(storeA, 'a', { title: 'Alpha', next: [{ id: 'b' }] });
+    write(storeB, 'a', { title: 'Alpha', next: [{ id: 'c' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA, 'a').next)).toEqual(['b', 'c']);
+    expect(propertiesOf(storeB, 'a').next).toEqual(propertiesOf(storeA, 'a').next);
+  });
+
+  /** A legacy row with no key for the list: creating the key stays last-writer-wins. */
+  it('last writer wins when two peers relate the first row of a legacy row with no key', () => {
     start([row('a', 'Alpha'), row('b', 'Bravo'), row('c', 'Charlie')]);
 
     write(storeA, 'a', { title: 'Alpha', next: [{ id: 'b' }] });
@@ -104,6 +134,70 @@ describe('database relations — two peers', () => {
 
     expect(ids(propertiesOf(storeA, 'a').next)).toHaveLength(1);
     expect(propertiesOf(storeA, 'a').next).toEqual(propertiesOf(storeB, 'a').next);
+  });
+
+  it('keeps both first relation additions to a row created by Merge with CSV', async () => {
+    const blok = await makeEditor([
+      { id: 'db', type: 'database', data: { schema, views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v' }, content: ['b', 'c'] },
+      row('b', 'Bravo'),
+      row('c', 'Charlie'),
+    ]);
+
+    blok.blocks.getById('db')?.call('mergeCsv', 'Name\nAlpha\n' as never);
+    storeA.fromJSON((await blok.save()).blocks);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+
+    const imported = storeA.toJSON().find((block) => block.type === 'database-row' && propertiesOf(storeA, block.id ?? '').title === 'Alpha');
+
+    if (imported?.id === undefined) throw new Error('CSV row was not created');
+    const properties = propertiesOf(storeA, imported.id);
+
+    write(storeA, imported.id, { ...properties, next: [{ id: 'b' }] });
+    write(storeB, imported.id, { ...properties, next: [{ id: 'c' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA, imported.id).next)).toEqual(['b', 'c']);
+    expect(propertiesOf(storeB, imported.id).next).toEqual(propertiesOf(storeA, imported.id).next);
+  });
+
+  it.each([
+    ['setDependenciesEnabled', 'blockedBy'],
+    ['setSubItemsEnabled', 'subItems'],
+  ])('keeps both first relation additions after %s creates the pair on existing rows', async (method, role) => {
+    const blok = await makeEditor([
+      { id: 'db', type: 'database', data: { schema: [schema[0]], views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v' }, content: ['a', 'b', 'c'] },
+      row('a', 'Alpha'),
+      row('b', 'Bravo'),
+      row('c', 'Charlie'),
+    ]);
+
+    blok.blocks.getById('db')?.call(method, true as never);
+    const output = await blok.save();
+    const definition = output.blocks.find((block) => block.id === 'db')?.data.schema as PropertyDefinition[] | undefined;
+    const property = definition?.find((candidate) => candidate.relation?.role === role);
+
+    if (property === undefined) throw new Error('relation pair was not created');
+    storeA.fromJSON(output.blocks);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+    const properties = propertiesOf(storeA, 'a');
+
+    write(storeA, 'a', { ...properties, [property.id]: [{ id: 'b' }] });
+    write(storeB, 'a', { ...properties, [property.id]: [{ id: 'c' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA, 'a')[property.id])).toEqual(['b', 'c']);
+    expect(propertiesOf(storeB, 'a')[property.id]).toEqual(propertiesOf(storeA, 'a')[property.id]);
+  });
+
+  it('keeps the related row one peer added while the other unrelated the last one', () => {
+    start([row('a', 'Alpha', { next: [{ id: 'z' }] }), row('b', 'Bravo'), row('z', 'Zulu')]);
+
+    write(storeA, 'a', { title: 'Alpha', next: [] });
+    write(storeB, 'a', { title: 'Alpha', next: [{ id: 'z' }, { id: 'b' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA, 'a').next)).toEqual(['b']);
+    expect(propertiesOf(storeB, 'a').next).toEqual(propertiesOf(storeA, 'a').next);
   });
 
   it('a two-way edit racing a delete leaves no related row that does not exist', () => {

@@ -153,6 +153,30 @@ describe('PopoverDesktop close motion (animateClose)', () => {
     expect(item).not.toHaveFocus();
   });
 
+  it('is inert while it fades, so its items leave the accessibility tree and take no clicks', async () => {
+    const popover = open({ animateClose: true });
+    const motion = controllableAnimation();
+
+    stubAnimations(popover, [motion.animation]);
+    popover.hide();
+
+    expect(popover.getElement().hasAttribute('inert')).toBe(true);
+
+    await motion.end();
+
+    expect(popover.getElement().hasAttribute('inert')).toBe(false);
+  });
+
+  it('a reopen during the close is not inert', () => {
+    const popover = open({ animateClose: true });
+
+    stubAnimations(popover, [controllableAnimation().animation]);
+    popover.hide();
+    popover.show();
+
+    expect(popover.getElement().hasAttribute('inert')).toBe(false);
+  });
+
   it('leaves the top layer at once without the opt-in', () => {
     const popover = open();
 

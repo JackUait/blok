@@ -98,13 +98,13 @@ const niceStep = (raw: number): number => {
   return nice * power;
 };
 
-/** Round ticks from zero past the highest value. */
-export const valueTicks = (max: number): number[] => {
-  if (!(max > 0)) return [0, 1];
-  const step = niceStep(max / 4);
-  const top = Math.ceil(max / step) * step;
+export const valueTicks = (max: number, min = 0): number[] => {
+  if (!(max > min)) return [0, 1];
+  const step = niceStep((max - min) / 4);
+  const bottom = Math.floor(min / step);
+  const top = Math.ceil(max / step);
 
-  return Array.from({ length: Math.round(top / step) + 1 }, (_, i) => Number((i * step).toPrecision(12)));
+  return Array.from({ length: top - bottom + 1 }, (_, i) => Number(((i + bottom) * step).toPrecision(12)));
 };
 
 const fit = (text: string, width: number): string => {
@@ -114,14 +114,18 @@ const fit = (text: string, width: number): string => {
 };
 
 /** A bar with a curved data end and a square foot on the baseline. */
-const barPath = (x: number, y: number, w: number, h: number, horizontal: boolean, round: boolean): string => {
+const barPath = (x: number, y: number, w: number, h: number, horizontal: boolean, round: boolean, negative: boolean): string => {
   const r = round ? Math.min(BAR_RADIUS, w / 2, h / 2) : 0;
 
   if (horizontal) {
-    return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+    return negative
+      ? `M${x + w},${y}H${x + r}Q${x},${y} ${x},${y + r}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w}Z`
+      : `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
   }
 
-  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  return negative
+    ? `M${x},${y}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w - r}Q${x + w},${y + h} ${x + w},${y + h - r}V${y}Z`
+    : `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
 };
 
 /** Catmull-Rom through the points, as cubic curves. */
@@ -137,7 +141,7 @@ const linePath = (pts: Array<[number, number]>, smooth: boolean): string => {
     const p0 = pts[Math.max(0, i - 1)];
     const p1 = pts[i];
     const p3 = pts[Math.min(pts.length - 1, i + 2)];
-    // Control points stay between the two ends, so the curve never dips past a value (or below zero).
+    // Control points stay between the two ends, so the curve never dips past a value.
     const low = Math.min(p1[1], p[1]);
     const high = Math.max(p1[1], p[1]);
     const clamp = (y: number): number => Math.min(high, Math.max(low, y));
@@ -423,8 +427,9 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     const { settings, data, formatValue } = this.options;
     const horizontal = settings.type === 'bar';
     const points = data.points.filter((p) => !p.hidden);
-    const ticks = valueTicks(data.max);
+    const ticks = valueTicks(data.max, data.min);
     const top = ticks[ticks.length - 1];
+    const bottom = ticks[0];
     const tickText = ticks.map((t) => formatValue(t));
     const nameRoom = settings.axisNames ? 18 : 0;
     const valueRoom = Math.max(...tickText.map((t) => t.length)) * CHAR_WIDTH + 8;
@@ -438,11 +443,12 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     const plotW = Math.max(10, width - box.left - box.right);
     const plotH = Math.max(10, height - box.top - box.bottom);
     const band = (horizontal ? plotH : plotW) / points.length;
-    const scale = (value: number): number => (value / top) * (horizontal ? plotW : plotH);
+    const scale = (value: number): number => (value / (top - bottom)) * (horizontal ? plotW : plotH);
+    const base = horizontal ? box.left - scale(bottom) : box.top + plotH + scale(bottom);
     const bandStart = (i: number): number => (horizontal ? box.top : box.left) + i * band;
     const valueAt = (value: number): { x: number; y: number } => (horizontal
-      ? { x: box.left + scale(value), y: 0 }
-      : { x: 0, y: box.top + plotH - scale(value) });
+      ? { x: base + scale(value), y: 0 }
+      : { x: 0, y: base - scale(value) });
     const grid = settings.gridLines;
     const valueLines = horizontal ? grid === 'vertical' || grid === 'both' : grid === 'horizontal' || grid === 'both';
     const categoryLines = horizontal ? grid === 'horizontal' || grid === 'both' : grid === 'vertical' || grid === 'both';
@@ -482,14 +488,14 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     layer.appendChild(svgEl('line', {
       'data-blok-database-chart-axis': '',
       ...(horizontal
-        ? { x1: box.left, y1: box.top, x2: box.left, y2: box.top + plotH }
-        : { x1: box.left, y1: box.top + plotH, x2: box.left + plotW, y2: box.top + plotH }),
+        ? { x1: base, y1: box.top, x2: base, y2: box.top + plotH }
+        : { x1: box.left, y1: base, x2: box.left + plotW, y2: base }),
       style: `stroke:${GRID};stroke-width:1`,
     }));
     if (settings.axisNames) this.axisNames(layer, width, box, plotH, plotW);
     svg.appendChild(layer);
 
-    const geometry = { horizontal, band, bandStart, scale, base: horizontal ? box.left : box.top + plotH, plotH, plotW, box };
+    const geometry = { horizontal, band, bandStart, scale, base, plotH, plotW, box };
 
     if (settings.type === 'line') {
       this.drawLines(svg, points, geometry);
@@ -533,20 +539,25 @@ export class DatabaseChartView implements DatabaseViewRenderer {
       const stacked = data.stacked || parts.length === 1;
       const thickness = Math.min(MAX_BAR, (g.band * 0.7) / (stacked ? 1 : parts.length));
       const groupStart = g.bandStart(i) + (g.band - thickness * (stacked ? 1 : parts.length)) / 2;
-      const lastFilled = parts.map((part) => part.value > 0).lastIndexOf(true);
+      const lastPositive = parts.map((part) => part.value > 0).lastIndexOf(true);
+      const lastNegative = parts.map((part) => part.value < 0).lastIndexOf(true);
+      let positiveOffset = 0;
+      let negativeOffset = 0;
 
-      parts.reduce((offset, part, j) => {
-        const length = g.scale(Math.max(0, part.value));
+      parts.forEach((part, j) => {
+        const negative = part.value < 0;
+        const length = Math.abs(g.scale(part.value));
+        const offset = stacked ? (negative ? negativeOffset : positiveOffset) : 0;
         const along = stacked ? groupStart : groupStart + j * thickness;
-        const isEnd = !stacked || j === lastFilled;
+        const isEnd = !stacked || j === (negative ? lastNegative : lastPositive);
         // The 2px surface gap between touching marks: a stack's segments, or side-by-side bars.
         const drawn = Math.max(0, length - (stacked && !isEnd ? GAP : 0));
         const crossGap = !stacked && j > 0 ? GAP : 0;
 
         if (drawn > 0) {
           const d = g.horizontal
-            ? barPath(g.base + offset, along + crossGap, drawn, thickness - crossGap, true, isEnd)
-            : barPath(along + crossGap, g.base - offset - drawn, thickness - crossGap, drawn, false, isEnd);
+            ? barPath(negative ? g.base - offset - drawn : g.base + offset, along + crossGap, drawn, thickness - crossGap, true, isEnd, negative)
+            : barPath(along + crossGap, negative ? g.base + offset : g.base - offset - drawn, thickness - crossGap, drawn, false, isEnd, negative);
           const mark = svgEl('path', { d, style: `fill:${part.color.color};fill-opacity:${part.color.opacity}` });
 
           mark.setAttribute('data-blok-database-chart-mark', '');
@@ -554,15 +565,17 @@ export class DatabaseChartView implements DatabaseViewRenderer {
           if (part.series !== undefined) mark.setAttribute('data-series', part.series.key);
           marks.appendChild(mark);
         }
-
-        return stacked ? offset + length : offset;
-      }, 0);
+        if (stacked) {
+          if (negative) negativeOffset += length;
+          else positiveOffset += length;
+        }
+      });
       if (settings.dataLabels) {
-        const total = stacked ? parts.reduce((sum, part) => sum + Math.max(0, part.value), 0) : Math.max(...parts.map((part) => part.value));
+        const total = stacked ? parts.reduce((sum, part) => sum + part.value, 0) : Math.max(...parts.map((part) => part.value));
         const center = g.bandStart(i) + g.band / 2;
         const label = svgEl('text', g.horizontal
-          ? { x: g.base + g.scale(total) + 6, y: center + 4, 'text-anchor': 'start' }
-          : { x: center, y: g.base - g.scale(total) - 6, 'text-anchor': 'middle' });
+          ? { x: g.base + g.scale(total) + (total < 0 ? -6 : 6), y: center + 4, 'text-anchor': total < 0 ? 'end' : 'start' }
+          : { x: center, y: g.base - g.scale(total) + (total < 0 ? 16 : -6), 'text-anchor': 'middle' });
 
         label.setAttribute('data-blok-database-chart-data-label', '');
         label.setAttribute('style', `fill:${INK}`);
@@ -585,7 +598,7 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     const defs = svgEl('defs');
 
     lines.forEach((line, n) => {
-      const pts = points.map((p, i): [number, number] => [g.bandStart(i) + g.band / 2, g.base - g.scale(Math.max(0, line.value(p)))]);
+      const pts = points.map((p, i): [number, number] => [g.bandStart(i) + g.band / 2, g.base - g.scale(line.value(p))]);
       const d = linePath(pts, settings.smooth);
 
       if (settings.gradient && pts.length > 0) {
@@ -645,13 +658,15 @@ export class DatabaseChartView implements DatabaseViewRenderer {
   private drawHits(svg: SVGSVGElement, points: ChartPoint[], g: {
     horizontal: boolean; band: number; bandStart: (i: number) => number; base: number; scale: (v: number) => number;
   }): void {
-    const reach = g.scale(valueTicks(this.options.data.max).at(-1) ?? 1);
+    const ticks = valueTicks(this.options.data.max, this.options.data.min);
+    const start = g.scale(ticks[0]);
+    const reach = g.scale(ticks[ticks.length - 1]) - start;
     const layer = svgEl('g');
 
     points.forEach((p, i) => {
       const hit = svgEl('rect', g.horizontal
-        ? { x: g.base, y: g.bandStart(i), width: reach, height: g.band }
-        : { x: g.bandStart(i), y: g.base - reach, width: g.band, height: reach });
+        ? { x: g.base + start, y: g.bandStart(i), width: reach, height: g.band }
+        : { x: g.bandStart(i), y: g.base - start - reach, width: g.band, height: reach });
 
       hit.setAttribute('fill', 'transparent');
       this.wireHit(hit, p);

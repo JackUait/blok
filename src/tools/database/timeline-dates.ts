@@ -80,6 +80,27 @@ export const barGeometry = (span: EventSpan, windowStart: string, zoom: Timeline
   };
 };
 
+/**
+ * Hours zoom: a bar whose start has a time sits at that time. It ends at its
+ * end time, or one hour later when there is none. Null for a value with no
+ * time, which keeps the day geometry.
+ */
+export const hourBarGeometry = (values: BarValues, windowStart: string): { offset: number; width: number } | null => {
+  const start = parseDateValue(values.start);
+  const from = start === null ? null : minutesFrom(windowStart, start.start);
+
+  if (start === null || from === null) {
+    return null;
+  }
+
+  const endPart = values.end === undefined ? start.end : parseDateValue(values.end)?.start;
+  const to = endPart === undefined ? null : minutesFrom(windowStart, endPart);
+  const pxPerMinute = TIMELINE_DAY_WIDTH.hours / DAY_MINUTES;
+  const length = to !== null && to > from ? to - from : HOUR_MINUTES;
+
+  return { offset: from * pxPerMinute, width: Math.max(length * pxPerMinute, MIN_BAR_PX) };
+};
+
 export interface VisibleRange {
   first: string;
   last: string;
@@ -121,9 +142,51 @@ export interface BarWrite {
 
 const firstDay = (value: PropertyValue | undefined): string | null => parseDateValue(value)?.start.slice(0, 10) ?? null;
 
-/** Moves a bar by whole days. Times and lengths stay. */
-export const moveBar = (values: BarValues, deltaDays: number): BarWrite => {
+const HOUR_MINUTES = 60;
+const DAY_MINUTES = 24 * HOUR_MINUTES;
+const TIMED_PART = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/;
+
+/** Minutes from `windowStart` to a timed part, or null when the part has no time. */
+const minutesFrom = (windowStart: string, part: string): number | null => {
+  const match = TIMED_PART.exec(part);
+
+  if (match === null) {
+    return null;
+  }
+
+  return daysBetween(windowStart, match[1]) * DAY_MINUTES + Number(match[2]) * HOUR_MINUTES + Number(match[3]);
+};
+
+/** Shifts a timed part by whole hours as wall time; text after `HH:mm` (seconds, zone) stays. */
+const shiftPartByHours = (part: string, hours: number): string => {
+  const match = TIMED_PART.exec(part);
+
+  if (match === null) {
+    return part;
+  }
+
+  const total = Number(match[2]) * HOUR_MINUTES + Number(match[3]) + hours * HOUR_MINUTES;
+  const dayShift = Math.floor(total / DAY_MINUTES);
+  const inDay = total - dayShift * DAY_MINUTES;
+  const pad = (n: number): string => String(n).padStart(2, '0');
+
+  return `${addDays(match[1], dayShift)}T${pad(Math.floor(inDay / HOUR_MINUTES))}:${pad(inDay % HOUR_MINUTES)}${part.slice(match[0].length)}`;
+};
+
+/**
+ * Moves a bar by whole days, times and lengths kept. With `deltaHours`
+ * (hours zoom), a value that has a time moves by hours instead.
+ */
+export const moveBar = (values: BarValues, deltaDays: number, deltaHours?: number): BarWrite => {
   const shift = (value: PropertyValue | undefined): string | null => {
+    const parsed = parseDateValue(value);
+
+    if (parsed !== null && parsed.hasTime && deltaHours !== undefined) {
+      return [parsed.start, parsed.end].filter((part): part is string => part !== undefined)
+        .map((part) => shiftPartByHours(part, deltaHours))
+        .join('/');
+    }
+
     const day = firstDay(value);
 
     return day === null ? null : moveDateValue(value, addDays(day, deltaDays));

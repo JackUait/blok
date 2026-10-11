@@ -92,6 +92,10 @@ export class PersonalViewEdits {
     this.write(viewId, { ...this.get(viewId), ...patch });
   }
 
+  replace(viewId: string, patch: PersonalViewPatch): void {
+    this.write(viewId, patch);
+  }
+
   clear(viewId: string): void {
     this.write(viewId, {});
   }

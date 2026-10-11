@@ -6,7 +6,7 @@
  *
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
-import { databaseRowTitle, inRowOrder, titlePropertyIdOf } from '../shared/database-rows';
+import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
 import { buildDocumentModel } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { createHtmlRenderer } from './blocks-to-html';
@@ -408,7 +408,7 @@ const readPlainText = (
       return children;
     }
     const titleId = titlePropertyIdOf(block.data);
-    const rows = inRowOrder(children.filter((child) => child.type === 'database-row'));
+    const rows = inRowOrder(children.filter((child) => child.type === 'database-row' && !isTemplateRow(child)));
 
     rows.forEach((row) => {
       if (row.id !== undefined && titleId !== undefined) {

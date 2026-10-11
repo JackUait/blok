@@ -169,6 +169,9 @@ export const groupKeysFor = (
     // Grouped by their result type: the model groups with that property.
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'place':
+    case 'verification':
       return [NO_VALUE_GROUP_KEY];
   }
 };
@@ -275,6 +278,9 @@ export const groupValueForKey = (property: PropertyDefinition, key: string, sett
     case 'uniqueId':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'place':
+    case 'verification':
       return undefined;
   }
 };

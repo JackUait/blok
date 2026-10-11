@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
+import { captureDataKeySnapshot, DocumentStore } from '../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import type { FileValue, PersonValue, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -112,13 +112,88 @@ describe('database-row — two peers editing person and files values', () => {
   });
 
   /**
-   * KNOWN LIMIT, pinned so a fix shows up here. An empty list is a plain
-   * leaf: the identity rule needs at least one element, and no key-name rule
-   * can reach a nanoid property id (see EAGER_ARRAY_KEYS). Two peers adding
-   * the FIRST person at the same instant each write a whole new list over
-   * the key, and the later write wins. Every later add merges.
+   * The database tool writes `[]` for every person, files and relation
+   * property when it creates a row (or the property). That birth is made by
+   * one peer, and the empty list is an empty keyed container, so the first
+   * adds of two peers merge into it by id.
    */
-  it('last writer wins when two peers add the first person to an empty list (known limit)', () => {
+  it('keeps both people when two peers add the first person to a list born empty', () => {
+    start({ who: [] });
+
+    writeProperties(storeA, { title: 'Row', who: [{ id: 'u1' }] });
+    writeProperties(storeB, { title: 'Row', who: [{ id: 'u2' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA).who)).toEqual(['u1', 'u2']);
+    expect(propertiesOf(storeB).who).toEqual(propertiesOf(storeA).who);
+  });
+
+  it('keeps both files when two peers attach the first file to a list born empty', () => {
+    start({ att: [] });
+
+    writeProperties(storeA, { title: 'Row', att: [file('f1')] });
+    writeProperties(storeB, { title: 'Row', att: [file('f2')] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA).att)).toEqual(['f1', 'f2']);
+    expect(propertiesOf(storeB).att).toEqual(propertiesOf(storeA).att);
+  });
+
+  it('keeps one person when two peers add the same person to a list born empty', () => {
+    start({ who: [] });
+
+    writeProperties(storeA, { title: 'Row', who: [{ id: 'u1' }] });
+    writeProperties(storeB, { title: 'Row', who: [{ id: 'u1' }] });
+    sync(storeA, storeB);
+
+    expect(propertiesOf(storeA).who).toEqual([{ id: 'u1' }]);
+    expect(propertiesOf(storeB).who).toEqual([{ id: 'u1' }]);
+  });
+
+  it('keeps the add when one peer clears the list while the other adds', () => {
+    start({ who: [{ id: 'u0' }] });
+
+    writeProperties(storeA, { title: 'Row', who: [] });
+    writeProperties(storeB, { title: 'Row', who: [{ id: 'u0' }, { id: 'u1' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA).who)).toEqual(['u1']);
+    expect(propertiesOf(storeB).who).toEqual(propertiesOf(storeA).who);
+  });
+
+  it('keeps both first adds made after a peer cleared the list', () => {
+    start({ who: [{ id: 'u0' }] });
+
+    writeProperties(storeA, { title: 'Row', who: [] });
+    sync(storeA, storeB);
+    writeProperties(storeA, { title: 'Row', who: [{ id: 'u1' }] });
+    writeProperties(storeB, { title: 'Row', who: [{ id: 'u2' }] });
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA).who)).toEqual(['u1', 'u2']);
+    expect(propertiesOf(storeB).who).toEqual(propertiesOf(storeA).who);
+  });
+
+  it('a clear captured before a peer added keeps that add (async save)', () => {
+    start({ who: [{ id: 'u0' }] });
+
+    const seen = captureDataKeySnapshot(storeA.getBlockById('row1')?.get('data'));
+
+    writeProperties(storeB, { title: 'Row', who: [{ id: 'u0' }, { id: 'u1' }] });
+    sync(storeA, storeB);
+    storeA.updateBlockData('row1', 'properties', { title: 'Row', who: [] }, seen);
+    sync(storeA, storeB);
+
+    expect(ids(propertiesOf(storeA).who)).toEqual(['u1']);
+    expect(propertiesOf(storeB).who).toEqual(propertiesOf(storeA).who);
+  });
+
+  /**
+   * A row saved before the birth rule (or by an older client) has no key for
+   * the list. Two first adds each create the key, and creating a map key is
+   * last-writer-wins. Only the birth fixes this; nothing promotes on load.
+   */
+  it('last writer wins when two peers add the first person to a legacy row with no key', () => {
     start({});
 
     writeProperties(storeA, { title: 'Row', who: [{ id: 'u1' }] });
@@ -129,15 +204,27 @@ describe('database-row — two peers editing person and files values', () => {
     expect(propertiesOf(storeA).who).toEqual(propertiesOf(storeB).who);
   });
 
-  /** KNOWN LIMIT: removing the last person turns the list back into a leaf, so a concurrent add is lost. */
-  it('last writer wins when one peer clears the list while the other adds (known limit)', () => {
-    start({ who: [{ id: 'u0' }] });
+  /** Multi-select values share the `properties` map but are strings: they must stay whole values. */
+  it('keeps one whole multi-select value when two peers fill an empty one at once', () => {
+    start({ tags: [] });
 
-    writeProperties(storeA, { title: 'Row', who: [] });
-    writeProperties(storeB, { title: 'Row', who: [{ id: 'u0' }, { id: 'u1' }] });
+    writeProperties(storeA, { title: 'Row', tags: ['a'] });
+    writeProperties(storeB, { title: 'Row', tags: ['b'] });
     sync(storeA, storeB);
 
-    expect(propertiesOf(storeA).who).toEqual(propertiesOf(storeB).who);
+    expect([['a'], ['b']]).toContainEqual(propertiesOf(storeA).tags);
+    expect(propertiesOf(storeB).tags).toEqual(propertiesOf(storeA).tags);
+  });
+
+  it('never doubles a multi-select option two peers pick at once', () => {
+    start({ tags: [] });
+
+    writeProperties(storeA, { title: 'Row', tags: ['a'] });
+    writeProperties(storeB, { title: 'Row', tags: ['a'] });
+    sync(storeA, storeB);
+
+    expect(propertiesOf(storeA).tags).toEqual(['a']);
+    expect(propertiesOf(storeB).tags).toEqual(['a']);
   });
 
   it('keeps a stash one change kept while the other peer edits another cell', () => {

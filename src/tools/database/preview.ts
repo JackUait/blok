@@ -1,4 +1,4 @@
-import { IconBoard, IconCalendar, IconSelect, IconTable, IconText } from '../../components/icons';
+import { IconArrowDiagonal, IconBoard, IconCalendar, IconSelect, IconTable, IconText } from '../../components/icons';
 import { createPreview, h } from '../../components/utils/block-preview';
 
 type Color = 'gray' | 'yellow' | 'green' | 'purple';
@@ -81,5 +81,30 @@ export const renderBoardPreview = (): HTMLElement =>
         card('Hire a chef', 'Team', 'gray', { 'data-shift': 'up' })
       ),
       column('Done', 'green', '1', '2', card('Logo', 'Brand', 'purple', { 'data-shift': 'down' }))
+    )
+  );
+
+/**
+ * Linked view: the same table as the database's, under the source's name
+ * with a link arrow, as a linked view shows its source's title.
+ */
+export const renderLinkedDatabasePreview = (): HTMLElement =>
+  createPreview(
+    'database',
+    h('div', { 'data-tabs': '' }, h('span', { 'data-linked-source': '' }, icon(IconArrowDiagonal), 'Tasks'), tab(IconTable, 'My view', true)),
+    h(
+      'div',
+      { 'data-table': '' },
+      h(
+        'div',
+        { 'data-head': '' },
+        h('span', { 'data-cell': 'title' }, icon(IconText), 'Name'),
+        h('span', { 'data-cell': 'status' }, icon(IconSelect), 'Status'),
+        h('span', { 'data-cell': 'date' }, icon(IconCalendar), 'Date')
+      ),
+      row('Write brief', 'green', 'Done', 'Sep 12'),
+      row('Pick a name', 'yellow', 'Doing', 'Sep 18'),
+      row('Book venue', 'gray', 'To do', 'Oct 2'),
+      row('Send invites', 'purple', 'Idea', 'Oct 6')
     )
   );

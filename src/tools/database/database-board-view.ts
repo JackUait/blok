@@ -38,6 +38,10 @@ interface DatabaseBoardViewOptions {
   onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
   /** Sub-groups: one horizontal lane each, holding every column. */
   subGroups?: BoardLane[];
+  /** A column's full row count when `getRows` gives only the first page (load limit). */
+  getTotal?: (optionId: string) => number;
+  /** "Load more" under a column that holds more rows than it shows. */
+  onLoadMore?: (optionId: string) => void;
 }
 
 export interface BoardLane {
@@ -66,7 +70,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
   private readonly hiddenGroupCount: number;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext' | 'getTotal' | 'onLoadMore'>;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, ...settings
@@ -108,11 +112,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.style.flex = '1';
     boardArea.style.minWidth = '0';
 
-    const lanes = this.settings.subGroups ?? [];
+    const lanes = this.settings.subGroups;
     // With lanes, the group buttons go after the one header row.
-    const buttonRow = lanes.length > 0 ? this.createHeads() : boardArea;
+    const buttonRow = lanes !== undefined ? this.createHeads() : boardArea;
 
-    if (lanes.length > 0) {
+    // Zero lanes (every sub-group hidden) still draws as sub-grouped: an empty board, not every card.
+    if (lanes !== undefined) {
       boardArea.setAttribute('data-sub-grouped', '');
       boardArea.style.flexDirection = 'column';
       boardArea.appendChild(buttonRow);
@@ -123,7 +128,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       }
     }
 
-    if (this.hiddenGroupCount > 0) {
+    if (this.hiddenGroupCount > 0 && !this.readOnly) {
       const hiddenBtn = document.createElement('button');
 
       hiddenBtn.type = 'button';
@@ -369,8 +374,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     columnEl.style.flexDirection = 'column';
     this.applyColumnLook(columnEl, option);
 
+    const total = withHeader ? this.settings.getTotal?.(option.id) ?? rows.length : rows.length;
+
     if (withHeader) {
-      columnEl.appendChild(this.createColumnHeader(option, rows.length));
+      columnEl.appendChild(this.createColumnHeader(option, total));
     }
 
     const cardsContainer = document.createElement('div');
@@ -390,6 +397,16 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     columnEl.appendChild(cardsContainer);
+
+    if (total > rows.length) {
+      const more = document.createElement('button');
+
+      more.type = 'button';
+      more.setAttribute('data-blok-database-column-load-more', '');
+      more.textContent = this.i18n.t('tools.database.galleryLoadMore');
+      more.addEventListener('click', () => this.settings.onLoadMore?.(option.id));
+      columnEl.appendChild(more);
+    }
 
     if (!this.readOnly) {
       const addCardBtn = document.createElement('button');
@@ -422,7 +439,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     el.style.setProperty('min-width', columnWidth);
     el.style.setProperty('flex', `0 0 ${columnWidth}`);
 
-    if (option.color !== undefined) {
+    // "Color columns" off: columns and cards drop the hue, pills keep it.
+    if (option.color !== undefined && this.settings.view?.groupSettings?.colorColumns !== false) {
       const c = option.color;
 
       // Only some hues were measured (colors.css); the rest derive from the option pill.

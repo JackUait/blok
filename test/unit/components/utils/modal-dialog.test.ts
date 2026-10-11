@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openModalDialog } from '../../../../src/components/utils/modal-dialog';
+import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
+import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 
 // jsdom lacks the HTML Popover API; stub the minimal shape promoteToTopLayer needs.
 beforeEach(() => {
@@ -265,5 +267,113 @@ describe('openModalDialog', () => {
     expect(content.isConnected).toBe(false);
     expect(content.getAttribute('data-blok-closing')).toBe('true');
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  describe('focus outside the surface that the trap leaves alone', () => {
+    const popovers: PopoverDesktop[] = [];
+
+    beforeEach(() => {
+      PopoverRegistry.resetForTests();
+    });
+
+    afterEach(() => {
+      popovers.splice(0).forEach((popover) => popover.destroy());
+      PopoverRegistry.resetForTests();
+    });
+
+    const openMenuFrom = (trigger: HTMLElement): HTMLElement => {
+      const popover = new PopoverDesktop({ trigger, items: [{ title: 'Pick', onActivate: vi.fn() }] });
+
+      popovers.push(popover);
+      popover.show();
+
+      const menu = popover.getElement().querySelector<HTMLElement>('[role="menu"]');
+
+      if (menu === null) throw new Error('Missing menu');
+
+      return menu;
+    };
+
+    it('lets focus move into a menu the dialog opened (it lives on body)', () => {
+      const { content, surface, first } = buildDialog();
+      const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
+      const menu = openMenuFrom(first);
+
+      menu.focus();
+
+      expect(menu).toHaveFocus();
+      handle.close();
+    });
+
+    it('Escape closes a menu the dialog opened and keeps the dialog; the next Escape dismisses it', () => {
+      const { content, surface, first } = buildDialog();
+      const onDismiss = vi.fn();
+      const handle = openModalDialog({ content, surface, onDismiss });
+      const menu = openMenuFrom(first);
+      // On an element: the menu's Flipper reads attributes off the key target.
+      const escape = (): boolean => first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      escape();
+
+      expect(onDismiss).not.toHaveBeenCalled();
+      expect(menu.isConnected && menu.closest('[data-blok-popover-opened]') !== null).toBe(false);
+      expect(first).toHaveFocus();
+
+      escape();
+
+      expect(onDismiss).toHaveBeenCalledWith('escape');
+      handle.close();
+    });
+
+    it('pulls focus back from a menu opened by a trigger outside the dialog', () => {
+      const { content, surface, first } = buildDialog();
+      const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
+      const stranger = document.createElement('button');
+
+      document.body.appendChild(stranger);
+      openMenuFrom(stranger).focus();
+
+      expect(first).toHaveFocus();
+      handle.close();
+    });
+
+    it('pulls focus back from an open-marked element on body that the dialog did not open', () => {
+      const { content, surface, first } = buildDialog();
+      const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
+      const stranger = document.createElement('div');
+      const field = document.createElement('input');
+
+      stranger.setAttribute('data-blok-popover-opened', '');
+      stranger.appendChild(field);
+      document.body.appendChild(stranger);
+
+      field.focus();
+
+      expect(first).toHaveFocus();
+      handle.close();
+    });
+
+    it('keeps a nested dialog modal: focus in the outer dialog is pulled back into the inner one', () => {
+      const outer = buildDialog();
+
+      // The real setup and confirm backdrops carry it.
+      outer.content.setAttribute('data-blok-popover', '');
+
+      const outerHandle = openModalDialog({ content: outer.content, surface: outer.surface, onDismiss: vi.fn() });
+      const inner = buildDialog();
+      const innerHandle = openModalDialog({
+        content: inner.content,
+        surface: inner.surface,
+        container: outer.surface,
+        topLayer: false,
+        onDismiss: vi.fn(),
+      });
+
+      outer.last.focus();
+
+      expect(inner.first).toHaveFocus();
+      innerHandle.close();
+      outerHandle.close();
+    });
   });
 });

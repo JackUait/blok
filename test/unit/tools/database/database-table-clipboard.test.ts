@@ -22,9 +22,10 @@ describe('table clipboard', () => {
     vi.restoreAllMocks();
   });
 
-  it('copies values as their display text: labels, Yes/No, numbers', () => {
+  it('copies labels, lists, Yes/No and numbers as clipboard text', () => {
     expect(cellText(select, 'o2')).toBe('Build');
-    expect(cellText(multi, ['o1', 'o2'])).toBe('Idea, Build');
+    expect(cellText(multi, ['o1', 'o2'])).toBe('"Idea", Build');
+    expect(valueFromText(multi, cellText(multi, ['o1', 'o2']))).toEqual(['o1', 'o2']);
     expect(cellText(checkbox, true)).toBe('Yes');
     expect(cellText(number, 35.5)).toBe('35.5');
     expect(cellText(text, null)).toBe('');
@@ -47,8 +48,37 @@ describe('table clipboard', () => {
   it('prefers an HTML table to the text, reading only cell text out of it', () => {
     const html = '<meta charset="utf-8"><table><tr><th>Name</th><td><b>Bold</b> <img src="x" onerror="window.__fired = true"></td></tr></table>';
 
-    expect(parseClipboard({ html, text: 'ignored' })).toEqual([['Name', 'Bold']]);
+    expect(parseClipboard({ html, text: 'ignored' })).toEqual([['Name', 'Bold ']]);
     expect((window as unknown as { __fired?: boolean }).__fired).toBeUndefined();
+  });
+
+  it('preserves HTML line breaks and significant spaces in table cells', () => {
+    const html = '<table><tr><td>  first<br><b>second</b>  </td><td>  </td></tr></table>';
+
+    expect(parseClipboard({ html })).toEqual([['  first\nsecond  ', '  ']]);
+  });
+
+  it('preserves a whitespace-only text cell instead of clearing it', () => {
+    expect(valueFromText(text, '  ')).toBe('  ');
+  });
+
+  it('keeps comma-bearing multi-select labels when copying and pasting', () => {
+    const tags: PropertyDefinition = { ...multi, config: { options: [
+      { id: 'o-design', label: 'Research, "design"', position: 'a0' },
+      { id: 'o-build', label: 'Build', position: 'a1' },
+    ] } };
+
+    expect(valueFromText(tags, cellText(tags, ['o-design', 'o-build'])))
+      .toEqual(['o-design', 'o-build']);
+  });
+
+  it('matches a pasted comma-bearing multi-select label as one option', () => {
+    const tags: PropertyDefinition = { ...multi, config: { options: [
+      { id: 'o-design', label: 'Research, design', position: 'a0' },
+      { id: 'o-build', label: 'Build', position: 'a1' },
+    ] } };
+
+    expect(valueFromText(tags, 'Research, design')).toEqual(['o-design']);
   });
 
   it('falls back to the text when the HTML has no table', () => {

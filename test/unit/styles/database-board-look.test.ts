@@ -53,6 +53,13 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('padding: 0 var(--blok-space-2) var(--blok-space-2)');
   });
 
+  it('rounds only the bottom of a column body below the shared heads, as Notion measured 0 0 10px 10px', () => {
+    const body = ruleBody(database, '[data-blok-database-column][data-sub-group]');
+
+    expect(body).toContain('border-start-start-radius: 0');
+    expect(body).toContain('border-start-end-radius: 0');
+  });
+
   it('uses the measured tints, rings and accents, light and dark', () => {
     expect(tokenValues('--blok-database-column-bg')).toEqual(['rgba(66, 35, 3, 0.03)', 'rgba(252, 252, 252, 0.03)', 'rgba(252, 252, 252, 0.03)']);
     expect(tokenValues('--blok-database-card-bg')).toEqual(['rgb(32, 32, 32)', 'rgb(32, 32, 32)']);
@@ -61,8 +68,9 @@ describe('board column, card and header look (research/08)', () => {
     expect(tokenValues('--blok-database-column-pink-bg').slice(-2)).toEqual(['rgba(255, 78, 149, 0.055)', 'rgba(255, 78, 149, 0.055)']);
     expect(tokenValues('--blok-database-column-yellow-ring')).toEqual(['rgba(211, 168, 0, 0.137)', 'rgba(255, 225, 117, 0.13)', 'rgba(255, 225, 117, 0.13)']);
     expect(tokenValues('--blok-database-column-accent')).toEqual(['rgb(95, 94, 89)', 'rgb(188, 186, 182)', 'rgb(188, 186, 182)']);
-    expect(tokenValues('--blok-database-column-yellow-accent')[0]).toBe('rgb(216, 163, 47)');
-    expect(tokenValues('--blok-database-column-brown-accent')[0]).toBe('rgb(182, 137, 101)');
+    // Divergence: Notion's light yellow (2.2:1) and brown (2.9:1) accents fail AA on their tint, so they take the measured pill text (7.3:1, 8.6:1).
+    expect(tokenValues('--blok-database-column-yellow-accent')[0]).toBe('var(--blok-database-option-yellow-text)');
+    expect(tokenValues('--blok-database-column-brown-accent')[0]).toBe('var(--blok-database-option-brown-text)');
   });
 
   it('uses the measured gray option pill, which keeps the board header pill readable (research/08)', () => {
@@ -125,5 +133,11 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('background-color: transparent');
     expect(body).toContain('padding: 0');
     expect(body).toContain('margin-inline-start: var(--blok-space-1)');
+  });
+});
+
+describe('board column "Load more"', () => {
+  it('shares the gallery "Load more" look', () => {
+    expect(ruleBody(database, '[data-blok-database-column-load-more]')).toBe(ruleBody(database, '[data-blok-database-gallery-load-more]'));
   });
 });

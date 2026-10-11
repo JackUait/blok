@@ -191,6 +191,167 @@ describe('table bulk actions and clipboard', () => {
   });
 
   describe('paste', () => {
+    it.each<{
+      label: string;
+      type: 'formula' | 'rollup';
+      resultType: PropertyDefinition['type'];
+      value: DatabaseRow['properties'][string];
+      text: string;
+      clipboardText?: string;
+      pillLabels?: string[];
+      config?: PropertyDefinition['config'];
+    }>([
+      { label: 'true formula Boolean', type: 'formula', resultType: 'checkbox', value: true, text: 'Yes' },
+      { label: 'false formula Boolean', type: 'formula', resultType: 'checkbox', value: false, text: 'No' },
+      { label: 'formula person list', type: 'formula', resultType: 'person', value: [{ id: 'u1' }, { id: 'u2' }], text: 'u1, u2' },
+      { label: 'rollup file list', type: 'rollup', resultType: 'files', value: [
+        { id: 'f1', name: 'Notes.pdf', url: 'https://files.test/notes.pdf' },
+        { id: 'f2', name: 'Plan.pdf', url: 'https://files.test/plan.pdf' },
+      ], text: 'https://files.test/notes.pdf, https://files.test/plan.pdf' },
+      { label: 'rollup option list', type: 'rollup', resultType: 'multiSelect', value: ['o-idea', 'o-build'], text: '"Idea", Build', clipboardText: '"""Idea"", Build"', pillLabels: ['Idea', 'Build'], config: { options: [
+        { id: 'o-idea', label: 'Idea', position: 'a0' },
+        { id: 'o-build', label: 'Build', position: 'a1' },
+      ] } },
+    ])('copies a $label through each external clipboard format without losing its text', ({ type, resultType, value, text, config, clipboardText = text, pillLabels = [] }) => {
+      const computed: PropertyDefinition = { id: 'p-result', name: 'Result', type, position: 'a5' };
+      const { root, handlers, state, view } = mount({
+        schema: [...schema, computed],
+        rows: [
+          { ...row('r1', 'Alpha'), computed: { 'p-result': value } },
+          row('r2', 'Bravo', { 'p-notes': 'Existing text' }),
+        ],
+        cellContext: { valueProperty: (property) => property.id === computed.id ? { ...property, type: resultType, config } : property },
+      });
+      const source = { rowId: 'r1', propertyId: 'p-result' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-notes' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', { 'text/plain': copy.data.get('text/plain') ?? '' }).event);
+
+      expect(commitsOf(handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-notes', value: text }], []]]);
+      grid(root).dispatchEvent(clipboardEvent('paste', { 'text/html': copy.data.get('text/html') ?? '' }).event);
+      expect(commitsOf(handlers)).toEqual([
+        [[{ rowId: 'r2', propertyId: 'p-notes', value: text }], []],
+        [[{ rowId: 'r2', propertyId: 'p-notes', value: text }], []],
+      ]);
+      expect(copy.data.get('text/plain')).toBe(clipboardText);
+      expect([...cell(root, 'r1', computed.id).querySelectorAll('[data-blok-database-option-pill]')].map((pill) => pill.textContent)).toEqual(pillLabels);
+      view.destroy();
+    });
+
+    it('keeps two option labels when the target adds a comma-bearing option', () => {
+      const options = [
+        { id: 'o-idea', label: 'Idea', position: 'a0' },
+        { id: 'o-build', label: 'Build', position: 'a1' },
+      ];
+      const sourceTags: PropertyDefinition = { id: 'p-tags', name: 'Tags', type: 'multiSelect', position: 'a5', config: { options } };
+      const targetTags: PropertyDefinition = {
+        ...sourceTags,
+        config: { options: [...options, { id: 'o-combined', label: 'Idea, Build', position: 'a2' }] },
+      };
+      const source = mount({
+        schema: [...schema, sourceTags],
+        rows: [row('r1', 'Source', { 'p-tags': ['o-idea', 'o-build'] })],
+      });
+      const target = mount({
+        schema: [...schema, targetTags],
+        rows: [row('r2', 'Target', { 'p-tags': ['o-combined'] })],
+      });
+      const from = { rowId: 'r1', propertyId: 'p-tags' };
+      const to = { rowId: 'r2', propertyId: 'p-tags' };
+
+      source.state.selection = { kind: 'cell', anchor: from, focus: from };
+      const copy = clipboardEvent('copy');
+
+      grid(source.root).dispatchEvent(copy.event);
+      target.state.selection = { kind: 'cell', anchor: to, focus: to };
+      grid(target.root).dispatchEvent(clipboardEvent('paste', { 'text/plain': copy.data.get('text/plain') ?? '' }).event);
+
+      expect(commitsOf(target.handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-tags', value: ['o-idea', 'o-build'] }], []]]);
+      source.view.destroy();
+      target.view.destroy();
+    });
+
+    it('keeps two relation rows when the target adds a comma-bearing title', () => {
+      const links: PropertyDefinition = { id: 'p-links', name: 'Links', type: 'relation', position: 'a5' };
+      const candidates = [
+        { id: 'related-idea', title: 'Idea' },
+        { id: 'related-build', title: 'Build' },
+      ];
+      const source = mount({
+        schema: [...schema, links],
+        rows: [row('r1', 'Source', { 'p-links': [{ id: 'related-idea' }, { id: 'related-build' }] })],
+        cellContext: { relationCandidates: () => candidates },
+      });
+      const target = mount({
+        schema: [...schema, links],
+        rows: [row('r2', 'Target', { 'p-links': [{ id: 'related-combined' }] })],
+        cellContext: { relationCandidates: () => [...candidates, { id: 'related-combined', title: 'Idea, Build' }] },
+      });
+      const from = { rowId: 'r1', propertyId: 'p-links' };
+      const to = { rowId: 'r2', propertyId: 'p-links' };
+
+      source.state.selection = { kind: 'cell', anchor: from, focus: from };
+      const copy = clipboardEvent('copy');
+
+      grid(source.root).dispatchEvent(copy.event);
+      target.state.selection = { kind: 'cell', anchor: to, focus: to };
+      grid(target.root).dispatchEvent(clipboardEvent('paste', { 'text/plain': copy.data.get('text/plain') ?? '' }).event);
+
+      expect(commitsOf(target.handlers)).toEqual([[[{
+        rowId: 'r2', propertyId: 'p-links', value: [{ id: 'related-idea' }, { id: 'related-build' }],
+      }], []]]);
+      source.view.destroy();
+      target.view.destroy();
+    });
+
+    it.each(['text/plain', 'text/html'] as const)('keeps target options when one copied label is unresolved in %s', (format) => {
+      const sourceTags: PropertyDefinition = { id: 'p-tags', name: 'Tags', type: 'multiSelect', position: 'a5', config: { options: [
+        { id: 'o-idea', label: 'Idea', position: 'a0' },
+        { id: 'o-build', label: 'Build', position: 'a1' },
+      ] } };
+      const targetTags: PropertyDefinition = { ...sourceTags, config: { options: [
+        { id: 'o-idea', label: 'Idea', position: 'a0' },
+        { id: 'o-existing', label: 'Existing', position: 'a1' },
+      ] } };
+      const targetRow = row('r2', 'Target', { 'p-tags': ['o-existing'] });
+      const handlers = makeHandlers();
+
+      handlers.commitCells = vi.fn((changes: Array<{ rowId: string; propertyId: string; value: DatabaseRow['properties'][string] }>) => {
+        for (const change of changes) {
+          if (change.rowId === targetRow.id) targetRow.properties[change.propertyId] = change.value;
+        }
+      });
+      const source = mount({
+        schema: [...schema, sourceTags],
+        rows: [row('r1', 'Source', { 'p-tags': ['o-idea', 'o-build'] })],
+      });
+      const target = mount({
+        schema: [...schema, targetTags],
+        rows: [targetRow],
+        handlers,
+      });
+      const from = { rowId: 'r1', propertyId: 'p-tags' };
+      const to = { rowId: 'r2', propertyId: 'p-tags' };
+
+      source.state.selection = { kind: 'cell', anchor: from, focus: from };
+      const copy = clipboardEvent('copy');
+
+      grid(source.root).dispatchEvent(copy.event);
+      target.state.selection = { kind: 'cell', anchor: to, focus: to };
+      grid(target.root).dispatchEvent(clipboardEvent('paste', { [format]: copy.data.get(format) ?? '' }).event);
+
+      expect(targetRow.properties['p-tags']).toEqual(['o-existing']);
+      expect(commitsOf(handlers)).toEqual([[[], []]]);
+      source.view.destroy();
+      target.view.destroy();
+    });
+
     it('pastes a block of cells from the anchor, turning text into each type', () => {
       const { root, handlers } = mount();
 
@@ -243,6 +404,178 @@ describe('table bulk actions and clipboard', () => {
       grid(root).dispatchEvent(clipboardEvent('paste', { 'text/html': html, 'text/plain': 'ignored' }).event);
 
       expect(commitsOf(handlers)[0]).toEqual([[], [{ 'p-stage': 'o-build', 'p-title': 'Foxtrot' }]]);
+    });
+
+    it('roundtrips copied relation references with comma-bearing titles', () => {
+      const relation: PropertyDefinition = { id: 'p-links', name: 'Links', type: 'relation', position: 'a5', relation: { targetDatabaseId: 'related-db' } };
+      const candidates = [{ id: 'related-1', title: 'Research, design' }, { id: 'related-2', title: 'Build' }, { id: 'related-3', title: 'Existing' }];
+      const { root, handlers, state, view } = mount({
+        schema: [...schema, relation],
+        rows: [row('r1', 'Alpha', { 'p-links': [{ id: 'related-1' }, { id: 'related-2' }] }), row('r2', 'Bravo', { 'p-links': [{ id: 'related-3' }] })],
+        cellContext: { relationCandidates: () => candidates, relationTitle: (_property, id) => candidates.find((candidate) => candidate.id === id)?.title },
+      });
+      const source = { rowId: 'r1', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+      expect(commitsOf(handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-links', value: [{ id: 'related-1' }, { id: 'related-2' }] }], []]]);
+      view.destroy();
+    });
+
+    it('roundtrips copied relations without confusing equal row titles', () => {
+      const relation: PropertyDefinition = { id: 'p-links', name: 'Links', type: 'relation', position: 'a5', relation: { targetDatabaseId: 'related-db' } };
+      const candidates = [{ id: 'related-1', title: 'Same title' }, { id: 'related-2', title: 'Same title' }];
+      const { root, handlers, state, view } = mount({
+        schema: [...schema, relation],
+        rows: [row('r1', 'Alpha', { 'p-links': [{ id: 'related-1' }] }), row('r2', 'Bravo', { 'p-links': [{ id: 'related-2' }] })],
+        cellContext: { relationCandidates: () => candidates, relationTitle: (_property, id) => candidates.find((candidate) => candidate.id === id)?.title },
+      });
+      const source = { rowId: 'r1', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+      expect(commitsOf(handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-links', value: [{ id: 'related-1' }] }], []]]);
+      view.destroy();
+    });
+
+    it('keeps existing links when copied relations cannot resolve in the target', () => {
+      const relation: PropertyDefinition = { id: 'p-links', name: 'Links', type: 'relation', position: 'a5', relation: { targetDatabaseId: 'related-db' } };
+      const data = [row('r1', 'Alpha', { 'p-links': [{ id: 'missing-page' }] }), row('r2', 'Bravo', { 'p-links': [{ id: 'existing-page' }] })];
+      const handlers = makeHandlers();
+
+      handlers.commitCells = vi.fn((changes) => {
+        for (const change of changes) {
+          const target = data.find((item) => item.id === change.rowId);
+
+          if (target !== undefined) target.properties[change.propertyId] = change.value;
+        }
+      });
+      const { root, state, view } = mount({
+        schema: [...schema, relation], rows: data, handlers,
+        cellContext: { relationCandidates: () => [{ id: 'existing-page', title: 'Existing' }] },
+      });
+      const source = { rowId: 'r1', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+      expect(data.find((item) => item.id === 'r2')?.properties['p-links']).toEqual([{ id: 'existing-page' }]);
+      grid(root).dispatchEvent(clipboardEvent('paste', { 'text/plain': 'Unresolvable page' }).event);
+      expect(data.find((item) => item.id === 'r2')?.properties['p-links']).toEqual([{ id: 'existing-page' }]);
+      view.destroy();
+    });
+
+    it('pastes relation titles into new rows using the grid relation candidates', () => {
+      const relation: PropertyDefinition = { id: 'p-links', name: 'Links', type: 'relation', position: 'a5', relation: { targetDatabaseId: 'related-db' } };
+      const { root, handlers, view } = mount({
+        schema: [...schema, relation],
+        cellContext: { relationCandidates: () => [{ id: 'related-1', title: 'Research, design' }] },
+      });
+      const html = '<table><tr><th>Name</th><th>Links</th></tr><tr><td>New row</td><td>Research, design</td></tr></table>';
+
+      grid(root).dispatchEvent(clipboardEvent('paste', { 'text/html': html }).event);
+
+      expect(commitsOf(handlers)).toEqual([[[], [{ 'p-title': 'New row', 'p-links': [{ id: 'related-1' }] }]]]);
+      view.destroy();
+    });
+
+    it('keeps comma-bearing multi-select chips through the grid clipboard', () => {
+      const tags: PropertyDefinition = { id: 'p-tags', name: 'Tags', type: 'multiSelect', position: 'a5', config: { options: [
+        { id: 'o-design', label: 'Research, "design"', position: 'a0' },
+        { id: 'o-build', label: 'Build', position: 'a1' },
+      ] } };
+      const { root, handlers, state, view } = mount({
+        schema: [...schema, tags],
+        rows: [row('r1', 'Alpha', { 'p-tags': ['o-design', 'o-build'] }), row('r2', 'Bravo')],
+      });
+      const source = { rowId: 'r1', propertyId: 'p-tags' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-tags' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+      expect(commitsOf(handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-tags', value: ['o-design', 'o-build'] }], []]]);
+      view.destroy();
+    });
+
+    it('keeps separate multi-select options when their labels also name one comma-bearing option', () => {
+      const tags: PropertyDefinition = { id: 'p-tags', name: 'Tags', type: 'multiSelect', position: 'a5', config: { options: [
+        { id: 'o-idea', label: 'Idea', position: 'a0' },
+        { id: 'o-build', label: 'Build', position: 'a1' },
+        { id: 'o-combined', label: 'Idea, Build', position: 'a2' },
+      ] } };
+      const { root, handlers, state, view } = mount({
+        schema: [...schema, tags],
+        rows: [row('r1', 'Alpha', { 'p-tags': ['o-idea', 'o-build'] }), row('r2', 'Bravo', { 'p-tags': ['o-combined'] })],
+      });
+      const source = { rowId: 'r1', propertyId: 'p-tags' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-tags' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+      expect(commitsOf(handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-tags', value: ['o-idea', 'o-build'] }], []]]);
+      view.destroy();
+    });
+
+    it('keeps separate relation references when their titles also name one comma-bearing row', () => {
+      const relation: PropertyDefinition = { id: 'p-links', name: 'Links', type: 'relation', position: 'a5', relation: { targetDatabaseId: 'related-db' } };
+      const candidates = [
+        { id: 'related-idea', title: 'Idea' },
+        { id: 'related-build', title: 'Build' },
+        { id: 'related-combined', title: 'Idea, Build' },
+      ];
+      const { root, handlers, state, view } = mount({
+        schema: [...schema, relation],
+        rows: [
+          row('r1', 'Alpha', { 'p-links': [{ id: 'related-idea' }, { id: 'related-build' }] }),
+          row('r2', 'Bravo', { 'p-links': [{ id: 'related-combined' }] }),
+        ],
+        cellContext: { relationCandidates: () => candidates, relationTitle: (_property, id) => candidates.find((candidate) => candidate.id === id)?.title },
+      });
+      const source = { rowId: 'r1', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: source, focus: source };
+      const copy = clipboardEvent('copy');
+
+      grid(root).dispatchEvent(copy.event);
+      const target = { rowId: 'r2', propertyId: 'p-links' };
+
+      state.selection = { kind: 'cell', anchor: target, focus: target };
+      grid(root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+      expect(commitsOf(handlers)).toEqual([[[{ rowId: 'r2', propertyId: 'p-links', value: [{ id: 'related-idea' }, { id: 'related-build' }] }], []]]);
+      view.destroy();
     });
 
     it('never writes from a read-only table', () => {

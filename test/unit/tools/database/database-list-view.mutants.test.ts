@@ -43,18 +43,20 @@ const rowPropsHtml = (rowId: string): string =>
   + `<button data-blok-database-delete-row="" data-row-id="${rowId}" aria-label="T(tools.database.deleteRow)">×</button>`
   + '</div>';
 
-const rowHtml = (rowId: string, title: string): string =>
-  `<div data-blok-database-list-row="" data-row-id="${rowId}" role="listitem">`
+const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
+  `<div data-blok-database-list-row="" data-row-id="${rowId}" role="listitem" tabindex="${tabindex}">`
   + `<div data-blok-database-list-row-title="">${title}</div>`
   + rowPropsHtml(rowId)
   + '</div>';
 
 const ADD_ROW_HTML =
-  '<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)">+ T(tools.database.newRow)</button>';
+  '<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)">+ T(tools.database.newPage)</button>';
 
 const FLAT_HTML =
-  '<div data-blok-database-list="" role="list" aria-label="T(tools.database.listView)">'
+  '<div data-blok-database-list="" data-blok-keyboard-owner="">'
+  + '<div data-blok-database-list-rows="" role="list" aria-label="T(tools.database.listView)">'
   + rowHtml('row-1', 'Fix bug')
+  + '</div>'
   + ADD_ROW_HTML
   + '</div>';
 
@@ -91,8 +93,7 @@ describe('DatabaseListView — mutation coverage', () => {
       expect(list.outerHTML).toBe(FLAT_HTML);
       expect(attrs(list)).toStrictEqual({
         'data-blok-database-list': '',
-        'role': 'list',
-        'aria-label': 'T(tools.database.listView)',
+        'data-blok-keyboard-owner': '',
       });
 
       const addRowBtn = list.querySelector('[data-blok-database-add-row]');
@@ -199,7 +200,7 @@ describe('createView — grouped branch', () => {
       const list = view.createView();
 
       expect(list.outerHTML).toBe(
-        '<div data-blok-database-list="">'
+        '<div data-blok-database-list="" data-blok-keyboard-owner="">'
         + '<div data-blok-database-list-group="" data-option-id="opt-a">'
         + '<div data-blok-database-list-group-header="">'
         + `<span data-blok-database-list-group-toggle="">${chevronHtml()}</span>`
@@ -211,7 +212,7 @@ describe('createView — grouped branch', () => {
         + rowHtml('row-1', 'Fix bug')
         + '</div>'
         + '<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)" data-option-id="opt-a">'
-        + '+ T(tools.database.newRow)'
+        + '+ T(tools.database.newPage)'
         + '</button>'
         + '</div>'
         + '</div>'
@@ -308,7 +309,7 @@ describe('createView — grouped branch', () => {
 
       expect(insertSpy).not.toHaveBeenCalled();
       expect(appendSpy).toHaveBeenCalledTimes(1);
-      expect(container.innerHTML).toBe(rowHtml('row-9', 'Nine'));
+      expect(container.innerHTML).toBe(rowHtml('row-9', 'Nine', '-1'));
     });
   });
 
@@ -413,48 +414,7 @@ describe('createView — grouped branch', () => {
       expect(properties?.outerHTML).toBe(rowPropsHtml('row-1'));
     });
 
-    it('renders no badge for a checkbox property the row has no value for', () => {
-      const view = new DatabaseListView({
-        readOnly: false,
-        i18n,
-        rows: [makeRow({ properties: { title: 'Fix bug' } })],
-        titlePropertyId: 'title',
-        schema: [TITLE_PROP, { id: 'done',
-          name: 'Done',
-          type: 'checkbox',
-          position: 'a1' }],
-        visiblePropertyIds: ['done'],
-      });
-
-      const list = view.createView();
-      const properties = list.querySelector('[data-blok-database-list-row-properties]');
-
-      // Checkbox is the only branch that renders something for a falsy value,
-      // so it is the only value type that makes the undefined/null guard visible.
-      expect(properties?.outerHTML).toBe(rowPropsHtml('row-1'));
-    });
-
-    it('renders no badge for a checkbox property explicitly stored as null', () => {
-      const view = new DatabaseListView({
-        readOnly: false,
-        i18n,
-        rows: [makeRow({ properties: { title: 'Fix bug',
-          done: null } })],
-        titlePropertyId: 'title',
-        schema: [TITLE_PROP, { id: 'done',
-          name: 'Done',
-          type: 'checkbox',
-          position: 'a1' }],
-        visiblePropertyIds: ['done'],
-      });
-
-      const list = view.createView();
-      const properties = list.querySelector('[data-blok-database-list-row-properties]');
-
-      expect(properties?.outerHTML).toBe(rowPropsHtml('row-1'));
-    });
-
-    it('serializes a checked checkbox badge with its glyph and its visually-hidden state text', () => {
+    it('wraps a checkbox in one editable slot holding the shared display checkbox', () => {
       const view = new DatabaseListView({
         readOnly: false,
         i18n,
@@ -468,48 +428,17 @@ describe('createView — grouped branch', () => {
         visiblePropertyIds: ['done'],
       });
 
-      const list = view.createView();
-      const badge = list.querySelector('[data-blok-database-list-row-property]');
+      const badge = view.createView().querySelector('[data-blok-database-list-row-property]');
 
-      // Every visually-hidden declaration is asserted as READ BACK: cssstyle
-      // normalises `padding: 0` to `0px` and `border: 0` to `0px`.
-      expect(badge?.outerHTML).toBe(
-        '<span data-blok-database-list-row-property="" data-property-id="done">'
-        + '<span data-blok-database-checkbox-glyph="" aria-hidden="true" data-state="checked">✓</span>'
-        + '<span style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px;'
-        + ' overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0px;">'
-        + 'T(tools.database.checkboxChecked)'
-        + '</span>'
-        + '</span>'
-      );
-    });
-
-    it('serializes an unchecked checkbox badge with an empty glyph and the unchecked state text', () => {
-      const view = new DatabaseListView({
-        readOnly: false,
-        i18n,
-        rows: [makeRow({ properties: { title: 'Fix bug',
-          done: false } })],
-        titlePropertyId: 'title',
-        schema: [TITLE_PROP, { id: 'done',
-          name: 'Done',
-          type: 'checkbox',
-          position: 'a1' }],
-        visiblePropertyIds: ['done'],
+      expect(attrs(badge ?? document.createElement('span'))).toStrictEqual({
+        'data-blok-database-list-row-property': '',
+        'data-property-id': 'done',
+        'data-editable': '',
+        tabindex: '-1',
+        role: 'button',
+        'aria-label': 'Done: T(tools.database.checkboxChecked)',
       });
-
-      const list = view.createView();
-      const badge = list.querySelector('[data-blok-database-list-row-property]');
-
-      expect(badge?.outerHTML).toBe(
-        '<span data-blok-database-list-row-property="" data-property-id="done">'
-        + '<span data-blok-database-checkbox-glyph="" aria-hidden="true" data-state="unchecked"></span>'
-        + '<span style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px;'
-        + ' overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0px;">'
-        + 'T(tools.database.checkboxUnchecked)'
-        + '</span>'
-        + '</span>'
-      );
+      expect(badge?.querySelector('[data-blok-database-checkbox]')?.getAttribute('data-state')).toBe('checked');
     });
 
     it('renders no badge for a select property whose definition carries no config', () => {
@@ -532,21 +461,6 @@ describe('createView — grouped branch', () => {
       expect(properties?.outerHTML).toBe(rowPropsHtml('row-1'));
     });
 
-    /*
-     * PROVEN EQUIVALENT — `const options = propDef.config?.options ?? []` with
-     * the `[]` replaced by `["Stryker was here"]` (mutant 288:50).
-     *
-     * The array is read exactly once, by `options.find(o => o.id === value)`.
-     * `"Stryker was here".id` is `undefined`, so the predicate reduces to
-     * `undefined === value`, and a `value` of `undefined` already returned `null`
-     * at the guard on line 278. `find` therefore yields `undefined` under both
-     * versions, both take `if (option === undefined) return null`, and nothing
-     * else reads `options`. No input can separate them.
-     *
-     * The fallback IS exercised by the test above: the OptionalChaining mutant on
-     * the same line (`propDef.config.options`) dies there, which only happens if
-     * that test reaches this expression with `config` undefined.
-     */
     it('renders no badge for a select value that matches none of the configured options', () => {
       const view = new DatabaseListView({
         readOnly: false,
@@ -586,40 +500,28 @@ describe('createView — grouped branch', () => {
         visiblePropertyIds: ['status'],
       });
 
-      const list = view.createView();
-      const badge = list.querySelector('[data-blok-database-list-row-property]');
+      const pill = view.createView().querySelector('[data-blok-database-list-row-property] [data-blok-database-option-pill]');
 
-      expect(badge?.outerHTML).toBe(
-        '<span data-blok-database-list-row-property="" data-property-id="status"'
-        + ' style="background-color: var(--blok-color-green-bg); color: var(--blok-color-green-text);">'
-        + 'Beta'
-        + '</span>'
-      );
+      expect(pill?.outerHTML).toBe('<span data-blok-database-option-pill="" data-color="green">Beta</span>');
     });
 
-    it('leaves a select badge unstyled when the matched option carries no color', () => {
+    it('draws a read-only slot with no edit affordance', () => {
       const view = new DatabaseListView({
-        readOnly: false,
+        readOnly: true,
         i18n,
         rows: [makeRow({ properties: { title: 'Fix bug',
-          status: 'opt-plain' } })],
+          status: 'opt-a' } })],
         titlePropertyId: 'title',
         schema: [TITLE_PROP, { id: 'status',
           name: 'Status',
           type: 'select',
           position: 'a1',
-          config: { options: [{ id: 'opt-plain',
-            label: 'Plain',
-            position: 'a0' }] } }],
+          config: { options: [OPTION_A] } }],
         visiblePropertyIds: ['status'],
       });
 
-      const list = view.createView();
-      const badge = list.querySelector('[data-blok-database-list-row-property]');
+      const badge = view.createView().querySelector('[data-blok-database-list-row-property]');
 
-      expect(badge?.outerHTML).toBe(
-        '<span data-blok-database-list-row-property="" data-property-id="status">Plain</span>'
-      );
       expect(attrs(badge ?? document.createElement('span'))).toStrictEqual({
         'data-blok-database-list-row-property': '',
         'data-property-id': 'status',

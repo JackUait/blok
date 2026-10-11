@@ -141,6 +141,69 @@ describe('EmojiPicker progressive keywords', () => {
     return flush();
   }
 
+  it('keeps page scrolling unlocked when a pending open is closed and removed', async () => {
+    const grid = deferred<ProcessedEmoji[]>();
+
+    mockLoadEmojiGrid.mockReturnValueOnce(grid.promise);
+    const picker = await createPicker();
+    const root = picker.getElement();
+    const registrations = vi.spyOn(document, 'addEventListener');
+
+    document.documentElement.style.overflow = 'auto';
+    const opening = picker.open(anchor);
+
+    picker.close();
+    root.remove();
+    registrations.mockClear();
+    grid.resolve(emojis);
+
+    try {
+      await opening;
+
+      expect(document.documentElement.style.overflow).toBe('auto');
+      expect(registrations.mock.calls.some(([type, , options]) => type === 'keydown' && options === true)).toBe(false);
+      expect(picker.isOpen()).toBe(false);
+      expect(root.hidden).toBe(true);
+      expect(root.isConnected).toBe(false);
+    } finally {
+      picker.close();
+      root.remove();
+    }
+  });
+
+  it('opens a pending picker normally when its grid finishes loading', async () => {
+    const grid = deferred<ProcessedEmoji[]>();
+
+    mockLoadEmojiGrid.mockReturnValueOnce(grid.promise);
+    const picker = await createPicker();
+    const root = picker.getElement();
+
+    document.documentElement.style.overflow = 'auto';
+    const opening = picker.open(anchor);
+
+    grid.resolve(emojis);
+
+    try {
+      await opening;
+
+      expect(root.hidden).toBe(false);
+      expect(root.isConnected).toBe(true);
+      expect(root.contains(document.activeElement)).toBe(true);
+      expect(document.documentElement.style.overflow).toBe('hidden');
+
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', bubbles: true, cancelable: true,
+      }));
+
+      expect(document.documentElement.style.overflow).toBe('auto');
+      expect(picker.isOpen()).toBe(false);
+      expect(root.hidden).toBe(true);
+    } finally {
+      picker.close();
+      root.remove();
+    }
+  });
+
   it('shows the grid while the keywords are still loading', async () => {
     const picker = await createPicker();
 

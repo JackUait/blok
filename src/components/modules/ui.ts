@@ -712,6 +712,10 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    if (target.closest(`[${DATA_ATTR.contextMenuOwner}]`) !== null) {
+      return;
+    }
+
     const nativeTarget = target.closest('a, input, textarea, select, img, video, audio');
 
     if (nativeTarget !== null && (

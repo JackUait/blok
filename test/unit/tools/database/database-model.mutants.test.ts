@@ -395,10 +395,11 @@ describe('DatabaseModel — mutation coverage', () => {
   });
 
   describe('positionBetween', () => {
-    it('rejects out-of-order keys instead of letting the library swap them', () => {
-      expect(() => DatabaseModel.positionBetween('a2', 'a1')).toThrowError(
-        new Error('DatabaseModel.positionBetween: keys out of order (a2 >= a1)')
-      );
+    it('lands between out-of-order keys instead of throwing', () => {
+      const between = DatabaseModel.positionBetween('a2', 'a1');
+
+      expect(between > 'a1').toBe(true);
+      expect(between < 'a2').toBe(true);
     });
 
     // Equal neighbours are not a caller bug: documents written before appended
@@ -415,19 +416,14 @@ describe('DatabaseModel — mutation coverage', () => {
       expect(DatabaseModel.positionBetween(null, null)).toBe('a0');
     });
 
-    // `'0' >= null` and `null >= '0'` are both true under numeric coercion, so a
-    // guard that stops requiring BOTH neighbours claims an ordering fault on a
-    // key the library alone should reject.
-    it('leaves an invalid trailing neighbour to the library', () => {
-      expect(() => DatabaseModel.positionBetween('0', null)).toThrowError(
-        new Error('invalid order key head: 0')
-      );
+    // `'0' > null` is false under numeric coercion; a guard that stops
+    // requiring BOTH neighbours would swap them and mint a key below '0'.
+    it('mints a key above an unreadable trailing neighbour', () => {
+      expect(DatabaseModel.positionBetween('0', null) > '0').toBe(true);
     });
 
-    it('leaves an invalid leading neighbour to the library', () => {
-      expect(() => DatabaseModel.positionBetween(null, '0')).toThrowError(
-        new Error('invalid order key head: 0')
-      );
+    it('mints a key below an unreadable leading neighbour', () => {
+      expect(DatabaseModel.positionBetween(null, '0') < '0').toBe(true);
     });
   });
 });

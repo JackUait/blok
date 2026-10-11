@@ -74,6 +74,14 @@ describe('DatabaseBoardView', () => {
       expect(button?.nextElementSibling?.hasAttribute('data-blok-database-add-column')).toBe(true);
     });
 
+    it('offers no hidden-groups button in read-only, where it could not show a group again', () => {
+      const view = new DatabaseBoardView({
+        readOnly: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 2,
+      });
+
+      expect(view.createView().querySelector('[data-blok-database-hidden-groups]')).toBeNull();
+    });
+
     it('offers no hidden-groups button when nothing is hidden', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
 
@@ -201,6 +209,33 @@ describe('DatabaseBoardView', () => {
       expect(column.style.getPropertyValue('--_blok-group-accent'))
         .toBe('var(--blok-database-column-green-accent, var(--blok-database-option-green-text))');
       expect(column.style.backgroundColor).toBe('');
+    });
+
+    it('leaves a colored column on the default tokens when the view turns "Color columns" off', () => {
+      const options = [makeOption({ id: 'opt-1', color: 'green' })];
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title',
+        view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'p', groupSettings: { colorColumns: false } },
+      });
+      const column = view.createView().querySelector('[data-blok-database-column]') as HTMLElement;
+
+      expect(column.style.getPropertyValue('--_blok-group-tint')).toBe('');
+      expect(column.style.getPropertyValue('--_blok-group-ring')).toBe('');
+      expect(column.style.getPropertyValue('--_blok-group-accent')).toBe('');
+      expect(column.hasAttribute('data-color')).toBe(false);
+    });
+
+    it('keeps sub-group lane columns untinted when "Color columns" is off', () => {
+      const options = [makeOption({ id: 'opt-1', color: 'green' })];
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title',
+        view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'p', groupSettings: { colorColumns: false } },
+        subGroups: [{ key: 'l1', label: 'Lane' }],
+      });
+      const tinted = [...view.createView().querySelectorAll<HTMLElement>('[data-blok-database-column], [data-blok-database-board-column-head]')]
+        .filter((el) => el.style.getPropertyValue('--_blok-group-tint') !== '');
+
+      expect(tinted).toHaveLength(0);
     });
 
     it('leaves an uncolored column on the default tokens', () => {

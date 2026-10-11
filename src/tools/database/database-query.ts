@@ -12,6 +12,9 @@ import type {
 import { parseDateValue } from './cells/date-value';
 import { filesOf, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupsOf } from './property-values';
 import { RELATIVE_DATE_OPERATORS, relativeWindow, resolveDay } from './relative-dates';
+import { scopeSubItems } from './sub-items';
+import { isEmptyObjectValue, isOutputData, placeText } from './tier3-values';
+import { comparePositions } from './positions';
 
 const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
 const COMPARE_OPERATORS = ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to'] as const;
@@ -48,6 +51,9 @@ export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>>
   // that property (ComputedProperties.valueProperty), never with these.
   formula: [],
   rollup: [],
+  button: [],
+  place: TEXT_OPERATORS,
+  verification: ['is_empty', 'is_not_empty'],
 };
 
 /** A rollup that shows a list filters with Notion's API quantifiers. */
@@ -97,6 +103,8 @@ export interface QuerySource {
   now?: Date;
   /** The current user's id, for a person filter's "Me". */
   me?: string | null;
+  /** Sub-items on: each sub-item's parent row. The view's sub-item options pick the rows. */
+  parents?: Map<string, string>;
 }
 
 export interface QueryRowsRequest {
@@ -146,7 +154,7 @@ const toIdList = (value: PropertyValue): string[] => personIdsOf(value);
 
 /** `undefined` means "this filter does not apply", so the row passes. */
 const matchText = (value: PropertyValue | undefined, operator: string, target: PropertyValue): boolean | undefined => {
-  const isDocument = typeof value === 'object' && value !== null && !Array.isArray(value);
+  const isDocument = isOutputData(value);
 
   if (operator === 'is_empty' || operator === 'is_not_empty') {
     const empty = isDocument ? value.blocks.length === 0 : isBlank(value);
@@ -315,6 +323,13 @@ const MATCHERS: Record<PropertyType, Matcher> = {
   relation: matchMultiSelect,
   formula: () => undefined,
   rollup: () => undefined,
+  button: () => undefined,
+  place: (value, operator, target) => matchText(placeText(value), operator, target),
+  verification: (value, operator) => {
+    const empty = value === undefined || value === null || (typeof value === 'object' && !Array.isArray(value) && isEmptyObjectValue(value));
+
+    return operator === 'is_empty' ? empty : !empty;
+  },
 };
 
 const LIST_SHAPES: readonly PropertyType[] = ['multiSelect', 'person', 'relation', 'files'];
@@ -429,7 +444,7 @@ export const rowMatchesFilterTree = (
 ): boolean => tree === undefined || (evaluate(row, tree, schema, now, me) ?? true);
 
 /** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
-const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => a.position.localeCompare(b.position);
+const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => comparePositions(a.position, b.position);
 
 /** Options compare with `<`, like getSelectOptions, so sort order matches column order. */
 const compareKeys = (a: string, b: string): number => {
@@ -488,8 +503,15 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
     case 'email':
     case 'phone':
       return typeof value === 'string' && value !== '' ? value : undefined;
+    case 'place': {
+      const text = placeText(value);
+
+      return text === '' ? undefined : text;
+    }
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'verification':
       return undefined;
   }
 };
@@ -577,12 +599,12 @@ const dateTargetValue = (operator: string, target: PropertyValue): string | unde
   }
 };
 
-const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue): PropertyValue | undefined => {
+const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue, me: string | null): PropertyValue | undefined => {
   if (type === 'date') {
     return dateTargetValue(operator, target);
   }
   if (operator === 'contains' && type === 'person') {
-    const id = toIdList(target)[0];
+    const id = toIdList(target).map((each) => (each === ME_FILTER_VALUE ? me ?? '' : each)).find((each) => each !== '');
 
     return id === undefined ? undefined : [{ id }];
   }
@@ -612,6 +634,9 @@ const filterTargetValue = (type: PropertyType | undefined, operator: string, tar
     case 'relation':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'place':
+    case 'verification':
     case undefined:
       return undefined;
   }
@@ -622,9 +647,9 @@ const filterTargetValue = (type: PropertyType | undefined, operator: string, tar
  * `contains`), as Notion does, so the filter does not hide the row on the
  * next redraw.
  */
-export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[]): Record<string, PropertyValue> =>
+export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[], me: string | null = null): Record<string, PropertyValue> =>
   Object.fromEntries(filters.flatMap((filter) => {
-    const value = filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.operator, filter.value);
+    const value = filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.operator, filter.value, me);
 
     return value === undefined ? [] : [[filter.propertyId, value]];
   }));
@@ -660,7 +685,10 @@ const searchText = (property: PropertyDefinition, value: PropertyValue | undefin
     case 'relation':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'verification':
       return '';
+    case 'place': return placeText(value);
   }
 };
 
@@ -675,10 +703,12 @@ export const rowMatchesSearch = (row: DatabaseRow, search: string | undefined, s
 const filteredRows = (source: QuerySource, view: DatabaseViewConfig, search?: string): DatabaseRow[] => {
   const now = source.now ?? new Date();
 
-  return source.rows.filter((row) =>
+  const matching = source.rows.filter((row) =>
     rowMatchesFilters(row, view.filters, source.schema, now, source.me) &&
     rowMatchesFilterTree(row, view.filterTree, source.schema, now, source.me) &&
     rowMatchesSearch(row, search, source.schema));
+
+  return source.parents === undefined ? matching : scopeSubItems(matching, view, source.parents);
 };
 
 /**

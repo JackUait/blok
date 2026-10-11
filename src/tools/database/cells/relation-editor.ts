@@ -112,6 +112,7 @@ class RelationEditor implements CellEditorHandle {
     if (this.property.relation?.limit === 1) {
       this.selected = this.selected.includes(id) ? [] : [id];
     } else {
+      if (!this.selected.includes(id) && this.ctx.maxSelections !== undefined && this.selected.length >= this.ctx.maxSelections) return;
       this.selected = this.selected.includes(id) ? this.selected.filter((s) => s !== id) : [...this.selected, id];
     }
     const value: RelationValue[] = this.selected.map((selected) => ({ id: selected }));

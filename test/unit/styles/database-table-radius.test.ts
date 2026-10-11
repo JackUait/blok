@@ -91,9 +91,9 @@ describe('database board', () => {
     expect(radiusOf('database.css', '[data-blok-database-add-column]')).toEqual([role('control-lg')]);
   });
 
-  it('the card action group is concentric with its buttons', () => {
-    expect(radiusOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control-lg')]);
-    expect(innerOf('database.css', '[data-blok-database-card-actions]')).toEqual([derive('control-lg', '0-5')]);
+  it('the card action pill is a 24px control and its buttons share its radius (research/07:135, 08:317)', () => {
+    expect(radiusOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control')]);
+    expect(innerOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-edit-card], [data-blok-database-card-menu]'))
       .toEqual([inner('control')]);
   });
@@ -111,9 +111,9 @@ describe('database board', () => {
 });
 
 describe('database tabs and menus', () => {
-  it('a tab is a large control and its rename input nests inside it', () => {
-    expect(radiusOf('database.css', '[data-blok-database-tab]')).toEqual([role('control-lg')]);
-    expect(innerOf('database.css', '[data-blok-database-tab]')).toEqual([derive('control-lg', '2')]);
+  it('a tab is a pill (Notion\'s 20px at 32px tall, research/07:45) and its rename input is a control', () => {
+    expect(radiusOf('database.css', '[data-blok-database-tab]')).toEqual([role('pill')]);
+    expect(innerOf('database.css', '[data-blok-database-tab]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-tab-rename-input]')).toEqual([inner('control')]);
   });
 
@@ -151,6 +151,8 @@ describe('database tabs and menus', () => {
 describe('database list and drawer', () => {
   it('rows and row-like buttons are controls', () => {
     expect(radiusOf('database.css', '[data-blok-database-list-row]')).toEqual([role('control')]);
+    // A 30px property slot (research/07) is a control, not a small tag.
+    expect(radiusOf('database.css', '[data-blok-database-list-row-property]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-list-group-header]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-drawer-add-prop]')).toEqual([role('control')]);
     expect(radiusOf(
@@ -160,7 +162,6 @@ describe('database list and drawer', () => {
   });
 
   it('small row buttons and tags are small controls; the chevron tip is a notch', () => {
-    expect(radiusOf('database.css', '[data-blok-database-list-row-property]')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-list-row-open]')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-list-row-properties] [data-blok-database-delete-row]'))
       .toEqual([role('control-sm')]);

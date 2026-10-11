@@ -1,6 +1,7 @@
 import type { BodyBlock } from './row-body';
 import { formatDateDisplay, toIsoDay, toIsoTime } from './cells/date-format';
 import { filesOf, personIdsOf } from './property-values';
+import { isOutputData, placeText, verificationStatus } from './tier3-values';
 import { generateKeyBetween } from 'fractional-indexing';
 
 import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
@@ -111,7 +112,7 @@ const computedText = (value: PropertyValue | undefined, ctx: CsvTextContext): st
 };
 
 const bodyText = (value: PropertyValue | undefined): string => {
-  const blocks: unknown = typeof value === 'object' && value !== null && !Array.isArray(value) ? value.blocks : undefined;
+  const blocks: unknown = isOutputData(value) ? value.blocks : undefined;
 
   if (!Array.isArray(blocks)) return '';
 
@@ -161,10 +162,17 @@ export const csvCellText = (property: PropertyDefinition, value: PropertyValue |
     }
     case 'richText':
       return typeof value === 'string' ? value : bodyText(value);
+    case 'place':
+      return placeText(value);
+    case 'verification':
+      return value === null || value === undefined ? '' : verificationStatus(value);
     case 'relation':
     case 'formula':
     case 'rollup':
       return computedText(value, ctx);
+    // A button holds no value.
+    case 'button':
+      return '';
     case 'title':
     case 'text':
     case 'url':
@@ -253,6 +261,10 @@ const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | u
     case 'email':
     case 'phone':
       return raw;
+    // Text names a place but holds no coordinates; the host geocodes it.
+    case 'place':
+      return text === '' ? null : { address: text };
+    case 'verification':
     case 'select':
     case 'multiSelect':
     case 'status':
@@ -268,6 +280,7 @@ const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | u
     case 'relation':
     case 'formula':
     case 'rollup':
+    case 'button':
     default:
       return undefined;
   }

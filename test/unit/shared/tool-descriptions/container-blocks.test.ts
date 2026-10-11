@@ -267,6 +267,54 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
     },
   },
   {
+    name: 'database',
+    scenario: 'sub-items, dependencies, a button property, a default template and sub-item view settings',
+    data: {
+      activeViewId: 'v',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0', defaultTemplateId: 'tpl' },
+        { id: 'parent', name: 'Parent item', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db', limit: 1, twoWay: true, syncedPropertyId: 'subs', role: 'parentItem' } },
+        { id: 'subs', name: 'Sub-items', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'parent', role: 'subItems' } },
+        {
+          id: 'blockedBy', name: 'Blocked by', type: 'relation', position: 'a3',
+          relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'blocking', role: 'blockedBy' },
+          dependency: { shift: 'maintain', avoidWeekends: true },
+        },
+        { id: 'blocking', name: 'Blocking', type: 'relation', position: 'a4', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'blockedBy', role: 'blocking' } },
+        {
+          id: 'btn', name: 'Done', type: 'button', position: 'a5',
+          button: {
+            label: 'Mark done',
+            buttonActions: [
+              { id: 'a1', type: 'editProperty', propertyId: 'name', value: 'Done' },
+              { id: 'a2', type: 'insertBlocks', blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'Hi' } }] },
+              { id: 'a3', type: 'openPage' },
+              { id: 'a4', type: 'callback', name: 'webhook' },
+            ],
+          },
+        },
+      ],
+      views: [
+        { id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], subItemsDisplay: 'nested', subItemsFilter: 'parentsAndSubItems', arrowsBy: 'blockedBy' },
+      ],
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a linked database pointing at a source block',
+    data: {
+      activeViewId: 'v',
+      source: { databaseId: 'db', documentId: 'doc-2' },
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+    },
+  },
+  {
+    name: 'database-row',
+    scenario: 'a repeating page template',
+    data: { properties: { name: 'Weekly' }, position: 'a0', template: true, repeat: { frequency: 'weekly', interval: 2, start: '2026-10-12T09:00:00.000Z', lastRunAt: '2026-10-12T09:00:00.000Z' } },
+  },
+  {
     name: 'database-row',
     scenario: 'relation values are row id objects',
     data: { properties: { rel: [{ id: 'row-2' }, { id: 'row-3' }] }, position: 'a0' },
@@ -323,6 +371,28 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
         colorRules: [{ id: 'c1', propertyId: 'due', operator: 'is_not_empty', value: null, color: 'green', applyTo: 'property' }],
         showPageIcon: false,
       }],
+    },
+  },
+  {
+    name: 'database',
+    scenario: 'a row page layout on the title property',
+    data: {
+      activeViewId: 'v',
+      schema: [
+        {
+          id: 'name',
+          name: 'Name',
+          type: 'title',
+          position: 'a0',
+          pageLayoutStructure: 'tabbed',
+          pageLayoutGroupIn: 'panel',
+          pageLayoutSections: [{ id: 's1', name: 'Planning' }],
+          pageLayoutPlacements: [{ id: 'due', place: 'heading' }, { id: 'stage', place: 'section', sectionId: 's1' }],
+        },
+        { id: 'due', name: 'Due', type: 'date', position: 'a1' },
+        { id: 'stage', name: 'Stage', type: 'select', position: 'a2', config: { options: [] } },
+      ],
+      views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
     },
   },
   {
@@ -384,6 +454,7 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
           timelineBy: 'start',
           timelineEndBy: 'end',
           timelineZoom: '5_years',
+          timelineCenter: '2026-10-09',
           showTimelineTable: true,
           tableProperties: [{ id: 'start', visible: true, width: 120 }],
           arrowsBy: 'blocked-by',
@@ -600,7 +671,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('c2578f2f343d061080130142ac9ca7876abe3b47fb9dd302c16561e66e38cf4c');
+      .toBe('95908c20f306cafeec52307e1da27160fcadf05feee60f9df551393bf0ec4f01');
 
     const published: unknown = JSON.parse(snapshot);
 

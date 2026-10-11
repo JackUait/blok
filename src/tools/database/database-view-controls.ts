@@ -1,15 +1,16 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
-import { IconSearch, IconSliders, IconLock, IconPlus } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
-import { defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
+import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
 import { openFilterPill, openViewSettings } from './database-view-settings-panel';
-import type { ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
+import type { StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
+import type { AutomationSettings } from './database-automations-panel';
 import type {
   DatabaseViewConfig,
   DatabaseViewStateStore,
@@ -55,6 +56,13 @@ export interface ViewControlsHost {
   layoutItems?: () => PopoverItemParams[];
   /** One-shot actions for the settings root page. */
   actions?: () => ViewSettingsAction[];
+  automations?: AutomationSettings;
+  /** Database settings: sub-items and dependencies. */
+  structure?: StructureSettings;
+  /** "New": a row from the default template. */
+  newRow?: () => void;
+  /** The "New" chevron: templates and "+ New template". */
+  openNewMenu?: (anchor: HTMLElement) => void;
 }
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
@@ -65,6 +73,15 @@ const button = (testId: string, label: string, content: { icon?: string; text?: 
   el.setAttribute('aria-label', label);
   if (content.icon !== undefined) el.innerHTML = content.icon;
   if (content.text !== undefined) el.append(content.text);
+
+  return el;
+};
+
+/** A 28px toolbar button that holds only an icon; its aria-label names it. */
+const iconButton = (testId: string, label: string, icon: string): HTMLButtonElement => {
+  const el = button(testId, label, { icon });
+
+  el.setAttribute('data-blok-database-toolbar-icon', '');
 
   return el;
 };
@@ -112,10 +129,10 @@ export class DatabaseViewControls {
     this.lockBadge.setAttribute('aria-label', this.t('lockedLabel'));
     this.lockBadge.innerHTML = IconLock;
 
-    this.filterButton = button('database-toolbar-filter', this.t('settingsFilter'), { text: this.t('settingsFilter') });
-    this.sortButton = button('database-toolbar-sort', this.t('settingsSort'), { text: this.t('settingsSort') });
-    this.searchButton = button('database-toolbar-search', this.t('searchLabel'), { icon: IconSearch });
-    this.settingsButton = button('database-toolbar-settings', this.t('settingsTitle'), { icon: IconSliders });
+    this.filterButton = iconButton('database-toolbar-filter', this.t('settingsFilter'), IconFilter);
+    this.sortButton = iconButton('database-toolbar-sort', this.t('settingsSort'), IconSort);
+    this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
+    this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
     this.searchInput = document.createElement('input');
     this.searchInput.type = 'search';
     this.searchInput.hidden = true;
@@ -139,10 +156,27 @@ export class DatabaseViewControls {
       if (this.query === '') this.hideSearch();
     });
     this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton);
+    if (host.newRow !== undefined) {
+      this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
+    }
 
     this.filterBar = document.createElement('div');
     this.filterBar.setAttribute('data-blok-database-filter-bar', '');
     this.refresh();
+  }
+
+  /** Notion's "New" split button (research/08): the main part adds a row, the chevron lists templates. */
+  private newSplitButton(newRow: () => void, openMenu: ((anchor: HTMLElement) => void) | undefined): HTMLElement {
+    const wrap = document.createElement('span');
+    const main = button('database-toolbar-new', this.t('toolbarNew'), { text: this.t('toolbarNew') });
+    const chevron = button('database-toolbar-new-menu', this.t('templateMenuLabel'), { icon: IconChevronDown });
+
+    wrap.setAttribute('data-blok-database-new', '');
+    main.addEventListener('click', () => newRow());
+    chevron.addEventListener('click', () => openMenu?.(chevron));
+    wrap.append(main, chevron);
+
+    return wrap;
   }
 
   /** Fetches personal edits from the host store; without one they are read on demand. */
@@ -161,6 +195,19 @@ export class DatabaseViewControls {
 
   hasPersonalEdits(viewId: string): boolean {
     return this.personal.has(viewId);
+  }
+
+  hasPersonalSorts(viewId: string): boolean {
+    return this.personal.get(viewId).sorts !== undefined;
+  }
+
+  /** Clears the sorts this person sees, leaving the saved view alone. */
+  dropPersonalSorts(view: DatabaseViewConfig): void {
+    const patch = { ...this.personal.get(view.id) };
+
+    delete patch.sorts;
+    this.personal.replace(view.id, view.sorts.length === 0 ? patch : { ...patch, sorts: [] });
+    this.refresh();
   }
 
   /** Syncs the toolbar and filter bar to the active view, and the open panel. */
@@ -263,7 +310,7 @@ export class DatabaseViewControls {
   private saveForEveryone(): void {
     const view = this.host.savedView();
 
-    if (view === undefined || this.host.locked()) return;
+    if (view === undefined || this.host.locked() || this.host.readOnly()) return;
     const patch = this.personal.get(view.id);
 
     this.personal.clear(view.id);
@@ -303,6 +350,8 @@ export class DatabaseViewControls {
       ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),
       ...(this.host.layoutItems !== undefined ? { layoutItems: this.host.layoutItems } : {}),
       ...(this.host.actions !== undefined ? { actions: this.host.actions } : {}),
+      ...(this.host.automations !== undefined ? { automations: this.host.automations } : {}),
+      ...(this.host.structure !== undefined ? { structure: this.host.structure } : {}),
     };
   }
 
@@ -334,7 +383,7 @@ export class DatabaseViewControls {
       root: {
         title: this.t('filterAdd'),
         build: () => this.host.schema()
-          .filter((p) => p.type !== 'richText')
+          .filter((p) => FILTERABLE_TYPES.includes(p.type))
           .map((property) => panelRow({
             label: property.name,
             testId: `database-pick-property-${property.id}`,

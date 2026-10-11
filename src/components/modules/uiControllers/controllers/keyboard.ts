@@ -5,6 +5,7 @@ import { isIosDevice } from '../../../utils/browser';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { getCaretOffset } from '../../../utils/caret/selection';
 import { runConvert } from '../../../utils/convert-refusal';
+import { hasEscapeLayer } from '../../../utils/dismissable-layer';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
@@ -819,6 +820,11 @@ export class KeyboardController extends Controller {
      * from being enabled when closing block settings.
      */
     if (PopoverRegistry.instance.hasOpenPopovers()) {
+      // A layer (modal, toast) listens later on document and would also peel on this press.
+      if (hasEscapeLayer()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
       PopoverRegistry.instance.closeTopmost();
 
       return;

@@ -20,6 +20,8 @@ const DEFAULT_KEYS = {
   viewTypeTimeline: 'tools.database.viewTypeTimeline',
   viewTypeChart: 'tools.database.viewTypeChart',
   viewTypeFeed: 'tools.database.viewTypeFeed',
+  viewTypeForm: 'tools.database.viewTypeForm',
+  viewTypeMap: 'tools.database.viewTypeMap',
 } as const;
 
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
@@ -45,6 +47,8 @@ export const DATABASE_DEFAULT_TEXT = {
   viewTypeTimeline: englishDefault(DEFAULT_KEYS.viewTypeTimeline),
   viewTypeChart: englishDefault(DEFAULT_KEYS.viewTypeChart),
   viewTypeFeed: englishDefault(DEFAULT_KEYS.viewTypeFeed),
+  viewTypeForm: englishDefault(DEFAULT_KEYS.viewTypeForm),
+  viewTypeMap: englishDefault(DEFAULT_KEYS.viewTypeMap),
 } as const;
 
 const localizeCanonicalValue = (
@@ -171,6 +175,14 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
 
   if (view.type === 'feed') {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeFeed, DEFAULT_KEYS.viewTypeFeed, i18n);
+  }
+
+  if (view.type === 'form') {
+    return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeForm, DEFAULT_KEYS.viewTypeForm, i18n);
+  }
+
+  if (view.type === 'map') {
+    return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeMap, DEFAULT_KEYS.viewTypeMap, i18n);
   }
 
   return view.name;

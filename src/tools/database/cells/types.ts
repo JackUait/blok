@@ -37,6 +37,8 @@ export interface CellContext {
   people?: DatabasePerson[];
   /** The current user's id, listed first in the person editor. */
   me?: string;
+  /** A form question's selection cap, independent of the property schema. */
+  maxSelections?: number;
   /** Stores a picked file and gives its URL. Without it the files editor offers links only. */
   uploadFile?: (file: File) => Promise<{ url: string; name?: string }>;
   /** Anchors the relative date format. Defaults to the current time. */
@@ -69,6 +71,8 @@ export interface CellEditorCallbacks {
   onCancel?: () => void;
   /** The editor closed, after any commit or cancel. Hosts restore focus here. */
   onClose?: () => void;
+  /** The status editor's "Edit property" footer: open the property menu. Without it there is no footer. */
+  onEditProperty?: () => void;
 }
 
 export type CellEditorContext = CellContext & CellEditorCallbacks;

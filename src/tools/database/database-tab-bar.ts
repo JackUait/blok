@@ -1,6 +1,6 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -11,12 +11,13 @@ import {
   type PositionTracker,
 } from '../../components/utils/popover/anchored-position';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
-import type { DatabaseViewConfig, ViewType } from './types';
-import { copyGhostRadius } from './copy-ghost-radius';
+import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
+import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
 
 const DRAG_THRESHOLD = 10;
 
@@ -48,6 +49,9 @@ const VIEW_ICONS: Record<string, string> = {
   timeline: IconTimeline,
   chart: IconChart,
   feed: IconMessage,
+  form: IconListChecklist,
+  map: IconMap,
+  dashboard: IconColumns,
 };
 
 export interface TabBarOptions {
@@ -61,6 +65,10 @@ export interface TabBarOptions {
   onReorder: (viewId: string, newPosition: string) => void;
   /** "Edit view": opens the view settings panel under the tab. */
   onEditView?: (viewId: string, anchor: HTMLElement) => void;
+  /** This person's "Display as". Defaults to both. */
+  display?: DatabaseTabDisplay;
+  /** Offers "Display as" in the tab menu. */
+  onDisplayChange?: (display: DatabaseTabDisplay) => void;
   api?: API;
   readOnly?: boolean;
 }
@@ -108,7 +116,9 @@ export class DatabaseTabBar {
   render(): HTMLElement {
     const bar = document.createElement('div');
     bar.setAttribute('data-blok-database-tab-bar', '');
+    bar.setAttribute(DATA_ATTR.contextMenuOwner, '');
     bar.setAttribute('role', 'tablist');
+    bar.setAttribute('data-display', this.options.display ?? 'both');
     // Arrow/Home/End roving and Enter/Space activation are the bar's own; Blok's
     // block- and editor-level keyboard handling stands down inside the subtree.
     bar.setAttribute(DATA_ATTR.keyboardOwner, '');
@@ -289,6 +299,7 @@ export class DatabaseTabBar {
     }
 
     const iconSpan = document.createElement('span');
+    iconSpan.setAttribute('data-blok-database-tab-icon', '');
     iconSpan.innerHTML = VIEW_ICONS[view.type] ?? '';
     tab.appendChild(iconSpan);
 
@@ -337,6 +348,7 @@ export class DatabaseTabBar {
           this.options.onDuplicate(viewId);
         },
       },
+      ...this.displayItems(),
     ];
 
     const deleteItems = canDelete
@@ -373,6 +385,32 @@ export class DatabaseTabBar {
     });
 
     this.contextPopover.show();
+  }
+
+  /** "Display as" (research/03 §1.2). */
+  private displayItems(): PopoverItemParams[] {
+    const onDisplayChange = this.options.onDisplayChange;
+
+    if (onDisplayChange === undefined) return [];
+    const current = this.options.display ?? 'both';
+    const modes: Array<[DatabaseTabDisplay, string, string]> = [
+      ['both', 'tools.database.tabDisplayBoth', 'Text and icon'],
+      ['text', 'tools.database.tabDisplayText', 'Text only'],
+      ['icon', 'tools.database.tabDisplayIcon', 'Icon only'],
+    ];
+
+    return [{
+      icon: IconTabs,
+      title: this.t('tools.database.tabDisplayAs', 'Display as'),
+      children: {
+        items: modes.map(([mode, key, fallback]) => ({
+          title: this.t(key, fallback),
+          isActive: mode === current,
+          closeOnActivate: true,
+          onActivate: () => onDisplayChange(mode),
+        })),
+      },
+    }];
   }
 
   private closeContextPopover(): void {
@@ -589,7 +627,7 @@ export class DatabaseTabBar {
         const rect = sourceTab.getBoundingClientRect();
         this.ghostEl.style.top = `${rect.top}px`;
         this.ghostEl.style.width = `${rect.width}px`;
-        document.body.appendChild(this.ghostEl);
+        mountGhost(sourceTab, this.ghostEl);
         sourceTab.style.opacity = '0.4';
       }
     }

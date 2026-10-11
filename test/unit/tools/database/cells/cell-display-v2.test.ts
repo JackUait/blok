@@ -185,7 +185,7 @@ describe('renderCellValue — new property types', () => {
   });
 
   it('shows a type from a newer client as empty, without throwing', () => {
-    const el = renderCellValue(prop('place' as PropertyType), { lat: 1 } as never, ctx());
+    const el = renderCellValue(prop('hologram' as PropertyType), 'x', ctx());
 
     expect(el.textContent).toBe('');
   });
@@ -201,7 +201,7 @@ describe('openCellEditor — read-only and unknown types', () => {
     document.body.innerHTML = '';
   });
 
-  it.each(['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId', 'place'])('opens nothing for %s', (type) => {
+  it.each(['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId', 'button'])('opens nothing for %s', (type) => {
     const context = makeEditorContext();
     const handle = openCellEditor(prop(type as PropertyType), null, makeAnchor(), context);
 
@@ -245,5 +245,24 @@ describe('status cell editor', () => {
 
     expect(sequence).toEqual(['todo', 's1', 'inProgress', 's2', 'complete', 's3']);
     expect(document.querySelector('[data-blok-database-status-group-heading="todo"]')?.textContent).toBe('To-do');
+  });
+
+  it('ends with "Edit property", which closes the editor and asks for the property menu (research/08)', () => {
+    const onEditProperty = vi.fn();
+    const context = makeEditorContext({ onEditProperty });
+    const handle = openCellEditor(statusProp, null, makeAnchor(), context);
+    const footer = document.querySelector<HTMLElement>('[data-blok-database-select-edit-property]');
+
+    expect(footer?.textContent).toContain('tools.database.editProperty');
+    footer?.click();
+
+    expect(handle.isOpen).toBe(false);
+    expect(onEditProperty).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no "Edit property" footer without the lever', () => {
+    openCellEditor(statusProp, null, makeAnchor(), makeEditorContext());
+
+    expect(document.querySelector('[data-blok-database-select-edit-property]')).toBeNull();
   });
 });

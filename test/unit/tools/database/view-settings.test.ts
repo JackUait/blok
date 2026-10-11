@@ -24,6 +24,8 @@ import {
   resolveWrapCells,
   visibleRowPropertyIds,
   withCalculation,
+  withCalculationCap,
+  resolveCountCaps,
   withPropertyOrder,
   withPropertySetting,
 } from '../../../../src/tools/database/view-settings';
@@ -387,6 +389,17 @@ describe('view-settings', () => {
       expect(set).toEqual([{ id: 'p-due', fn: 'count' }, { id: 'p-done', fn: 'checked' }]);
       expect(withCalculation({ ...start, calculations: set }, 'p-due', 'empty')).toEqual([{ id: 'p-due', fn: 'empty' }, { id: 'p-done', fn: 'checked' }]);
       expect(withCalculation({ ...start, calculations: set }, 'p-due', null)).toEqual([{ id: 'p-done', fn: 'checked' }]);
+    });
+
+    it('keeps "Show large counts as 99+" across a change of function, and sets it with Count when none is picked', () => {
+      const start = view({ calculations: [{ id: 'p-due', fn: 'count' }] });
+      const capped = withCalculationCap(start, 'p-due', true);
+
+      expect(capped).toEqual([{ id: 'p-due', fn: 'count', capCounts: true }]);
+      expect(withCalculation({ ...start, calculations: capped }, 'p-due', 'empty')).toEqual([{ id: 'p-due', fn: 'empty', capCounts: true }]);
+      expect(withCalculationCap({ ...start, calculations: capped }, 'p-due', false)).toEqual([{ id: 'p-due', fn: 'count' }]);
+      expect(withCalculationCap(start, 'p-done', true)).toEqual([{ id: 'p-due', fn: 'count' }, { id: 'p-done', fn: 'count', capCounts: true }]);
+      expect(resolveCountCaps({ ...start, calculations: capped })).toEqual(new Set(['p-due']));
     });
   });
 });

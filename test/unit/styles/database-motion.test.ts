@@ -96,14 +96,15 @@ describe('side peek', () => {
   });
 
   it('narrows the page beside it over the same 200ms', () => {
-    const host = body(outsideReducedMotion, '[data-blok-database-peek]');
+    // The host is the editor wrapper; its `all: initial !important` reset beats anything weaker.
+    const host = body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek]');
 
-    expect(host).toContain('padding-inline-end: var(--_blok-peek-inset, 0px)');
-    expect(host).toContain('transition: padding-inline-end 200ms ease');
+    expect(host).toContain('padding-inline-end: var(--_blok-peek-inset, 0px) !important');
+    expect(host).toContain('transition: padding-inline-end 200ms ease !important');
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {
     expect(body(reducedMotion, '[data-blok-database-drawer]')).toContain('transition: none');
-    expect(body(reducedMotion, '[data-blok-database-peek]')).toContain('transition: none');
+    expect(body(reducedMotion, '[data-blok-interface=blok][data-blok-database-peek]')).toContain('transition: none !important');
   });
 });

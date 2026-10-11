@@ -68,6 +68,22 @@ describe('DatabaseDropLine', () => {
     expect(line()?.style.top).toBe('198px');
   });
 
+  it('takes a fading line back when it shows again, so two lines never show at once', () => {
+    const drop = new DatabaseDropLine();
+
+    drop.showHorizontal({ left: 10, centerY: 100, width: 260 });
+    drop.hide();
+    drop.showHorizontal({ left: 300, centerY: 100, width: 260 });
+
+    expect(document.body.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
+    expect(line()?.style.opacity).toBe('');
+    expect(line()?.style.left).toBe('300px');
+
+    vi.advanceTimersByTime(DROP_LINE_FADE_MS);
+
+    expect(line()).not.toBeNull();
+  });
+
   it('fades the line out and removes it after the fade', () => {
     const drop = new DatabaseDropLine();
 
@@ -89,23 +105,6 @@ describe('DatabaseDropLine', () => {
     drop.hide();
 
     expect(line()).toBeNull();
-  });
-
-  it('draws a fresh line while the previous one still fades out', () => {
-    const drop = new DatabaseDropLine();
-
-    drop.showHorizontal({ left: 10, centerY: 100, width: 260 });
-    drop.hide();
-    drop.showHorizontal({ left: 10, centerY: 300, width: 260 });
-
-    const lines = document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]');
-
-    expect(lines).toHaveLength(2);
-    expect(lines[1].style.opacity).toBe('');
-
-    vi.advanceTimersByTime(DROP_LINE_FADE_MS);
-
-    expect(document.body.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
   });
 
   it('removes every line at once on destroy', () => {

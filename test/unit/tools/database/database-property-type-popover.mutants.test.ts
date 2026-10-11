@@ -39,7 +39,8 @@ const optionFor = (type: string): HTMLElement | null =>
 /** Notion's "Select type" order (research/08), without Person: no people directory here. */
 const TYPES: PropertyType[] = [
   'text', 'number', 'select', 'multiSelect', 'status', 'date', 'files', 'checkbox', 'url', 'phone', 'email',
-  'relation', 'rollup', 'formula', 'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+  'relation', 'rollup', 'formula', 'button', 'uniqueId', 'place', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+  'verification',
 ];
 
 describe('database property type popover mutants', () => {

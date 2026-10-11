@@ -34,6 +34,10 @@ export class DatabasePropertyTypePopover {
     this.withNameField = options.withNameField === true;
   }
 
+  get isOpen(): boolean {
+    return this.popoverEl !== null;
+  }
+
   open(anchor: HTMLElement): void {
     this.close();
 
@@ -106,13 +110,12 @@ export class DatabasePropertyTypePopover {
   }
 
   close(): void {
+    const popover = this.popoverEl;
+
+    this.popoverEl = null;
     this.positionTracker?.detach();
     this.positionTracker = null;
-
-    if (this.popoverEl !== null) {
-      this.popoverEl.remove();
-      this.popoverEl = null;
-    }
+    popover?.remove();
     if (this.boundOutsideClick !== null) {
       document.removeEventListener('mousedown', this.boundOutsideClick);
       this.boundOutsideClick = null;

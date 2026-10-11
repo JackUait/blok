@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as Y from 'yjs';
 import { DatabaseBackendSync } from '../../../../src/tools/database/database-backend-sync';
 import type { DatabaseAdapter } from '../../../../src/tools/database/types';
+import type { BlockReplayCapture } from '../../../../types/events/editor-events';
 
 const createMockAdapter = (): DatabaseAdapter => ({
   loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
@@ -55,6 +57,29 @@ describe('DatabaseBackendSync', () => {
   });
 
   describe('row operations', () => {
+    it('still holds a row whose backend delete failed', async () => {
+      const adapter = createMockAdapter();
+
+      vi.mocked(adapter.deleteRow).mockRejectedValue(new Error('offline'));
+      const sync = new DatabaseBackendSync(adapter, () => undefined);
+
+      await sync.syncCreateRow({ id: 'r1', properties: {}, position: 'a0' });
+      await sync.syncDeleteRow({ rowId: 'r1' });
+
+      expect(sync.holdsRow('r1')).toBe(true);
+    });
+
+    it('does not hold a row whose backend create failed', async () => {
+      const adapter = createMockAdapter();
+
+      vi.mocked(adapter.createRow).mockRejectedValue(new Error('offline'));
+      const sync = new DatabaseBackendSync(adapter, () => undefined);
+
+      await sync.syncCreateRow({ id: 'r1', properties: {}, position: 'a0' });
+
+      expect(sync.holdsRow('r1')).toBe(false);
+    });
+
     it('syncCreateRow calls adapter.createRow', async () => {
       const adapter = createMockAdapter();
       const sync = new DatabaseBackendSync(adapter);
@@ -287,23 +312,14 @@ describe('DatabaseBackendSync', () => {
       expect(rows.has('r1')).toBe(false);
     });
 
-    it('does not recreate a deleted row when a newer immediate write starts during an earlier write', async () => {
+    it('refuses a forward write requested after deletion while an earlier write is pending', async () => {
       const adapter = createMockAdapter();
       const rows = new Set(['r1']);
       let releaseOlderWrite: (() => void) | undefined;
-      let releaseNewerWrite: (() => void) | undefined;
-      let markNewerStarted: (() => void) | undefined;
       const olderWriteGate = new Promise<void>((resolve) => { releaseOlderWrite = resolve; });
-      const newerWriteGate = new Promise<void>((resolve) => { releaseNewerWrite = resolve; });
-      const newerStarted = new Promise<void>((resolve) => { markNewerStarted = resolve; });
 
       vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
-        if (properties.title === 'Older') {
-          await olderWriteGate;
-        } else {
-          markNewerStarted?.();
-          await newerWriteGate;
-        }
+        if (properties.title === 'Older') await olderWriteGate;
         rows.add(rowId);
         return { id: rowId, position: 'a0', properties };
       });
@@ -311,18 +327,1071 @@ describe('DatabaseBackendSync', () => {
         rows.delete(rowId);
       });
       const sync = new DatabaseBackendSync(adapter);
-
       const olderWrite = sync.syncUpdateRowNow({ rowId: 'r1', properties: { title: 'Older' } });
       const deletion = sync.syncDeleteRow({ rowId: 'r1' });
       const newerWrite = sync.syncUpdateRowNow({ rowId: 'r1', properties: { title: 'Newer' } });
 
-      if (releaseOlderWrite === undefined || releaseNewerWrite === undefined) throw new Error('write gates were not initialized');
+      if (releaseOlderWrite === undefined) throw new Error('older write gate was not initialized');
       releaseOlderWrite();
-      await newerStarted;
-      releaseNewerWrite();
       await Promise.all([olderWrite, newerWrite, deletion]);
 
+      expect(vi.mocked(adapter.updateRow).mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { title: 'Older' } }],
+      ]);
       expect(rows.has('r1')).toBe(false);
+    });
+
+    it('keeps a reentrant delete behind its adapter update without deferring the update call', async () => {
+      const adapter = createMockAdapter();
+      const rows = new Set(['r1']);
+      const order: string[] = [];
+      const sync = new DatabaseBackendSync(adapter);
+      let deletion: Promise<void> | undefined;
+      let releaseWrite: (() => void) | undefined;
+      const writeGate = new Promise<void>((resolve) => { releaseWrite = resolve; });
+
+      vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+        order.push('write started');
+        deletion = sync.syncDeleteRow({ rowId });
+        await writeGate;
+        rows.add(rowId);
+        order.push('write finished');
+        return { id: rowId, position: 'a0', properties };
+      });
+      vi.mocked(adapter.deleteRow).mockImplementation(async ({ rowId }) => {
+        rows.delete(rowId);
+        order.push('delete');
+      });
+      const writing = sync.syncUpdateRowNow({ rowId: 'r1', properties: { notes: 'changed' } });
+      const startedInSameTick = vi.mocked(adapter.updateRow).mock.calls.length === 1;
+
+      if (releaseWrite === undefined) throw new Error('write gate was not initialized');
+      releaseWrite();
+      await writing;
+      if (deletion === undefined) throw new Error('adapter did not request deletion');
+      await deletion;
+
+      expect(rows.has('r1')).toBe(false);
+      expect(startedInSameTick).toBe(true);
+      expect(order).toEqual(['write started', 'write finished', 'delete']);
+    });
+
+    it('sends an expired unrelated pending field as soon as replay releases its row', async () => {
+      const adapter = createMockAdapter();
+      const observer = { created: vi.fn(), updated: vi.fn() };
+      const started = Date.now();
+      const deliveries: Array<{
+        at: number;
+        params: Parameters<DatabaseAdapter['updateRow']>[0];
+      }> = [];
+      let releaseReplay: (() => void) | undefined;
+      const gate = new Promise<void>((resolve) => { releaseReplay = resolve; });
+
+      vi.mocked(adapter.updateRow).mockImplementation(async (params) => {
+        deliveries.push({
+          at: Date.now() - started,
+          params: { ...params, properties: { ...params.properties } },
+        });
+        if (params.properties.notes === 'short') await gate;
+        return { id: params.rowId, position: 'a0', properties: params.properties };
+      });
+      const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { notes: 'changed', amount: 22 } });
+      await vi.advanceTimersByTimeAsync(200);
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true, after: 'short',
+        }],
+      });
+      await vi.advanceTimersByTimeAsync(450);
+      if (releaseReplay === undefined) throw new Error('replay gate was not initialized');
+      releaseReplay();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(deliveries).toEqual([
+        { at: 200, params: { rowId: 'r1', properties: { notes: 'short' } } },
+        { at: 650, params: { rowId: 'r1', properties: { amount: 22 } } },
+      ]);
+      await vi.runAllTimersAsync();
+
+      expect(deliveries).toHaveLength(2);
+      expect(observer.updated).toHaveBeenCalledTimes(1);
+      expect(observer.created).not.toHaveBeenCalled();
+    });
+
+    it('keeps a newer unrelated pending field out of the replay patch', async () => {
+      const adapter = createMockAdapter();
+      const observer = { created: vi.fn(), updated: vi.fn() };
+      let releaseReplay: (() => void) | undefined;
+      const replayGate = new Promise<void>((resolve) => { releaseReplay = resolve; });
+
+      vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+        if (properties.notes === 'short') await replayGate;
+        return { id: rowId, position: 'a0', properties };
+      });
+      const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { notes: 'changed', amount: 22 } });
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true, after: 'short',
+        }],
+      });
+      sync.syncUpdateRow({ rowId: 'r1', properties: { amount: 33 } });
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(vi.mocked(adapter.updateRow).mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { notes: 'short' } }],
+      ]);
+
+      if (releaseReplay === undefined) throw new Error('replay gate was not initialized');
+      releaseReplay();
+      await vi.runAllTimersAsync();
+
+      expect(vi.mocked(adapter.updateRow).mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { notes: 'short' } }],
+        [{ rowId: 'r1', properties: { amount: 33 } }],
+      ]);
+      expect(observer.updated).toHaveBeenCalledTimes(2);
+      expect(observer.created).not.toHaveBeenCalled();
+    });
+
+    it('queues replay creation behind a pending delete without running automation', async () => {
+      const adapter = createMockAdapter();
+      const observer = { created: vi.fn(), updated: vi.fn() };
+      const rows = new Map<string, { properties: Record<string, unknown>; template?: boolean }>();
+      const order: string[] = [];
+      let releaseDelete: (() => void) | undefined;
+      const deleteGate = new Promise<void>((resolve) => { releaseDelete = resolve; });
+
+      vi.mocked(adapter.deleteRow).mockImplementation(async ({ rowId }) => {
+        order.push('delete started');
+        await deleteGate;
+        rows.delete(rowId);
+        order.push('delete ended');
+      });
+      vi.mocked(adapter.createRow).mockImplementation(async ({ id, properties, position, template }) => {
+        rows.set(id, { properties, template });
+        order.push('create');
+        return { id, properties, position };
+      });
+      const sync = new DatabaseBackendSync(adapter, undefined, observer);
+      const deletion = sync.syncDeleteRow({ rowId: 'r1' });
+
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'add', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: true, value: true },
+        },
+        changes: [
+          { path: ['properties'], beforePresent: false, afterPresent: true, after: { t: 'Template' } },
+          { path: ['position'], beforePresent: false, afterPresent: true, after: 'a2' },
+          { path: ['template'], beforePresent: false, afterPresent: true, after: true },
+        ],
+      });
+      await Promise.resolve();
+
+      expect(adapter.createRow).not.toHaveBeenCalled();
+
+      if (releaseDelete === undefined) throw new Error('delete gate was not initialized');
+      releaseDelete();
+      await deletion;
+      await vi.runAllTimersAsync();
+
+      expect(rows.get('r1')).toEqual({ properties: { t: 'Template' }, template: true });
+      expect(order).toEqual(['delete started', 'delete ended', 'create']);
+      expect(observer.created).not.toHaveBeenCalled();
+      expect(observer.updated).not.toHaveBeenCalled();
+    });
+
+    it('serializes a forward delete, replay creation and replay removal', async () => {
+      const adapter = createMockAdapter();
+      const rows = new Set(['r1']);
+      const order: string[] = [];
+      let releaseDelete: (() => void) | undefined;
+      const deleteGate = new Promise<void>((resolve) => { releaseDelete = resolve; });
+
+      vi.mocked(adapter.deleteRow).mockImplementation(async ({ rowId }) => {
+        order.push('delete started');
+        await deleteGate;
+        rows.delete(rowId);
+        order.push('delete ended');
+      });
+      vi.mocked(adapter.createRow).mockImplementation(async ({ id, properties, position }) => {
+        rows.add(id);
+        order.push('create');
+        return { id, properties, position };
+      });
+      const sync = new DatabaseBackendSync(adapter);
+      const deletion = sync.syncDeleteRow({ rowId: 'r1' });
+
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'add', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [
+          { path: ['properties'], beforePresent: false, afterPresent: true, after: { t: 'Restored' } },
+          { path: ['position'], beforePresent: false, afterPresent: true, after: 'a0' },
+        ],
+      });
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'remove', origin: 'redo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [],
+      });
+
+      if (releaseDelete === undefined) throw new Error('delete gate was not initialized');
+      releaseDelete();
+      await deletion;
+      await vi.runAllTimersAsync();
+
+      expect(rows.has('r1')).toBe(false);
+      expect(order).toEqual([
+        'delete started', 'delete ended', 'create', 'delete started', 'delete ended',
+      ]);
+    });
+
+    it('keeps both captured replay writes before a reentrant row delete', async () => {
+      const adapter = createMockAdapter();
+      const rows = new Set(['r1']);
+      const order: string[] = [];
+      const sync = new DatabaseBackendSync(adapter);
+      let deletion: Promise<void> | undefined;
+      let markMoved: (() => void) | undefined;
+      const moved = new Promise<void>((resolve) => { markMoved = resolve; });
+
+      vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+        order.push('update');
+        deletion = sync.syncDeleteRow({ rowId });
+        rows.add(rowId);
+        return { id: rowId, position: 'a0', properties };
+      });
+      vi.mocked(adapter.moveRow).mockImplementation(async ({ rowId, position }) => {
+        order.push('move');
+        rows.add(rowId);
+        markMoved?.();
+        return { id: rowId, position, properties: { notes: 'short' } };
+      });
+      vi.mocked(adapter.deleteRow).mockImplementation(async ({ rowId }) => {
+        order.push('delete');
+        rows.delete(rowId);
+      });
+      const capture: BlockReplayCapture = {
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [
+          { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+          { path: ['position'], beforePresent: true, afterPresent: true, after: 'a2' },
+        ],
+      };
+
+      sync.syncReplayRow(capture);
+      const startedInSameTick = vi.mocked(adapter.updateRow).mock.calls.length === 1;
+
+      if (deletion === undefined) throw new Error('adapter did not request deletion');
+      await Promise.all([deletion, moved]);
+
+      expect(rows.has('r1')).toBe(false);
+      expect(order).toEqual(['update', 'move', 'delete']);
+      expect(startedInSameTick).toBe(true);
+    });
+
+    it('queues a captured inverse behind an in-flight forward write', async () => {
+      const adapter = createMockAdapter();
+      let releaseForward: (() => void) | undefined;
+      const forwardGate = new Promise<void>((resolve) => { releaseForward = resolve; });
+      let savedNotes = '';
+
+      vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+        if (properties.notes === 'changed') await forwardGate;
+        if (typeof properties.notes === 'string') savedNotes = properties.notes;
+        return { id: rowId, position: 'a0', properties };
+      });
+      const sync = new DatabaseBackendSync(adapter);
+      const forward = sync.syncUpdateRowNow({ rowId: 'r1', properties: { notes: 'changed' } });
+
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true, after: 'short',
+        }],
+      });
+      if (releaseForward === undefined) throw new Error('forward gate was not initialized');
+      releaseForward();
+      await forward;
+      await vi.runAllTimersAsync();
+
+      expect(savedNotes).toBe('short');
+      expect(vi.mocked(adapter.updateRow).mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { notes: 'changed' } }],
+        [{ rowId: 'r1', properties: { notes: 'short' } }],
+      ]);
+    });
+
+    it.each<{
+      reason: string;
+      rejected: Pick<BlockReplayCapture, 'type' | 'origin' | 'scope' | 'changes'>;
+    }>([
+      {
+        reason: 'a missing after slot',
+        rejected: {
+          type: 'update', origin: 'undo', scope: 'keys',
+          changes: [
+            { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+            { path: ['properties', 'amount'], beforePresent: true, afterPresent: true },
+          ],
+        },
+      },
+      {
+        reason: 'a non-finite tail after valid property and position slots',
+        rejected: {
+          type: 'update', origin: 'undo', scope: 'keys',
+          changes: [
+            { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+            { path: ['position'], beforePresent: true, afterPresent: true, after: 'a2' },
+            { path: ['properties', 'amount'], beforePresent: true, afterPresent: true, after: Number.POSITIVE_INFINITY },
+          ],
+        },
+      },
+      {
+        reason: 'replacement scope',
+        rejected: {
+          type: 'update', origin: 'undo', scope: 'replacement',
+          changes: [
+            { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+          ],
+        },
+      },
+      {
+        reason: 'remote origin',
+        rejected: {
+          type: 'update', origin: 'remote', scope: 'keys',
+          changes: [
+            { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+          ],
+        },
+      },
+      {
+        reason: 'a malformed birth position',
+        rejected: {
+          type: 'add', origin: 'redo', scope: 'keys',
+          changes: [
+            { path: ['properties'], beforePresent: false, afterPresent: true, after: { notes: 'short' } },
+            { path: ['position'], beforePresent: false, afterPresent: true },
+          ],
+        },
+      },
+      {
+        reason: 'a removal carrying changes',
+        rejected: {
+          type: 'remove', origin: 'undo', scope: 'keys',
+          changes: [
+            { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+          ],
+        },
+      },
+    ])('keeps pending patches at their original deadlines after rejecting $reason', async ({ rejected }) => {
+      const adapter = createMockAdapter();
+      const observer = { created: vi.fn(), updated: vi.fn() };
+      type StoredRow = Awaited<ReturnType<DatabaseAdapter['updateRow']>>;
+      const rows = new Map<string, StoredRow>([
+        ['r1', { id: 'r1', position: 'a0', properties: { notes: 'stored', status: 'stored', amount: 12 } }],
+        ['r2', { id: 'r2', position: 'a1', properties: { notes: 'other', amount: 12 } }],
+      ]);
+      const started = Date.now();
+      const deliveries: Array<
+        | { at: number; operation: 'update'; params: Parameters<DatabaseAdapter['updateRow']>[0] }
+        | { at: number; operation: 'create'; params: Parameters<DatabaseAdapter['createRow']>[0] }
+        | { at: number; operation: 'move'; params: Parameters<DatabaseAdapter['moveRow']>[0] }
+        | { at: number; operation: 'delete'; params: Parameters<DatabaseAdapter['deleteRow']>[0] }
+      > = [];
+
+      vi.mocked(adapter.updateRow).mockImplementation(async (params) => {
+        deliveries.push({
+          at: Date.now() - started, operation: 'update',
+          params: { ...params, properties: { ...params.properties } },
+        });
+        const previous = rows.get(params.rowId);
+
+        if (previous === undefined) throw new Error('updated row does not exist');
+        const row = { ...previous, properties: { ...previous.properties, ...params.properties } };
+
+        rows.set(params.rowId, row);
+        return row;
+      });
+      vi.mocked(adapter.createRow).mockImplementation(async (params) => {
+        deliveries.push({
+          at: Date.now() - started, operation: 'create',
+          params: { ...params, properties: { ...params.properties } },
+        });
+        const row = { id: params.id, position: params.position, properties: { ...params.properties } };
+
+        rows.set(params.id, row);
+        return row;
+      });
+      vi.mocked(adapter.moveRow).mockImplementation(async (params) => {
+        deliveries.push({ at: Date.now() - started, operation: 'move', params: { ...params } });
+        const previous = rows.get(params.rowId);
+
+        if (previous === undefined) throw new Error('moved row does not exist');
+        const row = { ...previous, position: params.position };
+
+        rows.set(params.rowId, row);
+        return row;
+      });
+      vi.mocked(adapter.deleteRow).mockImplementation(async (params) => {
+        deliveries.push({ at: Date.now() - started, operation: 'delete', params: { ...params } });
+        rows.delete(params.rowId);
+      });
+      const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { notes: 'changed', status: 'done' } });
+      await vi.advanceTimersByTimeAsync(100);
+      sync.syncUpdateRow({ rowId: 'r2', properties: { amount: 33 } });
+      await vi.advanceTimersByTimeAsync(100);
+      sync.syncReplayRow({
+        blockId: 'r1',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        ...rejected,
+      });
+      await vi.advanceTimersByTimeAsync(400);
+
+      expect(deliveries).toEqual([
+        {
+          at: 500, operation: 'update',
+          params: { rowId: 'r1', properties: { notes: 'changed', status: 'done' } },
+        },
+        {
+          at: 600, operation: 'update',
+          params: { rowId: 'r2', properties: { amount: 33 } },
+        },
+      ]);
+      await vi.runAllTimersAsync();
+
+      expect(deliveries).toHaveLength(2);
+      expect(Array.from(rows.values())).toEqual([
+        { id: 'r1', position: 'a0', properties: { notes: 'changed', status: 'done', amount: 12 } },
+        { id: 'r2', position: 'a1', properties: { notes: 'other', amount: 33 } },
+      ]);
+      expect(observer.updated.mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { notes: 'changed', status: 'done' } }],
+        [{ rowId: 'r2', properties: { amount: 33 } }],
+      ]);
+      expect(observer.created).not.toHaveBeenCalled();
+    });
+
+    describe('structured property replay', () => {
+      const replay = (
+        changes: BlockReplayCapture['changes'],
+        origin: 'undo' | 'redo' = 'undo',
+      ): BlockReplayCapture => ({
+        blockId: 'r1', type: 'update', origin, scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes,
+      });
+      const direct = (after: unknown): BlockReplayCapture['changes'][number] => ({
+        path: ['properties', 'structured'],
+        beforePresent: true, afterPresent: true, after,
+      });
+
+      it.each<{
+        name: string;
+        origin: 'undo' | 'redo';
+        after: unknown;
+        expected: unknown;
+      }>([
+        {
+          name: 'relation undo', origin: 'undo',
+          after: Object.freeze([Object.freeze({ id: 'related-a' }), Object.freeze({ id: 'related-b' })]),
+          expected: [{ id: 'related-a' }, { id: 'related-b' }],
+        },
+        {
+          name: 'relation redo', origin: 'redo',
+          after: Object.freeze([Object.freeze({ id: 'related-b' }), Object.freeze({ id: 'related-a' })]),
+          expected: [{ id: 'related-b' }, { id: 'related-a' }],
+        },
+        {
+          name: 'files undo', origin: 'undo',
+          after: Object.freeze([
+            Object.freeze({ id: 'file-a', name: 'Before.txt', url: 'https://example.invalid/a.txt' }),
+          ]),
+          expected: [{ id: 'file-a', name: 'Before.txt', url: 'https://example.invalid/a.txt' }],
+        },
+        {
+          name: 'files redo', origin: 'redo',
+          after: Object.freeze([
+            Object.freeze({ id: 'file-b', name: 'Second.txt', url: 'https://example.invalid/b.txt' }),
+            Object.freeze({ id: 'file-a', name: 'After.txt', url: 'https://example.invalid/a.txt' }),
+          ]),
+          expected: [
+            { id: 'file-b', name: 'Second.txt', url: 'https://example.invalid/b.txt' },
+            { id: 'file-a', name: 'After.txt', url: 'https://example.invalid/a.txt' },
+          ],
+        },
+        { name: 'empty undo', origin: 'undo', after: Object.freeze([]), expected: [] },
+        { name: 'empty redo', origin: 'redo', after: Object.freeze([]), expected: [] },
+      ])('persists $name without flushing an unrelated pending field early', async ({ origin, after, expected }) => {
+        const adapter = createMockAdapter();
+        const observer = { created: vi.fn(), updated: vi.fn() };
+        const stored: { properties: Parameters<DatabaseAdapter['updateRow']>[0]['properties'] } = {
+          properties: { structured: [{ id: 'stored' }], status: 'stored' },
+        };
+        const deliveries: Array<{
+          at: number;
+          params: Parameters<DatabaseAdapter['updateRow']>[0];
+        }> = [];
+        const started = Date.now();
+
+        vi.mocked(adapter.updateRow).mockImplementation(async (params) => {
+          deliveries.push({ at: Date.now() - started, params });
+          stored.properties = { ...stored.properties, ...params.properties };
+          return { id: params.rowId, position: 'a0', properties: stored.properties };
+        });
+        const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+        sync.syncUpdateRow({
+          rowId: 'r1', properties: { structured: [{ id: 'pending' }], status: 'done' },
+        });
+        await vi.advanceTimersByTimeAsync(100);
+        sync.syncReplayRow(replay([direct(after)], origin));
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(stored.properties.structured).toEqual(expected);
+        expect(deliveries).toEqual([{
+          at: 100, params: { rowId: 'r1', properties: { structured: expected } },
+        }]);
+        expect(stored.properties.status).toBe('stored');
+        await vi.advanceTimersByTimeAsync(400);
+        expect(deliveries).toEqual([
+          { at: 100, params: { rowId: 'r1', properties: { structured: expected } } },
+          { at: 500, params: { rowId: 'r1', properties: { status: 'done' } } },
+        ]);
+        expect(stored.properties).toEqual({ structured: expected, status: 'done' });
+        expect(observer.updated.mock.calls).toEqual([[
+          { rowId: 'r1', properties: { structured: [{ id: 'pending' }], status: 'done' } },
+        ]]);
+        expect(observer.created).not.toHaveBeenCalled();
+      });
+
+      it.each<{
+        name: string;
+        after: unknown;
+        expected: unknown;
+      }>([
+        { name: 'relations', after: Object.freeze([Object.freeze({ id: 'inverse' })]), expected: [{ id: 'inverse' }] },
+        {
+          name: 'files',
+          after: Object.freeze([
+            Object.freeze({ id: 'file-a', name: 'Before.txt', url: 'https://example.invalid/a.txt' }),
+          ]),
+          expected: [{ id: 'file-a', name: 'Before.txt', url: 'https://example.invalid/a.txt' }],
+        },
+        { name: 'an empty array', after: Object.freeze([]), expected: [] },
+      ])('does not recover stale $name after an immediate body write fails', async ({ after, expected }) => {
+        const adapter = createMockAdapter();
+        const observer = { created: vi.fn(), updated: vi.fn() };
+        const stored: { properties: Parameters<DatabaseAdapter['updateRow']>[0]['properties'] } = {
+          properties: { structured: [{ id: 'stored' }], status: 'stored' },
+        };
+        const successfulWrites: Array<Parameters<DatabaseAdapter['updateRow']>[0]> = [];
+        const gate: { release?: () => void } = {};
+        const failedWriteGate = new Promise<void>((resolve) => { gate.release = resolve; });
+
+        vi.mocked(adapter.updateRow).mockImplementation(async (params) => {
+          if (Object.hasOwn(params.properties, 'body')) {
+            await failedWriteGate;
+            throw new Error('body write failed');
+          }
+          successfulWrites.push(params);
+          stored.properties = { ...stored.properties, ...params.properties };
+          return { id: params.rowId, position: 'a0', properties: stored.properties };
+        });
+        const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+        sync.syncUpdateRow({
+          rowId: 'r1', properties: { structured: [{ id: 'pending' }], status: 'done' },
+        });
+        const bodyWrite = sync.syncUpdateRowNow({
+          rowId: 'r1', properties: { body: { blocks: [] } },
+        });
+
+        sync.syncReplayRow(replay([direct(after)]));
+        if (gate.release === undefined) throw new Error('failure gate was not initialized');
+        gate.release();
+        await bodyWrite;
+        await vi.runAllTimersAsync();
+
+        expect(stored.properties.structured).toEqual(expected);
+        expect(successfulWrites).toEqual([
+          { rowId: 'r1', properties: { structured: expected } },
+          { rowId: 'r1', properties: { status: 'done' } },
+        ]);
+        expect(stored.properties.status).toBe('done');
+        expect(observer.updated.mock.calls).toEqual([[
+          { rowId: 'r1', properties: { structured: [{ id: 'pending' }], status: 'done' } },
+        ]]);
+        expect(observer.created).not.toHaveBeenCalled();
+      });
+
+      const rejected: Array<{
+        name: string;
+        after: unknown;
+        path?: readonly (string | number)[];
+      }> = [
+        { name: 'a missing id', after: [{}] },
+        { name: 'an empty id', after: [{ id: '' }] },
+        { name: 'a non-string id', after: [{ id: 7 }] },
+        { name: 'a file without a URL', after: [{ id: 'file-a', name: 'Report.txt' }] },
+        { name: 'a file without a name', after: [{ id: 'file-a', url: 'https://example.invalid/a.txt' }] },
+        { name: 'a non-string file name', after: [{ id: 'file-a', name: 7, url: 'https://example.invalid/a.txt' }] },
+        { name: 'a non-finite file URL', after: [{ id: 'file-a', name: 'Report.txt', url: Number.POSITIVE_INFINITY }] },
+        { name: 'a nested record', after: [{ id: 'related-a', nested: { id: 'related-b' } }] },
+        { name: 'a nested array', after: [[{ id: 'related-a' }]] },
+        { name: 'a shared array', after: new Y.Array<unknown>() },
+        { name: 'a shared record', after: [new Y.Map<unknown>()] },
+        { name: 'a non-finite scalar', after: Number.NaN },
+        { name: 'an extra non-finite field', after: [{ id: 'related-a', amount: Number.POSITIVE_INFINITY }] },
+        { name: 'duplicate relation ids', after: [{ id: 'related-a' }, { id: 'related-a' }] },
+        {
+          name: 'duplicate file ids',
+          after: [
+            { id: 'file-a', name: 'First.txt', url: 'https://example.invalid/a.txt' },
+            { id: 'file-a', name: 'Second.txt', url: 'https://example.invalid/b.txt' },
+          ],
+        },
+        {
+          name: 'relations mixed with files',
+          after: [{ id: 'related-a' }, { id: 'file-a', name: 'Report.txt', url: 'https://example.invalid/a.txt' }],
+        },
+        {
+          name: 'files mixed with relations',
+          after: [{ id: 'file-a', name: 'Report.txt', url: 'https://example.invalid/a.txt' }, { id: 'related-a' }],
+        },
+        { name: 'a scalar mixed with a relation', after: ['related-a', { id: 'related-b' }] },
+        { name: 'a string array', after: ['related-a'] },
+        { name: 'a custom record prototype', after: [new (class { readonly id = 'related-a'; })()] },
+        { name: 'a nested property path', path: ['properties', 'structured', 'id'], after: [{ id: 'related-a' }] },
+        { name: 'a duplicate property path', path: ['properties', 'structured'], after: [{ id: 'other' }] },
+        { name: 'an array position', path: ['position'], after: [] },
+      ];
+      const withRejectedTail = ({ after, path }: typeof rejected[number]): BlockReplayCapture =>
+        replay([
+          direct(Object.freeze([Object.freeze({ id: 'captured' })])),
+          { path: ['properties', 'notes'], beforePresent: true, afterPresent: true, after: 'short' },
+          { path: ['position'], beforePresent: true, afterPresent: true, after: 'a2' },
+          {
+            path: path ?? ['properties', 'invalid'],
+            beforePresent: true, afterPresent: true, after,
+          },
+        ]);
+
+      it.each(rejected)('keeps every pending field at its deadline after rejecting $name', async (bad) => {
+        const adapter = createMockAdapter();
+        const observer = { created: vi.fn(), updated: vi.fn() };
+        const stored: { properties: Parameters<DatabaseAdapter['updateRow']>[0]['properties'] } = {
+          properties: { structured: [{ id: 'stored' }], notes: 'stored', status: 'stored' },
+        };
+        const deliveries: Array<{
+          at: number;
+          params: Parameters<DatabaseAdapter['updateRow']>[0];
+        }> = [];
+        const started = Date.now();
+
+        vi.mocked(adapter.updateRow).mockImplementation(async (params) => {
+          deliveries.push({ at: Date.now() - started, params });
+          stored.properties = { ...stored.properties, ...params.properties };
+          return { id: params.rowId, position: 'a0', properties: stored.properties };
+        });
+        const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+        sync.syncUpdateRow({
+          rowId: 'r1', properties: { structured: [{ id: 'pending' }], notes: 'changed', status: 'done' },
+        });
+        await vi.advanceTimersByTimeAsync(200);
+        sync.syncReplayRow(withRejectedTail(bad));
+        await vi.advanceTimersByTimeAsync(299);
+
+        expect(deliveries).toEqual([]);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(stored.properties).toEqual({
+          structured: [{ id: 'pending' }], notes: 'changed', status: 'done',
+        });
+        expect(deliveries).toEqual([{
+          at: 500,
+          params: {
+            rowId: 'r1', properties: { structured: [{ id: 'pending' }], notes: 'changed', status: 'done' },
+          },
+        }]);
+        expect(adapter.moveRow).not.toHaveBeenCalled();
+        expect(adapter.createRow).not.toHaveBeenCalled();
+        expect(observer.updated).toHaveBeenCalledTimes(1);
+        expect(observer.created).not.toHaveBeenCalled();
+      });
+
+      it.each(rejected)('keeps consumed recovery fields after rejecting $name', async (bad) => {
+        const adapter = createMockAdapter();
+        const observer = { created: vi.fn(), updated: vi.fn() };
+        const stored: { properties: Parameters<DatabaseAdapter['updateRow']>[0]['properties'] } = {
+          properties: { structured: [{ id: 'stored' }], notes: 'stored', status: 'stored' },
+        };
+        const successfulWrites: Array<Parameters<DatabaseAdapter['updateRow']>[0]> = [];
+        const gate: { release?: () => void } = {};
+        const failedWriteGate = new Promise<void>((resolve) => { gate.release = resolve; });
+
+        vi.mocked(adapter.updateRow).mockImplementation(async (params) => {
+          if (Object.hasOwn(params.properties, 'body')) {
+            await failedWriteGate;
+            throw new Error('body write failed');
+          }
+          successfulWrites.push(params);
+          stored.properties = { ...stored.properties, ...params.properties };
+          return { id: params.rowId, position: 'a0', properties: stored.properties };
+        });
+        const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+        sync.syncUpdateRow({
+          rowId: 'r1', properties: { structured: [{ id: 'pending' }], notes: 'changed', status: 'done' },
+        });
+        const bodyWrite = sync.syncUpdateRowNow({
+          rowId: 'r1', properties: { body: { blocks: [] } },
+        });
+
+        sync.syncReplayRow(withRejectedTail(bad));
+        if (gate.release === undefined) throw new Error('failure gate was not initialized');
+        gate.release();
+        await bodyWrite;
+        await vi.runAllTimersAsync();
+
+        expect(stored.properties).toEqual({
+          structured: [{ id: 'pending' }], notes: 'changed', status: 'done',
+        });
+        expect(successfulWrites).toEqual([{
+          rowId: 'r1', properties: { structured: [{ id: 'pending' }], notes: 'changed', status: 'done' },
+        }]);
+        expect(adapter.moveRow).not.toHaveBeenCalled();
+        expect(adapter.createRow).not.toHaveBeenCalled();
+        expect(observer.updated).toHaveBeenCalledTimes(1);
+        expect(observer.created).not.toHaveBeenCalled();
+      });
+
+      it.each<{
+        name: string;
+        overrides: Partial<Pick<BlockReplayCapture, 'origin' | 'scope' | 'native'>>;
+      }>([
+        { name: 'remote', overrides: { origin: 'remote' } },
+        { name: 'unknown', overrides: { scope: 'unknown' } },
+        { name: 'replacement', overrides: { scope: 'replacement' } },
+        { name: 'another native type', overrides: {
+          native: { type: 'paragraph', parent: { present: true, value: 'db' }, template: { present: false } },
+        } },
+      ])('does not authorize structured values from $name captures', async ({ overrides }) => {
+        const adapter = createMockAdapter();
+        const sync = new DatabaseBackendSync(adapter);
+
+        sync.syncReplayRow({ ...replay([direct([{ id: 'captured' }])]), ...overrides });
+        await vi.runAllTimersAsync();
+
+        expect(adapter.updateRow).not.toHaveBeenCalled();
+        expect(adapter.createRow).not.toHaveBeenCalled();
+        expect(adapter.moveRow).not.toHaveBeenCalled();
+      });
+
+      it('keeps structured row births outside scalar-only creation replay', async () => {
+        const adapter = createMockAdapter();
+        const sync = new DatabaseBackendSync(adapter);
+
+        sync.syncReplayRow({
+          ...replay([]), type: 'add', origin: 'redo',
+          changes: [
+            { path: ['properties'], beforePresent: false, afterPresent: true, after: { structured: [{ id: 'related-a' }] } },
+            { path: ['position'], beforePresent: false, afterPresent: true, after: 'a0' },
+          ],
+        });
+        await vi.runAllTimersAsync();
+
+        expect(adapter.createRow).not.toHaveBeenCalled();
+        expect(adapter.updateRow).not.toHaveBeenCalled();
+        expect(adapter.moveRow).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not authorize remote, unknown, replacement, nested or unsupported values', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      const base: BlockReplayCapture = {
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true, after: 'short',
+        }],
+      };
+      const captures: BlockReplayCapture[] = [
+        { ...base, origin: 'remote' },
+        { ...base, origin: 'local' },
+        { ...base, origin: 'load' },
+        { ...base, scope: 'unknown' },
+        { ...base, scope: 'replacement' },
+        { ...base, changes: [{
+          path: ['properties', 'notes', 'value'],
+          beforePresent: true, afterPresent: true, after: 'short',
+        }] },
+        { ...base, changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true, after: { text: 'not a validated scalar' },
+        }] },
+        { ...base, changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true,
+        }] },
+        { ...base, changes: [{
+          path: ['properties'],
+          beforePresent: true, afterPresent: true, after: { notes: 'short', amount: 99 },
+        }] },
+        { ...base, changes: [
+          ...base.changes,
+          { path: ['properties', 'amount', 'value'], beforePresent: true, afterPresent: true, after: 99 },
+        ] },
+        { ...base, changes: [
+          ...base.changes,
+          { path: ['pageId'], beforePresent: true, afterPresent: true, after: 'unsupported-owned-page' },
+        ] },
+        { ...base, changes: [
+          ...base.changes,
+          { path: ['position'], beforePresent: true, afterPresent: false },
+        ] },
+        { ...base, changes: [
+          { path: ['position'], beforePresent: true, afterPresent: true, after: 'a1' },
+          { path: ['properties', 'amount'], beforePresent: true, afterPresent: true, after: Number.NaN },
+        ] },
+        { ...base, changes: [
+          { path: ['properties', 'notes'], beforePresent: true, afterPresent: false, after: 'inconsistent-delete' },
+        ] },
+        { ...base, type: 'add', changes: [
+          { path: ['properties'], beforePresent: false, afterPresent: true, after: { notes: { text: 'unsupported' } } },
+          { path: ['position'], beforePresent: false, afterPresent: true, after: 'a0' },
+        ] },
+        { ...base, type: 'add', changes: [
+          { path: ['properties'], beforePresent: false, afterPresent: true, after: { notes: 'valid' } },
+          { path: ['position'], beforePresent: false, afterPresent: true, after: 'a0' },
+          { path: ['pageId'], beforePresent: false, afterPresent: true, after: 'unsupported-owned-page' },
+        ] },
+      ];
+
+      for (const capture of captures) sync.syncReplayRow(capture);
+      await vi.runAllTimersAsync();
+
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+      expect(adapter.createRow).not.toHaveBeenCalled();
+      expect(adapter.moveRow).not.toHaveBeenCalled();
+      expect(adapter.deleteRow).not.toHaveBeenCalled();
+    });
+
+    it('does not treat inherited capture values as owned slots', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      class InheritedAfter {
+        readonly path = ['properties', 'notes'];
+        readonly beforePresent = true;
+        readonly afterPresent = true;
+        get after(): string { return 'inherited'; }
+      }
+
+      class InheritedProperties {
+        readonly notes = 'own';
+        get title(): string { return 'inherited'; }
+      }
+
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [new InheritedAfter()],
+      });
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'add', origin: 'redo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [
+          { path: ['properties'], beforePresent: false, afterPresent: true, after: new InheritedProperties() },
+          { path: ['position'], beforePresent: false, afterPresent: true, after: 'a0' },
+        ],
+      });
+      await vi.runAllTimersAsync();
+
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+      expect(adapter.createRow).not.toHaveBeenCalled();
+    });
+
+    it.each(['succeeds', 'fails'] as const)(
+      'keeps a newer consumed pending value when the second immediate write %s',
+      async (secondOutcome) => {
+        const adapter = createMockAdapter();
+        const observer = { created: vi.fn(), updated: vi.fn() };
+        const successfulWrites: Array<Parameters<DatabaseAdapter['updateRow']>[0]> = [];
+        let releaseFirstFailure: (() => void) | undefined;
+        const firstFailureGate = new Promise<void>((resolve) => { releaseFirstFailure = resolve; });
+        let calls = 0;
+        let savedStatus = 'stored';
+        let savedNotes = 'changed';
+
+        vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+          calls += 1;
+          if (calls === 1) {
+            await firstFailureGate;
+            throw new Error('first immediate write failed');
+          }
+          if (calls === 2 && secondOutcome === 'fails') {
+            throw new Error('second immediate write failed');
+          }
+          if (typeof properties.status === 'string') savedStatus = properties.status;
+          if (typeof properties.notes === 'string') savedNotes = properties.notes;
+          successfulWrites.push({ rowId, properties: { ...properties } });
+          return { id: rowId, position: 'a0', properties };
+        });
+        const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+        sync.syncUpdateRow({
+          rowId: 'r1', properties: { notes: 'changed', status: 'old' },
+        });
+        const firstWrite = sync.syncUpdateRowNow({
+          rowId: 'r1', properties: { body: { blocks: [] } },
+        });
+        sync.syncUpdateRow({ rowId: 'r1', properties: { status: 'new' } });
+        const secondWrite = sync.syncUpdateRowNow({
+          rowId: 'r1',
+          properties: {
+            body: { blocks: [{ id: 'second-body', type: 'paragraph', data: { text: 'Second body' } }] },
+          },
+        });
+        const capture: BlockReplayCapture = {
+          blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+          native: {
+            type: 'database-row', parent: { present: true, value: 'db' },
+            template: { present: false },
+          },
+          changes: [{
+            path: ['properties', 'notes'],
+            beforePresent: true, afterPresent: true, after: 'short',
+          }],
+        };
+
+        sync.syncReplayRow(capture);
+        if (releaseFirstFailure === undefined) throw new Error('first failure gate was not initialized');
+        releaseFirstFailure();
+        await Promise.all([firstWrite, secondWrite]);
+        await vi.runAllTimersAsync();
+
+        expect(savedStatus).toBe('new');
+        expect(observer.updated.mock.calls).toEqual([
+          [{ rowId: 'r1', properties: { notes: 'changed', status: 'old' } }],
+          [{ rowId: 'r1', properties: { status: 'new' } }],
+        ]);
+        expect(observer.created).not.toHaveBeenCalled();
+        expect(savedNotes).toBe('short');
+        expect(successfulWrites).toContainEqual({
+          rowId: 'r1', properties: { notes: 'short' },
+        });
+      },
+    );
+
+    it('does not recover an undone consumed pending field or notify its observer again after failure', async () => {
+      const adapter = createMockAdapter();
+      const observer = { created: vi.fn(), updated: vi.fn() };
+      const successfulWrites: Array<Parameters<DatabaseAdapter['updateRow']>[0]> = [];
+      let releaseFailure: (() => void) | undefined;
+      const failureGate = new Promise<void>((resolve) => { releaseFailure = resolve; });
+      let calls = 0;
+      let savedNotes = 'short';
+      let savedStatus = '';
+
+      vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+        calls += 1;
+        if (calls === 1) {
+          await failureGate;
+          throw new Error('body write failed');
+        }
+        if (typeof properties.notes === 'string') savedNotes = properties.notes;
+        if (typeof properties.status === 'string') savedStatus = properties.status;
+        successfulWrites.push({ rowId, properties });
+        return { id: rowId, position: 'a0', properties };
+      });
+      const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+      sync.syncUpdateRow({
+        rowId: 'r1', properties: { notes: 'changed', status: 'done' },
+      });
+      const bodyWrite = sync.syncUpdateRowNow({
+        rowId: 'r1', properties: { body: { blocks: [] } },
+      });
+      sync.syncReplayRow({
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys',
+        native: {
+          type: 'database-row', parent: { present: true, value: 'db' },
+          template: { present: false },
+        },
+        changes: [{
+          path: ['properties', 'notes'],
+          beforePresent: true, afterPresent: true, after: 'short',
+        }],
+      });
+
+      if (releaseFailure === undefined) throw new Error('failure gate was not initialized');
+      releaseFailure();
+      await bodyWrite;
+      await vi.runAllTimersAsync();
+
+      expect(savedNotes).toBe('short');
+      expect(observer.updated.mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { notes: 'changed', status: 'done' } }],
+      ]);
+      expect(savedStatus).toBe('done');
+      expect(successfulWrites).toEqual([
+        { rowId: 'r1', properties: { notes: 'short' } },
+        { rowId: 'r1', properties: { status: 'done' } },
+      ]);
+      expect(observer.created).not.toHaveBeenCalled();
     });
 
     it('syncUpdateRow debounces at 500ms', () => {
@@ -376,6 +1445,46 @@ describe('DatabaseBackendSync', () => {
       expect(successfulWrites[0]).toMatchObject({
         rowId: 'r1', properties: { title: 'Renamed', status: 'done' },
       });
+    });
+
+    it('keeps a newer explicitly flushed title after an older immediate body write fails', async () => {
+      const adapter = createMockAdapter();
+      const observer = { created: vi.fn(), updated: vi.fn() };
+      let releaseBodyWrite: (() => void) | undefined;
+      const bodyWriteGate = new Promise<void>((resolve) => { releaseBodyWrite = resolve; });
+      let markTitleFlushed: (() => void) | undefined;
+      const titleFlushed = new Promise<void>((resolve) => { markTitleFlushed = resolve; });
+      let storedTitle = 'Original';
+      let writes = 0;
+
+      vi.mocked(adapter.updateRow).mockImplementation(async ({ rowId, properties }) => {
+        writes += 1;
+        if (writes === 1) {
+          await bodyWriteGate;
+          throw new Error('body write failed');
+        }
+        if (typeof properties.title === 'string') storedTitle = properties.title;
+        if (properties.title === 'C') markTitleFlushed?.();
+        return { id: rowId, position: 'a0', properties };
+      });
+      const sync = new DatabaseBackendSync(adapter, undefined, observer);
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'A' } });
+      const bodyWrite = sync.syncUpdateRowNow({ rowId: 'r1', properties: { body: { blocks: [] } } });
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'C' } });
+      sync.flushPendingUpdates();
+      if (releaseBodyWrite === undefined) throw new Error('body write gate was not initialized');
+      releaseBodyWrite();
+      await Promise.all([bodyWrite, titleFlushed]);
+      await vi.runAllTimersAsync();
+
+      expect(storedTitle).toBe('C');
+      expect(observer.updated.mock.calls).toEqual([
+        [{ rowId: 'r1', properties: { title: 'A' } }],
+        [{ rowId: 'r1', properties: { title: 'C' } }],
+      ]);
+      expect(observer.created).not.toHaveBeenCalled();
     });
 
     it('keeps a newer flushed title after an older immediate body write fails', async () => {

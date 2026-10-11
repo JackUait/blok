@@ -1,20 +1,24 @@
 import type { I18n } from '../../../types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
+import type { DatabaseRow, DatabaseViewConfig, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill, openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { formatDateText, resolveLocale } from './cells/date-format';
+import { formatDateDisplay, formatDateText, resolveLocale } from './cells/date-format';
+import { formatNumberValue } from './cells/number-format';
 import { computeCalculation } from './database-calculations';
 import type { CalculationResult } from './database-calculations';
 import {
   resolveCalculations,
+  resolveCountCaps,
   resolveFrozenColumnCount,
   resolveLoadLimit,
   resolveShowVerticalLines,
   resolveViewProperties,
   withCalculation,
+  withCalculationCap,
   withPropertyOrder,
   withPropertySetting,
 } from './view-settings';
@@ -23,6 +27,7 @@ import type { CellChange, TableState } from './database-table-grid';
 import { pageIconElement, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, openMenu, rowMenuItems } from './database-table-menus';
+import type { CountCap } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize } from './database-table-resize';
 import { DatabaseTableColumnDrag } from './database-table-column-drag';
@@ -33,6 +38,7 @@ import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
 import {
   IconChevronDown,
+  IconChevronRight,
   IconMenu,
   IconPlus,
   IconSplitView,
@@ -71,8 +77,13 @@ export interface TableHandlers {
   addRow: (groupKey: string | null, afterRowId?: string) => string | null;
   deleteRows: (rowIds: string[]) => void;
   duplicateRow: (rowId: string) => void;
-  openRow: (rowId: string) => void;
+  /** Opens a row page, in `mode` when the row menu's "Open in" names one. */
+  openRow: (rowId: string, mode?: OpenPagesIn) => void;
   copyRowLink: (rowId: string) => void;
+  /** Other databases of this document a row can move to. */
+  moveTargets?: () => Array<{ id: string; title: string }>;
+  /** "Move to": the row leaves for another database. */
+  moveRowTo?: (rowId: string, databaseId: string) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
   openPropertyMenu: (propertyId: string, anchor: HTMLElement) => void;
@@ -92,6 +103,16 @@ export interface TableHandlers {
   /** Redraw from the model, keeping the table state. */
   rerender: () => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
+  /** A cell editor's "Edit property": open that column's property menu. */
+  editProperty?: (propertyId: string) => void;
+}
+
+/** Sub-items "Nested in toggle": what the table asks about each shown row. */
+export interface TableNesting {
+  info: (rowId: string) => { depth: number; hasChildren: boolean; expanded: boolean } | undefined;
+  toggle: (rowId: string) => void;
+  /** "+ New sub-item" under an open parent. */
+  addSubItem?: (parentId: string) => void;
 }
 
 export interface DatabaseTableViewOptions {
@@ -112,6 +133,11 @@ export interface DatabaseTableViewOptions {
   locale?: string;
   /** What cells need from the host: relation titles, computed result types. */
   cellContext?: Partial<CellContext>;
+  nesting?: TableNesting;
+  /** The host's comments for a row or a cell. Works in read-only too. */
+  comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void;
+  /** Where the selection bar goes: the view toolbar row, which it replaces (research/08). Else the table's top. */
+  selectionBarSlot?: () => HTMLElement | null;
 }
 
 interface Column {
@@ -122,6 +148,55 @@ interface Column {
   frozenAt?: number;
 }
 
+/** A footer cell's content: "Calculate" when no function is set, else its label and result. The timeline's table panel shares it. */
+export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, rows, i18n, locale, capCounts = false }: {
+  fn: CalculationFn | undefined;
+  property: PropertyDefinition;
+  /** `property` as its result type (formula, rollup). */
+  shown: PropertyDefinition;
+  rows: DatabaseRow[];
+  i18n: Pick<I18n, 't'>;
+  locale: string | undefined;
+  /** "Show large counts as 99+". */
+  capCounts?: boolean;
+}): void => {
+  // research/08: a button column has no Calculate.
+  if (property.type === 'button') {
+    return;
+  }
+  if (fn === undefined) {
+    const placeholder = document.createElement('span');
+
+    cell.setAttribute('data-empty', '');
+    placeholder.setAttribute('data-blok-database-table-calc-placeholder', '');
+    placeholder.textContent = i18n.t('tools.database.tableCalculate');
+    cell.appendChild(placeholder);
+
+    return;
+  }
+
+  const result = computeCalculation(fn, rows.map((row) => readPropertyValue(row, property)), shown);
+  const label = document.createElement('span');
+  const value = document.createElement('span');
+
+  label.setAttribute('data-blok-database-table-calc-label', '');
+  label.textContent = i18n.t(CALCULATION_LABEL_KEYS[fn]);
+  value.setAttribute('data-blok-database-table-calc-value', '');
+  value.textContent = formatCalculation(result, locale, {
+    ...(NUMBER_RESULT_FNS.has(fn) && shown.type === 'number' ? { number: shown.number ?? {} } : {}),
+    capCounts: capCounts && COUNT_RESULT_FNS.has(fn),
+  });
+  cell.append(label, value);
+};
+
+/** Functions whose result is a value of the column, shown in its number format. Unverified against Notion. */
+const NUMBER_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['sum', 'average', 'median', 'min', 'max', 'range']);
+
+/** Functions whose result is a count, which "Show large counts as 99+" caps. */
+const COUNT_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['count', 'count_values', 'unique', 'empty', 'not_empty', 'checked', 'unchecked']);
+
+const MAX_SHOWN_COUNT = 99;
+
 const tableIds = { next: 0 };
 
 /** A DOM id from row and property ids, which may hold any character. */
@@ -129,10 +204,18 @@ const idPart = (value: string): string => value.replace(/[^A-Za-z0-9_-]/g, (ch) 
 
 const CALC_NUMBER = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, useGrouping: false });
 
-export const formatCalculation = (result: CalculationResult, locale: string | undefined): string => {
+export const formatCalculation = (
+  result: CalculationResult,
+  locale: string | undefined,
+  options: { number?: NumberDisplay; capCounts?: boolean } = {}
+): string => {
   switch (result.kind) {
     case 'number':
-      return CALC_NUMBER.format(result.value);
+      if (options.capCounts === true && result.value > MAX_SHOWN_COUNT) {
+        return `${MAX_SHOWN_COUNT}+`;
+      }
+
+      return options.number === undefined ? CALC_NUMBER.format(result.value) : formatNumberValue(result.value, options.number, resolveLocale(locale));
     case 'percent':
       return `${CALC_NUMBER.format(result.value)}%`;
     case 'date':
@@ -278,9 +361,17 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
           : {}),
+        ...(this.handlers?.editProperty !== undefined
+          ? { editProperty: (propertyId: string) => this.handlers?.editProperty?.(propertyId) }
+          : {}),
       },
     });
+    gridEl.addEventListener('click', this.handleNestingClick, true);
     gridEl.addEventListener('click', this.handleClick);
+    if (this.options.comment !== undefined) {
+      gridEl.setAttribute(DATA_ATTR.contextMenuOwner, '');
+      gridEl.addEventListener('contextmenu', this.handleContextMenu);
+    }
     // Bubble on the grid runs before the popover registry's document listener,
     // whose outside press closes the open editor and asks for a redraw.
     gridEl.addEventListener('pointerdown', this.handlePress);
@@ -350,6 +441,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   destroy(): void {
+    this.bulkEditor?.cancel();
+    this.bulkEditor = null;
     this.menu?.destroy();
     this.menu = null;
     this.grid?.destroy();
@@ -357,6 +450,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.columnDrag?.destroy();
     this.rowDrag?.destroy();
     this.handleRelease();
+    this.removeSelectionBar();
   }
 
   /**
@@ -440,7 +534,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     icon.setAttribute('data-blok-database-table-column-icon', '');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = propertyTypeMeta(property.type).icon;
+    if (property.icon !== undefined && property.icon !== '') {
+      icon.textContent = property.icon;
+    } else {
+      icon.innerHTML = propertyTypeMeta(property.type).icon;
+    }
 
     const name = document.createElement('span');
 
@@ -513,10 +611,26 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     body.setAttribute('role', 'rowgroup');
     body.setAttribute('data-blok-database-table-body', '');
     const shown = this.visibleCount(groupKey, rows.length);
+    // Open parents waiting for their "+ New sub-item" line, deepest last.
+    const open: Array<{ id: string; depth: number }> = [];
+    const closeTo = (depth: number): void => {
+      while (open.length > 0 && open[open.length - 1].depth >= depth) {
+        const parent = open.pop();
+
+        if (parent !== undefined) body.appendChild(this.createAddSubItem(parent.id, parent.depth + 1));
+      }
+    };
 
     for (const row of rows.slice(0, shown)) {
+      const info = this.options.nesting?.info(row.id);
+
+      closeTo(info?.depth ?? 0);
       body.appendChild(this.createRow(row, groupKey));
+      if (info?.expanded === true && this.editable && this.options.nesting?.addSubItem !== undefined) {
+        open.push({ id: row.id, depth: info.depth });
+      }
     }
+    closeTo(0);
     fragment.appendChild(body);
 
     if (rows.length === 0 && group === undefined && this.options.view.filters.length > 0) {
@@ -556,6 +670,30 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     return add;
   }
 
+  private createAddSubItem(parentId: string, depth: number): HTMLElement {
+    const line = document.createElement('div');
+    const add = document.createElement('button');
+    const icon = document.createElement('span');
+
+    const cell = document.createElement('div');
+
+    // A row of the grid's rowgroup, so the grid's children stay rows; the
+    // grid's own keyboard reads only data-blok-database-table-row.
+    line.setAttribute('role', 'row');
+    line.setAttribute('data-blok-database-add-subitem', '');
+    line.setAttribute('data-parent-id', parentId);
+    line.style.setProperty('--blok-database-subitem-depth', String(depth));
+    cell.setAttribute('role', 'gridcell');
+    add.type = 'button';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = IconPlus;
+    add.append(icon, this.t('tools.database.subItemsNew'));
+    cell.appendChild(add);
+    line.appendChild(cell);
+
+    return line;
+  }
+
   private createEmptyState(): HTMLElement {
     const empty = document.createElement('div');
 
@@ -581,6 +719,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     rowEl.setAttribute('data-row-id', row.id);
     rowEl.setAttribute('data-group-key', groupKey);
     rowEl.setAttribute('aria-selected', 'false');
+    const nested = this.options.nesting?.info(row.id);
+
+    if (nested !== undefined) {
+      rowEl.setAttribute('data-subitem-depth', String(nested.depth));
+      rowEl.style.setProperty('--blok-database-subitem-depth', String(nested.depth));
+    }
 
     if (this.editable) {
       const gutter = this.createGutter();
@@ -642,12 +786,19 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
     });
 
+    const fillHandle = cell.querySelector('[data-blok-database-table-fill-handle]');
+
     cell.replaceChildren(value);
 
     const icon = column.property.type === 'title' && showsPageIcon(this.options.view) ? pageIconElement(row) : null;
 
     if (icon !== null) {
       cell.insertBefore(icon, value);
+    }
+    const nested = column.property.type === 'title' ? this.options.nesting?.info(rowId) : undefined;
+
+    if (nested !== undefined) {
+      cell.insertBefore(this.createSubItemToggle(nested), cell.firstChild);
     }
 
     if (column.property.type === 'title' && (this.handlers !== undefined || this.options.openRow !== undefined)) {
@@ -666,7 +817,42 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       open.append(icon, label);
       cell.appendChild(open);
     }
+    if (fillHandle !== null) cell.appendChild(fillHandle);
   }
+
+  private createSubItemToggle(nested: { hasChildren: boolean; expanded: boolean }): HTMLElement {
+    const toggle = document.createElement('button');
+
+    toggle.type = 'button';
+    toggle.tabIndex = -1;
+    toggle.setAttribute('data-blok-database-subitem-toggle', '');
+    toggle.setAttribute('aria-expanded', String(nested.expanded));
+    toggle.setAttribute('aria-label', this.t(nested.expanded ? 'tools.database.subItemsCollapse' : 'tools.database.subItemsExpand'));
+    toggle.toggleAttribute('data-empty', !nested.hasChildren);
+    toggle.innerHTML = IconChevronRight;
+
+    return toggle;
+  }
+
+  /** Capture: a toggle or "+ New sub-item" press must not select or edit the cell under it. */
+  private readonly handleNestingClick = (event: MouseEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+    const toggle = target?.closest('[data-blok-database-subitem-toggle]') ?? null;
+    const add = target?.closest('[data-blok-database-add-subitem]') ?? null;
+    const nesting = this.options.nesting;
+
+    if (nesting === undefined || (toggle === null && add === null)) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const rowId = toggle?.closest('[data-row-id]')?.getAttribute('data-row-id');
+    const parentId = add?.getAttribute('data-parent-id');
+
+    if (typeof rowId === 'string') {
+      nesting.toggle(rowId);
+    } else if (typeof parentId === 'string') {
+      nesting.addSubItem?.(parentId);
+    }
+  };
 
   private readonly handleRepaint = (event: Event): void => {
     const cell = event.target;
@@ -764,6 +950,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   private createFooter(rows: DatabaseRow[]): HTMLElement {
     const footer = document.createElement('div');
     const calculations = resolveCalculations(this.options.view, this.shownSchema());
+    const caps = resolveCountCaps(this.options.view);
 
     footer.setAttribute('data-blok-database-table-footer', '');
     if (this.editable) {
@@ -771,7 +958,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     for (const column of this.columns) {
       const fn = calculations.get(column.property.id);
-      const cell = document.createElement(this.editable ? 'button' : 'div');
+      const cell = document.createElement(this.editable && column.property.type !== 'button' ? 'button' : 'div');
 
       cell.setAttribute('data-blok-database-table-calc', '');
       cell.setAttribute('data-property-id', column.property.id);
@@ -781,24 +968,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       }
       this.sizeCell(cell, column);
 
-      if (fn === undefined) {
-        cell.setAttribute('data-empty', '');
-        const placeholder = document.createElement('span');
-
-        placeholder.setAttribute('data-blok-database-table-calc-placeholder', '');
-        placeholder.textContent = this.t('tools.database.tableCalculate');
-        cell.appendChild(placeholder);
-      } else {
-        const result = computeCalculation(fn, rows.map((row) => readPropertyValue(row, column.property)), this.shown(column.property));
-        const label = document.createElement('span');
-        const value = document.createElement('span');
-
-        label.setAttribute('data-blok-database-table-calc-label', '');
-        label.textContent = this.t(CALCULATION_LABEL_KEYS[fn]);
-        value.setAttribute('data-blok-database-table-calc-value', '');
-        value.textContent = formatCalculation(result, this.options.locale);
-        cell.append(label, value);
-      }
+      fillCalculationCell(cell, {
+        fn, property: column.property, shown: this.shown(column.property), rows, i18n: this.options.i18n, locale: this.options.locale, capCounts: caps.has(column.property.id),
+      });
       footer.appendChild(cell);
     }
     footer.appendChild(this.createFiller());
@@ -824,20 +996,33 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     all?.setAttribute('aria-checked', rowIds.length > 0 ? someState : 'false');
 
     if (rowIds.length === 0) {
-      this.bar?.remove();
-      this.bar = null;
+      this.removeSelectionBar();
 
       return;
     }
     if (this.bar === null) {
+      const slot = this.options.selectionBarSlot?.() ?? null;
+
       this.bar = this.createSelectionBar();
-      root.insertBefore(this.bar, root.firstChild);
+      if (slot === null) {
+        root.insertBefore(this.bar, root.firstChild);
+      } else {
+        slot.appendChild(this.bar);
+        slot.setAttribute('data-blok-database-selecting', '');
+      }
     }
     const count = this.bar.querySelector('[data-blok-database-table-selection-count]');
 
     if (count !== null) {
       count.textContent = this.t('tools.database.tableSelectedCount', { count: rowIds.length });
     }
+  }
+
+  /** The bar can live outside the table root, so it never leaves with it. */
+  private removeSelectionBar(): void {
+    this.bar?.parentElement?.removeAttribute('data-blok-database-selecting');
+    this.bar?.remove();
+    this.bar = null;
   }
 
   private createSelectionBar(): HTMLElement {
@@ -914,9 +1099,15 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     this.bulkEditor?.close();
     this.bulkEditor = openCellEditor(property, null, anchor, {
+      ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: false,
+      options: property.config?.options ?? [],
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
+      ...(handlers.optionsChange !== undefined
+        ? { onOptionsChange: (next: SelectOption[]) => handlers.optionsChange?.(propertyId, next) }
+        : {}),
+      ...(handlers.editProperty !== undefined ? { onEditProperty: () => handlers.editProperty?.(propertyId) } : {}),
       onCommit: (value) => handlers.commitCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
       onClose: () => {
         this.bulkEditor = null;
@@ -971,6 +1162,17 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   // ─── Clicks ───
+
+  /** A right-click on a cell opens its comments. It stops here so core's block menu does not replace it. */
+  private readonly handleContextMenu = (event: MouseEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+    const cell = target?.closest<HTMLElement>('[data-blok-database-table-cell]');
+    const rowId = cell?.closest('[data-row-id]')?.getAttribute('data-row-id');
+
+    if (cell === null || cell === undefined || rowId === null || rowId === undefined || this.options.comment === undefined) return;
+    event.preventDefault();
+    this.options.comment(rowId, cell.getAttribute('data-property-id') ?? undefined, cell);
+  };
 
   private readonly handleClick = (event: MouseEvent): void => {
     const target = event.target instanceof Element ? event.target : null;
@@ -1058,7 +1260,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       return;
     }
-    const calc = closest('[data-blok-database-table-calc]');
+    const calc = closest('button[data-blok-database-table-calc]');
 
     if (calc !== null) {
       this.openCalculationMenu(calc);
@@ -1126,7 +1328,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
   }
 
-  private showMenu(anchor: HTMLElement, items: PopoverItemParams[], options: { searchable?: boolean } = {}): void {
+  private showMenu(anchor: HTMLElement, items: PopoverItemParams[], options: { searchable?: boolean; searchPlaceholder?: string } = {}): void {
     this.menu?.destroy();
     const menu = openMenu(anchor, items, {
       ...options,
@@ -1151,7 +1353,14 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     this.showMenu(anchor, calculationItems(this.shown(property), current, this.options.i18n, (fn: CalculationFn | null) => {
       this.handlers?.updateView({ calculations: withCalculation(this.options.view, propertyId, fn) });
-    }));
+    }, this.countCap(propertyId)));
+  }
+
+  private countCap(propertyId: string): CountCap {
+    return {
+      capCounts: resolveCountCaps(this.options.view).has(propertyId),
+      onCapCounts: (cap) => this.handlers?.updateView({ calculations: withCalculationCap(this.options.view, propertyId, cap) }),
+    };
   }
 
   private openRowMenu(anchor: HTMLElement, rowId: string): void {
@@ -1172,14 +1381,32 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         this.grid?.paint();
         this.grid?.openEditor(ref);
       },
-      onOpenSidePeek: () => handlers.openRow(rowId),
+      onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
+      ...(handlers.moveRowTo !== undefined ? { moveTargets: handlers.moveTargets?.() ?? [], onMoveTo: (databaseId: string) => handlers.moveRowTo?.(rowId, databaseId) } : {}),
+      ...this.lastEdited(rowId),
+      ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, anchor) } : {}),
       onDelete: () => {
         this.state.selection = null;
         handlers.deleteRows([rowId]);
       },
-    }), { searchable: true });
+    }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions') });
+  }
+
+  /** The row menu footer: who edited the row last, by the host's people, and when. */
+  private lastEdited(rowId: string): { lastEdited?: { name?: string; time: string } } {
+    const meta = this.allRows().find((row) => row.id === rowId)?.meta;
+    const at = meta?.lastEditedAt;
+
+    if (at === undefined) {
+      return {};
+    }
+    const ctx = this.options.cellContext;
+    const time = formatDateDisplay(new Date(at).toISOString(), resolveLocale(this.options.locale), { dateFormat: 'relative' }, ctx?.now, ctx?.hourCycle) ?? '';
+    const name = meta?.lastEditedBy === undefined ? undefined : ctx?.people?.find((person) => person.id === meta.lastEditedBy)?.name;
+
+    return { lastEdited: { ...(name !== undefined ? { name } : {}), time } };
   }
 
   // ─── Columns ───
@@ -1208,7 +1435,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       property: this.shown(column.property),
       frozenHere: frozen === index + 1,
       wrapped: column.wrap,
+      showPageIcon: showsPageIcon(view),
       calculation: resolveCalculations(view, this.shownSchema()).get(propertyId),
+      countCap: this.countCap(propertyId),
       onFilter: () => handlers.viewAction('filter', propertyId, anchor),
       onSort: () => handlers.viewAction('sort', propertyId, anchor),
       onGroup: () => handlers.viewAction('group', propertyId, anchor),
@@ -1217,6 +1446,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onUnfreeze: () => handlers.updateView({ frozenColumnCount: 0 }),
       onHide: () => handlers.updateView({ properties: withPropertySetting(view, schema, propertyId, { visible: false }) }),
       onWrap: (wrap) => handlers.updateView({ properties: withPropertySetting(view, schema, propertyId, { wrap }) }),
+      onShowPageIcon: (showPageIcon) => handlers.updateView({ showPageIcon }),
       onInsert: (side) => handlers.addProperty(anchor, { propertyId, side }),
     });
   }

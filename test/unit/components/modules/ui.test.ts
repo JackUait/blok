@@ -492,6 +492,24 @@ describe("UI module", () => {
       expect(passedAnchor).toMatchObject({ left: 120, top: 240 });
     });
 
+    it("stands down inside a context-menu owner, so the tool's own menu wins", async () => {
+      const { redactor, open, moveAndOpen } = await setupContextMenu();
+      const owner = document.createElement("div");
+      const tab = document.createElement("div");
+
+      owner.setAttribute("data-blok-context-menu-owner", "");
+      owner.appendChild(tab);
+      redactor.appendChild(owner);
+
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      tab.dispatchEvent(event);
+
+      expect(open).not.toHaveBeenCalled();
+      expect(moveAndOpen).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
     it("leaves the native context menu untouched on links", async () => {
       const { redactor, open, moveAndOpen } = await setupContextMenu();
 

@@ -32,6 +32,9 @@ export const databaseRowTitle = (row: RowLike, titlePropertyId: string | undefin
   return typeof value === 'string' ? value : '';
 };
 
+/** A page template lives as a row block but is never a row: exports skip it. */
+export const isTemplateRow = (row: RowLike): boolean => row.data.template === true;
+
 /** The database's manual row order: by fractional `position`, ties kept as they came. */
 export const inRowOrder = <T extends RowLike>(rows: T[]): T[] => {
   const positionOf = (row: T): string => (typeof row.data.position === 'string' ? row.data.position : '');

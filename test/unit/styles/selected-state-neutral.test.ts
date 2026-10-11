@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { readMainCss } from './helpers/read-main-css';
 
 /**
@@ -12,23 +12,59 @@ const css = readMainCss();
 /** The keyboard cursor fill counts as selected too: Notion paints it gray. */
 const SELECTED_FILLS = ['--blok-icon-active-bg', '--blok-popover-icon-active-bg', '--blok-item-focus-bg', '--blok-item-focus-shadow', '--blok-database-card-border-active', '--blok-database-table-cell-ring'];
 
-const declarations = (token: string): string[] =>
-  [...css.matchAll(new RegExp(`${token}:\\s*([^;]+);`, 'g'))].map(match => match[1].trim());
+const declarations = (token: string, source = css): string[] =>
+  [...source.matchAll(new RegExp(`${token}:\\s*([^;]+);`, 'g'))].map(match => match[1].trim());
+
+const hasNeutralFills = (token: string, source = css): boolean => {
+  const values = declarations(token, source);
+
+  return values.length > 0 && values.every(value => {
+    const alias = value.match(/^var\((--[\w-]+)\)$/)?.[1];
+    const paints = alias === undefined ? [value] : declarations(alias, source);
+
+    return paints.length > 0 && paints.every(paint => {
+      if (paint === 'transparent') return true;
+      const channels = paint.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/);
+
+      if (channels === null) return false;
+      const [r, g, b] = channels.slice(1).map(Number);
+
+      return Math.max(r, g, b) - Math.min(r, g, b) <= 10;
+    });
+  });
+};
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
+
+describe('selected-state fill parser', () => {
+  it.each([
+    { name: 'a blue literal', source: ':root { --selected: rgb(0, 0, 255); }' },
+    { name: 'a direct alias whose neutral fallback hides a blue target', source: ':root { --selected: var(--blue, rgb(55, 53, 47)); --blue: rgb(0, 0, 255); }' },
+    { name: 'a blue alias target in one theme', source: ':root { --selected: var(--target); --target: rgba(55, 53, 47, 0.08); } [data-theme="dark"] { --target: rgb(0, 0, 255); }' },
+    { name: 'a missing alias target', source: ':root { --selected: var(--missing); }' },
+    { name: 'a nested alias', source: ':root { --selected: var(--first); --first: var(--second); --second: rgb(55, 53, 47); }' },
+    { name: 'a nested alias whose neutral fallback hides a blue target', source: ':root { --selected: var(--first); --first: var(--blue, rgb(55, 53, 47)); --blue: rgb(0, 0, 255); }' },
+    { name: 'a cyclic alias', source: ':root { --selected: var(--first); --first: var(--second); --second: var(--first); }' },
+  ])('rejects $name', ({ source }) => {
+    expect(hasNeutralFills('--selected', source)).toBe(false);
+  });
+
+  it.each([
+    { name: 'neutral literals in light and dark themes', source: ':root { --selected: rgba(55, 53, 47, 0.08); } [data-theme="dark"] { --selected: rgba(255, 255, 255, 0.055); }' },
+    { name: 'neutral alias targets in light and dark themes', source: ':root { --selected: var(--target); --target: rgba(55, 53, 47, 0.08); } [data-theme="dark"] { --target: rgba(255, 255, 255, 0.055); }' },
+    { name: 'transparent', source: ':root { --selected: transparent; }' },
+  ])('accepts $name', ({ source }) => {
+    expect(hasNeutralFills('--selected', source)).toBe(true);
+  });
+});
 
 describe('selected-state tokens are neutral', () => {
   it.each(SELECTED_FILLS)('%s is a gray fill in every theme', (token) => {
     const values = declarations(token);
 
     expect(values.length).toBeGreaterThanOrEqual(3);
-    values.forEach(value => {
-      const channels = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-
-      expect(channels, `${token}: ${value}`).not.toBeNull();
-      const [r, g, b] = (channels ?? []).slice(1).map(Number);
-
-      // Gray: the channels differ by a warm tint at most, never a blue hue.
-      expect(Math.max(r, g, b) - Math.min(r, g, b), `${token}: ${value}`).toBeLessThanOrEqual(10);
-    });
+    expect(hasNeutralFills(token), `${token}: ${values.join(', ')}`).toBe(true);
   });
 
   it('--blok-icon-active-text is the primary ink in every theme', () => {

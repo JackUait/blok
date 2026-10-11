@@ -8,10 +8,13 @@ import {
   createDefaultStatusSettings,
   filesOf,
   isComputedType,
+  isListValueType,
+  offersAutofill,
   personIdsOf,
   readPropertyValue,
 } from './property-values';
 import type { OutputData } from '../../../types';
+import { isEmptyObjectValue, isOutputData, isPlaceValue, isVerificationValue, placeText } from './tier3-values';
 import type {
   ConvertedValue,
   DatabaseRow,
@@ -61,7 +64,7 @@ const LIST_SEPARATOR = ', ';
 const isEmptyValue = (value: PropertyValue | undefined): boolean =>
   value === undefined || value === null || value === '' || value === false
   || (Array.isArray(value) && value.length === 0)
-  || (typeof value === 'object' && value !== null && !Array.isArray(value) && value.blocks.length === 0);
+  || (typeof value === 'object' && value !== null && !Array.isArray(value) && isEmptyObjectValue(value));
 
 const optionLabel = (property: PropertyDefinition, id: string): string | undefined =>
   property.config?.options.find((o) => o.id === id)?.label;
@@ -79,6 +82,15 @@ const documentText = (value: OutputData): string =>
 /** A value as text. Lists join with ", ", as Notion writes them. */
 export const valueToText = (value: PropertyValue | undefined, property: PropertyDefinition): string => {
   if (value === undefined || value === null) return '';
+  if (property.type === 'formula' || property.type === 'rollup') {
+    if (typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+      return value.map((item) => {
+        if (typeof item === 'string') return item;
+        return 'url' in item ? item.url : item.id;
+      }).join(LIST_SEPARATOR);
+    }
+  }
 
   switch (property.type) {
     case 'select':
@@ -118,10 +130,15 @@ export const valueToText = (value: PropertyValue | undefined, property: Property
     // The computed value, in the shape of its result type.
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'place':
+    case 'verification':
     default:
       if (typeof value === 'string') return value;
       if (typeof value === 'number') return String(value);
-      if (typeof value === 'object' && !Array.isArray(value)) return documentText(value);
+      if (isOutputData(value)) return documentText(value);
+      if (isPlaceValue(value)) return placeText(value);
+      if (isVerificationValue(value)) return value.state;
 
       return '';
   }
@@ -183,6 +200,9 @@ const textToValue = (text: string, to: PropertyDefinition, ensure: EnsureOption,
     case 'relation':
     case 'formula':
     case 'rollup':
+    case 'button':
+    case 'place':
+    case 'verification':
       return null;
     case 'title':
     case 'text':
@@ -205,10 +225,10 @@ export const convertValue = (
   ensure: EnsureOption,
   mint: () => string = nanoid
 ): PropertyValue => {
-  if (isEmptyValue(value) || value === undefined) return to.type === 'checkbox' ? false : null;
+  if ((isEmptyValue(value) && !(isComputedType(from.type) && value === false)) || value === undefined) return to.type === 'checkbox' ? false : null;
   // Text cannot name a row, and formula and rollup are computed: the old
   // value is kept in `convertedValues` for a change back.
-  if (to.type === 'relation' || to.type === 'formula' || to.type === 'rollup') return null;
+  if (to.type === 'relation' || to.type === 'formula' || to.type === 'rollup' || to.type === 'button') return null;
 
   if (OPTION_TYPES.has(from.type) && OPTION_TYPES.has(to.type)) {
     const ids = personIdsOf(value);
@@ -244,6 +264,10 @@ const retype = (property: PropertyDefinition, to: PropertyType): PropertyDefinit
   }
   if (next.config === undefined) {
     delete next.config;
+  }
+  // The new type has no AI Autofill row, so nothing could turn the hooks off.
+  if (!offersAutofill(to)) {
+    delete next.autofill;
   }
   if (to === 'status' && next.status === undefined) {
     next.status = createDefaultStatusSettings();
@@ -327,5 +351,15 @@ export const planTypeChange = (
     target.config = { ...target.config, options };
   }
 
-  return { property: target, writes };
+  if (!isListValueType(to)) {
+    return { property: target, writes };
+  }
+
+  // A list is never left unset: `[]` is the container peers' first adds merge into.
+  const bare = rows.filter((row) => (row.properties[property.id] ?? null) === null && !writes.some((w) => w.rowId === row.id));
+
+  return {
+    property: target,
+    writes: [...writes.map((write) => ({ ...write, value: write.value ?? [] })), ...bare.map((row) => ({ rowId: row.id, value: [] }))],
+  };
 };

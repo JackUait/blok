@@ -114,7 +114,7 @@ describe('formula properties', () => {
     });
 
     it('rejects a property type formulas cannot read', () => {
-      const odd: PropertyDefinition[] = [{ id: 'x', name: 'X', type: 'button' as PropertyDefinition['type'], position: 'a0' }];
+      const odd: PropertyDefinition[] = [{ id: 'x', name: 'X', type: 'button', position: 'a0' }];
 
       expect(compileFormula('prop("X")', odd)).toMatchObject({ ok: false, error: { message: 'Property "X" cannot be used in a formula' } });
     });

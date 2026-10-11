@@ -175,7 +175,8 @@
     "title": "plaintext",
     "schema": "plaintext",
     "views": "plaintext",
-    "activeViewId": "plaintext"
+    "activeViewId": "plaintext",
+    "automations": "plaintext"
   },
   "database-row": {
     "title": "plaintext",

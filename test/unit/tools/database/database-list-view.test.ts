@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
+import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1', position: 'a0', properties: { title: 'Fix bug' }, ...overrides,
@@ -43,22 +44,29 @@ describe('DatabaseListView', () => {
       expect(list.hasAttribute('data-blok-database-list')).toBe(true);
     });
 
-    it('renders wrapper with role="list"', () => {
+    it('puts the rows in a labelled role="list" that holds list items only, with "+ New page" outside it', () => {
       const view = new DatabaseListView({
-        readOnly: false, i18n, rows: [], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+        readOnly: false, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+        total: 2, onLoadMore: vi.fn(),
       });
       const list = view.createView();
+      const rows = list.querySelector('[role="list"]');
 
-      expect(list.getAttribute('role')).toBe('list');
+      expect(list.hasAttribute('role')).toBe(false);
+      expect(rows?.getAttribute('aria-label')).toBe('tools.database.listView');
+      expect([...(rows?.children ?? [])].every((child) => child.getAttribute('role') === 'listitem')).toBe(true);
+      expect(list.querySelector(':scope > [data-blok-database-add-row]')).not.toBeNull();
+      expect(list.querySelector(':scope > [data-blok-database-list-load-more]')).not.toBeNull();
     });
 
-    it('renders localised list-view aria-label on wrapper', () => {
+    it('keeps a group\'s "Load more" outside its role="list" rows', () => {
       const view = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+        options: [{ id: 'g1', label: 'G', position: 'a0' }], getRows: () => [makeRow()], getTotal: () => 2, onLoadMore: vi.fn(),
       });
-      const list = view.createView();
+      const rows = view.createView().querySelector('[data-blok-database-list-group] [role="list"]');
 
-      expect(list.getAttribute('aria-label')).toBe('tools.database.listView');
+      expect([...(rows?.children ?? [])].every((child) => child.getAttribute('role') === 'listitem')).toBe(true);
     });
 
     it('renders one row element per row', () => {
@@ -232,7 +240,7 @@ describe('DatabaseListView', () => {
       expect(badges).toHaveLength(2);
     });
 
-    it('renders select property as a colored pill with label', () => {
+    it('renders select property as the shared colored option pill', () => {
       const schema: PropertyDefinition[] = [
         { id: 'title', name: 'Title', type: 'title', position: 'a0' },
         {
@@ -251,15 +259,13 @@ describe('DatabaseListView', () => {
       });
       const list = view.createView();
 
-      const badge = list.querySelector('[data-blok-database-list-row-property][data-property-id="status"]') as HTMLElement;
+      const pill = list.querySelector('[data-blok-database-list-row-property][data-property-id="status"] [data-blok-database-option-pill]');
 
-      expect(badge).not.toBeNull();
-      expect(badge.textContent).toBe('To Do');
-      expect(badge.style.backgroundColor).toBe('var(--blok-color-red-bg)');
-      expect(badge.style.color).toBe('var(--blok-color-red-text)');
+      expect(pill?.textContent).toBe('To Do');
+      expect(pill?.getAttribute('data-color')).toBe('red');
     });
 
-    it('renders a display-only checkbox property as an aria-hidden glyph plus accessible state text', () => {
+    it('renders a checkbox property as the shared display checkbox with accessible state text', () => {
       const schema: PropertyDefinition[] = [
         { id: 'title', name: 'Title', type: 'title', position: 'a0' },
         { id: 'done', name: 'Done', type: 'checkbox', position: 'a1' },
@@ -272,16 +278,11 @@ describe('DatabaseListView', () => {
       const list = view.createView();
 
       const badge = list.querySelector('[data-blok-database-list-row-property][data-property-id="done"]') as HTMLElement;
+      const box = badge.querySelector('[data-blok-database-checkbox]') as HTMLElement;
 
-      // No real form control — the list view checkbox is read-only display.
       expect(badge.querySelector('input[type="checkbox"]')).toBeNull();
-
-      const glyph = badge.querySelector('[data-blok-database-checkbox-glyph]') as HTMLElement;
-      expect(glyph).not.toBeNull();
-      expect(glyph.getAttribute('aria-hidden')).toBe('true');
-      expect(glyph.getAttribute('data-state')).toBe('checked');
-
-      // Accessible state conveyed to screen readers.
+      expect(box.getAttribute('aria-hidden')).toBe('true');
+      expect(box.getAttribute('data-state')).toBe('checked');
       expect(badge.textContent).toContain('tools.database.checkboxChecked');
     });
 
@@ -298,27 +299,26 @@ describe('DatabaseListView', () => {
       const list = view.createView();
 
       const badge = list.querySelector('[data-blok-database-list-row-property][data-property-id="done"]') as HTMLElement;
-      const glyph = badge.querySelector('[data-blok-database-checkbox-glyph]') as HTMLElement;
 
-      expect(glyph.getAttribute('data-state')).toBe('unchecked');
+      expect(badge.querySelector('[data-blok-database-checkbox]')?.getAttribute('data-state')).toBe('unchecked');
       expect(badge.textContent).toContain('tools.database.checkboxUnchecked');
     });
 
-    it('renders number property as plain text', () => {
+    it('formats a number with its property number format, not the raw value', () => {
       const schema: PropertyDefinition[] = [
         { id: 'title', name: 'Title', type: 'title', position: 'a0' },
-        { id: 'count', name: 'Count', type: 'number', position: 'a1' },
+        { id: 'count', name: 'Count', type: 'number', position: 'a1', number: { format: 'dollar' } },
       ];
-      const rows = [makeRow({ id: 'row-1', properties: { title: 'Row', count: 99 } })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Row', count: 1200 } })];
       const view = new DatabaseListView({
         readOnly: false, i18n, rows, titlePropertyId: 'title', schema,
-        visiblePropertyIds: ['count'],
+        visiblePropertyIds: ['count'], locale: 'en-US',
       });
       const list = view.createView();
 
       const badge = list.querySelector('[data-blok-database-list-row-property][data-property-id="count"]') as HTMLElement;
 
-      expect(badge.textContent).toBe('99');
+      expect(badge.textContent).toBe('$1,200.00');
     });
 
     it('does not render badges for property ids NOT in visiblePropertyIds', () => {
@@ -338,6 +338,299 @@ describe('DatabaseListView', () => {
 
       expect(badges).toHaveLength(1);
       expect(badges[0].getAttribute('data-property-id')).toBe('notes');
+    });
+  });
+
+  describe('property values through the shared cells layer', () => {
+    const schema: PropertyDefinition[] = [
+      { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+      {
+        id: 'st', name: 'Stage', type: 'status', position: 'a1', status: createDefaultStatusSettings(),
+        config: { options: [{ id: 's-todo', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' }] },
+      },
+      { id: 'due', name: 'Due', type: 'date', position: 'a2' },
+      {
+        id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a3',
+        config: { options: [{ id: 't1', label: 'Alpha', color: 'blue', position: 'a0' }, { id: 't2', label: 'Beta', color: 'pink', position: 'a1' }] },
+      },
+      { id: 'own', name: 'Owner', type: 'person', position: 'a4' },
+      { id: 'fx', name: 'Formula', type: 'formula', position: 'a5' },
+      { id: 'notes', name: 'Notes', type: 'text', position: 'a6' },
+    ];
+    const ids = ['st', 'due', 'tags', 'own', 'fx', 'notes'];
+    const row = makeRow({
+      id: 'r1',
+      properties: { title: 'Row', st: 's-todo', due: '2026-10-12', tags: ['t1', 't2'], own: [{ id: 'u1' }], fx: 7, notes: '' },
+    });
+    const slot = (list: HTMLElement, id: string): HTMLElement | null =>
+      list.querySelector<HTMLElement>(`[data-blok-database-list-row-property][data-property-id="${id}"]`);
+    const make = (overrides: Partial<ConstructorParameters<typeof DatabaseListView>[0]> = {}): HTMLElement => new DatabaseListView({
+      readOnly: false, i18n, rows: [row], titlePropertyId: 'title', schema, visiblePropertyIds: ids, locale: 'en-US',
+      cellContext: { people: [{ id: 'u1', name: 'Ada' }] },
+      ...overrides,
+    }).createView();
+
+    it('shows a status as its label pill, never the option id', () => {
+      const list = make();
+
+      expect(slot(list, 'st')?.textContent).not.toContain('s-todo');
+      expect(slot(list, 'st')?.querySelector('[data-blok-database-option-pill]')?.textContent).toBe('Not started');
+    });
+
+    it('shows a date formatted, never the raw ISO string', () => {
+      const text = slot(make(), 'due')?.textContent ?? '';
+
+      expect(text).not.toBe('2026-10-12');
+      expect(text).toContain('2026');
+    });
+
+    it('shows every multi-select option as a pill', () => {
+      const pills = [...(slot(make(), 'tags')?.querySelectorAll('[data-blok-database-option-pill]') ?? [])].map((p) => p.textContent);
+
+      expect(pills).toEqual(['Alpha', 'Beta']);
+    });
+
+    it('shows a person as an avatar chip whose name stays for screen readers only', () => {
+      const chip = slot(make(), 'own')?.querySelector('[data-blok-database-person-chip]');
+
+      expect(chip).not.toBeNull();
+      expect(chip?.querySelector('[data-blok-database-sr-only]')?.textContent).toBe('Ada');
+    });
+
+    it('shows a formula as its result type through valueProperty', () => {
+      const list = make({ cellContext: { valueProperty: (p) => ({ ...p, type: 'number', number: { format: 'dollar' } }) } });
+
+      expect(slot(list, 'fx')?.textContent).toBe('$7.00');
+    });
+
+    it('leaves out a property with no value', () => {
+      expect(slot(make(), 'notes')).toBeNull();
+    });
+
+    it('names an editable slot by its property and its shown value', () => {
+      const button = slot(make(), 'st');
+
+      expect(button?.getAttribute('role')).toBe('button');
+      expect(button?.getAttribute('aria-label')).toBe('Stage: Not started');
+    });
+
+    it('never makes a slot a button when its value holds its own link (no nested controls)', () => {
+      const linked: PropertyDefinition[] = [...schema, { id: 'site', name: 'Site', type: 'url', position: 'a7' }];
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow({ id: 'r1', properties: { title: 'Row', site: 'https://example.com' } })],
+        titlePropertyId: 'title', schema: linked, visiblePropertyIds: ['site'],
+      }).createView();
+      const site = slot(list, 'site');
+
+      expect(site?.querySelector('a[href]')).not.toBeNull();
+      expect(site?.hasAttribute('role')).toBe(false);
+      expect(site?.hasAttribute('aria-label')).toBe(false);
+      expect(site?.hasAttribute('data-editable')).toBe(true);
+    });
+
+    it('marks a slot editable only when its type has an editor and the list is editable', () => {
+      const list = make();
+
+      expect(slot(list, 'st')?.hasAttribute('data-editable')).toBe(true);
+      expect(slot(list, 'fx')?.hasAttribute('data-editable')).toBe(false);
+      expect(slot(make({ readOnly: true }), 'st')?.hasAttribute('data-editable')).toBe(false);
+    });
+  });
+
+  describe('inline edit and keyboard (research/03 §5)', () => {
+    const schema = makeSchema([{ name: 'A' }, { name: 'B' }]);
+    const rows = [
+      makeRow({ id: 'r1', position: 'a0', properties: { title: 'One', 'prop-0': 'x', 'prop-1': 'y' } }),
+      makeRow({ id: 'r2', position: 'a1', properties: { title: 'Two', 'prop-0': 'z' } }),
+    ];
+    const mount = (overrides: Partial<ConstructorParameters<typeof DatabaseListView>[0]> = {}): HTMLElement => {
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows, titlePropertyId: 'title', schema, visiblePropertyIds: ['prop-0', 'prop-1'], ...overrides,
+      }).createView();
+
+      document.body.appendChild(list);
+
+      return list;
+    };
+    const rowEl = (list: HTMLElement, id: string): HTMLElement =>
+      list.querySelector<HTMLElement>(`[data-blok-database-list-row][data-row-id="${id}"]`) as HTMLElement;
+    const slotOf = (list: HTMLElement, rowId: string, propId: string): HTMLElement =>
+      rowEl(list, rowId).querySelector<HTMLElement>(`[data-blok-database-list-row-property][data-property-id="${propId}"]`) as HTMLElement;
+    const press = (el: HTMLElement, init: KeyboardEventInit): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+
+      el.dispatchEvent(event);
+
+      return event;
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('owns its keyboard, so Blok does not take Tab or Shift+Enter', () => {
+      expect(mount().hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('makes the first row the one tab stop', () => {
+      const list = mount();
+
+      expect(rowEl(list, 'r1').getAttribute('tabindex')).toBe('0');
+      expect(rowEl(list, 'r2').getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('edits a property in place on click, without opening the page', () => {
+      const onPropertyEdit = vi.fn();
+      const outer = vi.fn();
+      const list = mount({ onPropertyEdit });
+
+      document.body.addEventListener('click', outer);
+      slotOf(list, 'r1', 'prop-0').click();
+      document.body.removeEventListener('click', outer);
+
+      expect(onPropertyEdit).toHaveBeenCalledWith('r1', 'prop-0', slotOf(list, 'r1', 'prop-0'));
+      expect(outer).not.toHaveBeenCalled();
+    });
+
+    it('does not edit in a read-only list', () => {
+      const onPropertyEdit = vi.fn();
+      const list = mount({ readOnly: true, onPropertyEdit });
+
+      slotOf(list, 'r1', 'prop-0').click();
+
+      expect(onPropertyEdit).not.toHaveBeenCalled();
+    });
+
+    it('Tab on a row goes to its first property, then to the next one; Shift+Tab goes back', () => {
+      const list = mount({ onPropertyEdit: vi.fn() });
+
+      rowEl(list, 'r1').focus();
+      expect(press(rowEl(list, 'r1'), { key: 'Tab' }).defaultPrevented).toBe(true);
+      expect(slotOf(list, 'r1', 'prop-0')).toHaveFocus();
+
+      press(slotOf(list, 'r1', 'prop-0'), { key: 'Tab' });
+      expect(slotOf(list, 'r1', 'prop-1')).toHaveFocus();
+
+      press(slotOf(list, 'r1', 'prop-1'), { key: 'Tab', shiftKey: true });
+      expect(slotOf(list, 'r1', 'prop-0')).toHaveFocus();
+
+      press(slotOf(list, 'r1', 'prop-0'), { key: 'Tab', shiftKey: true });
+      expect(rowEl(list, 'r1')).toHaveFocus();
+    });
+
+    it('lets Tab leave the list after the last property', () => {
+      const list = mount({ onPropertyEdit: vi.fn() });
+
+      expect(press(slotOf(list, 'r1', 'prop-1'), { key: 'Tab' }).defaultPrevented).toBe(false);
+    });
+
+    it('Enter on a property opens its editor; Escape goes back to the row', () => {
+      const onPropertyEdit = vi.fn();
+      const list = mount({ onPropertyEdit });
+
+      press(slotOf(list, 'r1', 'prop-1'), { key: 'Enter' });
+      expect(onPropertyEdit).toHaveBeenCalledWith('r1', 'prop-1', slotOf(list, 'r1', 'prop-1'));
+
+      slotOf(list, 'r1', 'prop-1').focus();
+      press(slotOf(list, 'r1', 'prop-1'), { key: 'Escape' });
+      expect(rowEl(list, 'r1')).toHaveFocus();
+    });
+
+    it('Shift+Enter on a row asks for a new item below it', () => {
+      const onNewBelow = vi.fn();
+      const list = mount({ onNewBelow });
+
+      expect(press(rowEl(list, 'r1'), { key: 'Enter', shiftKey: true }).defaultPrevented).toBe(true);
+      expect(onNewBelow).toHaveBeenCalledWith('r1', null);
+    });
+
+    it('Shift+Enter in a group passes the group, so the new item lands in it', () => {
+      const onNewBelow = vi.fn();
+      const options: SelectOption[] = [{ id: 'g1', label: 'G', position: 'a0' }];
+      const list = mount({ onNewBelow, options, getRows: () => rows });
+
+      press(rowEl(list, 'r2'), { key: 'Enter', shiftKey: true });
+
+      expect(onNewBelow).toHaveBeenCalledWith('r2', 'g1');
+    });
+
+    it('Enter on a row opens it; arrows move between rows', () => {
+      const list = mount();
+      const open = vi.fn();
+
+      rowEl(list, 'r1').addEventListener('click', open);
+      press(rowEl(list, 'r1'), { key: 'Enter' });
+      expect(open).toHaveBeenCalled();
+
+      rowEl(list, 'r1').focus();
+      press(rowEl(list, 'r1'), { key: 'ArrowDown' });
+      expect(rowEl(list, 'r2')).toHaveFocus();
+      press(rowEl(list, 'r2'), { key: 'ArrowUp' });
+      expect(rowEl(list, 'r1')).toHaveFocus();
+    });
+
+    it('never handles keys in a read-only list beyond opening and moving', () => {
+      const onNewBelow = vi.fn();
+      const list = mount({ readOnly: true, onNewBelow });
+
+      press(rowEl(list, 'r1'), { key: 'Enter', shiftKey: true });
+
+      expect(onNewBelow).not.toHaveBeenCalled();
+    });
+
+    it('starts an inline title edit on a row and reports the new title', () => {
+      const onTitleEdit = vi.fn();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows, titlePropertyId: 'title', schema, visiblePropertyIds: [], onTitleEdit,
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+      view.editTitle('r2');
+      const input = list.querySelector<HTMLInputElement>('[data-row-id="r2"] input');
+
+      expect(input).not.toBeNull();
+      if (input === null) return;
+      input.value = 'Renamed';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onTitleEdit).toHaveBeenCalledWith('r2', 'Renamed');
+    });
+  });
+
+  describe('load limit', () => {
+    const many = Array.from({ length: 3 }, (_, i) => makeRow({ id: `r${i}`, position: `a${i}` }));
+
+    it('shows "Load more" when the view holds more rows than it shows, and asks for more', () => {
+      const onLoadMore = vi.fn();
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: many.slice(0, 2), total: 3, onLoadMore, titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      }).createView();
+      const more = list.querySelector<HTMLButtonElement>('[data-blok-database-list-load-more]');
+
+      expect(more?.textContent).toBe('tools.database.tableLoadMore');
+      more?.click();
+      expect(onLoadMore).toHaveBeenCalledWith('');
+    });
+
+    it('shows no "Load more" when every row is shown', () => {
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: many, total: 3, onLoadMore: vi.fn(), titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      }).createView();
+
+      expect(list.querySelector('[data-blok-database-list-load-more]')).toBeNull();
+    });
+
+    it('counts a group\'s total in its header, and loads more for that group', () => {
+      const onLoadMore = vi.fn();
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+        options: [{ id: 'g1', label: 'G', position: 'a0' }], getRows: () => many.slice(0, 1), getTotal: () => 3, onLoadMore,
+      }).createView();
+
+      expect(list.querySelector('[data-blok-database-list-group-count]')?.textContent).toBe('3');
+      list.querySelector<HTMLButtonElement>('[data-blok-database-list-load-more][data-group-key="g1"]')?.click();
+      expect(onLoadMore).toHaveBeenCalledWith('g1');
     });
   });
 

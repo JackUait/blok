@@ -126,6 +126,89 @@ describe('DatabaseTool — view settings', () => {
     expect(dispatchChange).not.toHaveBeenCalled();
   });
 
+  it('saves personal filter and sort changes to the selected ordinary table view', () => {
+    const first = tableView({
+      name: 'First table',
+      filters: [{ id: 'first-filter', propertyId: 'p-stage', operator: 'equals', value: 'o-idea' }],
+      sorts: [{ id: 'first-sort', propertyId: 'p-title', direction: 'desc' }],
+    });
+    const second = tableView({ id: 'v2', name: 'Second table', position: 'a1' });
+    const { tool, root, dispatchChange } = mount({}, {}, { views: [first, second] });
+
+    try {
+      const baseline = structuredClone(tool.save(root));
+      const selectTab = (viewId: string): void => {
+        const tab = root.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${viewId}"]`);
+
+        if (tab === null) throw new Error(`missing ordinary view tab ${viewId}`);
+        tab.click();
+      };
+
+      const controlsState = (): [HTMLElement['hidden'], HTMLElement['hidden'], boolean, HTMLElement['hidden'], boolean] => {
+        const toolbar = root.querySelector<HTMLElement>('[data-blok-database-view-toolbar]');
+        const filter = q('database-toolbar-filter');
+        const sort = q('database-toolbar-sort');
+
+        if (toolbar === null || !(filter instanceof HTMLButtonElement) || !(sort instanceof HTMLButtonElement)) {
+          throw new Error('missing ordinary filter or sort control');
+        }
+
+        return [toolbar.hidden, filter.hidden, filter.disabled, sort.hidden, sort.disabled];
+      };
+
+      selectTab('v2');
+      const selectedControls = controlsState();
+      const sharedWritesBeforePersonal = dispatchChange.mock.calls.length;
+
+      headerAction(root, 'p-num', 'tools.database.tableFilter');
+      const input = q('database-filter-value');
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('missing numeric filter input');
+      input.value = '0';
+      input.dispatchEvent(new Event('input'));
+      click('database-filter-operator');
+      click('database-filter-op-greater_than');
+      const filteredRows = rowIds(root);
+
+      headerAction(root, 'p-num', 'tools.database.tableSort');
+      click('database-header-sort-asc');
+      const personalRows = rowIds(root);
+      const beforeSave = structuredClone(tool.save(root));
+      const sharedWritesAfterPersonal = dispatchChange.mock.calls.length;
+      const personalControls = controlsState();
+
+      click('database-view-save');
+      const afterSave = structuredClone(tool.save(root));
+      const savedControls = controlsState();
+
+      expect(afterSave.views.find((view) => view.id === 'v2')).toMatchObject({
+        filters: [expect.objectContaining({ propertyId: 'p-num', operator: 'greater_than' })],
+        sorts: [expect.objectContaining({ propertyId: 'p-num', direction: 'asc' })],
+      });
+      expect(afterSave.views.find((view) => view.id === 'v2')?.filters[0]?.value).toBe(0);
+      expect(afterSave.views.find((view) => view.id === 'v1')).toEqual(baseline.views.find((view) => view.id === 'v1'));
+      expect(beforeSave.views).toEqual(baseline.views);
+      expect(beforeSave.activeViewId).toBe('v2');
+      expect(afterSave.activeViewId).toBe('v2');
+      expect(filteredRows).toEqual(['r1', 'r2']);
+      expect(personalRows).toEqual(['r2', 'r1']);
+      expect(sharedWritesAfterPersonal).toBe(sharedWritesBeforePersonal);
+      expect(dispatchChange.mock.calls.length).toBeGreaterThan(sharedWritesAfterPersonal);
+      expect(selectedControls).toEqual([false, false, false, false, false]);
+      expect(personalControls).toEqual([false, false, false, false, false]);
+      expect(savedControls).toEqual([false, false, false, false, false]);
+      expect(q('database-view-save')).toBeNull();
+
+      selectTab('v1');
+      expect(rowIds(root)).toEqual(['r1']);
+      selectTab('v2');
+      expect(rowIds(root)).toEqual(['r2', 'r1']);
+      expect(tool.save(root).views.find((view) => view.id === 'v1')).toEqual(baseline.views.find((view) => view.id === 'v1'));
+    } finally {
+      tool.destroy();
+    }
+  });
+
   it('writes a personal sort to the document on Save for everyone', () => {
     const { tool, root, dispatchChange } = mount();
 
@@ -151,6 +234,19 @@ describe('DatabaseTool — view settings', () => {
     input.dispatchEvent(new Event('input'));
 
     expect(rowIds(root)).toEqual(['r1']);
+  });
+
+  it.each(['list', 'gallery'] as const)('searches a paged %s view too', (type) => {
+    const { root } = mount({ type });
+
+    click('database-toolbar-search');
+    const input = q('database-search-input') as HTMLInputElement;
+
+    input.value = 'idea';
+    input.dispatchEvent(new Event('input'));
+
+    expect([...root.querySelectorAll('[data-blok-database-list-row], [data-blok-database-gallery-card]')].map((el) => el.getAttribute('data-row-id')))
+      .toEqual(['r1']);
   });
 
   it('switches the layout from the settings panel', () => {
@@ -227,11 +323,95 @@ describe('DatabaseTool — view settings', () => {
     expect(root.querySelector('[data-row-id="r2"]')?.hasAttribute('data-blok-database-color')).toBe(false);
   });
 
+  it('paints feed cards that match a color rule (research/05 §6.2)', () => {
+    const { root } = mount({ type: 'feed', colorRules: [{ id: 'c1', propertyId: 'p-num', operator: 'greater_than', value: 100, color: 'green' }] });
+
+    expect(root.querySelector('[data-blok-database-feed-card][data-row-id="r1"]')?.getAttribute('data-blok-database-color')).toBe('green');
+    expect(root.querySelector('[data-blok-database-feed-card][data-row-id="r2"]')?.hasAttribute('data-blok-database-color')).toBe(false);
+  });
+
   it('paints one cell when the rule applies to its property', () => {
     const { root } = mount({ colorRules: [{ id: 'c1', propertyId: 'p-num', operator: 'is_not_empty', value: null, color: 'red', applyTo: 'property' }] });
 
     expect(root.querySelector('[data-row-id="r1"] [data-property-id="p-num"]')?.getAttribute('data-blok-database-color')).toBe('red');
     expect(root.querySelector('[data-row-id="r1"]')?.hasAttribute('data-blok-database-color')).toBe(false);
+  });
+
+  it.each(['locked', 'editStructure'] as const)(
+    'does not save a group fold when %s denies view changes',
+    (denial) => {
+      const config: DatabaseConfig = denial === 'editStructure'
+        ? { permissions: { can: (action) => action !== 'editStructure' } }
+        : {};
+      const extra: Partial<DatabaseData> = denial === 'locked'
+        ? { schema: schema.map((property) => property.type === 'title'
+          ? { ...property, databaseLocked: true } : property) }
+        : {};
+      const { tool, root, dispatchChange } = mount({ groupBy: 'p-stage' }, config, extra);
+      const before = tool.save(root).views;
+      const toggle = root.querySelector<HTMLElement>('[data-group-key="o-idea"] [data-blok-database-table-group-toggle]');
+
+      if (toggle === null) throw new Error('missing group toggle');
+      dispatchChange.mockClear();
+      try {
+        toggle.click();
+
+        expect(tool.save(root).views).toEqual(before);
+        expect(rowIds(root).sort()).toEqual(['r2', 'r3']);
+        expect(dispatchChange).not.toHaveBeenCalled();
+      } finally {
+        tool.destroy();
+      }
+    }
+  );
+
+  it.each(['locked', 'editStructure'] as const)(
+    'does not save the toggle-all shortcut when %s denies view changes',
+    (denial) => {
+      const config: DatabaseConfig = denial === 'editStructure'
+        ? { permissions: { can: (action) => action !== 'editStructure' } }
+        : {};
+      const extra: Partial<DatabaseData> = denial === 'locked'
+        ? { schema: schema.map((property) => property.type === 'title'
+          ? { ...property, databaseLocked: true } : property) }
+        : {};
+      const { tool, root, dispatchChange } = mount({ groupBy: 'p-stage' }, config, extra);
+      const before = tool.save(root).views;
+
+      dispatchChange.mockClear();
+      try {
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+          code: 'KeyT', key: '†', altKey: true, metaKey: true, ctrlKey: true, bubbles: true,
+        }));
+
+        expect(tool.save(root).views).toEqual(before);
+        expect(dispatchChange).not.toHaveBeenCalled();
+      } finally {
+        tool.destroy();
+      }
+    }
+  );
+
+  it('expands an open database on the second Cmd/Ctrl+Alt+T while a locked one sits beside it', () => {
+    const locked = mount({ groupBy: 'p-stage' }, {}, {
+      schema: schema.map((property) => property.type === 'title' ? { ...property, databaseLocked: true } : property),
+    });
+    const open = mount({ groupBy: 'p-stage' });
+    const press = (): void => {
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        code: 'KeyT', key: '†', altKey: true, metaKey: true, ctrlKey: true, bubbles: true,
+      }));
+    };
+
+    try {
+      press();
+      press();
+
+      expect(open.tool.save(open.root).views[0].collapsedGroups).toEqual([]);
+    } finally {
+      locked.tool.destroy();
+      open.tool.destroy();
+    }
   });
 
   it('keeps a collapsed group collapsed in the saved view', () => {

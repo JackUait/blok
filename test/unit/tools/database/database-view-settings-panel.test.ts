@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
 import type { ViewSettingsContext } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
@@ -178,6 +179,18 @@ describe('view settings panel', () => {
     expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-gallery-fit-image"]')?.disabled).toBe(true);
   });
 
+  it('marks the layout\'s default open mode with "Default for <layout>", under that mode only', () => {
+    const h = harness();
+
+    h.open();
+    click('database-settings-layout');
+    click('database-settings-open-pages');
+    const text = document.body.textContent ?? '';
+
+    expect(text.match(/tools\.database\.openPagesDefaultFor/g)).toHaveLength(1);
+    expect(text).toContain('tools.database.openPagesSideDescriptiontools.database.openPagesDefaultFor');
+  });
+
   it('sets the load limit, where pages open, and the layout switches', () => {
     const h = harness();
 
@@ -248,6 +261,71 @@ describe('view settings panel', () => {
     click('database-filter-option-o1');
 
     expect(h.state.view.filters).toEqual([expect.objectContaining({ propertyId: 'stage', operator: 'equals', value: ['o1'] })]);
+  });
+
+  it('offers every filterable property in "+ Filter", Files and ID too, but never a button', () => {
+    const h = harness();
+    const extra: PropertyDefinition[] = [
+      { id: 'att', name: 'Attachment', type: 'files', position: 'a6' },
+      { id: 'uid', name: 'ID', type: 'uniqueId', position: 'a7' },
+      { id: 'act', name: 'Act', type: 'button', position: 'a8' },
+    ];
+
+    h.ctx.schema = () => [...schema, ...extra];
+    h.open('filter');
+    click('database-filter-add');
+
+    expect(exists('database-pick-property-att')).toBe(true);
+    expect(exists('database-pick-property-uid')).toBe(true);
+    expect(exists('database-pick-property-act')).toBe(false);
+  });
+
+  it('reorders simple filters from the Filters page, keyboard Alt+Arrow included', () => {
+    const h = harness({ filters: [
+      { id: 'f1', propertyId: 'num', operator: 'is_not_empty', value: null },
+      { id: 'f2', propertyId: 'due', operator: 'is_empty', value: null },
+    ] });
+
+    h.open('filter');
+    document.querySelector('[data-blok-testid="database-filters-list-handle-f2"]')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true }));
+
+    expect(h.state.view.filters.map((f) => f.id)).toEqual(['f2', 'f1']);
+  });
+
+  it('reorders sorts from the Sort page, keyboard Alt+Arrow included', () => {
+    const h = harness({ sorts: [
+      { id: 's1', propertyId: 'num', direction: 'asc' },
+      { id: 's2', propertyId: 'due', direction: 'desc' },
+    ] });
+
+    h.open('sort');
+    document.querySelector('[data-blok-testid="database-sorts-list-handle-s1"]')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }));
+
+    expect(h.state.view.sorts.map((s) => s.id)).toEqual(['s2', 's1']);
+  });
+
+  it('moves flat filters into the advanced tree on its first edit', () => {
+    const h = harness({ filters: [
+      { id: 'legacy-title', propertyId: 'title', operator: 'equals', value: 'Alpha' },
+      { id: 'legacy-num', propertyId: 'num', operator: 'greater_than', value: 10 },
+    ] });
+
+    h.open('filter');
+    click('database-filter-advanced');
+    const add = document.querySelector<HTMLElement>('[data-blok-testid^="database-filter-add-rule-"]');
+
+    if (add === null) throw new Error('no advanced filter add button');
+    add.click();
+    click('database-pick-property-due');
+
+    expect(h.state.view.filters).toEqual([]);
+    expect(h.state.view.filterTree?.filterRules).toHaveLength(3);
+    expect(h.state.view.filterTree?.filterRules.slice(0, 2)).toEqual([
+      { id: 'legacy-title', propertyId: 'title', operator: 'equals', value: 'Alpha' },
+      { id: 'legacy-num', propertyId: 'num', operator: 'greater_than', value: 10 },
+    ]);
   });
 
   it('builds an advanced filter with nested groups, three layers at most', () => {
@@ -326,16 +404,86 @@ describe('view settings panel', () => {
     expect(exists('database-group-color-columns')).toBe(true);
   });
 
-  it.each([
-    ['prog', 'status'],
-    ['owner', 'person'],
-  ])('shows no group sort for a %s (%s) grouping, as research/08 measured', (groupBy) => {
-    harness({ groupBy }).open('group');
+  it('shows no group sort for a person grouping', () => {
+    harness({ groupBy: 'owner' }).open('group');
 
     expect(exists('database-group-sort')).toBe(false);
     expect(exists('database-group-text-by')).toBe(false);
     expect(exists('database-group-date-by')).toBe(false);
     expect(exists('database-group-hide-empty')).toBe(true);
+  });
+
+  it.each(['option', 'group'] as const)('offers and saves every status %s group sort choice', (groupByStatus) => {
+    const h = harness({ groupBy: 'prog', groupByStatus, groupSettings: { sort: 'ascending', hideEmptyGroups: true } });
+    const panel = h.open('group');
+    const choices = [
+      ['manual', 'tools.database.groupSortManual'],
+      ['ascending', 'tools.database.groupSortAscending'],
+      ['descending', 'tools.database.groupSortDescending'],
+    ] as const;
+
+    try {
+      expect(exists('database-group-sort')).toBe(true);
+
+      for (const [sort, label] of choices) {
+        click('database-group-sort');
+        expect([...panel.root.querySelectorAll('[data-blok-testid^="database-group-sort-"]')].map((row) => row.textContent?.trim()))
+          .toEqual(choices.map(([, choiceLabel]) => choiceLabel));
+        click(`database-group-sort-${sort}`);
+
+        expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupSettings: { sort, hideEmptyGroups: true } });
+        expect(h.state.view.groupSettings).toEqual({ sort, hideEmptyGroups: true });
+        expect(h.state.view.groupByStatus).toBe(groupByStatus);
+        expect(panel.root.querySelector('[data-blok-testid="database-group-sort"] [data-blok-database-panel-value]')?.textContent).toBe(label);
+      }
+    } finally {
+      panel.close();
+    }
+  });
+
+  it.each([
+    ['ascending', ['To-do (1)', 'In progress (1)', 'Complete (1)']],
+    ['descending', ['Complete (1)', 'In progress (1)', 'To-do (1)']],
+  ] as const)('renders status Group %s in the configured progress order', (sort, labels) => {
+    const status: PropertyDefinition = {
+      id: 'prog', name: 'Progress', type: 'status', position: 'a0',
+      status: { groups: [
+        { id: 'todo', kind: 'todo', name: 'To-do', position: 'a0' },
+        { id: 'inProgress', kind: 'inProgress', name: 'In progress', position: 'a1' },
+        { id: 'complete', kind: 'complete', name: 'Complete', position: 'a2' },
+      ] },
+      config: { options: [
+        { id: 's1', label: 'Not started', position: 'a0', groupId: 'todo' },
+        { id: 's2', label: 'In progress', position: 'a0', groupId: 'inProgress' },
+        { id: 's3', label: 'Done', position: 'a0', groupId: 'complete' },
+      ] },
+    };
+    const h = harness({ groupBy: 'prog', groupByStatus: 'group', groupSettings: { sort, hideEmptyGroups: true } });
+    const model = new DatabaseModel({ schema: [status], views: [h.state.view], activeViewId: 'v' });
+
+    model.setRows([
+      { id: 'r1', position: 'a0', properties: { prog: 's1' } },
+      { id: 'r2', position: 'a1', properties: { prog: 's2' } },
+      { id: 'r3', position: 'a2', properties: { prog: 's3' } },
+    ]);
+    h.ctx.schema = () => model.getSchema();
+    h.ctx.groups = () => {
+      const options = model.getSelectOptions('prog', { statusBy: 'group' });
+
+      return model.listGroups(h.state.view).map(({ key, count }) => ({
+        key,
+        label: options.find((option) => option.id === key)?.label ?? key,
+        count,
+      }));
+    };
+    const panel = h.open('group');
+
+    try {
+      expect([...panel.root.querySelectorAll('[data-blok-testid^="database-group-visible-"]')].map((row) => row.textContent?.trim()))
+        .toEqual(labels);
+    } finally {
+      panel.close();
+    }
   });
 
   it('offers "Me" first in a person filter', () => {
@@ -399,5 +547,89 @@ describe('view settings panel', () => {
     click('database-filter-delete');
 
     expect(h.state.view.filters).toEqual([]);
+  });
+});
+
+describe('view settings panel — sub-items and dependencies', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const structure = (on: { subItems: boolean; dependencies: boolean }): {
+    settings: NonNullable<ViewSettingsContext['structure']>;
+    setSubItems: ReturnType<typeof vi.fn>;
+    updateDependency: ReturnType<typeof vi.fn>;
+  } => {
+    const setSubItems = vi.fn();
+    const updateDependency = vi.fn();
+
+    return {
+      setSubItems,
+      updateDependency,
+      settings: {
+        subItems: () => on.subItems,
+        setSubItems,
+        dependencies: () => (on.dependencies ? { shift: 'none' } : undefined),
+        setDependencies: vi.fn(),
+        updateDependency,
+      },
+    };
+  };
+
+  it('turns sub-items on from Database settings', () => {
+    const h = harness();
+    const calls = structure({ subItems: false, dependencies: false });
+
+    h.ctx.structure = calls.settings;
+    h.open();
+    click('database-settings-subitems');
+    click('database-settings-subitems-switch');
+
+    expect(calls.setSubItems).toHaveBeenCalledWith(true);
+    expect(exists('database-settings-subitems-display-nested')).toBe(false);
+  });
+
+  it('sets a table\'s sub-item display and filter on the view', () => {
+    const h = harness();
+
+    h.ctx.structure = structure({ subItems: true, dependencies: false }).settings;
+    h.open();
+    click('database-settings-subitems');
+    click('database-settings-subitems-display-flattened');
+    click('database-settings-subitems-filter-parentsAndSubItems');
+
+    expect(h.ctx.updateView).toHaveBeenCalledWith({ subItemsDisplay: 'flattened' });
+    expect(h.ctx.updateView).toHaveBeenCalledWith({ subItemsFilter: 'parentsAndSubItems' });
+  });
+
+  it('offers a board "Card property" or "Flattened list", and parents only as a card property', () => {
+    const h = harness({ type: 'board', groupBy: 'stage' });
+
+    h.ctx.structure = structure({ subItems: true, dependencies: false }).settings;
+    h.open();
+    click('database-settings-subitems');
+
+    expect(exists('database-settings-subitems-display-card')).toBe(true);
+    expect(exists('database-settings-subitems-display-nested')).toBe(false);
+    expect(exists('database-settings-subitems-filter-subItems')).toBe(false);
+  });
+
+  it('turns dependencies on and picks a date shifting rule', () => {
+    const h = harness();
+    const calls = structure({ subItems: false, dependencies: true });
+
+    h.ctx.structure = calls.settings;
+    h.open();
+    click('database-settings-dependencies');
+    click('database-settings-dependencies-shift-maintain');
+    click('database-settings-dependencies-weekends');
+
+    expect(calls.updateDependency).toHaveBeenCalledWith({ shift: 'maintain' });
+    expect(calls.updateDependency).toHaveBeenCalledWith({ avoidWeekends: true });
   });
 });

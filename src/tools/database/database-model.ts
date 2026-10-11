@@ -6,6 +6,7 @@ import type {
   DatabaseViewConfig,
   DatabaseViewSettingKey,
   GroupSettings,
+  PageLayoutFields,
   PropertyConfig,
   PropertyDefinition,
   PropertySettingsV2,
@@ -15,11 +16,15 @@ import type {
   ViewType,
 } from './types';
 import { DATABASE_DEFAULT_TEXT } from './database-localization';
+import { pageLayoutFields, pageLayoutOf } from './page-layout';
+import type { PageLayoutData } from './page-layout';
 import { queryGroups, queryRows } from './database-query';
-import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf } from './property-values';
+import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, withEmptyLists } from './property-values';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
 import { resolveViewProperties, visibleRowPropertyIds } from './view-settings';
 import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
+import { parentMap, relationPair } from './sub-items';
+import { comparePositions, looseKeyBetween, normalizeKey } from './positions';
 
 export type ViewCreateConfig = Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey>>;
 
@@ -39,6 +44,8 @@ export interface DatabaseModelOptions {
   now?: () => Date;
   /** The current user's id, for a person filter's "Me" (the people lever). */
   me?: () => string | null;
+  /** The database block's id: a relation to it is a self-relation (sub-items). */
+  databaseId?: string;
 }
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
@@ -47,7 +54,7 @@ const ORPHAN_GROUP_POSITION = 'zzzzzzzz';
 export { NO_VALUE_GROUP_KEY };
 
 /** What `updateProperty` may change. */
-export type PropertyChanges = Partial<Pick<PropertyDefinition, 'name' | 'config'>> & Partial<PropertySettingsV2>;
+export type PropertyChanges = Partial<Pick<PropertyDefinition, 'name' | 'config'>> & Partial<PropertySettingsV2> & PageLayoutFields;
 
 export interface GroupOptions {
   /** Status only: one group per status group instead of per option. */
@@ -64,12 +71,14 @@ export class DatabaseModel {
   /** Today, for relative dates. Tests pin it. */
   private readonly now: () => Date;
   private readonly me: () => string | null;
+  private readonly databaseId: string | undefined;
   /** Formula and rollup as their result type (ComputedProperties.valueProperty). */
   private valueOf: (property: PropertyDefinition) => PropertyDefinition = (property) => property;
 
   constructor(data?: Partial<DatabaseData>, options: DatabaseModelOptions = {}) {
     this.now = options.now ?? ((): Date => new Date());
     this.me = options.me ?? ((): null => null);
+    this.databaseId = options.databaseId;
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
@@ -187,6 +196,47 @@ export class DatabaseModel {
     }
   }
 
+  /** The template new rows start from, read on the title property. */
+  getDefaultTemplateId(): string | undefined {
+    return this.schema.find((p) => p.type === 'title')?.defaultTemplateId;
+  }
+
+  setDefaultTemplateId(templateId: string | null): void {
+    const title = this.schema.find((p) => p.type === 'title');
+
+    if (title === undefined) return;
+    if (templateId === null) {
+      delete title.defaultTemplateId;
+    } else {
+      title.defaultTemplateId = templateId;
+    }
+  }
+
+  getPageLayout(): PageLayoutData {
+    return pageLayoutOf(this.schema.find((p) => p.type === 'title'));
+  }
+
+  setPageLayout(layout: PageLayoutData): void {
+    const title = this.schema.find((p) => p.type === 'title');
+
+    if (title !== undefined) this.updateProperty(title.id, pageLayoutFields(layout));
+  }
+
+  /**
+   * Writes the empty layout lists, in a save of their own, before anyone adds
+   * to them. A list born in the same write as its first entry is a whole-value
+   * write, and a peer's concurrent first entry is lost. Returns whether it wrote.
+   */
+  bearPageLayout(): boolean {
+    const title = this.schema.find((p) => p.type === 'title');
+
+    if (title === undefined || (Array.isArray(title.pageLayoutPlacements) && Array.isArray(title.pageLayoutSections))) return false;
+    title.pageLayoutPlacements ??= [];
+    title.pageLayoutSections ??= [];
+
+    return true;
+  }
+
   // ─── Row projection ───
 
   setRows(rows: DatabaseRow[]): void {
@@ -194,7 +244,7 @@ export class DatabaseModel {
   }
 
   getOrderedRows(): DatabaseRow[] {
-    return [...this.rows].sort((a, b) => a.position.localeCompare(b.position));
+    return [...this.rows].sort((a, b) => comparePositions(a.position, b.position));
   }
 
   getRow(rowId: string): DatabaseRow | undefined {
@@ -207,7 +257,7 @@ export class DatabaseModel {
     return {
       id: nanoid(),
       position: DatabaseModel.positionBetween(lastPosition, null),
-      properties: properties ?? {},
+      properties: withEmptyLists(this.schema, properties ?? {}),
     };
   }
 
@@ -291,21 +341,33 @@ export class DatabaseModel {
     const keys = isOptionType
       ? [...groupOptions.map((o) => o.id), NO_VALUE_GROUP_KEY]
       : [...new Set([...this.queryGroups({ ...view, filters: [], filterTree: undefined }).map((g) => g.key), ...counts.keys()])];
-    const ordered = orderGroupKeys(property, keys, settings, this.now(), isOptionType ? groupOptions : undefined);
+    const ordered = property.type === 'status' && view.groupByStatus === 'group'
+      ? [
+        ...(settings.sort === 'descending' ? [...groupOptions].reverse() : groupOptions).map((option) => option.id),
+        NO_VALUE_GROUP_KEY,
+      ]
+      : orderGroupKeys(property, keys, settings, this.now(), isOptionType ? groupOptions : undefined);
 
     return ordered
       .map((key) => ({ key, count: counts.get(key) ?? 0 }))
       .filter((group) => settings.hideEmptyGroups !== true || group.count > 0);
   }
 
+  /** The "Parent item" / "Sub-items" pair, when sub-items are on. */
+  subItemPair(): { forward: string; backward: string } | undefined {
+    return this.databaseId === undefined ? undefined : relationPair(this.schema, this.databaseId, 'parentItem', 'subItems');
+  }
+
   private querySource(view: DatabaseViewConfig): QuerySource {
     const now = this.now();
+    const subItems = this.subItemPair();
 
     return {
       schema: this.getValueSchema(),
       rows: this.rows,
       now,
       me: this.me(),
+      ...(subItems !== undefined ? { parents: parentMap(this.rows, subItems.forward) } : {}),
       ...(view.groupBy !== undefined
         ? { groupKeysOf: this.groupKeysOf(view.groupBy, { statusBy: view.groupByStatus, settings: view.groupSettings, now }) }
         : {}),
@@ -458,37 +520,31 @@ export class DatabaseModel {
   /**
    * Generates a fractional index strictly between `after` and `before`.
    *
-   * The ordering guard is load-bearing: fractional-indexing >= 4 silently swaps
-   * out-of-order arguments instead of throwing, which would turn a caller-side
-   * ordering bug (stale/unsorted neighbour lookup) into silently corrupted
-   * positions. Callers must pass neighbours read from a position-sorted list.
-   *
-   * Two extra rules exist because this key is minted from local state while a
-   * peer mints one from the same state:
-   * - appending (`before === null`) adds a random suffix, so two peers adding
-   *   at the same moment never land on the same key;
-   * - equal neighbours are tolerated instead of throwing, because a document
-   *   written before that suffix existed still holds duplicate keys, and a
-   *   throw here kills the whole drop and loses the user's move.
+   * Never throws. A throw here kills a drop with no message, and stored keys
+   * are not always the library's own:
+   * - equal neighbours: a document written before appended keys carried a
+   *   random suffix holds rows two peers minted at the same moment;
+   * - out-of-order neighbours (a caller that sorted another way) are swapped,
+   *   so the key still lands between the two;
+   * - keys the library rejects (`a000` from a `padStart`, a bad head) are
+   *   normalized, or else get a code-unit key between them.
+   * Appending (`before === null`) adds a random suffix, so two peers adding at
+   * the same moment never land on the same key.
    */
   static positionBetween(after: string | null, before: string | null): string {
-    if (after !== null && before !== null) {
-      if (after > before) {
-        throw new Error(`DatabaseModel.positionBetween: keys out of order (${after} >= ${before})`);
-      }
+    const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
 
-      if (after === before) {
-        return after + DatabaseModel.randomKeySuffix();
-      }
+    if (low !== null && low === high) {
+      return low + DatabaseModel.randomKeySuffix();
     }
 
-    const key = generateKeyBetween(after, before);
+    try {
+      const key = generateKeyBetween(normalizeKey(low), normalizeKey(high));
 
-    if (after !== null && before === null) {
-      return key + DatabaseModel.randomKeySuffix();
+      return low !== null && high === null ? key + DatabaseModel.randomKeySuffix() : key;
+    } catch {
+      return looseKeyBetween(low ?? '', high, DatabaseModel.randomKeySuffix());
     }
-
-    return key;
   }
 
   /**
@@ -497,9 +553,8 @@ export class DatabaseModel {
    * only breaks ties between peers.
    *
    * Digits only, although fractional-indexing takes the whole base62 alphabet:
-   * rows are ordered with `localeCompare` and options with `<`, and those two
-   * disagree on letter case. The last digit may not be '0' — the library
-   * rejects a key ending in one.
+   * a digit tail keeps a key the library can read and extend. The last digit
+   * may not be '0' — the library rejects a key ending in one.
    */
   private static randomKeySuffix(): string {
     const digit = (from: number): string => String(from + Math.floor(Math.random() * (10 - from)));

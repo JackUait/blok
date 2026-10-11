@@ -370,6 +370,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         }
         this.closing = null;
         window.clearTimeout(timer.id);
+        popover.removeAttribute('inert');
         removeFromTopLayer(popover);
         container.className = css.popoverContainer;
         this.onCloseSettled();
@@ -381,6 +382,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     };
 
     this.closing = closing;
+    // A fading card is closed: its items must not take clicks or show in the accessibility tree.
+    popover.setAttribute('inert', '');
 
     // The card stays in the DOM while it fades; focus must not stay on it.
     if (document.activeElement instanceof HTMLElement && popover.contains(document.activeElement)) {

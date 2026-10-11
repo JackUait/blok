@@ -71,6 +71,75 @@ public sealed class YDocConverterDatabaseRelationTests
     Assert.Equal(RelatedIds(server), RelatedIds(peer));
   }
 
+  [Fact]
+  public void SeedStoresAnEmptyListUnderPropertiesAsAKeyedContainer()
+  {
+    var doc = SeededDoc(
+        """
+        { "id": "r1", "type": "database-row",
+          "data": { "properties": { "rel": [], "tags": ["a"] }, "other": { "x": [] } } }
+        """);
+    var properties = Assert.IsType<YMap>(DataValue(doc, "r1", "properties"));
+    var other = Assert.IsType<YMap>(DataValue(doc, "r1", "other"));
+
+    Assert.True(properties.TryGet("rel", out var relation));
+    Assert.True(IsKeyedContainer(relation));
+    Assert.True(other.TryGet("x", out var leaf));
+    Assert.False(IsKeyedContainer(leaf));
+
+    var exported = YDocConverter.Export(doc).AsArray().First(node => node?["id"]?.GetValue<string>() == "r1");
+
+    Assert.Equal("[]", exported?["data"]?["properties"]?["rel"]?.ToJsonString());
+  }
+
+  [Fact]
+  public void TwoPeersRelatingTheFirstRowOfAListBornEmptyKeepBoth()
+  {
+    var server = SeededDoc(
+        """{ "id": "r1", "type": "database-row", "data": { "properties": { "rel": [] } } }""");
+    var peer = Peer(server);
+
+    Apply(server, """{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "b" }] } } }""");
+    Apply(peer, """{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "c" }] } } }""");
+    Exchange(server, peer);
+
+    Assert.Equal(["b", "c"], RelatedIds(server));
+    Assert.Equal(["b", "c"], RelatedIds(peer));
+  }
+
+  [Fact]
+  public void AClearAndAnAddMadeAtOnceKeepTheAdd()
+  {
+    var server = SeededDoc(RowWithRelation);
+    var peer = Peer(server);
+
+    Apply(server, """{ "op": "update", "id": "r1", "data": { "properties": { "rel": [] } } }""");
+    Apply(peer, """{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "z" }, { "id": "c" }] } } }""");
+    Exchange(server, peer);
+
+    Assert.Equal(["c"], RelatedIds(server));
+    Assert.Equal(["c"], RelatedIds(peer));
+  }
+
+  [Fact]
+  public void AnUpdateThatAddsAnEmptyListMakesAKeyedContainer()
+  {
+    var doc = SeededDoc(
+        """{ "id": "r1", "type": "database-row", "data": { "properties": { "n": 1 } } }""");
+
+    Apply(doc, """{ "op": "update", "id": "r1", "data": { "properties": { "n": 1, "rel": [] } } }""");
+
+    var properties = Assert.IsType<YMap>(DataValue(doc, "r1", "properties"));
+
+    Assert.True(properties.TryGet("rel", out var relation));
+    Assert.True(IsKeyedContainer(relation));
+  }
+
+  private static bool IsKeyedContainer(object? value)
+  {
+    return value is YMap map && Entry(map, "__rows") is YMap && Entry(map, "__rowKeys") is YArray;
+  }
+
   private static string[] RelatedIds(YDoc doc)
   {
     var block = YDocConverter.Export(doc).AsArray().First(node => node?["id"]?.GetValue<string>() == "r1");

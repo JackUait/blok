@@ -2,7 +2,7 @@ import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isListSlotMapKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { writeRichText } from './rich-text-write';
 import { diffText } from './text-diff';
 import { writePageField, type PageFields } from './page-fields';
@@ -1450,7 +1450,7 @@ export class DocumentStore {
       }
 
       this.transact(() => {
-        this.deepAssignYMap(currentValue, value as Record<string, unknown>, seen);
+        this.deepAssignYMap(currentValue, value as Record<string, unknown>, seen, isListSlotMapKey(dataKey));
       }, 'local');
 
       return true;
@@ -1601,8 +1601,8 @@ export class DocumentStore {
     this.transact(() => {
       // plainToYValue serializes nested objects into Y.Maps and qualifying
       // arrays into Y.Arrays so later sub-edits can merge; primitive and
-      // empty arrays stay atomic plain leaves.
-      ydata.set(dataKey, this.serializer.plainToYValue(value));
+      // empty arrays stay atomic plain leaves (outside the list-slot map).
+      ydata.set(dataKey, this.serializer.plainDataValue(dataKey, value));
     }, 'local');
 
     return true;
@@ -1677,7 +1677,7 @@ export class DocumentStore {
    * every depth: a whole-key set is last-writer-wins, so a peer's edit INSIDE
    * the container goes with the container it replaces.
    */
-  private deepAssignYMap(target: Y.Map<unknown>, source: Record<string, unknown>, seen?: DataKeySnapshot): void {
+  private deepAssignYMap(target: Y.Map<unknown>, source: Record<string, unknown>, seen?: DataKeySnapshot, listSlots = false): void {
     const known = seen?.get(target);
 
     // Remove keys no longer present.
@@ -1690,12 +1690,16 @@ export class DocumentStore {
     }
 
     for (const [key, value] of Object.entries(source)) {
-      this.assignYMapEntry(target, key, value, seen);
+      this.assignYMapEntry(target, key, value, seen, listSlots);
     }
   }
 
-  /** Assign one key of a nested Y.Map, recursing into child Y.Maps/Y.Arrays. */
-  private assignYMapEntry(target: Y.Map<unknown>, key: string, input: unknown, seen?: DataKeySnapshot): void {
+  /**
+   * Assign one key of a nested Y.Map, recursing into child Y.Maps/Y.Arrays.
+   * @param listSlots - true only for the entries of the list-slot map
+   *   (`isListSlotMapKey`); never passed further down
+   */
+  private assignYMapEntry(target: Y.Map<unknown>, key: string, input: unknown, seen?: DataKeySnapshot, listSlots = false): void {
     // Same substitution as `updateBlockData`, one level down.
     const value = toSerializableValue(input);
     // Scrub the nested KEY here — deep-merge writes bypass objectToYMap, so this
@@ -1704,10 +1708,23 @@ export class DocumentStore {
     const isPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
     const existing = target.get(mapKey);
 
+    // Promoting an unchanged legacy list leaf would race a peer's first add.
+    if (listSlots && Array.isArray(value) && value.length === 0) {
+      if (this.serializer.isGridMap(existing)) {
+        this.deepAssignYIdentity(existing, [], seen);
+      } else if (!equals(this.serializer.yValueToPlain(existing), value)) {
+        target.set(mapKey, this.serializer.plainToIdentityMap([]));
+      }
+
+      return;
+    }
+
     // Keyed grid first: a grid wrapper IS a Y.Map, so the plain-object branch
     // below would tear its container keys apart.
     if (Array.isArray(value) && this.serializer.isGridMap(existing)) {
-      if (this.serializer.isGridArray(value)) {
+      if (value.length === 0) {
+        this.deepAssignYIdentity(existing, [], seen);
+      } else if (this.serializer.isGridArray(value)) {
         this.deepAssignYGrid(existing, value, seen);
       } else if (this.serializer.isIdentityArray(value)) {
         this.deepAssignYIdentity(existing, value, seen);
@@ -2009,8 +2026,8 @@ export class DocumentStore {
    * a reorder racing a field edit applied that edit to whichever element took
    * the index, and both peers converged on the same wrong value.
    *
-   * `source` must satisfy `isIdentityArray` (so every element has a unique
-   * string id); must run inside a transaction.
+   * `source` must be empty or satisfy `isIdentityArray`; must run inside a
+   * transaction.
    */
   private deepAssignYIdentity(target: Y.Map<unknown>, source: Record<string, unknown>[], seen?: DataKeySnapshot): void {
     const rows = target.get(GRID_ROWS_KEY) as Y.Map<unknown>;

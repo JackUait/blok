@@ -121,7 +121,20 @@ internal static class YDocConverter
   /// reason <c>contentIds</c> is: a later promotion runs on two peers at once
   /// and map-set is last-writer-wins, so the loser's ids are discarded.
   /// </summary>
-  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations", "hiddenGroups", "collapsedGroups", "filterRules", "colorRules", "tableProperties"];
+  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations", "hiddenGroups", "collapsedGroups", "filterRules", "colorRules", "tableProperties", "buttonActions", "pageLayoutPlacements", "pageLayoutSections"];
+
+  /// <summary>
+  /// The one TOP-LEVEL data key whose map holds list slots: a database row's
+  /// <c>properties</c>. An EMPTY array directly in that map is stored as an
+  /// empty keyed wrapper, not a leaf, so two peers' first adds merge into it
+  /// by id, and a list cleared back to <c>[]</c> is cleared in place.
+  ///
+  /// LOCKSTEP: <c>LIST_SLOT_MAP_KEY</c> in
+  /// src/components/modules/yjs/serializer.ts. A server-seeded row must hold
+  /// the same container a client-seeded one does, or a first add on one side
+  /// replaces the other's list.
+  /// </summary>
+  private const string ListSlotMapKey = "properties";
 
   // nanoid's default alphabet; keys are random so two peers never collide.
   private const string RowKeyAlphabet =
@@ -1633,9 +1646,29 @@ internal static class YDocConverter
         string key,
         JsonNode? value,
         int depth,
-        bool nested)
+        bool nested,
+        bool listSlot = false)
     {
       var existing = Value(target, key);
+
+      // An emptied list slot is cleared IN PLACE, so a peer's concurrent add
+      // survives; the grid branch below would replace the container with a
+      // leaf. A leaf [] (an older client's write) is left alone: promoting it
+      // on every save would race a peer's first add. LOCKSTEP with
+      // assignYMapEntry in src/components/modules/yjs/document-store.ts.
+      if (listSlot && value is JsonArray { Count: 0 } empty)
+      {
+        if (existing is YMap slot && IsGridMap(slot))
+        {
+          Identity(transaction, slot, empty, depth);
+        }
+        else if (!SameAsLive(existing, empty, depth))
+        {
+          target.Set(transaction, key, InputWriter.PlainToIdentityMap(empty, depth));
+        }
+
+        return;
+      }
 
       // The keyed grid FIRST: a grid wrapper IS a map, and the object branch
       // below would tear its container keys apart.
@@ -1704,16 +1737,21 @@ internal static class YDocConverter
 
       if (value is JsonObject map)
       {
+        var slots = !nested && key == ListSlotMapKey;
+
         if (existing is YMap liveMap)
         {
-          Map(transaction, liveMap, map, depth);
+          Map(transaction, liveMap, map, depth, slots);
 
           return;
         }
 
         // Unconditional, even when the plain shapes match: what is there is
         // not a YMap, and leaving it would keep the key un-mergeable forever.
-        target.Set(transaction, key, InputWriter.PlainToYValue(map, depth));
+        target.Set(
+            transaction,
+            key,
+            slots ? InputWriter.PlainDataValue(key, map, depth) : InputWriter.PlainToYValue(map, depth));
 
         return;
       }
@@ -1738,7 +1776,7 @@ internal static class YDocConverter
     /// same JSON already, and refused the request if one carried a NUL.
     /// </summary>
     private static void Map(
-        YTransaction transaction, YMap target, JsonObject source, int depth)
+        YTransaction transaction, YMap target, JsonObject source, int depth, bool listSlots = false)
     {
       foreach (var key in target.Keys.ToArray())
       {
@@ -1750,7 +1788,7 @@ internal static class YDocConverter
 
       foreach (var (key, value) in source)
       {
-        Entry(transaction, target, key, value, depth + 1, nested: true);
+        Entry(transaction, target, key, value, depth + 1, nested: true, listSlot: listSlots);
       }
     }
 
@@ -2598,7 +2636,7 @@ internal static class YDocConverter
     internal static YMap ToDataMap(IReadOnlyList<KeyValuePair<string, object?>> entries)
     {
       return new YMap(entries.Select(entry =>
-          Pair(entry.Key, ToShared(entry.Value, BlockFieldDepth + 1))));
+          Pair(entry.Key, ToShared(entry.Key, entry.Value, BlockFieldDepth + 1))));
     }
 
     /// <summary>
@@ -2606,13 +2644,13 @@ internal static class YDocConverter
     /// for: a marker mints the <see cref="YText"/>, anything else is plain
     /// JSON and goes through the ordinary value walk.
     /// </summary>
-    internal static object? ToShared(object? value, int depth)
+    internal static object? ToShared(string key, object? value, int depth)
     {
       return value switch
       {
         MergeableRichText rich => NewRichText(rich.Segments),
         MergeableText text => new YText(text.Value),
-        _ => PlainToYValue(value as JsonNode, depth),
+        _ => PlainDataValue(key, value as JsonNode, depth),
       };
     }
 
@@ -2715,7 +2753,19 @@ internal static class YDocConverter
       }
     }
 
-    private static YMap ObjectToYMap(JsonObject value, int depth)
+    /// <summary>
+    /// A top-level data value: <see cref="PlainToYValue"/>, except that the
+    /// list-slot map mints its empty lists as keyed wrappers. Mirrors
+    /// <c>plainDataValue</c> in src/components/modules/yjs/serializer.ts.
+    /// </summary>
+    internal static object? PlainDataValue(string key, JsonNode? value, int depth)
+    {
+      return key == ListSlotMapKey && value is JsonObject map
+        ? ObjectToYMap(map, depth, listSlots: true)
+        : PlainToYValue(value, depth);
+    }
+
+    private static YMap ObjectToYMap(JsonObject value, int depth, bool listSlots = false)
     {
       GuardDepth(depth, "a data value");
 
@@ -2724,6 +2774,14 @@ internal static class YDocConverter
       foreach (var (key, child) in value)
       {
         var mapKey = NoNul(key, "a data key");
+
+        if ((listSlots || mapKey == "definitions" || mapKey == "triggers" || mapKey == "actions") &&
+            child is JsonArray { Count: 0 } empty)
+        {
+          entries.Add(Pair(mapKey, PlainToIdentityMap(empty, depth + 1)));
+
+          continue;
+        }
 
         entries.Add(Pair(
             mapKey,
@@ -2818,7 +2876,7 @@ internal static class YDocConverter
     /// Mirrors <c>plainToIdentityMap</c> in
     /// src/components/modules/yjs/serializer.ts.
     /// </summary>
-    private static YMap PlainToIdentityMap(JsonArray elements, int depth)
+    internal static YMap PlainToIdentityMap(JsonArray elements, int depth)
     {
       var rowEntries = new List<KeyValuePair<string, object?>>();
       var order = new List<object?>();

@@ -48,8 +48,8 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
  * NESTED data keys holding a LIST THAT IS BORN EMPTY and then grows on two
  * peers at once: a table cell's `blocks` (ordered child ids), and a database
  * view's `filters`, `sorts`, `calculations`, `hiddenGroups`,
- * `collapsedGroups`, `colorRules` and every `filterRules` list in its filter
- * tree. The names are unusual on purpose: the rule matches a key name at any
+ * `collapsedGroups`, `colorRules`, a button property's `buttonActions` and every `filterRules` list in its filter
+ * tree, and the page layout lists on its title property. The names are unusual on purpose: the rule matches a key name at any
  * depth in every tool's data. Stored as a `Y.Array` from birth — empty, and
  * whatever the elements turn out to be — so two peers each
  * adding the FIRST element keep both instead of one whole-value write
@@ -80,7 +80,8 @@ export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.ha
  * container is a plain array where a client-seeded one is a Y.Array.
  */
 const EAGER_ARRAY_KEYS = new Set([
-  'blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules', 'tableProperties',
+  'blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules', 'tableProperties', 'buttonActions',
+  'pageLayoutPlacements', 'pageLayoutSections',
 ]);
 
 /**
@@ -89,6 +90,32 @@ const EAGER_ARRAY_KEYS = new Set([
  * covers every nested list born empty — see `EAGER_ARRAY_KEYS`.
  */
 export const isOrderedIdArrayKey = (key: string): boolean => EAGER_ARRAY_KEYS.has(key);
+
+/**
+ * The one TOP-LEVEL data key whose map holds LIST SLOTS: a database row's
+ * `properties`, keyed by nanoid property ids. An EMPTY array directly in that
+ * map is stored as an empty keyed wrapper (the `plainToIdentityMap` shape), not
+ * a leaf, so the first id-bearing elements two peers add at once merge into it
+ * by id, and a list cleared back to `[]` stays that container.
+ *
+ * The database tool writes `[]` for every person, files and relation property
+ * when it creates the row or the property, so ONE peer creates the container.
+ * The property TYPE decides that birth in the tool; this rule reads the key
+ * path only (see `DIFFABLE_TEXT_KEYS` for why a representation never follows
+ * the type). A row with no key for a list still loses one of two first adds:
+ * creating a map key is last-writer-wins, and promoting on load would race.
+ *
+ * Only the empty case is new. A non-empty id list already takes the wrapper
+ * through `isIdentityArray`; a multi-select's strings stay a whole-value leaf,
+ * so two peers picking one option never store it twice.
+ *
+ * LOCKSTEP: `ListSlotMapKey` in
+ * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs.
+ */
+const LIST_SLOT_MAP_KEY = 'properties';
+
+/** Whether a block's top-level data key holds list slots. */
+export const isListSlotMapKey = (key: string): boolean => key === LIST_SLOT_MAP_KEY;
 
 /**
  * Remove every NUL from a string. A NUL in ANY position — map key, string
@@ -618,6 +645,21 @@ export class YBlockSerializer {
 
     return isDiffableTextKey(dataKey) && typeof value === 'string'
       ? new Y.Text(stripNul(value))
+      : this.plainDataValue(dataKey, value);
+  }
+
+  /**
+   * A top-level data value with no mergeable text: `plainToYValue`, except
+   * that the list-slot map (`isListSlotMapKey`) mints its empty lists as
+   * keyed containers.
+   * @param dataKey - the NUL-free top-level data key
+   * @param input - the plain value
+   */
+  public plainDataValue(dataKey: string, input: unknown): unknown {
+    const value = toSerializableValue(input);
+
+    return isListSlotMapKey(dataKey) && value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? this.objectToYMap(value as Record<string, unknown>, true)
       : this.plainToYValue(value);
   }
 
@@ -633,12 +675,21 @@ export class YBlockSerializer {
    * LOCKSTEP: `InputWriter`'s ordered-id branch in
    * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs must defer the
    * same way.
+   * @param listSlots - true only for the list-slot map (`isListSlotMapKey`):
+   *   an empty array in it becomes an empty keyed wrapper
    */
-  public objectToYMap(obj: Record<string, unknown>): Y.Map<unknown> {
+  public objectToYMap(obj: Record<string, unknown>, listSlots = false): Y.Map<unknown> {
     const ymap = new Y.Map<unknown>();
 
     for (const [key, value] of Object.entries(obj)) {
       const mapKey = stripNul(key);
+
+      if ((listSlots || mapKey === 'definitions' || mapKey === 'triggers' || mapKey === 'actions') &&
+        Array.isArray(value) && value.length === 0) {
+        ymap.set(mapKey, this.plainToIdentityMap([]));
+        continue;
+      }
+
       const eager = isOrderedIdArrayKey(mapKey) && Array.isArray(value) &&
         !this.isGridArray(value) && !this.isIdentityArray(value);
 

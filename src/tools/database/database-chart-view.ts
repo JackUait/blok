@@ -541,13 +541,16 @@ export class DatabaseChartView implements DatabaseViewRenderer {
       const groupStart = g.bandStart(i) + (g.band - thickness * (stacked ? 1 : parts.length)) / 2;
       const lastPositive = parts.map((part) => part.value > 0).lastIndexOf(true);
       const lastNegative = parts.map((part) => part.value < 0).lastIndexOf(true);
-      let positiveOffset = 0;
-      let negativeOffset = 0;
+      const lengths = parts.map((part) => Math.abs(g.scale(part.value)));
+      // A stacked segment starts where the earlier segments of the same sign end.
+      const stackOffsets = parts.map((part, j) => lengths.slice(0, j)
+        .filter((_, k) => (parts[k].value < 0) === (part.value < 0))
+        .reduce((sum, length) => sum + length, 0));
 
       parts.forEach((part, j) => {
         const negative = part.value < 0;
-        const length = Math.abs(g.scale(part.value));
-        const offset = stacked ? (negative ? negativeOffset : positiveOffset) : 0;
+        const length = lengths[j];
+        const offset = stacked ? stackOffsets[j] : 0;
         const along = stacked ? groupStart : groupStart + j * thickness;
         const isEnd = !stacked || j === (negative ? lastNegative : lastPositive);
         // The 2px surface gap between touching marks: a stack's segments, or side-by-side bars.
@@ -564,10 +567,6 @@ export class DatabaseChartView implements DatabaseViewRenderer {
           mark.setAttribute('data-key', p.key);
           if (part.series !== undefined) mark.setAttribute('data-series', part.series.key);
           marks.appendChild(mark);
-        }
-        if (stacked) {
-          if (negative) negativeOffset += length;
-          else positiveOffset += length;
         }
       });
       if (settings.dataLabels) {

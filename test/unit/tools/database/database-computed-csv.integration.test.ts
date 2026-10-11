@@ -67,7 +67,7 @@ describe('computed CSV values', () => {
           files: [{ id: 'image', name: 'image.png', url: 'https://example.test/image.png' }],
         } } },
       ] },
-    }) as unknown as TestEditor;
+    });
     await editor.isReady;
     await new Promise(resolve => setTimeout(resolve, 0));
     if (database === undefined) throw new Error('no database tool');

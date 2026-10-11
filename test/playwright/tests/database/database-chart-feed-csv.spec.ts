@@ -174,17 +174,18 @@ test.describe('chart view', () => {
         const refund = await bounds(negative);
         const baseline = Number(await page.locator('[data-blok-database-chart-axis]').getAttribute(chartType === 'bar' ? 'x1' : 'y1'));
 
-        if (chartType === 'bar') {
-          expect(refund.x + refund.width).toBeLessThanOrEqual(baseline + 0.5);
-          expect(refund.x).toBeLessThan(baseline);
-          expect(sale.x).toBeGreaterThanOrEqual(baseline - 0.5);
-          expect(sale.width).toBeGreaterThan(0);
-        } else {
-          expect(refund.y).toBeGreaterThanOrEqual(baseline - 0.5);
-          expect(refund.y + refund.height).toBeGreaterThan(baseline);
-          expect(sale.y + sale.height).toBeLessThanOrEqual(baseline + 0.5);
-          expect(sale.height).toBeGreaterThan(0);
-        }
+        // Value-axis extent where larger means more positive. SVG y grows down, so columns are negated.
+        const extent = (box: { x: number; y: number; width: number; height: number }): { low: number; high: number } => chartType === 'bar'
+          ? { low: box.x, high: box.x + box.width }
+          : { low: -(box.y + box.height), high: -box.y };
+        const base = chartType === 'bar' ? baseline : -baseline;
+        const saleExtent = extent(sale);
+        const refundExtent = extent(refund);
+
+        expect(refundExtent.high).toBeLessThanOrEqual(base + 0.5);
+        expect(refundExtent.low).toBeLessThan(base);
+        expect(saleExtent.low).toBeGreaterThanOrEqual(base - 0.5);
+        expect(saleExtent.high).toBeGreaterThan(saleExtent.low);
       });
     }
   }

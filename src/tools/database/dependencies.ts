@@ -73,7 +73,7 @@ export const shiftDependents = (input: ShiftInput): Array<{ rowId: string; write
   const seen = new Set([input.changedRowId]);
   const order: DatabaseRow[] = [];
   // Stable traversal cuts cycle back edges the same way in every row order.
-  const sortedRows = [...rows].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const sortedRows = [...rows].sort((a, b) => Number(a.id > b.id) - Number(a.id < b.id));
   const visit = (blockerId: string): void => {
     for (const row of sortedRows) {
       if (seen.has(row.id) || !relationIdsOf(row.properties[input.blockedBy]).includes(blockerId)) continue;
@@ -96,11 +96,9 @@ export const shiftDependents = (input: ShiftInput): Array<{ rowId: string; write
     const wanted = Math.max(...blockers.map((blocker) => wantedDelta(span, blocker)));
     const delta = wanted !== 0 && input.settings.avoidWeekends === true ? offWeekend(span.start, span.end, wanted) : wanted;
 
-    if (delta === 0) {
-      // A weekend-pinned blocker still constrains earlier shifts.
-      if (mode === 'maintain') moved.set(row.id, { id: row.id, before: span, after: span });
-      continue;
-    }
+    // A weekend-pinned blocker still constrains earlier shifts.
+    if (delta === 0 && mode === 'maintain') moved.set(row.id, { id: row.id, before: span, after: span });
+    if (delta === 0) continue;
     const write = moveBar(values, delta);
     const next = spanAfter(values, write);
 

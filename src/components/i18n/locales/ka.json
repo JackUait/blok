@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "თვისების სახელი",
   "tools.database.propertyNamePlaceholder": "შეიყვანეთ თვისების სახელი…",
   "tools.database.propertyIcon": "თვისების ხატულა",
+  "tools.database.editAutomation": "ავტომატიზაციის რედაქტირება",
   "tools.database.editProperty": "თვისების რედაქტირება",
   "tools.database.changeType": "ტიპის შეცვლა",
   "tools.database.statusDisplayAs": "ჩვენების სახე",

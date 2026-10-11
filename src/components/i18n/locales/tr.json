@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Özellik adı",
   "tools.database.propertyNamePlaceholder": "Özellik adını yazın…",
   "tools.database.propertyIcon": "Özellik simgesi",
+  "tools.database.editAutomation": "Otomasyonu düzenle",
   "tools.database.editProperty": "Özelliği düzenle",
   "tools.database.changeType": "Türü değiştir",
   "tools.database.statusDisplayAs": "Görüntüleme biçimi",

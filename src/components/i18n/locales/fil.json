@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Pangalan ng property",
   "tools.database.propertyNamePlaceholder": "I-type ang pangalan ng property…",
   "tools.database.propertyIcon": "Icon ng property",
+  "tools.database.editAutomation": "I-edit ang automation",
   "tools.database.editProperty": "I-edit ang property",
   "tools.database.changeType": "Palitan ang uri",
   "tools.database.statusDisplayAs": "Ipakita bilang",

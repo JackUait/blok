@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ຊື່ຄຸນສົມບັດ",
   "tools.database.propertyNamePlaceholder": "ພິມຊື່ຄຸນສົມບັດ…",
   "tools.database.propertyIcon": "ໄອຄອນຄຸນສົມບັດ",
+  "tools.database.editAutomation": "ແກ້ໄຂການເຮັດວຽກອັດຕະໂນມັດ",
   "tools.database.editProperty": "ແກ້ໄຂຄຸນສົມບັດ",
   "tools.database.changeType": "ປ່ຽນປະເພດ",
   "tools.database.statusDisplayAs": "ສະແດງເປັນ",

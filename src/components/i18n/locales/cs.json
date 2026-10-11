@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Název vlastnosti",
   "tools.database.propertyNamePlaceholder": "Zadejte název vlastnosti…",
   "tools.database.propertyIcon": "Ikona vlastnosti",
+  "tools.database.editAutomation": "Upravit automatizaci",
   "tools.database.editProperty": "Upravit vlastnost",
   "tools.database.changeType": "Změnit typ",
   "tools.database.statusDisplayAs": "Zobrazit jako",

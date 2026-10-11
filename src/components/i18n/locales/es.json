@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Nombre de la propiedad",
   "tools.database.propertyNamePlaceholder": "Escribe el nombre de la propiedad…",
   "tools.database.propertyIcon": "Icono de la propiedad",
+  "tools.database.editAutomation": "Editar automatización",
   "tools.database.editProperty": "Editar propiedad",
   "tools.database.changeType": "Cambiar tipo",
   "tools.database.statusDisplayAs": "Mostrar como",

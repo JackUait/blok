@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Rekvizīta nosaukums",
   "tools.database.propertyNamePlaceholder": "Ierakstiet rekvizīta nosaukumu…",
   "tools.database.propertyIcon": "Rekvizīta ikona",
+  "tools.database.editAutomation": "Rediģēt automatizāciju",
   "tools.database.editProperty": "Rediģēt rekvizītu",
   "tools.database.changeType": "Mainīt tipu",
   "tools.database.statusDisplayAs": "Rādīt kā",

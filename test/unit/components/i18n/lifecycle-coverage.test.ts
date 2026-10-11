@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1009 + 118 + 410 + 4 closure for all 1541 keys', () => {
+  it('rebuilds a disjoint 1010 + 118 + 410 + 4 closure for all 1542 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1541);
+    expect(lifecycle.size).toBe(1542);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -340,7 +340,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +18: Tier 3 (D6) calls its place, verification, form, map, dashboard and comment keys by literal.
       // +14: the peek's hidden properties fold, "Default for", tab "Display as", 99+, the row menu
       // (Move to, search, last edited) and Edit property options call their keys by literal.
-      'executable-literal': 1009,
+      'executable-literal': 1010,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "پراپرٹی کا نام",
   "tools.database.propertyNamePlaceholder": "پراپرٹی کا نام ٹائپ کریں…",
   "tools.database.propertyIcon": "پراپرٹی کا آئیکن",
+  "tools.database.editAutomation": "آٹومیشن میں ترمیم کریں",
   "tools.database.editProperty": "پراپرٹی میں ترمیم کریں",
   "tools.database.changeType": "قسم تبدیل کریں",
   "tools.database.statusDisplayAs": "اس طرح دکھائیں",

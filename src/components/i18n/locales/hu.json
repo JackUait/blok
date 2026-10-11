@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Tulajdonság neve",
   "tools.database.propertyNamePlaceholder": "Tulajdonság nevének megadása…",
   "tools.database.propertyIcon": "Tulajdonság ikonja",
+  "tools.database.editAutomation": "Automatizáció szerkesztése",
   "tools.database.editProperty": "Tulajdonság szerkesztése",
   "tools.database.changeType": "Típus módosítása",
   "tools.database.statusDisplayAs": "Megjelenítés módja",

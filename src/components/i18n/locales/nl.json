@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Naam van eigenschap",
   "tools.database.propertyNamePlaceholder": "Typ de naam van de eigenschap…",
   "tools.database.propertyIcon": "Pictogram van eigenschap",
+  "tools.database.editAutomation": "Automatisering bewerken",
   "tools.database.editProperty": "Eigenschap bewerken",
   "tools.database.changeType": "Type wijzigen",
   "tools.database.statusDisplayAs": "Weergeven als",

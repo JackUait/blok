@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "プロパティ名",
   "tools.database.propertyNamePlaceholder": "プロパティ名を入力…",
   "tools.database.propertyIcon": "プロパティのアイコン",
+  "tools.database.editAutomation": "オートメーションを編集",
   "tools.database.editProperty": "プロパティを編集",
   "tools.database.changeType": "種類を変更",
   "tools.database.statusDisplayAs": "表示形式",

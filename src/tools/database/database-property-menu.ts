@@ -314,7 +314,13 @@ export class DatabasePropertyMenu {
           return { name: entry, title: this.t('tools.database.editProperty'), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(id) };
         }
 
-        return { name: entry, title: this.t('tools.database.editProperty'), icon: IconPencil, children: { items: this.editItems(property, update) } };
+        // research/08: Notion names a button's settings "Edit automation".
+        return {
+          name: entry,
+          title: this.t(property.type === 'button' ? 'tools.database.editAutomation' : 'tools.database.editProperty'),
+          icon: IconPencil,
+          children: { items: this.editItems(property, update) },
+        };
       case 'displayAs': {
         const status = property.status;
         const current = status?.showAs ?? 'select';

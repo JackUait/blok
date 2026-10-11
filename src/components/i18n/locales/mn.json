@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Шинжийн нэр",
   "tools.database.propertyNamePlaceholder": "Шинжийн нэр бичих…",
   "tools.database.propertyIcon": "Шинжийн дүрс",
+  "tools.database.editAutomation": "Автоматжуулалтыг засах",
   "tools.database.editProperty": "Шинжийг засах",
   "tools.database.changeType": "Төрөл өөрчлөх",
   "tools.database.statusDisplayAs": "Харуулах хэлбэр",

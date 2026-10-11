@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "د ځانګړتیا نوم",
   "tools.database.propertyNamePlaceholder": "د ځانګړتیا نوم ولیکئ…",
   "tools.database.propertyIcon": "د ځانګړتیا آیکن",
+  "tools.database.editAutomation": "اتوماسیون سم کړئ",
   "tools.database.editProperty": "ځانګړتیا سمه کړئ",
   "tools.database.changeType": "ډول بدل کړئ",
   "tools.database.statusDisplayAs": "داسې ښکاره کړئ",

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "خاسلىق ئاتى",
   "tools.database.propertyNamePlaceholder": "خاسلىق ئاتىنى كىرگۈزۈڭ…",
   "tools.database.propertyIcon": "خاسلىق سىنبەلگىسى",
+  "tools.database.editAutomation": "ئاپتوماتلاشتۇرۇشنى تەھرىرلەش",
   "tools.database.editProperty": "خاسلىقنى تەھرىرلەش",
   "tools.database.changeType": "تىپنى ئۆزگەرتىش",
   "tools.database.statusDisplayAs": "كۆرسىتىش شەكلى",

@@ -603,6 +603,7 @@ export type BlokMessageKey =
   | 'tools.database.duplicateProperty'
   | 'tools.database.duplicatePropertyName'
   | 'tools.database.duplicateView'
+  | 'tools.database.editAutomation'
   | 'tools.database.editCardTitle'
   | 'tools.database.editOptions'
   | 'tools.database.editProperty'

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Egenskapsnamn",
   "tools.database.propertyNamePlaceholder": "Skriv egenskapsnamn…",
   "tools.database.propertyIcon": "Egenskapsikon",
+  "tools.database.editAutomation": "Redigera automatisering",
   "tools.database.editProperty": "Redigera egenskap",
   "tools.database.changeType": "Ändra typ",
   "tools.database.statusDisplayAs": "Visa som",

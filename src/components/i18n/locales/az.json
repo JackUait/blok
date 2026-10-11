@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Xüsusiyyətin adı",
   "tools.database.propertyNamePlaceholder": "Xüsusiyyətin adını yazın…",
   "tools.database.propertyIcon": "Xüsusiyyət simvolu",
+  "tools.database.editAutomation": "Avtomatlaşdırmanı redaktə et",
   "tools.database.editProperty": "Xüsusiyyəti redaktə et",
   "tools.database.changeType": "Növü dəyiş",
   "tools.database.statusDisplayAs": "Göstərmə forması",

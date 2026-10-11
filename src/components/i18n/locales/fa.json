@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "نام ویژگی",
   "tools.database.propertyNamePlaceholder": "نام ویژگی را بنویسید…",
   "tools.database.propertyIcon": "نماد ویژگی",
+  "tools.database.editAutomation": "ویرایش اتوماسیون",
   "tools.database.editProperty": "ویرایش ویژگی",
   "tools.database.changeType": "تغییر نوع",
   "tools.database.statusDisplayAs": "نمایش به‌صورت",

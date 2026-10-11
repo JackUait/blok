@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Име на својството",
   "tools.database.propertyNamePlaceholder": "Внесете име на својството…",
   "tools.database.propertyIcon": "Икона на својството",
+  "tools.database.editAutomation": "Уреди автоматизација",
   "tools.database.editProperty": "Уреди својство",
   "tools.database.changeType": "Промени тип",
   "tools.database.statusDisplayAs": "Прикажи како",

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "اسم الخاصية",
   "tools.database.propertyNamePlaceholder": "اكتب اسم الخاصية…",
   "tools.database.propertyIcon": "أيقونة الخاصية",
+  "tools.database.editAutomation": "تعديل الأتمتة",
   "tools.database.editProperty": "تعديل الخاصية",
   "tools.database.changeType": "تغيير النوع",
   "tools.database.statusDisplayAs": "العرض كـ",

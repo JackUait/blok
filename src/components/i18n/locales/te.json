@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ప్రాపర్టీ పేరు",
   "tools.database.propertyNamePlaceholder": "ప్రాపర్టీ పేరు టైప్ చేయండి…",
   "tools.database.propertyIcon": "ప్రాపర్టీ చిహ్నం",
+  "tools.database.editAutomation": "ఆటోమేషన్‌ను సవరించు",
   "tools.database.editProperty": "ప్రాపర్టీని సవరించు",
   "tools.database.changeType": "రకాన్ని మార్చు",
   "tools.database.statusDisplayAs": "ఇలా చూపు",

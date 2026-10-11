@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "속성 이름",
   "tools.database.propertyNamePlaceholder": "속성 이름 입력…",
   "tools.database.propertyIcon": "속성 아이콘",
+  "tools.database.editAutomation": "자동화 편집",
   "tools.database.editProperty": "속성 편집",
   "tools.database.changeType": "유형 변경",
   "tools.database.statusDisplayAs": "표시 방식",

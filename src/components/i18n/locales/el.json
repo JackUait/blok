@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Όνομα ιδιότητας",
   "tools.database.propertyNamePlaceholder": "Πληκτρολογήστε όνομα ιδιότητας…",
   "tools.database.propertyIcon": "Εικονίδιο ιδιότητας",
+  "tools.database.editAutomation": "Επεξεργασία αυτοματισμού",
   "tools.database.editProperty": "Επεξεργασία ιδιότητας",
   "tools.database.changeType": "Αλλαγή τύπου",
   "tools.database.statusDisplayAs": "Εμφάνιση ως",

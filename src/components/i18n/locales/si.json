@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ගුණාංගයේ නම",
   "tools.database.propertyNamePlaceholder": "ගුණාංගයේ නම ටයිප් කරන්න…",
   "tools.database.propertyIcon": "ගුණාංග නිරූපකය",
+  "tools.database.editAutomation": "ස්වයංක්‍රීයකරණය සංස්කරණය කරන්න",
   "tools.database.editProperty": "ගුණාංගය සංස්කරණය කරන්න",
   "tools.database.changeType": "වර්ගය වෙනස් කරන්න",
   "tools.database.statusDisplayAs": "මෙලෙස පෙන්වන්න",

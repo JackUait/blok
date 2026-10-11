@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Emri i vetisë",
   "tools.database.propertyNamePlaceholder": "Shkruaj emrin e vetisë…",
   "tools.database.propertyIcon": "Ikona e vetisë",
+  "tools.database.editAutomation": "Ndrysho automatizimin",
   "tools.database.editProperty": "Ndrysho vetinë",
   "tools.database.changeType": "Ndrysho llojin",
   "tools.database.statusDisplayAs": "Shfaq si",

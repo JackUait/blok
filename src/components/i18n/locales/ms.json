@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Nama sifat",
   "tools.database.propertyNamePlaceholder": "Taip nama sifat…",
   "tools.database.propertyIcon": "Ikon sifat",
+  "tools.database.editAutomation": "Sunting automasi",
   "tools.database.editProperty": "Sunting sifat",
   "tools.database.changeType": "Tukar jenis",
   "tools.database.statusDisplayAs": "Paparkan sebagai",

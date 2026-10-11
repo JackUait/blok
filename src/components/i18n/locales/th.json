@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ชื่อคุณสมบัติ",
   "tools.database.propertyNamePlaceholder": "พิมพ์ชื่อคุณสมบัติ…",
   "tools.database.propertyIcon": "ไอคอนคุณสมบัติ",
+  "tools.database.editAutomation": "แก้ไขระบบอัตโนมัติ",
   "tools.database.editProperty": "แก้ไขคุณสมบัติ",
   "tools.database.changeType": "เปลี่ยนประเภท",
   "tools.database.statusDisplayAs": "แสดงเป็น",

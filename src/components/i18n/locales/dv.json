@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ޕްރޮޕަރޓީގެ ނަން",
   "tools.database.propertyNamePlaceholder": "ޕްރޮޕަރޓީގެ ނަން ލިޔޭ…",
   "tools.database.propertyIcon": "ޕްރޮޕަރޓީގެ އައިކަން",
+  "tools.database.editAutomation": "އޮޓޮމޭޝަން ބަދަލުކުރޭ",
   "tools.database.editProperty": "ޕްރޮޕަރޓީ ބަދަލުކުރޭ",
   "tools.database.changeType": "ޓައިޕް ބަދަލުކުރޭ",
   "tools.database.statusDisplayAs": "ދައްކާނީ",

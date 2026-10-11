@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "የንብረት ስም",
   "tools.database.propertyNamePlaceholder": "የንብረት ስም ይተይቡ…",
   "tools.database.propertyIcon": "የንብረት አዶ",
+  "tools.database.editAutomation": "አውቶሜሽንን አርትዕ",
   "tools.database.editProperty": "ንብረትን አርትዕ",
   "tools.database.changeType": "አይነት ቀይር",
   "tools.database.statusDisplayAs": "የማሳያ ቅርጽ",

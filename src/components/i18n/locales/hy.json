@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Հատկության անուն",
   "tools.database.propertyNamePlaceholder": "Մուտքագրեք հատկության անունը…",
   "tools.database.propertyIcon": "Հատկության պատկերակ",
+  "tools.database.editAutomation": "Խմբագրել ավտոմատացումը",
   "tools.database.editProperty": "Խմբագրել հատկությունը",
   "tools.database.changeType": "Փոխել տեսակը",
   "tools.database.statusDisplayAs": "Ցուցադրել որպես",

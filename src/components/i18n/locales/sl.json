@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Ime lastnosti",
   "tools.database.propertyNamePlaceholder": "Vnesite ime lastnosti…",
   "tools.database.propertyIcon": "Ikona lastnosti",
+  "tools.database.editAutomation": "Uredi avtomatizacijo",
   "tools.database.editProperty": "Uredi lastnost",
   "tools.database.changeType": "Spremeni vrsto",
   "tools.database.statusDisplayAs": "Prikaži kot",

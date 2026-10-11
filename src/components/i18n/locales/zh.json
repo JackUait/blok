@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "属性名称",
   "tools.database.propertyNamePlaceholder": "输入属性名称…",
   "tools.database.propertyIcon": "属性图标",
+  "tools.database.editAutomation": "编辑自动化",
   "tools.database.editProperty": "编辑属性",
   "tools.database.changeType": "更改类型",
   "tools.database.statusDisplayAs": "显示为",

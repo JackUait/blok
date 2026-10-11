@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ဂုဏ်သတ္တိအမည်",
   "tools.database.propertyNamePlaceholder": "ဂုဏ်သတ္တိအမည် ရိုက်ထည့်ပါ…",
   "tools.database.propertyIcon": "ဂုဏ်သတ္တိ အိုင်ကွန်",
+  "tools.database.editAutomation": "အလိုအလျောက်လုပ်ဆောင်မှု တည်းဖြတ်ရန်",
   "tools.database.editProperty": "ဂုဏ်သတ္တိ တည်းဖြတ်ရန်",
   "tools.database.changeType": "အမျိုးအစား ပြောင်းရန်",
   "tools.database.statusDisplayAs": "ပြသပုံ",

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ឈ្មោះលក្ខណៈ",
   "tools.database.propertyNamePlaceholder": "វាយឈ្មោះលក្ខណៈ…",
   "tools.database.propertyIcon": "រូបតំណាងលក្ខណៈ",
+  "tools.database.editAutomation": "កែសម្រួលស្វ័យប្រវត្តិកម្ម",
   "tools.database.editProperty": "កែសម្រួលលក្ខណៈ",
   "tools.database.changeType": "ប្ដូរប្រភេទ",
   "tools.database.statusDisplayAs": "បង្ហាញជា",

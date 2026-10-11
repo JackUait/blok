@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Numele proprietății",
   "tools.database.propertyNamePlaceholder": "Introduceți numele proprietății…",
   "tools.database.propertyIcon": "Pictograma proprietății",
+  "tools.database.editAutomation": "Editează automatizarea",
   "tools.database.editProperty": "Editează proprietatea",
   "tools.database.changeType": "Schimbă tipul",
   "tools.database.statusDisplayAs": "Afișează ca",

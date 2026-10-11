@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "屬性名稱",
   "tools.database.propertyNamePlaceholder": "輸入屬性名稱…",
   "tools.database.propertyIcon": "屬性圖示",
+  "tools.database.editAutomation": "編輯自動化",
   "tools.database.editProperty": "編輯屬性",
   "tools.database.changeType": "變更類型",
   "tools.database.statusDisplayAs": "顯示為",

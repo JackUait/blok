@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "ગુણધર્મનું નામ",
   "tools.database.propertyNamePlaceholder": "ગુણધર્મનું નામ લખો…",
   "tools.database.propertyIcon": "ગુણધર્મનું આઇકન",
+  "tools.database.editAutomation": "ઑટોમેશન સંપાદિત કરો",
   "tools.database.editProperty": "ગુણધર્મ સંપાદિત કરો",
   "tools.database.changeType": "પ્રકાર બદલો",
   "tools.database.statusDisplayAs": "આ રીતે બતાવો",

@@ -221,6 +221,16 @@ describe('DatabasePropertyMenu', () => {
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { description: 'What we spend' });
   });
 
+  it('labels a button column edit entry "Edit automation", like Notion (research/08)', () => {
+    open(prop('button'));
+    const buttonTitle = byName(lastItems(), 'editProperty').title;
+
+    open(prop('number'));
+
+    expect(buttonTitle).toBe('tools.database.editAutomation');
+    expect(byName(lastItems(), 'editProperty').title).toBe('tools.database.editProperty');
+  });
+
   it('switches a status between select and checkbox display', () => {
     const status = createDefaultStatusSettings();
     const cb = open(prop('status', { status }));

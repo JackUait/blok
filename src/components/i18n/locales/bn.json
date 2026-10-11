@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "বৈশিষ্ট্যের নাম",
   "tools.database.propertyNamePlaceholder": "বৈশিষ্ট্যের নাম লিখুন…",
   "tools.database.propertyIcon": "বৈশিষ্ট্যের আইকন",
+  "tools.database.editAutomation": "অটোমেশন সম্পাদনা করুন",
   "tools.database.editProperty": "বৈশিষ্ট্য সম্পাদনা করুন",
   "tools.database.changeType": "ধরন পরিবর্তন করুন",
   "tools.database.statusDisplayAs": "এভাবে দেখান",

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Tên thuộc tính",
   "tools.database.propertyNamePlaceholder": "Nhập tên thuộc tính…",
   "tools.database.propertyIcon": "Biểu tượng thuộc tính",
+  "tools.database.editAutomation": "Chỉnh sửa tự động hóa",
   "tools.database.editProperty": "Chỉnh sửa thuộc tính",
   "tools.database.changeType": "Đổi loại",
   "tools.database.statusDisplayAs": "Hiển thị dưới dạng",

@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Nama properti",
   "tools.database.propertyNamePlaceholder": "Ketik nama properti…",
   "tools.database.propertyIcon": "Ikon properti",
+  "tools.database.editAutomation": "Edit otomatisasi",
   "tools.database.editProperty": "Edit properti",
   "tools.database.changeType": "Ubah tipe",
   "tools.database.statusDisplayAs": "Tampilkan sebagai",

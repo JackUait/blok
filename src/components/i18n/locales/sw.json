@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Jina la sifa",
   "tools.database.propertyNamePlaceholder": "Andika jina la sifa…",
   "tools.database.propertyIcon": "Ikoni ya sifa",
+  "tools.database.editAutomation": "Hariri otomatiki",
   "tools.database.editProperty": "Hariri sifa",
   "tools.database.changeType": "Badilisha aina",
   "tools.database.statusDisplayAs": "Onyesha kama",

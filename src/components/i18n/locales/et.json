@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Omaduse nimi",
   "tools.database.propertyNamePlaceholder": "Sisesta omaduse nimi…",
   "tools.database.propertyIcon": "Omaduse ikoon",
+  "tools.database.editAutomation": "Muuda automatiseeringut",
   "tools.database.editProperty": "Muuda omadust",
   "tools.database.changeType": "Muuda tüüpi",
   "tools.database.statusDisplayAs": "Kuvamisviis",

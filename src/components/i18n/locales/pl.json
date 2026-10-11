@@ -1217,6 +1217,7 @@
   "tools.database.propertyName": "Nazwa właściwości",
   "tools.database.propertyNamePlaceholder": "Wpisz nazwę właściwości…",
   "tools.database.propertyIcon": "Ikona właściwości",
+  "tools.database.editAutomation": "Edytuj automatyzację",
   "tools.database.editProperty": "Edytuj właściwość",
   "tools.database.changeType": "Zmień typ",
   "tools.database.statusDisplayAs": "Wyświetlaj jako",

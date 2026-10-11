@@ -559,7 +559,8 @@ describe('BlockYjsSync', () => {
           callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
           await new Promise(resolve => setTimeout(resolve, 0));
 
-          expect(onBlockChanged).toHaveBeenCalledWith(block);
+          expect(onBlockChanged).toHaveBeenCalledWith(block, 'history');
+          expect(onBlockChanged).toHaveBeenCalledTimes(1);
         });
 
         it('for a block that had to be rebuilt', async () => {
@@ -577,8 +578,9 @@ describe('BlockYjsSync', () => {
           callback({ blockId: 'test-block', type: 'update', origin: 'redo' });
           await new Promise(resolve => setTimeout(resolve, 0));
 
-          expect(onBlockChanged).toHaveBeenCalledWith(newBlock);
-          expect(onBlockChanged).not.toHaveBeenCalledWith(block);
+          expect(onBlockChanged).toHaveBeenCalledWith(newBlock, 'history');
+          expect(onBlockChanged).toHaveBeenCalledTimes(1);
+          expect(onBlockChanged).not.toHaveBeenCalledWith(block, 'history');
         });
 
         it('while the reconcile window is still open', async () => {
@@ -1887,7 +1889,8 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'new-block', type: 'add', origin: 'undo' });
 
-        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(newBlock, 0);
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(newBlock, 0, 'history');
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledTimes(1);
       });
 
       it('reconciles orphaned children whose Yjs parentId matches restored block (Bug 3 regression)', () => {
@@ -2360,8 +2363,8 @@ describe('BlockYjsSync', () => {
         callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
 
         expect(mockHandlers.onBlockAdded).toHaveBeenCalledTimes(2);
-        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(tableBlock, expect.any(Number));
-        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(childBlock, expect.any(Number));
+        expect(mockHandlers.onBlockAdded).toHaveBeenNthCalledWith(1, tableBlock, 3, 'history');
+        expect(mockHandlers.onBlockAdded).toHaveBeenNthCalledWith(2, childBlock, 4, 'history');
       });
 
       it('calls setBlockParent for each block with parentId', () => {
@@ -2464,7 +2467,8 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
 
-        expect(mockHandlers.onBlockRemoved).toHaveBeenCalledWith(blockToRemove, 0);
+        expect(mockHandlers.onBlockRemoved).toHaveBeenCalledWith(blockToRemove, 0, 'history');
+        expect(mockHandlers.onBlockRemoved).toHaveBeenCalledTimes(1);
       });
 
       it('inserts default block when all blocks removed', () => {

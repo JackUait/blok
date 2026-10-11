@@ -20,6 +20,9 @@ export interface BlockMutationEventDetail {
    */
   origin?: BlockMutationOrigin;
 
+  /** Captured replay participation; history wins. Not field ownership. */
+  replaySource?: 'history' | 'remote';
+
   /** Local agents keep origin 'local'. */
   agent?: { id: string; name: string; turnId: string };
 }

@@ -927,6 +927,7 @@ export { BlockAddedMutationType } from '../types/events/block/BlockAdded';
 export { BlockRemovedMutationType } from '../types/events/block/BlockRemoved';
 export { BlockMovedMutationType } from '../types/events/block/BlockMoved';
 export { BlockChangedMutationType } from '../types/events/block/BlockChanged';
+export { BlockReplayed } from './components/events/BlockReplayed';
 
 /**
  * Thrown by `blocks.insertAt` / `blocks.moveTo` for a place that does not

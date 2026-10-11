@@ -56,7 +56,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
-import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload, SettingChangedPayload, CollaborationParticipant, CollaborationStatusChangedPayload, CollaborationTerminalReason } from './events/editor-events';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload, SettingChangedPayload, CollaborationParticipant, CollaborationStatusChangedPayload, CollaborationTerminalReason, BlockReplayNative, BlockReplayChange, BlockReplayCapture } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -172,11 +172,16 @@ export {
   DatabaseViewConfig,
   DatabaseRowData,
   DatabaseData,
+  DatabaseSavedAutomationTrigger,
+  DatabaseSavedAutomationAction,
+  DatabaseSavedAutomation,
+  DatabaseSavedAutomations,
   DatabaseAdapter,
   DatabaseRowPages,
   DatabaseRowPageReceipt,
   DatabaseConfig,
   DatabaseViewStateStore,
+  DatabaseTabDisplay,
   PersonalViewPatch,
   ComputedPropertyType,
   FormulaSettings,
@@ -186,6 +191,21 @@ export {
   RelationValue,
   ResolvedRelationRow,
   DatabaseRelations,
+  RelationRole,
+  DependencyShift,
+  DependencySettings,
+  DynamicValue,
+  ButtonAction,
+  ButtonBlock,
+  ButtonSettings,
+  DatabaseButtons,
+  TemplateRepeat,
+  TemplateRepeatFrequency,
+  DatabaseTemplates,
+  DatabaseSourceRef,
+  DatabaseLinkedSources,
+  SubItemsDisplay,
+  SubItemsFilter,
 } from './tools/database';
 export { BlockId } from './data-formats/block-id';
 export {
@@ -236,6 +256,8 @@ export {
   InsertAtOptions,
   MoveToTarget,
 } from './api';
+export const BlockReplayed: 'block replayed';
+
 export {
   BlockMutationType,
   BlockMutationEvent,
@@ -253,6 +275,9 @@ export {
   BlockRenderedPayload,
   BlocksRenderedPayload,
   BlockChildrenMountedPayload,
+  BlockReplayNative,
+  BlockReplayChange,
+  BlockReplayCapture,
   I18nChangedPayload,
   SettingChangedPayload,
   CollaborationParticipant,

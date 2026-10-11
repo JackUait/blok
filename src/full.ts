@@ -58,6 +58,7 @@ export {
   BlockRemovedMutationType,
   BlockMovedMutationType,
   BlockChangedMutationType,
+  BlockReplayed,
   BlockPlacementError,
 } from './blok';
 

@@ -716,7 +716,7 @@ describe('placement-based move undo/redo', () => {
 
       expect(events).toEqual([
         { type: 'move', blockId: 'x', origin: 'local' },
-        { type: 'update', blockId: 'x', origin: 'local' },
+        expect.objectContaining({ type: 'update', blockId: 'x', origin: 'local' }),
       ]);
     });
   });

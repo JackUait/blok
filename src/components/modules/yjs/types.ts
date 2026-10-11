@@ -42,9 +42,44 @@ export interface AwarenessChange {
  * multiple IDs so that parent and child blocks can be created together
  * before any lifecycle hooks fire.
  */
+export interface BlockReplayNative {
+  readonly type: string;
+  readonly parent: Readonly<{ present: false } | { present: true; value: string }>;
+  readonly template: Readonly<{ present: false } | { present: true; value: boolean }>;
+}
+
+export interface BlockReplayChange {
+  readonly path: readonly (string | number)[];
+  readonly beforePresent: boolean;
+  readonly afterPresent: boolean;
+  readonly after?: unknown;
+}
+
+export interface BlockReplayRelocation {
+  readonly before: BlockReplayNative;
+  readonly after: BlockReplayNative;
+  readonly row: Readonly<{
+    /** A person, relation or file list is an array of string-field records. */
+    properties: Readonly<Record<string, string | number | boolean | null | ReadonlyArray<Readonly<Record<string, string>>>>>;
+    position: string;
+  }>;
+}
+
+export interface BlockReplayCapture {
+  readonly blockId: string;
+  readonly type: 'add' | 'remove' | 'update';
+  readonly origin: TransactionOrigin;
+  readonly scope: 'keys' | 'replacement' | 'unknown';
+  readonly native?: BlockReplayNative;
+  readonly changes: readonly BlockReplayChange[];
+  readonly relocation?: BlockReplayRelocation;
+}
+
 export type BlockChangeEvent =
-  | { type: 'add' | 'remove' | 'update' | 'move'; blockId: string; origin: TransactionOrigin }
-  | { type: 'batch-add'; blockIds: string[]; origin: TransactionOrigin };
+  | { type: 'add' | 'remove' | 'update' | 'move'; blockId: string; origin: TransactionOrigin;
+    captures?: readonly BlockReplayCapture[] }
+  | { type: 'batch-add'; blockIds: string[]; origin: TransactionOrigin;
+    captures?: readonly BlockReplayCapture[] };
 
 /**
  * Transaction origin types AFTER classification by

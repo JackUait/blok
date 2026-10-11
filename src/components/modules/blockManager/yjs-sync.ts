@@ -17,7 +17,7 @@ import { equals } from '../../utils/object';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import { dfsOrder, flatIndexForPlacement, subtreeEnd, type TreePlacement } from '../../utils/tree-order';
 import type { YjsManager } from '../yjs';
-import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
+import type { BlockChangeEvent, BlockReplayCapture, TransactionOrigin } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
 import { isSelfPlacedParent } from './new-block-placement';
@@ -93,17 +93,18 @@ export interface SyncHandlers {
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
   /** Called when a block is removed during undo/redo (before DOM removal) */
-  onBlockRemoved: (block: Block, index: number) => void;
+  onBlockRemoved: (block: Block, index: number, replaySource?: 'history' | 'remote') => void;
   /** Called when a block is added during undo/redo (after insertion) */
-  onBlockAdded: (block: Block, index: number) => void;
+  onBlockAdded: (block: Block, index: number, replaySource?: 'history' | 'remote') => void;
   /**
    * Called, inside the reconcile window, when undo/redo or a peer changed a
    * block's data. A tool with no editable DOM (a database row) makes no
    * mutation of its own, so without this nothing tells its parent to redraw.
    */
-  onBlockChanged?: (block: Block) => void;
+  onBlockChanged?: (block: Block, replaySource?: 'history' | 'remote') => void;
   /** Tell the host a block changed, without writing it to the document. */
   announceBlockChanged?: (block: Block) => void;
+  onBlockReplayed?: (capture: BlockReplayCapture) => void;
   /**
    * Write a block's current content back to the document, bypassing the echo
    * gate. Used to replay a mutation that was suppressed as a reconciler echo
@@ -262,6 +263,9 @@ export class BlockYjsSync {
    * through `onBlockChanged`, in either order. See `claimChangeAnnouncement`.
    */
   private readonly announcedChanges = new Set<string>();
+
+  // Captured before setData awaits, not inferred from live block data.
+  private readonly replayParticipation = new Map<string, 'history' | 'remote'>();
 
   /** How many peer changes are materialising blocks right now. */
   private peerMaterializeDepth = 0;
@@ -522,6 +526,7 @@ export class BlockYjsSync {
       // The baseline belongs to the window that just closed; a later window
       // must arm itself.
       this.rewrittenFromDocument.delete(blockId);
+      this.replayParticipation.delete(blockId);
 
       // Cleared together with the record, or a stale "the user typed here"
       // flag would make this block's every later reconciler rewrite replay.
@@ -918,6 +923,11 @@ export class BlockYjsSync {
         event.origin === 'redo' ||
         event.origin === 'remote'
       ) {
+        const captures = event.type === 'move' ? [] : event.captures ?? [];
+
+        for (const capture of captures) {
+          this.handlers.onBlockReplayed?.(capture);
+        }
         this.syncBlockFromYjs(event);
       }
     });
@@ -1308,6 +1318,12 @@ export class BlockYjsSync {
     // observers cannot write back to Yjs and clear the redo stack.
     this.markRewrittenFromDocument(blockId, data);
     void this.withAtomicOperationAsync(async () => {
+      const replaySource = replaySourceOf(origin);
+
+      if (replaySource !== undefined && this.replayParticipation.get(blockId) !== 'history') {
+        this.replayParticipation.set(blockId, replaySource);
+      }
+
       // Only for a PEER's edit. Undo and redo carry a caret of their own —
       // `UndoHistory` restores the snapshot it captured, synchronously, while
       // this runs after `setData`'s await and would therefore win. It would
@@ -1322,7 +1338,7 @@ export class BlockYjsSync {
       if (success) {
         restoreCaret?.();
         rebaseHistory?.();
-        this.handlers.onBlockChanged?.(block);
+        this.handlers.onBlockChanged?.(block, this.replayParticipation.get(blockId) ?? replaySource);
       } else {
         // After an await, so outside `syncBlockFromYjs`'s mark.
         this.asPeerChange(origin, () => {
@@ -1476,7 +1492,12 @@ export class BlockYjsSync {
 
     this.handlers.replaceBlock(blockIndex, newBlock);
     this.remountDescendantsLeftIn(oldHolder, target.id);
-    this.handlers.onBlockChanged?.(newBlock);
+    this.handlers.onBlockChanged?.(
+      newBlock,
+      record.replaySource === 'history'
+        ? 'history'
+        : this.replayParticipation.get(target.id) ?? record.replaySource,
+    );
 
     // Children re-homed here were not there when the insert's rendered()
     // fired; a second call lets the container see them.
@@ -1869,7 +1890,7 @@ export class BlockYjsSync {
 
       // Emit block-added event so listeners (e.g., TableCellBlocks) can
       // claim the block for the correct cell during undo/redo
-      this.handlers.onBlockAdded(block, targetIndex);
+      this.handlers.onBlockAdded(block, targetIndex, replaySourceOf(origin));
 
       // Set parent relationship if needed — this moves the block into the toggle's
       // DOM child container, updates parent's contentIds, and applies indentation.
@@ -2086,7 +2107,7 @@ export class BlockYjsSync {
       // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
       for (const { block, targetIndex, parentId, placement } of created) {
         this.blocksStore.activateBlock(block);
-        this.handlers.onBlockAdded(block, targetIndex);
+        this.handlers.onBlockAdded(block, targetIndex, replaySourceOf(origin));
 
         // Set parent relationship if needed — this moves the block into the toggle's
         // DOM child container, updates parent's contentIds, and applies indentation.
@@ -2130,7 +2151,7 @@ export class BlockYjsSync {
     this.withAtomicOperation(() => {
       // Emit block-removed event BEFORE removal so listeners can inspect
       // the block's DOM position (e.g., which table cell it's in)
-      this.handlers.onBlockRemoved(block, index);
+      this.handlers.onBlockRemoved(block, index, replaySourceOf(origin));
 
       // Clean up parent's contentIds so the parent block reports
       // no children after undo removes a child block.

@@ -308,7 +308,7 @@ describe('lineage reset', () => {
       peer.addBlock(paragraph('p1', 'post-reset remote'));
       manager.applyRemoteUpdate(peer.encodeStateAsUpdate(manager.getStateVector()), { source: 'room' });
 
-      expect(events).toContainEqual({ type: 'add', blockId: 'p1', origin: 'remote' });
+      expect(events).toContainEqual(expect.objectContaining({ type: 'add', blockId: 'p1', origin: 'remote' }));
 
       manager.destroy();
     });
@@ -325,7 +325,7 @@ describe('lineage reset', () => {
       manager.undo();
 
       expect(manager.toJSON()).toEqual([]);
-      expect(events).toContainEqual({ type: 'remove', blockId: 'b1', origin: 'undo' });
+      expect(events).toContainEqual(expect.objectContaining({ type: 'remove', blockId: 'b1', origin: 'undo' }));
 
       manager.destroy();
     });

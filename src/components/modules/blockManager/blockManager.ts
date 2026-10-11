@@ -20,7 +20,7 @@ import { BlockToolAPI } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
-import { BlockChanged, BlockRendered } from '../../events';
+import { BlockChanged, BlockRendered, BlockReplayed } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { sanitizeBlocks } from '../../utils/sanitizer';
 import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
@@ -593,11 +593,11 @@ export class BlockManager extends Module {
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
         },
-        onBlockRemoved: (block, index) => {
+        onBlockRemoved: (block, index, replaySource) => {
           this.operations.forgetCurrentBlock(block);
           this.Blok.BlockSelection.forgetRemovedBlock(block);
           this.Blok.RectangleSelection.forgetRemovedBlock(block);
-          this.blockDidMutated(BlockRemovedMutationType, block, { index });
+          this.blockDidMutated(BlockRemovedMutationType, block, { index, replaySource });
         },
         resyncBlockData: (block, options) => {
           // A drag can begin after the mutation was recorded. The browser
@@ -609,14 +609,17 @@ export class BlockManager extends Module {
 
           void this.syncBlockDataToYjs(block, options);
         },
-        onBlockAdded: (block, index) => {
-          this.blockDidMutated(BlockAddedMutationType, block, { index });
+        onBlockAdded: (block, index, replaySource) => {
+          this.blockDidMutated(BlockAddedMutationType, block, { index, replaySource });
         },
-        onBlockChanged: (block) => {
-          this.blockDidMutated(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block) }, 'replay');
+        onBlockChanged: (block, replaySource) => {
+          this.blockDidMutated(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block), replaySource }, 'replay');
         },
         announceBlockChanged: (block) => {
           this.emitBlockMutation(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block) });
+        },
+        onBlockReplayed: (capture) => {
+          this.eventsDispatcher.emitNotification(BlockReplayed, capture);
         },
       },
       this.blocksStore

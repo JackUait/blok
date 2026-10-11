@@ -314,7 +314,22 @@ describe('BlockObserver mutants', () => {
         blocksMap.set('b1', new Y.Map<unknown>());
       }, 'local');
 
-      expect(events).toStrictEqual([{ type: 'update', blockId: 'b1', origin: 'local' }]);
+      expect(events).toStrictEqual([
+        {
+          type: 'update',
+          blockId: 'b1',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b1',
+              type: 'update',
+              origin: 'local',
+              scope: 'unknown',
+              changes: [],
+            },
+          ],
+        },
+      ]);
     });
 
     it('reports a bare order insertion as a move', () => {
@@ -365,7 +380,27 @@ describe('BlockObserver mutants', () => {
         grid.insert(0, ['b1']);
       }, 'local');
 
-      expect(events).toStrictEqual([{ type: 'update', blockId: 'b1', origin: 'local' }]);
+      expect(events).toStrictEqual([
+        {
+          type: 'update',
+          blockId: 'b1',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b1',
+              type: 'update',
+              origin: 'local',
+              scope: 'unknown',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [],
+            },
+          ],
+        },
+      ]);
     });
 
     it('treats a contentIds array nested deeper than a block as content, not order', () => {
@@ -389,7 +424,27 @@ describe('BlockObserver mutants', () => {
         nested.insert(0, ['b1']);
       }, 'local');
 
-      expect(events).toStrictEqual([{ type: 'update', blockId: 'b1', origin: 'local' }]);
+      expect(events).toStrictEqual([
+        {
+          type: 'update',
+          blockId: 'b1',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b1',
+              type: 'update',
+              origin: 'local',
+              scope: 'unknown',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [],
+            },
+          ],
+        },
+      ]);
     });
 
     it('drops a change whose target never reaches the blocks map', () => {
@@ -456,7 +511,27 @@ describe('BlockObserver mutants', () => {
         blocksMap.delete('b1');
       }, 'local');
 
-      expect(events).toStrictEqual([{ type: 'remove', blockId: 'b1', origin: 'local' }]);
+      expect(events).toStrictEqual([
+        {
+          type: 'remove',
+          blockId: 'b1',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b1',
+              type: 'remove',
+              origin: 'local',
+              scope: 'keys',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [],
+            },
+          ],
+        },
+      ]);
     });
 
     // A subscriber may legally grow the document while its own event is being
@@ -472,8 +547,44 @@ describe('BlockObserver mutants', () => {
       addBlocks(['b1']);
 
       expect(events).toStrictEqual([
-        { type: 'add', blockId: 'b1', origin: 'local' },
-        { type: 'add', blockId: 'b2', origin: 'local' },
+        {
+          type: 'add',
+          blockId: 'b1',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b1',
+              type: 'add',
+              origin: 'local',
+              scope: 'keys',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [{ path: ['text'], beforePresent: false, afterPresent: true, after: '' }],
+            },
+          ],
+        },
+        {
+          type: 'add',
+          blockId: 'b2',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b2',
+              type: 'add',
+              origin: 'local',
+              scope: 'keys',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [{ path: ['text'], beforePresent: false, afterPresent: true, after: '' }],
+            },
+          ],
+        },
       ]);
     });
   });
@@ -507,7 +618,27 @@ describe('BlockObserver mutants', () => {
       observer.observe({ blocksMap, rootOrder }, undoManager);
       addBlocks(['b1']);
 
-      expect(events).toStrictEqual([{ type: 'add', blockId: 'b1', origin: 'local' }]);
+      expect(events).toStrictEqual([
+        {
+          type: 'add',
+          blockId: 'b1',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b1',
+              type: 'add',
+              origin: 'local',
+              scope: 'keys',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [{ path: ['text'], beforePresent: false, afterPresent: true, after: '' }],
+            },
+          ],
+        },
+      ]);
     });
   });
 
@@ -584,7 +715,27 @@ describe('BlockObserver mutants', () => {
         failure
       );
       expect(vi.mocked(logLabeled)).toHaveBeenCalledTimes(1);
-      expect(attached.emitted).toStrictEqual([{ type: 'add', blockId: 'b9', origin: 'local' }]);
+      expect(attached.emitted).toStrictEqual([
+        {
+          type: 'add',
+          blockId: 'b9',
+          origin: 'local',
+          captures: [
+            {
+              blockId: 'b9',
+              type: 'add',
+              origin: 'local',
+              scope: 'keys',
+              native: {
+                type: 'paragraph',
+                parent: { present: false },
+                template: { present: false },
+              },
+              changes: [{ path: ['text'], beforePresent: false, afterPresent: true, after: '' }],
+            },
+          ],
+        },
+      ]);
     });
 
     // yjs hands a deep observer the listener list it captured, so an event can

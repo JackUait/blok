@@ -1,4 +1,4 @@
-import { BlokEditorEventMap } from '../events/editor-events';
+import { BlokEditorEventMap, BlockReplayCapture } from '../events/editor-events';
 
 /**
  * Describes Blok`s events API.
@@ -14,6 +14,7 @@ export interface Events {
    * @param eventName - one of the well-known editor event names
    * @param data - payload matching the event
    */
+  emit(eventName: 'block replayed', data: BlockReplayCapture): void;
   emit<Name extends keyof BlokEditorEventMap>(eventName: Name, data: BlokEditorEventMap[Name]): void;
 
   /**
@@ -30,6 +31,7 @@ export interface Events {
    * @param eventName - one of the well-known editor event names
    * @param callback - the handler to remove
    */
+  off(eventName: 'block replayed', callback: (data: BlockReplayCapture) => void): void;
   off<Name extends keyof BlokEditorEventMap>(eventName: Name, callback: (data: BlokEditorEventMap[Name]) => void): void;
 
   /**
@@ -46,6 +48,7 @@ export interface Events {
    * @param eventName - one of the well-known editor event names
    * @param callback - receives a typed payload
    */
+  on(eventName: 'block replayed', callback: (data: BlockReplayCapture) => void): void;
   on<Name extends keyof BlokEditorEventMap>(eventName: Name, callback: (data: BlokEditorEventMap[Name]) => void): void;
 
   /**

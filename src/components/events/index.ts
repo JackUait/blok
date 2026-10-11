@@ -1,3 +1,5 @@
+import type { BlockReplayCapture } from '../modules/yjs/types';
+
 import type { BlockChangedPayload } from './BlockChanged';
 import { BlockChanged } from './BlockChanged';
 import type { BlockChildrenMountedPayload } from './BlockChildrenMounted';
@@ -5,6 +7,7 @@ import { BlockChildrenMounted } from './BlockChildrenMounted';
 import type { BlockHovered, BlockHoveredPayload } from './BlockHovered';
 import type { BlockRenderedPayload } from './BlockRendered';
 import { BlockRendered } from './BlockRendered';
+import { BlockReplayed } from './BlockReplayed';
 import type { BlocksRenderedPayload } from './BlocksRendered';
 import { BlocksRendered } from './BlocksRendered';
 import type { BlockSettingsClosedPayload } from './BlockSettingsClosed';
@@ -36,6 +39,7 @@ export {
   BlockChanged,
   BlockChildrenMounted,
   BlockRendered,
+  BlockReplayed,
   BlocksRendered,
   FakeCursorAboutToBeToggled,
   FakeCursorHaveBeenSet,
@@ -57,6 +61,7 @@ export interface BlokEventMap {
   [BlockChanged]: BlockChangedPayload;
   [BlockChildrenMounted]: BlockChildrenMountedPayload;
   [BlockRendered]: BlockRenderedPayload;
+  [BlockReplayed]: BlockReplayCapture;
   [BlocksRendered]: BlocksRenderedPayload;
   [FakeCursorAboutToBeToggled]: FakeCursorAboutToBeToggledPayload;
   [FakeCursorHaveBeenSet]: FakeCursorHaveBeenSetPayload;

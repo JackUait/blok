@@ -1,4 +1,4 @@
-import { isEmpty } from '../utils';
+import { isEmpty, logLabeled } from '../utils';
 
 /**
  * Event Dispatcher event listener
@@ -82,6 +82,17 @@ export class EventsDispatcher<EventMap> {
 
       return newData !== undefined ? newData : previousData;
     }, data);
+  }
+
+  /** A listener's Promise must not become the next listener's payload. */
+  public emitNotification<Name extends keyof EventMap>(eventName: Name, data: EventMap[Name]): void {
+    for (const callback of this.subscribers[eventName] ?? []) {
+      try {
+        callback(data);
+      } catch (error) {
+        logLabeled('A notification subscriber threw.', 'error', error);
+      }
+    }
   }
 
   /**

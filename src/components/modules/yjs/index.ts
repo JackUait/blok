@@ -181,7 +181,7 @@ export class YjsManager extends Module {
       richTextFieldsFor: (type) => this.Blok?.Tools?.blockTools?.get(type)?.richTextFields ?? [],
     });
     this.documentStore = new DocumentStore(this.serializer);
-    this.blockObserver = new BlockObserver();
+    this.blockObserver = new BlockObserver(this.serializer);
     this.undoHistory = new UndoHistory(
       this.documentStore.undoScope,
       this.Blok

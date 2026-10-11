@@ -11,6 +11,53 @@
 import type { ThemeMode } from '../api/theme';
 import type { EditorWidth } from '../api/width';
 
+export interface BlockReplayNative {
+  readonly type: string;
+  readonly parent: Readonly<{ present: false } | { present: true; value: string }>;
+  readonly template: Readonly<{ present: false } | { present: true; value: boolean }>;
+}
+
+/** after is absent when the key was deleted. */
+export interface BlockReplayChange {
+  readonly path: readonly (string | number)[];
+  readonly beforePresent: boolean;
+  readonly afterPresent: boolean;
+  readonly after?: unknown;
+}
+
+/**
+ * A row this editor's own undo or redo moved from one parent to another.
+ * `row` is the whole row after the move, read before any subscriber ran.
+ */
+export interface BlockReplayRelocation {
+  readonly before: BlockReplayNative;
+  readonly after: BlockReplayNative;
+  readonly row: Readonly<{
+    /** A person, relation or file list is an array of string-field records. */
+    properties: Readonly<Record<string, string | number | boolean | null | ReadonlyArray<Readonly<Record<string, string>>>>>;
+    position: string;
+  }>;
+}
+
+/** A sparse transaction record, not a current-state snapshot. */
+export interface BlockReplayCapture {
+  readonly blockId: string;
+  readonly type: 'add' | 'remove' | 'update';
+  readonly origin:
+    | 'local'
+    | 'undo'
+    | 'redo'
+    | 'load'
+    | 'remote'
+    | 'move'
+    | 'move-undo'
+    | 'move-redo';
+  readonly scope: 'keys' | 'replacement' | 'unknown';
+  readonly native?: BlockReplayNative;
+  readonly changes: readonly BlockReplayChange[];
+  readonly relocation?: BlockReplayRelocation;
+}
+
 /**
  * Payload for the `block:rendered` event.
  */

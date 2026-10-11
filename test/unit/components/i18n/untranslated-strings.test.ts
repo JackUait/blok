@@ -69,6 +69,7 @@ const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
   'tools.image.cropRatio4to3': '4:3',
   'tools.image.cropRatio16to9': '16:9',
   'tools.database.propertyTypeUrl': 'URL',
+  'tools.database.buttonUrl': 'URL',
   'tools.image.altButton': 'Alt',
   'tools.database.filterOperator.numberEquals': '=',
   'tools.database.filterOperator.numberDoesNotEqual': '≠',
@@ -221,6 +222,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   fr: new Set([
+    'tools.database.formQuestionName',
+    'tools.database.formQuestionDescription',
     'tools.colorPicker.color.orange',
     'searchTerms.note',
     'tools.callout.colorOrange',
@@ -667,6 +670,61 @@ const DATABASE_CHART_CSV_COGNATE_RETENTIONS: Record<string, string[]> = {
 };
 
 for (const [locale, keys] of Object.entries(DATABASE_CHART_CSV_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
+ * Database automation builder cognates. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_AUTOMATION_COGNATE_RETENTIONS: Record<string, string[]> = {
+  fil: ['tools.database.automationTarget'],
+  nl: ['tools.database.automationMode'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_AUTOMATION_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
+ * Page layout and form cognates. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_LAYOUT_FORM_COGNATE_RETENTIONS: Record<string, string[]> = {
+  fr: ['tools.database.layoutStructureSimple'],
+  tr: ['tools.database.viewTypeForm'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_LAYOUT_FORM_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
+ * Button property cognates. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_BUTTON_COGNATE_RETENTIONS: Record<string, string[]> = {
+  cs: ['tools.database.buttonBlockText'],
+  de: ['tools.database.buttonBlockText'],
+  fr: ['tools.database.buttonActionUnknown'],
+  ro: ['tools.database.buttonBlockText'],
+  sk: ['tools.database.buttonBlockText'],
+  sv: ['tools.database.buttonBlockText'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_BUTTON_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
+ * Edit property options heading cognates. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_OPTIONS_COGNATE_RETENTIONS: Record<string, string[]> = {
+  fr: ['tools.database.editOptions'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_OPTIONS_COGNATE_RETENTIONS)) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);
 }

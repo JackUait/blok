@@ -19,6 +19,7 @@ const extractPlaceholders = (value: string): string[] =>
 const UNIVERSAL_IDENTICAL_KEYS = [
   'blockSettings.menuShortcutMac',
   'blockSettings.menuShortcutWin',
+  'tools.database.buttonUrl',
   'tools.database.filterOperator.greaterThan',
   'tools.database.filterOperator.greaterThanOrEqual',
   'tools.database.filterOperator.lessThan',

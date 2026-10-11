@@ -2,7 +2,9 @@
 
 Date: 2026-10-09. Base: `main` at `665c077a`, last release `v1.16.1`.
 
-This is the umbrella document. It says what "match Notion" means here, what Blok has today, what is missing, and the order to build it in. Each phase gets its own implementation plan in this folder. Only Phase 0 is written out to task level so far (`01-phase-0-foundations.md`). Later phases get their own plans when they start, because each one depends on decisions made in the phases before it.
+This is the umbrella document. The inventory and gap matrix below describe the research baseline at `665c077a`, not the current implementation. Later phases and the measured backlog supersede those baseline rows.
+
+Full parity is unfinished. The integrated candidate at `64faf9e7` still has review findings and missing features. Source and authored tests are not runtime proof. Host hooks, placeholders and saved configuration slots do not satisfy a complete feature.
 
 ## Evidence
 
@@ -64,7 +66,7 @@ The database looks further along than it is.
 
 ## Constraints every phase carries (summary of `research/02`)
 
-1. **Everything is a block.** Rows stay `database-row` children. Property values stay in `data.properties`. Views and schema stay in the database block's `data`. Relations and rollups store row ids; they never build a parallel model. Sub-items are `parentId` links between row blocks.
+1. **Everything is a block.** Rows stay `database-row` children. Property values stay in `data.properties`. Views and schema stay in the database block's `data`. Relations and rollups store row ids; they never build a parallel model. Sub-items are rows of the same database: the tree lives in the "Parent item" / "Sub-items" relation values, not in block `parentId` (superseded in Phase 6, see below).
 2. **CRDT shape.**
    - Every new list of objects carries a unique string `id`, so it merges by identity (`src/components/modules/yjs/serializer.ts:673-713`).
    - Lists that start empty and that two peers grow need an eager birth, both in `EAGER_ARRAY_KEYS` (`serializer.ts:78`) and in C# `OrderedIdArrayKeys` (`packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs:124`).
@@ -118,7 +120,7 @@ These are conflicts or trade-offs the research turned up. Each has a recommendat
 
 ### Decision outcomes (2026-10-09)
 
-The user approved the recommendations ("go ahead, do whatever you need"). Task M (`research/08`) then measured what Notion actually does, and it changed three of them:
+The user asked to implement all tasks and phases with full Notion parity. This does not approve D6's reduction to host hooks or placeholder views. Task M (`research/08`) measured Notion interactions and changed three recommendations:
 - **D3: Notion is blue.**
   - A selected cell has a `rgba(35,131,226,0.07)` fill and a 2px `rgb(39,131,222)` ring. A selected row has a `0.14` fill.
   - Blok's "no blue selected states" law (CLAUDE.md) wins, so Blok uses a gray fill and primary ink. This is a deliberate divergence, documented as such.
@@ -304,7 +306,12 @@ Output: `research/08-notion-signed-in-measurements.md`. Delete the scratch page 
 ### Phase 6: Computation and structure
 - Formula 2.0 evaluator, a subproject with its own spec.
 - Relation and rollup within one document. Cross-document needs the backend index the architecture doc deferred.
-- Sub-items and dependencies (row-block `parentId` plus a self-relation).
+- Sub-items and dependencies (two-way self-relation pairs, marked by `relation.role`).
+
+#### Phase 6 structure decisions (branch `p6-structure`)
+- **Sub-items are not nested blocks.** A sub-item stays a `database-row` child of the database block. Its parent is the row named in its "Parent item" relation (limit 1, two-way with "Sub-items"). Nesting a row block under another row would make it part of that row's page body (D5), and `database-row` denies `database-row` children. A loop two peers make (a under b while b goes under a) is broken the same way on every peer: the loop member with the smallest id loses its parent.
+- **Templates are row blocks.** A template is a `database-row` with `template: true`, so its body stays child blocks. The database keeps templates out of its rows, so no view, query, calculation, ID number, relation source or export sees them. The default template is `defaultTemplateId` on the title property (beside `databaseLocked`). v1.16.1 clients show template rows as ordinary rows.
+- **A linked database is a `database` block with `source: { databaseId }`.** It keeps its own views and saves a one-property stand-in schema; rows and schema come live from the source. v1.16.1 drops `source` on save (it spreads only its model snapshot), so an old client's re-save turns a linked block into an empty database. Known degradation, accepted because the task named this shape.
 - Templates.
 - Button property.
 - Chart and feed layouts.

@@ -1,52 +1,129 @@
 # Measured deltas to implement (from research/08)
 
-Each item names the phase that owns it. Tick an item when its test-first commit lands on `db-parity`.
+Each item names its owning phase. All work stays on the existing `main` branch. A checked baseline item records the cited implementation, not full parity. Later reviews can reopen it.
 
-- [ ] P1: The no-value column on a select board is LAST. A new group added later goes after it.
-- [ ] P1: The D7 prompt "Would you like to remove sorting?" (Remove / Don't remove) replaces Phase 0's sorted-drag gate.
+Full parity is unfinished. The integrated candidate has additional regression tests and fixes awaiting verification. The Tier 3 hooks and slots below are scaffolding, not completed services.
+
+- [x] P1: The no-value column on a select board is LAST. A new group added later goes after it.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 43dedecc; database.test.ts "…last No <property> column", "places a group added from New group after…".
+- [x] P1: The D7 prompt "Would you like to remove sorting?" (Remove / Don't remove) replaces Phase 0's sorted-drag gate.
   - Remove: delete the sorts, write the sorted order as positions, then place the row where it was dropped.
   - Dialog: 324 wide, 20px padding, 12px radius; enters with scale 0.97 → 1 and opacity, over 200ms ease.
-- [ ] P1: Deleting an option asks "Are you sure you want to delete this option?".
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 86acc20b; database.test.ts "drag in a sorted view asks…", database-confirm-dialog.test.ts, styles/database-confirm-css.test.ts.
+- [x] P1: Deleting an option asks "Are you sure you want to delete this option?".
   - The group's "⋯" menu gets: Edit groups, Hide aggregation, Hide group, Move to Trash (with the confirm "All pages inside this group will be moved to Trash."), and the 10 colors.
-- [ ] P1: Drag ghosts use opacity 0.4, with no rotation, scale or shadow. The drop line is 4px `rgba(35,131,226,0.43)` and fades over 200ms. There is no reflow animation on drop.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 9702808b; database-group-menu.test.ts "lists Edit groups… ten colors", database.test.ts "asks before moving the group's pages to Trash".
+- [x] P1: Drag ghosts use opacity 0.4, with no rotation, scale or shadow. The drop line is 4px `rgba(35,131,226,0.43)` and fades over 200ms. There is no reflow animation on drop.
   - Today Blok uses rotate(2deg) scale(1.02), opacity 0.85 and a gap animation.
-- [ ] P1: Side peek is half the viewport. It slides in with translateX over 200ms ease, and the content narrows over the same time.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 868da141; database-drop-line.test.ts, card/column/list-row drag tests, styles/database-drop-line.test.ts.
+- [x] P1: Side peek is half the viewport. It slides in with translateX over 200ms ease, and the content narrows over the same time.
   - Today the drawer animates its width to 45%.
-- [ ] P1: Menus open with opacity 0→1 and scale 0.96→1 over 200ms ease, from the corner nearest the anchor.
-- [ ] P1: Group collapse rotates only the caret (−90°, 200ms ease-out). Rows appear and disappear at once.
-- [ ] P1: View tab switch: the background changes over 100ms ease-in-out, and the body swaps in one frame.
-- [ ] P1: The table cell keyboard model from research/08 §"Cell keyboard model", exactly.
-- [ ] P1: The calculation footer menu: None / Count › / Percent › / More options › (number) / Date › (date). Checkbox gets Checked/Unchecked. The label is 10px uppercase.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): b4611dcc; styles/database-motion.test.ts "side peek", database-card-drawer.test.ts.
+- [x] P1: Menus open with opacity 0→1 and scale 0.96→1 over 200ms ease, from the corner nearest the anchor.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 60b7f846; styles/database-motion.test.ts "database menus". The anchor-corner origin is pinned only by the CSS snapshot.
+- [x] P1: Group collapse rotates only the caret (−90°, 200ms ease-out). Rows appear and disappear at once.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 60b7f846; styles/database-motion.test.ts "grouped list collapse", database-table-view.test.ts "collapsing a group removes its rows at once". The table caret rule is pinned only by the CSS snapshot.
+- [x] P1: View tab switch: the background changes over 100ms ease-in-out, and the body swaps in one frame.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 60b7f846; styles/database-motion.test.ts "view tab switch". "Body swaps in one frame" has no test.
+- [x] P1: The table cell keyboard model from research/08 §"Cell keyboard model", exactly.
+  - Mostly landed in 51ba04e3 (database-table-view.test.ts "cell keyboard model"). Tab in the last row and Enter in a last-row editor are pinned too.
+  - Enter on a new row's title now commits and keeps that title selected. Before, it moved down, which in a grouped table landed on the next group's first row. Pinned by "Enter on a new row title commits it and keeps that title cell selected".
+  - Enter in the select editor picks and moves down. Pinned by "Enter in the select editor picks the option and moves the selection down". Notion's multi-select Enter is unmeasured.
+- [x] P1: The calculation footer menu: None / Count › / Percent › / More options › (number) / Date › (date). Checkbox gets Checked/Unchecked. The label is 10px uppercase.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 51ba04e3, f53d3057; database-table-view.test.ts "offers None, Count and Percent…", "gives a checkbox column Checked and Unchecked". The 10px uppercase label is pinned only by the CSS snapshot.
 - [ ] P1: The column header menu items per type (research/08 table).
+  - Partial (audit): Edit property is missing for select, multi-select, person and status; the title's "Show page icon" lives in the settings panel instead; "Property access" is not built.
 - [ ] P1: The row ⋮⋮ menu: Edit icon, Edit property ›, Open in ›, Comment, Copy link, Duplicate (⌘D), Move to, Move to Trash (Del). Footer: "Last edited by …".
-- [ ] P1: The OPEN button on the title cell shows a side-peek icon before "OPEN".
-- [ ] P1: The board card: 10px radius, a 3-layer shadow whose 1px ring takes the column hue, and a 15px/500 title. The column tint has a 10px bottom radius.
-- [ ] P2: Number "Edit property": format (Number, Number with separators, Percent, 41 currencies), Decimal places, Show as Number/Bar/Ring.
-- [ ] P3: The filter pill turns blue with a value. **Divergence**: an active filter pill is a "selected/active state" under Blok's law, so use gray.
-- [ ] P3: Group settings per type (research/08 table). The select group sort is Manual/Alphabetical/Reverse. Date grouping offers Relative/Day/Week/Month/Year. Number grouping offers Unique/Range. Text grouping offers Exact/Alphabetical.
-- [ ] P3: Conditional color: rule cards, "Page background", "Apply to: Entire row / property".
-- [ ] P3: Load limit 10/25/50/100, board default 25. "Load more groups" when there are more than 10 groups.
-- [ ] P3: Advanced filters: "Where … And/Or", "+ Add filter rule / Add filter group".
-- [ ] P4: A new row in a filtered view opens in a peek, prefilled with what the filters allow (date "this week" → today).
-- [ ] P4: Open pages in: Side peek (default for Board) / Center peek / Full page, with the descriptions measured in research/08.
-- [ ] P1: Edit-mode right-click on a view tab opens the view menu, then core's block menu (ui.ts:700 contextmenu) replaces it. The view menu must win (verify0/3d).
-- [ ] P1 (core): PopoverDesktop hide() leaves the top layer at once, so every menu closes instantly. Notion closes with opacity 1→0 and scale 1→0.96 over 200ms ease. Fix this in shared popover code, with a reduced-motion fallback.
-- [ ] P1: The board column tint rounds all four corners. Notion rounds only the bottom (0 0 10px 10px).
-- [ ] P1: The measured yellow (~2.2:1) and brown (~3.0:1) column accents are below WCAG AA. Blok's a11y law wins, so this is a documented divergence: use AA-safe text.
-- [ ] P3: "Remove sorting" rewrites shared row positions. Check that this matches Notion when other views have their own manual order.
-- [ ] P5: The calendar "No date (N)" toolbar button lists rows with no date (measured in research/08). Today those rows are hidden with no home.
-- [ ] P5: The gallery and calendar settings `layoutItems()` are not mounted in the Phase 3 settings panel yet.
-- [ ] P5: A card cannot be dropped into an empty gallery group.
-- [ ] P3: Board sub-groups are saved and editable but never drawn.
-- [ ] P1: The column-header property menu (database-property-menu.ts) has neither DATABASE_MENU_CLASS nor the open/close motion.
-- [ ] P5: Timeline hours zoom moves bars by whole days only.
-- [ ] P5: The timeline zoom centre is per user (local). Notion stores a shared `center_timestamp`.
-- [ ] P5: Timeline dependency arrows: `arrowsBy` is stored, nothing is drawn. Needs relations (P6).
-- [ ] P5: The timeline table panel has no calculations.
-- [ ] P5: Sub-group lanes:
+  - Partial (audit): "Open in" offers only Side peek; "Move to" and the "Last edited by" footer are missing. Comment comes with the Tier 3 `config.comments` hook.
+- [x] P1: The OPEN button on the title cell shows a side-peek icon before "OPEN".
+  - Landed earlier: 51ba04e3. Pinned now by database-table-view.test.ts "the OPEN button shows the side-peek icon before its label".
+- [x] P1: The board card: 10px radius, a 3-layer shadow whose 1px ring takes the column hue, and a 15px/500 title. The column tint has a 10px bottom radius.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): f22c4ff6, 2d51a75d; styles/database-board-look.test.ts.
+- [x] P2: Number "Edit property": format (Number, Number with separators, Percent, 41 currencies), Decimal places, Show as Number/Bar/Ring.
+  - Built: database-property-menu.ts Number format, Decimal places, Show as. Tests: database-property-menu.test.ts "lists Number, Number with separators, Percent and the 42 currencies, searchable", "sets the format, decimals and show-as…".
+  - Open: research/08 says 41 currencies; the code lists 41 plus Bitcoin (42). Not re-measured.
+- [x] P3: The filter pill turns blue with a value. **Divergence**: an active filter pill is a "selected/active state" under Blok's law, so use gray.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 47d39860; database-view-controls.test.ts "marks an active filter pill…" (gray).
+- [x] P3: Group settings per type (research/08 table). The select group sort is Manual/Alphabetical/Reverse. Date grouping offers Relative/Day/Week/Month/Year. Number grouping offers Unique/Range. Text grouping offers Exact/Alphabetical.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 7f240977, d086849e; group-keys.test.ts, database-model-groups.test.ts. Divergence: no sort row for status (research/08 lists Ascending).
+- [x] P3: Conditional color: rule cards, "Page background", "Apply to: Entire row / property".
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 7f240977; database-view-settings-panel.test.ts "adds a conditional color rule…", database-view-settings-tool.test.ts.
+- [x] P3: Load limit 10/25/50/100, board default 25. "Load more groups" when there are more than 10 groups.
+  - Board columns now show the view's load limit (default 25) with a per-column "Load more" and the full count in the header; before, the board never capped cards. A sub-grouped board still draws every row (a per-column cut would split unevenly across lanes). "Load more groups" was already there; both are pinned in database.test.ts "board load limit".
+- [x] P3: Advanced filters: "Where … And/Or", "+ Add filter rule / Add filter group".
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 7f240977; database-view-settings-panel.test.ts "builds an advanced filter…", "sets And or Or".
+- [x] P4: A new row in a filtered view opens in a peek, prefilled with what the filters allow (date "this week" → today).
+  - Built: index.ts newRowProperties with newRowValues. Tests: row-page-peek.integration.test.ts "opens a new row of a filtered view in its peek, prefilled so it passes the filter"; database-query.test.ts "fills a date the filters allow…".
+- [x] P4: Open pages in: Side peek (default for Board) / Center peek / Full page, with the descriptions measured in research/08.
+  - Built: view-settings.ts per-layout defaults; database-view-settings-panel.ts picker with descriptions. Tests: row-page-peek.integration.test.ts "opens a center peek as a modal…", "shows a full page in place of the database…"; e2e database-row-page.spec.ts.
+- [x] P1: Edit-mode right-click on a view tab opens the view menu, then core's block menu (ui.ts:700 contextmenu) replaces it. The view menu must win (verify0/3d).
+  - New generic lever `data-blok-context-menu-owner` (`DATA_ATTR.contextMenuOwner`): core's block menu stands down inside it. The tab bar declares it.
+- [x] P1 (core): PopoverDesktop hide() leaves the top layer at once, so every menu closes instantly. Notion closes with opacity 1→0 and scale 1→0.96 over 200ms ease. Fix this in shared popover code, with a reduced-motion fallback.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 8a9c86de, 077b6285; popover-close-motion.test.ts. `animateClose` is opt-in; only database menus use it.
+- [x] P1: The board column tint rounds all four corners. Notion rounds only the bottom (0 0 10px 10px).
+  - A lane column body (below the shared heads) is now `0 0 10px 10px`. A column without lanes keeps all four: there the header and body are one element, which looks like Notion's top-rounded header over a bottom-rounded body.
+- [x] P1: The measured yellow (~2.2:1) and brown (~3.0:1) column accents are below WCAG AA. Blok's a11y law wins, so this is a documented divergence: use AA-safe text.
+  - Divergence: in light mode `--blok-database-column-yellow-accent` / `-brown-accent` now point at the measured option pill text (7.3:1 and 8.6:1 on the tint, computed). Dark keeps the measured yellow. Pinned by `database-board-look.test.ts`.
+- [x] P3: "Remove sorting" rewrites shared row positions. Check that this matches Notion when other views have their own manual order.
+  - Unmeasured: research/08 measured one view only, and research/03 lists per-view manual order as unverified. Blok keeps ONE shared manual order (`position` on the row block), so "Remove" re-orders every unsorted view and leaves other views' sorts alone. Pinned by database.test.ts "'Remove' in one view re-orders the shared manual order…". Re-check in Notion before adding per-view order (it would be a new view field).
+- [x] P5: The calendar "No date (N)" toolbar button lists rows with no date (measured in research/08). Today those rows are hidden with no home.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 2511de58; database-calendar-view.test.ts "No date list".
+- [x] P5: The gallery and calendar settings `layoutItems()` are not mounted in the Phase 3 settings panel yet.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 4e61de42; database-view-settings-panel.test.ts "mounts the layout rows…".
+- [x] P5: A card cannot be dropped into an empty gallery group.
+  - An empty group's grid is a drop target (`data-drop="inside"`, ringed with the drop line color; Notion's look for this is unmeasured).
+- [x] P3: Board sub-groups are saved and editable but never drawn.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): c8519c7a, 38219ecb; database.test.ts "board sub-group lanes".
+- [x] P1: The column-header property menu (database-property-menu.ts) has neither DATABASE_MENU_CLASS nor the open/close motion.
+  - It now passes `class: DATABASE_MENU_CLASS, animateClose: true`. Programmatic `close()` still destroys at once.
+- [x] P5: Timeline hours zoom moves bars by whole days only.
+  - At hours zoom a value with a time now sits at its hour and moves by whole hours (`moveBar(..., deltaHours)`, `hourBarGeometry`). A value with no time keeps whole days. Edge resize still snaps to days. Notion's hour-level snapping is unmeasured.
+- [x] P5: The timeline zoom centre is per user (local). Notion stores a shared `center_timestamp`.
+  - New optional view field `timelineCenter` (`YYYY-MM-DD`). A redraw around a new centre writes it as a derived change (no undo step) and syncs it. A person's own local centre still wins; the shared one is the default for anyone without one. Not BREAKING: the timeline view never shipped (added after v1.16.1).
+- [x] P5: Timeline dependency arrows: `arrowsBy` is stored, nothing is drawn. Needs relations (P6).
+  - Built: database-timeline-view.ts createArrows/placeArrows. Tests: database-dependencies-tool.test.ts "draws an arrow from each blocking item to the item it blocks".
+- [x] P5: The timeline table panel has no calculations.
+  - The panel ends with a footer built by the table's `fillCalculationCell`, stored in the view's `calculations` (same shape and menu as the table footer).
+- [x] P5: Sub-group lanes:
   - every lane repeats the column headers;
   - "+ New page" in a lane does not set the sub-group;
   - a sorted cross-lane drop loses the sub-group change;
   - the add-group buttons sit below the lanes.
-- [ ] P5: The board layout rows reuse gallery-* test ids.
-- [ ] P5: Board card padding is 10px 12px; Notion measured 8px 10px 6px.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): c8519c7a, 38219ecb; database.test.ts "board sub-group lanes", "board card parity" (all four sub-bullets).
+- [x] P5: The board layout rows reuse gallery-* test ids.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): c085f470; database-layout-items.test.ts "names its rows board-*".
+- [x] P5: Board card padding is 10px 12px; Notion measured 8px 10px 6px.
+  - Landed earlier (audited 2026-10-09, unit tests run and green): 969af015; styles/database-board-card-css.test.ts "pads a card…".
+- [x] P6: The first add to an empty person, files or relation list keeps both peers' adds. The tool writes `[]` when it creates a row or a list property, and an empty list in `properties` is a keyed container (client and C#). A row saved before this, with no key for the list, is still last-writer-wins.
+- [x] P6: Row page layouts (help/layouts, launched 2024-10-24). Built: "Customize layout" on the row page head; a builder bar with Page settings, Cancel and "Apply to all pages"; pins under the title (limit 15); a property group with named sections that fold; single-property modules in the page or the details panel; "View details" opens and closes the panel; the group can sit in the panel; Simple or Tabbed structure; "Reset to original page layout" (no property is deleted). Stored on the title property (`pageLayout*` keys), never in `config` or at the top level.
+  - Pin limit conflict: the help page says 15, the layouts guide says four. Blok uses 15.
+  - Diverges: Tabbed shows a Content tab plus one tab per relation property, showing that relation's value. Notion's tabs hold views of other databases the user picks.
+  - Diverges: the details panel stacks below the group instead of sitting at the right of the page.
+  - Diverges: edits are moved with "Move up / Move down" and a "⋯" menu; Notion also drags properties and modules.
+  - Diverges: section folding and the panel's open state are per viewer and not saved.
+  - Missing: the entry in the database "•••" settings menu, the "page preview toggle", property search in the builder, "Add a property" under pinned properties, the < > pin scroll arrows, the per-property 👁️ in the builder (the existing page visibility setting still applies), backlinks and comments options, the "Property icons" and "Full width" options.
+  - Missing: Notion's builder has no measured values in research/07 or 08; the look uses Blok tokens.
+## Tier 3 scaffolding (not full parity)
+
+The user has not approved limiting these features to hooks. The entries below describe the existing scaffolding. Public submission, scheduling, delivery, maps, dashboards, permissions and other missing behavior remain required.
+- [x] Automations: `config.automations.onTrigger(trigger, ctx)`.
+  - Built: `pageAdded` fires after each local row add, `propertyEdited` once a property's edits settle (500 ms, last value), so typing a title fires one trigger. Both start from the backend-sync call sites; peers, undo and redo fire nothing.
+  - Built: `ctx.run` runs Edit property, Edit pages and Add page in this database as host values. Its writes fire nothing (Notion: automations never chain).
+  - Hook only: schedule triggers, "any/all of" combining, view scope (the host reads `ctx.matchesView`), and notification, mail, webhook and Slack actions. Definitions are stored by the host, not in the document.
+- [x] Forms: a `form` view type.
+  - Built: one question per visible property, in view order; required and description on the view property setting; a Required toggle in the view; submit adds a row and calls `config.forms.onSubmit`; read-only only calls the host; closed form; confirmation screen.
+  - Hook only: the public link, anonymous answers, submission permissions and email copies. Not built: person, files and relation questions, conditional logic, the full builder (question rename, long answer, list vs dropdown).
+- [x] Map: a `place` property (`{name?, address?, lat?, lon?}`) and a `map` view.
+  - Built: place cells, editing (writes `{address}` and drops stale coordinates), text filters, A→Z sort, search, `mapBy`, an honest empty state with no lever or no place property.
+  - Hook only: `config.map.render(container, items, {open})` draws the map; geocoding is the host's. Not built: auto-creating a Place property, map height.
+- [x] Dashboard: a `dashboard` view type and `view.dashboard.rows[].widgets[]` slot. A placeholder note only; not offered in the add-view menu.
+- [x] AI autofill: `property.autofill` (`mode`, `instruction`, `language`, `onCreate`, `onEdit`) and `config.ai.autofill`.
+  - Built: fills on create and on edit (500 ms settle), writes with `{derived:true}`, drops a stale answer.
+  - Not built: a manual "Update" action and a settings UI. The setting is set through the data.
+- [x] Verification: a `verification` property (`{state, verifiedBy?, expiresAt?}`). A click verifies as `people.me()` or unverifies; past `expiresAt` it reads Expired. Not built: setting an expiry in the UI, the Owner property, notifications.
+- [x] Permissions: `config.permissions.can(action, {databaseId})` with `editContent`, `editStructure` and `comment`.
+  - Built: `editContent` false acts as read-only, `editStructure` false acts as a locked database, so every path those guard follows it (since the rebase onto db-parity this includes CSV merge, the CSV merge menu item and the row page layout builder) (menus, drag, keyboard, cell editors, paste, selection bar, add row/view/property, the title). A throwing gate denies.
+  - Not covered: the row page body (core edits those child blocks); core actions on the database block itself (block menu delete, move, duplicate); API writes (`blocks.update`); per-row or per-property answers. The gate is read on render and on `setReadOnly`.
+- [x] Comments: `config.comments.open(target, anchor)`. Built: the table row menu "Comment" item and a right-click on a table cell (works in read-only). Not built: board, gallery, list and drawer entry points, and comment badges.
+- [x] Calendar sync: `view.calendarSync` (`enabled`, `calendarId`) slot only.
+- [x] Multi-source: `view.dataSourceId` slot only. Blok still reads only its own rows.

@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Pārvietot uz",
   "tools.database.searchActions": "Meklēt darbības…",
   "tools.database.rowLastEditedBy": "Pēdējo reizi rediģēja {name}",
+  "tools.database.rowWordCount": "Vārdu skaits: {words}, rakstzīmju skaits: {characters}",
   "tools.database.rowLastEdited": "Pēdējo reizi rediģēts",
   "tools.database.tableLinkCopied": "Saite nokopēta",
   "tools.database.tableDuplicate": "Dublēt",

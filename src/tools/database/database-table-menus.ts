@@ -272,8 +272,10 @@ export interface RowMenuContext {
   /** Other databases of this document. Without any there is no Move to row. */
   moveTargets?: Array<{ id: string; title: string }>;
   onMoveTo?: (databaseId: string) => void;
-  /** Who edited the row last, and when, already formatted. Without it there is no footer. */
+  /** Who edited the row last, and when, already formatted. */
   lastEdited?: { name?: string; time: string };
+  /** Words and characters of the row. Without it or lastEdited there is no footer. */
+  counts?: { words: number; characters: number };
 }
 
 const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> = [
@@ -282,18 +284,26 @@ const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> =
   { mode: 'full', icon: IconExpandFullscreen, key: 'tools.database.openPagesFull' },
 ];
 
-/** research/08's footer: "Last edited by ⟨name⟩", then the time. */
-const lastEditedFooter = (i18n: T, lastEdited: { name?: string; time: string }): PopoverItemParams => {
+/** research/08's footer: "Last edited by ⟨name⟩", the time, then "1 word, 5 characters". */
+const rowFooter = (i18n: T, lastEdited: RowMenuContext['lastEdited'], counts: RowMenuContext['counts']): PopoverItemParams => {
   const footer = document.createElement('div');
-  const who = document.createElement('div');
-  const when = document.createElement('div');
+  const line = (text: string): void => {
+    const el = document.createElement('div');
+
+    el.textContent = text;
+    footer.append(el);
+  };
 
   footer.setAttribute('data-blok-database-row-menu-footer', '');
-  who.textContent = lastEdited.name === undefined
-    ? i18n.t('tools.database.rowLastEdited')
-    : i18n.t('tools.database.rowLastEditedBy', { name: lastEdited.name });
-  when.textContent = lastEdited.time;
-  footer.append(who, when);
+  if (lastEdited !== undefined) {
+    line(lastEdited.name === undefined
+      ? i18n.t('tools.database.rowLastEdited')
+      : i18n.t('tools.database.rowLastEditedBy', { name: lastEdited.name }));
+    line(lastEdited.time);
+  }
+  if (counts !== undefined) {
+    line(i18n.t('tools.database.rowWordCount', { words: counts.words, characters: counts.characters }));
+  }
 
   return { type: PopoverItemType.Html, element: footer, name: 'last-edited' };
 };
@@ -329,7 +339,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
     },
     { type: PopoverItemType.Separator },
     ...(ctx.onComment !== undefined
-      ? [{ type: PopoverItemType.Default as const, name: 'database-row-comment', title: i18n.t('tools.database.tableComment'), icon: IconMessage, onActivate: ctx.onComment }]
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-comment', title: i18n.t('tools.database.tableComment'), icon: IconMessage, secondaryLabel: beautifyShortcut('CMD+SHIFT+M'), onActivate: ctx.onComment }]
       : []),
     { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
     { type: PopoverItemType.Default, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
@@ -338,6 +348,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
         type: PopoverItemType.Default as const,
         title: i18n.t('tools.database.tableMoveTo'),
         icon: IconArrowDiagonal,
+        secondaryLabel: beautifyShortcut('CMD+SHIFT+P'),
         children: {
           searchable: true,
           items: targets.map((target) => ({
@@ -350,6 +361,6 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
       }]
       : []),
     { type: PopoverItemType.Default, name: 'database-row-delete', title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: beautifyShortcut('DELETE'), onActivate: ctx.onDelete },
-    ...(ctx.lastEdited !== undefined ? [{ type: PopoverItemType.Separator } as const, lastEditedFooter(i18n, ctx.lastEdited)] : []),
+    ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [{ type: PopoverItemType.Separator } as const, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
   ];
 };

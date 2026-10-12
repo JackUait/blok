@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Áthelyezés ide",
   "tools.database.searchActions": "Műveletek keresése…",
   "tools.database.rowLastEditedBy": "Utoljára szerkesztette: {name}",
+  "tools.database.rowWordCount": "Szavak: {words}, karakterek: {characters}",
   "tools.database.rowLastEdited": "Utoljára szerkesztve",
   "tools.database.tableLinkCopied": "Hivatkozás másolva",
   "tools.database.tableDuplicate": "Megkettőzés",

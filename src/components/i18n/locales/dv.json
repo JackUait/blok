@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "ބަދަލުކުރޭ",
   "tools.database.searchActions": "އަމަލުތައް ހޯދާ…",
   "tools.database.rowLastEditedBy": "{name} އެންމެ ފަހުން އެޑިޓްކުރީ",
+  "tools.database.rowWordCount": "ބަސް: {words}، އަކުރު: {characters}",
   "tools.database.rowLastEdited": "އެންމެ ފަހުން އެޑިޓްކުރީ",
   "tools.database.tableLinkCopied": "ލިންކް ކޮޕީ ކުރެވިއްޖެ",
   "tools.database.tableDuplicate": "ކޮޕީ ހަދާ",

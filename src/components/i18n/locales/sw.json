@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Hamishia",
   "tools.database.searchActions": "Tafuta vitendo…",
   "tools.database.rowLastEditedBy": "Kimehaririwa mara ya mwisho na {name}",
+  "tools.database.rowWordCount": "Maneno: {words}, herufi: {characters}",
   "tools.database.rowLastEdited": "Kimehaririwa mara ya mwisho",
   "tools.database.tableLinkCopied": "Kiungo kimenakiliwa",
   "tools.database.tableDuplicate": "Rudufu",

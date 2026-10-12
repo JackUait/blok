@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Siirrä kohteeseen",
   "tools.database.searchActions": "Etsi toimintoja…",
   "tools.database.rowLastEditedBy": "Viimeksi muokannut {name}",
+  "tools.database.rowWordCount": "Sanoja: {words}, merkkejä: {characters}",
   "tools.database.rowLastEdited": "Viimeksi muokattu",
   "tools.database.tableLinkCopied": "Linkki kopioitu",
   "tools.database.tableDuplicate": "Monista",

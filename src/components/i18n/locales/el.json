@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Μετακίνηση σε",
   "tools.database.searchActions": "Αναζήτηση ενεργειών…",
   "tools.database.rowLastEditedBy": "Τελευταία επεξεργασία από {name}",
+  "tools.database.rowWordCount": "Λέξεις: {words}, χαρακτήρες: {characters}",
   "tools.database.rowLastEdited": "Τελευταία επεξεργασία",
   "tools.database.tableLinkCopied": "Ο σύνδεσμος αντιγράφηκε",
   "tools.database.tableDuplicate": "Διπλότυπο",

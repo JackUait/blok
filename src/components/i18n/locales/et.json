@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Teisalda",
   "tools.database.searchActions": "Otsi toiminguid…",
   "tools.database.rowLastEditedBy": "Viimati muutis {name}",
+  "tools.database.rowWordCount": "Sõnu: {words}, märke: {characters}",
   "tools.database.rowLastEdited": "Viimati muudetud",
   "tools.database.tableLinkCopied": "Link kopeeriti",
   "tools.database.tableDuplicate": "Dubleeri",

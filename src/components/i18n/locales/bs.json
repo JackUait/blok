@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Premjesti u",
   "tools.database.searchActions": "Pretražite radnje…",
   "tools.database.rowLastEditedBy": "Posljednja izmjena: {name}",
+  "tools.database.rowWordCount": "Riječi: {words}, znakova: {characters}",
   "tools.database.rowLastEdited": "Posljednja izmjena",
   "tools.database.tableLinkCopied": "Veza je kopirana",
   "tools.database.tableDuplicate": "Dupliciraj",

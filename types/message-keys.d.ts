@@ -996,6 +996,7 @@ export type BlokMessageKey =
   | 'tools.database.rowLastEdited'
   | 'tools.database.rowLastEditedBy'
   | 'tools.database.rowTitlePlaceholder'
+  | 'tools.database.rowWordCount'
   | 'tools.database.searchActions'
   | 'tools.database.searchLabel'
   | 'tools.database.searchPlaceholder'

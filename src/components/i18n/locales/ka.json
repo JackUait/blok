@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "გადატანა",
   "tools.database.searchActions": "ქმედებების ძიება…",
   "tools.database.rowLastEditedBy": "ბოლო რედაქტორი: {name}",
+  "tools.database.rowWordCount": "სიტყვები: {words}, სიმბოლოები: {characters}",
   "tools.database.rowLastEdited": "ბოლოს რედაქტირდა",
   "tools.database.tableLinkCopied": "ბმული დაკოპირდა",
   "tools.database.tableDuplicate": "დუბლირება",

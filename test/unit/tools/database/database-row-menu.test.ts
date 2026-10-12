@@ -78,6 +78,22 @@ describe('row ⋮⋮ menu (research/08)', () => {
     expect(items(context({ moveTargets: [], onMoveTo: vi.fn() })).map((i) => i.title)).not.toContain('tools.database.tableMoveTo');
   });
 
+  it('Comment and Move to show their keys through the shared shortcut formatter', () => {
+    const list = items(context({ onComment: vi.fn(), moveTargets: [{ id: 'db2', title: 'Projects' }], onMoveTo: vi.fn() }));
+
+    expect(named(list, 'tools.database.tableComment').secondaryLabel).toBe(beautifyShortcut('CMD+SHIFT+M'));
+    expect(named(list, 'tools.database.tableMoveTo').secondaryLabel).toBe(beautifyShortcut('CMD+SHIFT+P'));
+  });
+
+  it('the footer counts the words and characters of the row', () => {
+    const t = (key: string, vars?: Record<string, string | number>): string => (vars === undefined ? key : `${key}:${JSON.stringify(vars)}`);
+    const list = items(context({ i18n: { t }, counts: { words: 1, characters: 5 } }));
+    const footer = list[list.length - 1];
+
+    expect(footer.type).toBe('html');
+    expect(footer.element?.textContent).toContain('tools.database.rowWordCount:{"words":1,"characters":5}');
+  });
+
   it('ends with a "Last edited by" footer when the row knows who edited it', () => {
     const list = items(context({ lastEdited: { name: 'Jack', time: 'today 3:02 AM' } }));
     const footer = list[list.length - 1];
@@ -96,7 +112,7 @@ describe('row ⋮⋮ menu in the table', () => {
   const mount = (handlers: Partial<TableHandlers> = {}): HTMLElement => {
     const view = new DatabaseTableView({
       readOnly: false,
-      i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars?.name !== undefined ? `${key}:${vars.name}` : key) } as DatabaseTableViewOptions['i18n'],
+      i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${Object.values(vars).join(',')}`) } as DatabaseTableViewOptions['i18n'],
       view: { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] },
       schema,
       rows,
@@ -130,5 +146,23 @@ describe('row ⋮⋮ menu in the table', () => {
 
     expect(search?.placeholder).toBe('tools.database.searchActions');
     expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowLastEditedBy:Jack Uait');
+  });
+
+  it('the footer counts the words and characters of the row title', () => {
+    const root = mount();
+
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+
+    expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowWordCount:1,5');
+  });
+
+  it('Move to shows its key on screen next to its chevron', () => {
+    const root = mount({ moveRowTo: vi.fn(), moveTargets: () => [{ id: 'db2', title: 'Projects' }] });
+
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+    const move = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+      .find((title) => title.textContent === 'tools.database.tableMoveTo')?.parentElement;
+
+    expect(move?.querySelector('[data-blok-testid="popover-item-secondary-title"]')).not.toBeNull();
   });
 });

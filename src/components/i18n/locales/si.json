@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "වෙත ගෙන යන්න",
   "tools.database.searchActions": "ක්‍රියා සොයන්න…",
   "tools.database.rowLastEditedBy": "{name} විසින් අවසන් සංස්කරණය",
+  "tools.database.rowWordCount": "වචන: {words}, අක්ෂර: {characters}",
   "tools.database.rowLastEdited": "අවසන් සංස්කරණය",
   "tools.database.tableLinkCopied": "සබැඳිය පිටපත් කරන ලදී",
   "tools.database.tableDuplicate": "අනුපිටපත",

@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Přesunout do",
   "tools.database.searchActions": "Hledat akce…",
   "tools.database.rowLastEditedBy": "Naposledy upraveno uživatelem {name}",
+  "tools.database.rowWordCount": "Počet slov: {words}, počet znaků: {characters}",
   "tools.database.rowLastEdited": "Naposledy upraveno",
   "tools.database.tableLinkCopied": "Odkaz zkopírován",
   "tools.database.tableDuplicate": "Duplikovat",

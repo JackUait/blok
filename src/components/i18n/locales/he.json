@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "העבר אל",
   "tools.database.searchActions": "חיפוש פעולות…",
   "tools.database.rowLastEditedBy": "נערך לאחרונה על ידי {name}",
+  "tools.database.rowWordCount": "מילים: {words}, תווים: {characters}",
   "tools.database.rowLastEdited": "נערך לאחרונה",
   "tools.database.tableLinkCopied": "הקישור הועתק",
   "tools.database.tableDuplicate": "שכפל",

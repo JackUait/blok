@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Премести в",
   "tools.database.searchActions": "Търсене на действия…",
   "tools.database.rowLastEditedBy": "Последна редакция от {name}",
+  "tools.database.rowWordCount": "Думи: {words}, знаци: {characters}",
   "tools.database.rowLastEdited": "Последна редакция",
   "tools.database.tableLinkCopied": "Връзката е копирана",
   "tools.database.tableDuplicate": "Дублирай",

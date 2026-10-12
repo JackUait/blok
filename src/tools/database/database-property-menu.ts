@@ -53,8 +53,9 @@ const ALL_VIEWS_NOTE: ReadonlySet<PropertyType> = new Set<PropertyType>(['number
  * Change type or Duplicate, as Notion's ID menu.
  */
 export const propertyMenuEntries = (property: PropertyDefinition): PropertyMenuEntry[] => {
+  // research/08: the Title menu has no description row.
   if (property.type === 'title') {
-    return ['description'];
+    return [];
   }
 
   const isId = property.type === 'uniqueId';
@@ -188,7 +189,7 @@ export class DatabasePropertyMenu {
       ...head.map((entry) => this.entry(entry, property)),
       ...lead,
       ...this.autofillItem(property),
-      ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, { type: PopoverItemType.Separator } as const] : []),
+      ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, ...(tail.length > 0 ? [{ type: PopoverItemType.Separator } as const] : [])] : []),
       ...tail.map((entry) => this.entry(entry, property)),
     ];
     const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });

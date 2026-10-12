@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Chuyển đến",
   "tools.database.searchActions": "Tìm thao tác…",
   "tools.database.rowLastEditedBy": "Chỉnh sửa lần cuối bởi {name}",
+  "tools.database.rowWordCount": "Số từ: {words}, số ký tự: {characters}",
   "tools.database.rowLastEdited": "Chỉnh sửa lần cuối",
   "tools.database.tableLinkCopied": "Đã sao chép liên kết",
   "tools.database.tableDuplicate": "Nhân bản",

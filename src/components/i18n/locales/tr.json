@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Şuraya taşı",
   "tools.database.searchActions": "Eylem arayın…",
   "tools.database.rowLastEditedBy": "Son düzenleyen: {name}",
+  "tools.database.rowWordCount": "Sözcük: {words}, karakter: {characters}",
   "tools.database.rowLastEdited": "Son düzenleme",
   "tools.database.tableLinkCopied": "Bağlantı kopyalandı",
   "tools.database.tableDuplicate": "Çoğalt",

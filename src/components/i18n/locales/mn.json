@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Зөөх",
   "tools.database.searchActions": "Үйлдэл хайх…",
   "tools.database.rowLastEditedBy": "{name} сүүлд засварласан",
+  "tools.database.rowWordCount": "Үгийн тоо: {words}, тэмдэгтийн тоо: {characters}",
   "tools.database.rowLastEdited": "Сүүлд засварласан",
   "tools.database.tableLinkCopied": "Холбоосыг хуулав",
   "tools.database.tableDuplicate": "Хувилах",

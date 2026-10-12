@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Presunúť do",
   "tools.database.searchActions": "Hľadať akcie…",
   "tools.database.rowLastEditedBy": "Autor poslednej úpravy: {name}",
+  "tools.database.rowWordCount": "Počet slov: {words}, počet znakov: {characters}",
   "tools.database.rowLastEdited": "Naposledy upravené",
   "tools.database.tableLinkCopied": "Odkaz skopírovaný",
   "tools.database.tableDuplicate": "Duplikovať",

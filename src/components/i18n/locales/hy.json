@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Տեղափոխել",
   "tools.database.searchActions": "Որոնել գործողություններ…",
   "tools.database.rowLastEditedBy": "Վերջին անգամ խմբագրել է {name}",
+  "tools.database.rowWordCount": "Բառեր՝ {words}, նիշեր՝ {characters}",
   "tools.database.rowLastEdited": "Վերջին խմբագրում",
   "tools.database.tableLinkCopied": "Հղումը պատճենվեց",
   "tools.database.tableDuplicate": "Կրկնօրինակել",

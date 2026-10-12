@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "منتقل ڪريو",
   "tools.database.searchActions": "عمل ڳوليو…",
   "tools.database.rowLastEditedBy": "آخري ترميم ڪندڙ: {name}",
+  "tools.database.rowWordCount": "لفظ: {words}، اکر: {characters}",
   "tools.database.rowLastEdited": "آخري ترميم",
   "tools.database.tableLinkCopied": "لنڪ ڪاپي ٿي ويو",
   "tools.database.tableDuplicate": "نقل ٺاهيو",

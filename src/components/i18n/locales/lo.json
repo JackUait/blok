@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "ຍ້າຍໄປ",
   "tools.database.searchActions": "ຄົ້ນຫາການດຳເນີນການ…",
   "tools.database.rowLastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",
+  "tools.database.rowWordCount": "ຄຳ: {words}, ຕົວອັກສອນ: {characters}",
   "tools.database.rowLastEdited": "ແກ້ໄຂລ່າສຸດ",
   "tools.database.tableLinkCopied": "ສຳເນົາລິ້ງແລ້ວ",
   "tools.database.tableDuplicate": "ເຮັດສຳເນົາ",

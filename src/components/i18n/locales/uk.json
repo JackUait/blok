@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Перемістити в",
   "tools.database.searchActions": "Шукати дії…",
   "tools.database.rowLastEditedBy": "Останнє редагування: {name}",
+  "tools.database.rowWordCount": "Слів: {words}, символів: {characters}",
   "tools.database.rowLastEdited": "Останнє редагування",
   "tools.database.tableLinkCopied": "Посилання скопійовано",
   "tools.database.tableDuplicate": "Дублювати",

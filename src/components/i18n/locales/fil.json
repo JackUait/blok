@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Ilipat sa",
   "tools.database.searchActions": "Maghanap ng aksyon…",
   "tools.database.rowLastEditedBy": "Huling na-edit ni {name}",
+  "tools.database.rowWordCount": "Mga salita: {words}, mga karakter: {characters}",
   "tools.database.rowLastEdited": "Huling na-edit",
   "tools.database.tableLinkCopied": "Nakopya ang link",
   "tools.database.tableDuplicate": "Gumawa ng kopya",

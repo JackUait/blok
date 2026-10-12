@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "ย้ายไปที่",
   "tools.database.searchActions": "ค้นหาการดำเนินการ…",
   "tools.database.rowLastEditedBy": "แก้ไขล่าสุดโดย {name}",
+  "tools.database.rowWordCount": "คำ: {words}, อักขระ: {characters}",
   "tools.database.rowLastEdited": "แก้ไขล่าสุด",
   "tools.database.tableLinkCopied": "คัดลอกลิงก์แล้ว",
   "tools.database.tableDuplicate": "ทำซ้ำ",

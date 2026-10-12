@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "אַריבערפֿירן צו",
   "tools.database.searchActions": "זוכן אַקציעס…",
   "tools.database.rowLastEditedBy": "לעצט רעדאַקטירט דורך {name}",
+  "tools.database.rowWordCount": "ווערטער: {words}, צייכנס: {characters}",
   "tools.database.rowLastEdited": "לעצט רעדאַקטירט",
   "tools.database.tableLinkCopied": "לינק קאָפּירט",
   "tools.database.tableDuplicate": "דופּליקירן",

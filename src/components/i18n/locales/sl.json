@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Premakni v",
   "tools.database.searchActions": "Poiščite dejanja…",
   "tools.database.rowLastEditedBy": "Nazadnje urejeno: {name}",
+  "tools.database.rowWordCount": "Besede: {words}, znaki: {characters}",
   "tools.database.rowLastEdited": "Nazadnje urejeno",
   "tools.database.tableLinkCopied": "Povezava kopirana",
   "tools.database.tableDuplicate": "Podvoji",

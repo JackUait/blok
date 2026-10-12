@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "يۆتكەش",
   "tools.database.searchActions": "مەشغۇلات ئىزدەش…",
   "tools.database.rowLastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",
+  "tools.database.rowWordCount": "سۆز: {words}، ھەرپ: {characters}",
   "tools.database.rowLastEdited": "ئاخىرقى تەھرىرلەش",
   "tools.database.tableLinkCopied": "ئۇلانما كۆچۈرۈلدى",
   "tools.database.tableDuplicate": "كۆپەيتىش",

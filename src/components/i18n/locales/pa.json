@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "ਇਸ ਵਿੱਚ ਲਿਜਾਓ",
   "tools.database.searchActions": "ਕਾਰਵਾਈਆਂ ਲੱਭੋ…",
   "tools.database.rowLastEditedBy": "{name} ਦੁਆਰਾ ਆਖਰੀ ਸੋਧ",
+  "tools.database.rowWordCount": "ਸ਼ਬਦ: {words}, ਅੱਖਰ: {characters}",
   "tools.database.rowLastEdited": "ਆਖਰੀ ਸੋਧ",
   "tools.database.tableLinkCopied": "ਲਿੰਕ ਕਾਪੀ ਹੋ ਗਿਆ",
   "tools.database.tableDuplicate": "ਨਕਲ ਬਣਾਓ",

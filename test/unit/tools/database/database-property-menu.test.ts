@@ -70,7 +70,8 @@ describe('property menu entries (research/08 header menus, property-level items)
   });
 
   it.each<[PropertyType, string[]]>([
-    ['title', ['description']],
+    // research/08: the Title list has no description row.
+    ['title', []],
     ['text', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['number', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['select', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
@@ -90,6 +91,17 @@ describe('DatabasePropertyMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     captured.popovers.length = 0;
+  });
+
+  it('the title menu has no description row and does not end on a separator', () => {
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.open(prop('title'), document.createElement('button'), [{ type: 'default', title: 'tools.database.tableFilter' } as never]);
+    const items = lastItems();
+
+    expect(items.some((i) => i.name === 'description')).toBe(false);
+    expect(items[items.length - 1]?.type).not.toBe('separator');
+    menu.destroy();
   });
 
   afterEach(() => {

@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "ఇక్కడికి తరలించు",
   "tools.database.searchActions": "చర్యలను వెతకండి…",
   "tools.database.rowLastEditedBy": "{name} చివరిగా సవరించారు",
+  "tools.database.rowWordCount": "పదాలు: {words}, అక్షరాలు: {characters}",
   "tools.database.rowLastEdited": "చివరిగా సవరించబడింది",
   "tools.database.tableLinkCopied": "లింక్ కాపీ చేయబడింది",
   "tools.database.tableDuplicate": "నకలు చేయండి",

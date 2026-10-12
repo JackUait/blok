@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Déplacer vers",
   "tools.database.searchActions": "Rechercher des actions…",
   "tools.database.rowLastEditedBy": "Dernière modification par {name}",
+  "tools.database.rowWordCount": "Mots : {words}, caractères : {characters}",
   "tools.database.rowLastEdited": "Dernière modification",
   "tools.database.tableLinkCopied": "Lien copié",
   "tools.database.tableDuplicate": "Dupliquer",

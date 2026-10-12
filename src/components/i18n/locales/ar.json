@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "نقل إلى",
   "tools.database.searchActions": "البحث في الإجراءات…",
   "tools.database.rowLastEditedBy": "آخر تعديل بواسطة {name}",
+  "tools.database.rowWordCount": "الكلمات: {words}، الأحرف: {characters}",
   "tools.database.rowLastEdited": "آخر تعديل",
   "tools.database.tableLinkCopied": "تم نسخ الرابط",
   "tools.database.tableDuplicate": "تكرار",

@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "منتقل کریں",
   "tools.database.searchActions": "کارروائیاں تلاش کریں…",
   "tools.database.rowLastEditedBy": "{name} نے آخری ترمیم کی",
+  "tools.database.rowWordCount": "الفاظ: {words}، حروف: {characters}",
   "tools.database.rowLastEdited": "آخری ترمیم",
   "tools.database.tableLinkCopied": "لنک کاپی ہو گیا",
   "tools.database.tableDuplicate": "نقل بنائیں",

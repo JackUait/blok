@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "ផ្លាស់ទីទៅ",
   "tools.database.searchActions": "ស្វែងរកសកម្មភាព…",
   "tools.database.rowLastEditedBy": "កែសម្រួលចុងក្រោយដោយ {name}",
+  "tools.database.rowWordCount": "ពាក្យ៖ {words}, តួអក្សរ៖ {characters}",
   "tools.database.rowLastEdited": "កែសម្រួលចុងក្រោយ",
   "tools.database.tableLinkCopied": "បានចម្លងតំណ",
   "tools.database.tableDuplicate": "ស្ទួន",

@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Alihkan ke",
   "tools.database.searchActions": "Cari tindakan…",
   "tools.database.rowLastEditedBy": "Kali terakhir disunting oleh {name}",
+  "tools.database.rowWordCount": "Perkataan: {words}, aksara: {characters}",
   "tools.database.rowLastEdited": "Kali terakhir disunting",
   "tools.database.tableLinkCopied": "Pautan disalin",
   "tools.database.tableDuplicate": "Gandakan",

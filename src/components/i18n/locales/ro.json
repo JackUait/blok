@@ -872,6 +872,7 @@
   "tools.database.tableMoveTo": "Mută în",
   "tools.database.searchActions": "Căutați acțiuni…",
   "tools.database.rowLastEditedBy": "Ultima editare de {name}",
+  "tools.database.rowWordCount": "Cuvinte: {words}, caractere: {characters}",
   "tools.database.rowLastEdited": "Ultima editare",
   "tools.database.tableLinkCopied": "Link copiat",
   "tools.database.tableDuplicate": "Duplică",

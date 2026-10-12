@@ -1389,12 +1389,22 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onDuplicate: () => handlers.duplicateRow(rowId),
       ...(handlers.moveRowTo !== undefined ? { moveTargets: handlers.moveTargets?.() ?? [], onMoveTo: (databaseId: string) => handlers.moveRowTo?.(rowId, databaseId) } : {}),
       ...this.lastEdited(rowId),
+      counts: this.titleCounts(rowId),
       ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, anchor) } : {}),
       onDelete: () => {
         this.state.selection = null;
         handlers.deleteRows([rowId]);
       },
     }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions') });
+  }
+
+  /** research/08 does not say what Notion counts; this counts the title only. */
+  private titleCounts(rowId: string): { words: number; characters: number } {
+    const value = this.allRows().find((row) => row.id === rowId)?.properties[this.options.titlePropertyId];
+    const title = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    const trimmed = title.trim();
+
+    return { words: trimmed === '' ? 0 : trimmed.split(/\s+/).length, characters: Array.from(title).length };
   }
 
   /** The row menu footer: who edited the row last, by the host's people, and when. */

@@ -16,6 +16,7 @@ import {
   resetPageLayout,
   resolvePageLayout,
   setGroupIn,
+  setPropertyIcons,
   setStructure,
 } from '../../../../src/tools/database/page-layout';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
@@ -185,5 +186,16 @@ describe('page layout — edits', () => {
       pageLayoutSections: [],
     });
     expect(pageLayoutFields(setStructure('tabbed')(empty)).pageLayoutStructure).toBe('tabbed');
+  });
+
+  it('turns property icons off as false on the title property, and back on by dropping the key', () => {
+    const off = setPropertyIcons(false)(empty);
+
+    expect(pageLayoutFields(off).pageLayoutPropertyIcons).toBe(false);
+    expect(pageLayoutOf({ ...TITLE, pageLayoutPropertyIcons: false }).propertyIcons).toBe(false);
+    expect(empty.propertyIcons).toBe(true);
+    expect(pageLayoutFields(setPropertyIcons(true)(off)).pageLayoutPropertyIcons).toBeUndefined();
+    expect(resolvePageLayout(off, PROPS).propertyIcons).toBe(false);
+    expect(resetPageLayout()(off).propertyIcons).toBe(true);
   });
 });

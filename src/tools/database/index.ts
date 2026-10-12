@@ -93,7 +93,7 @@ import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconUpload } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconSplitView, IconUpload } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -2608,6 +2608,28 @@ export class DatabaseTool implements BlockTool {
     input.click();
   }
 
+  /**
+   * "Customize page layout" (Notion's settings menu label). It opens the first
+   * row page and starts customizing. Its place in the panel is a Blok choice.
+   */
+  private layoutActions(): ViewSettingsAction[] {
+    if (this.readOnly || this.structureLocked() || this.linked) return [];
+
+    return [{
+      testId: 'database-settings-customize-layout',
+      label: this.api.i18n.t('tools.database.layoutCustomizePage'),
+      icon: IconSplitView,
+      disabled: this.viewRowOrder().length === 0,
+      onClick: () => {
+        const first = this.viewRowOrder()[0];
+
+        if (first === undefined) return;
+        this.handleRowClick(first.id);
+        this.cardDrawer?.startCustomizing();
+      },
+    }];
+  }
+
   /** "…" panel actions: save the chart, export the view, import or merge a CSV. */
   private csvActions(): ViewSettingsAction[] {
     const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
@@ -3071,7 +3093,7 @@ export class DatabaseTool implements BlockTool {
       groups: (sub) => this.groupEntries(sub),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
       layoutItems: () => this.layoutItems(),
-      actions: () => this.csvActions(),
+      actions: () => [...(context === undefined ? this.layoutActions() : []), ...this.csvActions()],
       automations: {
         read: () => owner.savedAutomations,
         schema: () => owner.model.getSchema(),
@@ -5122,8 +5144,9 @@ export class DatabaseTool implements BlockTool {
           }
         },
         onOpenPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
-        onOpenAddProperty: (anchor) => this.openAddProperty(anchor, undefined, () => {
+        onOpenAddProperty: (anchor, onAdded) => this.openAddProperty(anchor, undefined, (created) => {
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+          onAdded?.(created.id);
         }),
         hasPeople: this.hasPeople,
         cellContext: () => this.cellContext(),
@@ -7069,7 +7092,7 @@ export class DatabaseTool implements BlockTool {
    * (Insert left/right), the new column lands beside that one in the active
    * view's column order.
    */
-  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: () => void, context?: NativeWidgetContext): void {
+  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: (created: PropertyDefinition) => void, context?: NativeWidgetContext): void {
     if (this.destroyed || this.readOnly || this.structureLocked() || (context !== undefined && !context.writable())) return;
     const previous = this.addPropertyPopover;
 
@@ -7088,7 +7111,7 @@ export class DatabaseTool implements BlockTool {
         const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) });
 
         if (created !== null) {
-          onAdded?.();
+          onAdded?.(created);
         }
         // research/08: Relation opens "Related to" right away.
         if (created?.type === 'relation') this.openRelatedToPicker(created.id, anchor);

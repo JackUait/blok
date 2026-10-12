@@ -46,9 +46,10 @@ const doc = (viewOverrides: Record<string, unknown> = {}, titleOverrides: Record
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}): Promise<void> => {
+const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}, readOnly = false): Promise<void> => {
   editor = new Blok({
     holder,
+    readOnly,
     dataModel: 'hierarchical',
     tools: {
       paragraph: Paragraph,
@@ -80,6 +81,19 @@ const savedTitle = async (): Promise<Record<string, unknown> | undefined> => {
   const data = saved?.blocks.find((block) => block.id === 'db')?.data as { schema: Array<Record<string, unknown>> } | undefined;
 
   return data?.schema.find((property) => property.type === 'title');
+};
+
+const customizeAction = async (databaseId = 'db'): Promise<HTMLButtonElement | null> => {
+  await click(q(`[data-blok-element][data-blok-id="${databaseId}"] [data-blok-testid="database-toolbar-settings"]`));
+
+  return document.querySelector<HTMLButtonElement>('[data-blok-testid="database-settings-customize-layout"]');
+};
+
+const editorSchema = async (): Promise<Array<Record<string, unknown>>> => {
+  const saved = await editor?.save();
+  const data = saved?.blocks.find((block) => block.id === 'db')?.data as { schema: Array<Record<string, unknown>> } | undefined;
+
+  return data?.schema ?? [];
 };
 
 const item = (name: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-popover-item][data-blok-item-name="${name}"]`);
@@ -138,6 +152,101 @@ describe('row page layout through the database tool', () => {
 
     expect(q('[data-blok-database-drawer-pins] [data-property-id="due"]')).not.toBeNull();
     expect(shownTitle()).toBe('Two');
+  });
+
+  it('opens the first row page in Customize from Customize page layout in the settings panel', async () => {
+    await make(doc());
+    const action = await customizeAction();
+
+    expect(action?.disabled).toBe(false);
+    await click(action);
+
+    expect(shownTitle()).toBe('One');
+    expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
+  });
+
+  it('disables Customize page layout with no rows', async () => {
+    await make([{ ...doc()[0], content: [] }]);
+
+    expect((await customizeAction())?.disabled).toBe(true);
+  });
+
+  it('hides Customize page layout when read-only or locked', async () => {
+    await make(doc(), {}, true);
+
+    expect(await customizeAction()).toBeNull();
+    editor?.destroy();
+    document.querySelectorAll('[data-blok-popover]').forEach((el) => el.remove());
+    holder?.replaceChildren();
+    await make(doc({}, { databaseLocked: true }));
+
+    expect(await customizeAction()).toBeNull();
+  });
+
+  it('hides Customize page layout on a linked view', async () => {
+    const [database, ...rows] = doc();
+    const { schema, views } = database.data as { schema: unknown[]; views: Array<Record<string, unknown>> };
+
+    await make([
+      database,
+      ...rows,
+      { id: 'linked', type: 'database', data: { source: { databaseId: 'db' }, schema, views: views.map((v) => ({ ...v, id: 'lv' })), activeViewId: 'lv' } },
+    ]);
+
+    expect(await customizeAction('db')).not.toBeNull();
+    await click(document.body);
+    document.querySelectorAll('[data-blok-popover]').forEach((el) => el.remove());
+
+    expect(await customizeAction('linked')).toBeNull();
+    expect(q('[data-blok-element][data-blok-id="linked"] [data-blok-testid="database-toolbar-settings"]')).not.toBeNull();
+  });
+
+  it('adds a pinned property from the pins row: the property saves at once, the pin on Apply', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(q('[data-blok-database-layout-add-pin]'));
+    await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
+    const added = (await editorSchema()).find((property) => property.type === 'number');
+
+    expect(added).toBeDefined();
+    expect(q(`[data-blok-database-drawer-pins] [data-property-id="${String(added?.id)}"]`)).not.toBeNull();
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [] });
+    await click(q('[data-blok-database-layout-apply]'));
+
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: added?.id, place: 'heading' }] });
+  });
+
+  it('cancels the pin but keeps a property added from the pins row', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(q('[data-blok-database-layout-add-pin]'));
+    await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
+    await click(q('[data-blok-database-layout-cancel]'));
+
+    expect((await editorSchema()).some((property) => property.type === 'number')).toBe(true);
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [] });
+    expect(q('[data-blok-database-drawer-pins]')).toBeNull();
+  });
+
+  it('saves Property icons off on the title property, and Reset drops the key', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(q('[data-blok-database-layout-settings]'));
+    await click(item('property-icons'));
+    await click(q('[data-blok-database-layout-apply]'));
+
+    expect(await savedTitle()).toMatchObject({ pageLayoutPropertyIcons: false });
+    expect(q('[data-blok-database-drawer-prop-icon]')).toBeNull();
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(q('[data-blok-database-layout-settings]'));
+    await click(item('reset'));
+
+    expect(await savedTitle()).not.toHaveProperty('pageLayoutPropertyIcons');
+    expect(q('[data-blok-database-drawer-prop-icon]')).not.toBeNull();
   });
 
   it('offers no Customize layout on a locked database', async () => {

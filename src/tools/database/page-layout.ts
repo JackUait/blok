@@ -6,6 +6,7 @@ export const PAGE_LAYOUT_PIN_LIMIT = 15;
 export interface PageLayoutData {
   structure: 'simple' | 'tabbed';
   groupIn: 'page' | 'panel';
+  propertyIcons: boolean;
   placements: PageLayoutPlacement[];
   sections: PageLayoutSection[];
 }
@@ -16,6 +17,7 @@ export type PageLayoutOp = (layout: PageLayoutData) => PageLayoutData;
 export interface ResolvedPageLayout {
   structure: 'simple' | 'tabbed';
   groupIn: 'page' | 'panel';
+  propertyIcons: boolean;
   heading: PropertyDefinition[];
   pageModules: PropertyDefinition[];
   panelModules: PropertyDefinition[];
@@ -30,6 +32,7 @@ export const canPlaceInPanel = (property: PropertyDefinition | undefined): boole
 export const pageLayoutOf = (title: PropertyDefinition | undefined): PageLayoutData => ({
   structure: title?.pageLayoutStructure === 'tabbed' ? 'tabbed' : 'simple',
   groupIn: title?.pageLayoutGroupIn === 'panel' ? 'panel' : 'page',
+  propertyIcons: title?.pageLayoutPropertyIcons !== false,
   placements: Array.isArray(title?.pageLayoutPlacements) ? title.pageLayoutPlacements.map((p) => ({ ...p })) : [],
   sections: Array.isArray(title?.pageLayoutSections) ? title.pageLayoutSections.map((s) => ({ ...s })) : [],
 });
@@ -38,6 +41,7 @@ export const pageLayoutOf = (title: PropertyDefinition | undefined): PageLayoutD
 export const pageLayoutFields = (layout: PageLayoutData): Required<Pick<PageLayoutFields, 'pageLayoutPlacements' | 'pageLayoutSections'>> & PageLayoutFields => ({
   pageLayoutStructure: layout.structure === 'tabbed' ? 'tabbed' : undefined,
   pageLayoutGroupIn: layout.groupIn === 'panel' ? 'panel' : undefined,
+  pageLayoutPropertyIcons: layout.propertyIcons ? undefined : false,
   pageLayoutPlacements: layout.placements,
   pageLayoutSections: layout.sections,
 });
@@ -61,6 +65,7 @@ export const resolvePageLayout = (layout: PageLayoutData, properties: PropertyDe
   const resolved: ResolvedPageLayout = {
     structure: layout.structure,
     groupIn: layout.groupIn,
+    propertyIcons: layout.propertyIcons,
     heading: [],
     pageModules: [],
     panelModules: [],
@@ -155,6 +160,8 @@ export const moveToSection = (id: string, sectionId: string | null): PageLayoutO
 export const setStructure = (structure: PageLayoutData['structure']): PageLayoutOp => (layout) => ({ ...layout, structure });
 
 export const setGroupIn = (groupIn: PageLayoutData['groupIn']): PageLayoutOp => (layout) => ({ ...layout, groupIn });
+
+export const setPropertyIcons = (propertyIcons: boolean): PageLayoutOp => (layout) => ({ ...layout, propertyIcons });
 
 /** "Reset to original page layout". The lists stay, empty, so the next edit does not race their birth. */
 export const resetPageLayout = (): PageLayoutOp => () => pageLayoutOf(undefined);

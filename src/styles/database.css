@@ -1210,10 +1210,34 @@
  */
 [data-blok-database-drawer-prop-label] {
   color: var(--blok-database-peek-label);
-  min-width: 100px;
-  flex-shrink: 0;
   font-size: 14px;
   line-height: 20px;
+}
+
+/* The label column: a 16px type icon (research/08), then the label. The gap is a Blok value. */
+[data-blok-database-drawer-prop-head] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-width: 100px;
+  flex-shrink: 0;
+  color: var(--blok-database-peek-label);
+}
+
+[data-blok-database-drawer-prop-icon] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  inline-size: 16px;
+  block-size: 16px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+[data-blok-database-drawer-prop-icon] svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 /**
@@ -2027,6 +2051,7 @@
 [data-blok-database-layout-cancel],
 [data-blok-database-layout-apply],
 [data-blok-database-layout-add-section],
+[data-blok-database-layout-add-pin],
 [data-blok-database-drawer-details-toggle],
 [data-blok-database-drawer-section-toggle],
 [data-blok-database-drawer-tabs] [role="tab"] {
@@ -2076,7 +2101,56 @@
   display: flex;
   gap: var(--blok-space-4);
   overflow-x: auto;
+}
+
+/* Arrows and "+ Add a property" sit beside the scroller. Notion's arrows were not measured; sizes are Blok's. */
+[data-blok-database-drawer-pins-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
   margin-bottom: var(--blok-space-3);
+}
+
+[data-blok-database-drawer-pins-row] > [data-blok-database-drawer-pins] {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+[data-blok-database-drawer-pins-back],
+[data-blok-database-drawer-pins-forward] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: var(--blok-database-add-text);
+  cursor: pointer;
+}
+
+[data-blok-database-layout-add-pin]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+[data-blok-database-drawer-pins-back][hidden],
+[data-blok-database-drawer-pins-forward][hidden] {
+  display: none;
+}
+
+[data-blok-database-drawer-pins-back] svg,
+[data-blok-database-drawer-pins-forward] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[dir="rtl"] [data-blok-database-drawer-pins-back] svg,
+[dir="rtl"] [data-blok-database-drawer-pins-forward] svg {
+  transform: scaleX(-1);
 }
 
 [data-blok-database-drawer-pins] [data-blok-database-drawer-pin] {
@@ -2087,8 +2161,11 @@
   max-inline-size: 240px;
 }
 
-[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-label] {
+[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-head] {
   min-width: 0;
+}
+
+[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-label] {
   font-size: 12px;
 }
 
@@ -2196,6 +2273,9 @@
   [data-blok-database-layout-cancel]:hover,
   [data-blok-database-layout-apply]:hover,
   [data-blok-database-layout-add-section]:hover,
+  [data-blok-database-layout-add-pin]:not(:disabled):hover,
+  [data-blok-database-drawer-pins-back]:hover,
+  [data-blok-database-drawer-pins-forward]:hover,
   [data-blok-database-layout-item-menu]:hover,
   [data-blok-database-layout-section-delete]:hover,
   [data-blok-database-drawer-details-toggle]:hover,

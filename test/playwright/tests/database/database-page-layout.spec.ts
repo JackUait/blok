@@ -180,6 +180,50 @@ test.describe('row page layout', () => {
     expect(bounds.panelTop).toBeGreaterThanOrEqual(bounds.groupBottom - 1);
   });
 
+  test('opens the first page in Customize from Customize page layout in the settings panel', async ({ page }) => {
+    await mount(page, blocks());
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-customize-layout').click();
+
+    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeVisible();
+    await expect(peek(page).locator('[data-blok-database-drawer-title]')).toHaveValue('Alpha');
+    await expect(peek(page).locator('[data-blok-database-drawer-prop-icon]').first()).toBeVisible();
+  });
+
+  // Notion's pin arrows were not measured: only their behaviour is checked here.
+  for (const dir of ['ltr', 'rtl'] as const) {
+    test(`scrolls overflowing pins with the arrows (${dir})`, async ({ page }) => {
+      const extra = Array.from({ length: 10 }, (_, i) => ({ id: `p-x${i}`, name: `Pinned property ${i}`, type: 'text', position: `b${i}` }));
+      const data = blocks({ pageLayoutPlacements: extra.map((p) => ({ id: p.id, place: 'heading' })) });
+      const db = data[0].data as { schema: unknown[] };
+
+      db.schema.push(...extra);
+      await mount(page, data, dir);
+      await openRow(page, 'r1');
+      const back = peek(page).getByRole('button', { name: 'Show earlier pinned properties' });
+      const forward = peek(page).getByRole('button', { name: 'Show more pinned properties' });
+
+      await expect(forward).toBeVisible();
+      await expect(back).toBeHidden();
+      await forward.click();
+      await expect.poll(() => pins(page).evaluate((el) => Math.abs(el.scrollLeft))).toBeGreaterThan(0);
+      expect(await pins(page).evaluate((el) => Math.sign(el.scrollLeft))).toBe(dir === 'rtl' ? -1 : 1);
+      await expect(back).toBeVisible();
+      await back.click();
+      await expect.poll(() => pins(page).evaluate((el) => Math.abs(el.scrollLeft))).toBeLessThanOrEqual(1);
+      await expect(back).toBeHidden();
+    });
+  }
+
+  test('shows no pin arrows when the pins fit', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }));
+    await openRow(page, 'r1');
+    await expect(pins(page)).toBeVisible();
+
+    await expect(peek(page).getByRole('button', { name: 'Show more pinned properties' })).toBeHidden();
+    await expect(peek(page).getByRole('button', { name: 'Show earlier pinned properties' })).toBeHidden();
+  });
+
   test('switches to a Tabbed page from Page settings and resets to the original layout', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }));
     await openRow(page, 'r1');

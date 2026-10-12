@@ -17,8 +17,10 @@ import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { getElementDirection } from '../../components/utils/direction';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
+import { propertyTypeMeta } from './database-property-types';
 import { rowDescription } from './row-body';
 import { outputBlocksToHtml, outputBlocksToSegments } from '../../shared/rich-text/block-data';
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
@@ -40,6 +42,7 @@ import {
   resetPageLayout,
   resolvePageLayout,
   setGroupIn,
+  setPropertyIcons,
   setStructure,
 } from './page-layout';
 import type { PageLayoutOp, ResolvedPageLayout } from './page-layout';
@@ -107,8 +110,11 @@ export interface CardDrawerOptions {
   onClose: () => void;
   /** "+ Add a property": the chosen type and the name typed above it ('' when left empty). */
   onAddProperty?: (type: PropertyType, name: string) => void;
-  /** "+ Add a property": the database's add-property menu under `anchor`. Wins over `onAddProperty`. */
-  onOpenAddProperty?: (anchor: HTMLElement) => void;
+  /**
+   * "+ Add a property": the database's add-property menu under `anchor`. Wins over `onAddProperty`.
+   * `onAdded` gets the new property's id after the schema refresh.
+   */
+  onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string) => void) => void;
   /** A property label was clicked: open its property menu under `anchor`. */
   onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement) => void;
   /** Offer Person when adding a property. */
@@ -259,6 +265,10 @@ export class DatabaseCardDrawer {
   /** The edits of an open Customize layout, or null when not customizing. */
   private layoutDraft: PageLayoutOp[] | null = null;
   private layoutMenu: PopoverDesktop | null = null;
+  /** Watches the pins scroller for overflow. Replaced on every redraw. */
+  private pinsObserver: ResizeObserver | null = null;
+  /** The resolved layout's "Property icons", read while drawing property rows. */
+  private propertyIcons = true;
   private detailsOpen = true;
   private readonly collapsedSections = new Set<string>();
   /** The open tab of a Tabbed page: 'content' or a relation property id. */
@@ -296,6 +306,8 @@ export class DatabaseCardDrawer {
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
   private propertyTypePopover: DatabasePropertyTypePopover | null = null;
+  /** The built-in type menu was opened from the pins row: pin what it adds. */
+  private pinNextAdded = false;
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
@@ -617,6 +629,7 @@ export class DatabaseCardDrawer {
     this.cleanupEditor();
     this.closeModeMenu();
     this.closeLayoutMenu();
+    this.stopWatchingPins();
     this.layoutDraft = null;
     this.drawer?.querySelector('[data-blok-database-drawer-layout-bar]')?.remove();
     this.emojiPicker?.close();
@@ -660,6 +673,7 @@ export class DatabaseCardDrawer {
 
   destroy(): void {
     this.events?.off('i18n:changed', this.followOuterDirection);
+    this.stopWatchingPins();
     this.releasePeekHost();
     this.closeModeMenu();
     this.closeLayoutMenu();
@@ -1240,30 +1254,40 @@ export class DatabaseCardDrawer {
 
       addBtn.setAttribute('data-blok-database-drawer-add-prop', '');
       addBtn.textContent = this.t('tools.database.addProperty');
-      addBtn.addEventListener('click', () => {
-        if (this.onOpenAddProperty !== undefined) {
-          this.onOpenAddProperty(addBtn);
-
-          return;
-        }
-        if (this.propertyTypePopover === null) {
-          this.propertyTypePopover = new DatabasePropertyTypePopover({
-            onSelect: (type, name) => {
-              this.onAddProperty?.(type, name);
-              this.propertyTypePopover?.close();
-            },
-            i18n: this.i18n,
-            hasPeople: this.hasPeople,
-            withNameField: true,
-          });
-        }
-
-        this.propertyTypePopover.open(addBtn);
-      });
+      addBtn.addEventListener('click', () => this.openAddProperty(addBtn, false));
       propsSection.appendChild(addBtn);
     }
 
     return propsSection;
+  }
+
+  /** "+ Add a property". From the pins row, the new property becomes a draft pin; the property itself is written at once. */
+  private openAddProperty(anchor: HTMLElement, pinIt: boolean): void {
+    if (this.onOpenAddProperty !== undefined) {
+      this.onOpenAddProperty(anchor, pinIt ? (id) => this.editLayout(pin(id)) : undefined);
+
+      return;
+    }
+    this.pinNextAdded = pinIt;
+    if (this.propertyTypePopover === null) {
+      this.propertyTypePopover = new DatabasePropertyTypePopover({
+        onSelect: (type, name) => {
+          const before = new Set(this.schema.map((p) => p.id));
+
+          this.onAddProperty?.(type, name);
+          // onAddProperty refreshes the schema synchronously, so the new property is there now.
+          const added = this.pinNextAdded ? this.schema.find((p) => !before.has(p.id)) : undefined;
+
+          if (added !== undefined) this.editLayout(pin(added.id));
+          this.propertyTypePopover?.close();
+        },
+        i18n: this.i18n,
+        hasPeople: this.hasPeople,
+        withNameField: true,
+      });
+    }
+
+    this.propertyTypePopover.open(anchor);
   }
 
   /** A named section of the property group. Folding it is this viewer's own. */
@@ -1348,7 +1372,10 @@ export class DatabaseCardDrawer {
       return;
     }
     content.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
+    this.stopWatchingPins();
     const resolved = this.resolvedLayout();
+
+    this.propertyIcons = resolved.propertyIcons;
     const search = this.layoutDraft === null ? '' : this.drawer?.querySelector<HTMLInputElement>('[data-blok-database-layout-search]')?.value.trim().toLowerCase() ?? '';
     const matches = (def: PropertyDefinition): boolean => def.name.toLowerCase().includes(search);
     const layout: ResolvedPageLayout = {
@@ -1365,8 +1392,8 @@ export class DatabaseCardDrawer {
     if (!tabs.some((def) => def.id === this.activeTab)) {
       this.activeTab = 'content';
     }
-    if (layout.heading.length > 0) {
-      regions.push(this.moduleList('data-blok-database-drawer-pins', 'heading', layout.heading, row));
+    if (layout.heading.length > 0 || this.layoutDraft !== null) {
+      regions.push(this.buildPinsRow(layout.heading, resolved.heading.length, row));
     }
     if (layout.structure === 'tabbed') {
       regions.push(this.buildTabs(tabs));
@@ -1464,6 +1491,51 @@ export class DatabaseCardDrawer {
     return panel;
   }
 
+  /** The pins scroller, and "+ Add a property" while customizing. `pinned` counts pins search hides too. */
+  private buildPinsRow(pins: PropertyDefinition[], pinned: number, row: DatabaseRow): HTMLElement {
+    const wrap = document.createElement('div');
+    const scroller = this.moduleList('data-blok-database-drawer-pins', 'heading', pins, row);
+    // Notion's arrows were not measured: the step (most of the visible width) and the look are Blok's.
+    const scrollPins = (step: 1 | -1): void => {
+      const rtl = getElementDirection(scroller) === 'rtl' ? -1 : 1;
+
+      scroller.scrollBy({ left: step * rtl * scroller.clientWidth * 0.8, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    };
+    const back = this.iconButton('data-blok-database-drawer-pins-back', 'tools.database.layoutPinsBack', IconChevronLeft, () => scrollPins(-1));
+    const forward = this.iconButton('data-blok-database-drawer-pins-forward', 'tools.database.layoutPinsForward', IconChevronRight, () => scrollPins(1));
+    // RTL scrolls toward negative scrollLeft, so the distance from the start is its absolute value.
+    const sync = (): void => {
+      const start = Math.abs(scroller.scrollLeft);
+      const overflow = scroller.scrollWidth - scroller.clientWidth > 1;
+
+      back.hidden = !overflow || start <= 1;
+      forward.hidden = !overflow || start + scroller.clientWidth >= scroller.scrollWidth - 1;
+    };
+
+    wrap.setAttribute('data-blok-database-drawer-pins-row', '');
+    back.hidden = true;
+    forward.hidden = true;
+    scroller.addEventListener('scroll', sync, { passive: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      this.pinsObserver = new ResizeObserver(sync);
+      this.pinsObserver.observe(scroller);
+    }
+    wrap.append(back, scroller, forward);
+    if (this.layoutDraft !== null) {
+      const add = this.textButton('data-blok-database-layout-add-pin', 'tools.database.addProperty', () => this.openAddProperty(add, true));
+
+      add.disabled = pinned >= PAGE_LAYOUT_PIN_LIMIT;
+      wrap.appendChild(add);
+    }
+
+    return wrap;
+  }
+
+  private stopWatchingPins(): void {
+    this.pinsObserver?.disconnect();
+    this.pinsObserver = null;
+  }
+
   /** Pins in the heading, or single-property modules in the page or the panel. */
   private moduleList(attr: string, place: 'heading' | 'page' | 'panel', properties: PropertyDefinition[], row: DatabaseRow): HTMLElement {
     const list = document.createElement('div');
@@ -1522,7 +1594,7 @@ export class DatabaseCardDrawer {
     return [toggle, panel];
   }
 
-  private startCustomizing(): void {
+  startCustomizing(): void {
     if (!this.customizable || this.layoutDraft !== null || this.currentRow === null) {
       return;
     }
@@ -1627,6 +1699,9 @@ export class DatabaseCardDrawer {
       { type: PopoverItemType.Separator },
       { type: PopoverItemType.Default, name: 'group-in-page', title: this.label('tools.database.layoutGroupInPage'), ...check(layout.groupIn === 'page'), closeOnActivate: true, onActivate: () => this.editLayout(setGroupIn('page')) },
       { type: PopoverItemType.Default, name: 'group-in-panel', title: this.label('tools.database.layoutGroupInPanel'), ...check(layout.groupIn === 'panel'), closeOnActivate: true, onActivate: () => this.editLayout(setGroupIn('panel')) },
+      { type: PopoverItemType.Separator },
+      // Notion's toggle here was never measured; a check item matches the rows above.
+      { type: PopoverItemType.Default, name: 'property-icons', title: this.label('tools.database.layoutPropertyIcons'), ...check(layout.propertyIcons), closeOnActivate: true, onActivate: () => this.editLayout(setPropertyIcons(!layout.propertyIcons)) },
       { type: PopoverItemType.Separator },
       {
         type: PopoverItemType.Default,
@@ -1860,6 +1935,23 @@ export class DatabaseCardDrawer {
     label.setAttribute('data-blok-database-drawer-prop-label', '');
     label.setAttribute('data-property-id', def.id);
     label.textContent = def.name;
+    const head = document.createElement('div');
+
+    head.setAttribute('data-blok-database-drawer-prop-head', '');
+    // Outside the label: callers read the label's text as the property name.
+    if (this.propertyIcons) {
+      const icon = document.createElement('span');
+
+      icon.setAttribute('data-blok-database-drawer-prop-icon', '');
+      icon.setAttribute('aria-hidden', 'true');
+      if (def.icon !== undefined && def.icon !== '') {
+        icon.textContent = def.icon;
+      } else {
+        icon.innerHTML = propertyTypeMeta(def.type).icon;
+      }
+      head.appendChild(icon);
+    }
+    head.appendChild(label);
     if (!this.readOnly && this.onOpenPropertyMenu !== undefined) {
       const openMenu = this.onOpenPropertyMenu;
 
@@ -1873,7 +1965,7 @@ export class DatabaseCardDrawer {
         }
       });
     }
-    row.appendChild(label);
+    row.appendChild(head);
 
     const valueEl = document.createElement('div');
 

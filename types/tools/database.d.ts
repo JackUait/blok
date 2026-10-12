@@ -67,6 +67,8 @@ export interface PageLayoutFields {
   pageLayoutStructure?: 'simple' | 'tabbed';
   /** Where the property group sits. Default `page`. */
   pageLayoutGroupIn?: 'page' | 'panel';
+  /** `false` hides the icon beside each property label. Default shown. */
+  pageLayoutPropertyIcons?: false;
   /** A property with no entry sits in the property group. */
   pageLayoutPlacements?: PageLayoutPlacement[];
   pageLayoutSections?: PageLayoutSection[];

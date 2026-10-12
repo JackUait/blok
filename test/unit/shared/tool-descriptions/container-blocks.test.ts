@@ -386,6 +386,7 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
           position: 'a0',
           pageLayoutStructure: 'tabbed',
           pageLayoutGroupIn: 'panel',
+          pageLayoutPropertyIcons: false,
           pageLayoutSections: [{ id: 's1', name: 'Planning' }],
           pageLayoutPlacements: [{ id: 'due', place: 'heading' }, { id: 'stage', place: 'section', sectionId: 's1' }],
         },
@@ -653,6 +654,15 @@ const INVALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data:
     },
   },
   {
+    name: 'database',
+    scenario: 'property icons stored as on (only false is saved)',
+    data: {
+      schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0', pageLayoutPropertyIcons: true }],
+      views: [{ id: 'view-table', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'view-table',
+    },
+  },
+  {
     name: 'database-row',
     scenario: 'an empty pageId',
     data: { properties: { name: 'Ship it' }, position: 'a0', pageId: '' },
@@ -671,7 +681,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('95908c20f306cafeec52307e1da27160fcadf05feee60f9df551393bf0ec4f01');
+      .toBe('d9cecee7e65d0ab1b2ffa3e90b7438372baf115a55deac10694c6d61cbb136f7');
 
     const published: unknown = JSON.parse(snapshot);
 

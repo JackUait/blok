@@ -20,7 +20,7 @@ const ruleBody = (selector: string): string => {
 };
 
 const layoutRules = (): string =>
-  [...database.matchAll(/([^{}]*\[data-blok-database-(?:drawer-(?:pins|pin|modules|panel-modules|module|section[a-z-]*|details[a-z-]*|columns|main|tabs|tab-panel|customize|layout-bar)|layout-[a-z-]+)\][^{}]*)\{([^{}]*)\}/g)]
+  [...database.matchAll(/([^{}]*\[data-blok-database-(?:drawer-(?:pins[a-z-]*|pin|prop-head|prop-icon|modules|panel-modules|module|section[a-z-]*|details[a-z-]*|columns|main|tabs|tab-panel|customize|layout-bar)|layout-[a-z-]+)\][^{}]*)\{([^{}]*)\}/g)]
     .map((m) => `${m[1]}{${m[2]}}`)
     .join('\n');
 
@@ -61,6 +61,22 @@ describe('database row page layout css', () => {
     expect(main).toContain('flex: 999 1 240px');
     expect(main).toContain('min-inline-size: 0');
     expect(panel).toContain('flex: 1 1 240px');
+  });
+
+  it('puts a 16px icon in the label column, which keeps the label width', () => {
+    const head = ruleBody('[data-blok-database-drawer-prop-head]');
+
+    expect(head).toContain('display: flex');
+    expect(head).toContain('min-width: 100px');
+    expect(ruleBody('[data-blok-database-drawer-prop-icon]')).toContain('inline-size: 16px');
+    expect(ruleBody('[data-blok-database-drawer-prop-label]')).not.toContain('min-width');
+  });
+
+  it('lets the pins scroller shrink between its arrows, and flips the arrows in RTL', () => {
+    expect(ruleBody('[data-blok-database-drawer-pins-row]')).toContain('display: flex');
+    expect(ruleBody('[data-blok-database-drawer-pins-row] > [data-blok-database-drawer-pins]')).toContain('min-inline-size: 0');
+    expect(ruleBody('[data-blok-database-drawer-pins-back][hidden], [data-blok-database-drawer-pins-forward][hidden]')).toContain('display: none');
+    expect(ruleBody('[dir="rtl"] [data-blok-database-drawer-pins-back] svg, [dir="rtl"] [data-blok-database-drawer-pins-forward] svg')).toContain('transform: scaleX(-1)');
   });
 
   it('uses logical properties and radius role tokens only', () => {

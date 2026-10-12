@@ -398,6 +398,7 @@ export const DATABASE_DATA = {
           defaultTemplateId: { type: 'string', description: 'Read on the title property only: the template row new rows start from.' },
           pageLayoutStructure: { type: 'string', enum: ['simple', 'tabbed'], description: 'Read on the title property only: the row page structure. Default simple.' },
           pageLayoutGroupIn: { type: 'string', enum: ['page', 'panel'], description: 'Read on the title property only: where the row page property group sits. Default page.' },
+          pageLayoutPropertyIcons: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the icon beside each row page property label. Absent means shown.' },
           pageLayoutPlacements: {
             type: 'array',
             description: 'Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.',

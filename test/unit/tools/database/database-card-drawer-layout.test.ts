@@ -97,6 +97,22 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-owner', 'p-rel']);
   });
 
+  it('puts a 16px property icon beside each label, outside the label text', () => {
+    const options = createOptions({
+      schema: [...schemaWith(), { id: 'p-mood', name: 'Mood', type: 'text', position: 'a5', icon: '🙂' }],
+    });
+
+    new DatabaseCardDrawer(options).open(ROW);
+    const head = q('[data-blok-database-drawer-prop-head]:has([data-property-id="p-due"])');
+    const icon = head?.querySelector('[data-blok-database-drawer-prop-icon]');
+
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.querySelector('svg')).not.toBeNull();
+    expect(q('[data-blok-database-drawer-prop-label][data-property-id="p-due"]')?.textContent).toBe('Due');
+    expect(q('[data-blok-database-drawer-prop-label][data-property-id="p-due"] [data-blok-database-drawer-prop-icon]')).toBeNull();
+    expect(q('[data-blok-database-drawer-prop-head]:has([data-property-id="p-mood"]) [data-blok-database-drawer-prop-icon]')?.textContent).toBe('🙂');
+  });
+
   it('draws no layout chrome for a database without a layout', () => {
     new DatabaseCardDrawer(createOptions()).open(ROW);
 
@@ -577,8 +593,125 @@ describe('DatabaseCardDrawer — page layout', () => {
       clickItem('reset');
 
       expect(written(options, { pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutStructure: 'tabbed' }))
-        .toEqual({ structure: 'simple', groupIn: 'page', placements: [], sections: [] });
+        .toEqual({ structure: 'simple', groupIn: 'page', propertyIcons: true, placements: [], sections: [] });
       expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    });
+
+    it('turns property icons off from Page settings as a draft edit', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-layout-settings]')?.click();
+
+      expect(q('[data-blok-popover-item][data-blok-item-name="property-icons"] svg')).not.toBeNull();
+      clickItem('property-icons');
+
+      expect(q('[data-blok-database-drawer-prop-icon]')).toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      q('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.propertyIcons).toBe(false);
+    });
+
+    it('draws no property icons when the layout turns them off', () => {
+      new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutPropertyIcons: false }) })).open(ROW);
+
+      expect(q('[data-blok-database-drawer-prop-label][data-property-id="p-due"]')?.textContent).toBe('Due');
+      expect(q('[data-blok-database-drawer-prop-icon]')).toBeNull();
+    });
+
+    it('keeps the unapplied draft when stepping to the next page', () => {
+      const next: DatabaseRow = { id: 'row-2', position: 'a1', properties: { 'p-title': 'Second', 'p-due': 'Monday' } };
+      const options = createOptions({ adjacentRow: (rowId, direction) => (rowId === 'row-1' && direction === 1 ? next : undefined) });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+      q('[data-blok-database-peek-next]')?.click();
+
+      expect(q('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.textContent).toContain('Monday');
+      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+    });
+
+    it('adds a property from the pins row as a draft pin, even with no pins yet', () => {
+      const added: PropertyDefinition = { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' };
+      const options = createOptions({ onOpenAddProperty: vi.fn() });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      const add = q<HTMLButtonElement>('[data-blok-database-drawer-pins-row] [data-blok-database-layout-add-pin]');
+
+      expect(add?.disabled).toBe(false);
+      add?.click();
+      const [anchor, onAdded] = vi.mocked(options.onOpenAddProperty)?.mock.calls[0] ?? [];
+
+      expect(anchor).toBe(add);
+      drawer.refreshSchema([...schemaWith(), added]);
+      onAdded?.('p-new');
+
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-new']);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      q('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.placements).toEqual([{ id: 'p-new', place: 'heading' }]);
+    });
+
+    it('pins a property made with the built-in type menu from the pins row only', () => {
+      const added: PropertyDefinition[] = [];
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer({
+        ...options,
+        onAddProperty: () => {
+          added.push({ id: `p-new-${added.length}`, name: 'Budget', type: 'number', position: `a9${added.length}` });
+          drawer.refreshSchema([...schemaWith(), ...added]);
+        },
+      });
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-drawer-add-prop]')?.click();
+      q('[data-blok-database-property-type-option="number"]')?.click();
+
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual([]);
+      q('[data-blok-database-layout-add-pin]')?.click();
+      q('[data-blok-database-property-type-option="number"]')?.click();
+
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-new-1']);
+      drawer.destroy();
+    });
+
+    it('disables Add a property in the pins row at the pin limit, counting pins search hides', () => {
+      const pins: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT }, (_, i) =>
+        ({ id: `pin-${i}`, name: `Pinned ${i}`, type: 'text', position: `b${String(i).padStart(2, '0')}` }));
+      const options = createOptions({
+        schema: [
+          { id: 'p-title', name: 'Title', type: 'title', position: 'a0', pageLayoutPlacements: pins.map((p) => ({ id: p.id, place: 'heading' })) },
+          ...pins,
+          { id: 'candidate', name: 'Candidate', type: 'text', position: 'c0' },
+        ],
+        onOpenAddProperty: vi.fn(),
+      });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
+
+      if (search === null) throw new Error('missing property search');
+      search.value = 'candidate';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(q<HTMLButtonElement>('[data-blok-database-layout-add-pin]')?.disabled).toBe(true);
+    });
+
+    it('shows Add a property in the pins row only while customizing', () => {
+      new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) })).open(ROW);
+
+      expect(q('[data-blok-database-drawer-pins]')).not.toBeNull();
+      expect(q('[data-blok-database-layout-add-pin]')).toBeNull();
     });
 
     it('drops the draft when the page closes', () => {
@@ -594,6 +727,75 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       expect(q('[data-blok-database-drawer-pins]')).toBeNull();
       expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    });
+  });
+
+  describe('pin scroll arrows', () => {
+    const PINNED = schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }, { id: 'p-owner', place: 'heading' }] });
+    const observers: Array<{ observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn>; fire: () => void }> = [];
+
+    /** Gives every element the same scroll box; jsdom has no layout. */
+    const box = (scrollWidth: number, clientWidth: number): void => {
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(scrollWidth);
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(clientWidth);
+    };
+
+    beforeEach(() => {
+      observers.length = 0;
+      vi.stubGlobal('ResizeObserver', class {
+        private readonly callback: () => void;
+        readonly observe = vi.fn();
+        readonly disconnect = vi.fn();
+        constructor(callback: () => void) {
+          this.callback = callback;
+          observers.push({ observe: this.observe, disconnect: this.disconnect, fire: () => this.callback() });
+        }
+        unobserve(): void {}
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('shows only the forward arrow while the pins overflow at the start', () => {
+      box(600, 300);
+      new DatabaseCardDrawer(createOptions({ schema: PINNED })).open(ROW);
+      observers.at(-1)?.fire();
+
+      expect(q('[data-blok-database-drawer-pins-forward]')?.hidden).toBe(false);
+      expect(q('[data-blok-database-drawer-pins-back]')?.hidden).toBe(true);
+      expect(q('[data-blok-database-drawer-pins-forward]')?.getAttribute('aria-label')).toBe('Show more pinned properties');
+      expect(observers.at(-1)?.observe).toHaveBeenCalledWith(q('[data-blok-database-drawer-pins]'));
+    });
+
+    it('hides both arrows when the pins fit', () => {
+      box(300, 300);
+      new DatabaseCardDrawer(createOptions({ schema: PINNED })).open(ROW);
+      observers.at(-1)?.fire();
+
+      expect(q('[data-blok-database-drawer-pins-forward]')?.hidden).toBe(true);
+      expect(q('[data-blok-database-drawer-pins-back]')?.hidden).toBe(true);
+    });
+
+    it('disconnects the pins observer on redraw, close and destroy', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ schema: PINNED }));
+
+      drawer.open(ROW);
+      const first = observers.at(-1);
+
+      drawer.refreshSchema(PINNED);
+      expect(first?.disconnect).toHaveBeenCalled();
+      const second = observers.at(-1);
+
+      expect(second).not.toBe(first);
+      drawer.close();
+      expect(second?.disconnect).toHaveBeenCalled();
+      drawer.open(ROW);
+      const third = observers.at(-1);
+
+      drawer.destroy();
+      expect(third?.disconnect).toHaveBeenCalled();
     });
   });
 });

@@ -1,0 +1,68 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "cl",
+        "type": "column_list",
+        "data": {},
+        "content": [
+          "c1",
+          "c2"
+        ]
+      },
+      {
+        "id": "c1",
+        "type": "column",
+        "data": {},
+        "parent": "cl",
+        "content": [
+          "l"
+        ]
+      },
+      {
+        "id": "l",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Left text"
+            }
+          ]
+        },
+        "parent": "c1"
+      },
+      {
+        "id": "c2",
+        "type": "column",
+        "data": {},
+        "parent": "cl",
+        "content": [
+          "r",
+          "img"
+        ]
+      },
+      {
+        "id": "r",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Right text"
+            }
+          ]
+        },
+        "parent": "c2"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "img",
+        "type": "image",
+        "data": {
+          "url": "https://example.com/a.png"
+        },
+        "parent": "c2"
+      }
+    ]
+  }
+}

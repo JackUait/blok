@@ -1,0 +1,84 @@
+{
+  "id": "custom-tool",
+  "parityExcluded": "The rating tool and its handler exist only in the browser (06 D6: custom handlers outside the browser are cut).",
+  "seed": {
+    "blocks": []
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "r",
+            "type": "rating",
+            "data": {
+              "value": 0
+            },
+            "position": "end"
+          }
+        },
+        {
+          "name": "rating.setValue",
+          "args": {
+            "id": "r",
+            "value": 4
+          }
+        }
+      ]
+    }
+  ],
+  "referenceFinal": {
+    "blocks": [
+      {
+        "id": "r",
+        "type": "rating",
+        "data": {
+          "value": 4
+        },
+        "lastEditedBy": "agent-test"
+      }
+    ]
+  },
+  "referenceLog": [
+    {
+      "batch": 0,
+      "index": 0,
+      "name": "block.insert",
+      "args": {},
+      "actorId": "agent-test"
+    },
+    {
+      "batch": 0,
+      "index": 1,
+      "name": "rating.setValue",
+      "args": {},
+      "actorId": "agent-test"
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "wrote data directly instead of the action",
+      "final": {
+        "blocks": [
+          {
+            "id": "r",
+            "type": "rating",
+            "data": {
+              "value": 4
+            }
+          }
+        ]
+      },
+      "log": [
+        {
+          "batch": 0,
+          "index": 0,
+          "name": "block.insert",
+          "args": {},
+          "actorId": "agent-test"
+        }
+      ]
+    }
+  ]
+}

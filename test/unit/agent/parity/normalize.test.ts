@@ -208,6 +208,126 @@ describe('normalizeForParity', () => {
     }, keepIds));
   });
 
+  it('preserves colliding payload strings while relabeling only structural references', () => {
+    const doc: OutputData = {
+      blocks: [
+        {
+          id: 'table-minted',
+          type: 'table',
+          data: { content: [[{ blocks: ['minted'], text: 'minted' }]] },
+          content: ['minted'],
+        },
+        {
+          id: 'minted',
+          type: 'minted',
+          parent: 'table-minted',
+          data: {
+            text: [{ text: 'minted' }],
+            url: 'minted',
+            id: 'minted',
+            parent: 'minted',
+            content: ['minted'],
+            blocks: ['minted'],
+          },
+          tunes: { label: 'minted', metadata: { id: 'minted' } },
+          createdBy: 'minted',
+          lastEditedBy: 'minted',
+        },
+      ],
+    };
+    const out = normalizeForParity(doc, new Set<string>());
+
+    expect(out.blocks[1]?.data.text).toEqual([{ text: 'minted' }]);
+    expect(out).toEqual({
+      blocks: [
+        {
+          id: 'b0',
+          type: 'table',
+          data: { content: [[{ blocks: ['b0.0'], text: 'minted' }]] },
+          content: ['b0.0'],
+        },
+        {
+          id: 'b0.0',
+          type: 'minted',
+          parent: 'b0',
+          data: {
+            text: [{ text: 'minted' }],
+            url: 'minted',
+            id: 'minted',
+            parent: 'minted',
+            content: ['minted'],
+            blocks: ['minted'],
+          },
+          tunes: { label: 'minted', metadata: { id: 'minted' } },
+          createdBy: 'minted',
+          lastEditedBy: 'minted',
+        },
+      ],
+    });
+  });
+
+  it('retains an orphan block whose parent is missing', () => {
+    const doc: OutputData = {
+      blocks: [
+        { id: 'root', type: 'paragraph', data: { text: [{ text: 'Root' }] } },
+        {
+          id: 'orphan', type: 'paragraph', parent: 'missing-parent',
+          data: { text: [{ text: 'Orphan' }] },
+        },
+      ],
+    };
+    const out = normalizeForParity(doc, new Set(['root', 'orphan']));
+
+    expect(out.blocks).toHaveLength(2);
+    expect(out).toEqual({
+      blocks: [
+        { id: 'root', type: 'paragraph', data: { text: [{ text: 'Root' }] } },
+        {
+          id: 'orphan', type: 'paragraph', parent: 'missing-parent',
+          data: { text: [{ text: 'Orphan' }] },
+        },
+      ],
+    });
+  });
+
+  it('retains an unlisted child when its parent also lists another child', () => {
+    const doc: OutputData = {
+      blocks: [
+        {
+          id: 'parent', type: 'toggle', content: ['listed'],
+          data: { text: [{ text: 'Parent' }] },
+        },
+        {
+          id: 'listed', type: 'paragraph', parent: 'parent',
+          data: { text: [{ text: 'Listed' }] },
+        },
+        {
+          id: 'unlisted', type: 'paragraph', parent: 'parent',
+          data: { text: [{ text: 'Extra block' }] },
+        },
+      ],
+    };
+    const out = normalizeForParity(doc, new Set(['parent', 'listed', 'unlisted']));
+
+    expect(out.blocks).toHaveLength(3);
+    expect(out).toEqual({
+      blocks: [
+        {
+          id: 'parent', type: 'toggle', content: ['listed'],
+          data: { text: [{ text: 'Parent' }] },
+        },
+        {
+          id: 'listed', type: 'paragraph', parent: 'parent',
+          data: { text: [{ text: 'Listed' }] },
+        },
+        {
+          id: 'unlisted', type: 'paragraph', parent: 'parent',
+          data: { text: [{ text: 'Extra block' }] },
+        },
+      ],
+    });
+  });
+
   it('sorts object keys recursively without changing array order or values', () => {
     expect(stableStringify({ b: 1, a: { d: 2, c: 3 } })).toBe('{"a":{"c":3,"d":2},"b":1}');
     expect(stableStringify({ z: [{ b: false, a: null }, 'second'], a: 'first' }))

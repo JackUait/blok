@@ -224,6 +224,104 @@
           "value": "📅"
         }
       }
+    },
+    {
+      "name": "drops load defaults the editor fills, keeps chosen values",
+      "keepIds": [
+        "q1",
+        "q2",
+        "c1",
+        "c2"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "q1",
+            "type": "quote",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ],
+              "size": "default"
+            }
+          },
+          {
+            "id": "q2",
+            "type": "quote",
+            "data": {
+              "text": [
+                {
+                  "text": "b"
+                }
+              ],
+              "size": "large"
+            }
+          },
+          {
+            "id": "c1",
+            "type": "callout",
+            "data": {
+              "emoji": "💡",
+              "textColor": null,
+              "backgroundColor": null
+            }
+          },
+          {
+            "id": "c2",
+            "type": "callout",
+            "data": {
+              "emoji": "💡",
+              "textColor": "red",
+              "backgroundColor": "blue"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "q1",
+            "type": "quote",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ]
+            }
+          },
+          {
+            "id": "q2",
+            "type": "quote",
+            "data": {
+              "text": [
+                {
+                  "text": "b"
+                }
+              ],
+              "size": "large"
+            }
+          },
+          {
+            "id": "c1",
+            "type": "callout",
+            "data": {
+              "emoji": "💡"
+            }
+          },
+          {
+            "id": "c2",
+            "type": "callout",
+            "data": {
+              "emoji": "💡",
+              "textColor": "red",
+              "backgroundColor": "blue"
+            }
+          }
+        ]
+      }
     }
   ]
 }

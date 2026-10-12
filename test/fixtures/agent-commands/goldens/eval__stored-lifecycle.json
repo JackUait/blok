@@ -1,0 +1,30 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Report body"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "end",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Thanks for reading."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

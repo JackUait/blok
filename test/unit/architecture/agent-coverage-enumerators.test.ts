@@ -1,3 +1,5 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import ts from 'typescript';
@@ -5,12 +7,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultBlockTools, defaultInlineTools } from '../../../src/tools';
 import {
+  actionUnionIds,
+  apiIds,
+  dragIds,
+  enumerateActionUnions,
   enumerateInsert,
   enumerateTunes,
   formatIds,
   insertIds,
+  keyIds,
+  scanMenus,
+  shortcutIds,
+  toolOf,
+  triggerFileIds,
   tuneIdsFromBlockSettings,
   tuneIdsFromToolsModule,
+  typingHandlerIds,
+  uiFileIds,
 } from './agent-coverage/enumerators';
 import { BLOCK_TOOL_CLASSES } from './agent-coverage/registry';
 import {
@@ -253,5 +266,152 @@ describe('agent coverage enumerators', () => {
       'src/components/modules/toolbar/blockSettings.ts',
       'src/components/modules/tools.ts',
     ]);
+  });
+});
+
+describe('menu enumerator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('maps a file to its tool directory', () => {
+    expect(toolOf('src/tools/table/table-row-col-popover.ts')).toBe('table');
+    expect(toolOf('src/tools/link/bookmark/index.ts')).toBe('bookmark');
+    expect(toolOf('src/tools/column-drop.ts')).toBe('column-drop');
+    expect(toolOf('src/shared/database/types.ts')).toBe('database');
+  });
+
+  it('finds named, templated, conditional, unnamed and spread items (mutation check)', () => {
+    const source = parseSource(`
+      const a = { name: 'image-caption', onActivate: () => {} };
+      const b = { name: \`image-alignment-\${x}\`, onActivate: () => {} };
+      const c = { name: type === 'row' ? 'table-clear-row' : 'table-clear-column', onActivate: () => {} };
+      const d = { title: 'unnamed', onActivate: () => {} };
+      const e = { ...button, onActivate: () => {} };
+      const f = { name: 'not-a-menu-item' };
+    `);
+    const scan = scanMenus(source, 'src/tools/image/index.ts');
+
+    expect(ids(scan.capabilities)).toEqual([
+      'menu:image/image-alignment-*',
+      'menu:image/image-caption',
+      'menu:image/table-clear-column',
+      'menu:image/table-clear-row',
+    ]);
+    expect(scan.unnamed).toEqual(['src/tools/image/index.ts:5']);
+  });
+
+  it('gives a non-static name a file-scoped wildcard id', () => {
+    const scan = scanMenus(parseSource(`const a = { name: id, onActivate: () => {} };`), 'src/tools/code/language-picker.ts');
+
+    expect(ids(scan.capabilities)).toEqual(['menu:code/*@src/tools/code/language-picker.ts']);
+  });
+});
+
+describe('action, shortcut, key, typing and drag enumerators', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('action-union: each `type` member of an exported *Action union (mutation check)', () => {
+    const source = parseSource(`
+      export type RowColAction = | { type: 'insert-row-above'; index: number } | { type: 'move-row'; from: number };
+      type PrivateAction = { type: 'nope' };
+      export type NotAnUnion = { type: 'nope' };
+    `);
+
+    expect(ids(actionUnionIds(source, 'src/tools/table/table-row-col-controls.ts'))).toEqual([
+      'action:table/insert-row-above',
+      'action:table/move-row',
+    ]);
+  });
+
+  it('action-union: also walks the database types shared with the server runtime', () => {
+    const found = enumerateActionUnions().filter((c) => c.id === 'action:database/sendSlack');
+
+    expect(found.map((c) => c.file)).toEqual(['src/shared/database/types.ts']);
+  });
+
+  it('shortcut: literal, constant and dynamic names (mutation check)', () => {
+    const source = parseSource(`
+      Shortcuts.add({ name: 'CMD+A', handler });
+      Shortcuts.add({ name: COLLAPSE_ALL, handler });
+      Shortcuts.add({ name: shortcut, handler });
+      Other.add({ name: 'CMD+B' });
+    `);
+
+    expect(ids(shortcutIds(source, 'src/x/y.ts'))).toEqual([
+      'shortcut:x/y.ts/<dynamic>',
+      'shortcut:x/y.ts/CMD+A',
+      'shortcut:x/y.ts/COLLAPSE_ALL',
+    ]);
+  });
+
+  it('key: case keyCodes.X labels and the slash check (mutation check)', () => {
+    const source = parseSource(`
+      switch (code) { case keyCodes.ENTER: break; case keyCodes.TAB: break; case 3: break; }
+      if (event.key === '/') {}
+    `);
+
+    expect(ids(keyIds(source, 'src/components/modules/blockEvents/index.ts'))).toEqual(['key:/', 'key:ENTER', 'key:TAB']);
+  });
+
+  it('typing: handle*Shortcut and handle*Markdown methods (mutation check)', () => {
+    const source = parseSource(`
+      class M { private handleListShortcut() {} private handleLinkMarkdown() {} private handleOther() {} }
+    `);
+
+    expect(ids(typingHandlerIds(source, 'src/m.ts'))).toEqual(['typing:handleLinkMarkdown', 'typing:handleListShortcut']);
+  });
+
+  it('drag: members of DropTarget.edge only (mutation check + near miss)', () => {
+    const source = parseSource(`
+      export interface DropTarget { edge: 'top' | 'bottom' | 'left'; depth: number }
+      export interface OtherTarget { edge: 'inside' | 'outside' }
+    `);
+
+    expect(ids(dragIds(source, 'src/d.ts'))).toEqual(['drag:bottom', 'drag:left', 'drag:top']);
+  });
+
+  it('typing: only *Trigger.ts composer files (mutation check + near miss)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'composers-'));
+
+    writeFileSync(join(dir, 'slashTrigger.ts'), '');
+    writeFileSync(join(dir, 'keyboardNavigation.ts'), '');
+
+    expect(ids(triggerFileIds(dir))).toEqual(['typing:slashTrigger']);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe('api and ui-file enumerators', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('api: methods and function properties of the Blocks interface only (mutation check)', () => {
+    const source = parseSource(`
+      export interface Blocks { insert(type: string): void; insert(type: string, x: number): void; render: (d: unknown) => Promise<void>; count: number }
+      export interface Other { nope(): void }
+    `);
+
+    expect(ids(apiIds(source, 'types/api/blocks.d.ts'))).toEqual(['api:blocks.insert', 'api:blocks.render']);
+  });
+
+  it('ui-file: a file with a click/pointerdown/mousedown/keydown listener (mutation check)', () => {
+    expect(ids(uiFileIds(parseSource(`el.addEventListener('pointerdown', fn);`), 'src/tools/a.ts'))).toEqual(['ui-file:src/tools/a.ts']);
+    expect(uiFileIds(parseSource(`el.addEventListener('focus', fn);`), 'src/tools/b.ts')).toEqual([]);
   });
 });

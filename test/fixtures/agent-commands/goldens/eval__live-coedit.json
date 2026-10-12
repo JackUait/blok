@@ -1,0 +1,55 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Meeting notes:"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "s1",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Agree on Friday"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "s2",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Send recap"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Action items follow."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

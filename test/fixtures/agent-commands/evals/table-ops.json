@@ -1,0 +1,245 @@
+{
+  "id": "table-ops",
+  "seed": {
+    "blocks": [
+      {
+        "id": "t",
+        "type": "table",
+        "data": {
+          "withHeadings": false,
+          "withHeadingColumn": false,
+          "content": [
+            [
+              {
+                "blocks": [
+                  "a1"
+                ]
+              },
+              {
+                "blocks": [
+                  "a2"
+                ]
+              },
+              {
+                "blocks": [
+                  "a3"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "b1"
+                ]
+              },
+              {
+                "blocks": [
+                  "b2"
+                ]
+              },
+              {
+                "blocks": [
+                  "b3"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "c1"
+                ]
+              },
+              {
+                "blocks": [
+                  "c2"
+                ]
+              },
+              {
+                "blocks": [
+                  "c3"
+                ]
+              }
+            ]
+          ]
+        },
+        "content": [
+          "a1",
+          "a2",
+          "a3",
+          "b1",
+          "b2",
+          "b3",
+          "c1",
+          "c2",
+          "c3"
+        ]
+      },
+      {
+        "id": "a1",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "Name"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "Owner"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a3",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "Notes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "b1",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "Spec"
+            }
+          ]
+        }
+      },
+      {
+        "id": "b2",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": []
+        }
+      },
+      {
+        "id": "b3",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "draft"
+            }
+          ]
+        }
+      },
+      {
+        "id": "c1",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "Build"
+            }
+          ]
+        }
+      },
+      {
+        "id": "c2",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "Ana"
+            }
+          ]
+        }
+      },
+      {
+        "id": "c3",
+        "type": "paragraph",
+        "parent": "t",
+        "data": {
+          "text": [
+            {
+              "text": "late"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.update",
+          "args": {
+            "id": "t",
+            "data": {
+              "withHeadings": true
+            }
+          }
+        },
+        {
+          "name": "table.mergeCells",
+          "args": {
+            "id": "t",
+            "range": {
+              "fromRow": 1,
+              "fromCol": 0,
+              "toRow": 1,
+              "toCol": 1
+            }
+          }
+        },
+        {
+          "name": "table.deleteColumns",
+          "args": {
+            "id": "t",
+            "at": 2,
+            "count": 1
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "rewrote the whole table data instead of using the actions",
+      "log": [
+        {
+          "batch": 0,
+          "index": 0,
+          "name": "block.update",
+          "args": {},
+          "actorId": "agent-test"
+        }
+      ],
+      "final": {
+        "blocks": [
+          {
+            "id": "t",
+            "type": "table",
+            "data": {
+              "withHeadings": true,
+              "withHeadingColumn": false,
+              "content": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

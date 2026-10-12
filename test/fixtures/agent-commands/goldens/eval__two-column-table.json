@@ -1,0 +1,335 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "cl",
+        "type": "column_list",
+        "data": {},
+        "content": [
+          "c1",
+          "c2"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "c1",
+        "type": "column",
+        "data": {},
+        "parent": "cl",
+        "content": [
+          "ha",
+          "b0.0.1"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "ha",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Plan A"
+            }
+          ],
+          "level": 3
+        },
+        "parent": "c1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1",
+        "type": "table",
+        "data": {
+          "withHeadings": false,
+          "withHeadingColumn": false,
+          "content": [
+            [
+              {
+                "blocks": [
+                  "b0.0.1.0"
+                ]
+              },
+              {
+                "blocks": [
+                  "b0.0.1.1"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "b0.0.1.2"
+                ]
+              },
+              {
+                "blocks": [
+                  "b0.0.1.3"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "b0.0.1.4"
+                ]
+              },
+              {
+                "blocks": [
+                  "b0.0.1.5"
+                ]
+              }
+            ]
+          ]
+        },
+        "parent": "c1",
+        "content": [
+          "b0.0.1.0",
+          "b0.0.1.1",
+          "b0.0.1.2",
+          "b0.0.1.3",
+          "b0.0.1.4",
+          "b0.0.1.5"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1.0",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Item"
+            }
+          ]
+        },
+        "parent": "b0.0.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1.1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Cost"
+            }
+          ]
+        },
+        "parent": "b0.0.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1.2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hosting"
+            }
+          ]
+        },
+        "parent": "b0.0.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1.3",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "$20"
+            }
+          ]
+        },
+        "parent": "b0.0.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1.4",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Support"
+            }
+          ]
+        },
+        "parent": "b0.0.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.0.1.5",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "$50"
+            }
+          ]
+        },
+        "parent": "b0.0.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "c2",
+        "type": "column",
+        "data": {},
+        "parent": "cl",
+        "content": [
+          "hb",
+          "b0.1.1"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "hb",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Plan B"
+            }
+          ],
+          "level": 3
+        },
+        "parent": "c2"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1",
+        "type": "table",
+        "data": {
+          "withHeadings": false,
+          "withHeadingColumn": false,
+          "content": [
+            [
+              {
+                "blocks": [
+                  "b0.1.1.0"
+                ]
+              },
+              {
+                "blocks": [
+                  "b0.1.1.1"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "b0.1.1.2"
+                ]
+              },
+              {
+                "blocks": [
+                  "b0.1.1.3"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "b0.1.1.4"
+                ]
+              },
+              {
+                "blocks": [
+                  "b0.1.1.5"
+                ]
+              }
+            ]
+          ]
+        },
+        "parent": "c2",
+        "content": [
+          "b0.1.1.0",
+          "b0.1.1.1",
+          "b0.1.1.2",
+          "b0.1.1.3",
+          "b0.1.1.4",
+          "b0.1.1.5"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1.0",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Item"
+            }
+          ]
+        },
+        "parent": "b0.1.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1.1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Cost"
+            }
+          ]
+        },
+        "parent": "b0.1.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1.2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hosting"
+            }
+          ]
+        },
+        "parent": "b0.1.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1.3",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "$35"
+            }
+          ]
+        },
+        "parent": "b0.1.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1.4",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Support"
+            }
+          ]
+        },
+        "parent": "b0.1.1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1.1.5",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "$0"
+            }
+          ]
+        },
+        "parent": "b0.1.1"
+      }
+    ]
+  }
+}

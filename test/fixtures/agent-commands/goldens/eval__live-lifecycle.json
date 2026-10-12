@@ -1,0 +1,31 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Live doc"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "w",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Wrap-up"
+            }
+          ],
+          "level": 2
+        }
+      }
+    ]
+  }
+}

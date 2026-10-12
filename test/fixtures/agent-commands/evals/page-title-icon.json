@@ -1,0 +1,71 @@
+{
+  "id": "page-title-icon",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Body"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "doc.setTitle",
+          "args": {
+            "title": "Q3 plan"
+          }
+        },
+        {
+          "name": "doc.setIcon",
+          "args": {
+            "icon": {
+              "type": "emoji",
+              "value": "📅"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "wrote the title as a heading block",
+      "final": {
+        "blocks": [
+          {
+            "id": "t",
+            "type": "header",
+            "data": {
+              "text": [
+                {
+                  "text": "📅 Q3 plan"
+                }
+              ],
+              "level": 1
+            }
+          },
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Body"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

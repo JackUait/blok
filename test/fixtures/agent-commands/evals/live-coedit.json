@@ -1,0 +1,292 @@
+{
+  "id": "live-coedit",
+  "docId": "live-coedit",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Meeting notes:"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Action items follow."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "s1",
+            "type": "list",
+            "data": {
+              "text": "Agree on Friday",
+              "style": "unordered"
+            },
+            "position": {
+              "after": "p1"
+            }
+          }
+        },
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "s2",
+            "type": "list",
+            "data": {
+              "text": "Send recap",
+              "style": "unordered"
+            },
+            "position": {
+              "after": "s1"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "referenceFinal": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Meeting notes: we agreed on Friday"
+            }
+          ]
+        },
+        "lastEditedBy": "human"
+      },
+      {
+        "id": "s1",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Agree on Friday"
+            }
+          ],
+          "style": "unordered"
+        },
+        "lastEditedBy": "agent-test"
+      },
+      {
+        "id": "s2",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Send recap"
+            }
+          ],
+          "style": "unordered"
+        },
+        "lastEditedBy": "agent-test"
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Action items follow."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "referenceResults": [
+    {
+      "ok": true,
+      "changed": {
+        "created": [
+          "s1",
+          "s2"
+        ],
+        "updated": [],
+        "moved": [],
+        "removed": []
+      },
+      "delivery": {
+        "durable": true,
+        "pending": false,
+        "serverSequence": "l:1",
+        "savedVersion": null
+      }
+    }
+  ],
+  "referenceObserved": {
+    "humanId": "human",
+    "humanTyped": {
+      "blockId": "p1",
+      "text": "we agreed on Friday"
+    },
+    "participants": [
+      {
+        "id": "human",
+        "name": "Ana"
+      },
+      {
+        "id": "agent-test",
+        "name": "Parity"
+      }
+    ],
+    "peerSawAgentCursorOn": [
+      "s1"
+    ],
+    "journalActors": [
+      "human",
+      "agent-test"
+    ],
+    "serverAckedSequences": [
+      "l:1"
+    ]
+  },
+  "knownBad": [
+    {
+      "why": "the human's typing was lost",
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Meeting notes:"
+                }
+              ]
+            },
+            "lastEditedBy": "human"
+          },
+          {
+            "id": "s1",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "Agree on Friday"
+                }
+              ],
+              "style": "unordered"
+            },
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "s2",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "Send recap"
+                }
+              ],
+              "style": "unordered"
+            },
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "p2",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Action items follow."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "why": "the human-only block carries the agent's id (06 C3)",
+      "results": [
+        {
+          "ok": true,
+          "changed": {
+            "created": [
+              "s1",
+              "s2"
+            ],
+            "updated": [],
+            "moved": [],
+            "removed": []
+          }
+        }
+      ],
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Meeting notes: we agreed on Friday"
+                }
+              ]
+            },
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "s1",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "Agree on Friday"
+                }
+              ],
+              "style": "unordered"
+            },
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "s2",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "Send recap"
+                }
+              ],
+              "style": "unordered"
+            },
+            "lastEditedBy": "agent-test"
+          },
+          {
+            "id": "p2",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Action items follow."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

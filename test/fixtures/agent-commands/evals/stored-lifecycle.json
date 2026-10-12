@@ -1,0 +1,67 @@
+{
+  "id": "stored-lifecycle",
+  "docId": "doc-x",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Report body"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "end",
+            "type": "paragraph",
+            "data": {
+              "text": "Thanks for reading."
+            },
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "referenceToolCalls": [
+    "blok_list_documents",
+    "blok_open",
+    "blok_execute",
+    "blok_close"
+  ],
+  "knownBad": [
+    {
+      "why": "never closed, so nothing was saved",
+      "toolCalls": [
+        "blok_list_documents",
+        "blok_open",
+        "blok_execute"
+      ],
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Report body"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

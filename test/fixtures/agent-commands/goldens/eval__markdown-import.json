@@ -1,0 +1,75 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "p0",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Weekly note"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b1",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Goals"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b2",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "ship v1"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b3",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "write docs"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b4",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Owner:",
+              "marks": {
+                "bold": true
+              }
+            },
+            {
+              "text": " Ana"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

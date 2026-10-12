@@ -1,0 +1,54 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "h1",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Budget 2026"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "h2",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Hiring"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "h3",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Marketing budget"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "The budget is tight."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "t",
+        "type": "table",
+        "data": {
+          "withHeadings": true,
+          "withHeadingColumn": false,
+          "content": [
+            [
+              {
+                "blocks": [
+                  "a1"
+                ]
+              },
+              {
+                "blocks": [
+                  "a2"
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "b1",
+                  "b2"
+                ],
+                "colspan": 2
+              },
+              {
+                "blocks": [],
+                "mergedInto": [
+                  1,
+                  0
+                ]
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "c1"
+                ]
+              },
+              {
+                "blocks": [
+                  "c2"
+                ]
+              }
+            ]
+          ]
+        },
+        "content": [
+          "a1",
+          "a2",
+          "b1",
+          "b2",
+          "c1",
+          "c2"
+        ]
+      },
+      {
+        "id": "a1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Name"
+            }
+          ]
+        },
+        "parent": "t"
+      },
+      {
+        "id": "a2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Owner"
+            }
+          ]
+        },
+        "parent": "t"
+      },
+      {
+        "id": "b1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Spec"
+            }
+          ]
+        },
+        "parent": "t"
+      },
+      {
+        "id": "b2",
+        "type": "paragraph",
+        "data": {
+          "text": []
+        },
+        "parent": "t"
+      },
+      {
+        "id": "c1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Build"
+            }
+          ]
+        },
+        "parent": "t"
+      },
+      {
+        "id": "c2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Ana"
+            }
+          ]
+        },
+        "parent": "t"
+      }
+    ]
+  }
+}

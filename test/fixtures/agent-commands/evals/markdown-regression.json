@@ -1,0 +1,133 @@
+{
+  "id": "markdown-regression",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Notes"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "h",
+            "type": "header",
+            "data": {
+              "text": "Plan",
+              "level": 2
+            },
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "i",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "We ship in three steps.",
+                  "marks": {
+                    "bold": true
+                  }
+                }
+              ]
+            },
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "l1",
+            "type": "list",
+            "data": {
+              "text": "Write the spec",
+              "style": "unordered"
+            },
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "l2",
+            "type": "list",
+            "data": {
+              "text": "Build it",
+              "style": "unordered"
+            },
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "l3",
+            "type": "list",
+            "data": {
+              "text": "Ship it",
+              "style": "unordered"
+            },
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "c",
+            "type": "code",
+            "data": {
+              "code": "npm run build",
+              "language": "bash"
+            },
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "Markdown written into one paragraph",
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Notes"
+                }
+              ]
+            }
+          },
+          {
+            "id": "x",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "## Plan\n**We ship in three steps.**\n- Write the spec\n- Build it\n- Ship it\n```\nnpm run build\n```"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

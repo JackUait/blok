@@ -1,0 +1,81 @@
+{
+  "id": "markdown-import",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p0",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Weekly note"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "## Goals\n- ship v1\n- write docs\n\n**Owner:** Ana"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "markdown.insert",
+          "args": {
+            "markdown": "## Goals\n- ship v1\n- write docs\n\n**Owner:** Ana",
+            "position": {
+              "after": "p1"
+            }
+          }
+        },
+        {
+          "name": "block.delete",
+          "args": {
+            "id": "p1"
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "left the raw Markdown in place",
+      "final": {
+        "blocks": [
+          {
+            "id": "p0",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Weekly note"
+                }
+              ]
+            }
+          },
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "## Goals\n- ship v1\n- write docs\n\n**Owner:** Ana"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

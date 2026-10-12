@@ -711,6 +711,767 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.addOption"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId",
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "color": {
+                        "type": "string",
+                        "enum": [
+                          "default",
+                          "gray",
+                          "brown",
+                          "orange",
+                          "yellow",
+                          "green",
+                          "blue",
+                          "purple",
+                          "pink",
+                          "red"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.addProperty"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "type"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "type": {
+                        "enum": [
+                          "text",
+                          "number",
+                          "select",
+                          "multiSelect",
+                          "date",
+                          "checkbox",
+                          "url",
+                          "richText",
+                          "status",
+                          "email",
+                          "phone",
+                          "person",
+                          "files",
+                          "createdTime",
+                          "lastEditedTime",
+                          "createdBy",
+                          "lastEditedBy",
+                          "uniqueId",
+                          "relation",
+                          "rollup",
+                          "formula",
+                          "button",
+                          "place",
+                          "verification"
+                        ]
+                      },
+                      "options": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "label"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "label": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "default",
+                                "gray",
+                                "brown",
+                                "orange",
+                                "yellow",
+                                "green",
+                                "blue",
+                                "purple",
+                                "pink",
+                                "red"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "before": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "after": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.addRow"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "values": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Values keyed by property id, in the shapes schema describes."
+                      },
+                      "group": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "before": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "after": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.addView"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "type"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "board",
+                          "table",
+                          "list",
+                          "gallery",
+                          "calendar",
+                          "timeline",
+                          "chart",
+                          "feed",
+                          "form",
+                          "map"
+                        ]
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "groupBy": {
+                        "type": "string",
+                        "description": "Property id to group by."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.create"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [],
+                    "additionalProperties": false,
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "view": {
+                        "enum": [
+                          "board",
+                          "list",
+                          "table"
+                        ],
+                        "description": "The first view. Default board, grouped by Status."
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Parent block id. Omit or null for the document root."
+                      },
+                      "position": {
+                        "description": "Where the new block goes among its siblings. Default: the end.",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.deleteOption"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId",
+                      "optionId",
+                      "rows"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "optionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "rows": {
+                        "enum": [
+                          "keep",
+                          "delete"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.deleteView"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.duplicateView"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.moveOption"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId",
+                      "optionId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "optionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "before": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "after": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "before"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "after"
+                        ]
+                      }
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.moveRow"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "group": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "before": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "after": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "before"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "after"
+                        ]
+                      }
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.moveView"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "before": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "after": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "before"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "after"
+                        ]
+                      }
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.renameOption"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId",
+                      "optionId",
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "optionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.renameView"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId",
+                      "name"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.setRowValues"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId",
+                      "values"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "values": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Values keyed by property id, in the shapes schema describes."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "doc.find"
                   },
                   "args": {
@@ -1019,6 +1780,401 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "image.addMarkup"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "items"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 500,
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "description": "A freehand stroke.",
+                              "required": [
+                                "type",
+                                "color",
+                                "points",
+                                "size"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pen",
+                                    "highlighter"
+                                  ]
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-f]{6}$"
+                                },
+                                "points": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "number"
+                                  },
+                                  "description": "Flat x, y, pressure triples. Pressure is 0..1."
+                                },
+                                "size": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 0.5,
+                                  "description": "Stroke width."
+                                },
+                                "cut": {
+                                  "type": "string",
+                                  "enum": [
+                                    "start",
+                                    "end",
+                                    "both"
+                                  ],
+                                  "description": "Ends the eraser cut. Omitted when none."
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "description": "A shape between two corners. Rect and ellipse fill the box they span; line and arrow join the points.",
+                              "required": [
+                                "type",
+                                "color",
+                                "x1",
+                                "y1",
+                                "x2",
+                                "y2",
+                                "size"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "rect",
+                                    "rounded-rect",
+                                    "ellipse",
+                                    "line",
+                                    "arrow",
+                                    "bubble",
+                                    "star",
+                                    "polygon",
+                                    "spotlight",
+                                    "magnifier"
+                                  ]
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-f]{6}$"
+                                },
+                                "x1": {
+                                  "type": "number"
+                                },
+                                "y1": {
+                                  "type": "number"
+                                },
+                                "x2": {
+                                  "type": "number"
+                                },
+                                "y2": {
+                                  "type": "number"
+                                },
+                                "size": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 0.5,
+                                  "description": "Stroke width."
+                                },
+                                "fill": {
+                                  "type": "boolean",
+                                  "description": "Rect and ellipse only: a translucent fill. Omitted for false."
+                                },
+                                "rotation": {
+                                  "type": "number",
+                                  "description": "Star and polygon only: clockwise degrees. Omitted for 0."
+                                },
+                                "tx": {
+                                  "type": "number",
+                                  "description": "Bubble only: where the tail points."
+                                },
+                                "ty": {
+                                  "type": "number"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "description": "A text label.",
+                              "required": [
+                                "type",
+                                "color",
+                                "x",
+                                "y",
+                                "text",
+                                "size"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "text"
+                                  ]
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-f]{6}$"
+                                },
+                                "x": {
+                                  "type": "number",
+                                  "description": "Centre of the text block."
+                                },
+                                "y": {
+                                  "type": "number"
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 2000,
+                                  "description": "Plain text; a newline breaks the line."
+                                },
+                                "size": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 0.5,
+                                  "description": "Font size."
+                                },
+                                "style": {
+                                  "type": "string",
+                                  "enum": [
+                                    "plain",
+                                    "outline",
+                                    "background"
+                                  ],
+                                  "description": "Omitted for \"plain\"."
+                                },
+                                "rotation": {
+                                  "type": "number",
+                                  "description": "Clockwise degrees about the centre. Omitted for 0."
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.crop"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rect"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rect": {
+                        "type": "object",
+                        "required": [
+                          "x",
+                          "y",
+                          "w",
+                          "h"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "x": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "y": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "w": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "h": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          }
+                        }
+                      },
+                      "shape": {
+                        "enum": [
+                          "rect",
+                          "circle",
+                          "ellipse"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.flip"
+                  },
+                  "args": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.removeMarkup"
+                  },
+                  "args": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "markupIds": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "all": {
+                        "const": true
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "markupIds"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "all"
+                        ]
+                      }
+                    ],
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.rotate"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "turns"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "turns": {
+                        "enum": [
+                          1,
+                          2,
+                          3
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "image.setSource"
                   },
                   "args": {
@@ -1032,6 +2188,79 @@
                       "url": {
                         "type": "string",
                         "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.straighten"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "degrees"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "degrees": {
+                        "type": "number",
+                        "minimum": -45,
+                        "maximum": 45
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.updateMarkup"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "markupId",
+                      "patch"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "markupId": {
+                        "type": "string"
+                      },
+                      "patch": {
+                        "type": "object",
+                        "description": "Fields to change, in the saved markup shape."
                       },
                       "id": {
                         "type": "string",

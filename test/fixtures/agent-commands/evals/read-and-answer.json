@@ -1,0 +1,145 @@
+{
+  "id": "read-and-answer",
+  "seed": {
+    "blocks": [
+      {
+        "id": "h1",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Budget 2026"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "h2",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Hiring"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "h3",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Marketing budget"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "The budget is tight."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "doc.find",
+          "args": {
+            "text": "budget",
+            "type": "header"
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "named the paragraph too",
+      "answer": "h1, h3 and p",
+      "final": {
+        "blocks": [
+          {
+            "id": "h1",
+            "type": "header",
+            "data": {
+              "text": [
+                {
+                  "text": "Budget 2026"
+                }
+              ],
+              "level": 2
+            }
+          },
+          {
+            "id": "h2",
+            "type": "header",
+            "data": {
+              "text": [
+                {
+                  "text": "Hiring"
+                }
+              ],
+              "level": 2
+            }
+          },
+          {
+            "id": "h3",
+            "type": "header",
+            "data": {
+              "text": [
+                {
+                  "text": "Marketing budget"
+                }
+              ],
+              "level": 2
+            }
+          },
+          {
+            "id": "p",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "The budget is tight."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "why": "edited a read-only question's document",
+      "answer": "h1 and h3",
+      "final": {
+        "blocks": [
+          {
+            "id": "h1",
+            "type": "header",
+            "data": {
+              "text": [
+                {
+                  "text": "Budget 2026 (checked)"
+                }
+              ],
+              "level": 2
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "referenceAnswer": "h1 and h3"
+}

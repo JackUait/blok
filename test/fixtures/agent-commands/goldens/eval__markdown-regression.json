@@ -1,0 +1,94 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Notes"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "h",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Plan"
+            }
+          ],
+          "level": 2
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "i",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "We ship in three steps.",
+              "marks": {
+                "bold": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "l1",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Write the spec"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "l2",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Build it"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "l3",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "Ship it"
+            }
+          ],
+          "style": "unordered"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "c",
+        "type": "code",
+        "data": {
+          "code": "npm run build",
+          "language": "bash"
+        }
+      }
+    ]
+  }
+}

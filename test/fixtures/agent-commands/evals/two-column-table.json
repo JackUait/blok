@@ -1,0 +1,119 @@
+{
+  "id": "two-column-table",
+  "seed": {
+    "blocks": []
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "cl",
+            "type": "column_list",
+            "data": {},
+            "position": "end",
+            "children": [
+              {
+                "id": "c1",
+                "type": "column",
+                "data": {},
+                "children": [
+                  {
+                    "id": "ha",
+                    "type": "header",
+                    "data": {
+                      "text": "Plan A",
+                      "level": 3
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "c2",
+                "type": "column",
+                "data": {},
+                "children": [
+                  {
+                    "id": "hb",
+                    "type": "header",
+                    "data": {
+                      "text": "Plan B",
+                      "level": 3
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "table.create",
+          "args": {
+            "parentId": "c1",
+            "position": "end",
+            "rows": 3,
+            "cols": 2,
+            "cells": [
+              [
+                "Item",
+                "Cost"
+              ],
+              [
+                "Hosting",
+                "$20"
+              ],
+              [
+                "Support",
+                "$50"
+              ]
+            ]
+          }
+        },
+        {
+          "name": "table.create",
+          "args": {
+            "parentId": "c2",
+            "position": "end",
+            "rows": 3,
+            "cols": 2,
+            "cells": [
+              [
+                "Item",
+                "Cost"
+              ],
+              [
+                "Hosting",
+                "$35"
+              ],
+              [
+                "Support",
+                "$0"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "a Markdown table in a paragraph",
+      "final": {
+        "blocks": [
+          {
+            "id": "x",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "| Item | Cost |\n|---|---|\n| Hosting | $20 |"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

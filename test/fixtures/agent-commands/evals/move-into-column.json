@@ -1,0 +1,148 @@
+{
+  "id": "move-into-column",
+  "seed": {
+    "blocks": [
+      {
+        "id": "cl",
+        "type": "column_list",
+        "data": {},
+        "content": [
+          "c1",
+          "c2"
+        ]
+      },
+      {
+        "id": "c1",
+        "type": "column",
+        "parent": "cl",
+        "data": {},
+        "content": [
+          "l"
+        ]
+      },
+      {
+        "id": "l",
+        "type": "paragraph",
+        "parent": "c1",
+        "data": {
+          "text": [
+            {
+              "text": "Left text"
+            }
+          ]
+        }
+      },
+      {
+        "id": "c2",
+        "type": "column",
+        "parent": "cl",
+        "data": {},
+        "content": [
+          "r"
+        ]
+      },
+      {
+        "id": "r",
+        "type": "paragraph",
+        "parent": "c2",
+        "data": {
+          "text": [
+            {
+              "text": "Right text"
+            }
+          ]
+        }
+      },
+      {
+        "id": "img",
+        "type": "image",
+        "data": {
+          "url": "https://example.com/a.png"
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.move",
+          "args": {
+            "id": "img",
+            "parentId": "c2",
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "deleted the image and inserted a copy",
+      "final": {
+        "blocks": [
+          {
+            "id": "cl",
+            "type": "column_list",
+            "data": {},
+            "content": [
+              "c1",
+              "c2"
+            ]
+          },
+          {
+            "id": "c1",
+            "type": "column",
+            "parent": "cl",
+            "data": {},
+            "content": [
+              "l"
+            ]
+          },
+          {
+            "id": "l",
+            "type": "paragraph",
+            "parent": "c1",
+            "data": {
+              "text": [
+                {
+                  "text": "Left text"
+                }
+              ]
+            }
+          },
+          {
+            "id": "c2",
+            "type": "column",
+            "parent": "cl",
+            "data": {},
+            "content": [
+              "r",
+              "img2"
+            ]
+          },
+          {
+            "id": "r",
+            "type": "paragraph",
+            "parent": "c2",
+            "data": {
+              "text": [
+                {
+                  "text": "Right text"
+                }
+              ]
+            }
+          },
+          {
+            "id": "img2",
+            "type": "image",
+            "parent": "c2",
+            "data": {
+              "url": "https://example.com/a.png"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

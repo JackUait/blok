@@ -10,7 +10,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('loads the fourteen core command cases from the real fixture directory', () => {
+it('loads the nineteen core command cases from the real fixture directory', () => {
   expect(loadParityCases().filter(fixture => fixture.name.startsWith('01-')).map(fixture => fixture.name)).toEqual([
     '01-convert-paragraph-to-header',
     '01-delete-everything',
@@ -18,10 +18,15 @@ it('loads the fourteen core command cases from the real fixture directory', () =
     '01-doc-title-icon-clear',
     '01-doc-title-icon-set',
     '01-duplicate-toggle',
+    '01-insert-callout-explicit-children',
     '01-insert-columns-default',
     '01-insert-leaf',
+    '01-insert-tabs-explicit-children',
+    '01-insert-toggle-explicit-children',
+    '01-insert-toggle-heading-explicit-children',
     '01-insert-tree',
     '01-move-into-toggle',
+    '01-move-out-of-column',
     '01-refs',
     '01-text-format-bold',
     '01-text-insert-delete-replace',

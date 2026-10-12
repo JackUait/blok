@@ -1,0 +1,216 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Blok.Server.Collab;
+using Blok.Server.Yjs;
+
+namespace Blok.Server.Tests.Agent;
+
+/// <summary>
+/// C# twin of test/unit/agent/parity/normalize.ts. Pinned by
+/// test/fixtures/agent-commands/normalizer-cases.json: change both together.
+/// </summary>
+internal static class AgentParityNormalizer
+{
+  /// <summary>Tool fields the editor fills on load and headless appliers do not (normalize.ts TOOL_MINTED).</summary>
+  private static readonly Dictionary<string, Dictionary<string, JsonNode?>> LoadDefaults = new(StringComparer.Ordinal)
+  {
+    ["quote"] = new(StringComparer.Ordinal) { ["size"] = JsonValue.Create("default") },
+    ["callout"] = new(StringComparer.Ordinal) { ["textColor"] = null, ["backgroundColor"] = null },
+  };
+
+  internal static JsonObject Normalize(JsonObject document, ISet<string> keepIds)
+  {
+    var blocks = document["blocks"]!.AsArray().Select(b => b!.AsObject()).ToList();
+    var byId = new Dictionary<string, int>(StringComparer.Ordinal);
+
+    for (var i = 0; i < blocks.Count; i++)
+    {
+      if (IdOf(blocks[i]) is { } id)
+      {
+        byId[id] = i;
+      }
+    }
+
+    var ordered = new List<(JsonObject Block, string Label)>();
+    var visited = new HashSet<int>();
+
+    void Walk(int index, string label)
+    {
+      if (!visited.Add(index))
+      {
+        return;
+      }
+
+      var block = blocks[index];
+      ordered.Add((block, label));
+
+      var listed = (block["content"] as JsonArray ?? [])
+          .Select(id => id is JsonValue v && v.TryGetValue<string>(out var text) && byId.TryGetValue(text, out var child) ? child : -1)
+          .Where(child => child >= 0)
+          .ToList();
+      var own = IdOf(block);
+      var children = listed.Count > 0
+          ? listed
+          : Enumerable.Range(0, blocks.Count).Where(i => own is not null && ParentOf(blocks[i]) == own).ToList();
+
+      for (var i = 0; i < children.Count; i++)
+      {
+        Walk(children[i], $"{label}.{i}");
+      }
+    }
+
+    var roots = Enumerable.Range(0, blocks.Count).Where(i => blocks[i]["parent"] is null).ToList();
+
+    for (var i = 0; i < roots.Count; i++)
+    {
+      Walk(roots[i], $"b{i}");
+    }
+
+    var nextRoot = roots.Count;
+
+    // Orphans (a missing parent) still count, after the rooted tree.
+    for (var i = 0; i < blocks.Count; i++)
+    {
+      if (!visited.Contains(i))
+      {
+        Walk(i, $"b{nextRoot}");
+        nextRoot++;
+      }
+    }
+
+    var names = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    foreach (var (block, label) in ordered)
+    {
+      if (IdOf(block) is { } id && !keepIds.Contains(id))
+      {
+        names[id] = label;
+      }
+    }
+
+    var output = new JsonArray();
+
+    foreach (var (block, _) in ordered)
+    {
+      output.Add(Clean(block, names));
+    }
+
+    var result = new JsonObject { ["blocks"] = output };
+
+    // Flat page fields, as OutputData saves them (01 D-1).
+    foreach (var key in new[] { "title", "icon" })
+    {
+      if (document.TryGetPropertyValue(key, out var value) && value is not null)
+      {
+        result[key] = value.DeepClone();
+      }
+    }
+
+    return result;
+  }
+
+  internal static string Stable(JsonNode? node)
+  {
+    return node switch
+    {
+      JsonObject obj => "{" + string.Join(",", obj.OrderBy(p => p.Key, StringComparer.Ordinal)
+          .Select(p => $"{JsonSerializer.Serialize(p.Key)}:{Stable(p.Value)}")) + "}",
+      JsonArray array => "[" + string.Join(",", array.Select(Stable)) + "]",
+      null => "null",
+      _ => node.ToJsonString(),
+    };
+  }
+
+  private static string? IdOf(JsonObject block) =>
+      block["id"] is JsonValue v && v.TryGetValue<string>(out var id) ? id : null;
+
+  private static string? ParentOf(JsonObject block) =>
+      block["parent"] is JsonValue v && v.TryGetValue<string>(out var id) ? id : null;
+
+  private static JsonObject Clean(JsonObject block, Dictionary<string, string> names)
+  {
+    var copy = block.DeepClone().AsObject();
+    var type = copy["type"]?.GetValue<string>();
+    string Rename(string id) => names.GetValueOrDefault(id, id);
+
+    copy.Remove("lastEditedAt");
+    copy.Remove("createdAt");
+
+    // Only structural references are renamed; payload strings stay as written.
+    if (IdOf(copy) is { } own)
+    {
+      copy["id"] = Rename(own);
+    }
+
+    if (ParentOf(copy) is { } parent)
+    {
+      copy["parent"] = Rename(parent);
+    }
+
+    if (copy["content"] is JsonArray content)
+    {
+      copy["content"] = new JsonArray(content
+          .Select(id => id is JsonValue v && v.TryGetValue<string>(out var text) ? JsonValue.Create(Rename(text)) : id?.DeepClone())
+          .ToArray());
+    }
+
+    if (copy["data"] is JsonObject data)
+    {
+      copy["data"] = CleanData(type, data, Rename);
+    }
+
+    return copy;
+  }
+
+  private static JsonObject CleanData(string? type, JsonObject data, Func<string, string> rename)
+  {
+    if (type is not null && LoadDefaults.TryGetValue(type, out var defaults))
+    {
+      foreach (var (key, value) in defaults)
+      {
+        if (data.TryGetPropertyValue(key, out var actual) && JsonNode.DeepEquals(actual, value))
+        {
+          data.Remove(key);
+        }
+      }
+    }
+
+    if (type == "table" && data["content"] is JsonArray rows)
+    {
+      foreach (var cell in rows.OfType<JsonArray>().SelectMany(r => r).OfType<JsonObject>())
+      {
+        // Random until the table ships ToolRuntime.normalize (06 C17).
+        cell.Remove("id");
+        cell.Remove("rowId");
+
+        if (cell["blocks"] is JsonArray cellBlocks)
+        {
+          cell["blocks"] = new JsonArray(cellBlocks
+              .Select(id => id is JsonValue v && v.TryGetValue<string>(out var text) ? JsonValue.Create(rename(text)) : id?.DeepClone())
+              .ToArray());
+        }
+      }
+    }
+
+    foreach (var key in data.Select(p => p.Key).ToList())
+    {
+      if (RichTextFields.BuiltIn.IsRich(type, key) && data[key] is JsonArray array)
+      {
+        data[key] = Canonical(array);
+      }
+    }
+
+    return data;
+  }
+
+  /// <summary>
+  /// Canonical segments for a rich field. HTML strings stay: the C# runners emit
+  /// segments, and HTML parsing is the TS canonicalizer's job (06 C16).
+  /// </summary>
+  private static JsonNode Canonical(JsonArray array)
+  {
+    return JsJson.Parse(array.ToJsonString()) is AnyArray segments && RichText.IsRichText(segments)
+        ? RichText.ToJson(RichText.Canonicalize(segments))
+        : array.DeepClone();
+  }
+}

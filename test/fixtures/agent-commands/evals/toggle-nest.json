@@ -1,0 +1,188 @@
+{
+  "id": "toggle-nest",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p0",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "FAQ section"
+            }
+          ]
+        }
+      },
+      {
+        "id": "q1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "How do I start?"
+            }
+          ]
+        }
+      },
+      {
+        "id": "q2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Where is the data?"
+            }
+          ]
+        }
+      },
+      {
+        "id": "q3",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Who can edit?"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p4",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Footer"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "tg",
+            "type": "toggle",
+            "data": {
+              "text": "FAQ"
+            },
+            "position": {
+              "after": "p0"
+            }
+          }
+        },
+        {
+          "name": "block.move",
+          "args": {
+            "id": "q1",
+            "parentId": "tg",
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.move",
+          "args": {
+            "id": "q2",
+            "parentId": "tg",
+            "position": "end"
+          }
+        },
+        {
+          "name": "block.move",
+          "args": {
+            "id": "q3",
+            "parentId": "tg",
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "copied the text into new blocks and deleted the originals",
+      "final": {
+        "blocks": [
+          {
+            "id": "p0",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "FAQ section"
+                }
+              ]
+            }
+          },
+          {
+            "id": "tg",
+            "type": "toggle",
+            "data": {
+              "text": [
+                {
+                  "text": "FAQ"
+                }
+              ]
+            },
+            "content": [
+              "n1",
+              "n2",
+              "n3"
+            ]
+          },
+          {
+            "id": "n1",
+            "type": "paragraph",
+            "parent": "tg",
+            "data": {
+              "text": [
+                {
+                  "text": "How do I start?"
+                }
+              ]
+            }
+          },
+          {
+            "id": "n2",
+            "type": "paragraph",
+            "parent": "tg",
+            "data": {
+              "text": [
+                {
+                  "text": "Where is the data?"
+                }
+              ]
+            }
+          },
+          {
+            "id": "n3",
+            "type": "paragraph",
+            "parent": "tg",
+            "data": {
+              "text": [
+                {
+                  "text": "Who can edit?"
+                }
+              ]
+            }
+          },
+          {
+            "id": "p4",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Footer"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

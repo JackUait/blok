@@ -1,0 +1,44 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "p1",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "call Ana"
+            }
+          ],
+          "style": "checklist"
+        }
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Notes from Monday"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "p3",
+        "type": "list",
+        "data": {
+          "text": [
+            {
+              "text": "send invoice"
+            }
+          ],
+          "style": "checklist"
+        }
+      }
+    ]
+  }
+}

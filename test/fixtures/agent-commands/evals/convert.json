@@ -1,0 +1,126 @@
+{
+  "id": "convert",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "TODO call Ana"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Notes from Monday"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p3",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "TODO send invoice"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.convert",
+          "args": {
+            "id": "p1",
+            "type": "list",
+            "data": {
+              "style": "checklist"
+            }
+          }
+        },
+        {
+          "name": "text.delete",
+          "args": {
+            "id": "p1",
+            "range": {
+              "find": "TODO "
+            }
+          }
+        },
+        {
+          "name": "block.convert",
+          "args": {
+            "id": "p3",
+            "type": "list",
+            "data": {
+              "style": "checklist"
+            }
+          }
+        },
+        {
+          "name": "text.delete",
+          "args": {
+            "id": "p3",
+            "range": {
+              "find": "TODO "
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "Markdown checkboxes typed as text",
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "- [ ] call Ana"
+                }
+              ]
+            }
+          },
+          {
+            "id": "p2",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Notes from Monday"
+                }
+              ]
+            }
+          },
+          {
+            "id": "p3",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "- [ ] send invoice"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

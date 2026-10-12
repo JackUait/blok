@@ -1,0 +1,85 @@
+{
+  "reviewed": false,
+  "document": {
+    "blocks": [
+      {
+        "id": "p0",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "FAQ section"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "tg",
+        "type": "toggle",
+        "data": {
+          "text": [
+            {
+              "text": "FAQ"
+            }
+          ]
+        },
+        "content": [
+          "q1",
+          "q2",
+          "q3"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "q1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "How do I start?"
+            }
+          ]
+        },
+        "parent": "tg"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "q2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Where is the data?"
+            }
+          ]
+        },
+        "parent": "tg"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "q3",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Who can edit?"
+            }
+          ]
+        },
+        "parent": "tg"
+      },
+      {
+        "id": "p4",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Footer"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

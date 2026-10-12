@@ -1,0 +1,92 @@
+{
+  "id": "format-range",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Intro"
+            }
+          ]
+        }
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "See the quarterly report for details."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "text.format",
+          "args": {
+            "id": "p2",
+            "range": {
+              "find": "quarterly"
+            },
+            "set": {
+              "bold": true
+            }
+          }
+        },
+        {
+          "name": "text.format",
+          "args": {
+            "id": "p2",
+            "range": {
+              "find": "report"
+            },
+            "set": {
+              "link": {
+                "href": "https://example.com"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "knownBad": [
+    {
+      "why": "Markdown marks typed as text",
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Intro"
+                }
+              ]
+            }
+          },
+          {
+            "id": "p2",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "See the **quarterly** [report](https://example.com) for details."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

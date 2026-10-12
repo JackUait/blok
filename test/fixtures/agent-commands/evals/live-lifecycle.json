@@ -1,0 +1,135 @@
+{
+  "id": "live-lifecycle",
+  "docId": "room-y",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Live doc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reference": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "w",
+            "type": "header",
+            "data": {
+              "text": "Wrap-up",
+              "level": 2
+            },
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "referenceToolCalls": [
+    "blok_open",
+    "blok_execute",
+    "blok_close"
+  ],
+  "referenceResults": [
+    {
+      "ok": true,
+      "changed": {
+        "created": [
+          "w"
+        ],
+        "updated": [],
+        "moved": [],
+        "removed": []
+      },
+      "delivery": {
+        "durable": true,
+        "pending": false,
+        "serverSequence": "l:1",
+        "savedVersion": null
+      }
+    }
+  ],
+  "referenceObserved": {
+    "participants": [
+      {
+        "id": "human",
+        "name": "Ana"
+      },
+      {
+        "id": "agent-test",
+        "name": "Parity"
+      }
+    ],
+    "participantsAfterClose": [
+      {
+        "id": "human",
+        "name": "Ana"
+      }
+    ],
+    "serverAckedSequences": [
+      "l:1"
+    ]
+  },
+  "knownBad": [
+    {
+      "why": "never left the room",
+      "toolCalls": [
+        "blok_open",
+        "blok_execute"
+      ],
+      "observed": {
+        "participants": [
+          {
+            "id": "agent-test",
+            "name": "Parity"
+          }
+        ],
+        "participantsAfterClose": [
+          {
+            "id": "agent-test",
+            "name": "Parity"
+          }
+        ],
+        "serverAckedSequences": [
+          "l:1"
+        ]
+      },
+      "final": {
+        "blocks": [
+          {
+            "id": "p1",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Live doc"
+                }
+              ]
+            }
+          },
+          {
+            "id": "w",
+            "type": "header",
+            "data": {
+              "text": [
+                {
+                  "text": "Wrap-up"
+                }
+              ],
+              "level": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

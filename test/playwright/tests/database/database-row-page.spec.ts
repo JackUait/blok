@@ -160,6 +160,32 @@ test.describe('page body as child blocks', () => {
     await expect(peek(page)).toHaveCount(0);
   });
 
+  test('Escape after a click on a button in the peek closes it, as from the title', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+    await peek(page).getByRole('button', { name: 'Properties' }).click();
+    await page.keyboard.press('Escape');
+
+    await expect(peek(page)).toHaveCount(0);
+    await expect(page.locator('[data-blok-id="db-1"]')).toHaveAttribute('data-blok-navigation-focused', 'true');
+  });
+
+  test('undo after a click on a button in the peek still undoes the title', async ({ page }) => {
+    const title = async (): Promise<unknown> => ((await saved(page)).find((b) => b.id === 'r1')?.data.properties as Record<string, unknown>)['p-title'];
+
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peekTitle(page).click();
+    await page.keyboard.press('End');
+    await page.keyboard.type('XYZ');
+    await expect.poll(title).toBe('AlphaXYZ');
+    await peek(page).getByRole('button', { name: 'Properties' }).click();
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect.poll(title).toBe('Alpha');
+  });
+
   test('the body stays in the side peek while it slides out', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');

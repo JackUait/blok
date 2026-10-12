@@ -1428,6 +1428,23 @@ describe('KeyboardController — mutation coverage', () => {
       expect(reachedTarget).toBe(true);
     });
 
+    it('leaves an Escape from a button in a block to the block and the tool', () => {
+      const harness = enabledHarness();
+      const holder = document.createElement('div');
+      const button = document.createElement('button');
+
+      holder.setAttribute('data-blok-element', '');
+      holder.appendChild(button);
+      harness.redactor.appendChild(holder);
+      harness.state.currentBlock = makeBlock('current');
+
+      const { event, reachedTarget } = harness.press(button, { key: 'Escape' });
+
+      expect(reachedTarget).toBe(true);
+      expect(event.defaultPrevented).toBe(false);
+      expect(harness.blok.BlockSelection.enableNavigationMode).not.toHaveBeenCalled();
+    });
+
     it('turns a cross-block text selection into a block selection', () => {
       const harness = enabledHarness();
 

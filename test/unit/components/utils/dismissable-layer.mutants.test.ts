@@ -63,6 +63,32 @@ describe('dismissable-layer mutants', () => {
     vi.restoreAllMocks();
   });
 
+  it('skips a layer whose element left the page, so the next Escape reaches the layer or editor below', () => {
+    const below = vi.fn();
+    const stale = vi.fn();
+    const staleElement = makeElement();
+
+    track(registerLayer({ element: makeElement(), onDismiss: below }));
+    track(registerLayer({ element: staleElement, onDismiss: stale }));
+    staleElement.remove();
+    pressEscape();
+
+    expect(stale).not.toHaveBeenCalled();
+    expect(below).toHaveBeenCalledWith('escape');
+  });
+
+  it('lets Escape through when the only layer left the page', () => {
+    const staleElement = makeElement();
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+
+    track(registerLayer({ element: staleElement, onDismiss: vi.fn() }));
+    staleElement.remove();
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(hasEscapeLayer()).toBe(false);
+  });
+
   it('ignores a pointerdown whose target is not a node', () => {
     const onDismiss = vi.fn();
 

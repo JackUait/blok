@@ -90,13 +90,31 @@ const stack: LayerEntry[] = [];
 const listeners = { installed: false };
 
 /**
+ * Drops layers whose element left the page. A tool that rerenders while its
+ * popover is open never unregisters, and a stale layer would swallow the next
+ * Escape. Defined before the handlers and `hasEscapeLayer`, which call it.
+ */
+const pruneDetached = (): void => {
+  const live = stack.filter((entry) => entry.element.isConnected);
+
+  stack.splice(0, stack.length, ...live);
+  if (stack.length === 0) {
+    removeListeners();
+  }
+};
+
+/**
  * Whether any registered layer participates in Escape dismissal. The popover
  * registry's capture-phase Escape backstop consults this to defer to the layer
  * stack, so one Escape press peels exactly one surface regardless of which
  * document listener was attached first.
  * @returns true when an escape-participating layer is registered
  */
-export const hasEscapeLayer = (): boolean => stack.some((entry) => entry.escape);
+export const hasEscapeLayer = (): boolean => {
+  pruneDetached();
+
+  return stack.some((entry) => entry.escape);
+};
 
 /**
  * Returns true when the event target sits inside the layer's element or anchor.
@@ -122,6 +140,7 @@ const handleKeyDown = (event: KeyboardEvent): void => {
   if (event.key !== 'Escape') {
     return;
   }
+  pruneDetached();
 
   for (const entry of [...stack].reverse()) {
     if (!entry.escape) {
@@ -156,6 +175,7 @@ const handlePointerDown = (event: PointerEvent): void => {
   if (!(target instanceof Node)) {
     return;
   }
+  pruneDetached();
 
   for (const entry of [...stack].reverse()) {
     if (isInsideLayer(entry, target)) {

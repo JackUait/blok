@@ -34,6 +34,7 @@ import { readMarkup } from './markup/model';
 import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { registerLayer } from '../../components/utils/dismissable-layer';
 import { inlineDelta, logicalArrow, type TextDirection } from '../../components/utils/direction';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 
@@ -1267,12 +1268,7 @@ function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
   wrapper.appendChild(popover);
   parent.appendChild(wrapper);
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && !popover.hidden) {
-      event.stopPropagation();
-      closePopover();
-    }
-  };
+  const layer: { unregister: (() => void) | null } = { unregister: null };
 
   const onOutside = (event: MouseEvent): void => {
     if (popover.hidden) return;
@@ -1290,7 +1286,9 @@ function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
     imageRoot()?.setAttribute('data-align-open', 'true');
     trigger.setAttribute('aria-expanded', 'true');
     tooltipHide();
-    document.addEventListener('keydown', onKeyDown);
+    // The layer stack takes Escape in capture, before the block holder's
+    // handler would also enter navigation mode on the same press.
+    layer.unregister = registerLayer({ element: popover, anchor: trigger, outside: false, onDismiss: closePopover });
     document.addEventListener('mousedown', onOutside);
   };
 
@@ -1300,7 +1298,8 @@ function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
     popover.removeAttribute('data-blok-popover-opened');
     imageRoot()?.removeAttribute('data-align-open');
     trigger.setAttribute('aria-expanded', 'false');
-    document.removeEventListener('keydown', onKeyDown);
+    layer.unregister?.();
+    layer.unregister = null;
     document.removeEventListener('mousedown', onOutside);
   }
 

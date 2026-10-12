@@ -102,6 +102,32 @@ test.describe('Embed link-card fallback and origin allowlist', () => {
     await expect(page.locator('[data-blok-testid="embed-link-card"]')).toHaveCount(0);
   });
 
+  test('one Escape closes the align popover and keeps focus on its trigger; the next enters navigation mode', async ({ page }) => {
+    await createBlok(page, storedGenericEmbed('https://dashboard.example.com/widget/42'), {
+      linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'] },
+    });
+
+    const iframe = page.locator('[data-blok-testid="embed-frame"]');
+    const wrapper = page.getByTestId('block-wrapper').filter({ has: iframe });
+    const trigger = wrapper.getByRole('button', { name: 'Alignment', exact: true });
+
+    await expect(iframe).toBeVisible();
+    await iframe.hover();
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(trigger).toBeFocused();
+
+    await page.keyboard.press('Escape');
+
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(wrapper).not.toHaveAttribute('data-blok-navigation-focused', 'true');
+    await expect(trigger).toBeFocused();
+
+    await page.keyboard.press('Escape');
+
+    await expect(wrapper).toHaveAttribute('data-blok-navigation-focused', 'true');
+  });
+
   test('the replace action swaps the card for the URL input without losing data until resolve', async ({ page }) => {
     await createBlok(page, storedGenericEmbed('https://dashboard.example.com/widget/42'));
 

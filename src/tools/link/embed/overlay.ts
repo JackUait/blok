@@ -6,6 +6,7 @@ import {
   IconLinkExternal,
   IconDotsHorizontal,
 } from '../../../components/icons';
+import { registerLayer } from '../../../components/utils/dismissable-layer';
 import { setSafeLinkHref } from '../registry';
 
 export type EmbedAlignment = 'left' | 'center' | 'right';
@@ -185,12 +186,7 @@ function appendDivider(parent: HTMLElement): void {
  * outside-click dismissal. Returns a `toggle(next?)` to drive it programmatically.
  */
 function bindPopover(trigger: HTMLElement, popover: HTMLElement): (next?: boolean) => void {
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && !popover.hidden) {
-      event.stopPropagation();
-      toggle(false);
-    }
-  };
+  const layer: { unregister: (() => void) | null } = { unregister: null };
 
   const onOutside = (event: MouseEvent): void => {
     if (popover.hidden) {
@@ -209,11 +205,14 @@ function bindPopover(trigger: HTMLElement, popover: HTMLElement): (next?: boolea
 
     popover.toggleAttribute('hidden', !open);
     trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    layer.unregister?.();
+    layer.unregister = null;
     if (open) {
-      document.addEventListener('keydown', onKeyDown);
+      // The layer stack takes Escape in capture, before the block holder's
+      // handler would also enter navigation mode on the same press.
+      layer.unregister = registerLayer({ element: popover, anchor: trigger, outside: false, onDismiss: () => toggle(false) });
       document.addEventListener('mousedown', onOutside);
     } else {
-      document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('mousedown', onOutside);
     }
   }

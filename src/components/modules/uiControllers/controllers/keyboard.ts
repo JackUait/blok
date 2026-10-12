@@ -941,8 +941,15 @@ export class KeyboardController extends Controller {
      */
     const isInsideRedactor = this.redactorElement && isTargetElement && this.redactorElement.contains(target);
     const hasCurrentBlock = this.Blok.BlockManager.currentBlock !== undefined;
+    /**
+     * A button in a block gets Escape the way a text field there does: the
+     * block's own handler enters navigation mode, and the event still reaches
+     * the tool. Stopping it here hid it from tools that close on Escape (the
+     * database page peek listens on document).
+     */
+    const isButtonInBlock = target instanceof HTMLButtonElement && target.closest(createSelector(DATA_ATTR.element)) !== null;
 
-    if (isInsideRedactor && hasCurrentBlock && !this.Blok.DragManager.isDragging) {
+    if (isInsideRedactor && hasCurrentBlock && !isButtonInBlock && !this.Blok.DragManager.isDragging) {
       event.preventDefault();
       /**
        * Stop propagation so the block holder's bubble keydown handler (blockEvents.keydown)

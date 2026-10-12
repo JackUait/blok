@@ -334,3 +334,30 @@ test('read-only mode hides overlay and resize handles', async ({ page }) => {
   await expect(imageBlock.locator('[data-role="image-overlay"]')).toHaveCount(0);
   await expect(imageBlock.locator('[data-role="resize-handle"]')).toHaveCount(0);
 });
+
+test('one Escape closes the align popover and keeps focus on its trigger; the next enters navigation mode', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', size: 'md', alignment: 'center' } },
+    ],
+  });
+
+  const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+  const wrapper = page.getByTestId('block-wrapper').filter({ has: page.getByRole('img', { name: 'pic' }) });
+  const trigger = imageBlock.getByRole('button', { name: 'Alignment', exact: true });
+
+  await imageBlock.getByRole('img').hover();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(trigger).toBeFocused();
+
+  await page.keyboard.press('Escape');
+
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(wrapper).not.toHaveAttribute('data-blok-navigation-focused', 'true');
+  await expect(trigger).toBeFocused();
+
+  await page.keyboard.press('Escape');
+
+  await expect(wrapper).toHaveAttribute('data-blok-navigation-focused', 'true');
+});

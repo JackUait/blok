@@ -273,6 +273,8 @@ test.describe('database view settings', () => {
     await active.click();
     await page.mouse.move(0, 0);
     await expect(active).toHaveAttribute('aria-checked', 'false');
+    // The hover fill fades out after the pointer leaves; wait for it to settle.
+    await expect.poll(async () => (await read()).rowFill).toBe(on.rowFill);
     const off = await read();
 
     expect(on.trackFill).not.toBe(off.trackFill);

@@ -9,6 +9,7 @@ import { logLabeled } from '../../utils/logger';
 import { readCaretPosition } from './caret-position';
 import { buildParticipants } from './participants';
 import {
+  capPresenceName,
   createPresence,
   hasDrawableIdentity,
   selectDrawableStates,
@@ -448,6 +449,25 @@ export class Collaboration extends Module {
   }
 
   /**
+   * A verified participant's display name, for "<agent> for <person>".
+   * @param userId - a verified actor id from the identities frame
+   */
+  private personNameFor(userId: string): string | null {
+    const states = this.Blok.YjsManager.getAwarenessStates();
+
+    for (const [clientId, actorId] of this.identities) {
+      const user: unknown = actorId === userId ? states.get(clientId)?.user : undefined;
+      const name = typeof user === 'object' && user !== null && 'name' in user ? capPresenceName(user.name) : '';
+
+      if (name !== '') {
+        return name;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * @param origin - the transaction origin an update arrived with
    */
   private isRemoteOrigin(origin: unknown): boolean {
@@ -754,11 +774,13 @@ export class Collaboration extends Module {
       resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
       resolveInputs: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.inputs ?? [],
       isHidden: () => this.Blok.ReadOnly.isControlsHidden,
-      translate: (key) => this.Blok.I18n.t(key),
+      translate: (key, vars) => this.Blok.I18n.t(key, vars),
       // The same test `publishUser` applies to this editor's own name, so
       // the reader occupies a silhouette here exactly when their peers give
       // them one.
       isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
+      resolvePersonName: (userId) => this.personNameFor(userId),
+      resolveAgentInput: (blockId, field) => this.Blok.AgentAPI.inputIndexFor(blockId, field),
     });
 
     /**
@@ -779,6 +801,12 @@ export class Collaboration extends Module {
     this.presenceEditsUnhook = this.Blok.YjsManager.onBlocksChanged((event) => {
       if (event.type === 'update' && event.origin === 'remote') {
         presenceRenderer.remoteEdit(event.blockId);
+      }
+
+      // Awareness and document frames travel separately, so an agentCursor
+      // or a caret can name a block before it syncs. Redraw when it lands.
+      if (event.type === 'add' && event.origin === 'remote') {
+        this.presence?.redraw();
       }
     });
 

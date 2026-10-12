@@ -74,6 +74,11 @@
         window.__blocksApi = blocks;
       }, [blocks]);
 
+      // The live instance from the adapter's own surface, for agent e2e.
+      React.useEffect(() => {
+        window.__blokEditor = editor;
+      }, [editor]);
+
       // Reactive read: the number of ROOT blocks, derived in render from the live
       // snapshot. It refreshes ONLY when useBlocks re-renders the component on a
       // 'block changed' emission — so an e2e can assert this updates after a bulk

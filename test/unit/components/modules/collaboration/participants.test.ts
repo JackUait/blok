@@ -311,3 +311,26 @@ describe('buildParticipants', () => {
     expect(participant.user.color).not.toBe('');
   });
 });
+
+describe('participants — agent rows (test 21)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const row = (fields: Record<string, unknown>): ReturnType<typeof buildParticipants>[number] =>
+    buildParticipants([state(7, { user: { name: 'Claude' }, ...fields })], null, new Map(), undefined, NOW)[0];
+
+  it('a valid agent field marks the row', () => {
+    expect(row({ agent: { via: 'mcp', onBehalfOf: 'u1', onBehalfOfName: 'Ann' } }).agent)
+      .toEqual({ via: 'mcp', onBehalfOf: 'u1', onBehalfOfName: 'Ann' });
+  });
+
+  it('a malformed agent field leaves a plain participant', () => {
+    expect(row({ agent: { via: 1, onBehalfOf: 'u1' } })).not.toHaveProperty('agent');
+    expect(row({})).not.toHaveProperty('agent');
+  });
+});

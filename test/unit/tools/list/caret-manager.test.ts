@@ -42,6 +42,15 @@ const createMockAPI = (): API => ({
   ui: {} as API["ui"],
   theme: {} as API["theme"],
   viewState: {} as API["viewState"],
+  agent: {
+    tools: () => Promise.resolve([]),
+    guidance: () => Promise.resolve(""),
+    begin: () => {
+      throw new Error("Agent turns are not used by this fixture.");
+    },
+    state: { status: "idle" },
+    subscribe: () => () => undefined,
+  },
   rectangleSelection: {} as API["rectangleSelection"],
   config: {},
 });
@@ -98,6 +107,7 @@ describe("caret-manager", () => {
   let mockBlock: BlockAPI;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.useFakeTimers();
 
     // Create mock block with holder element
@@ -117,6 +127,7 @@ describe("caret-manager", () => {
   afterEach(() => {
     vi.runAllTimers();
     vi.useRealTimers();
+    vi.restoreAllMocks();
     // Clean up DOM
     document.body.innerHTML = "";
   });

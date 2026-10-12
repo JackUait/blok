@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MAX_PEERS,
   PRESENCE_SCAN_LIMIT,
+  agentColorFor,
   presenceColorFor,
   type PresenceState,
 } from '../../../../../src/components/modules/collaboration/presence';
@@ -68,8 +69,10 @@ const makeHolder = (blockId: string): HTMLElement => {
 const setup = (
   options: {
     blockIds?: string[];
-    translate?: (key: string) => string;
+    translate?: (key: string, vars?: Record<string, string>) => string;
     isLocalAnonymous?: () => boolean;
+    resolvePersonName?: (userId: string) => string | null;
+    resolveAgentInput?: (blockId: string, field: string) => number | null;
   } = {}
 ): Harness => {
   const host = document.createElement('div');
@@ -98,6 +101,8 @@ const setup = (
     isHidden: () => hidden.value,
     translate: options.translate,
     isLocalAnonymous: options.isLocalAnonymous,
+    resolvePersonName: options.resolvePersonName,
+    resolveAgentInput: options.resolveAgentInput,
   });
 
   harnesses.push({ host, renderer });
@@ -761,5 +766,187 @@ describe('presence renderer', () => {
       expect(face(holder)).toBeNull();
       expect(holder.outerHTML).toBe(before);
     });
+  });
+});
+
+describe('presence — peers\' agentCursor (test 26)', () => {
+  const agentFor = (key: string, vars?: Record<string, string>): string =>
+    (key === 'presence.agentFor' ? `${vars?.agent} for ${vars?.person}` : key);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 10, top: 0, height: 18, right: 10, bottom: 18, width: 0, x: 10, y: 0, toJSON: () => ({}),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const humanWithAgent = (cursor: unknown): PresenceState =>
+    peer(7, { user: { name: 'Ann' }, caret: caretAt('block-1'), agentCursor: cursor });
+
+  const markerLabel = (holder: HTMLElement): string | null | undefined =>
+    holder.querySelector('[data-blok-agent-marker-label]')?.getAttribute('data-blok-agent-marker-label');
+
+  it('a block-level cursor draws a marker, and the human caret survives', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.renderer.render([humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2' })], 1);
+
+    expect(harness.holderOf('block-1').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
+    expect(markerLabel(harness.holderOf('block-2'))).toBe('Bot for Ann');
+  });
+
+  it('without a translator the marker carries the agent name alone', () => {
+    const harness = setup();
+
+    harness.renderer.render([humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2' })], 1);
+
+    expect(markerLabel(harness.holderOf('block-2'))).toBe('Bot');
+  });
+
+  it('paints the published colour, else the actor\'s palette colour', () => {
+    const harness = setup();
+
+    harness.renderer.render([humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2', color: 'nope' })], 1);
+
+    expect(harness.holderOf('block-2').querySelector<HTMLElement>('[data-blok-agent-marker-label]')?.style.getPropertyValue(PRESENCE_COLOR))
+      .toBe(agentColorFor('bot'));
+  });
+
+  it('a mapped cursor draws a second caret; both carets stay', () => {
+    const harness = setup({ translate: agentFor, resolveAgentInput: () => 0 });
+
+    harness.renderer.render([humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2', field: 'text', start: 1, end: 1 })], 1);
+
+    expect(harness.holderOf('block-1').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
+    expect(harness.holderOf('block-2').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
+  });
+
+  it('a bad offset falls back to a marker; a bad actorId draws nothing', () => {
+    const harness = setup({ translate: agentFor, resolveAgentInput: () => 0 });
+
+    harness.renderer.render([humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2', field: 'text', start: -1, end: 1 })], 1);
+    expect(harness.holderOf('block-2').querySelector('[data-blok-agent-marker]')).not.toBeNull();
+
+    harness.renderer.render([humanWithAgent({ actorId: '', name: 'Bot', blockId: 'block-2' })], 1);
+    expect(harness.host.querySelector('[data-blok-agent-marker]')).toBeNull();
+  });
+
+  it('this client\'s own agentCursor is not drawn', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.renderer.render([peer(1, { user: { name: 'Me' }, agentCursor: { actorId: 'bot', name: 'Bot', blockId: 'block-2' } })], 1);
+
+    expect(harness.host.querySelector('[data-blok-agent-marker]')).toBeNull();
+  });
+
+  it('hidden controls draw no agent', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.hidden.value = true;
+    harness.renderer.render([humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2' })], 1);
+
+    expect(harness.host.querySelector('[data-blok-agent-marker]')).toBeNull();
+  });
+
+  it('clear() removes agent layers too', () => {
+    const harness = setup({ translate: agentFor, resolveAgentInput: () => 0 });
+
+    harness.renderer.render([
+      humanWithAgent({ actorId: 'bot', name: 'Bot', blockId: 'block-2' }),
+      peer(8, { user: { name: 'Cy' }, agentCursor: { actorId: 'b2', name: 'B2', blockId: 'block-3', field: 'text', start: 1, end: 1 } }),
+    ], 1);
+    expect(harness.holderOf('block-3').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
+    harness.renderer.clear();
+
+    expect(harness.host.querySelector('[data-blok-agent-marker], [data-blok-presence-caret]')).toBeNull();
+  });
+});
+
+describe('presence — MCP agent participants (test 21)', () => {
+  const agentFor = (key: string, vars?: Record<string, string>): string =>
+    (key === 'presence.agentFor' ? `${vars?.agent} for ${vars?.person}` : key);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 10, top: 0, height: 18, right: 10, bottom: 18, width: 0, x: 10, y: 0, toJSON: () => ({}),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const mcpPeer = (agent: unknown): PresenceState =>
+    peer(9, { user: { name: 'Claude' }, caret: caretAt('block-1'), agent });
+
+  const caretLabel = (harness: Harness): string | null | undefined =>
+    harness.holderOf('block-1').querySelector('[data-blok-presence-caret-label]')?.getAttribute('data-blok-presence-caret-label');
+
+  it('labels the caret "<agent> for <onBehalfOfName>" and marks the face', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.renderer.render([mcpPeer({ via: 'mcp', onBehalfOf: 'u1', onBehalfOfName: 'Ann' })], 1);
+
+    expect(caretLabel(harness)).toBe('Claude for Ann');
+    expect(harness.host.querySelector('[data-blok-presence-face][data-blok-presence-agent]')).not.toBeNull();
+  });
+
+  it('falls back to the participant row by id, then to the agent name alone', () => {
+    const byRow = setup({ translate: agentFor, resolvePersonName: (id) => (id === 'u1' ? 'Bob' : null) });
+
+    byRow.renderer.render([mcpPeer({ via: 'mcp', onBehalfOf: 'u1' })], 1);
+    expect(caretLabel(byRow)).toBe('Claude for Bob');
+
+    const alone = setup({ translate: agentFor, resolvePersonName: () => null });
+
+    alone.renderer.render([mcpPeer({ via: 'mcp', onBehalfOf: 'u2' })], 1);
+    expect(caretLabel(alone)).toBe('Claude');
+    expect(alone.host.querySelector('[data-blok-presence-face][data-blok-presence-agent]')).not.toBeNull();
+  });
+
+  it('without a translator the label is the agent name alone', () => {
+    const harness = setup();
+
+    harness.renderer.render([mcpPeer({ via: 'mcp', onBehalfOf: 'u1', onBehalfOfName: 'Ann' })], 1);
+
+    expect(caretLabel(harness)).toBe('Claude');
+  });
+
+  it('the agent face shows the agent\'s own initials, not the "for <person>" part', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.renderer.render([mcpPeer({ via: 'mcp', onBehalfOf: 'u1', onBehalfOfName: 'Ann' })], 1);
+
+    const agentFace = harness.host.querySelector('[data-blok-presence-face][data-blok-presence-agent]');
+
+    expect(agentFace?.getAttribute(INITIALS_ATTR)).toBe('C');
+    expect(agentFace?.getAttribute('aria-label')).toBe('Claude for Ann');
+  });
+
+  it('a malformed agent field draws a plain participant', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.renderer.render([mcpPeer({ via: 5, onBehalfOf: 'u1' })], 1);
+
+    expect(harness.host.querySelector('[data-blok-presence-agent]')).toBeNull();
+    expect(caretLabel(harness)).toBe('Claude');
+  });
+
+  it('an MCP agent\'s own agentCursor keeps its composed name', () => {
+    const harness = setup({ translate: agentFor });
+
+    harness.renderer.render([peer(9, {
+      user: { name: 'Claude' },
+      agent: { via: 'mcp', onBehalfOf: 'u1', onBehalfOfName: 'Ann' },
+      agentCursor: { actorId: 'claude', name: 'Claude', blockId: 'block-2' },
+    })], 1);
+
+    expect(harness.holderOf('block-2').querySelector('[data-blok-agent-marker-label]')?.getAttribute('data-blok-agent-marker-label'))
+      .toBe('Claude for Ann');
   });
 });

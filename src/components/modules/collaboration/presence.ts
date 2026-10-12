@@ -77,6 +77,11 @@ export interface Presence {
   stop(): void;
   /** This editor's awareness client id, or null before the first publish. */
   readonly localClientId: number | null;
+  /**
+   * Redraw from the current awareness states, once per microtask burst. For
+   * a block that arrives after the awareness that names it.
+   */
+  redraw(): void;
 }
 
 /** Presence outbound window — decision 9's ~100ms. */
@@ -171,6 +176,30 @@ export const initialsOf = (name: string): string =>
  */
 export const presenceColorFor = (clientId: number): string =>
   PRESENCE_PALETTE[Math.abs(Math.trunc(clientId)) % PRESENCE_PALETTE.length];
+
+/** Longest display name drawn anywhere in presence. */
+export const MAX_PRESENCE_NAME_LENGTH = 32;
+
+/**
+ * Trim and cap a display name. Cut by code point: slicing an astral character
+ * in half leaves a lone surrogate. The UTF-16 pre-slice bounds what Array.from
+ * has to build, since a peer can publish megabytes.
+ * @param value - an untrusted name
+ */
+export const capPresenceName = (value: unknown): string => (typeof value !== 'string'
+  ? ''
+  : Array.from(value.trim().slice(0, 2 * MAX_PRESENCE_NAME_LENGTH)).slice(0, MAX_PRESENCE_NAME_LENGTH).join(''));
+
+/**
+ * A stable palette colour for an agent id, the same in every browser.
+ * FNV-1a, so every client hashes the id the same way.
+ * @param actorId - the agent's actor id
+ */
+export const agentColorFor = (actorId: string): string =>
+  presenceColorFor(Array.from(actorId).reduce(
+    (hash, char) => Math.imul(hash ^ (char.codePointAt(0) ?? 0), 0x01000193) >>> 0,
+    0x811c9dc5
+  ));
 
 /**
  * The most peers one pass will ever take. Counted in DRAWABLE peers, never in
@@ -292,6 +321,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
     unhookAwareness: null as (() => void) | null,
     unhookAwarenessUpdate: null as (() => void) | null,
     onCaretMove: null as (() => void) | null,
+    redrawQueued: false,
   };
 
   const publishBlockId = (): void => {
@@ -595,6 +625,21 @@ export const createPresence = (options: PresenceOptions): Presence => {
       // seconds, and a closed session must not leave a ghost outline for half a
       // minute.
       renderer?.clear();
+    },
+
+    redraw(): void {
+      if (!state.running || state.redrawQueued) {
+        return;
+      }
+
+      state.redrawQueued = true;
+      queueMicrotask(() => {
+        state.redrawQueued = false;
+
+        if (state.running) {
+          notify();
+        }
+      });
     },
   };
 };

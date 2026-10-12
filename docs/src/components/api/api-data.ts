@@ -3379,6 +3379,84 @@ rendered() {
     ],
   },
   {
+    id: "agent-api",
+    badge: "Agent",
+    title: "Agent API",
+    description:
+      "An assistant built into your app edits the open document through `editor.agent`. Blok gives you tool definitions for your model and runs each tool call. Your app owns the model, the API keys and the chat UI.\n\nThe user sees where the agent works. The agent never moves the user's caret, selection or scroll. One Cmd+Z undoes one uninterrupted run of agent work.",
+    methods: [
+      {
+        name: "agent.tools(options)",
+        returnType: "Promise<AgentAnthropicTool[] | AgentOpenAITool[]>",
+        description:
+          "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: `'envelope'` (default) or `'full'`. `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it.",
+        example: `const tools = await editor.agent.tools({ format: 'anthropic' });`,
+      },
+      {
+        name: "agent.guidance()",
+        returnType: "Promise<string>",
+        description:
+          "Text for your system prompt. It tells the model how to address blocks, how to add Markdown and how to recover from errors.",
+        example: `const system = await editor.agent.guidance();`,
+      },
+      {
+        name: "agent.begin(options)",
+        returnType: "AgentTurn",
+        description:
+          "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color`. Users see the name, and the id is saved as `lastEditedBy`.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` keeps the user's id in `lastEditedBy`.",
+        example: `const tools = await editor.agent.tools({ format: 'anthropic' });
+const system = await editor.agent.guidance();
+const turn = editor.agent.begin({ agent: { id: 'assistant', name: 'Assistant' } });
+
+stopButton.onclick = () => turn.stop();
+
+try {
+  // Your own model loop. For each tool_use block:
+  //   const result = await turn.call(block.name, block.input);
+  //   reply with { type: 'tool_result', tool_use_id: block.id,
+  //                content: result.content, is_error: result.isError }
+} finally {
+  turn.end();
+}`,
+      },
+      {
+        name: "turn.call(name, input)",
+        returnType: "Promise<AgentToolResult>",
+        description:
+          "Runs one tool call from your model and returns `{ content, isError }`. Send `content` back as the tool result. A model mistake comes back with `isError: true`, so the model can fix it.",
+        example: `const result = await turn.call(block.name, block.input);`,
+      },
+      {
+        name: "turn.end()",
+        returnType: "void",
+        description:
+          "Closes the turn when your model has finished. Calls made after it return a `CANCELLED` error.",
+        example: `turn.end();`,
+      },
+      {
+        name: "turn.stop()",
+        returnType: "void",
+        description:
+          "Closes the turn and cancels calls that have not started. Wire it to your Stop button. Work already applied stays, and the user can undo it.",
+        example: `stopButton.onclick = () => turn.stop();`,
+      },
+      {
+        name: "agent.state",
+        returnType: "AgentState",
+        description:
+          "`{ status: 'idle' }` or `{ status: 'working', turn }`. It stays the same object until it changes, so it works with `useSyncExternalStore`.",
+        example: `const state = useSyncExternalStore(editor.agent.subscribe, () => editor.agent.state);`,
+      },
+      {
+        name: "agent.subscribe(listener)",
+        returnType: "() => void",
+        description:
+          "Calls `listener` every time `state` changes. Returns a function that unsubscribes.",
+        example: `const unsubscribe = editor.agent.subscribe(() => render(editor.agent.state));`,
+      },
+    ],
+  },
+  {
     id: "tools-api",
     badge: "Tools",
     title: "Tools API",
@@ -3783,7 +3861,7 @@ interface OutputData {
         name: "equalsOutputData(a, b, options?)",
         returnType: "boolean",
         description:
-          "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
+          "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy` / `createdAt` / `createdBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
         example: `import { equalsOutputData } from '@bloklabs/core';
 
 const saved = await editor.save();
@@ -4092,6 +4170,8 @@ interface OutputBlockData {
   indent?: number;    // Nesting/indent level
   lastEditedAt?: number; // Timestamp (ms since epoch) of the last edit — omitted until the block is actually edited
   lastEditedBy?: string; // Id of the user who last edited this block (from user.id config)
+  createdAt?: number; // Timestamp (ms since epoch) the block was created, stamped once
+  createdBy?: string; // Id of the user who created this block (from user.id config)
 }
 
 // Example blocks:
@@ -4174,6 +4254,19 @@ const listItemBlock: OutputBlockData = {
         type: "string (optional)",
         default: "—",
         description: "Id of the user who last edited this block (from the user.id config)",
+      },
+      {
+        option: "createdAt",
+        type: "number (optional)",
+        default: "—",
+        description:
+          "Timestamp (ms since epoch) of when this block was created. The editor that creates the block stamps it once, and later edits never change it. Blocks created before this field existed have none, and loading a document never invents one. equalsOutputData ignores this field.",
+      },
+      {
+        option: "createdBy",
+        type: "string (optional)",
+        default: "—",
+        description: "Id of the user who created this block (from the user.id config)",
       },
     ],
   },

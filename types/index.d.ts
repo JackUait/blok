@@ -17,6 +17,7 @@ import { BlokSchema, InlineToolConstructable, InlineToolConstructorOptions, Tool
 import type { ToolRegistrySnapshot, ManifestOverrides, BlokToolManifest } from './tool-manifest';
 
 import {
+  Agent,
   Blocks,
   Caret,
   Events,
@@ -255,6 +256,16 @@ export {
   BlockPosition,
   InsertAtOptions,
   MoveToTarget,
+  Agent,
+  AgentTurn,
+  AgentToolsOptions,
+  AgentAnthropicTool,
+  AgentOpenAITool,
+  AgentToolName,
+  AgentIdentity,
+  AgentTurnOptions,
+  AgentToolResult,
+  AgentState,
 } from './api';
 export const BlockReplayed: 'block replayed';
 
@@ -316,6 +327,11 @@ export interface API {
   theme: Theme;
   /** This browser's personal block state, never saved in the document (see {@link ViewState}). */
   viewState: ViewState;
+  /**
+   * In-app agent turns, tool definitions and state (see {@link Agent}).
+   * Every editor has it; optional so hand-built API objects need not add it.
+   */
+  agent?: Agent;
   /** Runtime setter for the live callback config (see {@link Handlers}). */
   handlers: Handlers;
   /** Read-only view of selected editor configuration. */
@@ -823,7 +839,10 @@ export class Blok {
  * These namespaces exist only once `isReady` resolves; before that, type the
  * reference as {@link PendingBlok}.
  */
-export interface Blok extends Omit<API, 'i18n'> {}
+// `agent` is optional on API only so hand-built API objects need not add it; a live editor always has it.
+export interface Blok extends Omit<API, 'i18n' | 'agent'> {
+  agent: Agent;
+}
 
 export { Blok as EditorJS };
 export default Blok;

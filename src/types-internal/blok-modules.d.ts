@@ -1,4 +1,5 @@
 /** ./api */
+import { AgentAPI } from '../components/modules/api/agent';
 import { BlocksAPI } from '../components/modules/api/blocks';
 import { CaretAPI } from '../components/modules/api/caret';
 import { EventsAPI } from '../components/modules/api/events';
@@ -58,6 +59,7 @@ import { YjsManager } from '../components/modules/yjs';
 
 export interface BlokModules {
   // API Modules
+  AgentAPI: AgentAPI,
   BlocksAPI: BlocksAPI,
   CaretAPI: CaretAPI,
   HandlersAPI: HandlersAPI,

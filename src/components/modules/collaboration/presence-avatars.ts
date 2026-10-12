@@ -16,6 +16,10 @@ export interface AvatarIdentity {
    * this client's own value and never a peer's.
    */
   glyph?: string | null;
+  /** An agent, not a person: the face is drawn as a rounded square. */
+  isAgent?: boolean;
+  /** The name the initials come from, when the label says more ("Claude for Ann" → "C"). */
+  monogramName?: string;
 }
 
 /** What the avatar layer needs to know about a peer, after sanitization. */
@@ -48,6 +52,7 @@ export interface AvatarLayer {
 const GUTTER_ATTR = 'data-blok-presence-gutter';
 const FACE_ATTR = 'data-blok-presence-face';
 const OVERFLOW_ATTR = 'data-blok-presence-face-overflow';
+const AGENT_ATTR = 'data-blok-presence-agent';
 /**
  * The monogram (or the `+N`), painted by presence.css through `content:
  * attr()`. An attribute and NOT a text node, because the strip sits inside the
@@ -105,6 +110,10 @@ export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text'
   avatar.setAttribute(attr, '');
   avatar.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
 
+  if (peer.isAgent === true) {
+    avatar.setAttribute(AGENT_ATTR, '');
+  }
+
   // A peer who published no name wears a silhouette instead of a monogram:
   // initials of a name this client generated would be initials of nobody.
   if (glyph !== null) {
@@ -117,10 +126,12 @@ export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text'
   }
 
   if (peer.name !== '' && glyph === null) {
+    const initials = initialsOf(peer.monogramName ?? peer.name);
+
     if (monogram === 'attribute') {
-      avatar.setAttribute(INITIALS_ATTR, initialsOf(peer.name));
+      avatar.setAttribute(INITIALS_ATTR, initials);
     } else {
-      avatar.textContent = initialsOf(peer.name);
+      avatar.textContent = initials;
     }
   }
 
@@ -135,7 +146,7 @@ export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text'
 const stripSignature = (group: AvatarPeer[], maxFaces: number): string =>
   group
     .slice(0, maxFaces)
-    .map((peer) => `${peer.clientId}:${peer.color}:${peer.glyph ?? ''}:${peer.name}`)
+    .map((peer) => `${peer.clientId}:${peer.color}:${peer.glyph ?? ''}:${peer.isAgent === true ? 'agent' : ''}:${peer.monogramName ?? ''}:${peer.name}`)
     .concat(group.length > maxFaces ? [`+${group.length - maxFaces}`] : [])
     .join('\u0000');
 

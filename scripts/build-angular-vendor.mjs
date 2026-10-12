@@ -86,7 +86,7 @@ const NgCounter = createAngularBlock({
         [data]="data"
         [readOnly]="readOnly"
         [config]="config"
-        (ready)="onReady()"
+        (ready)="onReady($event)"
         (dataChange)="onData($event)"
       ></blok-editor>
     </div>
@@ -108,7 +108,10 @@ class AppComponent {
     { id: 'counter1', type: 'ng-counter', data: { count: 0 } },
   ] };
 
-  onReady() { this.status = 'ready'; }
+  onReady(editor) {
+    this.status = 'ready';
+    (globalThis as unknown as { __blokEditor?: unknown }).__blokEditor = editor;
+  }
   // (dataChange) fires the serialized content on every change batch (the real
   // core onSave -> adapter chain), proving the reactive serialize path E2E.
   onData(d) { this.output = JSON.stringify(d); }

@@ -311,6 +311,12 @@ const MODULE_COPY: Record<string, Copy> = {
       'Store per-browser block state, such as whether a toggle is open, outside the saved document.',
     h1: 'ViewState API: personal block state',
   },
+  'agent-api': {
+    title: 'Blok Agent API — An In-App Assistant That Edits the Document',
+    description:
+      'Give your model tool definitions through editor.agent and let it edit the open document, visibly, stoppably and with undo.',
+    h1: 'Agent API: an assistant that edits the open document',
+  },
   'dev-override-seam': {
     title: 'Blok Dev Override Seam — Threat Model & Opt-Out',
     description:

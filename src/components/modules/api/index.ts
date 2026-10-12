@@ -72,6 +72,7 @@ export class API extends Module {
       ui: this.Blok.UiAPI.methods,
       theme: this.Blok.ThemeAPI.methods,
       viewState: this.Blok.ViewStateAPI.methods,
+      agent: this.Blok.AgentAPI.methods,
       config: {
         get linkPaste() {
           return apiConfig.linkPaste;

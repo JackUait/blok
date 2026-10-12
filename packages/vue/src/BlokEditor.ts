@@ -116,6 +116,8 @@ export const BlokEditor = defineComponent({
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     /** The built-in page title and icon. */
     pageTitle: { type: [Boolean, Object] as PropType<BlokConfig['pageTitle']>, default: undefined },
+    /** Agent settings: hidden tools or actions, and per-tool guidance. */
+    agent: { type: Object as PropType<BlokConfig['agent']>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
     recreateKey: { type: null as unknown as PropType<unknown> },
   },

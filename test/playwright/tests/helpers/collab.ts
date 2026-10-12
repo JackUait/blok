@@ -39,9 +39,8 @@ import { blockTextAsHtml } from './saved-as-html';
  *   makes the asker upload what it holds locally. Adding it keeps all specs
  *   green, so it masks nothing today, but "the room asks a client for what it
  *   has" has no coverage here.
- * - The join-time `QueryAwareness` nudge (`CollabRoom.cs:394`).
  * - The identities frame (type 107).
- *   Presence and participants therefore cannot be tested on this harness
+ *   Participants (frame 107) therefore cannot be tested on this harness
  *   without extending it first.
  */
 
@@ -221,6 +220,10 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
           // before-control inbound buffer for a case production never has.
           this.deliver(controlFrame);
           this.onopen?.({});
+          // The room asks every OTHER member to re-announce when someone joins
+          // (CollabRoom.cs:453). A BroadcastChannel never echoes, so this reaches
+          // only the peers, like the server's except-joiner broadcast.
+          this.channel.postMessage(new Uint8Array([3]));
         }, 0);
       }
 

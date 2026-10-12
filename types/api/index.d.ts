@@ -27,3 +27,4 @@ export * from './title';
 export * from './placeholder';
 export * from './tokens';
 export * from './marks';
+export * from './agent';

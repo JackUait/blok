@@ -1,3 +1,4 @@
+import { AgentAPI } from './api/agent';
 import { BlocksAPI } from './api/blocks';
 import { CaretAPI } from './api/caret';
 import { EventsAPI } from './api/events';
@@ -57,6 +58,7 @@ import { YjsManager } from './yjs';
  */
 export const Modules = {
   // API Modules
+  AgentAPI,
   BlocksAPI,
   CaretAPI,
   EventsAPI,

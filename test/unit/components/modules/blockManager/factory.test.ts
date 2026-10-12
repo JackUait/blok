@@ -191,6 +191,15 @@ const createMockAPIMethods = (): APIInterface => ({
   },
   theme: {} as APIInterface['theme'],
   viewState: {} as APIInterface['viewState'],
+  agent: {
+    tools: () => Promise.resolve([]),
+    guidance: () => Promise.resolve(''),
+    begin: () => {
+      throw new Error('Agent turns are not used by this fixture.');
+    },
+    state: { status: 'idle' },
+    subscribe: () => () => undefined,
+  },
   rectangleSelection: {} as APIInterface['rectangleSelection'],
   config: {},
 });
@@ -342,12 +351,17 @@ describe('BlockFactory', () => {
   let bindBlockEventsFn: (block: Block) => void;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     constructedToolOptions.length = 0;
     dependencies = createMockDependencies();
     // Create a mock function compatible with the expected type
     const mockFn = vi.fn((_block: Block) => {});
     bindBlockEventsFn = mockFn;
     factory = new BlockFactory(dependencies, bindBlockEventsFn, vi.fn());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   /**

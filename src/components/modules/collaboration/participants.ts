@@ -2,6 +2,7 @@ import type { CollaborationParticipant } from '../../../../types/events/editor-e
 
 import { ANONYMOUS_LABEL_KEYS, assignAnonymousGlyphs } from './anonymous-identity';
 import { isPresenceColor, presenceColorFor, readActiveAt, type DrawableState } from './presence';
+import { readAgentField, type RemoteAgent } from './remote-agents';
 import { normalizeUserId } from '../userDirectory';
 
 /** Longest name drawn, matching what the renderer already caps at. */
@@ -19,6 +20,7 @@ interface Member {
   blockId: string | null;
   name: string;
   color: string;
+  agent: RemoteAgent | null;
 }
 
 /**
@@ -105,6 +107,7 @@ export const buildParticipants = (
       blockId: typeof entry.state.blockId === 'string' ? entry.state.blockId : null,
       name: readName(entry.state.user.name),
       color: isPresenceColor(entry.state.user.color) ? entry.state.user.color : presenceColorFor(entry.clientId),
+      agent: readAgentField(entry.state.agent),
     };
     const group = groups.get(key);
 
@@ -145,6 +148,7 @@ export const buildParticipants = (
         // wired no translator gets the silhouette and no phrase.
         label: glyph === null || translate === undefined ? null : translate(ANONYMOUS_LABEL_KEYS[glyph]),
       },
+      ...(identity.agent === null ? {} : { agent: identity.agent }),
     });
   }
 

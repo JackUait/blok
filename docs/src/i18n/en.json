@@ -93,6 +93,7 @@
       "ui": "UI",
       "listeners": "Listeners",
       "viewState": "ViewState",
+      "agent": "Agent",
       "tools": "Tools",
       "uploader": "Uploader",
       "devOverrideSeam": "Dev override seam",
@@ -1095,6 +1096,41 @@
         }
       }
     },
+    "agentApi": {
+      "title": "Agent API",
+      "badge": "Agent",
+      "description": "An assistant built into your app edits the open document through `editor.agent`. Blok gives you tool definitions for your model and runs each tool call. Your app owns the model, the API keys and the chat UI.\n\nThe user sees where the agent works. The agent never moves the user's caret, selection or scroll. One Cmd+Z undoes one uninterrupted run of agent work.",
+      "methods": {
+        "agent": {
+          "tools": {
+            "description": "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: `'envelope'` (default) or `'full'`. `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it."
+          },
+          "guidance": {
+            "description": "Text for your system prompt. It tells the model how to address blocks, how to add Markdown and how to recover from errors."
+          },
+          "begin": {
+            "description": "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color`. Users see the name, and the id is saved as `lastEditedBy`.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` keeps the user's id in `lastEditedBy`."
+          },
+          "state": {
+            "description": "`{ status: 'idle' }` or `{ status: 'working', turn }`. It stays the same object until it changes, so it works with `useSyncExternalStore`."
+          },
+          "subscribe": {
+            "description": "Calls `listener` every time `state` changes. Returns a function that unsubscribes."
+          }
+        },
+        "turn": {
+          "call": {
+            "description": "Runs one tool call from your model and returns `{ content, isError }`. Send `content` back as the tool result. A model mistake comes back with `isError: true`, so the model can fix it."
+          },
+          "end": {
+            "description": "Closes the turn when your model has finished. Calls made after it return a `CANCELLED` error."
+          },
+          "stop": {
+            "description": "Closes the turn and cancels calls that have not started. Wire it to your Stop button. Work already applied stays, and the user can undo it."
+          }
+        }
+      }
+    },
     "toolsApi": {
       "title": "Tools API",
       "badge": "Tools",
@@ -1150,7 +1186,7 @@
       "methods": {
         "equalsOutputData": {
           "note": "Use it to gate persistence or state updates on real changes. `time` and `version` differ on every save, so a naive deep-equal always reports a change.",
-          "description": "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept."
+          "description": "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy` / `createdAt` / `createdBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept."
         },
         "isEmptyOutputData": {
           "note": "Content-less visual blocks (for example a divider with `data: {}`) count as empty. Check `blocks.length` when mere block presence matters.",

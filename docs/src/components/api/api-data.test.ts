@@ -102,6 +102,7 @@ describe("API_SECTIONS", () => {
       "ui-api",
       "listeners-api",
       "view-state-api",
+      "agent-api",
       "tools-api",
       "uploader-api",
       "output-data",

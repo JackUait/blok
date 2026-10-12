@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
 
 import { API } from '../../../../../src/components/modules/api'
 import { EventsDispatcher } from '../../../../../src/components/utils/events'
@@ -67,6 +67,7 @@ const createBlokStub = (rectangleSelection: Record<string, unknown>): BlokModule
     UiAPI: emptyMethods,
     ThemeAPI: emptyMethods,
     ViewStateAPI: emptyMethods,
+    AgentAPI: emptyMethods,
     RectangleSelection: rectangleSelection,
   } as unknown as BlokModules
 }
@@ -87,6 +88,10 @@ const setupApi = (rectangleSelection = createRectangleSelectionStub()): { api: A
 describe('API.methods.rectangleSelection facade', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('exposes exactly the five publicly-typed methods', () => {

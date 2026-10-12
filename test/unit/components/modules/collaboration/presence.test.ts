@@ -1059,3 +1059,52 @@ describe('readActiveAt', () => {
     expect(readActiveAt(null, now)).toBeNull();
   });
 });
+
+describe('presence — redraw for late blocks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('redraw() re-renders the current states once per burst', async () => {
+    const states = new Map<number, Record<string, unknown>>([
+      [5, { user: { name: 'Ann' }, agentCursor: { actorId: 'bot', name: 'Bot', blockId: 'late' } }],
+    ]);
+    const { presence, renderer } = setupWith(states);
+
+    presence.start();
+    renderer.renders.splice(0);
+    presence.redraw();
+    presence.redraw();
+    presence.redraw();
+    await Promise.resolve();
+
+    expect(renderer.renders).toHaveLength(1);
+    expect(renderer.renders[0].states[0]).toMatchObject({ clientId: 5 });
+    presence.stop();
+  });
+
+  it('redraw() does nothing when presence is stopped', async () => {
+    const { presence, renderer } = setupWith(new Map([[5, { user: { name: 'Ann' } }]]));
+
+    presence.redraw();
+    await Promise.resolve();
+
+    expect(renderer.renders).toHaveLength(0);
+  });
+
+  it('a redraw queued before stop() does not render after it', async () => {
+    const { presence, renderer } = setupWith(new Map([[5, { user: { name: 'Ann' } }]]));
+
+    presence.start();
+    presence.redraw();
+    presence.stop();
+    renderer.renders.splice(0);
+    await Promise.resolve();
+
+    expect(renderer.renders).toHaveLength(0);
+  });
+});

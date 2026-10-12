@@ -47,7 +47,10 @@
         const titleLog = ref('');
         const pageTitle = withTitle ? { onChange: (title) => { titleLog.value = title; } } : undefined;
 
-        const onReady = () => { status.value = 'ready'; };
+        const onReady = () => {
+          status.value = 'ready';
+          window.__blokEditor = editorRef.value?.instance ?? null;
+        };
         const save = async () => {
           const result = await editorRef.value?.save();
           output.value = JSON.stringify(result, null, 2);

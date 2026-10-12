@@ -59,6 +59,15 @@ const apiMethodsStub: ToolApiMethods = {
   ui: {} as ToolApiMethods['ui'],
   theme: {} as ToolApiMethods['theme'],
   viewState: {} as ToolApiMethods['viewState'],
+  agent: {
+    tools: () => Promise.resolve([]),
+    guidance: () => Promise.resolve(''),
+    begin: () => {
+      throw new Error('Agent turns are not used by this fixture.');
+    },
+    state: { status: 'idle' },
+    subscribe: () => () => undefined,
+  },
   rectangleSelection: {} as ToolApiMethods['rectangleSelection'],
   config: {},
 };

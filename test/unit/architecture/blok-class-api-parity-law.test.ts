@@ -34,6 +34,7 @@ const ENTRY = join(REPO_ROOT, 'types', 'index.d.ts');
  */
 const WIDENED_MEMBERS = new Map<string, string>([
   [ 'i18n', 'editor gets EditorI18n (I18n + update()), tools only get I18n' ],
+  [ 'agent', 'optional on API so hand-built API objects may omit it; a live editor always has it' ],
 ]);
 
 const createProgram = (): ts.Program => ts.createProgram([ ENTRY ], {

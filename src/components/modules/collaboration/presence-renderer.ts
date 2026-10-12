@@ -1,3 +1,5 @@
+import { createAgentMarkerLayer, type AgentMarker } from './agent-marker-layer';
+import { placeAgent } from './agent-placement';
 import {
   ANONYMOUS_LABEL_KEYS,
   assignAnonymousGlyphs,
@@ -5,6 +7,7 @@ import {
 } from './anonymous-identity';
 import { readCaret, type CaretPosition } from './caret-position';
 import {
+  agentColorFor,
   isPresenceColor,
   presenceColorFor,
   selectDrawableStates,
@@ -12,7 +15,8 @@ import {
   type PresenceState,
 } from './presence';
 import { createAvatarLayer, type AvatarLayer } from './presence-avatars';
-import { createCaretLayer, type CaretLayer } from './presence-carets';
+import { createCaretLayer, type CaretLayer, type CaretPeer } from './presence-carets';
+import { readAgentCursor, readAgentField, type RemoteAgent } from './remote-agents';
 
 export interface PresenceRendererOptions {
   /**
@@ -38,7 +42,7 @@ export interface PresenceRendererOptions {
    * Localizes an anonymous peer's label. Omit and they still get a silhouette,
    * just no tooltip — a label in the wrong language would be worse than none.
    */
-  translate?: (key: string) => string;
+  translate?: (key: string, vars?: Record<string, string>) => string;
   /**
    * Whether the READER published a name of their own.
    *
@@ -48,6 +52,10 @@ export interface PresenceRendererOptions {
    * tabs, which is the one thing the scheme promises not to do.
    */
   isLocalAnonymous?: () => boolean;
+  /** The display name of the participant with this verified user id, or null. */
+  resolvePersonName?: (userId: string) => string | null;
+  /** Which input of a block edits a data field, for drawing peers' agents. Omit: block level only. */
+  resolveAgentInput?: (blockId: string, field: string) => number | null;
 }
 
 export interface PresenceRenderer {
@@ -87,6 +95,11 @@ interface DrawablePeer {
   blockId: string | null;
   /** Their silhouette, for a peer who published no name; null for a named one. */
   glyph: AnonymousGlyph | null;
+  /** Their gated `agent` field: an MCP agent, not a person. */
+  agent: RemoteAgent | null;
+  isAgent: boolean;
+  /** The agent's own name, for its face's initials. */
+  monogramName?: string;
 }
 
 /**
@@ -130,6 +143,8 @@ const readPeer = (entry: DrawableState): DrawablePeer => {
     caret,
     blockId: caret?.blockId ?? blockIdWithoutCaret(entry.state),
     glyph: null,
+    agent: readAgentField(entry.state.agent),
+    isAgent: false,
   };
 };
 
@@ -170,6 +185,28 @@ const nameTheNameless = (
 };
 
 /**
+ * Name an MCP agent "<agent> for <person>". The person comes from the field's
+ * own name, else the participant row with that verified id.
+ * @param peers - peers after the anonymous pass
+ * @param options - the label seam and the person lookup
+ */
+const labelAgents = (
+  peers: DrawablePeer[],
+  options: Pick<PresenceRendererOptions, 'translate' | 'resolvePersonName'>
+): DrawablePeer[] => peers.map((peer) => {
+  if (peer.agent === null) {
+    return peer;
+  }
+
+  const person = peer.agent.onBehalfOfName ?? options.resolvePersonName?.(peer.agent.onBehalfOf) ?? null;
+  const name = person === null || options.translate === undefined || peer.name === ''
+    ? peer.name
+    : options.translate('presence.agentFor', { agent: peer.name, person });
+
+  return { ...peer, name, isAgent: true, monogramName: peer.name };
+});
+
+/**
  * Renders remote presence the way Notion splits it two ways: a face parked in
  * the gutter beside each peer's block, and a caret line at their exact
  * position.
@@ -205,6 +242,67 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
     resolveInputs: options.resolveInputs,
   });
 
+  // Separate from `carets`: that layer is keyed by client id, and a person and
+  // their in-app agent share one, so one layer would let the agent's caret
+  // replace the person's.
+  const agentCarets: CaretLayer = createCaretLayer({
+    resolveHolder: options.resolveHolder,
+    resolveInputs: options.resolveInputs,
+    restAfterMs: options.restAfterMs,
+  });
+  const agentMarkers = createAgentMarkerLayer({ resolveHolder: options.resolveHolder });
+
+  /**
+   * The flag on a peer's agent. An MCP agent's cursor is the agent itself,
+   * already named "<agent> for <person>"; a person's in-app agent is named for them.
+   * @param owner - the peer that published the cursor
+   * @param agentName - the cursor's own, gated name
+   */
+  const agentLabel = (owner: DrawablePeer, agentName: string): string => {
+    if (owner.isAgent) {
+      return owner.name;
+    }
+
+    return options.translate === undefined || owner.name === ''
+      ? agentName
+      : options.translate('presence.agentFor', { agent: agentName, person: owner.name });
+  };
+
+  /**
+   * Draw each peer's `agentCursor`. `selected` and `peers` share indexes.
+   * @param selected - the states this pass draws
+   * @param peers - the same states, made safe
+   */
+  const drawAgents = (selected: DrawableState[], peers: DrawablePeer[]): void => {
+    const caretPeers: CaretPeer[] = [];
+    const markers: AgentMarker[] = [];
+
+    selected.forEach((entry, index) => {
+      const cursor = readAgentCursor(entry.state.agentCursor);
+      const owner = peers[index];
+
+      if (cursor === null || owner === undefined) {
+        return;
+      }
+
+      const name = agentLabel(owner, cursor.name);
+      const color = cursor.color ?? agentColorFor(cursor.actorId);
+      const placement = placeAgent(cursor, {
+        resolveInputs: options.resolveInputs,
+        inputIndexFor: options.resolveAgentInput ?? ((): null => null),
+      });
+
+      if (placement.kind === 'caret') {
+        caretPeers.push({ clientId: entry.clientId, name, color, caret: placement.caret });
+      } else {
+        markers.push({ key: entry.clientId, blockId: placement.blockId, name, color });
+      }
+    });
+
+    agentCarets.render(caretPeers);
+    agentMarkers.render(markers);
+  };
+
   const state = {
     reflow: null as ResizeObserver | null,
     fontsDone: null as (() => void) | null,
@@ -224,7 +322,10 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
       return;
     }
 
-    state.reflow = new ResizeObserver(() => carets.reposition());
+    state.reflow = new ResizeObserver(() => {
+      carets.reposition();
+      agentCarets.reposition();
+    });
     state.reflow.observe(host);
 
     // A web font swapping in moves every line sideways without changing the
@@ -240,7 +341,10 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
     const fonts: FontFaceSet | undefined = document.fonts;
 
     if (fonts !== undefined) {
-      state.fontsDone = (): void => carets.reposition();
+      state.fontsDone = (): void => {
+        carets.reposition();
+        agentCarets.reposition();
+      };
       fonts.addEventListener('loadingdone', state.fontsDone);
     }
   };
@@ -248,6 +352,8 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
   const clear = (): void => {
     carets.clear();
     avatars.clear();
+    agentCarets.clear();
+    agentMarkers.clear();
     state.reflow?.disconnect();
     state.reflow = null;
 
@@ -269,14 +375,12 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
       // counts only peers it would actually draw against the cap, so junk
       // planted ahead of a real collaborator cannot take their place beside
       // their block or their caret off it.
-      const peers = nameTheNameless(
-        selectDrawableStates(states, localClientId).map(readPeer),
-        localClientId,
-        options
-      );
+      const selected = selectDrawableStates(states, localClientId);
+      const peers = labelAgents(nameTheNameless(selected.map(readPeer), localClientId, options), options);
 
       avatars.render(peers);
       carets.render(peers);
+      drawAgents(selected, peers);
       watchReflow();
     },
 
@@ -286,6 +390,7 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
       }
 
       carets.reposition();
+      agentCarets.reposition();
     },
 
     // Not gated on `isHidden`: a chromeless editor has no carets drawn, so
@@ -293,6 +398,7 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
     // back could un-hide a caret carrying a baseline from before the rewrite.
     remoteEdit(blockId: string): void {
       carets.remoteEdit(blockId);
+      agentCarets.remoteEdit(blockId);
     },
 
     clear,

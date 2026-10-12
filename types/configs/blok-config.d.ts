@@ -8,6 +8,7 @@ import { BlockMutationEvent } from '../events/block';
 import type { BlockMigrations } from '../migrate';
 import type { UserInfo } from './user-info';
 import type { BlokUploader } from './uploader';
+import type { ManifestOverrides } from '../tool-manifest';
 import type { MediaConfig } from './media';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
@@ -1329,6 +1330,18 @@ export interface BlokMountOptions {
      * Truncated to 32 characters, like every other display name Blok prints.
      */
     name?: string;
+  };
+
+  /**
+   * Settings for the in-app agent surface, `editor.agent`.
+   */
+  agent?: {
+    /**
+     * Hide tools or tool actions from agents, or add guidance to one tool.
+     * Keyed by the tool's registry key. A hidden action is missing from
+     * `editor.agent.tools()`, and calling it returns `UNKNOWN_COMMAND`.
+     */
+    overrides?: ManifestOverrides;
   };
 
   /**

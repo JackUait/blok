@@ -39,6 +39,7 @@ export const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'ui-api': 'api.uiApi',
   'listeners-api': 'api.listenersApi',
   'view-state-api': 'api.viewStateApi',
+  'agent-api': 'api.agentApi',
   'tools-api': 'api.toolsApi',
   'uploader-api': 'api.uploaderApi',
   'output-data': 'api.outputData',

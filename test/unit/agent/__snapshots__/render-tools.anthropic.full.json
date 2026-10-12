@@ -1,0 +1,3170 @@
+[
+  {
+    "name": "blok_read",
+    "description": "Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "rootId": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "A block id, or \"$ref\" of a block an earlier command created."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A block id, or \"$ref\" of a block an earlier command created."
+          }
+        },
+        "detail": {
+          "enum": [
+            "outline",
+            "full"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "cursor": {
+          "type": "string"
+        },
+        "textLimit": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "blok_describe",
+    "description": "Look up what you can do. With no arguments it lists tools and commands. Pass { tool } or { command } to get the argument schema.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "blok_execute",
+    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. Call blok_describe for a command's arguments.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "audio.setCover"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "audio.setSource"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.convert"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "type": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "data": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.delete"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.duplicate"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "position": {
+                        "description": "'start' | 'end' | { before: id } | { after: id }",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "after": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.insert"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "data": {
+                        "type": "object"
+                      },
+                      "tunes": {
+                        "type": "object"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "children": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/block_insert__insertSpec"
+                        }
+                      },
+                      "parentId": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "A block id, or \"$ref\" of a block an earlier command created."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "position": {
+                        "description": "'start' | 'end' | { before: id } | { after: id }",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "after": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "demote": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.move"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "parentId": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "A block id, or \"$ref\" of a block an earlier command created."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "position": {
+                        "description": "'start' | 'end' | { before: id } | { after: id }",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "after": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "position"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.update"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "data": {
+                        "type": "object"
+                      },
+                      "tunes": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "column_list.addColumn"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "from": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "column_list.create"
+                  },
+                  "args": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 5
+                      },
+                      "from": {
+                        "type": "array",
+                        "minItems": 2,
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "widths": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Parent block id. Omit or null for the document root."
+                      },
+                      "position": {
+                        "description": "Where the new block goes among its siblings. Default: the end.",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "count"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "from"
+                        ]
+                      }
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "column_list.removeColumn"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "index"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "index": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "column_list.setWidths"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "ratios"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "ratios": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "doc.find"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "rootId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "doc.read"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "rootId": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "A block id, or \"$ref\" of a block an earlier command created."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "depth": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "A block id, or \"$ref\" of a block an earlier command created."
+                        }
+                      },
+                      "detail": {
+                        "enum": [
+                          "outline",
+                          "full"
+                        ]
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      },
+                      "cursor": {
+                        "type": "string"
+                      },
+                      "textLimit": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "doc.setIcon"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "icon": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "const": "emoji"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "const": "image"
+                              },
+                              "url": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "url"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "icon"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "doc.setTitle"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "embed.setUrl"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "file.setSource"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "history.redo"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "history.undo"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "image.setSource"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "markdown.export"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "rootId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "markdown.insert"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "markdown": {
+                        "type": "string"
+                      },
+                      "parentId": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "A block id, or \"$ref\" of a block an earlier command created."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "position": {
+                        "description": "'start' | 'end' | { before: id } | { after: id }",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "after": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "markdown"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "rating.setValue"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 5
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.clearCells"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "range"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "range": {
+                        "type": "object",
+                        "description": "Inclusive cell range, zero-based.",
+                        "required": [
+                          "fromRow",
+                          "fromCol",
+                          "toRow",
+                          "toCol"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "fromRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fromCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.create"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "rows",
+                      "cols"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "withHeadings": {
+                        "type": "boolean"
+                      },
+                      "withHeadingColumn": {
+                        "type": "boolean"
+                      },
+                      "cells": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "description": "Text of one cell.",
+                            "oneOf": [
+                              {
+                                "type": "array",
+                                "description": "Rich-text segments, in order. Preferred: this is the shape Blok saves.",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "required": [
+                                        "text"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "text": {
+                                          "type": "string",
+                                          "description": "Line breaks are \"\\n\"."
+                                        },
+                                        "marks": {
+                                          "type": "object",
+                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "properties": {
+                                            "bold": {
+                                              "const": true
+                                            },
+                                            "italic": {
+                                              "const": true
+                                            },
+                                            "underline": {
+                                              "const": true
+                                            },
+                                            "strikethrough": {
+                                              "const": true
+                                            },
+                                            "code": {
+                                              "const": true
+                                            },
+                                            "sup": {
+                                              "const": true
+                                            },
+                                            "sub": {
+                                              "const": true
+                                            },
+                                            "highlight": {
+                                              "const": true,
+                                              "description": "A highlight with no colour of its own."
+                                            },
+                                            "color": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "background": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "link": {
+                                              "type": "object",
+                                              "required": [
+                                                "href"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "href": {
+                                                  "type": "string"
+                                                },
+                                                "target": {
+                                                  "type": "string"
+                                                },
+                                                "rel": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "patternProperties": {
+                                            "^tag:": {
+                                              "type": "object",
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "required": [
+                                        "embed"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "embed": {
+                                          "oneOf": [
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "equation"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "equation": {
+                                                  "type": "object",
+                                                  "required": [
+                                                    "expression"
+                                                  ],
+                                                  "properties": {
+                                                    "expression": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "page"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "page": {
+                                                  "type": "object",
+                                                  "required": [
+                                                    "id"
+                                                  ],
+                                                  "properties": {
+                                                    "id": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "html"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "html": {
+                                                  "type": "string",
+                                                  "description": "Inline markup the segment model has no slot for, kept verbatim."
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        "marks": {
+                                          "type": "object",
+                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "properties": {
+                                            "bold": {
+                                              "const": true
+                                            },
+                                            "italic": {
+                                              "const": true
+                                            },
+                                            "underline": {
+                                              "const": true
+                                            },
+                                            "strikethrough": {
+                                              "const": true
+                                            },
+                                            "code": {
+                                              "const": true
+                                            },
+                                            "sup": {
+                                              "const": true
+                                            },
+                                            "sub": {
+                                              "const": true
+                                            },
+                                            "highlight": {
+                                              "const": true,
+                                              "description": "A highlight with no colour of its own."
+                                            },
+                                            "color": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "background": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "link": {
+                                              "type": "object",
+                                              "required": [
+                                                "href"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "href": {
+                                                  "type": "string"
+                                                },
+                                                "target": {
+                                                  "type": "string"
+                                                },
+                                                "rel": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "patternProperties": {
+                                            "^tag:": {
+                                              "type": "object",
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "string",
+                                "description": "Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input."
+                              }
+                            ]
+                          }
+                        },
+                        "description": "Optional starting text, row by row."
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Parent block id. Omit or null for the document root."
+                      },
+                      "position": {
+                        "description": "Where the new block goes among its siblings. Default: the end.",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.deleteColumns"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.deleteRows"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.duplicateColumns"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.duplicateRows"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.fillCells"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "range",
+                      "direction"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "range": {
+                        "type": "object",
+                        "description": "Inclusive cell range, zero-based.",
+                        "required": [
+                          "fromRow",
+                          "fromCol",
+                          "toRow",
+                          "toCol"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "fromRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fromCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      },
+                      "direction": {
+                        "enum": [
+                          "right",
+                          "down"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.insertColumns"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      },
+                      "cells": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "description": "Text of one cell.",
+                            "oneOf": [
+                              {
+                                "type": "array",
+                                "description": "Rich-text segments, in order. Preferred: this is the shape Blok saves.",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "required": [
+                                        "text"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "text": {
+                                          "type": "string",
+                                          "description": "Line breaks are \"\\n\"."
+                                        },
+                                        "marks": {
+                                          "type": "object",
+                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "properties": {
+                                            "bold": {
+                                              "const": true
+                                            },
+                                            "italic": {
+                                              "const": true
+                                            },
+                                            "underline": {
+                                              "const": true
+                                            },
+                                            "strikethrough": {
+                                              "const": true
+                                            },
+                                            "code": {
+                                              "const": true
+                                            },
+                                            "sup": {
+                                              "const": true
+                                            },
+                                            "sub": {
+                                              "const": true
+                                            },
+                                            "highlight": {
+                                              "const": true,
+                                              "description": "A highlight with no colour of its own."
+                                            },
+                                            "color": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "background": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "link": {
+                                              "type": "object",
+                                              "required": [
+                                                "href"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "href": {
+                                                  "type": "string"
+                                                },
+                                                "target": {
+                                                  "type": "string"
+                                                },
+                                                "rel": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "patternProperties": {
+                                            "^tag:": {
+                                              "type": "object",
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "required": [
+                                        "embed"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "embed": {
+                                          "oneOf": [
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "equation"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "equation": {
+                                                  "type": "object",
+                                                  "required": [
+                                                    "expression"
+                                                  ],
+                                                  "properties": {
+                                                    "expression": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "page"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "page": {
+                                                  "type": "object",
+                                                  "required": [
+                                                    "id"
+                                                  ],
+                                                  "properties": {
+                                                    "id": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "html"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "html": {
+                                                  "type": "string",
+                                                  "description": "Inline markup the segment model has no slot for, kept verbatim."
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        "marks": {
+                                          "type": "object",
+                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "properties": {
+                                            "bold": {
+                                              "const": true
+                                            },
+                                            "italic": {
+                                              "const": true
+                                            },
+                                            "underline": {
+                                              "const": true
+                                            },
+                                            "strikethrough": {
+                                              "const": true
+                                            },
+                                            "code": {
+                                              "const": true
+                                            },
+                                            "sup": {
+                                              "const": true
+                                            },
+                                            "sub": {
+                                              "const": true
+                                            },
+                                            "highlight": {
+                                              "const": true,
+                                              "description": "A highlight with no colour of its own."
+                                            },
+                                            "color": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "background": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "link": {
+                                              "type": "object",
+                                              "required": [
+                                                "href"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "href": {
+                                                  "type": "string"
+                                                },
+                                                "target": {
+                                                  "type": "string"
+                                                },
+                                                "rel": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "patternProperties": {
+                                            "^tag:": {
+                                              "type": "object",
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "string",
+                                "description": "Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input."
+                              }
+                            ]
+                          }
+                        },
+                        "description": "Optional text for the new columns, column by column."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.insertRows"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "at"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      },
+                      "cells": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "description": "Text of one cell.",
+                            "oneOf": [
+                              {
+                                "type": "array",
+                                "description": "Rich-text segments, in order. Preferred: this is the shape Blok saves.",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "required": [
+                                        "text"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "text": {
+                                          "type": "string",
+                                          "description": "Line breaks are \"\\n\"."
+                                        },
+                                        "marks": {
+                                          "type": "object",
+                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "properties": {
+                                            "bold": {
+                                              "const": true
+                                            },
+                                            "italic": {
+                                              "const": true
+                                            },
+                                            "underline": {
+                                              "const": true
+                                            },
+                                            "strikethrough": {
+                                              "const": true
+                                            },
+                                            "code": {
+                                              "const": true
+                                            },
+                                            "sup": {
+                                              "const": true
+                                            },
+                                            "sub": {
+                                              "const": true
+                                            },
+                                            "highlight": {
+                                              "const": true,
+                                              "description": "A highlight with no colour of its own."
+                                            },
+                                            "color": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "background": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "link": {
+                                              "type": "object",
+                                              "required": [
+                                                "href"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "href": {
+                                                  "type": "string"
+                                                },
+                                                "target": {
+                                                  "type": "string"
+                                                },
+                                                "rel": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "patternProperties": {
+                                            "^tag:": {
+                                              "type": "object",
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "required": [
+                                        "embed"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "embed": {
+                                          "oneOf": [
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "equation"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "equation": {
+                                                  "type": "object",
+                                                  "required": [
+                                                    "expression"
+                                                  ],
+                                                  "properties": {
+                                                    "expression": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "page"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "page": {
+                                                  "type": "object",
+                                                  "required": [
+                                                    "id"
+                                                  ],
+                                                  "properties": {
+                                                    "id": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "required": [
+                                                "html"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "html": {
+                                                  "type": "string",
+                                                  "description": "Inline markup the segment model has no slot for, kept verbatim."
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        "marks": {
+                                          "type": "object",
+                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "properties": {
+                                            "bold": {
+                                              "const": true
+                                            },
+                                            "italic": {
+                                              "const": true
+                                            },
+                                            "underline": {
+                                              "const": true
+                                            },
+                                            "strikethrough": {
+                                              "const": true
+                                            },
+                                            "code": {
+                                              "const": true
+                                            },
+                                            "sup": {
+                                              "const": true
+                                            },
+                                            "sub": {
+                                              "const": true
+                                            },
+                                            "highlight": {
+                                              "const": true,
+                                              "description": "A highlight with no colour of its own."
+                                            },
+                                            "color": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "background": {
+                                              "type": "string",
+                                              "description": "Preset name (\"red\") or any CSS colour."
+                                            },
+                                            "link": {
+                                              "type": "object",
+                                              "required": [
+                                                "href"
+                                              ],
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "href": {
+                                                  "type": "string"
+                                                },
+                                                "target": {
+                                                  "type": "string"
+                                                },
+                                                "rel": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "patternProperties": {
+                                            "^tag:": {
+                                              "type": "object",
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "string",
+                                "description": "Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input."
+                              }
+                            ]
+                          }
+                        },
+                        "description": "Optional text for the new rows, row by row."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.mergeCells"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "range"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "range": {
+                        "type": "object",
+                        "description": "Inclusive cell range, zero-based.",
+                        "required": [
+                          "fromRow",
+                          "fromCol",
+                          "toRow",
+                          "toCol"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "fromRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fromCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.moveColumn"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "from",
+                      "to"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "from": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "to": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Index the moved line ends up at."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.moveRow"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "from",
+                      "to"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "from": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "to": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Index the moved line ends up at."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.splitCell"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "row",
+                      "col"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "row": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "col": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "table.styleCells"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "range"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "range": {
+                        "type": "object",
+                        "description": "Inclusive cell range, zero-based.",
+                        "required": [
+                          "fromRow",
+                          "fromCol",
+                          "toRow",
+                          "toCol"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "fromRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fromCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toRow": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "toCol": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      },
+                      "color": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Background colour."
+                      },
+                      "textColor": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "placement": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "top-left",
+                              "top-center",
+                              "top-right",
+                              "middle-left",
+                              "middle-center",
+                              "middle-right",
+                              "bottom-left",
+                              "bottom-center",
+                              "bottom-right"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Where content sits in the cell."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "tabs.addTab"
+                  },
+                  "args": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "icon": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "tabs.create"
+                  },
+                  "args": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "tabs": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "title"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "title": {
+                              "type": "string"
+                            },
+                            "icon": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Parent block id. Omit or null for the document root."
+                      },
+                      "position": {
+                        "description": "Where the new block goes among its siblings. Default: the end.",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "tabs.deleteTab"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "tabId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "tabId": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "text.delete"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "range": {
+                        "oneOf": [
+                          {
+                            "const": "all"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "expectText": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "find": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "occurrence": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "required": [
+                              "find"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "range"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "text.format"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "range": {
+                        "oneOf": [
+                          {
+                            "const": "all"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "expectText": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "find": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "occurrence": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "required": [
+                              "find"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "set": {
+                        "type": "object"
+                      },
+                      "unset": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "range"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "text.insert"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "oneOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "after": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "text": {
+                        "description": "Plain text, or rich-text segments. Never Markdown.",
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            }
+                          }
+                        ]
+                      },
+                      "marks": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "at",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "text.replace"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "range": {
+                        "oneOf": [
+                          {
+                            "const": "all"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "expectText": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "find": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "occurrence": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "required": [
+                              "find"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "with": {
+                        "description": "Plain text, or rich-text segments. Never Markdown.",
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "with"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "video.setSource"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "expectRevision": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commands"
+      ],
+      "$defs": {
+        "block_insert__insertSpec": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "data": {
+              "type": "object"
+            },
+            "tunes": {
+              "type": "object"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/block_insert__insertSpec"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+]

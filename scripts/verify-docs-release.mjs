@@ -11,6 +11,7 @@ export const RELEASE_PACKAGES = [
   { name: '@bloklabs/cli', manifestPath: 'packages/cli/package.json' },
   { name: '@bloklabs/presets', manifestPath: 'packages/presets/package.json' },
   { name: '@bloklabs/server', manifestPath: 'packages/server/package.json' },
+  { name: '@bloklabs/mcp', manifestPath: 'packages/mcp/package.json', after: '1.16.1' },
 ];
 
 export const SERVER_NUGET_PACKAGES = [
@@ -214,7 +215,9 @@ export async function verifyPublishedPackageVersions(version, {
   attempts = 6,
   lookupVersion = lookupNpmVersion,
   onRetry = () => {},
-  packageNames = RELEASE_PACKAGES.map(({ name }) => name),
+  packageNames = RELEASE_PACKAGES
+    .filter(({ after }) => after === undefined || compareVersions(version, after) > 0)
+    .map(({ name }) => name),
   retryDelayMs = 10_000,
   wait = waitFor,
 } = {}) {

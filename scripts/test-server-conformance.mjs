@@ -146,6 +146,7 @@ async function main() {
       'test/unit/server-conformance/sync-contract.test.ts',
       'test/unit/server-conformance/blok-client-contract.test.ts',
       'test/unit/server-conformance/protocol-v2-contract.test.ts',
+      'test/unit/server-conformance/mcp-agent-participant.test.ts',
     ];
 
     const reportPath = join(temporaryDirectory, 'vitest-report.json');

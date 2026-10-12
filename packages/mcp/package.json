@@ -1,0 +1,51 @@
+{
+  "name": "@bloklabs/mcp",
+  "version": "1.16.1",
+  "description": "MCP server for Blok — lets outside agents read and edit Blok documents, in live rooms or stored.",
+  "license": "Apache-2.0",
+  "author": "JackUait",
+  "homepage": "https://blokeditor.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JackUait/blok.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/JackUait/blok/issues"
+  },
+  "keywords": [
+    "blok",
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "block-editor",
+    "rich-text-editor",
+    "collaboration"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/mcp.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "blok-mcp": "bin/blok-mcp.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "types"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.1",
+    "ws": "8.21.0"
+  }
+}

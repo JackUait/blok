@@ -65,6 +65,12 @@ export const FAMILY = [
     manifestPath: 'packages/server/package.json',
     packDir: 'packages/server',
   },
+  {
+    npmName: '@bloklabs/mcp',
+    gprName: '@dodopizza/blok-mcp',
+    manifestPath: 'packages/mcp/package.json',
+    packDir: 'packages/mcp',
+  },
 ];
 
 /**

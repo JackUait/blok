@@ -1,9 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildTasks } from '../../../scripts/build-all.mjs';
 import { preflightTasks } from '../../../scripts/release-preflight.mjs';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 interface GraphTask {
   name: string;
@@ -103,6 +111,14 @@ describe('buildTasks', () => {
     expect(tasks.get('cli')?.cmd).toBe('node scripts/build-cli.mjs');
     expect(tasks.get('cli')?.deps ?? []).not.toContain('main');
     expect(buildTasks({ mode: 'production' }).some((t) => t.name === 'cli')).toBe(false);
+  });
+
+  it.each(['production', 'test'])('includes MCP with the CLI in %s mode, independent of core dist', (mode) => {
+    const tasks = byName(buildTasks({ mode, withCli: true }));
+
+    expect(tasks.get('mcp')?.cmd).toBe('node scripts/build-mcp.mjs');
+    expect(tasks.get('mcp')?.deps).toEqual(['fonts']);
+    expect(buildTasks({ mode }).some((task) => task.name === 'mcp')).toBe(false);
   });
 
   it('gives every build step a hang-guard timeout', () => {

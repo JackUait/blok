@@ -1,0 +1,66 @@
+import { CLIENT_INFO_META_KEY, McpServer, ProtocolError, ProtocolErrorCode } from '@modelcontextprotocol/server';
+
+import type { Tool } from '@modelcontextprotocol/server';
+
+import { safeClientName } from './actor';
+import { UnknownToolError } from './dispatcher';
+import type { Caller, ToolOutcome } from './dispatcher';
+import type { McpTool } from './tools';
+
+export type Dispatch = (name: string, args: Record<string, unknown>, caller: Caller) => Promise<ToolOutcome>;
+
+export const buildSdkServer = (input: {
+  tools: McpTool[];
+  dispatch: Dispatch;
+  caller: (clientName: string) => Caller;
+  version: string;
+}): McpServer['server'] => {
+  const tools = input.tools;
+
+  // The SDK requires an object root; keep the renderer schemas by reference.
+  if (!tools.every((tool): tool is McpTool & Tool => tool.inputSchema.type === 'object')) {
+    throw new TypeError('MCP tool input schemas must have an object root.');
+  }
+  const mcp = new McpServer({ name: 'blok-mcp', version: input.version });
+  const server = mcp.server;
+  const byName = new Map(tools.map(tool => [tool.name, tool]));
+
+  server.registerCapabilities({ tools: {} });
+  server.setRequestHandler('tools/list', async () => ({ tools }));
+  server.setRequestHandler('tools/call', async (request, ctx) => {
+    const name = request.params.name;
+    const tool = byName.get(name);
+
+    if (tool === undefined) {
+      throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown tool: ${name}`);
+    }
+    const envelope: unknown = ctx.mcpReq.envelope;
+    const clientInfo = typeof envelope === 'object' && envelope !== null && CLIENT_INFO_META_KEY in envelope
+      ? envelope[CLIENT_INFO_META_KEY]
+      : undefined;
+    const rawName = typeof clientInfo === 'object' && clientInfo !== null
+      && 'name' in clientInfo && typeof clientInfo.name === 'string'
+      ? clientInfo.name
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- 2025-era clients name themselves only in initialize; they send no per-request envelope.
+      : server.getClientVersion()?.name;
+    const caller = input.caller(safeClientName(rawName));
+    const outcome = await (async (): Promise<ToolOutcome> => {
+      try {
+        return await input.dispatch(name, request.params.arguments ?? {}, caller);
+      } catch (thrown) {
+        if (thrown instanceof UnknownToolError) {
+          throw new ProtocolError(ProtocolErrorCode.InvalidParams, thrown.message);
+        }
+        throw thrown;
+      }
+    })();
+
+    return server.projectCallToolResult({
+      content: [{ type: 'text', text: JSON.stringify(outcome.structuredContent) }],
+      structuredContent: outcome.structuredContent,
+      isError: outcome.isError,
+    }, tool.outputSchema);
+  });
+
+  return server;
+};

@@ -93,6 +93,86 @@ describe('docs release verification', () => {
     })).rejects.toThrow('@bloklabs/vue published 2.3.3');
   });
 
+  it('keeps the original seven default publication checks at 1.16.1', async () => {
+    const { verifyPublishedPackageVersions } = await loadVerifier();
+    const checkedNames: string[] = [];
+    const lookupVersion = vi.fn(async (name: string, version: string) => {
+      checkedNames.push(name);
+
+      return version;
+    });
+
+    await verifyPublishedPackageVersions('1.16.1', {
+      attempts: 1,
+      lookupVersion,
+    });
+
+    expect(checkedNames).toEqual([
+      '@bloklabs/core',
+      '@bloklabs/react',
+      '@bloklabs/vue',
+      '@bloklabs/angular',
+      '@bloklabs/cli',
+      '@bloklabs/presets',
+      '@bloklabs/server',
+    ]);
+  });
+
+  it('requires MCP in the default publication gate after 1.16.1', async () => {
+    const { verifyPublishedPackageVersions } = await loadVerifier();
+    const checkedNames: string[] = [];
+    const lookupVersion = vi.fn(async (name: string, version: string) => {
+      checkedNames.push(name);
+
+      return version;
+    });
+
+    await verifyPublishedPackageVersions('2.3.4', {
+      attempts: 1,
+      lookupVersion,
+    });
+
+    expect(checkedNames).toContain('@bloklabs/mcp');
+    expect(checkedNames).toEqual(FAMILY.map(({ npmName }) => npmName));
+  });
+
+  it('rejects a later release when default MCP lookup returns 404', async () => {
+    const { verifyPublishedPackageVersions } = await loadVerifier();
+    const lookupVersion = vi.fn(async (name: string, version: string) => {
+      if (name === '@bloklabs/mcp') {
+        throw new Error('npm registry returned 404');
+      }
+
+      return version;
+    });
+
+    await expect(verifyPublishedPackageVersions('2.3.4', {
+      attempts: 1,
+      lookupVersion,
+    })).rejects.toThrow(
+      'Package release 2.3.4 is not fully published: ' +
+      '@bloklabs/mcp unavailable (npm registry returned 404)',
+    );
+  });
+
+  it('rejects an explicit MCP check at the historical cutoff when MCP returns 404', async () => {
+    const { verifyPublishedPackageVersions } = await loadVerifier();
+    const lookupVersion = vi.fn(async () => {
+      throw new Error('npm registry returned 404');
+    });
+
+    await expect(verifyPublishedPackageVersions('1.16.1', {
+      attempts: 1,
+      lookupVersion,
+      packageNames: ['@bloklabs/mcp'],
+    })).rejects.toThrow(
+      'Package release 1.16.1 is not fully published: ' +
+      '@bloklabs/mcp unavailable (npm registry returned 404)',
+    );
+    expect(lookupVersion).toHaveBeenCalledOnce();
+    expect(lookupVersion).toHaveBeenCalledWith('@bloklabs/mcp', '1.16.1');
+  });
+
   it('pins the two NuGet packages, eight host archives, and checksums', async () => {
     const { SERVER_NUGET_PACKAGES, SERVER_RELEASE_ASSETS } = await loadVerifier();
 

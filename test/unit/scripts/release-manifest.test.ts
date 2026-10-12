@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAMILY, prepareManifestForGpr, rewriteSpecifiersForGpr } from '../../../scripts/release-manifest.mjs';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const findEntry = (npmName: string): (typeof FAMILY)[number] => {
   const entry = FAMILY.find((p) => p.npmName === npmName);
@@ -21,7 +29,17 @@ describe('release family manifest', () => {
       ['@bloklabs/cli', '@dodopizza/blok-cli'],
       ['@bloklabs/presets', '@dodopizza/blok-presets'],
       ['@bloklabs/server', '@dodopizza/blok-server'],
+      ['@bloklabs/mcp', '@dodopizza/blok-mcp'],
     ]);
+  });
+
+  it('publishes MCP from its own package directory', () => {
+    expect(FAMILY.find((entry) => entry.npmName === '@bloklabs/mcp')).toEqual({
+      npmName: '@bloklabs/mcp',
+      gprName: '@dodopizza/blok-mcp',
+      manifestPath: 'packages/mcp/package.json',
+      packDir: 'packages/mcp',
+    });
   });
 
   it('every entry declares its manifest and pack directories', () => {

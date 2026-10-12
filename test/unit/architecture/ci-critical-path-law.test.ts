@@ -8,7 +8,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 
 type WorkflowValue = boolean | number | string;
@@ -165,6 +165,14 @@ const e2eMatrix: MatrixEntry[] = [
 ];
 
 describe('CI critical-path law', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('keeps every preserved CI job and cancellation setting', () => {
     const requiredJobs = [
       'i18n',
@@ -378,6 +386,10 @@ describe('CI critical-path law', () => {
         run: 'yarn build:cli',
       },
       {
+        name: 'Build MCP',
+        run: 'yarn build:mcp',
+      },
+      {
         name: 'Run Unit Tests with coverage',
         env: { BLOK_UNIT_WITHOUT_DIST: '1' },
         run: [
@@ -435,6 +447,10 @@ describe('CI critical-path law', () => {
       {
         name: 'Build CLI',
         run: 'yarn build:cli',
+      },
+      {
+        name: 'Build MCP',
+        run: 'yarn build:mcp',
       },
       {
         name: 'Run Angular Unit Tests',

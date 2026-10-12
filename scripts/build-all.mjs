@@ -75,6 +75,7 @@ export function buildTasks({ mode = 'production', withCli = false } = {}) {
 
   if (withCli) {
     tasks.push({ name: 'cli', cmd: 'node scripts/build-cli.mjs', deps: ['fonts'] });
+    tasks.push({ name: 'mcp', cmd: 'node scripts/build-mcp.mjs', deps: ['fonts'] });
   }
 
   return tasks.map((t) => ({ ...t, timeoutMs: BUILD_TIMEOUT_MS }));

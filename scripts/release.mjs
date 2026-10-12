@@ -294,6 +294,7 @@ if (isDirectRun) {
     'packages/cli/package.json',
     'packages/presets/package.json',
     'packages/server/package.json',
+    'packages/mcp/package.json',
   ];
 
   for (const manifestPath of WORKSPACE_MANIFESTS) {

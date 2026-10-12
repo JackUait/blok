@@ -13,6 +13,8 @@ import type { TreePlacement } from '../../utils/tree-order';
 export interface InsertInsideParentOptions extends PublicInsertInsideParentOptions {
   /** Children declared before the tool renders. */
   contentIds?: string[];
+  /** Handed to the tool constructor; defaults to `'api'`. */
+  origin?: BlockOrigin;
 }
 
 /**

@@ -1,3 +1,4 @@
+import type { BlockOrigin } from '../../../../types';
 import type { AgentActor, Edit, PlannedBlock } from '../../../../types/agent';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
 import type { AgentApplier } from '../../../shared/agent/executor';
@@ -16,6 +17,16 @@ import { createRevisionCounter, editorSnapshot } from './editor-snapshot';
 
 // A peer edit can make the rollback refuse. Partial writes stay, so the
 // error must not promise an unchanged document (no retryable code).
+/**
+ * A planned block whose children the plan supplies (nested, or by a later
+ * insert or move in the same plan) is not a fresh creation: the plan already
+ * says what its children are. 'paste' is the restore origin for
+ * exactly that, so container tools (tabs, column_list, callout) do not seed
+ * defaults beside them. See BlockOrigin in types/tools/block-tool.d.ts.
+ */
+const originOf = (block: PlannedBlock, filled: ReadonlySet<string>): BlockOrigin =>
+  (block.children.length > 0 || filled.has(block.id) ? 'paste' : 'api');
+
 const rollbackRefused = (error: unknown): Error => {
   const cause = error instanceof AgentFailure ? error.error : undefined;
   const reason = cause?.message ?? (error instanceof Error ? error.message : String(error));
@@ -178,8 +189,11 @@ export class EditorApplier implements AgentApplier {
     const { BlockManager } = this.Blok;
 
     try {
+      const filled = new Set(plan.edits.flatMap(edit =>
+        (edit.op === 'insert' || edit.op === 'move') && edit.parentId !== null ? [edit.parentId] : []));
+
       for (const edit of plan.edits) {
-        await this.applyOne(edit);
+        await this.applyOne(edit, filled);
       }
 
       this.Blok.YjsManager.transact(() => {
@@ -206,7 +220,7 @@ export class EditorApplier implements AgentApplier {
     return { blocks: BlockManager.blocks, getBlockById: id => BlockManager.getBlockById(id) };
   }
 
-  private flattenTree(block: PlannedBlock, parentId: string | null): ComposeBlockOptions[] {
+  private flattenTree(block: PlannedBlock, parentId: string | null, filled: ReadonlySet<string>): ComposeBlockOptions[] {
     return [
       {
         id: block.id, tool: block.type,
@@ -214,19 +228,19 @@ export class EditorApplier implements AgentApplier {
         tunes: block.tunes,
         parentId: parentId ?? undefined,
         contentIds: block.children.map(child => child.id),
-        origin: 'api',
+        origin: originOf(block, filled),
       },
-      ...block.children.flatMap(child => this.flattenTree(child, block.id)),
+      ...block.children.flatMap(child => this.flattenTree(child, block.id, filled)),
     ];
   }
 
-  private insertSelfPlacedTree(block: PlannedBlock, parentId: string, afterId: string | null): void {
+  private insertSelfPlacedTree(block: PlannedBlock, parentId: string, afterId: string | null, filled: ReadonlySet<string>): void {
     const { BlockManager, YjsManager } = this.Blok;
     const placement = resolvePlacement(this.tree, parentId, afterId === null ? 'start' : { after: afterId });
     const inserted = BlockManager.insertInsideParent(
       parentId, placement.index,
       this.Blok.BlocksAPI.hostDataForTool(block.type, block.data),
-      block.type, { id: block.id, tunes: block.tunes, contentIds: block.children.map(child => child.id) }
+      block.type, { id: block.id, tunes: block.tunes, contentIds: block.children.map(child => child.id), origin: originOf(block, filled) }
     );
 
     for (const [name, value] of Object.entries(block.tunes ?? {})) {
@@ -234,7 +248,7 @@ export class EditorApplier implements AgentApplier {
     }
 
     block.children.reduce<string | null>((previous, child) => {
-      this.insertSelfPlacedTree(child, inserted.id, previous);
+      this.insertSelfPlacedTree(child, inserted.id, previous, filled);
 
       return child.id;
     }, null);
@@ -294,7 +308,7 @@ export class EditorApplier implements AgentApplier {
     );
   }
 
-  private async applyOne(edit: Edit): Promise<void> {
+  private async applyOne(edit: Edit, filled: ReadonlySet<string>): Promise<void> {
     const { BlockManager, YjsManager } = this.Blok;
     const block = 'id' in edit ? BlockManager.getBlockById(edit.id) : undefined;
 
@@ -302,11 +316,13 @@ export class EditorApplier implements AgentApplier {
       case 'insert': {
         const parent = edit.parentId === null ? undefined : BlockManager.getBlockById(edit.parentId);
 
-        if (parent !== undefined && isSelfPlacedParent(parent, id => BlockManager.getBlockById(id))) {
-          this.insertSelfPlacedTree(edit.block, parent.id, edit.afterId);
+        // insertMany drops a parentId it may not place itself: self-placing parents, and parents
+        // whose tool ownsChildren (column_list, tabs). Those children are placed explicitly.
+        if (parent !== undefined && (parent.tool.ownsChildren || isSelfPlacedParent(parent, id => BlockManager.getBlockById(id)))) {
+          this.insertSelfPlacedTree(edit.block, parent.id, edit.afterId, filled);
         } else {
           const placement = resolvePlacement(this.tree, edit.parentId, edit.afterId === null ? 'start' : { after: edit.afterId });
-          const blocks = this.flattenTree(edit.block, edit.parentId).map(options => BlockManager.composeBlock(options));
+          const blocks = this.flattenTree(edit.block, edit.parentId, filled).map(options => BlockManager.composeBlock(options));
 
           BlockManager.insertMany(blocks, placement.index, { notify: true, yjsSync: 'add' });
         }

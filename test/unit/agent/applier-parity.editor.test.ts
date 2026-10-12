@@ -5,13 +5,16 @@ import { Core } from '../../../src/components/core';
 import { createEditorAgentSession } from '../../../src/components/modules/agent/editor-session';
 import { Listeners } from '../../../src/components/utils/listeners';
 import { destroy as destroyTooltip } from '../../../src/components/utils/tooltip';
-import { Bold, Callout, Code, Column, ColumnList, Header, Image, Italic, List, Paragraph, Quote, Table, TabsTool, TabTool, Toggle } from '../../../src/tools';
+import { Audio, Bold, Bookmark, Callout, Code, Column, ColumnList, Database, DatabaseRow, Embed, File, Header, Image, Italic, List, Paragraph, Quote, Table, TabsTool, TabTool, Toggle, Video } from '../../../src/tools';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import type { AgentActor, AgentSession } from '../../../types/agent';
 import { callerChosenIds, expectationFor, loadParityCases } from './parity/corpus';
 import { normalizeForParity } from './parity/normalize';
 import { compareToGolden, runCorpusCase } from './parity/run-case';
 
+// Each batch re-renders through real Core in jsdom. A 12-batch table case grows the grid
+// to 5×5 and takes about 5 s, just past vitest's default.
+const CASE_TIMEOUT_MS = 30_000;
 const actor: AgentActor = { id: 'agent-test', name: 'Parity', kind: 'agent' };
 const cases = loadParityCases();
 let holder: HTMLDivElement | undefined;
@@ -206,6 +209,13 @@ describe.each(cases)('editor runner: $name', (c) => {
         code: { class: Code },
         table: { class: Table },
         image: { class: Image },
+        file: { class: File },
+        audio: { class: Audio },
+        video: { class: Video },
+        embed: { class: Embed },
+        bookmark: { class: Bookmark },
+        database: { class: Database },
+        'database-row': { class: DatabaseRow },
         callout: { class: Callout },
         column_list: { class: ColumnList },
         column: { class: Column },
@@ -244,5 +254,5 @@ describe.each(cases)('editor runner: $name', (c) => {
     }
     expect(process.env.BLOK_UPDATE_GOLDENS, 'Only the json runner generates goldens.').not.toBe('1');
     compareToGolden(c, normalizeForParity(saved, callerChosenIds(c)));
-  });
+  }, CASE_TIMEOUT_MS);
 });

@@ -1290,7 +1290,9 @@ export class TableCellBlocks {
     // Peers that padded the same cell each write it as a new key, so one
     // stand-in loses and no cell names it any more.
     const named = new Set(this.model.snapshot().content.flat().flatMap(cell => (isCellWithBlocks(cell) ? cell.blocks : [])));
-    const unnamed = [...this.paddedFillIds].filter(id => {
+    // An emptied-cell stand-in is unnamed too when a later grid write (a peer, an agent batch)
+    // gave its cell other blocks first. Left in place it is a child no cell shows.
+    const unnamed = [...new Set([...this.paddedFillIds, ...this.repairIds])].filter(id => {
       const block = this.api.blocks.getById?.(id);
 
       if (block?.isEmpty !== true || block.parentId !== this.tableBlockId) {

@@ -172,6 +172,7 @@ const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/popover-desktop.ts': 'Writes named popover CSS variables; physical top/left placement stays inventoried separately.',
   'components/utils/popover/popover-inline.ts': 'Writes named inline-popover CSS variables inside its local positioned wrapper.',
   'components/utils/tooltip.ts': 'Writes named tooltip CSS custom properties and dismisses on capture-phase scrolling.',
+  'tools/database/copy-ghost-radius.ts': 'Copies the board and column custom properties a drag ghost names (preview height, group tint/ring/accent) from its source onto the ghost; none set coordinates.',
 };
 
 const SHARED_POSITION_CALL_CLASSIFICATIONS: Record<string, string> = {

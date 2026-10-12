@@ -1471,8 +1471,21 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...gridEl.querySelectorAll<HTMLElement>(`[data-blok-database-table-column-header][data-property-id="${escaped}"] [data-blok-database-table-column-button]`),
       ...gridEl.querySelectorAll<HTMLElement>(`[role="gridcell"][data-property-id="${escaped}"] > [data-blok-database-cell]`),
     ];
+    // The header button fills its column, so its current width is never less
+    // than the column. Its max-content width is what the content needs.
+    const contentWidth = (el: HTMLElement): number => {
+      const { style } = el;
+      const width = style.width;
+
+      style.width = 'max-content';
+      const measured = el.getBoundingClientRect().width;
+
+      style.width = width;
+
+      return measured;
+    };
     // Cell padding is 8px a side.
-    const widest = Math.max(0, ...cells.map((el) => el.scrollWidth)) + 16;
+    const widest = Math.max(0, ...cells.map(contentWidth)) + 16;
 
     return Math.max(MIN_COLUMN_WIDTH, Math.ceil(widest));
   }

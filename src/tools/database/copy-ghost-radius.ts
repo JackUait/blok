@@ -21,3 +21,32 @@ export const copyGhostRadius = (source: Element, ghost: HTMLElement): void => {
 export const mountGhost = (source: Element, ghost: HTMLElement): void => {
   (source.closest<HTMLElement>('[data-blok-interface=blok]') ?? document.body).appendChild(ghost);
 };
+
+/**
+ * Carries what a ghost loses by leaving its view: custom properties the
+ * board or column sets (read from the source, which inherits them), and the
+ * view's attributes. database.css repeats each attribute rule on the ghost.
+ */
+export const copyGhostContext = (
+  source: Element,
+  view: Element | null,
+  ghost: HTMLElement,
+  context: { properties?: string[]; attributes?: string[] }
+): void => {
+  const computed = getComputedStyle(source);
+
+  for (const name of context.properties ?? []) {
+    const value = computed.getPropertyValue(name);
+
+    if (value !== '') {
+      ghost.style.setProperty(name, value);
+    }
+  }
+  for (const name of context.attributes ?? []) {
+    const value = view?.getAttribute(name);
+
+    if (value !== null && value !== undefined) {
+      ghost.setAttribute(name, value);
+    }
+  }
+};

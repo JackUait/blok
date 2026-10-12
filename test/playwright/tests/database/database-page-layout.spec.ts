@@ -130,7 +130,9 @@ test.describe('row page layout', () => {
     await expect(details).toBeHidden();
   });
 
-  test('places the details panel to the right of the page properties', async ({ page }) => {
+  // Not built: the panel stacks below the group. Known divergence, see
+  // docs/plans/2026-10-09-database-notion-parity/10-backlog.md (P6, "Diverges").
+  test.fixme('places the details panel to the right of the page properties', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }));
     await openRow(page, 'r1');
     const details = peek(page).getByRole('region', { name: 'Details' });

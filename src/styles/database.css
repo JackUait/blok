@@ -3515,7 +3515,8 @@
 }
 
 [data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell],
-[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-column-header] {
+[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-column-header],
+[data-blok-database-table-row-ghost][data-vertical-lines="true"] [data-blok-database-table-cell] {
   border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
@@ -5497,7 +5498,8 @@
   object-position: 50% 50%;
 }
 
-[data-blok-database-board][data-fit-image] [data-blok-database-card-image] {
+[data-blok-database-board][data-fit-image] [data-blok-database-card-image],
+[data-blok-database-ghost][data-fit-image] [data-blok-database-card-image] {
   object-fit: contain;
 }
 

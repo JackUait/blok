@@ -1,4 +1,4 @@
-import { mountGhost } from './copy-ghost-radius';
+import { copyGhostContext, mountGhost } from './copy-ghost-radius';
 import type { TableState } from './database-table-grid';
 
 const THRESHOLD = 5;
@@ -94,6 +94,7 @@ export class DatabaseTableRowDrag {
     ghost.style.left = `${rect.left}px`;
     ghost.style.top = `${rect.top}px`;
     ghost.style.width = `${rect.width}px`;
+    copyGhostContext(rowEl, rowEl.closest('[data-blok-database-table-grid]'), ghost, { attributes: ['data-vertical-lines'] });
     mountGhost(rowEl, ghost);
     this.ghost = ghost;
 

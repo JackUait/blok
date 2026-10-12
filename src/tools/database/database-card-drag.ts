@@ -1,4 +1,4 @@
-import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
+import { copyGhostContext, copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
@@ -173,6 +173,10 @@ export class DatabaseCardDrag {
       ghost.appendChild(clone);
 
       copyGhostRadius(this.sourceCard, ghost);
+      copyGhostContext(this.sourceCard, this.sourceCard.closest('[data-blok-database-board]'), ghost, {
+        properties: ['--blok-database-card-preview-height', '--_blok-group-tint', '--_blok-group-ring', '--_blok-group-accent'],
+        attributes: ['data-fit-image'],
+      });
 
       const rect = this.sourceCard.getBoundingClientRect();
 

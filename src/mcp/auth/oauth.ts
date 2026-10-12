@@ -41,6 +41,10 @@ const decodePart = (part: string | undefined): Record<string, unknown> => {
 };
 
 const toSigningKey = (jwk: Jwk): SigningKey | undefined => {
+  // RFC 7517 §4.2: a key published for encryption must not verify signatures.
+  if (jwk.use !== undefined && jwk.use !== 'sig') {
+    return undefined;
+  }
   try {
     const key = createPublicKey({ key: jwk, format: 'jwk' });
 
@@ -134,6 +138,10 @@ export const createJwtVerifier = (
 
       if ((alg !== 'RS256' && alg !== 'ES256') || typeof header.kid !== 'string' || signature === undefined || rest.length > 0) {
         throw invalid('Unsupported token');
+      }
+      // RFC 7515 §4.1.11: no critical extension is understood here, so any `crit` rejects.
+      if ('crit' in header) {
+        throw invalid('Unsupported critical header');
       }
       const { key, alg: keyAlg } = await keyFor(header.kid);
 

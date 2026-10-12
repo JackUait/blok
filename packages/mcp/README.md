@@ -92,6 +92,9 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
 
 - `--http <host:port>` serves Streamable HTTP instead of stdio.
 - A non-loopback address needs `--public`. `--public` needs `--auth oauth`.
+- Over HTTP the server also needs a per-document check, or it refuses to start. OAuth says who is calling, not which documents they may open.
+  - Pass `--authorize`, or
+  - serve live rooms only: `--ticket-url` with no `--source`, so your host decides each ticket.
 - `--auth oauth` makes the server an OAuth resource server. It needs `--oauth-issuer`, `--oauth-audience` and `--oauth-jwks`.
   - Tokens are checked against the issuer's JWKS. The audience must name this server.
   - Scopes: `blok.read` (list, open read-only, read, describe) and `blok.write` (open for writing, execute).

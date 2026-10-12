@@ -123,6 +123,13 @@ describe('startHttpServer', () => {
       expect((await post(`${url}/mcp`, { Authorization: `Bearer ${token.slice(0, -4)}AAAA` })).status).toBe(401);
     });
 
+    it.each(['', 'Bearer', 'Bearer ', 'Basic dXNlcjpwYXNz', `bearer${'x'}`])('401s the Authorization header %j', async (header) => {
+      const response = await post(`${url}/mcp`, { Authorization: header });
+
+      expect(response.status).toBe(401);
+      expect(seen).toEqual([]);
+    });
+
     it('403s a token without blok.read', async () => {
       expect((await post(`${url}/mcp`, { Authorization: `Bearer ${bearer('other')}` })).status).toBe(403);
     });

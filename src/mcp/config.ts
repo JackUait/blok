@@ -209,4 +209,11 @@ export const checkOptionSafety = (options: BlokMcpOptions): void => {
   if (options.transport.public === true && options.auth.kind === 'none') {
     throw new McpConfigError('--public needs --auth oauth: a public MCP endpoint without auth opens every document');
   }
+  // Spec §3.8: endpointAuth and OAuth say who calls, not which documents they may open.
+  // Over HTTP that per-document decision is --authorize, or the host's --ticket-url with no --source.
+  const hostDecides = options.tickets?.kind === 'url' && options.source === undefined;
+
+  if (options.authorize === undefined && !hostDecides) {
+    throw new McpConfigError('HTTP needs a per-document check: pass --authorize, or serve live rooms only with --ticket-url and no --source');
+  }
 };

@@ -141,6 +141,7 @@ describe('createBlokMcpServer', () => {
     const server = createBlokMcpServer({
       transport: { kind: 'http', listen: '127.0.0.1:0' },
       auth: { kind: 'none' },
+      authorize: async () => true,
     });
 
     try {
@@ -298,6 +299,14 @@ describe('runCli', () => {
 
     await expect(within(runCli(['--rich-text-fields', '{'], {}))).rejects.toMatchObject({ code: 2 });
     expect(stderr.mock.calls.map((call) => String(call[0]))).toEqual([expect.stringMatching(/^blok-mcp: --rich-text-fields/)]);
+    expect(assembly.assembleMcp).not.toHaveBeenCalled();
+  });
+
+  it('exits 2 when HTTP would serve a document source with no --authorize', async () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(within(runCli(['--http', '127.0.0.1:0', '--source', 'files:./docs'], {}))).rejects.toMatchObject({ code: 2 });
+    expect(stderr.mock.calls.map((call) => String(call[0]))).toEqual([expect.stringMatching(/^blok-mcp: HTTP needs a per-document check/)]);
     expect(assembly.assembleMcp).not.toHaveBeenCalled();
   });
 
@@ -492,7 +501,8 @@ describe('runCli shutdown lifecycle', () => {
     const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     try {
-      await within(runCli(['--http', '127.0.0.1:0'], {}));
+      // Live-only behind the host's ticket route: a per-document gate without --authorize.
+      await within(runCli(['--http', '127.0.0.1:0', '--ticket-url', 'https://app.example.com/tickets'], { BLOK_MCP_HOST_TOKEN: 'host-token' }));
       lifecycle.emit('end');
       await dispatchCheckpoint();
       expect(lifecycle.exit).not.toHaveBeenCalled();

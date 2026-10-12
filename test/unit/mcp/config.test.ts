@@ -506,6 +506,39 @@ describe('checkOptionSafety', () => {
     });
   });
 
+  // Spec §3.8 and line 336: over HTTP a per-document gate must exist. Either the
+  // authorize hook, or a live-only server whose host mints each ticket (--ticket-url, no --source).
+  describe('a per-document gate over HTTP', () => {
+    const http: Parameters<typeof checkOptionSafety>[0]['transport'] = { kind: 'http', listen: '127.0.0.1:4100' };
+    const files: Parameters<typeof checkOptionSafety>[0]['source'] = { kind: 'files', dir: './docs' };
+    const ticketUrl: Parameters<typeof checkOptionSafety>[0]['tickets'] = { kind: 'url', url: 'https://app.example.com/tickets', hostToken: 'host-token' };
+    const sync = { url: 'wss://sync.example.com/sync' };
+
+    it.each([
+      { label: 'OAuth and a files source', options: { auth: oauth, source: files } },
+      { label: 'OAuth and an endpoint source', options: { auth: oauth, source: { kind: 'endpoint' as const, url: 'https://app.example.com/docs', endpointAuth: 'Bearer x' } } },
+      { label: 'a ticket URL next to a source', options: { auth: oauth, source: files, sync, tickets: ticketUrl } },
+      { label: 'no auth and nothing else', options: {} },
+    ])('refuses $label without --authorize', ({ options }) => {
+      const config: Parameters<typeof checkOptionSafety>[0] = { ...base, transport: http, ...options };
+
+      expect(() => checkOptionSafety(config)).toThrow(McpConfigError);
+      expect(() => checkOptionSafety(config)).toThrow(/--authorize/);
+    });
+
+    it('allows a source over HTTP with an authorize hook', () => {
+      expect(() => checkOptionSafety({ ...base, auth: oauth, transport: http, source: files, authorize: async () => true })).not.toThrow();
+    });
+
+    it('allows a live-only server whose host mints each ticket', () => {
+      expect(() => checkOptionSafety({ ...base, auth: oauth, transport: http, sync, tickets: ticketUrl })).not.toThrow();
+    });
+
+    it('leaves stdio as the local user, without a hook', () => {
+      expect(() => checkOptionSafety({ ...base, source: files })).not.toThrow();
+    });
+  });
+
   it('allows local stdio without auth', () => {
     expect(() => checkOptionSafety(base)).not.toThrow();
   });
@@ -530,8 +563,8 @@ describe('checkOptionSafety', () => {
   });
 
   it.each(['127.0.0.1:4100', '[::1]:4100', 'localhost:4100'])
-    ('allows loopback HTTP at %s without auth', (listen) => {
-      expect(() => checkOptionSafety({ ...base, transport: { kind: 'http', listen } }))
+    ('allows loopback HTTP at %s without auth, given a per-document check', (listen) => {
+      expect(() => checkOptionSafety({ ...base, transport: { kind: 'http', listen }, authorize: async () => true }))
         .not.toThrow();
     });
 
@@ -569,6 +602,7 @@ describe('checkOptionSafety', () => {
     expect(() => checkOptionSafety({
       ...base,
       auth: oauth,
+      authorize: async () => true,
       transport: { kind: 'http', listen: '0.0.0.0:4100', public: true },
     })).not.toThrow();
   });

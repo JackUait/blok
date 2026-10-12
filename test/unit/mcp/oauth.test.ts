@@ -12,9 +12,9 @@ const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const ec = generateKeyPairSync('ec', { namedCurve: 'P-256' });
 const jwk = (key: KeyObject, kid: string, alg: string): Record<string, unknown> => ({ ...key.export({ format: 'jwk' }), kid, alg, use: 'sig' });
 
-const token = (claims: Record<string, unknown>, options: { alg?: string; kid?: string; key?: KeyObject } = {}): string => {
+const token = (claims: Record<string, unknown>, options: { alg?: string; kid?: string; key?: KeyObject; header?: Record<string, unknown> } = {}): string => {
   const alg = options.alg ?? 'RS256';
-  const head = `${b64({ alg, kid: options.kid ?? 'rsa-1', typ: 'JWT' })}.${b64(claims)}`;
+  const head = `${b64({ alg, kid: options.kid ?? 'rsa-1', typ: 'JWT', ...options.header })}.${b64(claims)}`;
   const signature = alg === 'ES256'
     ? sign('sha256', Buffer.from(head), { key: options.key ?? ec.privateKey, dsaEncoding: 'ieee-p1363' })
     : sign('sha256', Buffer.from(head), options.key ?? rsa.privateKey);
@@ -91,6 +91,26 @@ describe('createJwtVerifier', () => {
     expect(isInvalidToken(await refusal(unsigned))).toBe(true);
     expect(isInvalidToken(await refusal(hmac))).toBe(true);
     expect(isInvalidToken(await refusal(token(good, { key: other.privateKey })))).toBe(true);
+  });
+
+  // RFC 7515 §4.1.11: a recipient that does not understand every listed extension must reject.
+  it('refuses a token whose header lists critical extensions', async () => {
+    expect(isInvalidToken(await refusal(token(good, { header: { crit: ['exp'], exp: NOW_S + 600 } })))).toBe(true);
+    expect(isInvalidToken(await refusal(token(good, { header: { crit: [] } })))).toBe(true);
+  });
+
+  // RFC 7517 §4.2: a key published for encryption must not verify signatures.
+  it('refuses a token signed by a key published for encryption', async () => {
+    jwks([{ ...jwk(rsa.publicKey, 'rsa-1', 'RS256'), use: 'enc' }]);
+
+    expect(isInvalidToken(await refusal(token(good)))).toBe(true);
+  });
+
+  it('still accepts a key that names no use', async () => {
+    const { use: _use, ...plain } = jwk(rsa.publicKey, 'rsa-1', 'RS256');
+
+    jwks([plain]);
+    await expect(verifier().verifyAccessToken(token(good))).resolves.toBeDefined();
   });
 
   it('refuses a malformed token', async () => {

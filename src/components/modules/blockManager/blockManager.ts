@@ -799,7 +799,7 @@ export class BlockManager extends Module {
         ...(block.parentId !== null && { parent: block.parentId }),
         ...(block.contentIds.length > 0 && { content: block.contentIds }),
         ...(block.lastEditedAt !== undefined && { lastEditedAt: block.lastEditedAt }),
-        ...(block.lastEditedBy !== null && { lastEditedBy: block.lastEditedBy }),
+        ...(typeof block.lastEditedBy === 'string' && { lastEditedBy: block.lastEditedBy }),
         ...block.creation,
       };
     });

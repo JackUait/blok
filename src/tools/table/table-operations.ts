@@ -1,6 +1,7 @@
 import type { API } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { insertedColumnWidth } from '../../shared/table/column-widths';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
@@ -250,9 +251,7 @@ export const planInsertColumnWidths = (
 ): InsertColumnWidthPlan => {
   const existing = colWidths ?? readPixelWidths(gridEl);
 
-  const inserted = initialColWidth !== undefined
-    ? Math.round((initialColWidth / 2) * 100) / 100
-    : computeHalfAvgWidth(existing);
+  const inserted = insertedColumnWidth(existing, initialColWidth);
 
   const next = [...existing];
 
@@ -276,9 +275,7 @@ export const computeInsertColumnWidths = (
 };
 
 export const computeHalfAvgWidth = (colWidths: number[]): number =>
-  Math.round(
-    (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
-  ) / 100;
+  insertedColumnWidth(colWidths, undefined);
 
 /**
  * Mean column width. Used where a new column should look like the ones already

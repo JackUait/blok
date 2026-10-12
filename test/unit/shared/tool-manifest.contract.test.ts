@@ -266,19 +266,36 @@ describe('buildAgentContract', () => {
     expect(actionFor(contract, 'unsupported').available).toBe(false);
   });
 
-  it('blocks writing commands in read-only mode without inventing an unavailable reason', () => {
+  it('keeps supported writes available in a read-only document', () => {
+    const contract = buildAgentContract(buildToolManifest(snapshot({ readOnly: true })), core, where);
+
+    for (const name of [
+      'block.insert', 'history.undo', 'history.redo',
+      'table.insertRows', 'table.create', 'table.card', 'table.local',
+    ]) {
+      expect(commandFor(contract, name).available).toBe(true);
+      expect(commandFor(contract, name).unavailableReason).toBeUndefined();
+      expect(commandFor(contract, name).readOnly).toBe(false);
+    }
+    for (const name of ['insertRows', 'create', 'card', 'local']) {
+      expect(actionFor(contract, name).available).toBe(true);
+    }
+    expect(contract.manifest.readOnly).toBe(true);
+    expect(commandFor(contract, 'doc.read').available).toBe(true);
+  });
+
+  it('preserves runtime and service restrictions in a read-only document', () => {
     const contract = buildAgentContract(buildToolManifest(snapshot({ readOnly: true })), core, { runtime: 'jint', services: [] });
 
-    for (const command of contract.commands.filter(entry => !entry.readOnly)) {
-      expect(command.available).toBe(false);
-      expect(command.unavailableReason).toBeUndefined();
-      expect(command.readOnly).toBe(false);
+    for (const name of ['history.undo', 'history.redo', 'doc.find', 'table.local', 'table.unsupported']) {
+      expect(commandFor(contract, name)).toMatchObject({ available: false, unavailableReason: 'runtime' });
     }
-
-    expect(contract.commands).toHaveLength(10);
-    expect(commandFor(contract, 'doc.read').available).toBe(true);
-    expect(commandFor(contract, 'doc.find')).toMatchObject({ readOnly: true, available: false, unavailableReason: 'runtime' });
-    expect(contract.manifest.blocks.flatMap(entry => entry.actions).every(action => !action.available)).toBe(true);
+    expect(commandFor(contract, 'table.card')).toMatchObject({
+      available: false, unavailableReason: 'service', requires: ['linkMetadata', 'host'],
+    });
+    for (const name of ['local', 'unsupported', 'card']) {
+      expect(actionFor(contract, name).available).toBe(false);
+    }
   });
 
   it('copies effective action availability without changing the input or supplied schemas', () => {

@@ -1,4 +1,6 @@
 // src/shared/prop-schema.ts
+import type { BlockToolDescription } from '../../types/tools/tool-description';
+import { richText } from './tool-descriptions/rich-text';
 
 /** One field of a block's prop schema. */
 export interface PropSchemaEntry {
@@ -32,4 +34,33 @@ export const fillDefaults = <Data>(
   }
 
   return Object.freeze(result) as Readonly<Data>;
+};
+
+const typeFor = (value: unknown): Record<string, unknown> =>
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? { type: typeof value } : {};
+
+/**
+ * Agent description for a framework block. propSchema keys are exactly what
+ * save() returns, so the data object is closed.
+ */
+export const describeFromPropSchema = (input: {
+  type: string;
+  title?: string;
+  propSchema: PropSchema;
+  richTextFields?: string[];
+}): BlockToolDescription => {
+  const rich = new Set(input.richTextFields ?? []);
+  const entries = Object.entries(input.propSchema);
+
+  return {
+    summary: `${input.title ?? input.type} block`,
+    data: {
+      type: 'object',
+      additionalProperties: false,
+      properties: Object.fromEntries(entries.map(([key, entry]) => [key, rich.has(key)
+        ? richText(`Rich-text field "${key}".`)
+        : { ...typeFor(entry.default), ...(entry.values === undefined ? {} : { enum: [...entry.values] }) }])),
+    },
+    defaultData: Object.fromEntries(entries.map(([key, entry]) => [key, entry.default])),
+  };
 };

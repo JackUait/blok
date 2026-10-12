@@ -76,6 +76,7 @@ export const calculationItems = (
 ): PopoverItemParams[] => {
   const leaf = (fn: CalculationFn): PopoverItemParams => ({
     type: PopoverItemType.Default,
+    name: `database-calc-${fn}`,
     title: i18n.t(CALCULATION_LABEL_KEYS[fn]),
     isActive: current === fn,
     onActivate: () => onPick(fn),
@@ -92,6 +93,7 @@ export const calculationItems = (
     ? []
     : [{
       type: PopoverItemType.Default,
+      name: 'database-calc-cap-counts',
       title: i18n.t('tools.database.calcShowLargeCounts'),
       isActive: cap.capCounts,
       onActivate: () => cap.onCapCounts(!cap.capCounts),
@@ -99,6 +101,7 @@ export const calculationItems = (
   const items: PopoverItemParams[] = [
     {
       type: PopoverItemType.Default,
+      name: 'database-calc-none',
       title: i18n.t('tools.database.calcNone'),
       isActive: current === undefined,
       onActivate: () => onPick(null),
@@ -302,7 +305,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
   const onMoveTo = ctx.onMoveTo;
 
   return [
-    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: ctx.onEditIcon },
+    { type: PopoverItemType.Default, name: 'database-row-edit-icon', title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: ctx.onEditIcon },
     {
       type: PopoverItemType.Default,
       title: i18n.t('tools.database.tableEditProperty'),
@@ -310,6 +313,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
       children: {
         items: ctx.properties.map((property) => ({
           type: PopoverItemType.Default,
+          name: `database-row-edit-property-${property.id}`,
           title: property.name,
           onActivate: () => ctx.onEditProperty(property.id),
         })),
@@ -320,15 +324,15 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
       title: i18n.t('tools.database.tableOpenIn'),
       icon: IconSplitView,
       children: {
-        items: OPEN_IN.map(({ mode, icon, key }) => ({ type: PopoverItemType.Default, title: i18n.t(key), icon, onActivate: () => ctx.onOpenIn(mode) })),
+        items: OPEN_IN.map(({ mode, icon, key }) => ({ type: PopoverItemType.Default, name: `database-row-open-in-${mode}`, title: i18n.t(key), icon, onActivate: () => ctx.onOpenIn(mode) })),
       },
     },
     { type: PopoverItemType.Separator },
     ...(ctx.onComment !== undefined
-      ? [{ type: PopoverItemType.Default as const, title: i18n.t('tools.database.tableComment'), icon: IconMessage, onActivate: ctx.onComment }]
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-comment', title: i18n.t('tools.database.tableComment'), icon: IconMessage, onActivate: ctx.onComment }]
       : []),
-    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
-    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
+    { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
+    { type: PopoverItemType.Default, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
     ...(onMoveTo !== undefined && targets.length > 0
       ? [{
         type: PopoverItemType.Default as const,
@@ -338,13 +342,14 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
           searchable: true,
           items: targets.map((target) => ({
             type: PopoverItemType.Default as const,
+            name: `database-row-move-to-${target.id}`,
             title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
             onActivate: () => onMoveTo(target.id),
           })),
         },
       }]
       : []),
-    { type: PopoverItemType.Default, title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: beautifyShortcut('DELETE'), onActivate: ctx.onDelete },
+    { type: PopoverItemType.Default, name: 'database-row-delete', title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: beautifyShortcut('DELETE'), onActivate: ctx.onDelete },
     ...(ctx.lastEdited !== undefined ? [{ type: PopoverItemType.Separator } as const, lastEditedFooter(i18n, ctx.lastEdited)] : []),
   ];
 };

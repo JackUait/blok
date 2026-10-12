@@ -4,7 +4,15 @@ import { Core } from '../../../../src/components/core';
 import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 import { destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { BUILT_IN_RUNTIME_PARTS, BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
+import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from '../../../../src/shared/tool-actions/columns';
+import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/database';
+import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
+import { LINK_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/link';
+import { MEDIA_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/media';
+import { PAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/page';
 import { buildToolRuntimes, composeToolSanitize } from '../../../../src/shared/tool-actions/runtime';
+import { TABLE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/table';
+import { TABS_ACTION_HANDLERS, TABS_DEFAULT_CHILDREN } from '../../../../src/shared/tool-actions/tabs';
 import { BUILT_IN_BLOCK_SANITIZE } from '../../../../src/shared/tool-descriptions/sanitize/blocks';
 import { BUILT_IN_INLINE_SANITIZE } from '../../../../src/shared/tool-descriptions/sanitize/inline';
 import { defaultBlockTools, defaultInlineTools } from '../../../../src/tools';
@@ -19,6 +27,22 @@ const BLOCK_KEYS = [
   'divider', 'spacer', 'table_of_contents', 'quote', 'code', 'image', 'file', 'audio', 'video',
   'column_list', 'column', 'tabs', 'tab', 'embed', 'bookmark', 'page', 'page-link',
 ];
+
+const IMAGE_ACTIONS = { ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS };
+
+const EXPECTED_ACTIONS: Readonly<Record<string, Readonly<Record<string, ToolActionImpl>>>> = {
+  column_list: COLUMN_LIST_ACTION_HANDLERS,
+  page: PAGE_ACTION_HANDLERS,
+  table: TABLE_ACTION_HANDLERS,
+  tabs: TABS_ACTION_HANDLERS,
+  image: IMAGE_ACTIONS,
+  video: MEDIA_ACTION_HANDLERS.video,
+  audio: MEDIA_ACTION_HANDLERS.audio,
+  file: MEDIA_ACTION_HANDLERS.file,
+  embed: LINK_ACTION_HANDLERS.embed,
+  bookmark: LINK_ACTION_HANDLERS.bookmark,
+  database: DATABASE_ACTION_HANDLERS,
+};
 
 const INLINE_KEYS = [
   'marker', 'bold', 'italic', 'underline', 'clearFormat', 'link', 'strikethrough', 'inlineCode', 'equation', 'supSub',
@@ -252,7 +276,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(Object.keys(builtInEditorTools())).toEqual([...BLOCK_KEYS, ...INLINE_KEYS]);
   });
 
-  it('registers callout body seeds with table-only normalization and no actions', () => {
+  it('registers container seeds and tool actions with table-only normalization', () => {
     const defaultChildren: InsertSpec[] = [{ type: 'paragraph', data: { text: [] } }];
 
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren).toEqual(defaultChildren);
@@ -261,22 +285,40 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
 
     expect(typeof normalize).toBe('function');
     expect(BUILT_IN_RUNTIME_PARTS).toEqual({
-      table: { normalize },
+      table: { normalize, actions: TABLE_ACTION_HANDLERS },
       callout: { defaultChildren },
+      column_list: { defaultChildren: COLUMN_LIST_DEFAULT_CHILDREN, actions: COLUMN_LIST_ACTION_HANDLERS },
+      column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
+      page: { actions: PAGE_ACTION_HANDLERS },
+      tabs: { defaultChildren: TABS_DEFAULT_CHILDREN, actions: TABS_ACTION_HANDLERS },
+      image: { actions: IMAGE_ACTIONS },
+      video: { actions: MEDIA_ACTION_HANDLERS.video },
+      audio: { actions: MEDIA_ACTION_HANDLERS.audio },
+      file: { actions: MEDIA_ACTION_HANDLERS.file },
+      embed: { actions: LINK_ACTION_HANDLERS.embed },
+      bookmark: { actions: LINK_ACTION_HANDLERS.bookmark },
+      database: { actions: DATABASE_ACTION_HANDLERS },
+      list: { conversion: { export: 'text', import: 'text' } },
     });
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren)
       .toBe(BUILT_IN_RUNTIME_PARTS.callout?.defaultChildren);
 
     for (const runtime of BUILT_IN_TOOL_RUNTIMES.values()) {
-      expect(runtime.actions, runtime.name).toEqual({});
+      const expectedActions: Readonly<Record<string, ToolActionImpl>> = EXPECTED_ACTIONS[runtime.name] ?? {};
+
+      expect(runtime.actions, runtime.name).toEqual(expectedActions);
 
       if (runtime.name !== 'table') {
         expect(runtime, runtime.name).not.toHaveProperty('normalize');
       }
 
-      if (runtime.name === 'callout') {
+      if (runtime.name === 'callout' || runtime.name === 'column') {
         expect(runtime.defaultChildren).toEqual(defaultChildren);
+      } else if (runtime.name === 'column_list') {
+        expect(runtime.defaultChildren).toEqual(COLUMN_LIST_DEFAULT_CHILDREN);
+      } else if (runtime.name === 'tabs') {
+        expect(runtime.defaultChildren).toEqual(TABS_DEFAULT_CHILDREN);
       } else {
         expect(runtime, runtime.name).not.toHaveProperty('defaultChildren');
       }

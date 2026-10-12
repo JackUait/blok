@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Blok } from '../../../../../src/blok';
+import { Block } from '../../../../../src/components/block';
+import { ConvertConflictError } from '../../../../../src/components/errors/convert-conflict';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Header } from '../../../../../src/tools/header';
 import { YjsManager } from '../../../../../src/components/modules/yjs';
@@ -459,5 +461,70 @@ describe('the programmatic Blocks API racing a remote peer', () => {
       expect(textOf('peer', 'one')).toBe('alphaS');
       expect(textOf('peer', 'two')).toBe('beta edited');
     });
+  });
+
+  it('reports ConvertConflictError when the peer keeps changing the source during reads', async () => {
+    const instance = await boot(twoParagraphs());
+    const originalSave = Block.prototype.save;
+    let racing = true;
+    let characters = 0;
+
+    vi.spyOn(Block.prototype, 'save').mockImplementation(function (this: Block) {
+      return originalSave.call(this).then(result => {
+        if (racing && this.id === 'one') {
+          peerTypes('one', 5 + characters, 'X');
+          characters++;
+          deliverPeerUpdate();
+        }
+
+        return result;
+      });
+    });
+
+    const rejection: unknown = await instance.blocks.convert('one', 'header')
+      .catch((error: unknown) => error)
+      .finally(() => { racing = false; });
+
+    expect(rejection).toBeInstanceOf(ConvertConflictError);
+    expect(rejection).toHaveProperty('blockId', 'one');
+    expect(rejection).toHaveProperty('message', 'Could not convert Block «one»: it is being edited by someone else. Nothing was changed.');
+    expect(rejection).toHaveProperty('name', 'Error');
+    expect(String(rejection)).toBe('Error: Could not convert Block «one»: it is being edited by someone else. Nothing was changed.');
+    await frame();
+    syncBothWays();
+    expect(blockOf('local', 'one')?.type).toBe('paragraph');
+    expect(blockOf('peer', 'one')?.type).toBe('paragraph');
+    expect(textOf('local', 'one')).toBe(`alpha${'X'.repeat(characters)}`);
+    expect(textOf('peer', 'one')).toBe(`alpha${'X'.repeat(characters)}`);
+  });
+
+  it('reports ConvertConflictError when the peer changes source text during import', async () => {
+    const instance = await boot(twoParagraphs());
+    const config = Header.conversionConfig;
+
+    vi.spyOn(Header, 'conversionConfig', 'get').mockReturnValue({
+      ...config,
+      import: (text: string) => {
+        peerTypes('one', 5, 'X');
+        deliverPeerUpdate();
+
+        return { text };
+      },
+    });
+
+    const rejection: unknown = await instance.blocks.convert('one', 'header')
+      .catch((error: unknown) => error);
+
+    expect(rejection).toBeInstanceOf(ConvertConflictError);
+    expect(rejection).toHaveProperty('blockId', 'one');
+    expect(rejection).toHaveProperty('message', 'Could not convert Block «one»: it is being edited by someone else. Nothing was changed.');
+    expect(rejection).toHaveProperty('name', 'Error');
+    expect(String(rejection)).toBe('Error: Could not convert Block «one»: it is being edited by someone else. Nothing was changed.');
+    await frame();
+    syncBothWays();
+    expect(blockOf('local', 'one')?.type).toBe('paragraph');
+    expect(blockOf('peer', 'one')?.type).toBe('paragraph');
+    expect(textOf('local', 'one')).toBe('alphaX');
+    expect(textOf('peer', 'one')).toBe('alphaX');
   });
 });

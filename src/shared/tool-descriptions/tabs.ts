@@ -1,4 +1,72 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
+
+export const TABS_ACTIONS: ToolActionDeclaration[] = [
+  {
+    name: 'create',
+    target: 'create',
+    summary: 'Create a tabs block with its tabs.',
+    guidance: 'Omit tabs for three tabs titled Tab 1 to Tab 3. A new tab has no content; add blocks inside a tab with block.insert.',
+    args: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        tabs: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            required: ['title'],
+            additionalProperties: false,
+            properties: { title: { type: 'string' }, icon: { type: 'string' } },
+          },
+        },
+      },
+    },
+    result: {
+      type: 'object',
+      required: ['id', 'childIds'],
+      properties: {
+        id: { type: 'string' },
+        childIds: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  },
+  {
+    name: 'addTab',
+    target: 'block',
+    summary: 'Add a tab at a zero-based index.',
+    guidance: 'Omit at, or pass an index past the last tab, to append. Omit title for "Tab <n>", where n is the new tab count.',
+    args: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        title: { type: 'string' },
+        icon: { type: 'string' },
+        at: { type: 'integer', minimum: 0 },
+      },
+    },
+    result: {
+      type: 'object',
+      required: ['id'],
+      properties: { id: { type: 'string' } },
+    },
+  },
+  {
+    name: 'deleteTab',
+    target: 'block',
+    summary: 'Delete a tab and its content.',
+    args: {
+      type: 'object',
+      required: ['tabId'],
+      additionalProperties: false,
+      properties: { tabId: { type: 'string' } },
+    },
+    preconditions: [
+      'tabId must be a tab of this tabs block.',
+      'Deleting the last tab deletes the whole tabs block.',
+    ],
+  },
+];
 
 export const TABS_DATA = {
   type: 'object',
@@ -13,4 +81,5 @@ export const describeTabs = (_config: Record<string, unknown> = {}): BlockToolDe
   data: TABS_DATA,
   inputFields: [],
   defaultData: {},
+  actions: TABS_ACTIONS,
 });

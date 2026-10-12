@@ -3,14 +3,17 @@
  */
 
 import type { BlockOrigin, BlockToolData } from '../../../../types';
-import type { InsertInsideParentOptions } from '../../../../types/api/blocks';
+import type { InsertInsideParentOptions as PublicInsertInsideParentOptions } from '../../../../types/api/blocks';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationType, BlockMutationEventMap } from '../../../../types/events/block';
 import type { Block } from '../../block';
 import type { Blocks } from '../../blocks';
 import type { TreePlacement } from '../../utils/tree-order';
 
-export type { InsertInsideParentOptions };
+export interface InsertInsideParentOptions extends PublicInsertInsideParentOptions {
+  /** Children declared before the tool renders. */
+  contentIds?: string[];
+}
 
 /**
  * Block creation options
@@ -77,6 +80,8 @@ export interface InsertBlockOptions {
   replace?: boolean;
   /** Block tune data */
   tunes?: { [name: string]: BlockTuneData };
+  /** Children declared before the tool renders. */
+  contentIds?: string[];
   /** Skip syncing to Yjs (caller handles sync separately) */
   skipYjsSync?: boolean;
   /** When true, append block to workingArea instead of positioning relative to adjacent blocks */
@@ -108,6 +113,8 @@ export interface InsertBlockOptions {
    * store put it: the tool must place it.
    */
   placement?: TreePlacement;
+  /** Place declared self-placed children after block-added, before tree checks. */
+  placementAfterAdded?: TreePlacement;
   /**
    * Why this Block is being created — see {@link ComposeBlockOptions.origin}.
    * Defaults to `'api'`.

@@ -127,4 +127,18 @@ public static class BlokDocuments
     return new BlokDocumentConverter(
         JintBlokRuntime.FromEmbeddedResource(poolSize, timeout, allocationBudgetBytes));
   }
+
+  /// <summary>Creates an agent executor over a fresh engine pool. Keep one per process.</summary>
+  /// <param name="poolSize">How many batches may run at once.</param>
+  /// <param name="timeout">The runtime's startup and per-call timeout.</param>
+  /// <param name="allocationBudgetBytes">The runtime's per-call allocation budget.</param>
+  /// <returns>An executor using the embedded Blok runtime.</returns>
+  public static Agent.IBlokAgentExecutor CreateAgentExecutor(
+      int? poolSize = null,
+      TimeSpan? timeout = null,
+      long? allocationBudgetBytes = null)
+  {
+    return new Agent.BlokAgentExecutor(
+        JintBlokRuntime.FromEmbeddedResource(poolSize, timeout, allocationBudgetBytes));
+  }
 }

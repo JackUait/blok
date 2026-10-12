@@ -1,4 +1,6 @@
 import { describeImage } from '../../shared/tool-descriptions/image';
+import { IMAGE_ACTION_HANDLERS } from '../../shared/tool-actions/image';
+import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { imageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   AssetKind,
@@ -88,6 +90,7 @@ function prefersReducedMotion(): boolean {
 
 export class ImageTool implements BlockTool {
   public static describe = describeImage;
+  public static actionHandlers = { ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS };
 
   private readonly api: API;
   private readonly block: BlockAPI;

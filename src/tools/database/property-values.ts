@@ -1,5 +1,10 @@
 import { nanoid } from 'nanoid';
 import { safeHref } from '../../components/utils/sanitize-url';
+import {
+  createDefaultStatusOptions as createSharedStatusOptions,
+  createDefaultStatusSettings,
+  isListValueType,
+} from '../../shared/database/schema-ops';
 import type {
   DatabaseRow,
   FileValue,
@@ -9,7 +14,6 @@ import type {
   PropertyValue,
   SelectOption,
   StatusGroup,
-  StatusSettings,
 } from './types';
 
 /** Types whose value is computed from the row block, never stored in `properties`. */
@@ -29,15 +33,7 @@ const AUTOFILL_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([
 
 export const offersAutofill = (type: PropertyType): boolean => AUTOFILL_TYPES.has(type);
 
-/**
- * Types whose value is a list of `{ id }` objects. The tool writes `[]` for
- * them when it creates a row or the property, so ONE peer creates the list
- * and two peers' first adds then merge by id. Two peers each creating the key
- * is last-writer-wins: see LIST_SLOT_MAP_KEY in the yjs serializer.
- */
-const LIST_VALUE_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['person', 'files', 'relation']);
-
-export const isListValueType = (type: PropertyType): boolean => LIST_VALUE_TYPES.has(type);
+export { isListValueType, createDefaultStatusSettings };
 
 /** A naive host `target[id] = value` swaps its prototype on these ids. */
 const UNSAFE_PROPERTY_IDS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype']);
@@ -161,20 +157,8 @@ export const filesOf = (value: PropertyValue | undefined): FileValue[] =>
 
 export const STATUS_GROUP_KINDS = ['todo', 'inProgress', 'complete'] as const;
 
-/** The three Notion groups. Ids equal the kind, so two peers that add a status agree on them. */
-export const createDefaultStatusSettings = (names: Partial<Record<StatusGroup['kind'], string>> = {}): StatusSettings => ({
-  groups: [
-    { id: 'todo', kind: 'todo', name: names.todo ?? 'To-do', color: 'gray', position: 'a0' },
-    { id: 'inProgress', kind: 'inProgress', name: names.inProgress ?? 'In progress', color: 'blue', position: 'a1' },
-    { id: 'complete', kind: 'complete', name: names.complete ?? 'Complete', color: 'green', position: 'a2' },
-  ],
-});
-
-export const createDefaultStatusOptions = (labels: { notStarted: string; inProgress: string; done: string }): SelectOption[] => [
-  { id: nanoid(), label: labels.notStarted, color: 'gray', position: 'a0', groupId: 'todo' },
-  { id: nanoid(), label: labels.inProgress, color: 'blue', position: 'a0', groupId: 'inProgress' },
-  { id: nanoid(), label: labels.done, color: 'green', position: 'a0', groupId: 'complete' },
-];
+export const createDefaultStatusOptions = (labels: { notStarted: string; inProgress: string; done: string }): SelectOption[] =>
+  createSharedStatusOptions(labels, () => nanoid());
 
 const byPosition = <T extends { position: string }>(a: T, b: T): number => {
   if (a.position === b.position) return 0;

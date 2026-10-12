@@ -1,3 +1,4 @@
+import { COLUMN_LIST_ACTION_HANDLERS } from '../../shared/tool-actions/columns';
 import { describeColumnList } from '../../shared/tool-descriptions/column-list';
 import type {
   API,
@@ -40,6 +41,7 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
  */
 export class ColumnList implements BlockTool {
   public static describe = describeColumnList;
+  public static actionHandlers = COLUMN_LIST_ACTION_HANDLERS;
 
   private readonly api: API;
   private _data: ColumnListData;

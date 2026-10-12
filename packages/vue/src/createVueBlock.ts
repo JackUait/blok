@@ -33,7 +33,7 @@ import {
   mountChildBlocks,
   withSlotlessDescendants,
 } from '@bloklabs/core/adapters';
-import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
+import { describeFromPropSchema, fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
@@ -730,6 +730,21 @@ export function createVueBlock<Data = BlockToolData>(
 
     Object.defineProperty(VueBlockTool, key, {
       value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
+  // An authored describe wins; otherwise agents get the propSchema shape.
+  if (spec.statics?.describe === undefined) {
+    Object.defineProperty(VueBlockTool, 'describe', {
+      value: () => describeFromPropSchema({
+        type: spec.type,
+        title: spec.toolbox !== undefined && !Array.isArray(spec.toolbox) ? spec.toolbox.title : undefined,
+        propSchema: spec.propSchema,
+        richTextFields: spec.statics?.richTextFields,
+      }),
       writable: true,
       enumerable: true,
       configurable: true,

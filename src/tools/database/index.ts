@@ -1,4 +1,5 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
+import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
@@ -266,6 +267,7 @@ const rowLink: { closed: string | null } = { closed: null };
 
 export class DatabaseTool implements BlockTool {
   public static describe = describeDatabase;
+  public static actionHandlers = DATABASE_ACTION_HANDLERS;
 
   private readonly api: API;
   private readonly block: BlockAPI;
@@ -2931,6 +2933,7 @@ export class DatabaseTool implements BlockTool {
 
     this.showGroupPopover(anchor, TIMELINE_ZOOMS.map((zoom) => ({
       type: PopoverItemType.Default,
+      name: `database-timeline-zoom-${zoom}`,
       title: this.api.i18n.t(timelineZoomLabelKey(zoom)),
       isActive: zoom === current,
       onActivate: () => this.updateActiveView({ timelineZoom: zoom }),
@@ -4698,6 +4701,7 @@ export class DatabaseTool implements BlockTool {
       items: [
         {
           type: PopoverItemType.Default,
+          name: 'database-card-delete',
           title: this.api.i18n.t('tools.database.deleteCard'),
           icon: IconTrash,
           onActivate: () => {
@@ -5925,8 +5929,8 @@ export class DatabaseTool implements BlockTool {
       onDelete: () => this.trashSelection(),
       onMore: (anchor) => {
         openMenu(anchor, [
-          { title: this.api.i18n.t('tools.database.tableDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.duplicateSelection() },
-          { title: this.api.i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, closeOnActivate: true, onActivate: () => this.trashSelection() },
+          { name: 'database-selection-duplicate', title: this.api.i18n.t('tools.database.tableDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.duplicateSelection() },
+          { name: 'database-selection-delete', title: this.api.i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, closeOnActivate: true, onActivate: () => this.trashSelection() },
         ]);
       },
     }));
@@ -6000,6 +6004,7 @@ export class DatabaseTool implements BlockTool {
           return;
         }
         openMenu(bar, properties.map((property) => ({
+          name: `database-bulk-edit-${property.id}`,
           title: property.name,
           closeOnActivate: true,
           onActivate: () => {

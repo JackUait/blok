@@ -1,3 +1,4 @@
+import { TABLE_ACTION_HANDLERS } from '../../shared/tool-actions/table';
 import { describeTable } from '../../shared/tool-descriptions/table';
 import { tableSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -46,7 +47,7 @@ import {
   updateHeadingStyles,
   updateTextSizeStyles,
 } from './table-operations';
-import { mergePaddedCells } from './table-ids';
+import { generateTableId, mergePaddedCells } from './table-ids';
 import { TableModel } from './table-model';
 import { renderTablePreview } from './preview';
 import { ownPastedCells, ownPastedRows } from './table-cell-paste';
@@ -84,6 +85,7 @@ const WRAPPER_EDIT_CLASSES = [
  */
 export class Table implements BlockTool {
   public static describe = describeTable;
+  public static actionHandlers = TABLE_ACTION_HANDLERS;
 
   private api: API;
   private readOnly: boolean;
@@ -135,7 +137,7 @@ export class Table implements BlockTool {
 
     this.initialContent = normalized.content;
     this.grid = new TableGrid({ readOnly });
-    this.model = new TableModel(normalized);
+    this.model = new TableModel(normalized, { mintId: generateTableId });
     this.blockId = block?.id;
     this.block = block;
     this.subsystems = new TableSubsystems(this.createSubsystemHost());

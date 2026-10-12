@@ -1,0 +1,52 @@
+import type { AssetKind } from '../../../types/tools/block-tool';
+import type { ToolActionImpl } from '../../../types/tools/tool-description';
+import type { UploaderService } from './services';
+
+const isHttp = (url: string): boolean => /^https?:\/\//i.test(url);
+
+const HTTP_ONLY = 'Pass an http(s) URL.';
+
+interface Source {
+  url: string;
+  fileName?: string;
+}
+
+const hasUploadByUrl = (value: unknown): value is Required<UploaderService> =>
+  typeof value === 'object' && value !== null && 'uploadByUrl' in value && typeof value.uploadByUrl === 'function';
+
+// Image and video keep renditions in `variants`; a new source makes them stale (image/index.ts writeEnteredUrl).
+const HAS_VARIANTS = new Set(['image', 'video']);
+
+const rehost = (kind: AssetKind, tool: string, field: 'url' | 'coverUrl'): ToolActionImpl<{ url: string }, Source, undefined> => ({
+  prepare: async ({ services }, args) => {
+    if (!isHttp(args.url)) {
+      throw new TypeError(HTTP_ONLY);
+    }
+    if (!hasUploadByUrl(services.uploader)) {
+      return { url: args.url };
+    }
+    const asset = await services.uploader.uploadByUrl(args.url, { kind, tool });
+
+    return field === 'url' && asset.fileName !== undefined ? { url: asset.url, fileName: asset.fileName } : { url: asset.url };
+  },
+  run: (ctx, args, prepared) => {
+    if (!isHttp(args.url)) {
+      ctx.fail('INVALID_ARGS', HTTP_ONLY);
+    }
+    const block = ctx.block ?? ctx.fail('INVALID_ARGS', `Pass the id of a ${tool} block.`);
+    const source = prepared ?? { url: args.url };
+
+    ctx.update(block.id, field === 'url'
+      ? { ...source, ...(HAS_VARIANTS.has(tool) ? { variants: undefined } : {}) }
+      : { coverUrl: source.url });
+
+    return undefined;
+  },
+});
+
+export const MEDIA_ACTION_HANDLERS = {
+  image: { setSource: rehost('image', 'image', 'url') },
+  video: { setSource: rehost('video', 'video', 'url') },
+  audio: { setSource: rehost('audio', 'audio', 'url'), setCover: rehost('image', 'audio', 'coverUrl') },
+  file: { setSource: rehost('file', 'file', 'url') },
+} as const;

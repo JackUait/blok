@@ -48,6 +48,8 @@ const EXTRA_FILES = [
   'src/components/modules/paste/handlers/table-cells-handler.ts',
   'src/components/migration/legacy-grammar.mjs',
   'src/components/utils/data-model-transform.ts',
+  'src/shared/table/table-model.ts',
+  'src/shared/tool-actions/table.ts',
 ];
 
 interface ExemptSite {

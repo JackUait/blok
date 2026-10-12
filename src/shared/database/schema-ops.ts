@@ -1,0 +1,140 @@
+import { DATABASE_DEFAULT_TEXT } from './default-text';
+import { generateKeyBetween } from './fractional-index';
+import { looseKeyBetween, normalizeKey } from './positions';
+import { resolveViewProperties, visibleRowPropertyIds } from './view-properties';
+
+import type { DatabaseViewConfig, DatabaseViewSettingKey, PropertyDefinition, PropertyType, SelectOption, StatusGroup, StatusSettings, ViewType } from './types';
+
+/*
+ * Pure pieces of DatabaseModel that the headless database actions need too. DatabaseModel
+ * itself stays in src/tools: it uses structuredClone, which the Jint realm lacks.
+ */
+
+export type ViewCreateConfig = Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey>>;
+
+/**
+ * Random tail for an appended key. `key + suffix` sorts strictly after `key`
+ * and strictly before the next key with a larger integer part, so the suffix
+ * only breaks ties between peers.
+ *
+ * Digits only, although fractional-indexing takes the whole base62 alphabet:
+ * a digit tail keeps a key the library can read and extend. The last digit
+ * may not be '0' — the library rejects a key ending in one.
+ */
+const randomKeySuffix = (): string => {
+  const digit = (from: number): string => String(from + Math.floor(Math.random() * (10 - from)));
+
+  return `${digit(0)}${digit(0)}${digit(0)}${digit(1)}`;
+};
+
+/**
+ * A fractional-index key between two neighbours (DatabaseModel.positionBetween documents
+ * the cases). Appending (`before === null`) adds a random suffix, so two peers adding at
+ * the same moment never land on the same key.
+ */
+export const positionBetween = (after: string | null, before: string | null): string => {
+  const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
+
+  if (low !== null && low === high) {
+    return low + randomKeySuffix();
+  }
+
+  try {
+    const key = generateKeyBetween(normalizeKey(low), normalizeKey(high));
+
+    return low !== null && high === null ? key + randomKeySuffix() : key;
+  } catch {
+    return looseKeyBetween(low ?? '', high, randomKeySuffix());
+  }
+};
+
+export const createDefaultSchema = (mintId: (name: string) => string): PropertyDefinition[] => [
+  {
+    id: mintId('title'),
+    name: DATABASE_DEFAULT_TEXT.titleProperty,
+    type: 'title',
+    position: 'a0',
+  },
+  {
+    id: mintId('status'),
+    name: DATABASE_DEFAULT_TEXT.statusProperty,
+    type: 'select',
+    position: 'a1',
+    config: {
+      options: [
+        { id: mintId('not-started'), label: DATABASE_DEFAULT_TEXT.statusNotStarted, color: 'gray', position: 'a0' },
+        { id: mintId('in-progress'), label: DATABASE_DEFAULT_TEXT.statusInProgress, color: 'blue', position: 'a1' },
+        { id: mintId('done'), label: DATABASE_DEFAULT_TEXT.statusDone, color: 'green', position: 'a2' },
+      ],
+    },
+  },
+];
+
+/**
+ * A view as it is first written. `properties`, `calculations`, `filterTree`,
+ * `colorRules`, the group lists and both group settings maps exist from birth so two peers' first edits
+ * merge: a key both peers create at once is last-writer-wins. `properties`
+ * is never empty (there is always a title), so the CRDT keys its entries by
+ * id; the empty lists rely on the eager array rule in yjs/serializer.ts.
+ * The tree id derives from the view id, so seeded clients write the same one.
+ */
+export const newView = (
+  seed: Pick<DatabaseViewConfig, 'id' | 'name' | 'type' | 'position'> & ViewCreateConfig,
+  schema: PropertyDefinition[]
+): DatabaseViewConfig => {
+  const base: DatabaseViewConfig = {
+    ...seed,
+    groupBy: seed.groupBy,
+    sorts: seed.sorts ?? [],
+    filters: seed.filters ?? [],
+    visibleProperties: seed.visibleProperties ?? [],
+    calculations: seed.calculations ?? [],
+    hiddenGroups: seed.hiddenGroups ?? [],
+    collapsedGroups: seed.collapsedGroups ?? [],
+    filterTree: seed.filterTree ?? { id: `${seed.id}-filters`, conjunction: 'and', filterRules: [] },
+    colorRules: seed.colorRules ?? [],
+    groupSettings: seed.groupSettings ?? {},
+    subGroupSettings: seed.subGroupSettings ?? {},
+    ...(seed.type === 'timeline' ? { tableProperties: seed.tableProperties ?? [] } : {}),
+  };
+  const properties = seed.properties ?? resolveViewProperties(base, schema).map(({ id, visible }) => ({ id, visible }));
+
+  return { ...base, properties, visibleProperties: visibleRowPropertyIds({ ...base, properties }, schema) };
+};
+
+export const createDefaultView = (type: ViewType, schema: PropertyDefinition[], mintId: (name: string) => string): DatabaseViewConfig =>
+  newView({
+    id: mintId('view'),
+    name: type === 'table' ? DATABASE_DEFAULT_TEXT.viewTypeTable : DATABASE_DEFAULT_TEXT.viewBoard,
+    type,
+    position: 'a0',
+    ...(type === 'board' ? { groupBy: schema.find((p) => p.type === 'select')?.id } : {}),
+  }, schema);
+
+/**
+ * Types whose value is a list of `{ id }` objects. The tool writes `[]` for
+ * them when it creates a row or the property, so ONE peer creates the list
+ * and two peers' first adds then merge by id. Two peers each creating the key
+ * is last-writer-wins: see LIST_SLOT_MAP_KEY in the yjs serializer.
+ */
+const LIST_VALUE_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['person', 'files', 'relation']);
+
+export const isListValueType = (type: PropertyType): boolean => LIST_VALUE_TYPES.has(type);
+
+/** The three Notion groups. Ids equal the kind, so two peers that add a status agree on them. */
+export const createDefaultStatusSettings = (names: Partial<Record<StatusGroup['kind'], string>> = {}): StatusSettings => ({
+  groups: [
+    { id: 'todo', kind: 'todo', name: names.todo ?? 'To-do', color: 'gray', position: 'a0' },
+    { id: 'inProgress', kind: 'inProgress', name: names.inProgress ?? 'In progress', color: 'blue', position: 'a1' },
+    { id: 'complete', kind: 'complete', name: names.complete ?? 'Complete', color: 'green', position: 'a2' },
+  ],
+});
+
+export const createDefaultStatusOptions = (
+  labels: { notStarted: string; inProgress: string; done: string },
+  mintId: () => string
+): SelectOption[] => [
+  { id: mintId(), label: labels.notStarted, color: 'gray', position: 'a0', groupId: 'todo' },
+  { id: mintId(), label: labels.inProgress, color: 'blue', position: 'a0', groupId: 'inProgress' },
+  { id: mintId(), label: labels.done, color: 'green', position: 'a0', groupId: 'complete' },
+];

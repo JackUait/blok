@@ -386,6 +386,7 @@ export class DatabasePropertyMenu {
           icon: IconTrash,
           isDestructive: true,
           confirmation: {
+            name: entry,
             title: this.t('tools.database.deletePropertyConfirm'),
             icon: IconTrash,
             isDestructive: true,

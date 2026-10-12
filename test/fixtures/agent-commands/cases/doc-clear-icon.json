@@ -1,0 +1,22 @@
+{
+  "name": "doc-clear-icon",
+  "seed": {
+    "blocks": [],
+    "icon": {
+      "type": "emoji",
+      "value": "📅"
+    }
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "doc.setIcon",
+          "args": {
+            "icon": null
+          }
+        }
+      ]
+    }
+  ]
+}

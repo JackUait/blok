@@ -138,12 +138,14 @@ export class BlockInsertion {
       needToFocus = true,
       replace = false,
       tunes,
+      contentIds,
       skipYjsSync = false,
       appendToWorkingArea = false,
       forceTopLevel = false,
       origin = 'api',
       inferParent = false,
       eventParentId,
+      placementAfterAdded,
     } = options;
 
     const prevIndex = this.ctx.rawCurrentBlockIndex;
@@ -204,6 +206,7 @@ export class BlockInsertion {
       ...(id !== undefined && { id }),
       ...(data !== undefined && { data }),
       ...(tunes !== undefined && { tunes }),
+      ...(contentIds !== undefined && { contentIds }),
     });
 
     /**
@@ -340,6 +343,11 @@ export class BlockInsertion {
       ...(eventParentId !== undefined && { parentId: eventParentId }),
       ...(eventParentId === undefined && inferParent && { parentId: block.parentId }),
     });
+
+    // A live parent during block-added makes local table children await cell data.
+    if (placementAfterAdded !== undefined) {
+      this.hierarchy.placeBlock(block, placementAfterAdded);
+    }
 
     /**
      * Sync to Yjs data layer (unless caller is handling sync separately,
@@ -509,7 +517,7 @@ export class BlockInsertion {
    * @param reindent - whether to re-indent the placed block (an index insert at the root never did)
    */
   private insertAtPlacement(options: InsertBlockOptions, placement: TreePlacement, blocksStore: BlocksStore, reindent = true): Block {
-    const { id, tool, data, tunes, needToFocus = true, skipYjsSync = false, origin = 'api' } = options;
+    const { id, tool, data, tunes, contentIds, needToFocus = true, skipYjsSync = false, origin = 'api' } = options;
 
     if (options.index !== undefined || options.replace === true) {
       throw new Error('Could not insert Block. A placement cannot be combined with an index or a replace.');
@@ -535,6 +543,7 @@ export class BlockInsertion {
       ...(id !== undefined && { id }),
       ...(data !== undefined && { data }),
       ...(tunes !== undefined && { tunes }),
+      ...(contentIds !== undefined && { contentIds }),
     });
 
     // Model and mount first, so the tool's first rendered() already sees its
@@ -1109,7 +1118,7 @@ export class BlockInsertion {
       throw new BlockPlacementError(`"${parentId}" takes no children`);
     }
 
-    const { id: requestedId, tunes, focus = false, keepCurrent = false, origin } = options;
+    const { id: requestedId, tunes, contentIds, focus = false, keepCurrent = false, origin } = options;
     const insertIndex = this.clampIntoSubtree(parentBlock, requestedIndex);
     const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
@@ -1182,7 +1191,9 @@ export class BlockInsertion {
         needToFocus: focus,
         skipYjsSync: true,
         ...(selfPlaced ? { index: insertIndex, eventParentId: parentId } : { placement }),
+        ...(selfPlaced && contentIds !== undefined && { placementAfterAdded: placement }),
         ...(tunes !== undefined && { tunes }),
+        ...(contentIds !== undefined && { contentIds }),
         ...(origin !== undefined && { origin }),
       }, blocksStore);
 

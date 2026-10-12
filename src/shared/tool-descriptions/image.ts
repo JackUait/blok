@@ -1,5 +1,6 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 import { ALIGNMENT } from './rich-text';
+import { urlSourceAction } from './url-action';
 
 export const IMAGE_DATA = {
   type: 'object',
@@ -138,6 +139,114 @@ const filterNames = (filters: unknown[]): string[] => filters
   })
   .filter((name): name is string => typeof name === 'string' && name !== '' && name !== 'none');
 
+// The saved item shapes without `id`: the action mints ids. Derived, so the two stay one source.
+const NEW_MARKUP_ITEMS = IMAGE_DATA.properties.markup.items.anyOf.map(branch => ({
+  ...branch,
+  required: branch.required.filter(key => key !== 'id'),
+  properties: Object.fromEntries(Object.entries(branch.properties).filter(([key]) => key !== 'id')),
+}));
+
+const PERCENT = { type: 'number', minimum: 0, maximum: 100 };
+
+export const IMAGE_ACTIONS: ToolActionDeclaration[] = [
+  urlSourceAction('setSource', 'Set or replace the image from a URL.'),
+  {
+    name: 'crop',
+    summary: 'Crop the image to a rectangle given in percent of the turned image. The full rectangle removes the crop.',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['rect'],
+      additionalProperties: false,
+      properties: {
+        rect: {
+          type: 'object',
+          required: ['x', 'y', 'w', 'h'],
+          additionalProperties: false,
+          properties: { x: PERCENT, y: PERCENT, w: PERCENT, h: PERCENT },
+        },
+        shape: { enum: ['rect', 'circle', 'ellipse'] },
+      },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'rotate',
+    summary: 'Turn the image clockwise by quarter turns. The crop and drawings turn with it.',
+    target: 'block',
+    args: { type: 'object', required: ['turns'], additionalProperties: false, properties: { turns: { enum: [1, 2, 3] } } },
+    mirrors: [],
+  },
+  {
+    name: 'flip',
+    summary: 'Mirror the image left to right. The crop and drawings mirror with it.',
+    target: 'block',
+    args: { type: 'object', additionalProperties: false, properties: {} },
+    mirrors: [],
+  },
+  {
+    name: 'straighten',
+    summary: 'Tilt the image by a few degrees clockwise. The crop shrinks so no empty corner shows.',
+    target: 'block',
+    preconditions: ['naturalWidth and naturalHeight are known.'],
+    args: {
+      type: 'object',
+      required: ['degrees'],
+      additionalProperties: false,
+      properties: { degrees: { type: 'number', minimum: -45, maximum: 45 } },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'addMarkup',
+    summary: 'Draw shapes, strokes or text labels over the image. Returns their markup ids.',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['items'],
+      additionalProperties: false,
+      properties: { items: { type: 'array', minItems: 1, maxItems: 500, items: { anyOf: NEW_MARKUP_ITEMS } } },
+    },
+    result: {
+      type: 'object',
+      required: ['markupIds'],
+      properties: { markupIds: { type: 'array', items: { type: 'string' } } },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'updateMarkup',
+    summary: 'Change fields of one markup item. Its id and type stay.',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['markupId', 'patch'],
+      additionalProperties: false,
+      properties: {
+        markupId: { type: 'string' },
+        patch: { type: 'object', description: 'Fields to change, in the saved markup shape.' },
+      },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'removeMarkup',
+    summary: 'Remove markup items by id, or all of them.',
+    target: 'block',
+    // Flat, with oneOf over `required` only: core adds `id` to these properties for the block target.
+    args: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        markupIds: { type: 'array', minItems: 1, items: { type: 'string' } },
+        all: { const: true },
+      },
+      oneOf: [{ required: ['markupIds'] }, { required: ['all'] }],
+    },
+    mirrors: [],
+  },
+];
+
 export const describeImage = (config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'An image with optional caption, crop, turn, colour look and drawings.',
   guidance: 'Set or replace the picture with image.setSource. Crop, rotate, flip and straighten with image.crop, image.rotate, image.flip and image.straighten: each also turns crop and markup. Add or change drawings with image.addMarkup, image.updateMarkup and image.removeMarkup. caption and alt are plain text.',
@@ -146,4 +255,5 @@ export const describeImage = (config: Record<string, unknown> = {}): BlockToolDe
     : IMAGE_DATA,
   summaryFields: ['alignment', 'size', 'width'],
   guardedFields: { markup: 'image.*Markup' },
+  actions: IMAGE_ACTIONS,
 });

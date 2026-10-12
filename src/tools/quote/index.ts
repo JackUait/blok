@@ -175,6 +175,7 @@ export class Quote implements BlockTool {
           items: [
             {
               icon: IconQuote,
+              name: 'quote-size-default',
               title: this.api.i18n.t('tools.quote.defaultSize'),
               onActivate: (): void => this.setSize('default'),
               closeOnActivate: true,
@@ -182,6 +183,7 @@ export class Quote implements BlockTool {
             },
             {
               icon: IconQuote,
+              name: 'quote-size-large',
               title: this.api.i18n.t('tools.quote.largeSize'),
               onActivate: (): void => this.setSize('large'),
               closeOnActivate: true,

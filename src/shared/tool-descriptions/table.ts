@@ -1,4 +1,222 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import { richText } from './rich-text';
+
+import type { BlokSchema, BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
+
+const RICH_CELLS = { type: 'array', items: { type: 'array', items: richText('Text of one cell.') } };
+
+export const RANGE_ARGS: BlokSchema = {
+  type: 'object',
+  description: 'Inclusive cell range, zero-based.',
+  required: ['fromRow', 'fromCol', 'toRow', 'toCol'],
+  additionalProperties: false,
+  properties: {
+    fromRow: { type: 'integer', minimum: 0 },
+    fromCol: { type: 'integer', minimum: 0 },
+    toRow: { type: 'integer', minimum: 0 },
+    toCol: { type: 'integer', minimum: 0 },
+  },
+};
+
+const PLACEMENTS = [
+  'top-left', 'top-center', 'top-right',
+  'middle-left', 'middle-center', 'middle-right',
+  'bottom-left', 'bottom-center', 'bottom-right',
+];
+
+const LINE_ARGS: BlokSchema = {
+  type: 'object',
+  required: ['at'],
+  additionalProperties: false,
+  properties: {
+    at: { type: 'integer', minimum: 0 },
+    count: { type: 'integer', minimum: 1, default: 1 },
+  },
+};
+
+const MOVE_ARGS: BlokSchema = {
+  type: 'object',
+  required: ['from', 'to'],
+  additionalProperties: false,
+  properties: {
+    from: { type: 'integer', minimum: 0 },
+    to: { type: 'integer', minimum: 0, description: 'Index the moved line ends up at.' },
+  },
+};
+
+export const TABLE_ACTIONS: ToolActionDeclaration[] = [
+  {
+    name: 'create',
+    summary: 'Create a table with rows x cols cells, each holding one paragraph.',
+    target: 'create',
+    args: {
+      type: 'object',
+      required: ['rows', 'cols'],
+      additionalProperties: false,
+      properties: {
+        rows: { type: 'integer', minimum: 1 },
+        cols: { type: 'integer', minimum: 1 },
+        withHeadings: { type: 'boolean' },
+        withHeadingColumn: { type: 'boolean' },
+        cells: { ...RICH_CELLS, description: 'Optional starting text, row by row.' },
+      },
+    },
+    result: {
+      type: 'object',
+      required: ['id', 'childIds'],
+      properties: {
+        id: { type: 'string' },
+        childIds: { type: 'array', items: { type: 'string' } },
+      },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'insertRows',
+    summary: 'Insert empty rows before row at (use the row count to append).',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['at'],
+      additionalProperties: false,
+      properties: {
+        at: { type: 'integer', minimum: 0 },
+        count: { type: 'integer', minimum: 1, default: 1 },
+        cells: { ...RICH_CELLS, description: 'Optional text for the new rows, row by row.' },
+      },
+    },
+    result: {
+      type: 'object',
+      required: ['childIds'],
+      properties: { childIds: { type: 'array', items: { type: 'string' } } },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'insertColumns',
+    summary: 'Insert empty columns before column at (use the column count to append).',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['at'],
+      additionalProperties: false,
+      properties: {
+        at: { type: 'integer', minimum: 0 },
+        count: { type: 'integer', minimum: 1, default: 1 },
+        cells: { ...RICH_CELLS, description: 'Optional text for the new columns, column by column.' },
+      },
+    },
+    result: {
+      type: 'object',
+      required: ['childIds'],
+      properties: { childIds: { type: 'array', items: { type: 'string' } } },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'deleteRows',
+    summary: 'Delete rows and the blocks in their cells.',
+    target: 'block',
+    preconditions: ['At least one row must remain.'],
+    args: LINE_ARGS,
+    mirrors: [],
+  },
+  {
+    name: 'deleteColumns',
+    summary: 'Delete columns and the blocks in their cells.',
+    target: 'block',
+    preconditions: ['At least one column must remain.'],
+    args: LINE_ARGS,
+    mirrors: [],
+  },
+  {
+    name: 'moveRow',
+    summary: 'Move one row to another index.',
+    target: 'block',
+    preconditions: ['The row is not part of a merge and does not land inside one.'],
+    args: MOVE_ARGS,
+    mirrors: [],
+  },
+  {
+    name: 'moveColumn',
+    summary: 'Move one column to another index.',
+    target: 'block',
+    preconditions: ['The column is not part of a merge and does not land inside one.'],
+    args: MOVE_ARGS,
+    mirrors: [],
+  },
+  {
+    name: 'duplicateRows',
+    summary: 'Copy rows, with their blocks, colours and placement, right after the copied range.',
+    target: 'block',
+    args: LINE_ARGS,
+    mirrors: [],
+  },
+  {
+    name: 'duplicateColumns',
+    summary: 'Copy columns, with their blocks, colours, placement and width, right after the copied range.',
+    target: 'block',
+    args: LINE_ARGS,
+    mirrors: [],
+  },
+  {
+    name: 'clearCells',
+    summary: 'Empty the cells in a range; each keeps one empty paragraph.',
+    target: 'block',
+    args: { type: 'object', required: ['range'], additionalProperties: false, properties: { range: RANGE_ARGS } },
+    mirrors: [],
+  },
+  {
+    name: 'styleCells',
+    summary: 'Set or clear background colour, text colour and placement on a range of cells.',
+    guidance: 'Colours take a preset name (gray, brown, orange, yellow, green, blue, purple, pink, red) or a CSS colour. null clears. Covered cells of a merge are skipped.',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['range'],
+      additionalProperties: false,
+      properties: {
+        range: RANGE_ARGS,
+        color: { type: ['string', 'null'], description: 'Background colour.' },
+        textColor: { type: ['string', 'null'] },
+        placement: { anyOf: [{ enum: PLACEMENTS }, { type: 'null' }], description: 'Where content sits in the cell.' },
+      },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'fillCells',
+    summary: 'Copy the first column (right) or first row (down) of a range across the range. The other cells lose their blocks.',
+    target: 'block',
+    args: {
+      type: 'object',
+      required: ['range', 'direction'],
+      additionalProperties: false,
+      properties: { range: RANGE_ARGS, direction: { enum: ['right', 'down'] } },
+    },
+    mirrors: [],
+  },
+  {
+    name: 'mergeCells',
+    summary: 'Merge a rectangle of cells into its top-left cell. Their blocks move into it.',
+    target: 'block',
+    preconditions: ['The range has at least two cells and does not cut through another merged cell.'],
+    args: { type: 'object', required: ['range'], additionalProperties: false, properties: { range: RANGE_ARGS } },
+    mirrors: [],
+  },
+  {
+    name: 'splitCell',
+    summary: 'Split a merged cell back into single cells. Its content stays in the top-left cell.',
+    target: 'block',
+    preconditions: ['The cell at row, col is the top-left cell of a merge.'],
+    args: {
+      type: 'object',
+      required: ['row', 'col'],
+      additionalProperties: false,
+      properties: { row: { type: 'integer', minimum: 0 }, col: { type: 'integer', minimum: 0 } },
+    },
+    mirrors: [],
+  },
+];
 
 export const TABLE_DATA = {
   type: 'object',
@@ -28,14 +246,7 @@ export const TABLE_DATA = {
                 text: { type: 'string', description: 'Inline HTML mirror of the cell, kept for import/export paths.' },
                 color: { type: 'string', description: 'Cell background color preset name.' },
                 textColor: { type: 'string' },
-                placement: {
-                  type: 'string',
-                  enum: [
-                    'top-left', 'top-center', 'top-right',
-                    'middle-left', 'middle-center', 'middle-right',
-                    'bottom-left', 'bottom-center', 'bottom-right',
-                  ],
-                },
+                placement: { type: 'string', enum: PLACEMENTS },
                 colspan: { type: 'integer', minimum: 1, description: 'Only set on a merge origin.' },
                 rowspan: { type: 'integer', minimum: 1, description: 'Only set on a merge origin.' },
                 mergedInto: {
@@ -64,4 +275,5 @@ export const describeTable = (_config: Record<string, unknown> = {}): BlockToolD
   inputFields: [],
   summaryFields: ['withHeadings', 'withHeadingColumn'],
   guardedFields: { content: 'table.*' },
+  actions: TABLE_ACTIONS,
 });

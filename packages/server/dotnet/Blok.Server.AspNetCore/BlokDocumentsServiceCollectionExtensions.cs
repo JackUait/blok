@@ -74,6 +74,16 @@ public static class BlokDocumentsServiceCollectionExtensions
     services.TryAddSingleton<IBlokRuntime>(
         _ => JintBlokRuntime.FromEmbeddedResource(poolSize, timeout, allocationBudgetBytes));
     services.TryAddSingleton<IBlokDocumentConverter, BlokDocumentConverter>();
+    // Resolved here, not where collab registers, so either call order gets the rooms.
+    // The manager's factory throws when collab is off, so check the options first.
+    services.TryAddSingleton<Agent.IBlokAgentExecutor>(provider =>
+    {
+      var rooms = provider.GetService<BlokServerOptions>() is { CollabEnabled: true }
+        ? provider.GetRequiredService<Blok.Server.Collab.CollabRoomManager>()
+        : null;
+
+      return new Agent.BlokAgentExecutor(provider.GetRequiredService<IBlokRuntime>(), rooms, rooms?.Converter);
+    });
 
     if (warmUp)
     {

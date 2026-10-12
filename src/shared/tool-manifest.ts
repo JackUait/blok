@@ -176,7 +176,7 @@ const actionsFor = (
     return {
       ...action,
       command,
-      // Runner services and read-only rules belong to buildAgentContract.
+      // Runner runtime and services belong to buildAgentContract.
       available: block.handlers.includes(action.name),
     };
   });
@@ -334,13 +334,8 @@ const withTarget = (action: ManifestAction): BlokSchema => {
 
 const toolAvailability = (
   action: ManifestAction,
-  readOnly: boolean,
   where: ContractWhere
 ): Pick<CommandEntry, 'available' | 'unavailableReason'> => {
-  if (readOnly) {
-    return { available: false };
-  }
-
   if (!action.available || (action.runtime === 'editor' && where.runtime !== 'editor')) {
     return { available: false, unavailableReason: 'runtime' };
   }
@@ -363,7 +358,6 @@ export const buildAgentContract = (
       throw new Error(`Core command names must contain a dot: ${name}.`);
     }
 
-    const readOnlyBlocked = manifest.readOnly && !command.readOnly;
     const runtimeBlocked = (command.runtime === 'editor' && where.runtime !== 'editor')
       || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime));
 
@@ -376,8 +370,8 @@ export const buildAgentContract = (
       readOnly: command.readOnly,
       runtime: command.runtime,
       source: 'core',
-      available: !readOnlyBlocked && !runtimeBlocked,
-      ...(runtimeBlocked && !readOnlyBlocked ? { unavailableReason: 'runtime' } : {}),
+      available: !runtimeBlocked,
+      ...(runtimeBlocked ? { unavailableReason: 'runtime' } : {}),
     };
   });
 
@@ -394,7 +388,7 @@ export const buildAgentContract = (
         source: { tool: block.name, target: action.target },
         ...(action.requires === undefined ? {} : { requires: action.requires }),
         ...(action.effects === undefined ? {} : { effects: action.effects }),
-        ...toolAvailability(action, manifest.readOnly, where),
+        ...toolAvailability(action, where),
       };
 
       return { manifest: { ...action, available: command.available }, command };

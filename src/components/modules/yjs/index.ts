@@ -924,6 +924,26 @@ export class YjsManager extends Module {
     return this.undoHistory.gestureCount;
   }
 
+  public mergeTopUndoSteps(
+    previous: CaretHistoryEntry,
+    current: CaretHistoryEntry,
+    expected: { actorId: string; sessionId: string; gestureCount: number }
+  ): boolean {
+    if (this.isInMoveGroup || this.movesJoinStep) {
+      return false;
+    }
+
+    return this.undoHistory.mergeTopUndoSteps(previous, current, expected);
+  }
+
+  public undoStep(token: CaretHistoryEntry): boolean {
+    return this.undoHistory.undoStep(token);
+  }
+
+  public redoStep(token: CaretHistoryEntry): boolean {
+    return this.undoHistory.redoStep(token);
+  }
+
   /**
    * Undo the last operation.
    */

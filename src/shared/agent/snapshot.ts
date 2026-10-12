@@ -19,7 +19,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 
 // Snapshot payloads are JSON values, not host objects.
-const copyValue = (value: unknown): unknown => {
+export const copyValue = (value: unknown): unknown => {
   if (isArray(value)) {
     return value.map(copyValue);
   }
@@ -32,6 +32,12 @@ const copyValue = (value: unknown): unknown => {
 
 const copyRecord = (value: Record<string, unknown>): Record<string, unknown> =>
   Object.fromEntries(Object.entries(value).map(([key, item]): [string, unknown] => [key, copyValue(item)]));
+
+export const cloneRecord = (value: Record<string, unknown>): Record<string, unknown> => {
+  const clone = globalThis.structuredClone;
+
+  return typeof clone === 'function' ? clone(value) : copyRecord(value);
+};
 
 const copyIcon = (icon: PageIcon): PageIcon => {
   const fields = copyRecord({ ...icon });

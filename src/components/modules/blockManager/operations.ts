@@ -441,8 +441,8 @@ export class BlockOperations implements OperationsContext {
    * @param tunes - New tune data
    * @param derivedFrom - see `BlockMutation.update`
    */
-  public update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
-    return this.runOperation('update', () => this.mutation.update(block, blocksStore, data, tunes, derivedFrom));
+  public update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource, deleteKeys?: readonly string[]): Promise<Block> {
+    return this.runOperation('update', () => this.mutation.update(block, blocksStore, data, tunes, derivedFrom, deleteKeys));
   }
 
   /**

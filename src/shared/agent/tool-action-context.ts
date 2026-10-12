@@ -2,6 +2,7 @@ import { AgentFailure } from './errors';
 import { splitCommandName } from './names';
 import { buildPlannedBlock, emitMove, emitPatch } from './plan-block';
 import { PREPARE_PENDING } from './plan-state';
+import { cloneRecord } from './snapshot';
 
 import type { PlannedBlock } from '../../../types/agent';
 import type { ToolActionContext } from '../../../types/tools/tool-description';
@@ -14,7 +15,7 @@ const pointerKey = (key: string): string => key.replace(/~/g, '~0').replace(/\//
 const view = (block: SnapBlock): NonNullable<ReturnType<RecordingContext['read']>> => ({
   id: block.id,
   type: block.type,
-  data: structuredClone(block.data),
+  data: cloneRecord(block.data),
   parentId: block.parent,
   children: [...block.content],
 });
@@ -27,7 +28,7 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
   return {
     tool,
     ...(block !== undefined && { block: {
-      id: block.id, type: block.type, data: structuredClone(block.data), children: [...block.content],
+      id: block.id, type: block.type, data: cloneRecord(block.data), children: [...block.content],
     } }),
     read: id => {
       const found = state.draft.get(id);

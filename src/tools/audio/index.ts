@@ -1,4 +1,5 @@
 import { describeAudio } from '../../shared/tool-descriptions/audio';
+import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { audioSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -50,6 +51,7 @@ type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
 export class AudioTool implements BlockTool {
   public static describe = describeAudio;
+  public static actionHandlers = MEDIA_ACTION_HANDLERS.audio;
 
   private readonly api: API;
   private readonly block: BlockAPI;

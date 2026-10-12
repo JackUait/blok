@@ -6,12 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { unknownKeywords, validateAgainst } from '../../../../src/shared/schema/validate';
 import { BUILT_IN_BLOCK_DESCRIPTIONS, COLOR_PRESET_NAMES } from '../../../../src/shared/tool-descriptions';
 import { COLUMN_DATA, describeColumn } from '../../../../src/shared/tool-descriptions/column';
-import { COLUMN_LIST_DATA, describeColumnList } from '../../../../src/shared/tool-descriptions/column-list';
+import { COLUMN_LIST_ACTIONS, COLUMN_LIST_DATA, describeColumnList } from '../../../../src/shared/tool-descriptions/column-list';
 import { describeDivider, DIVIDER_DATA } from '../../../../src/shared/tool-descriptions/divider';
 import { describeSpacer, SPACER_DATA } from '../../../../src/shared/tool-descriptions/spacer';
 import { describeTab, TAB_DATA } from '../../../../src/shared/tool-descriptions/tab';
 import { describeTableOfContents, TABLE_OF_CONTENTS_DATA } from '../../../../src/shared/tool-descriptions/table-of-contents';
-import { describeTabs, TABS_DATA } from '../../../../src/shared/tool-descriptions/tabs';
+import { describeTabs, TABS_ACTIONS, TABS_DATA } from '../../../../src/shared/tool-descriptions/tabs';
 import { blokDocumentSchema } from '../../../../src/view/document-schema';
 import type { BlokSchema, BlockToolDescription, DescribeBlockTool } from '../../../../types/tools/tool-description';
 import { BLOCK_CLASSES } from './built-in-tools';
@@ -75,6 +75,7 @@ const LAYOUT_DESCRIPTIONS: Array<{
       guidance: 'Create one with column_list.create, which makes the columns too. Move an existing block into a column with block.move. The toolbox columnCount value is not saved data; never write it.',
       inputFields: [],
       defaultData: {},
+      actions: COLUMN_LIST_ACTIONS,
     },
   },
   {
@@ -100,6 +101,7 @@ const LAYOUT_DESCRIPTIONS: Array<{
       guidance: 'Create one with tabs.create. Add and delete tabs with tabs.addTab and tabs.deleteTab. Which tab is open is per person and never saved.',
       inputFields: [],
       defaultData: {},
+      actions: TABS_ACTIONS,
     },
   },
   {

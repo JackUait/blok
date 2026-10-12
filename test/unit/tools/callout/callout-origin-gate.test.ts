@@ -19,13 +19,8 @@ vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
  * transiently empty and seeding mints a phantom child that is written back into
  * the shared document. Gate mirrors src/tools/column/index.ts.
  *
- * `load` is the exception, because it is the ONE re-materialisation that carries
- * its own declaration: the renderer composes the block with the `contentIds` the
- * stored document names. A load whose contentIds are non-empty is the transient
- * case and must not seed. A load whose contentIds are EMPTY is a document that
- * genuinely declares a bodyless callout — a hand-authored `{ type: 'callout' }`,
- * which is the shape the docs and every host example use — and without a seed it
- * renders an inert panel with nothing to click into or type in.
+ * Declared children may arrive after rendered(), for any origin. An empty load
+ * needs an editable body but must not take the caret.
  */
 describe('callout seeds only for a genuine creation', () => {
   beforeEach(() => {
@@ -127,7 +122,7 @@ describe('callout seeds only for a genuine creation', () => {
     'seeds exactly one child when created with origin «%s»',
     (origin) => {
       const { insertInsideParent, api } = seedProbe();
-      const tool = new CalloutTool(createOptions(api, origin));
+      const tool = new CalloutTool(createOptions(api, origin, {}, []));
 
       tool.render();
       tool.rendered();
@@ -139,7 +134,7 @@ describe('callout seeds only for a genuine creation', () => {
   it('still carries the converted text into the seeded child on a convert', () => {
     const { insertInsideParent, api } = seedProbe();
     const tool = new CalloutTool(
-      createOptions(api, 'convert', { __importedText: 'Convert me to callout' })
+      createOptions(api, 'convert', { __importedText: 'Convert me to callout' }, [])
     );
 
     tool.render();

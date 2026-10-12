@@ -1,0 +1,21 @@
+{
+  "name": "doc-set-icon",
+  "seed": {
+    "blocks": []
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "doc.setIcon",
+          "args": {
+            "icon": {
+              "type": "emoji",
+              "value": "📅"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

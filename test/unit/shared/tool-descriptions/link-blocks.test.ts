@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { unknownKeywords, validateAgainst } from '../../../../src/shared/schema/validate';
 import { BUILT_IN_BLOCK_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions';
-import { BOOKMARK_DATA, describeBookmark } from '../../../../src/shared/tool-descriptions/bookmark';
-import { describeEmbed, EMBED_DATA } from '../../../../src/shared/tool-descriptions/embed';
-import { describePage, PAGE_DATA } from '../../../../src/shared/tool-descriptions/page';
+import { BOOKMARK_ACTIONS, BOOKMARK_DATA, describeBookmark } from '../../../../src/shared/tool-descriptions/bookmark';
+import { describeEmbed, EMBED_ACTIONS, EMBED_DATA } from '../../../../src/shared/tool-descriptions/embed';
+import { describePage, PAGE_ACTIONS, PAGE_DATA } from '../../../../src/shared/tool-descriptions/page';
 import { describePageLink, PAGE_LINK_DATA } from '../../../../src/shared/tool-descriptions/page-link';
 import { blokDocumentSchema } from '../../../../src/view/document-schema';
 import type { BlokSchema, BlockToolDescription, DescribeBlockTool } from '../../../../types/tools/tool-description';
@@ -200,7 +200,9 @@ describe('link self-description metadata and saved schemas', () => {
 
     expect(description).toEqual({
       summary, guidance, data: dataSchema, summaryFields,
-      ...(name === 'page' ? { inputFields: [] } : {}),
+      ...(name === 'page' ? { inputFields: [], actions: PAGE_ACTIONS } : {}),
+      ...(name === 'embed' ? { actions: EMBED_ACTIONS } : {}),
+      ...(name === 'bookmark' ? { actions: BOOKMARK_ACTIONS } : {}),
     });
     expect(description.guidance).not.toMatch(/<[^>]+>|\x60\x60\x60/);
   });

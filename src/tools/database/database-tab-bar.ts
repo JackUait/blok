@@ -324,6 +324,7 @@ export class DatabaseTabBar {
     const onEditView = this.options.onEditView;
     const editItems = onEditView === undefined ? [] : [{
       icon: IconSliders,
+      name: 'database-view-edit',
       title: t('tools.database.editView', 'Edit view'),
       closeOnActivate: true,
       onActivate: () => {
@@ -334,6 +335,7 @@ export class DatabaseTabBar {
       ...editItems,
       {
         icon: IconPencil,
+        name: 'database-view-rename',
         title: t('tools.database.renameView', 'Rename'),
         closeOnActivate: true,
         onActivate: () => {
@@ -342,6 +344,7 @@ export class DatabaseTabBar {
       },
       {
         icon: IconCopy,
+        name: 'database-view-duplicate',
         title: t('tools.database.duplicateView', 'Duplicate'),
         closeOnActivate: true,
         onActivate: () => {
@@ -356,6 +359,7 @@ export class DatabaseTabBar {
           { type: PopoverItemType.Separator as const },
           {
             icon: IconTrash,
+            name: 'database-view-delete',
             title: t('tools.database.deleteView', 'Delete'),
             isDestructive: true,
             closeOnActivate: true,
@@ -404,6 +408,7 @@ export class DatabaseTabBar {
       title: this.t('tools.database.tabDisplayAs', 'Display as'),
       children: {
         items: modes.map(([mode, key, fallback]) => ({
+          name: `database-tab-display-${mode}`,
           title: this.t(key, fallback),
           isActive: mode === current,
           closeOnActivate: true,

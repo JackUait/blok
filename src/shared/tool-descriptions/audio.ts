@@ -1,5 +1,6 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 import { ALIGNMENT } from './rich-text';
+import { urlSourceAction } from './url-action';
 
 export const AUDIO_DATA = {
   type: 'object',
@@ -22,10 +23,16 @@ export const AUDIO_DATA = {
   },
 };
 
+export const AUDIO_ACTIONS: ToolActionDeclaration[] = [
+  urlSourceAction('setSource', 'Set or replace the audio from a URL.'),
+  urlSourceAction('setCover', 'Set the cover picture from a URL.'),
+];
+
 export const describeAudio = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'An audio player with optional title, artist and cover.',
   guidance: 'Set the source with audio.setSource and the cover with audio.setCover. Remove the cover by writing coverUrl as "". caption, title and artist are plain text.',
   data: AUDIO_DATA,
   inputFields: ['title', 'artist', 'caption'],
   summaryFields: ['title', 'artist', 'alignment'],
+  actions: AUDIO_ACTIONS,
 });

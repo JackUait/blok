@@ -6,6 +6,7 @@ import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
 
 import type { AgentActor, AgentBatch, AgentError, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
+import type { EditStamp } from './json-applier';
 import type { DocSnapshot } from './snapshot';
 import type { Plan, PlannerActionImpl, PlannerContext } from './types';
 
@@ -197,24 +198,106 @@ const staleContext = (
   });
 };
 
+type PlanningInput = Omit<BatchInput, 'log' | 'batchNo'>;
+
+export type HostBatchPlan =
+  | { result: Extract<AgentResult, { ok: false }> }
+  | { result: Extract<AgentResult, { ok: true }>; plan: Plan; batch: AgentBatch; snapshot: DocSnapshot };
+
+const checkCancel = (signal: AbortSignal | undefined, orphaned: HostReceipt[] = []): void => {
+  if (signal?.aborted === true) {
+    throw failure('CANCELLED', 'The turn was stopped before anything was written.',
+      orphaned.length > 0 ? { details: { orphaned } } : {});
+  }
+};
+
+const checkRevision = (
+  checked: AgentBatch,
+  revision: string,
+  snapshot: () => DocSnapshot,
+  ctx: BatchInput['ctx']
+): void => {
+  if (checked.expectRevision !== undefined && checked.expectRevision !== revision) {
+    throw failure('STALE', 'The document changed since you read it. Read it again, then retry.', {
+      details: { revision, current: staleContext(checked, snapshot(), ctx) },
+    });
+  }
+};
+
+const checkSource = (input: PlanningInput, checked: ReturnType<typeof checkEnvelope>): AgentBatch => {
+  const batch = checked.batch;
+
+  if (checked.writes && input.applier.isReadOnly()) {
+    throw failure('READ_ONLY', 'The document is read-only now. Reads still work.');
+  }
+  checkRevision(batch, input.applier.revision(), () => input.applier.snapshot(), input.ctx);
+
+  return batch;
+};
+
+const pendingPlan = (
+  input: PlanningInput,
+  batch: AgentBatch,
+  warnings: AgentWarning[]
+): { plan: Plan; snapshot: DocSnapshot; stamp: EditStamp } => {
+  const stamp = { actorId: input.actor.id, at: (input.now ?? Date.now)() };
+  const pending = new Map<number, unknown>();
+
+  batch.commands.forEach((command, index) => {
+    const requires = typeof command.args.type === 'string'
+      ? input.ctx.tools.get(command.args.type)?.entry.insertRequires : undefined;
+    const insertPending = command.name === 'block.insert'
+      && (command.args.demote === true || (requires?.length ?? 0) > 0);
+
+    if (command.name === 'markdown.insert' || actionFor(input.ctx, command.name)?.prepare !== undefined || insertPending) {
+      pending.set(index, PREPARE_PENDING);
+    }
+  });
+  const snapshot = input.applier.snapshot();
+  const { plan } = planBatch({
+    snapshot, batch, ctx: { ...input.ctx, prepared: pending }, stamp, warnings,
+  });
+
+  return { plan, snapshot, stamp };
+};
+
+const planResult = (
+  batch: AgentBatch,
+  plan: Plan,
+  revision: string,
+  warnings: AgentWarning[]
+): Extract<AgentResult, { ok: true }> => ({
+  ok: true, revision,
+  results: plan.results.map((result, index) =>
+    batch.commands[index]?.name === 'doc.read' && isRecord(result) ? { ...result, revision } : result),
+  refs: plan.refs, changed: plan.changed,
+  ...(plan.lastRange !== undefined && { lastRange: plan.lastRange }), warnings,
+});
+
+const batchFailure = (
+  error: unknown,
+  input: PlanningInput,
+  warnings: AgentWarning[],
+  orphaned: HostReceipt[] = []
+): Extract<AgentResult, { ok: false }> => {
+  const cause = error instanceof AgentFailure ? error.error
+    : failure('APPLY_FAILED', `The document runtime failed: ${error instanceof Error ? error.message : String(error)}. The document may be partly changed; read it again.`).error;
+  const failed = orphaned.length > 0 && cause.code !== 'CANCELLED'
+    ? failure('ORPHANED_SIDE_EFFECT', `The batch failed after the host did work for it (${cause.message}). Clean up the listed items.`, {
+      ...(cause.commandIndex !== undefined && { commandIndex: cause.commandIndex }),
+      details: { orphaned, cause },
+    }).error
+    : cause;
+  const revision = failureRevision(input.applier);
+
+  return { ok: false, ...(revision !== undefined && { revision }), error: failed, warnings };
+};
+
 export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
   const warnings: AgentWarning[] = [];
   const orphaned: HostReceipt[] = [];
   const state: { batch?: AgentBatch } = {};
 
-  const checkCancel = (): void => {
-    if (input.signal?.aborted === true) {
-      throw failure('CANCELLED', 'The turn was stopped before anything was written.',
-        orphaned.length > 0 ? { details: { orphaned } } : {});
-    }
-  };
-  const checkRevision = (checked: AgentBatch, revision: string, snapshot: () => DocSnapshot): void => {
-    if (checked.expectRevision !== undefined && checked.expectRevision !== revision) {
-      throw failure('STALE', 'The document changed since you read it. Read it again, then retry.', {
-        details: { revision, current: staleContext(checked, snapshot(), input.ctx) },
-      });
-    }
-  };
   const record = (results: unknown[] | null, error: AgentError | null): void => {
     const commands = state.batch?.commands;
 
@@ -235,23 +318,18 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
   };
 
   try {
-    checkCancel();
-
+    checkCancel(input.signal);
     const checked = checkEnvelope(input.batch, input.ctx.commands, input.ctx.validate);
-    const batch = checked.batch;
 
-    state.batch = batch;
-    if (checked.writes && input.applier.isReadOnly()) {
-      throw failure('READ_ONLY', 'The document is read-only now. Reads still work.');
-    }
-    checkRevision(batch, input.applier.revision(), () => input.applier.snapshot());
+    state.batch = checked.batch;
+    const batch = checkSource(input, checked);
 
     const first = batch.commands[0];
 
     if (first?.name === 'history.undo' || first?.name === 'history.redo') {
       const step = historyStep(input.applier, first.name);
 
-      checkCancel();
+      checkCancel(input.signal, orphaned);
       await step();
       const revision = input.applier.revision();
 
@@ -263,22 +341,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       };
     }
 
-    const stamp = { actorId: input.actor.id, at: (input.now ?? Date.now)() };
-    const pending = new Map<number, unknown>();
-
-    batch.commands.forEach((command, index) => {
-      const requires = typeof command.args.type === 'string'
-        ? input.ctx.tools.get(command.args.type)?.entry.insertRequires : undefined;
-      const insertPending = command.name === 'block.insert'
-        && (command.args.demote === true || (requires?.length ?? 0) > 0);
-
-      if (command.name === 'markdown.insert' || actionFor(input.ctx, command.name)?.prepare !== undefined || insertPending) {
-        pending.set(index, PREPARE_PENDING);
-      }
-    });
-    const { plan: prePlan } = planBatch({
-      snapshot: input.applier.snapshot(), batch, ctx: { ...input.ctx, prepared: pending }, stamp, warnings,
-    });
+    const { plan: prePlan, stamp } = pendingPlan(input, batch, warnings);
     const insertTypes = new Map<number, string>();
     const preparations = preparationsFor(input, batch, prePlan, orphaned, insertTypes);
     const prepared = new Map<number, unknown>();
@@ -287,14 +350,14 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       prepared.set(index, await prepareAt(prepare, index));
     }
 
-    checkCancel();
+    checkCancel(input.signal, orphaned);
     await input.applier.settle?.();
 
     // Keep the fresh snapshot and apply in the same synchronous turn.
     const snapshot = input.applier.snapshot();
     const current = input.applier.revision();
 
-    checkRevision(batch, current, () => snapshot);
+    checkRevision(batch, current, () => snapshot, input.ctx);
 
     // Only concrete warnings refer to the IDs that will be applied.
     warnings.length = 0;
@@ -302,7 +365,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       snapshot, batch, ctx: { ...input.ctx, prepared }, stamp, warnings,
     });
 
-    checkCancel();
+    checkCancel(input.signal, orphaned);
     batch.commands.forEach((command, index) => {
       if (command.name !== 'block.insert') {
         return;
@@ -321,30 +384,44 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       await input.applier.apply(plan, draft);
     }
 
-    const revision = input.applier.revision();
-    const commands = batch.commands;
-    const results = plan.results.map((result, index) =>
-      commands[index]?.name === 'doc.read' && isRecord(result) ? { ...result, revision } : result);
+    const result = planResult(batch, plan, input.applier.revision(), warnings);
 
-    record(results, null);
+    record(result.results, null);
 
-    return {
-      ok: true, revision, results, refs: plan.refs, changed: plan.changed,
-      ...(plan.lastRange !== undefined && { lastRange: plan.lastRange }), warnings,
-    };
+    return result;
   } catch (error) {
-    const cause = error instanceof AgentFailure ? error.error
-      : failure('APPLY_FAILED', `The document runtime failed: ${error instanceof Error ? error.message : String(error)}. The document may be partly changed; read it again.`).error;
-    const failed = orphaned.length > 0 && cause.code !== 'CANCELLED'
-      ? failure('ORPHANED_SIDE_EFFECT', `The batch failed after the host did work for it (${cause.message}). Clean up the listed items.`, {
-        ...(cause.commandIndex !== undefined && { commandIndex: cause.commandIndex }),
-        details: { orphaned, cause },
-      }).error
-      : cause;
-    const revision = failureRevision(input.applier);
+    const result = batchFailure(error, input, warnings, orphaned);
 
-    record(null, failed);
+    record(null, result.error);
 
-    return { ok: false, ...(revision !== undefined && { revision }), error: failed, warnings };
+    return result;
+  }
+};
+
+export const planHostBatch = async (input: PlanningInput): Promise<HostBatchPlan> => {
+  const warnings: AgentWarning[] = [];
+
+  try {
+    checkCancel(input.signal);
+    const checked = checkEnvelope(input.batch, input.ctx.commands, input.ctx.validate);
+    const batch = checkSource(input, checked);
+    const command = batch.commands[0];
+    const entry = command === undefined ? undefined : input.ctx.commands.get(command.name);
+
+    // Only pending block actions bypass their run handler.
+    if (command === undefined || entry === undefined || entry.effects !== 'host'
+      || typeof entry.source !== 'object' || entry.source.target !== 'block'
+      || actionFor(input.ctx, command.name)?.prepare === undefined) {
+      throw failure('INVALID_ARGS', 'Host planning requires one prepared host action on a block.', {
+        commandIndex: 0, path: '/commands/0/name',
+      });
+    }
+    const { plan, snapshot } = pendingPlan(input, batch, warnings);
+
+    checkCancel(input.signal);
+
+    return { result: planResult(batch, plan, input.applier.revision(), warnings), plan, batch, snapshot };
+  } catch (error) {
+    return { result: batchFailure(error, input, warnings) };
   }
 };

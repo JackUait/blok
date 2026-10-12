@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
@@ -7,6 +7,39 @@ import { createContext, runInContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildServerRuntime } from '../../../scripts/build-server-runtime.mjs';
+import { COMMANDS } from '../../../src/shared/agent/commands';
+import { buildBuiltInSnapshot } from '../../../src/shared/built-in-snapshot';
+import { readCustomToolsFile, snapshotWithCustomTools } from '../../../src/shared/custom-tools-file';
+import { isObject } from '../../../src/shared/type-guards';
+import { buildAgentContract, buildToolManifest } from '../../../src/shared/tool-manifest';
+
+import type { BlokCustomToolsFile, HostService, ManifestOverrides } from '../../../types';
+import type { AgentActor, AgentBatch, Edit } from '../../../types/agent';
+import type { OutputData } from '../../../types/data-formats/output-data';
+import type { RichText } from '../../../types/rich-text';
+
+const buildBareRuntime = async (directory: string): Promise<(operation: string, inputJson: string) => Promise<string>> => {
+  const outputPath = await buildServerRuntime(directory);
+  const sandbox: Record<string, unknown> = {};
+
+  runInContext(readFileSync(outputPath, 'utf8'), createContext(sandbox));
+
+  const invoke: unknown = sandbox.blokServerInvoke;
+
+  if (typeof invoke !== 'function') {
+    throw new TypeError('The server runtime did not expose blokServerInvoke.');
+  }
+
+  return async (operation, inputJson) => {
+    const output: unknown = await invoke(operation, inputJson);
+
+    if (typeof output !== 'string') {
+      throw new TypeError('The server runtime did not return a string.');
+    }
+
+    return output;
+  };
+};
 
 describe('buildServerRuntime', () => {
   let outDir: string;
@@ -49,6 +82,43 @@ describe('buildServerRuntime', () => {
     expect(typeof invoke).toBe('function');
     expect(await invoke('blocksToHtml', '{"blocks":[{"type":"paragraph","data":{"text":"Hi &amp; bye"}}]}'))
       .toBe('<p>Hi &amp; bye</p>');
+  });
+
+  it('executes a stored write batch and read in a realm with no host globals', async () => {
+    const invoke = await buildBareRuntime(outDir);
+    const text: RichText = [{ text: 'x', marks: { bold: true } }];
+    const actor: AgentActor = { id: 'agent-jint', name: 'Server agent', kind: 'agent' };
+    const document: OutputData = {
+      blocks: [{ id: 'p', type: 'paragraph', data: { text: 'x' } }],
+    };
+    const batch: AgentBatch = { commands: [
+      { name: 'text.format', args: { id: 'p', range: { find: 'x' }, set: { bold: true } } },
+      { name: 'block.insert', args: { id: 'q', type: 'paragraph', data: { text: 'y' } } },
+      { name: 'doc.read', args: { detail: 'full' } },
+    ] };
+    const result: unknown = JSON.parse(await invoke('agentExecute', JSON.stringify({ document, actor, batch })));
+    const expectedEdits: Edit[] = [
+      { op: 'setRichText', id: 'p', field: 'text', value: text },
+      {
+        op: 'insert', block: { id: 'q', type: 'paragraph', data: { text: [{ text: 'y' }] }, children: [] },
+        parentId: null, afterId: 'p',
+      },
+    ];
+
+    if (!isObject(result) || !isObject(result.document) || !Array.isArray(result.document.blocks)) {
+      throw new TypeError('agentExecute must return a document with a blocks array.');
+    }
+
+    expect(result.edits).toEqual(expectedEdits);
+    expect(result.result).toMatchObject({
+      ok: true, revision: expect.stringMatching(/^h[0-9a-f]+$/),
+      results: [{}, { id: 'q' }, { blocks: [{ id: 'p' }, { id: 'q' }] }],
+    });
+    expect(result.document.blocks).toMatchObject([
+      { id: 'p', type: 'paragraph', data: { text }, lastEditedBy: actor.id },
+      { id: 'q', type: 'paragraph', data: { text: [{ text: 'y' }] }, lastEditedBy: actor.id },
+    ]);
+    expect(readFileSync(join(outDir, 'blok-server-runtime.js'), 'utf8').length).toBeLessThan(4 * 1024 * 1024);
   });
 
   /** The engine has no structuredClone; the hand clone must still keep an own `__proto__` key. */
@@ -164,5 +234,129 @@ describe('buildServerRuntime', () => {
     await rebuild;
 
     expect(changedBeforeCompletion).toBe(false);
+  });
+
+  it('builds the real manifest and Jint contract in a realm with no host globals', async () => {
+    const invoke = await buildBareRuntime(outDir);
+    const result: unknown = JSON.parse(await invoke('manifest', '{}'));
+    const manifest = buildToolManifest(buildBuiltInSnapshot({ blokVersion: await invoke('version', '{}') }));
+    const contract = buildAgentContract(manifest, COMMANDS, { runtime: 'jint', services: [] });
+
+    expect(result).toEqual({ manifest, contract });
+    expect(result).toMatchObject({
+      contract: {
+        commands: expect.arrayContaining([
+          expect.objectContaining({ name: 'history.undo', available: false, unavailableReason: 'runtime' }),
+          expect.objectContaining({ name: 'history.redo', available: false, unavailableReason: 'runtime' }),
+        ]),
+      },
+    });
+  });
+
+  it('adds a handlerless custom tool and hides an overridden built-in in the bare realm', async () => {
+    const invoke = await buildBareRuntime(outDir);
+    const customTools: BlokCustomToolsFile = {
+      formatVersion: 1,
+      blocks: [{
+        name: 'quiz',
+        statics: {
+          toolbox: [],
+          richTextFields: [],
+          acceptsChildren: false,
+          ownsChildren: false,
+          isLayout: false,
+          deletesChildren: false,
+          selfPlacesChildren: false,
+          restrictedInTableCell: false,
+          conversion: {},
+          convertible: { import: false, export: false },
+          hasPrepareInsert: false,
+        },
+        description: {
+          summary: 'A quiz.',
+          data: { type: 'object' },
+          actions: [{ name: 'grade', summary: 'Grade the quiz.', target: 'block', args: { type: 'object' } }],
+        },
+      }],
+    };
+    const overrides: ManifestOverrides = { spacer: { hidden: true } };
+    const result: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ customTools, overrides })));
+    const snapshot = snapshotWithCustomTools(
+      buildBuiltInSnapshot({ blokVersion: await invoke('version', '{}') }),
+      readCustomToolsFile(customTools)
+    );
+    const manifest = buildToolManifest(snapshot, overrides);
+    const contract = buildAgentContract(manifest, COMMANDS, { runtime: 'jint', services: [] });
+
+    expect(result).toEqual({ manifest, contract });
+    expect(result).toMatchObject({
+      manifest: {
+        blocks: expect.arrayContaining([
+          expect.objectContaining({ name: 'quiz', level: 'described' }),
+        ]),
+      },
+      contract: {
+        commands: expect.arrayContaining([
+          expect.objectContaining({ name: 'quiz.grade', available: false, unavailableReason: 'runtime' }),
+        ]),
+      },
+    });
+    expect(result).toMatchObject({
+      manifest: { blocks: expect.not.arrayContaining([expect.objectContaining({ name: 'spacer' })]) },
+      contract: { manifest: { blocks: expect.not.arrayContaining([expect.objectContaining({ name: 'spacer' })]) } },
+    });
+  });
+
+  it('forwards supplied services to the real manifest and Jint contract in the bare realm', async () => {
+    const invoke = await buildBareRuntime(outDir);
+    const services: HostService[] = ['pageBackend', 'host', 'uploader', 'linkMetadata'];
+    const result: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ services })));
+    const blokVersion = await invoke('version', '{}');
+    const manifest = buildToolManifest(buildBuiltInSnapshot({ blokVersion, services }));
+    const contract = buildAgentContract(manifest, COMMANDS, { runtime: 'jint', services });
+    const withoutServices = buildToolManifest(buildBuiltInSnapshot({ blokVersion }));
+    const contractWithoutServices = buildAgentContract(withoutServices, COMMANDS, { runtime: 'jint', services: [] });
+
+    expect(result).toEqual({ manifest, contract });
+    expect(result).not.toMatchObject({ manifest: { revision: withoutServices.revision } });
+    expect(result).not.toMatchObject({ contract: { revision: contractWithoutServices.revision } });
+  });
+
+  it('propagates the custom tools reader error for malformed input in the bare realm', async () => {
+    const invoke = await buildBareRuntime(outDir);
+    const customTools: unknown = { formatVersion: 1, blocks: [{ name: 'quiz' }] };
+    let expectedError: TypeError | undefined;
+
+    try {
+      readCustomToolsFile(customTools);
+    } catch (error: unknown) {
+      if (!(error instanceof TypeError)) {
+        throw error;
+      }
+
+      expectedError = error;
+    }
+
+    if (expectedError === undefined) {
+      throw new Error('Expected the custom tools reader to reject malformed input.');
+    }
+
+    await expect(invoke('manifest', JSON.stringify({ customTools }))).rejects.toMatchObject({
+      name: expectedError.name,
+      message: expectedError.message,
+    });
+  });
+
+  it('stays within the checked-in size budget', async () => {
+    const budgetPath = join(__dirname, 'server-runtime-size-budget.json');
+
+    expect(existsSync(budgetPath), 'Create server-runtime-size-budget.json from a measured build').toBe(true);
+
+    const budget: unknown = JSON.parse(readFileSync(budgetPath, 'utf8'));
+    const maxBytes = isObject(budget) && typeof budget.maxBytes === 'number' ? budget.maxBytes : 0;
+    const size = statSync(await buildServerRuntime(outDir)).size;
+
+    // Every Jint engine parses this bundle at startup.
+    expect(size, `bundle is ${size} bytes; budget ${maxBytes}. Raising it is a reviewed edit.`).toBeLessThanOrEqual(maxBytes);
   });
 });

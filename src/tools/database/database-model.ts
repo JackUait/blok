@@ -1,4 +1,3 @@
-import { generateKeyBetween } from 'fractional-indexing';
 import { nanoid } from 'nanoid';
 import type {
   DatabaseData,
@@ -15,18 +14,19 @@ import type {
   SelectOption,
   ViewType,
 } from './types';
-import { DATABASE_DEFAULT_TEXT } from './database-localization';
 import { pageLayoutFields, pageLayoutOf } from './page-layout';
 import type { PageLayoutData } from './page-layout';
 import { queryGroups, queryRows } from './database-query';
 import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, withEmptyLists } from './property-values';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
-import { resolveViewProperties, visibleRowPropertyIds } from './view-settings';
+import { visibleRowPropertyIds } from './view-settings';
 import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
 import { parentMap, relationPair } from './sub-items';
-import { comparePositions, looseKeyBetween, normalizeKey } from './positions';
+import { comparePositions } from './positions';
+import { createDefaultSchema, createDefaultView, newView, positionBetween } from '../../shared/database/schema-ops';
+import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 
-export type ViewCreateConfig = Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey>>;
+export type { ViewCreateConfig };
 
 export type ViewChanges = Partial<Pick<DatabaseViewConfig,
   'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey
@@ -532,34 +532,7 @@ export class DatabaseModel {
    * the same moment never land on the same key.
    */
   static positionBetween(after: string | null, before: string | null): string {
-    const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
-
-    if (low !== null && low === high) {
-      return low + DatabaseModel.randomKeySuffix();
-    }
-
-    try {
-      const key = generateKeyBetween(normalizeKey(low), normalizeKey(high));
-
-      return low !== null && high === null ? key + DatabaseModel.randomKeySuffix() : key;
-    } catch {
-      return looseKeyBetween(low ?? '', high, DatabaseModel.randomKeySuffix());
-    }
-  }
-
-  /**
-   * Random tail for an appended key. `key + suffix` sorts strictly after `key`
-   * and strictly before the next key with a larger integer part, so the suffix
-   * only breaks ties between peers.
-   *
-   * Digits only, although fractional-indexing takes the whole base62 alphabet:
-   * a digit tail keeps a key the library can read and extend. The last digit
-   * may not be '0' — the library rejects a key ending in one.
-   */
-  private static randomKeySuffix(): string {
-    const digit = (from: number): string => String(from + Math.floor(Math.random() * (10 - from)));
-
-    return `${digit(0)}${digit(0)}${digit(0)}${digit(1)}`;
+    return positionBetween(after, before);
   }
 
   private static idMinter(seed: string | undefined): (name: string) => string {
@@ -567,84 +540,16 @@ export class DatabaseModel {
   }
 
   private static createDefaultSchema(mintId: (name: string) => string): PropertyDefinition[] {
-    return [
-      {
-        id: mintId('title'),
-        name: DATABASE_DEFAULT_TEXT.titleProperty,
-        type: 'title',
-        position: 'a0',
-      },
-      {
-        id: mintId('status'),
-        name: DATABASE_DEFAULT_TEXT.statusProperty,
-        type: 'select',
-        position: 'a1',
-        config: {
-          options: [
-            {
-              id: mintId('not-started'),
-              label: DATABASE_DEFAULT_TEXT.statusNotStarted,
-              color: 'gray',
-              position: 'a0',
-            },
-            {
-              id: mintId('in-progress'),
-              label: DATABASE_DEFAULT_TEXT.statusInProgress,
-              color: 'blue',
-              position: 'a1',
-            },
-            {
-              id: mintId('done'),
-              label: DATABASE_DEFAULT_TEXT.statusDone,
-              color: 'green',
-              position: 'a2',
-            },
-          ],
-        },
-      },
-    ];
+    return createDefaultSchema(mintId);
   }
 
   private createDefaultView(type: ViewType, mintId: (name: string) => string): DatabaseViewConfig {
-    const statusProp = this.schema.find((p) => p.type === 'select');
-
-    return this.newView({
-      id: mintId('view'),
-      name: type === 'table' ? DATABASE_DEFAULT_TEXT.viewTypeTable : DATABASE_DEFAULT_TEXT.viewBoard,
-      type,
-      position: 'a0',
-      ...(type === 'board' ? { groupBy: statusProp?.id } : {}),
-    });
+    return createDefaultView(type, this.schema, mintId);
   }
 
-  /**
-   * A view as it is first written. `properties`, `calculations`, `filterTree`,
-   * `colorRules`, the group lists and both group settings maps exist from birth so two peers' first edits
-   * merge: a key both peers create at once is last-writer-wins. `properties`
-   * is never empty (there is always a title), so the CRDT keys its entries by
-   * id; the empty lists rely on the eager array rule in yjs/serializer.ts.
-   * The tree id derives from the view id, so seeded clients write the same one.
-   */
   private newView(
     seed: Pick<DatabaseViewConfig, 'id' | 'name' | 'type' | 'position'> & ViewCreateConfig
   ): DatabaseViewConfig {
-    const base: DatabaseViewConfig = {
-      ...seed,
-      groupBy: seed.groupBy,
-      sorts: seed.sorts ?? [],
-      filters: seed.filters ?? [],
-      visibleProperties: seed.visibleProperties ?? [],
-      calculations: seed.calculations ?? [],
-      hiddenGroups: seed.hiddenGroups ?? [],
-      collapsedGroups: seed.collapsedGroups ?? [],
-      filterTree: seed.filterTree ?? { id: `${seed.id}-filters`, conjunction: 'and', filterRules: [] },
-      colorRules: seed.colorRules ?? [],
-      groupSettings: seed.groupSettings ?? {},
-      subGroupSettings: seed.subGroupSettings ?? {},
-      ...(seed.type === 'timeline' ? { tableProperties: seed.tableProperties ?? [] } : {}),
-    };
-    const properties = seed.properties ?? resolveViewProperties(base, this.schema).map(({ id, visible }) => ({ id, visible }));
-
-    return { ...base, properties, visibleProperties: visibleRowPropertyIds({ ...base, properties }, this.schema) };
+    return newView(seed, this.schema);
   }
 }

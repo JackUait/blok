@@ -1,4 +1,5 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
+import { urlSourceAction } from './url-action';
 
 export const FILE_DATA = {
   type: 'object',
@@ -15,10 +16,15 @@ export const FILE_DATA = {
   },
 };
 
+export const FILE_ACTIONS: ToolActionDeclaration[] = [
+  urlSourceAction('setSource', 'Set or replace the file from a URL.'),
+];
+
 export const describeFile = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A downloadable file card.',
   guidance: 'Set the file with file.setSource. fileName and caption are plain text.',
   data: FILE_DATA,
   inputFields: ['fileName', 'caption'],
   summaryFields: ['fileName', 'mimeType'],
+  actions: FILE_ACTIONS,
 });

@@ -1,4 +1,4 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, BlokSchema, ToolActionDeclaration } from '../../../types/tools/tool-description';
 
 /** The Notion API's 45 number formats. Kept equal to cells/number-format.ts NUMBER_FORMATS by a test. */
 export const NUMBER_FORMAT_ENUM = [
@@ -14,6 +14,13 @@ export const NUMBER_FORMAT_ENUM = [
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
 
 /** Settings beside `config` on a property (Phase 2). Never inside `config`: v1.16.1 replaces it whole. */
+const PROPERTY_TYPES = [
+  'title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url', 'richText',
+  'status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId',
+  'relation', 'rollup', 'formula', 'button',
+  'place', 'verification',
+];
+
 const PROPERTY_SETTINGS = {
   description: { type: 'string' },
   icon: { type: 'string', description: 'An emoji.' },
@@ -386,12 +393,7 @@ export const DATABASE_DATA = {
           name: { type: 'string' },
           type: {
             type: 'string',
-            enum: [
-              'title', 'text', 'number', 'select', 'multiSelect', 'date', 'checkbox', 'url', 'richText',
-              'status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId',
-              'relation', 'rollup', 'formula', 'button',
-              'place', 'verification',
-            ],
+            enum: PROPERTY_TYPES,
           },
           position: { type: 'string', description: 'Fractional-index sort key.' },
           databaseLocked: { type: 'boolean', description: 'Read on the title property only: locks the schema and views. Data entry still works.' },
@@ -639,6 +641,161 @@ export const DATABASE_DATA = {
   },
 };
 
+const VIEW_ID = { type: 'string', minLength: 1, description: 'Id of a view in views.' };
+
+const PROPERTY_ID = { type: 'string', minLength: 1, description: 'Id of a property in schema.' };
+
+const OPTION_ID = { type: 'string', minLength: 1, description: 'Id of an option in the property\'s config.options.' };
+
+const ROW_ID = { type: 'string', minLength: 1, description: 'Id of a database-row child block.' };
+
+const ROW_VALUES = { type: 'object', additionalProperties: true, description: 'Values keyed by property id, in the shapes schema describes.' };
+
+const COLOR = { type: 'string', enum: COLORS };
+
+const NEW_OPTION = {
+  type: 'object',
+  required: ['label'],
+  additionalProperties: false,
+  properties: { label: { type: 'string', minLength: 1 }, color: COLOR },
+};
+
+const ADDABLE_VIEW_TYPES = ['board', 'table', 'list', 'gallery', 'calendar', 'timeline', 'chart', 'feed', 'form', 'map'];
+
+const closed = (properties: Record<string, unknown>, required: string[] = []): BlokSchema => ({
+  type: 'object', required, additionalProperties: false, properties,
+});
+
+export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
+  {
+    name: 'create',
+    summary: 'Create a database with a Title and a Status property and one view.',
+    target: 'create',
+    args: closed({ title: { type: 'string' }, view: { enum: ['board', 'list', 'table'], description: 'The first view. Default board, grouped by Status.' } }),
+    result: closed({ id: { type: 'string' }, childIds: { type: 'array', items: { type: 'string' } } }, ['id', 'childIds']),
+    mirrors: [],
+  },
+  {
+    name: 'addView',
+    summary: 'Add a view at the end and open it.',
+    guidance: 'A board or chart groups by groupBy, else by the first select property. A board needs a select property.',
+    target: 'block',
+    args: closed({ type: { enum: ADDABLE_VIEW_TYPES }, name: { type: 'string' }, groupBy: { type: 'string', description: 'Property id to group by.' } }, ['type']),
+    result: closed({ viewId: { type: 'string' } }, ['viewId']),
+    mirrors: [],
+  },
+  {
+    name: 'renameView',
+    summary: 'Rename a view.',
+    target: 'block',
+    args: closed({ viewId: VIEW_ID, name: { type: 'string' } }, ['viewId', 'name']),
+    mirrors: [],
+  },
+  {
+    name: 'duplicateView',
+    summary: 'Copy a view with all its settings to the end, and open the copy.',
+    target: 'block',
+    args: closed({ viewId: VIEW_ID }, ['viewId']),
+    result: closed({ viewId: { type: 'string' } }, ['viewId']),
+    mirrors: [],
+  },
+  {
+    name: 'deleteView',
+    summary: 'Delete a view. If it was open, its neighbour opens.',
+    target: 'block',
+    preconditions: ['At least one view must remain.'],
+    args: closed({ viewId: VIEW_ID }, ['viewId']),
+    mirrors: [],
+  },
+  {
+    name: 'moveView',
+    summary: 'Move a view before or after another view.',
+    target: 'block',
+    args: {
+      ...closed({ viewId: VIEW_ID, before: VIEW_ID, after: VIEW_ID }, ['viewId']),
+      // oneOf over `required` only: core adds `id` to these properties for the block target.
+      oneOf: [{ required: ['before'] }, { required: ['after'] }],
+    },
+    mirrors: [],
+  },
+  {
+    name: 'addProperty',
+    summary: 'Add a property (a column). It goes last unless before or after names a property.',
+    guidance: 'Only select and multiSelect take options. A status starts with Not started, In progress and Done. A relation starts as a relation to this database.',
+    target: 'block',
+    args: {
+      ...closed({
+        name: { type: 'string', minLength: 1 },
+        type: { enum: PROPERTY_TYPES.filter(type => type !== 'title') },
+        options: { type: 'array', items: NEW_OPTION },
+        before: PROPERTY_ID,
+        after: PROPERTY_ID,
+      }, ['name', 'type']),
+    },
+    result: closed({ propertyId: { type: 'string' } }, ['propertyId']),
+    mirrors: [],
+  },
+  {
+    name: 'addOption',
+    summary: 'Add an option to a select, multi-select or status property, last.',
+    target: 'block',
+    args: closed({ propertyId: PROPERTY_ID, label: { type: 'string', minLength: 1 }, color: COLOR }, ['propertyId', 'label']),
+    result: closed({ optionId: { type: 'string' } }, ['optionId']),
+    mirrors: [],
+  },
+  {
+    name: 'renameOption',
+    summary: 'Rename an option.',
+    target: 'block',
+    args: closed({ propertyId: PROPERTY_ID, optionId: OPTION_ID, label: { type: 'string', minLength: 1 } }, ['propertyId', 'optionId', 'label']),
+    mirrors: [],
+  },
+  {
+    name: 'moveOption',
+    summary: 'Move an option before or after another option.',
+    target: 'block',
+    args: {
+      ...closed({ propertyId: PROPERTY_ID, optionId: OPTION_ID, before: OPTION_ID, after: OPTION_ID }, ['propertyId', 'optionId']),
+      oneOf: [{ required: ['before'] }, { required: ['after'] }],
+    },
+    mirrors: [],
+  },
+  {
+    name: 'deleteOption',
+    summary: 'Delete an option. rows: keep empties the value on rows that had it (what the editor does); delete removes those rows.',
+    target: 'block',
+    preconditions: ['The property keeps at least one option.'],
+    args: closed({ propertyId: PROPERTY_ID, optionId: OPTION_ID, rows: { enum: ['keep', 'delete'] } }, ['propertyId', 'optionId', 'rows']),
+    mirrors: [],
+  },
+  {
+    name: 'addRow',
+    summary: 'Add a row (a database-row child block). It goes last unless before or after names a row.',
+    guidance: 'values maps property ids to values. group puts the row in a column of the open board view: an option id of the property it groups by.',
+    target: 'block',
+    args: closed({ values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID }),
+    result: closed({ rowId: { type: 'string' } }, ['rowId']),
+    mirrors: [],
+  },
+  {
+    name: 'moveRow',
+    summary: 'Move a row before or after another row, and optionally into another board column.',
+    target: 'block',
+    args: {
+      ...closed({ rowId: ROW_ID, group: OPTION_ID, before: ROW_ID, after: ROW_ID }, ['rowId']),
+      oneOf: [{ required: ['before'] }, { required: ['after'] }],
+    },
+    mirrors: [],
+  },
+  {
+    name: 'setRowValues',
+    summary: 'Set property values on a row. Values not named stay. The row title mirrors the title property.',
+    target: 'block',
+    args: closed({ rowId: ROW_ID, values: ROW_VALUES }, ['rowId', 'values']),
+    mirrors: [],
+  },
+];
+
 export const describeDatabase = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A database: a schema of properties and saved views. Rows are child database-row blocks.',
   guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change views, properties and select options with the database.* actions; schema and views cannot be written directly.',
@@ -646,4 +803,5 @@ export const describeDatabase = (_config: Record<string, unknown> = {}): BlockTo
   inputFields: ['title'],
   summaryFields: ['title', 'activeViewId'],
   guardedFields: { schema: 'database.*', views: 'database.*' },
+  actions: DATABASE_ACTIONS,
 });

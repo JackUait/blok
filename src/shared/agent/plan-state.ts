@@ -4,6 +4,7 @@ import { applyEdits } from './json-applier';
 import { looksLikeMarkdown } from './markdown-lookalike';
 import { snapshotTree } from './placement-rules';
 import { KNOWN_MARKS } from './rich-text-ops';
+import { cloneRecord, copyValue } from './snapshot';
 
 import type { AgentErrorCode, AgentWarning, AgentWarningCode, ChangedSet, Edit, PlannedBlock, TextRangeRef } from '../../../types/agent';
 import type { RichText } from '../../../types/rich-text';
@@ -175,8 +176,16 @@ export class PlanState {
   }
 
   public emit(...edits: Edit[]): void {
+    const clone = globalThis.structuredClone;
+
     for (const raw of edits) {
-      const edit = structuredClone(raw);
+      const edit = typeof clone === 'function' ? clone(raw) : { ...raw };
+
+      if (typeof clone !== 'function') {
+        Object.entries(raw).forEach(([key, value]) => {
+          Object.defineProperty(edit, key, { value: copyValue(value) });
+        });
+      }
 
       this.edits.push(edit);
       this.editCommand.push(this.index);
@@ -226,7 +235,7 @@ export class PlanState {
     options: { normalize?: boolean } = {}
   ): Record<string, unknown> {
     const tool = this.tool(type);
-    const input = structuredClone(raw);
+    const input = cloneRecord(raw);
 
     for (const field of tool?.entry.richTextFields ?? []) {
       const value = input[field];
@@ -246,7 +255,7 @@ export class PlanState {
       }
     }
 
-    const sanitized = this.ctx.ports.sanitizeBlockData(type, structuredClone(input));
+    const sanitized = this.ctx.ports.sanitizeBlockData(type, cloneRecord(input));
 
     for (const key of Object.keys(input)) {
       if (JSON.stringify(sanitized[key]) !== JSON.stringify(input[key])) {

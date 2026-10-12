@@ -220,4 +220,35 @@ describe('agent attribution scope', () => {
     expect(details.get('a')).not.toHaveProperty('agent');
   });
 
+  it.each([
+    { mode: 'default', optOut: false, expectedEditor: 'agent-1' },
+    { mode: 'user', optOut: true, expectedEditor: 'human-1' },
+  ])('keeps $mode scope stamps in live, shared and saved data without losing the agent event', async ({ optOut, expectedEditor }) => {
+    const Blok = await boot();
+    const details = changes(Blok);
+    const release = Blok.BlockManager.attributeTo(optOut
+      ? { ids: new Set(['a']), actor: { id: 'agent-1', name: 'Agent' }, turnId: 'turn-opt-out', stampLastEditedBy: false }
+      : { ids: new Set(['a']), actor: { id: 'agent-1', name: 'Agent' }, turnId: 'turn-opt-out' });
+
+    cleanups.push(release);
+    await update(Blok, 'a', 'Scoped edit');
+    const live = Blok.BlockManager.getBlockById('a');
+    const shared = Blok.YjsManager.toJSON().find(block => block.id === 'a');
+    const output = await Blok.Saver.save();
+    const persisted = output?.blocks.find(block => block.id === 'a');
+
+    expect(live?.lastEditedBy).toBe(expectedEditor);
+    expect(shared?.lastEditedBy).toBe(expectedEditor);
+    expect(persisted?.lastEditedBy).toBe(expectedEditor);
+    expect(live?.pluginsContent.textContent).toBe('Scoped edit');
+    expect(Blok.YjsManager.richSegmentsOf(shared?.data.text)).toEqual([{ text: 'Scoped edit' }]);
+    expect(persisted?.data.text).toEqual([{ text: 'Scoped edit' }]);
+    await vi.waitFor(() => {
+      expect(details.get('a')).toMatchObject({
+        target: { id: 'a' }, origin: 'local',
+        agent: { id: 'agent-1', name: 'Agent', turnId: 'turn-opt-out' },
+      });
+    });
+  }, 60_000);
+
 });

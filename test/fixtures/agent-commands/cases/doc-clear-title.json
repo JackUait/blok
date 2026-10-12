@@ -1,0 +1,19 @@
+{
+  "name": "doc-clear-title",
+  "seed": {
+    "blocks": [],
+    "title": "Old"
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "doc.setTitle",
+          "args": {
+            "title": ""
+          }
+        }
+      ]
+    }
+  ]
+}

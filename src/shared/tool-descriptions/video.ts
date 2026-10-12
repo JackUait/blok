@@ -1,5 +1,6 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 import { ALIGNMENT } from './rich-text';
+import { urlSourceAction } from './url-action';
 
 export const VIDEO_DATA = {
   type: 'object',
@@ -30,9 +31,14 @@ export const VIDEO_DATA = {
   },
 };
 
+export const VIDEO_ACTIONS: ToolActionDeclaration[] = [
+  urlSourceAction('setSource', 'Set or replace the video from a URL.'),
+];
+
 export const describeVideo = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A video player.',
   guidance: 'Set the source with video.setSource. caption is plain text.',
   data: VIDEO_DATA,
   summaryFields: ['alignment', 'width', 'autoplay', 'loop'],
+  actions: VIDEO_ACTIONS,
 });

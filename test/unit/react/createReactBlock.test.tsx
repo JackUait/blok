@@ -11,7 +11,7 @@ import { BlockPortalHost } from '../../../packages/react/src/BlockPortalHost';
 import type { BlockToolStatics } from '../../../packages/react/src/createReactBlock';
 import type { BlockAPI } from '../../../types/api';
 import type { BlockToolConstructable } from '../../../types/tools';
-import type { API } from '../../../types';
+import type { API, BlockToolDescription } from '../../../types';
 
 const REGISTRY_CONFIG_KEY = '__blokPortalRegistry';
 
@@ -1063,6 +1063,34 @@ describe('createReactBlock — core tool-contract passthrough', () => {
     expect(Tool.toolbox).toEqual({ title: 'Counter', icon: '<svg/>' });
     expect(Tool.isReadOnlySupported).toBe(true);
     expect(Tool.__isBlokReactBlock).toBe(true);
+  });
+
+  it('derives describe from propSchema when the author gives none', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      toolbox: { title: 'Counter', icon: '<svg></svg>' },
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div />,
+      statics: { richTextFields: ['label'] },
+    });
+    const description = (Tool as unknown as BlockToolConstructable).describe?.({});
+
+    expect(description?.data).toMatchObject({ additionalProperties: false, properties: { count: { type: 'number' } } });
+    expect(description?.data).toMatchObject({ properties: { label: { oneOf: expect.any(Array) } } });
+    expect(description?.summary).toBe('Counter block');
+    expect(description?.defaultData).toEqual({ count: 0, label: 'n' });
+  });
+
+  it('keeps an authored describe', () => {
+    const describe = (): BlockToolDescription => ({ summary: 'Mine', data: { type: 'object' } });
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div />,
+      statics: { describe },
+    });
+
+    expect((Tool as unknown as BlockToolConstructable).describe).toBe(describe);
   });
 });
 

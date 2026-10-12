@@ -2,7 +2,7 @@ import { cleanPageField } from '../page-title-icon';
 import { buildDocumentView, findBlocks } from './document-view';
 import { buildPlannedBlock } from './plan-block';
 import { PREPARE_PENDING } from './plan-state';
-import { DocSnapshot } from './snapshot';
+import { cloneRecord, DocSnapshot } from './snapshot';
 
 import type { AgentWarning, InsertSpec } from '../../../types/agent';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
@@ -128,6 +128,19 @@ export const planSetIcon = (state: PlanState, args: Record<string, unknown>): un
   return {};
 };
 
+/**
+ * markdownToBlocks (published) writes the legacy flat `depth: 0` on root list
+ * items. The list schema and the editor's own save omit depth at root.
+ */
+const withoutRootListDepth = (block: OutputBlockData): OutputBlockData => {
+  if (block.type !== 'list' || block.data.depth !== 0) {
+    return block;
+  }
+  const { depth: _root, ...data } = block.data;
+
+  return { ...block, data };
+};
+
 export const planMarkdownInsert = (state: PlanState, args: Record<string, unknown>): unknown => {
   const placement = state.place(args.parentId, args.position ?? 'end');
   const prepared = state.ctx.prepared.get(state.index);
@@ -174,7 +187,7 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
   }
 
   const temporary = { next: 0, id: '' };
-  const identified = blocks.map((block): OutputBlockData => {
+  const identified = blocks.map(withoutRootListDepth).map((block): OutputBlockData => {
     if (block.id !== undefined && block.id !== '') {
       return block;
     }
@@ -201,7 +214,7 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
 
   const toSpec = (id: string): InsertSpec => {
     const block = getBlock(id);
-    const data = structuredClone(block.data);
+    const data = cloneRecord(block.data);
 
     if (block.type === 'table' && isArray(data.content)) {
       data.content = data.content.map(row => !isArray(row) ? row : row.map(cell => {
@@ -217,7 +230,7 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
       type: block.type,
       id: ids.get(id) ?? state.fail('INVALID_ARGS', 'The imported block has no reserved ID.'),
       data,
-      ...(block.tunes !== undefined && { tunes: structuredClone(block.tunes) }),
+      ...(block.tunes !== undefined && { tunes: cloneRecord(block.tunes) }),
       children: block.content.map(toSpec),
     };
   };

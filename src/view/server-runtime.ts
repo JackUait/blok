@@ -1,8 +1,16 @@
-import type { LooseOutputBlockData, LooseOutputData, OutputData } from '../../types/data-formats/output-data';
+import type { HostService, ManifestOverrides } from '../../types';
+import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from '../../types/data-formats/output-data';
+import type { AgentActor } from '../../types/agent';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
 import { markdownToBlocksWithReport } from '../markdown';
+import { COMMANDS } from '../shared/agent/commands';
+import { createDocumentAgentSession } from '../shared/agent/document-session';
+import { buildBuiltInSnapshot } from '../shared/built-in-snapshot';
+import { readCustomToolsFile, snapshotWithCustomTools } from '../shared/custom-tools-file';
+import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
+import { createHeadlessAgentSetup, loadStoredDocument } from './agent-runtime';
 import { blocksToHtml } from './blocks-to-html';
 import { htmlToBlocksWithReport } from './html-to-blocks';
 import type { MarkdownDegradation } from './blocks-to-markdown';
@@ -399,6 +407,130 @@ const parseHtmlFields = (inputJson: string): HtmlField[] => {
   });
 };
 
+const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
+
+const isStoredBlock = (value: unknown): value is OutputBlockData =>
+  isRecord(value)
+  && typeof value.type === 'string' && value.type !== ''
+  && isRecord(value.data)
+  && (value.id === undefined || typeof value.id === 'string')
+  && (value.tunes === undefined || isRecord(value.tunes))
+  && (value.parent === undefined || typeof value.parent === 'string')
+  && (value.content === undefined || (isArray(value.content) && value.content.every(id => typeof id === 'string')))
+  && (value.indent === undefined || typeof value.indent === 'number')
+  && (value.lastEditedAt === undefined || typeof value.lastEditedAt === 'number')
+  && (value.lastEditedBy === undefined || typeof value.lastEditedBy === 'string')
+  && (value.createdAt === undefined || typeof value.createdAt === 'number')
+  && (value.createdBy === undefined || typeof value.createdBy === 'string');
+
+const isStoredDocument = (value: unknown): value is OutputData =>
+  isRecord(value)
+  && isArray(value.blocks) && value.blocks.every(isStoredBlock)
+  && (value.id === undefined || typeof value.id === 'string')
+  && (value.version === undefined || typeof value.version === 'string')
+  && (value.time === undefined || typeof value.time === 'number')
+  && (value.title === undefined || typeof value.title === 'string')
+  && (value.icon === undefined || readPageIcon(value.icon) !== undefined);
+
+const isAgentActor = (value: unknown): value is AgentActor =>
+  isRecord(value)
+  && typeof value.id === 'string' && typeof value.name === 'string' && value.kind === 'agent'
+  && (value.onBehalfOf === undefined || typeof value.onBehalfOf === 'string')
+  && (value.color === undefined || typeof value.color === 'string');
+
+const isBatchEnvelope = (value: unknown): boolean =>
+  isRecord(value)
+  && isArray(value.commands)
+  && value.commands.every(command => isRecord(command)
+    && typeof command.name === 'string' && isRecord(command.args)
+    && (command.ref === undefined || typeof command.ref === 'string'))
+  && (value.expectRevision === undefined || typeof value.expectRevision === 'string');
+
+const createServerAgentSession = (
+  input: Record<string, unknown>,
+  document: OutputData,
+  actor: AgentActor
+): ReturnType<typeof createDocumentAgentSession> => {
+  const customTools = input.customTools === undefined ? undefined : readCustomToolsFile(input.customTools);
+  const services = Array.isArray(input.services)
+    ? input.services.filter((service: unknown): service is HostService =>
+      service === 'uploader' || service === 'linkMetadata' || service === 'pageBackend' || service === 'host')
+    : [];
+  const overrides: ManifestOverrides = Object.fromEntries(
+    Object.entries(isRecord(input.overrides) ? input.overrides : {})
+      .filter((entry): entry is [string, ManifestOverrides[string]] => {
+        const override = entry[1];
+
+        return isRecord(override)
+          && (override.hidden === undefined || typeof override.hidden === 'boolean')
+          && (override.guidance === undefined || typeof override.guidance === 'string')
+          && (override.hiddenActions === undefined || (Array.isArray(override.hiddenActions)
+            && override.hiddenActions.every((action: unknown) => typeof action === 'string')));
+      })
+  );
+  const setup = createHeadlessAgentSetup({ customTools, overrides, services, runtime: 'jint' });
+
+  return createDocumentAgentSession({
+    document: loadStoredDocument(document, setup.richTextFieldsFor),
+    tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, runtime: 'jint',
+  });
+};
+
+const agentExecuteResult = async (inputJson: string): Promise<string> => {
+  const input = parseRecord(inputJson);
+  const { document, actor, batch } = input;
+
+  if (!isStoredDocument(document)) {
+    throw new TypeError('agentExecute input requires a `document` with a valid `blocks` array.');
+  }
+  if (!isAgentActor(actor)) {
+    throw new TypeError('agentExecute input requires an `actor` with string `id`, string `name` and kind `agent`.');
+  }
+  if (!isBatchEnvelope(batch)) {
+    throw new TypeError('agentExecute input requires a `batch` with a `commands` array of command objects.');
+  }
+
+  const session = createServerAgentSession(input, document, actor);
+
+  try {
+    const result = await session.execute(batch);
+
+    return JSON.stringify({ result, document: session.output(), edits: session.lastEdits() });
+  } finally {
+    session.close();
+  }
+};
+
+const agentPlanHostResult = async (inputJson: string): Promise<string> => {
+  const input = parseRecord(inputJson);
+  const { document, actor, batch } = input;
+
+  if (!isStoredDocument(document)) {
+    throw new TypeError('agentPlanHost input requires a `document` with a valid `blocks` array.');
+  }
+  if (!isAgentActor(actor)) {
+    throw new TypeError('agentPlanHost input requires an `actor` with string `id`, string `name` and kind `agent`.');
+  }
+  const session = createServerAgentSession(input, document, actor);
+
+  try {
+    const planned = await session.planHost(batch);
+
+    if (!('plan' in planned)) {
+      return JSON.stringify(planned);
+    }
+
+    return JSON.stringify({
+      result: planned.result,
+      plan: { ...planned.plan, touched: [...planned.plan.touched] },
+      batch: planned.batch,
+      view: planned.view,
+    });
+  } finally {
+    session.close();
+  }
+};
+
 export const invoke = async (operation: string, inputJson: string): Promise<string> => {
   switch (operation) {
     case 'markdownToBlocks':
@@ -495,6 +627,33 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
      */
     case 'schema':
       return JSON.stringify(blokDocumentSchema);
+    case 'manifest': {
+      const input = parseRecord(inputJson);
+      const customTools = input.customTools === undefined ? undefined : readCustomToolsFile(input.customTools);
+      const services = Array.isArray(input.services)
+        ? input.services.filter((service: unknown): service is HostService =>
+          service === 'uploader' || service === 'linkMetadata' || service === 'pageBackend' || service === 'host')
+        : [];
+      const overrides: ManifestOverrides = Object.fromEntries(
+        Object.entries(isRecord(input.overrides) ? input.overrides : {})
+          .filter((entry): entry is [string, ManifestOverrides[string]] => {
+            const override = entry[1];
+
+            return isRecord(override)
+              && (override.hidden === undefined || typeof override.hidden === 'boolean')
+              && (override.guidance === undefined || typeof override.guidance === 'string')
+              && (override.hiddenActions === undefined || (Array.isArray(override.hiddenActions)
+                && override.hiddenActions.every((action: unknown) => typeof action === 'string')));
+          })
+      );
+      const snapshot = snapshotWithCustomTools(
+        buildBuiltInSnapshot({ blokVersion: getBlokVersion(), services }),
+        customTools
+      );
+      const manifest = buildToolManifest(snapshot, overrides);
+
+      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, { runtime: 'jint', services }) });
+    }
     case 'extractTexts': {
       const { document, options } = parseTextsRequest(inputJson);
 
@@ -515,6 +674,10 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
         ...address,
         segments: htmlToSegmentsNode(html),
       })));
+    case 'agentExecute':
+      return agentExecuteResult(inputJson);
+    case 'agentPlanHost':
+      return agentPlanHostResult(inputJson);
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

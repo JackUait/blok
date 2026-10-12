@@ -1,0 +1,42 @@
+{
+  "steps": [
+    {
+      "key": "title",
+      "value": "Plan"
+    },
+    {
+      "key": "icon",
+      "value": {
+        "type": "emoji",
+        "value": "🚀"
+      }
+    },
+    {
+      "key": "title",
+      "value": ""
+    },
+    {
+      "key": "icon",
+      "value": null
+    }
+  ],
+  "after": [
+    {
+      "title": "Plan"
+    },
+    {
+      "title": "Plan",
+      "icon": {
+        "type": "emoji",
+        "value": "🚀"
+      }
+    },
+    {
+      "icon": {
+        "type": "emoji",
+        "value": "🚀"
+      }
+    },
+    {}
+  ]
+}

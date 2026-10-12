@@ -1042,6 +1042,12 @@ internal static class YDocConverter
         CollabEditOp.Update update => PlanUpdate(update, index),
         CollabEditOp.Remove remove => PlanRemove(remove, index),
         CollabEditOp.PatchMaps patch => PlanPatchMaps(patch, index),
+        CollabEditOp.SetPageField set => PlanSetPageField(set, index),
+        CollabEditOp.Move move => PlanMove(move, index),
+        CollabEditOp.Lift lift => PlanLift(lift, index),
+        CollabEditOp.Retype retype => PlanRetype(retype, index),
+        CollabEditOp.SetTunes tunes => PlanSetTunes(tunes, index),
+        CollabEditOp.SetMetadata metadata => PlanSetMetadata(metadata, index),
         _ => throw new CollabEditException(Where(index, "the op is not one this server knows.")),
       };
     }
@@ -1329,6 +1335,258 @@ internal static class YDocConverter
     }
 
     /// <summary>
+    /// LOCKSTEP with <c>DocumentStore.moveBlockTo</c>: the id leaves every
+    /// order array that lists it, its parentId is rewritten (deleted for the
+    /// root), and it is placed after <c>After</c>. The block map itself is
+    /// never replaced.
+    /// </summary>
+    private List<EditStep> PlanMove(CollabEditOp.Move op, int index)
+    {
+      NoNul(op.Id, "a block id");
+
+      if (!parents.TryGetValue(op.Id, out var oldParent))
+      {
+        throw new CollabEditException(Where(index, $"there is no block \"{op.Id}\" to move."));
+      }
+
+      RefuseUnlessBlockMap(op.Id, index);
+
+      List<string>? siblings = null;
+
+      if (op.Parent is not null)
+      {
+        NoNul(op.Parent, "a parent id");
+
+        if (!parents.ContainsKey(op.Parent))
+        {
+          throw new CollabEditException(Where(index, $"there is no block \"{op.Parent}\" to move under."));
+        }
+
+        RefuseUnlessBlockMap(op.Parent, index);
+
+        // A cycle a peer wrote must not hang the walk.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var cursor = op.Parent; cursor is not null && seen.Add(cursor); cursor = parents.GetValueOrDefault(cursor))
+        {
+          if (cursor == op.Id)
+          {
+            throw new CollabEditException(Where(index, $"block \"{op.Id}\" cannot move inside itself."));
+          }
+        }
+
+        if (!contents.TryGetValue(op.Parent, out siblings) || siblings is null)
+        {
+          throw new CollabEditException(Where(
+              index,
+              $"block \"{op.Parent}\" has no children list, so nothing can be placed under it."));
+        }
+      }
+
+      if (op.After is not null)
+      {
+        NoNul(op.After, "a block id");
+
+        if (op.After == op.Id ||
+            !parents.TryGetValue(op.After, out var afterParent) ||
+            !string.Equals(afterParent, op.Parent, StringComparison.Ordinal) ||
+            (op.Parent is null ? !order.Contains(op.After) : siblings?.Contains(op.After) != true))
+        {
+          throw new CollabEditException(Where(
+              index,
+              $"block \"{op.After}\" is not a child of " +
+              (op.Parent is null ? "the document root" : $"\"{op.Parent}\"") + ", so nothing can be placed after it."));
+        }
+      }
+
+      var steps = new List<EditStep>();
+
+      for (var at = order.LastIndexOf(op.Id); at >= 0; at = order.LastIndexOf(op.Id))
+      {
+        order.RemoveAt(at);
+        steps.Add(EditStep.RemoveRootOrder(at));
+      }
+
+      if (listedBy.Remove(op.Id, out var holders))
+      {
+        foreach (var holder in holders)
+        {
+          contents.GetValueOrDefault(holder)?.Remove(op.Id);
+          steps.Add(EditStep.UnlinkChild(holder, op.Id));
+        }
+      }
+
+      // The child index follows parentId, and a later removal in this request walks it.
+      if (oldParent is not null && children.TryGetValue(oldParent, out var bucket))
+      {
+        bucket.Remove(op.Id);
+      }
+
+      parents[op.Id] = op.Parent;
+      Index(op.Id, op.Parent);
+      steps.Add(EditStep.SetParentId(op.Id, op.Parent));
+
+      if (op.Parent is null)
+      {
+        var at = op.After is null ? 0 : order.IndexOf(op.After) + 1;
+
+        order.Insert(at, op.Id);
+        steps.Add(EditStep.InsertRootOrder(at, op.Id));
+      }
+      else if (siblings is not null)
+      {
+        ListedBy(op.Id).Add(op.Parent);
+        siblings.Insert(op.After is null ? 0 : siblings.IndexOf(op.After) + 1, op.Id);
+        steps.Add(EditStep.LinkChild(op.Parent, op.Id, op.After));
+      }
+
+      return steps;
+    }
+
+    /// <summary>
+    /// The children move into the block's own slot, in order, right after it,
+    /// so a removal of the block right after keeps them (<c>removeBlock</c>
+    /// with <c>withChildren: false</c> in json-applier.ts).
+    /// </summary>
+    private List<EditStep> PlanLift(CollabEditOp.Lift op, int index)
+    {
+      NoNul(op.Id, "a block id");
+
+      if (!parents.TryGetValue(op.Id, out var parentId))
+      {
+        throw new CollabEditException(Where(index, $"there is no block \"{op.Id}\" to lift children out of."));
+      }
+
+      // Listed children first, in their order; then any child only its parentId names.
+      var listed = (contents.GetValueOrDefault(op.Id) ?? [])
+          .Where(child => string.Equals(parents.GetValueOrDefault(child), op.Id, StringComparison.Ordinal));
+      var lifted = listed.Concat(children.GetValueOrDefault(op.Id) ?? []).Distinct(StringComparer.Ordinal).ToList();
+      var steps = new List<EditStep>();
+      var after = op.Id;
+
+      foreach (var child in lifted)
+      {
+        steps.AddRange(PlanMove(new CollabEditOp.Move(child, after, parentId), index));
+        after = child;
+      }
+
+      return steps;
+    }
+
+    /// <summary>LOCKSTEP with <c>DocumentStore.replaceBlockContent</c>: same map, new type, data replaced per key.</summary>
+    private List<EditStep> PlanRetype(CollabEditOp.Retype op, int index)
+    {
+      NoNul(op.Id, "a block id");
+
+      if (!parents.ContainsKey(op.Id))
+      {
+        throw new CollabEditException(Where(index, $"there is no block \"{op.Id}\" to retype."));
+      }
+
+      RefuseUnlessBlockMap(op.Id, index);
+
+      var type = NoNul(op.Type, "a block type");
+      var entries = InputWriter.BlockDataEntries(type, NormalizeBlockData(type, op.Data), input);
+
+      InputWriter.Screen(entries);
+      types[op.Id] = type;
+
+      return [EditStep.SetBlockField(op.Id, "type", type), EditStep.ReplaceData(op.Id, entries)];
+    }
+
+    /// <summary>LOCKSTEP with <c>DocumentStore.updateBlockTune</c>: each tune is assigned in place.</summary>
+    private List<EditStep> PlanSetTunes(CollabEditOp.SetTunes op, int index)
+    {
+      NoNul(op.Id, "a block id");
+
+      if (!parents.ContainsKey(op.Id))
+      {
+        throw new CollabEditException(Where(index, $"there is no block \"{op.Id}\" to set tunes on."));
+      }
+
+      RefuseUnlessBlockMap(op.Id, index);
+
+      var tunes = new List<KeyValuePair<string, JsonNode?>>();
+
+      foreach (var (name, value) in op.Tunes)
+      {
+        // Screened here: a step must not throw mid-transaction.
+        InputWriter.PlainToYValue(value, BlockFieldDepth + 1);
+        tunes.Add(KeyValuePair.Create(NoNul(name, "a tune name"), value?.DeepClone()));
+      }
+
+      return [EditStep.SetTunes(op.Id, tunes)];
+    }
+
+    private List<EditStep> PlanSetMetadata(CollabEditOp.SetMetadata op, int index)
+    {
+      NoNul(op.Id, "a block id");
+
+      if (!parents.ContainsKey(op.Id))
+      {
+        throw new CollabEditException(Where(index, $"there is no block \"{op.Id}\" to stamp."));
+      }
+
+      RefuseUnlessBlockMap(op.Id, index);
+
+      if (!double.IsFinite(op.LastEditedAt))
+      {
+        throw new CollabEditException(Where(index, "\"lastEditedAt\" must be a finite number."));
+      }
+
+      return [
+        EditStep.SetBlockField(op.Id, "lastEditedAt", op.LastEditedAt),
+        EditStep.SetBlockField(op.Id, "lastEditedBy", NoNul(op.LastEditedBy, "an editor id")),
+      ];
+    }
+
+    /// <summary>
+    /// LOCKSTEP with <c>writePageField</c> (page-fields.ts): NULs are stripped
+    /// (<c>cleanPageField</c>), and null or "" deletes the key.
+    /// </summary>
+    private List<EditStep> PlanSetPageField(CollabEditOp.SetPageField op, int index)
+    {
+      if (op.Key is not ("title" or "icon"))
+      {
+        throw new CollabEditException(Where(index, $"\"{op.Key}\" is not a page field."));
+      }
+
+      var value = WithoutNul(op.Value);
+      var clears = value is null || (value is JsonValue text && text.GetValueKind() == JsonValueKind.String && text.GetValue<string>().Length == 0);
+
+      if (clears)
+      {
+        return [EditStep.PatchMap(doc.GetMap(PageRoot), op.Key, null)];
+      }
+
+      var valid = op.Key == "title"
+        ? value is JsonValue title && title.GetValueKind() == JsonValueKind.String
+        : value is JsonObject icon && IsPageIconJson(icon);
+
+      if (!valid)
+      {
+        throw new CollabEditException(Where(index, op.Key == "title"
+          ? "a page title is a string."
+          : "a page icon is { type: \"emoji\", value } or { type: \"image\", url }."));
+      }
+
+      return [EditStep.PatchMap(doc.GetMap(PageRoot), op.Key, EncodeAny(InputWriter.Atomic(value, 1)))];
+    }
+
+    /// <summary><c>cleanPageField</c>: a string, or an object's top-level string fields, without U+0000.</summary>
+    private static JsonNode? WithoutNul(JsonNode? value)
+    {
+      static JsonNode? Clean(JsonNode? node) =>
+          node is JsonValue text && text.GetValueKind() == JsonValueKind.String
+            ? JsonValue.Create(text.GetValue<string>().Replace("\0", "", StringComparison.Ordinal))
+            : node?.DeepClone();
+
+      return value is JsonObject map
+        ? new JsonObject(map.Select(entry => KeyValuePair.Create(entry.Key, Clean(entry.Value))))
+        : Clean(value);
+    }
+
+    /// <summary>
     /// Refuses an op whose target is in the blocks map but is not a block.
     ///
     /// A peer can write anything into that map through an ordinary update, and
@@ -1528,6 +1786,68 @@ internal static class YDocConverter
         else
         {
           map.Set(transaction, key, DecodeAny(encoded));
+        }
+      });
+    }
+
+    internal static EditStep SetBlockField(string id, string key, object value)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        if (Value(blockMap, id) is YMap block)
+        {
+          block.Set(transaction, key, value);
+        }
+      });
+    }
+
+    /// <summary>Creates the tunes map when a peer's block has none, as <c>getOrCreateTunesMap</c> does.</summary>
+    internal static EditStep SetTunes(string id, IReadOnlyList<KeyValuePair<string, JsonNode?>> tunes)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        if (Value(blockMap, id) is not YMap block)
+        {
+          return;
+        }
+
+        if (Value(block, "tunes") is not YMap map)
+        {
+          map = new YMap();
+          block.Set(transaction, "tunes", map);
+        }
+
+        foreach (var (name, tune) in tunes)
+        {
+          if (tune is null)
+          {
+            map.Remove(transaction, name);
+          }
+          else
+          {
+            DeepAssign.Entry(transaction, map, name, tune.DeepClone(), BlockFieldDepth + 1, nested: true);
+          }
+        }
+      });
+    }
+
+    /// <summary>Root placement DELETES the key, as <c>applyPlacement</c> does; it is never a null value.</summary>
+    internal static EditStep SetParentId(string id, string? parentId)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        if (Value(blockMap, id) is not YMap block)
+        {
+          return;
+        }
+
+        if (parentId is null)
+        {
+          block.Remove(transaction, "parentId");
+        }
+        else
+        {
+          block.Set(transaction, "parentId", parentId);
         }
       });
     }

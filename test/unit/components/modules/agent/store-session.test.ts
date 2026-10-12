@@ -1,0 +1,338 @@
+// @vitest-environment node
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createStoreAgentSession } from '../../../../../src/components/modules/agent/store-session';
+import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
+import { createHeadlessAgentSetup } from '../../../../../src/view/agent-runtime';
+import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-parse5';
+
+import type { AgentActor, AgentSession, DocumentView, ViewArgs } from '../../../../../types/agent';
+import type { OutputBlockData } from '../../../../../types/data-formats/output-data';
+
+const actor: AgentActor = { id: 'agent-1', name: 'Agent', kind: 'agent' };
+const originalStamp = { createdAt: 1, createdBy: 'creator-1', lastEditedAt: 7, lastEditedBy: 'human-1' };
+const history: Array<'history.undo' | 'history.redo'> = ['history.undo', 'history.redo'];
+const stores: DocumentStore[] = [];
+const sessions: AgentSession[] = [];
+
+const initial = (): OutputBlockData[] => [
+  { ...originalStamp, id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } },
+  { ...originalStamp, id: 'q', type: 'paragraph', data: { text: [{ text: 'Q' }] } },
+];
+
+const open = (blocks: OutputBlockData[] = initial()) => {
+  const setup = createHeadlessAgentSetup({ runtime: 'node-live' });
+  const serializer = new YBlockSerializer({
+    htmlToSegments: htmlToSegmentsNode,
+    richTextFieldsFor: setup.richTextFieldsFor,
+  });
+  const store = new DocumentStore(serializer);
+
+  stores.push(store);
+  store.fromJSON(blocks);
+  const session = createStoreAgentSession({
+    store, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
+    richTextFieldsFor: setup.richTextFieldsFor,
+  });
+
+  sessions.push(session);
+
+  return { store, serializer, session };
+};
+
+const storedBlock = (store: DocumentStore, id: string): OutputBlockData => {
+  const block = store.toJSON().find(item => item.id === id);
+
+  if (block === undefined) {
+    throw new Error(`Expected stored block "${id}".`);
+  }
+
+  return block;
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(async () => {
+  try {
+    for (const session of sessions.splice(0)) {
+      await Promise.resolve(session.close());
+    }
+  } finally {
+    try {
+      await stores.splice(0).reduce(
+        (cleanup, store) => cleanup.then(() => store.destroy()),
+        Promise.resolve()
+      );
+    } finally {
+      vi.restoreAllMocks();
+    }
+  }
+});
+
+describe('createStoreAgentSession', () => {
+  it('persists rich formatting with agent metadata without stamping an untouched block', async () => {
+    const { store, serializer, session } = open();
+    const untouched = storedBlock(store, 'q');
+    const started = Date.now();
+    const result = await session.execute({
+      commands: [{ name: 'text.format', args: { id: 'p', range: 'all', set: { bold: true } } }],
+    });
+    const finished = Date.now();
+    const written = storedBlock(store, 'p');
+
+    expect(serializer.toRichSegments(written.data.text)).toEqual([{ text: 'P', marks: { bold: true } }]);
+    expect(written).toMatchObject({ lastEditedBy: actor.id, createdAt: 1, createdBy: 'creator-1' });
+    if (typeof written.lastEditedAt !== 'number') {
+      throw new Error('Expected the edit timestamp.');
+    }
+    expect(written.lastEditedAt).toBeGreaterThanOrEqual(started);
+    expect(written.lastEditedAt).toBeLessThanOrEqual(finished);
+    expect(storedBlock(store, 'q')).toEqual(untouched);
+    expect(result).toMatchObject({ ok: true, changed: { updated: ['p'] } });
+    expect(result.revision).toBe((await session.read()).revision);
+  });
+
+  it.each(history)('reports %s as unavailable for the live runtime without changing content', async name => {
+    const { store, session } = open();
+
+    expect(await session.execute({
+      commands: [{ name: 'text.format', args: { id: 'p', range: 'all', set: { bold: true } } }],
+    })).toMatchObject({ ok: true });
+    const before = store.toJSON();
+    const revision = (await session.read()).revision;
+    const result = await session.execute({ commands: [{ name, args: {} }] });
+
+    expect(result).toMatchObject({
+      ok: false, revision,
+      error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } },
+    });
+    expect(store.toJSON()).toEqual(before);
+    expect((await session.read()).revision).toBe(revision);
+    expect(session.describe({ command: name })).toMatchObject({
+      command: { name, available: false, unavailableReason: 'runtime' },
+    });
+  });
+
+  it('rejects a revision made stale by a native store edit and accepts the current revision', async () => {
+    const { store, session } = open();
+    const old = (await session.read()).revision;
+
+    store.updateBlockData('p', 'text', [{ text: 'Peer', marks: { italic: true } }]);
+    const current = await session.read();
+    const retained = store.toJSON();
+    const stale = await session.execute({
+      expectRevision: old, commands: [{ name: 'block.delete', args: { id: 'p' } }],
+    });
+
+    expect(stale).toMatchObject({
+      ok: false, revision: current.revision,
+      error: {
+        code: 'STALE', retryable: true,
+        details: { revision: current.revision, current: [{ id: 'p', type: 'paragraph', text: 'Peer' }] },
+      },
+    });
+    expect(current.revision).not.toBe(old);
+    expect(store.toJSON()).toEqual(retained);
+    const accepted = await session.execute({
+      expectRevision: current.revision, commands: [{ name: 'block.delete', args: { id: 'p' } }],
+    });
+
+    expect(store.orderedIds()).toEqual(['q']);
+    expect(accepted).toMatchObject({ ok: true, changed: { removed: ['p'] } });
+    expect(accepted.revision).not.toBe(current.revision);
+    expect((await session.read()).revision).toBe(accepted.revision);
+  });
+
+  it('retains partial native writes after APPLY_FAILED and refuses later writes while reads work', async () => {
+    const { store, serializer, session } = open();
+    const remove = vi.spyOn(store, 'removeBlock').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const failed = await session.execute({ commands: [
+      { name: 'text.replace', args: { id: 'p', with: 'Partial' } },
+      { name: 'doc.setTitle', args: { title: 'Partly applied' } },
+      { name: 'block.delete', args: { id: 'p' } },
+      { name: 'doc.setTitle', args: { title: 'Must not be written' } },
+    ] });
+
+    remove.mockRestore();
+
+    expect(serializer.toRichSegments(storedBlock(store, 'p').data.text)).toEqual([{ text: 'Partial' }]);
+    expect(store.page.get('title')).toBe('Partly applied');
+    expect(store.orderedIds()).toEqual(['p', 'q']);
+    expect(failed).toMatchObject({ ok: false, error: { code: 'APPLY_FAILED', retryable: false } });
+    if (failed.ok) {
+      throw new Error('Expected a failed native apply.');
+    }
+    expect(failed.error.message).toContain('boom');
+    const retained = store.toJSON();
+    const blocked = await session.execute({ commands: [
+      { name: 'block.delete', args: { id: 'p' } },
+      { name: 'doc.setTitle', args: { title: 'Blocked' } },
+    ] });
+
+    expect(blocked).toMatchObject({ ok: false, error: { code: 'READ_ONLY', retryable: false } });
+    expect(store.toJSON()).toEqual(retained);
+    expect(store.page.get('title')).toBe('Partly applied');
+    const view = await session.read({ ids: ['p'], detail: 'full' });
+
+    expect(view).toMatchObject({
+      revision: failed.revision, page: { title: 'Partly applied' },
+      blocks: [{ id: 'p', data: { text: [{ text: 'Partial' }] } }],
+    });
+    expect(await session.execute({ commands: [{ name: 'doc.read', args: { ids: ['p'] } }] }))
+      .toMatchObject({ ok: true, revision: view.revision, results: [{ blocks: [{ id: 'p', text: 'Partial' }] }] });
+    expect(store.toJSON()).toEqual(retained);
+  });
+
+  it('validates typed convenience reads and reads current rich data and page fields without logging', async () => {
+    const { store, session } = open();
+    const before = await session.read();
+
+    store.pageFromJSON({ title: 'Live', icon: { type: 'emoji', value: 'P' } });
+    store.updateBlockData('p', 'text', '<i>Updated</i>');
+    const retained = store.toJSON();
+    const args: ViewArgs = { ids: ['p'], detail: 'full', textLimit: 3 };
+    const view: DocumentView = await session.read(args);
+
+    await expect(session.read({ limit: 0 })).rejects.toMatchObject({ error: { code: 'INVALID_ARGS' } });
+    expect(session.log()).toEqual([]);
+    expect(view.blocks).toEqual([{
+      id: 'p', type: 'paragraph', depth: 0, text: 'Upd…', truncated: true,
+      data: { text: [{ text: 'Updated', marks: { italic: true } }] },
+    }]);
+    expect(view.rootId).toBeNull();
+    expect(view.page).toEqual({ title: 'Live', icon: { type: 'emoji', value: 'P' } });
+    expect(view.revision).not.toBe(before.revision);
+    expect(store.toJSON()).toEqual(retained);
+    expect(store.page.get('title')).toBe('Live');
+  });
+
+  it('retains separate command-log snapshots with batch order, results, errors and actor attribution', async () => {
+    const { session } = open();
+
+    await session.read();
+    expect(await session.execute({ commands: [
+      { name: 'doc.read', args: { ids: ['p'] } },
+      { name: 'doc.read', args: { ids: ['q'] } },
+    ] })).toMatchObject({ ok: true });
+    const firstLog = session.log();
+
+    expect(await session.execute({ commands: [{ name: 'block.delete', args: { id: 'missing' } }] }))
+      .toMatchObject({ ok: false, error: { code: 'BLOCK_NOT_FOUND' } });
+    expect(firstLog).toHaveLength(2);
+    expect(session.log()).toHaveLength(3);
+    expect(session.log()).toMatchObject([
+      {
+        batch: 1, index: 0, name: 'doc.read', args: { ids: ['p'] }, actorId: actor.id,
+        result: { blocks: [{ id: 'p', text: 'P' }] },
+      },
+      {
+        batch: 1, index: 1, name: 'doc.read', args: { ids: ['q'] }, actorId: actor.id,
+        result: { blocks: [{ id: 'q', text: 'Q' }] },
+      },
+      {
+        batch: 2, index: 0, name: 'block.delete', args: { id: 'missing' }, actorId: actor.id,
+        error: { code: 'BLOCK_NOT_FOUND' },
+      },
+    ]);
+  });
+
+  it('closes idempotently, detaches its revision observer and leaves the caller-owned store subscribed', async () => {
+    const { store, serializer, session } = open();
+    const revision = (await session.read()).revision;
+    const origins: unknown[] = [];
+    const unsubscribe = store.onAnyUpdate((_update, origin) => origins.push(origin));
+
+    try {
+      await Promise.resolve(session.close());
+      await Promise.resolve(session.close());
+      store.updateBlockData('p', 'text', [{ text: 'Owner still writes' }]);
+      const view = await session.read({ ids: ['p'] });
+
+      expect(origins).toEqual(['local']);
+      expect(view.revision).toBe(revision);
+      expect(view.blocks).toMatchObject([{ id: 'p', text: 'Owner still writes' }]);
+      expect(serializer.toRichSegments(storedBlock(store, 'p').data.text)).toEqual([{ text: 'Owner still writes' }]);
+    } finally {
+      await Promise.resolve(unsubscribe());
+    }
+  });
+
+  it('creates a native table with complete cell ids that stay stable through another normalization', async () => {
+    const { store, session } = open();
+    const untouched = store.toJSON();
+
+    // A table owns its cells, so a bare block.insert is refused (01 Task 8 Step 7).
+    expect(await session.execute({ commands: [{ name: 'block.insert', args: { type: 'table' } }] })).toMatchObject({
+      ok: false, error: { code: 'INVALID_ARGS', details: { use: 'table.create' } },
+    });
+
+    const inserted = await session.execute({ commands: [{ name: 'table.create', args: { rows: 2, cols: 2 } }] });
+
+    if (!inserted.ok) {
+      throw new Error(`Expected table.create to succeed: ${inserted.error.message}`);
+    }
+    const created = inserted.results[0];
+
+    if (typeof created !== 'object' || created === null || !('id' in created) || typeof created.id !== 'string' ||
+      !('childIds' in created) || !Array.isArray(created.childIds)) {
+      throw new Error('Expected a table id and its cell block ids.');
+    }
+    const tableId = created.id;
+    const childIds: unknown[] = created.childIds;
+    const written = storedBlock(store, tableId);
+    const content = written.data.content;
+
+    if (!Array.isArray(content)) {
+      throw new Error('Expected native table rows.');
+    }
+    const rows: unknown[] = content;
+    const cells = rows.flatMap((row): unknown[] => Array.isArray(row) ? row : []);
+
+    if (!cells.every((cell): cell is { id: string; rowId: string } =>
+      typeof cell === 'object' && cell !== null &&
+      'id' in cell && typeof cell.id === 'string' && cell.id.length > 0 &&
+      'rowId' in cell && typeof cell.rowId === 'string' && cell.rowId.length > 0
+    )) {
+      throw new Error('Expected complete cell ids.');
+    }
+    const [topLeft, topRight, bottomLeft] = cells;
+
+    if (topLeft === undefined || topRight === undefined || bottomLeft === undefined || cells.length !== 4) {
+      throw new Error('Expected four native table cells.');
+    }
+
+    expect(content).toEqual([
+      [{ blocks: [childIds[0]], id: topLeft.id, rowId: topLeft.rowId }, { blocks: [childIds[1]], id: topRight.id, rowId: topLeft.rowId }],
+      [{ blocks: [childIds[2]], id: topLeft.id, rowId: bottomLeft.rowId }, { blocks: [childIds[3]], id: topRight.id, rowId: bottomLeft.rowId }],
+    ]);
+    expect(topLeft.id).not.toBe(topRight.id);
+    expect(topLeft.rowId).not.toBe(bottomLeft.rowId);
+    expect(written).toMatchObject({
+      id: tableId, type: 'table', lastEditedBy: actor.id, content: childIds,
+      data: { withHeadings: false, withHeadingColumn: false },
+    });
+    expect(written).not.toHaveProperty('parent');
+    childIds.forEach(childId => {
+      expect(storedBlock(store, String(childId))).toMatchObject({ type: 'paragraph', parent: tableId, lastEditedBy: actor.id });
+    });
+    expect(inserted).toMatchObject({ changed: { created: [tableId, ...childIds] } });
+
+    const updated = await session.execute({
+      commands: [{ name: 'block.update', args: { id: tableId, data: { withHeadings: true, colWidths: [160, 180] } } }],
+    });
+    const renormalized = storedBlock(store, tableId);
+
+    expect(renormalized.data.content).toEqual(content);
+    expect(renormalized.data).toMatchObject({ withHeadings: true, withHeadingColumn: false, colWidths: [160, 180] });
+    expect(renormalized.content).toEqual(childIds);
+    expect(store.orderedIds()).toEqual(['p', 'q', tableId, ...childIds]);
+    expect(store.toJSON().slice(0, 2)).toEqual(untouched);
+    expect(renormalized).not.toHaveProperty('parent');
+    expect(updated).toMatchObject({ ok: true, changed: { updated: [tableId] } });
+  });
+});

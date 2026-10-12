@@ -2,6 +2,9 @@ import type { HostService, SnapshotBlock, ToolConfig, ToolRegistrySnapshot } fro
 import { BUILT_IN_RUNTIME_PARTS } from '../../shared/tool-actions';
 import type { ToolRuntime, ToolRuntimeRegistry } from '../../shared/tool-actions/runtime';
 import { CalloutTool } from '../../tools/callout';
+import { Column } from '../../tools/column';
+import { ColumnList } from '../../tools/column-list';
+import { TabsTool } from '../../tools/tabs';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 import { Table } from '../../tools/table';
 import { isRestrictedInTableCell } from '../../tools/table/table-restrictions';
@@ -108,7 +111,10 @@ export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new 
     .map((tool): [string, ToolRuntime] => {
       const toolClass = tool.toolClass;
       const tableParts = toolClass === Table ? BUILT_IN_RUNTIME_PARTS.table : undefined;
-      const parts = Object.is(toolClass, CalloutTool) ? BUILT_IN_RUNTIME_PARTS.callout : tableParts;
+      const listParts = Object.is(toolClass, ColumnList) ? BUILT_IN_RUNTIME_PARTS.column_list : tableParts;
+      const columnParts = Object.is(toolClass, Column) ? BUILT_IN_RUNTIME_PARTS.column : listParts;
+      const tabsParts = Object.is(toolClass, TabsTool) ? BUILT_IN_RUNTIME_PARTS.tabs : columnParts;
+      const parts = Object.is(toolClass, CalloutTool) ? BUILT_IN_RUNTIME_PARTS.callout : tabsParts;
 
       return [tool.name, {
         name: tool.name,

@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseViewConfig, PropertyDefinition, SelectOption, StatusGroup } from './types';
+import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 
 const DEFAULT_KEYS = {
   titleProperty: 'tools.database.defaultTitleProperty',
@@ -29,27 +30,7 @@ type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
 const englishDefault = (key: DefaultKey): string =>
   (englishDictionary as Record<string, string>)[key] ?? key;
 
-export const DATABASE_DEFAULT_TEXT = {
-  titleProperty: englishDefault(DEFAULT_KEYS.titleProperty),
-  statusProperty: englishDefault(DEFAULT_KEYS.statusProperty),
-  statusNotStarted: englishDefault(DEFAULT_KEYS.statusNotStarted),
-  statusInProgress: englishDefault(DEFAULT_KEYS.statusInProgress),
-  statusDone: englishDefault(DEFAULT_KEYS.statusDone),
-  statusGroupTodo: englishDefault(DEFAULT_KEYS.statusGroupTodo),
-  statusGroupInProgress: englishDefault(DEFAULT_KEYS.statusGroupInProgress),
-  statusGroupComplete: englishDefault(DEFAULT_KEYS.statusGroupComplete),
-  viewBoard: englishDefault(DEFAULT_KEYS.viewBoard),
-  viewTypeBoard: englishDefault(DEFAULT_KEYS.viewTypeBoard),
-  viewTypeList: englishDefault(DEFAULT_KEYS.viewTypeList),
-  viewTypeTable: englishDefault(DEFAULT_KEYS.viewTypeTable),
-  viewTypeGallery: englishDefault(DEFAULT_KEYS.viewTypeGallery),
-  viewTypeCalendar: englishDefault(DEFAULT_KEYS.viewTypeCalendar),
-  viewTypeTimeline: englishDefault(DEFAULT_KEYS.viewTypeTimeline),
-  viewTypeChart: englishDefault(DEFAULT_KEYS.viewTypeChart),
-  viewTypeFeed: englishDefault(DEFAULT_KEYS.viewTypeFeed),
-  viewTypeForm: englishDefault(DEFAULT_KEYS.viewTypeForm),
-  viewTypeMap: englishDefault(DEFAULT_KEYS.viewTypeMap),
-} as const;
+export { DATABASE_DEFAULT_TEXT };
 
 const localizeCanonicalValue = (
   value: string,

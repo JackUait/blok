@@ -29,7 +29,7 @@ import { destroy as destroyTooltip } from '../../../../src/components/utils/tool
 import { BUILT_IN_RUNTIME_PARTS } from '../../../../src/shared/tool-actions';
 import { describeTable } from '../../../../src/shared/tool-descriptions/table';
 import { buildToolManifest } from '../../../../src/shared/tool-manifest';
-import { Callout, Header, Paragraph, Table } from '../../../../src/tools';
+import { Callout, Header, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
 
 const hasMarkDestroyed = (value: unknown): value is { markDestroyed(): void } =>
   typeof value === 'object' && value !== null &&
@@ -666,6 +666,17 @@ describe('browser tool registry snapshot', () => {
     expect(runtimes.get('note')?.defaultChildren).toEqual([{ type: 'paragraph', data: { text: [] } }]);
     expect(runtimes.get('grid')?.name).toBe('grid');
     expect(runtimes.get('note')?.name).toBe('note');
+  });
+
+  it('gives the tabs tool its default tabs, so the editor still inserts a bare tabs block', async () => {
+    const instance = await boot({ tools: { paragraph: Paragraph, tabs: TabsTool, tab: TabTool } });
+    const tabsParts = BUILT_IN_RUNTIME_PARTS.tabs;
+
+    if (tabsParts?.defaultChildren === undefined) {
+      throw new Error('Tabs runtime parts are missing.');
+    }
+
+    expect(runtimesFromTools(instance.moduleInstances.Tools).get('tabs')?.defaultChildren).toBe(tabsParts.defaultChildren);
   });
 
   it('does not grant built-in runtime parts to a custom class registered under a built-in name', async () => {

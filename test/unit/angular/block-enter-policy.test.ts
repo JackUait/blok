@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { createAngularBlock } from '../../../packages/angular/src/createAngularBlock';
 import { BlockToolAdapter } from '../../../src/components/tools/block';
-import type { ToolConstructable } from '../../../types/tools';
+import type { BlockToolConstructable } from '../../../types/tools';
 
 type AdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 
@@ -27,7 +27,7 @@ type AdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 class StepsProbe {}
 
 /** Wrap a generated tool class the way core's Tools module does. */
-const asCoreTool = (constructable: ToolConstructable): BlockToolAdapter =>
+const asCoreTool = (constructable: BlockToolConstructable): BlockToolAdapter =>
   new BlockToolAdapter({
     name: 'ng-steps',
     constructable,
@@ -37,13 +37,13 @@ const asCoreTool = (constructable: ToolConstructable): BlockToolAdapter =>
     isInternal: false,
   });
 
-const buildSteps = (keepsChildrenOnEnter: boolean | undefined): ToolConstructable =>
+const buildSteps = (keepsChildrenOnEnter: boolean | undefined): BlockToolConstructable =>
   createAngularBlock({
     type: 'ng-steps',
     propSchema: {},
     component: StepsProbe,
     ...(keepsChildrenOnEnter === undefined ? {} : { statics: { keepsChildrenOnEnter } }),
-  }) as unknown as ToolConstructable;
+  }) as unknown as BlockToolConstructable;
 
 describe('angular Enter policy reaches core through the statics passthrough', () => {
   beforeEach(() => {
@@ -73,7 +73,7 @@ describe('angular Enter policy reaches core through the statics passthrough', ()
         propSchema: {},
         component: StepsProbe,
         statics: { ownsChildren: true, keepsChildrenOnEnter: true },
-      }) as unknown as ToolConstructable
+      }) as unknown as BlockToolConstructable
     );
 
     expect(tool.ownsChildren).toBe(true);

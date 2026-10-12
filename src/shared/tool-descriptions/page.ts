@@ -1,4 +1,4 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 
 export const PAGE_ICON_SCHEMA = {
   description:
@@ -23,6 +23,39 @@ export const PAGE_ICON_SCHEMA = {
   ],
 } as const;
 
+export const PAGE_ACTIONS: ToolActionDeclaration[] = [
+  {
+    name: 'rename',
+    summary: 'Rename the page this block points to. Not this document: use doc.setTitle for that.',
+    target: 'block',
+    runtime: 'any',
+    effects: 'host',
+    requires: ['pageBackend'],
+    preconditions: ['Send it alone in its batch.'],
+    args: {
+      type: 'object',
+      required: ['title'],
+      additionalProperties: false,
+      properties: { title: { type: 'string' } },
+    },
+  },
+  {
+    name: 'setIcon',
+    summary: 'Set or clear the icon of the page this block points to.',
+    target: 'block',
+    runtime: 'any',
+    effects: 'host',
+    requires: ['pageBackend'],
+    preconditions: ['Send it alone in its batch.'],
+    args: {
+      type: 'object',
+      required: ['icon'],
+      additionalProperties: false,
+      properties: { icon: { anyOf: [PAGE_ICON_SCHEMA, { type: 'null' }] } },
+    },
+  },
+];
+
 export const PAGE_DATA = {
   type: 'object',
   description: 'A link to a sub-page. The page body lives in a separate document named by `pageId`, not in this one, so the block has no children.',
@@ -41,4 +74,5 @@ export const describePage = (_config: Record<string, unknown> = {}): BlockToolDe
   data: PAGE_DATA,
   inputFields: [],
   summaryFields: ['pageId'],
+  actions: PAGE_ACTIONS,
 });

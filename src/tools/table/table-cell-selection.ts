@@ -1498,6 +1498,7 @@ export class TableCellSelection {
       if (canMerge) {
         mergeItems.push({
           icon: IconMergeCells,
+          name: 'table-merge-cells',
           title: this.i18n.t('tools.table.mergeCells'),
           closeOnActivate: true,
           onActivate: (): void => {
@@ -1514,6 +1515,7 @@ export class TableCellSelection {
       if ((isSingleCell || this.isSingleMergedCell(range)) && this.isMergedCell?.(range.minRow, range.minCol)) {
         mergeItems.push({
           icon: IconSplitCell,
+          name: 'table-split-cell',
           title: this.i18n.t('tools.table.splitCell'),
           closeOnActivate: true,
           onActivate: (): void => {
@@ -1530,6 +1532,7 @@ export class TableCellSelection {
       ...mergeItems,
       {
         icon: IconCopy,
+        name: 'table-copy-selection',
         title: this.i18n.t('tools.table.copySelection'),
         secondaryLabel: copyShortcut,
         closeOnActivate: true,
@@ -1539,6 +1542,7 @@ export class TableCellSelection {
       },
       {
         icon: IconCross,
+        name: 'table-clear-selection',
         title: this.i18n.t('tools.table.clearSelection'),
         secondaryLabel: 'Del',
         isDestructive: true,

@@ -1,3 +1,4 @@
+import { TABS_ACTION_HANDLERS } from '../../shared/tool-actions/tabs';
 import { describeTabs } from '../../shared/tool-descriptions/tabs';
 import type {
   API,
@@ -44,6 +45,7 @@ interface SeedData {
  */
 export class TabsTool implements BlockTool, TabsHandle {
   public static describe = describeTabs;
+  public static actionHandlers = TABS_ACTION_HANDLERS;
 
   private readonly api: API;
   private readonly blockId: string;
@@ -809,12 +811,14 @@ export class TabsTool implements BlockTool, TabsHandle {
     const items = [
       {
         icon: IconPencil,
+        name: 'tabs-rename',
         title: t('tools.tabs.rename'),
         closeOnActivate: true,
         onActivate: () => this.startRename(id),
       },
       {
         icon: IconEmojiSmile,
+        name: 'tabs-edit-icon',
         title: t('tools.tabs.editIcon'),
         closeOnActivate: true,
         onActivate: () => this.openIconPicker(id),
@@ -822,6 +826,7 @@ export class TabsTool implements BlockTool, TabsHandle {
       { type: PopoverItemType.Separator as const },
       {
         icon: IconTrash,
+        name: 'tabs-delete',
         title: t('tools.tabs.delete'),
         isDestructive: true,
         closeOnActivate: true,

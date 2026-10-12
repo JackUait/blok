@@ -1,0 +1,6 @@
+{
+  "measuredBytes": 924996,
+  "maxBytes": 976500,
+  "measuredAt": "92dfd581 plus the uncommitted 01 Task 37 / 02 Task 50 working tree (src/view/server-runtime.ts)",
+  "reason": "First build with the agent planner, contract and ports (06 §7.1). 930,000 (next 10,000) plus 5%; the margin absorbs small fixes, anything larger is a reviewed raise. Pre-agent size was 689,655 bytes."
+}

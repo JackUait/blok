@@ -1,4 +1,5 @@
 import { describeVideo } from '../../shared/tool-descriptions/video';
+import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { videoSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -59,6 +60,7 @@ const CONVERSION_IDLE_MS = 10 * 60_000;
 
 export class VideoTool implements BlockTool {
   public static describe = describeVideo;
+  public static actionHandlers = MEDIA_ACTION_HANDLERS.video;
 
   private readonly api: API;
   private readonly block: BlockAPI;

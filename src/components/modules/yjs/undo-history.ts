@@ -1389,6 +1389,89 @@ export class UndoHistory {
     return token === undefined ? undefined : this.stepTags.get(token);
   }
 
+  public mergeTopUndoSteps(
+    previous: CaretHistoryEntry,
+    current: CaretHistoryEntry,
+    expected: { actorId: string; sessionId: string; gestureCount: number }
+  ): boolean {
+    const { undoManager } = this;
+    const olderItem = undoManager.undoStack.at(-2);
+    const newerItem = undoManager.undoStack.at(-1);
+    const olderEntry = this.caretUndoStack.at(-2);
+
+    if (previous === current || previous.kind !== 'edit' || current.kind !== 'edit'
+      || olderEntry !== previous || this.caretUndoStack.at(-1) !== current
+      || olderItem === undefined || newerItem === undefined
+      || this.entryByStackItem.get(olderItem) !== previous || this.entryByStackItem.get(newerItem) !== current
+      || this.gestures !== expected.gestureCount
+      || this.isPerformingUndoRedo || undoManager.undoing || undoManager.redoing
+      || this.captureHolds > 0 || this.joiningDepth > 0 || this.pendingMoveGroup !== null
+      || undoManager.doc._transaction !== null) {
+      return false;
+    }
+
+    if ([previous, current].some(entry => {
+      const tag = this.stepTags.get(entry);
+
+      return tag?.actorId !== expected.actorId || tag.sessionId !== expected.sessionId;
+    })) {
+      return false;
+    }
+
+    const insertions = Y.mergeDeleteSets([olderItem.insertions, newerItem.insertions]);
+    const deletions = Y.mergeDeleteSets([olderItem.deletions, newerItem.deletions]);
+    const placements = new Map(this.deletedPlacements.get(olderItem));
+
+    for (const [id, placement] of this.deletedPlacements.get(newerItem) ?? []) {
+      if (!placements.has(id)) {
+        placements.set(id, placement);
+      }
+    }
+
+    olderItem.insertions = insertions;
+    olderItem.deletions = deletions;
+    olderEntry.after = current.after;
+    this.deletedPlacements.set(olderItem, placements);
+    // Clearing the retired item would free deletions the survivor still needs.
+    undoManager.undoStack.pop();
+    this.caretUndoStack.pop();
+    this.entryByStackItem.delete(newerItem);
+    this.deletedPlacements.delete(newerItem);
+    this.stepTags.delete(current);
+    this.reachedPast.delete(current);
+    if (this.openEntry === current) {
+      this.openEntry = previous;
+    }
+    undoManager.stopCapturing();
+
+    return true;
+  }
+
+  public undoStep(token: CaretHistoryEntry): boolean {
+    const wasUndone = this.caretRedoStack.includes(token);
+
+    this.undo(token);
+
+    return !wasUndone && this.caretRedoStack.includes(token);
+  }
+
+  public redoStep(token: CaretHistoryEntry): boolean {
+    const wasRedone = this.caretUndoStack.includes(token);
+
+    this.redo(token);
+
+    return !wasRedone && this.caretUndoStack.includes(token);
+  }
+
+  private isTopStep(direction: 'undo' | 'redo', token: CaretHistoryEntry): boolean {
+    const carets = direction === 'undo' ? this.caretUndoStack : this.caretRedoStack;
+    const items = direction === 'undo' ? this.undoManager.undoStack : this.undoManager.redoStack;
+    const item = items.at(-1);
+
+    return carets.at(-1) === token &&
+      (token.kind === 'move' || (item !== undefined && this.entryByStackItem.get(item) === token));
+  }
+
   /**
    * Undo the newest action that can apply.
    *
@@ -1407,9 +1490,12 @@ export class UndoHistory {
    *
    * When nothing applies, `canUndo()` says so until the doc changes.
    */
-  public undo(): void {
+  public undo(expectedToken?: CaretHistoryEntry): void {
     // Land buffered typing writes first so they are part of the group we pop.
     this.flushPendingWritesHook();
+    if (expectedToken !== undefined && !this.isTopStep('undo', expectedToken)) {
+      return;
+    }
 
     // Save scroll position before DOM manipulation. Removing focused elements
     // from the DOM (e.g., undoing an Enter in a table cell removes cell paragraph
@@ -1420,7 +1506,9 @@ export class UndoHistory {
     const carriedBefore = this.caretRedoStack.at(-1);
     const applied = ((): boolean => {
       try {
-        return this.undoFirstThatApplies(setAside);
+        return expectedToken === undefined
+          ? this.undoFirstThatApplies(setAside)
+          : this.undoTopIfItApplies(setAside);
       } finally {
         [...setAside].reverse().forEach((top) => this.putUndoTopBack(top));
       }
@@ -1430,7 +1518,7 @@ export class UndoHistory {
     if (applied && setAside.length > 0 && carried !== undefined && carried !== carriedBefore) {
       this.noteReachedPast(carried, setAside);
     }
-    if (!applied) {
+    if (!applied && expectedToken === undefined) {
       this.nothingUndoable = true;
     }
     this.restoreScrollIfJumped(savedScrollY);
@@ -1749,9 +1837,12 @@ export class UndoHistory {
    * Checks move stack first since moves are handled separately from Yjs UndoManager.
    * Restores caret position after the redo operation.
    */
-  public redo(): void {
+  public redo(expectedToken?: CaretHistoryEntry): void {
     // Same barrier as undo: buffered writes must not outlive the replay.
     this.flushPendingWritesHook();
+    if (expectedToken !== undefined && !this.isTopStep('redo', expectedToken)) {
+      return;
+    }
 
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
@@ -1771,10 +1862,18 @@ export class UndoHistory {
     if (nextIsMove) {
       const pending = this.moveRedoStack[this.moveRedoStack.length - 1];
 
+      if (expectedToken !== undefined && (pending === undefined || pending.length === 0)) {
+        return;
+      }
       // Same law as undo, read against `from`: the undo put the block back
       // there, and once the peer has moved it somewhere else replaying `to`
       // overrules them rather than repeating this editor's move.
-      if (pending !== undefined && pending.length > 0 && this.groupWasDisplacedSince(pending, 'from')) {
+      const displaced = pending !== undefined && pending.length > 0 && this.groupWasDisplacedSince(pending, 'from');
+
+      if (displaced && expectedToken !== undefined) {
+        return;
+      }
+      if (displaced) {
         this.reachPastRefusedMove(this.caretRedoStack, this.moveRedoStack, () => this.redo());
 
         return;
@@ -1819,7 +1918,7 @@ export class UndoHistory {
     // A spent item left the history and nothing later can depend on it: try
     // the next. One that is waiting stays on top and, like a refused one,
     // holds every later step back.
-    if (!this.undoManager.redoStack.includes(item)) {
+    if (expectedToken === undefined && !this.undoManager.redoStack.includes(item)) {
       this.redo();
     }
   }

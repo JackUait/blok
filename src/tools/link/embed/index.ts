@@ -1,4 +1,5 @@
 import { describeEmbed } from '../../../shared/tool-descriptions/embed';
+import { LINK_ACTION_HANDLERS } from '../../../shared/tool-actions/link';
 import { embedSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -168,6 +169,7 @@ const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
  */
 export class Embed implements BlockTool {
   public static describe = describeEmbed;
+  public static actionHandlers = LINK_ACTION_HANDLERS.embed;
 
   private readonly api: API;
   private readonly block: BlockAPI;

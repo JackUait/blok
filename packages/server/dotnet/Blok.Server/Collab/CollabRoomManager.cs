@@ -351,6 +351,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
   internal CollabRoomOptions Options => options;
 
+  /// <summary>The converter the rooms run, so an agent plans on the same export they serve.</summary>
+  internal ICollabDocConverter Converter => converter;
+
+  /// <summary>Without a journal, an edit with no ops still persists and schedules an export.</summary>
+  internal bool HasJournal => operationStore is not null;
+
   /// <summary>Block-level HTTP edit with the endpoint's idempotency receipt.</summary>
   internal async ValueTask<CollabEditResult> EditAsync(
       string docId,
@@ -374,6 +380,34 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     return await EditInRoomAsync(
         docId,
         room => room.EditAsync(ops, operationId, digest, actorId, expect, cancellationToken));
+  }
+
+  /// <summary>
+  /// An agent batch planned against the live doc inside the room lane, after
+  /// the duplicate and precondition checks (01 §3.14), like a restore.
+  /// </summary>
+  internal async ValueTask<CollabEditResult> AgentEditAsync(
+      string docId,
+      Func<YDoc, CancellationToken, ValueTask<IReadOnlyList<CollabEditOp>>> planOps,
+      string operationId,
+      ReadOnlyMemory<byte> digest,
+      string? actorId,
+      CollabEditPrecondition? expect,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+    ArgumentNullException.ThrowIfNull(planOps);
+    ArgumentException.ThrowIfNullOrEmpty(operationId);
+
+    // Without a journal the room never checks a precondition, so it would be ignored.
+    if (expect is not null && operationStore is null)
+    {
+      return new CollabEditResult(CollabEditStatus.PreconditionRequired, null);
+    }
+
+    return await EditInRoomAsync(
+        docId,
+        room => room.EditAsync(planOps, operationId, digest, actorId, expect, cancellationToken));
   }
 
   private async ValueTask<CollabEditResult> EditInRoomAsync(

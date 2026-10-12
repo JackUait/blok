@@ -17,7 +17,7 @@ import {
   DATA_ATTR,
 } from '@bloklabs/core/adapters';
 import { deepEqual } from '@bloklabs/core/adapters';
-import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
+import { describeFromPropSchema, fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 import { mountChildBlocks, withSlotlessDescendants } from '@bloklabs/core/adapters';
 
 import type { AngularBlockRenderContext, ChildAttributesFn } from './block-context';
@@ -578,6 +578,21 @@ export function createAngularBlock<Data = BlockToolData>(
 
     Object.defineProperty(AngularBlockTool, key, {
       value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
+  // An authored describe wins; otherwise agents get the propSchema shape.
+  if (spec.statics?.describe === undefined) {
+    Object.defineProperty(AngularBlockTool, 'describe', {
+      value: () => describeFromPropSchema({
+        type: spec.type,
+        title: spec.toolbox !== undefined && !Array.isArray(spec.toolbox) ? spec.toolbox.title : undefined,
+        propSchema: spec.propSchema,
+        richTextFields: spec.statics?.richTextFields,
+      }),
       writable: true,
       enumerable: true,
       configurable: true,

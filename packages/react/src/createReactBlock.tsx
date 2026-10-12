@@ -7,6 +7,7 @@ import {
   createChildDecorationLedger,
   DATA_ATTR,
   deepEqual,
+  describeFromPropSchema,
   fillDefaults,
   mountChildBlocks,
   type PropSchema,
@@ -1052,6 +1053,21 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
     Object.defineProperty(ReactBlockTool, key, {
       value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
+  // An authored describe wins; otherwise agents get the propSchema shape.
+  if (spec.statics?.describe === undefined) {
+    Object.defineProperty(ReactBlockTool, 'describe', {
+      value: () => describeFromPropSchema({
+        type: spec.type,
+        title: typeof spec.toolbox === 'object' && !Array.isArray(spec.toolbox) && typeof spec.toolbox.title === 'string' ? spec.toolbox.title : undefined,
+        propSchema: spec.propSchema,
+        richTextFields: spec.statics?.richTextFields,
+      }),
       writable: true,
       enumerable: true,
       configurable: true,

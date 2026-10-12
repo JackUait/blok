@@ -19,6 +19,7 @@ import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep, PLA
 import { htmlToPlainText, plainTextToHtml } from '../../utils/plain-text';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
+import { ConvertConflictError } from '../../errors/convert-conflict';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { INLINE_TEXT_SANITIZE } from '../../shared/inline-content-sanitize';
 import { placementImpliedByFlat, type TreePlacement } from '../../utils/tree-order';
@@ -259,8 +260,12 @@ export class BlockMutation {
    * @param derivedFrom - where the data was worked out from: the write joins
    *   the undo step that wrote that instead of adding one
    */
-  public async update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
-    if (!data && !tunes) {
+  public async update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource, deleteKeys?: readonly string[]): Promise<Block> {
+    const patch = deleteKeys === undefined || deleteKeys.length === 0
+      ? data
+      : { ...data, ...Object.fromEntries(deleteKeys.map(key => [key, undefined])) };
+
+    if (!patch && !tunes) {
       return block;
     }
 
@@ -315,7 +320,7 @@ export class BlockMutation {
     // `composeWrite` is evaluated by the short-circuit, so it runs
     // synchronously one statement before `setData` writes the Tool's DOM.
     const inPlaceData = tunes === undefined && liveBlock.tool.supportsInPlaceSetData
-      ? this.composeWrite(block.id, liveBlock.name, source.data, before, data)
+      ? this.composeWrite(block.id, liveBlock.name, source.data, before, patch, deleteKeys)
       : undefined;
     const appliedInPlace = inPlaceData !== undefined && await liveBlock.setData(inPlaceData);
 
@@ -335,8 +340,8 @@ export class BlockMutation {
         index: applied.index,
       });
 
-      this.writeNormalization(block.id, inPlaceData, before, data);
-      this.syncDataToYjs(block.id, data, derivedFrom);
+      this.writeNormalization(block.id, inPlaceData, before, patch);
+      this.syncDataToYjs(block.id, patch, derivedFrom);
 
       return applied.block;
     }
@@ -350,7 +355,7 @@ export class BlockMutation {
     }
 
     // Composed synchronously, immediately before the write — see `composeWrite`.
-    const mergedData = this.composeWrite(block.id, target.block.name, source.data, before, data);
+    const mergedData = this.composeWrite(block.id, target.block.name, source.data, before, patch, deleteKeys);
 
     const newBlock = this.factory.composeBlock({
       id: target.block.id,
@@ -393,8 +398,8 @@ export class BlockMutation {
       index: target.index,
     });
 
-    this.writeNormalization(block.id, mergedData, before, data);
-    this.syncDataToYjs(block.id, data, derivedFrom);
+    this.writeNormalization(block.id, mergedData, before, patch);
+    this.syncDataToYjs(block.id, patch, derivedFrom);
 
     // Sync changed tunes to Yjs (`!= null` — callers may pass a literal null)
     if (tunes != null) {
@@ -488,13 +493,15 @@ export class BlockMutation {
     tool: string,
     snapshot: BlockToolData,
     before: Record<string, unknown> | undefined,
-    patch?: Partial<BlockToolData>
+    patch?: Partial<BlockToolData>,
+    deleteKeys?: readonly string[]
   ): BlockToolData {
     const drift = this.documentDrift(blockId, before);
     const composed = Object.assign({}, snapshot, this.sanitizeDocumentData(tool, drift), patch ?? {});
-    const dropped = new Set(
-      this.documentDeletions(blockId, before).filter((key) => patch === undefined || !(key in patch))
-    );
+    const dropped = new Set([
+      ...this.documentDeletions(blockId, before).filter((key) => patch === undefined || !(key in patch)),
+      ...(deleteKeys ?? []),
+    ]);
 
     return Object.fromEntries(
       Object.entries(composed).filter(([key]) => !dropped.has(key))
@@ -1705,7 +1712,7 @@ export class BlockMutation {
      * Reject so the caller knows the turn-into did not happen and can retry.
      */
     if (read === null) {
-      throw new Error(`Could not convert Block «${blockToConvert.id}»: it is being edited by someone else. Nothing was changed.`);
+      throw new ConvertConflictError(blockToConvert.id);
     }
 
     const { block: source, saved: savedBlock, exported: exportedData } = read;
@@ -1834,7 +1841,7 @@ export class BlockMutation {
       drifted(source.id, savedBlock.data, read.snapshot)
       || (firstLine !== null && drifted(firstLine.block.id, firstLine.saved?.data, firstLine.snapshot))
     ) {
-      throw new Error(`Could not convert Block «${source.id}»: it is being edited by someone else. Nothing was changed.`);
+      throw new ConvertConflictError(source.id);
     }
 
     this.dependencies.YjsManager.stopCapturing();
@@ -1884,7 +1891,7 @@ export class BlockMutation {
     const read = await this.readConvertSource(child, this.readDocumentData(child.id), 3);
 
     if (read === null) {
-      throw new Error(`Could not convert Block «${source.id}»: it is being edited by someone else. Nothing was changed.`);
+      throw new ConvertConflictError(source.id);
     }
 
     return read;

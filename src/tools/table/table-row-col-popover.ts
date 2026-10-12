@@ -98,6 +98,7 @@ const buildEditItems = (
 ): PopoverItemParams[] => [
   {
     icon: IconCopy,
+    name: `table-duplicate-${type}`,
     title: options.i18n.t(type === 'row' ? 'tools.table.duplicateRow' : 'tools.table.duplicateColumn'),
     closeOnActivate: true,
     onActivate: (): void => {
@@ -106,6 +107,7 @@ const buildEditItems = (
   },
   {
     icon: IconCross,
+    name: `table-clear-${type}`,
     title: options.i18n.t('tools.table.clearSelection'),
     isDestructive: true,
     closeOnActivate: true,
@@ -157,6 +159,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
     buildColorItem('col', colIndex, count, options),
     {
       icon: IconInsertLeft,
+      name: 'table-insert-column-left',
       title: options.i18n.t('tools.table.insertColumnLeft'),
       closeOnActivate: true,
       onActivate: (): void => {
@@ -165,6 +168,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
     },
     {
       icon: IconInsertRight,
+      name: 'table-insert-column-right',
       title: options.i18n.t('tools.table.insertColumnRight'),
       closeOnActivate: true,
       onActivate: (): void => {
@@ -179,6 +183,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
     { type: PopoverItemType.Separator },
     {
       icon: IconTrash,
+      name: 'table-delete-column',
       title: options.i18n.t('tools.table.deleteColumn'),
       isDestructive: true,
       isDisabled: !canDelete,
@@ -218,6 +223,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions,
     buildColorItem('row', rowIndex, count, options),
     {
       icon: IconInsertAbove,
+      name: 'table-insert-row-above',
       title: options.i18n.t('tools.table.insertRowAbove'),
       closeOnActivate: true,
       onActivate: (): void => {
@@ -226,6 +232,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions,
     },
     {
       icon: IconInsertBelow,
+      name: 'table-insert-row-below',
       title: options.i18n.t('tools.table.insertRowBelow'),
       closeOnActivate: true,
       onActivate: (): void => {
@@ -240,6 +247,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions,
     { type: PopoverItemType.Separator },
     {
       icon: IconTrash,
+      name: 'table-delete-row',
       title: options.i18n.t('tools.table.deleteRow'),
       isDestructive: true,
       isDisabled: !canDelete,

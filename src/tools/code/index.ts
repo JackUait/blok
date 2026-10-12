@@ -705,6 +705,7 @@ export class CodeTool implements BlockTool {
       const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
       if (detectedLanguage) {
         childItems.push({
+          name: 'code-language-detected',
           title: this.getLanguageName(detectedLanguage.id),
           secondaryLabel: this.api.i18n.t(AUTO_DETECTED_KEY),
           icon: IconWand,
@@ -717,6 +718,7 @@ export class CodeTool implements BlockTool {
     }
 
     childItems.push(...LANGUAGES.map((lang) => ({
+      name: `code-language-${lang.id}`,
       title: this.getLanguageName(lang.id),
       trailingIcon: lang.id === selectedId ? IconCheck : undefined,
       onActivate: (): void => this.setLanguage(lang.id),

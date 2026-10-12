@@ -160,6 +160,7 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
   button(presets, i18n.t('tools.database.aiAutofillSummarize'), (el) => {
     menu(el, [{
       type: PopoverItemType.Default,
+      name: 'database-autofill-summary-paragraph',
       title: i18n.t('tools.database.aiAutofillParagraph'),
       closeOnActivate: true,
       onActivate: () => update({ mode: 'summary', language: undefined, instruction: i18n.t('tools.database.aiAutofillParagraphPrompt') }),
@@ -175,6 +176,7 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
       onClick: () => {
         menu(row, [false, true].map((on) => ({
           type: PopoverItemType.Default as const,
+          name: `database-autofill-trigger-${key}-${on ? 'on' : 'off'}`,
           title: i18n.t(on ? 'tools.database.aiAutofillTriggerOn' : 'tools.database.aiAutofillTriggerNone'),
           isActive: state.draft[key] === on,
           closeOnActivate: true,

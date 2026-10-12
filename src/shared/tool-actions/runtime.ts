@@ -11,6 +11,11 @@ export interface ToolRuntime {
   normalize?(data: Record<string, unknown>): Record<string, unknown>;
   defaultChildren?: InsertSpec[];
   actions: Readonly<Record<string, ToolActionImpl>>;
+  /**
+   * Text fields for block.convert when the tool's own conversionConfig is functions, which a
+   * registry snapshot cannot carry. Headless only: the editor keeps the tool's functions.
+   */
+  conversion?: { import?: string; export?: string };
 }
 
 export type ToolRuntimeRegistry = ReadonlyMap<string, ToolRuntime>;
@@ -22,6 +27,7 @@ export interface RuntimeBlockInput {
   normalize?: ToolRuntime['normalize'];
   defaultChildren?: InsertSpec[];
   actions?: Readonly<Record<string, ToolActionImpl>>;
+  conversion?: ToolRuntime['conversion'];
 }
 
 export const composeToolSanitize = (own: SanitizerConfig, inline: SanitizerConfig[]): SanitizerConfig => {
@@ -47,5 +53,6 @@ export const buildToolRuntimes = (blocks: RuntimeBlockInput[]): ToolRuntimeRegis
     ...(block.normalize === undefined ? {} : { normalize: block.normalize }),
     ...(block.defaultChildren === undefined ? {} : { defaultChildren: block.defaultChildren }),
     actions: block.actions ?? {},
+    ...(block.conversion === undefined ? {} : { conversion: block.conversion }),
   }])
 );

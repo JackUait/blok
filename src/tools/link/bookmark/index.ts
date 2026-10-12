@@ -1,4 +1,5 @@
 import { describeBookmark } from '../../../shared/tool-descriptions/bookmark';
+import { LINK_ACTION_HANDLERS } from '../../../shared/tool-actions/link';
 import { bookmarkSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -41,6 +42,7 @@ const URL_PATTERN = /https?:\/\/\S+/;
  */
 export class Bookmark implements BlockTool {
   public static describe = describeBookmark;
+  public static actionHandlers = LINK_ACTION_HANDLERS.bookmark;
 
   private readonly api: API;
   private readonly block: BlockAPI;

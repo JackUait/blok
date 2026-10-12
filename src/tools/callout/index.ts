@@ -66,7 +66,7 @@ const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
 
 /**
  * Origins that mean "the author just made this block" — the only ones allowed to
- * seed the first child paragraph unconditionally. Allow-list so a future origin
+ * seed a first child when none are declared. Allow-list so a future origin
  * fails CLOSED. `undefined` means a host hand-built the constructor options
  * (core always supplies one), which is an explicit creation.
  */
@@ -119,24 +119,15 @@ export class CalloutTool implements BlockTool {
   private _pendingChildText: string | null = null;
   /** Removers for the listeners only an editable callout carries. */
   private _editableTeardown: Array<() => void> = [];
-  /**
-   * True when this instance is a genuine CREATION rather than a
-   * re-materialisation of a callout the document already describes. Only a
-   * creation may seed its child paragraph.
-   */
-  private readonly isCreation: boolean;
-  /**
-   * True when the document itself named this callout's children. Only `load`
-   * carries that declaration (the renderer composes the block with the stored
-   * `contentIds`), which is what lets a load tell a genuinely bodyless callout
-   * apart from one whose children have simply not mounted yet.
-   */
+  /** Declared children may not have mounted at the first render. */
+  private readonly canSeedOnCreation: boolean;
+  /** A load with no declared children needs an editable body. */
   private readonly isDeclaredLoad: boolean;
 
   constructor({ data, api, readOnly, block, config, origin }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
     this.api = api;
     this.readOnly = readOnly;
-    this.isCreation = CREATION_ORIGINS.has(origin);
+    this.canSeedOnCreation = CREATION_ORIGINS.has(origin) && (block?.contentIds?.length ?? 0) === 0;
     this.isDeclaredLoad = origin === 'load' && (block?.contentIds?.length ?? 0) === 0;
 
     const importedText = typeof (data as Record<string, unknown>).__importedText === 'string'
@@ -299,16 +290,7 @@ export class CalloutTool implements BlockTool {
       withSlotlessDescendants(children, id => this.api.blocks.getChildren(id))
     );
 
-    // Auto-create initial paragraph child when callout has no children.
-    // Only for a genuine creation, or for a stored document that declares none:
-    // a re-materialised callout renders as a FRESH instance and its restored
-    // children's add events land AFTER this call, so getChildren() is only
-    // TRANSIENTLY empty. Seeding then writes a phantom paragraph back into the
-    // shared document. Mirrors Column.rendered(). `load` is exempt from that
-    // trap only because it brings the document's own contentIds with it — an
-    // empty declaration there is authoritative, and a callout keeps its body in
-    // children, so skipping the seed would render a panel nothing can type in.
-    if (children.length === 0 && (this.isCreation || this.isDeclaredLoad)) {
+    if (children.length === 0 && (this.canSeedOnCreation || this.isDeclaredLoad)) {
       this.seedBodyParagraph();
     }
   }

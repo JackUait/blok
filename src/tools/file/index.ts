@@ -1,4 +1,5 @@
 import { describeFile } from '../../shared/tool-descriptions/file';
+import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { fileSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
   API,
@@ -41,6 +42,7 @@ const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
 
 export class FileTool implements BlockTool {
   public static describe = describeFile;
+  public static actionHandlers = MEDIA_ACTION_HANDLERS.file;
 
   private readonly api: API;
   private readonly block: BlockAPI;

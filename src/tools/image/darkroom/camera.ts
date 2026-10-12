@@ -3,9 +3,9 @@ import { MIN } from '../crop-math';
 import { clampCentre, coverScale } from '../geometry';
 import { rubberBand } from '../spring';
 
-export interface Size { w: number; h: number }
-export interface Box { x: number; y: number; w: number; h: number }
-export interface Point { x: number; y: number }
+import type { Box, Size, Point } from '../../../shared/image/types';
+
+export type { Box, Point, Size };
 export interface Insets { top: number; right: number; bottom: number; left: number }
 
 /** Photo point (u, v) in natural px sits at stage (tx + s·u, ty + s·v). */

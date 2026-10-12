@@ -66,9 +66,9 @@ interface SyncBlockDataOptions {
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
  */
 export class BlockManager extends Module {
-  private agentScope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string } | null = null;
+  private agentScope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string; stampLastEditedBy?: boolean } | null = null;
 
-  public attributeTo(scope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string }): () => void {
+  public attributeTo(scope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string; stampLastEditedBy?: boolean }): () => void {
     this.agentScope = scope;
 
     return () => {
@@ -86,11 +86,12 @@ export class BlockManager extends Module {
       : undefined;
   }
 
-  private stampBlockEdit(block: Block): void {
+  public stampBlockEdit(block: Block, at = Date.now()): void {
     const editedBlock = block;
+    const agentId = this.agentScope?.stampLastEditedBy === false ? undefined : this.agentFor(editedBlock.id)?.id;
 
-    editedBlock.lastEditedAt = Date.now();
-    editedBlock.lastEditedBy = this.agentFor(editedBlock.id)?.id ?? this.config.user?.id ?? null;
+    editedBlock.lastEditedAt = at;
+    editedBlock.lastEditedBy = agentId ?? this.config.user?.id ?? null;
     this.Blok.YjsManager.updateBlockMetadata(editedBlock.id, editedBlock.lastEditedAt, editedBlock.lastEditedBy);
   }
 
@@ -797,6 +798,8 @@ export class BlockManager extends Module {
         ...(Object.keys(tunes).length > 0 && { tunes }),
         ...(block.parentId !== null && { parent: block.parentId }),
         ...(block.contentIds.length > 0 && { content: block.contentIds }),
+        ...(block.lastEditedAt !== undefined && { lastEditedAt: block.lastEditedAt }),
+        ...(block.lastEditedBy !== null && { lastEditedBy: block.lastEditedBy }),
         ...block.creation,
       };
     });
@@ -939,8 +942,8 @@ export class BlockManager extends Module {
    * @param tunes - (optional) tune data
    * @param derivedFrom - (optional) where the data was worked out from: see `api.blocks.transactWithoutCapture`
    */
-  public async update(block: Block, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
-    return this.operations.update(block, this.blocksStore, data, tunes, derivedFrom);
+  public async update(block: Block, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource, deleteKeys?: readonly string[]): Promise<Block> {
+    return this.operations.update(block, this.blocksStore, data, tunes, derivedFrom, deleteKeys);
   }
 
   /**

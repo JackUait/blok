@@ -4,16 +4,16 @@ import { describeContract } from './describe';
 import { buildDocumentView } from './document-view';
 import { checkEnvelope } from './envelope';
 import { AgentFailure, failure } from './errors';
-import { runBatch } from './executor';
+import { planHostBatch, runBatch } from './executor';
 import { contentRevision } from './revision';
 import { DocSnapshot } from './snapshot';
 
-import type { AgentActor, AgentSession, CommandLogEntry, DocumentView, ViewArgs } from '../../../types/agent';
+import type { AgentActor, AgentResult, AgentSession, CommandLogEntry, DocumentView, Edit, ViewArgs } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { ToolRuntimeRegistry } from '../tool-actions/runtime';
 import type { PageBackendService } from '../tool-actions/services';
-import type { AgentApplier } from './executor';
+import type { AgentApplier, HostBatchPlan } from './executor';
 import type { AgentPorts, SchemaValidator } from './types';
 
 type ReadBlock = (blockId: string) => { type: string; data: Record<string, unknown> } | undefined;
@@ -79,11 +79,17 @@ export const createDocumentAgentSession = (input: {
   pageTitles?: 'page-map';
   validate?: SchemaValidator;
   runtime?: 'node' | 'jint';
-}): AgentSession & { output(): OutputData } => {
+}): AgentSession & {
+  output(): OutputData;
+  lastEdits(): readonly Edit[];
+  execute(batch: unknown, options?: { signal?: AbortSignal }): Promise<AgentResult>;
+  planHost(batch: unknown, options?: { signal?: AbortSignal }): Promise<HostBatchPlan & { view?: DocumentView }>;
+} => {
   const id = `doc-session-${++sessionCount.value}`;
   const log: CommandLogEntry[] = [];
   const past: DocSnapshot[] = [];
   const future: DocSnapshot[] = [];
+  const applied: { edits: readonly Edit[] } = { edits: [] };
   const state = {
     current: DocSnapshot.fromOutput(input.document),
     closed: false,
@@ -101,10 +107,11 @@ export const createDocumentAgentSession = (input: {
     isReadOnly: () => state.closed,
     snapshot: () => state.current,
     revision: () => contentRevision(state.current.toOutput()),
-    apply: (_plan, draft) => {
+    apply: (plan, draft) => {
       past.push(state.current);
       future.length = 0;
       state.current = draft;
+      applied.edits = plan.edits;
 
       return Promise.resolve();
     },
@@ -141,13 +148,37 @@ export const createDocumentAgentSession = (input: {
       return buildDocumentView(state.current, args, ctx, applier.revision());
     },
     describe: query => describeContract(input.contract, query),
-    execute: (batch, options = {}) => runBatch({
-      batch, ctx, applier, actor: input.actor, signal: options.signal, log, batchNo: ++state.batchNo,
-    }),
+    execute: (batch: unknown, options: { signal?: AbortSignal } = {}) => {
+      applied.edits = [];
+
+      return runBatch({
+        batch, ctx, applier, actor: input.actor, signal: options.signal, log, batchNo: ++state.batchNo,
+      });
+    },
+    planHost: async (batch: unknown, options: { signal?: AbortSignal } = {}) => {
+      const planned = await planHostBatch({
+        batch, ctx, applier, actor: input.actor, signal: options.signal,
+      });
+
+      if (!('plan' in planned)) {
+        return planned;
+      }
+      const id = planned.batch.commands[0]?.args.id;
+
+      if (typeof id !== 'string') {
+        throw new Error('The validated host plan has no block ID.');
+      }
+
+      return {
+        ...planned,
+        view: buildDocumentView(planned.snapshot, { ids: [id], detail: 'full' }, ctx, planned.result.revision),
+      };
+    },
     log: () => [...log],
     close: () => {
       state.closed = true;
     },
     output: () => state.current.toOutput(),
+    lastEdits: () => applied.edits,
   };
 };

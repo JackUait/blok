@@ -1,0 +1,62 @@
+{
+  "name": "history-redo",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "keep"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "a",
+            "type": "paragraph",
+            "data": {
+              "text": "temp"
+            },
+            "position": "end"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "history.undo",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "history.redo",
+          "args": {}
+        }
+      ]
+    }
+  ],
+  "expectByRunner": {
+    "jint": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    },
+    "store": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    },
+    "room": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    }
+  }
+}

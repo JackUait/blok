@@ -6,6 +6,7 @@ import { plannerContextFrom } from '../../../../src/shared/agent/context';
 import { describeContract } from '../../../../src/shared/agent/describe';
 import { createDocumentAgentSession, createPageMapBackend } from '../../../../src/shared/agent/document-session';
 import { AgentFailure, failure } from '../../../../src/shared/agent/errors';
+import { runBatch } from '../../../../src/shared/agent/executor';
 import { planBatch } from '../../../../src/shared/agent/planner';
 import { contentRevision, canonicalJson } from '../../../../src/shared/agent/revision';
 import { richTextHelpers } from '../../../../src/shared/agent/rich-text-ops';
@@ -18,13 +19,14 @@ import { stubPorts } from './fixtures';
 
 import type { AgentPorts } from '../../../../src/shared/agent/types';
 import type { PageBackendService } from '../../../../src/shared/tool-actions/services';
-import type { AgentActor, AgentBatch, AgentResult, AgentSession } from '../../../../types/agent';
+import type { AgentActor, AgentBatch, AgentResult, Edit } from '../../../../types/agent';
 import type { OutputData } from '../../../../types/data-formats/output-data';
+import type { RichText } from '../../../../types/rich-text';
 import type { BlokToolManifest, BlockToolManifestEntry, CommandEntry } from '../../../../types/tool-manifest';
 import type { HostService, ToolActionImpl } from '../../../../types/tools/tool-description';
 import type { PageIcon } from '../../../../types/tools/page';
 
-type StoredSession = AgentSession & { output(): OutputData };
+type StoredSession = ReturnType<typeof createDocumentAgentSession>;
 type SessionInput = Parameters<typeof createDocumentAgentSession>[0];
 type SessionOptions = Partial<Pick<SessionInput, 'contract' | 'ports' | 'services' | 'pageTitles' | 'validate' | 'runtime'>>;
 type OpenPage = NonNullable<AgentPorts['openPageDocument']>;
@@ -183,6 +185,35 @@ afterEach(() => {
 });
 
 describe('stored document session', () => {
+  it.each([
+    { name: 'block.delete', args: { id: 'pb' } },
+    { name: 'page.observeBackend', args: { id: 'pb' } },
+  ] satisfies AgentBatch['commands'])('returns READ_ONLY for $name from a read-only contract', async command => {
+    const contract = buildAgentContract({ ...manifest, readOnly: true }, COMMANDS, { runtime: 'node', services: [] }, guidance);
+    const ctx = plannerContextFrom(contract, runtimes, stubPorts(), validateAgainst, {});
+    const snapshot = vi.fn(() => DocSnapshot.fromOutput(sourceDocument()));
+    const apply = vi.fn(() => Promise.resolve());
+    const result = await runBatch({
+      batch: { commands: [command] },
+      ctx,
+      applier: {
+        runtime: 'node',
+        isReadOnly: () => true,
+        snapshot,
+        revision: () => 'r0',
+        apply,
+      },
+      actor,
+      log: [],
+      batchNo: 1,
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'READ_ONLY', retryable: false } });
+    expect(snapshot).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+    expect(observePageBackend).not.toHaveBeenCalled();
+  });
+
   it('canonicalizes nested keys without reordering arrays', () => {
     expect(canonicalJson({ z: [{ b: 2, a: 1 }, null], a: { y: true, x: 'P', omitted: undefined } }))
       .toBe('{"a":{"x":"P","y":true},"z":[{"a":1,"b":2},null]}');
@@ -290,6 +321,61 @@ describe('stored document session', () => {
     }
     expect(inserted.lastEditedAt).toBeGreaterThan(1);
     expect(session.output().blocks.find(block => block.id === 'p')).toMatchObject({ lastEditedBy: 'owner', lastEditedAt: 1 });
+  });
+
+  it('exposes exactly the edits applied by the last successful stored batch', async () => {
+    const session = track(open());
+    const text: RichText = [{ text: 'P', marks: { bold: true } }];
+    const expectedEdits: readonly Edit[] = [
+      { op: 'setRichText', id: 'p', field: 'text', value: text },
+      { op: 'setPageField', key: 'title', value: 'Written' },
+    ];
+    await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Earlier batch' } }] });
+    const result = await session.execute({ commands: [
+      { name: 'text.format', args: { id: 'p', range: 'all', set: { bold: true } } },
+      { name: 'doc.setTitle', args: { title: 'Written' } },
+    ] });
+    const edits: readonly Edit[] = session.lastEdits();
+
+    expect(edits).toEqual(expectedEdits);
+    expect(result).toMatchObject({ ok: true, revision: contentRevision(session.output()) });
+    expect(session.output()).toMatchObject({
+      title: 'Written', blocks: [{ id: 'p', data: { text }, lastEditedBy: actor.id }],
+    });
+  });
+
+  it('clears lastEdits after a refused batch without returning earlier or partial writes', async () => {
+    const session = track(open());
+
+    await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Written' } }] });
+    const written = session.output();
+    const result = await session.execute({ commands: [
+      { name: 'doc.setTitle', args: { title: 'Never written' } },
+      { name: 'block.delete', args: { id: 'missing' } },
+    ] });
+
+    expect(session.lastEdits()).toEqual([]);
+    expect(result).toMatchObject({
+      ok: false, revision: contentRevision(written), error: { code: 'BLOCK_NOT_FOUND', commandIndex: 1 },
+    });
+    expect(session.output()).toEqual(written);
+    expect(written.title).toBe('Written');
+  });
+
+  it('clears lastEdits after an executed read without changing the last written document', async () => {
+    const session = track(open());
+
+    await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Written' } }] });
+    const written = session.output();
+    const result = await session.execute({ commands: [{ name: 'doc.read', args: { detail: 'full' } }] });
+
+    expect(session.lastEdits()).toEqual([]);
+    expect(result).toMatchObject({
+      ok: true, revision: contentRevision(written),
+      results: [{ revision: contentRevision(written), page: { title: 'Written' } }],
+    });
+    expect(session.output()).toEqual(written);
+    expect(written.title).toBe('Written');
   });
 
   it('restores one pre-batch snapshot for mixed block and page writes, then redoes exactly', async () => {

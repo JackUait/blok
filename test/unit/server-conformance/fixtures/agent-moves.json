@@ -1,0 +1,192 @@
+{
+  "seed": [
+    {
+      "id": "a",
+      "type": "toggle",
+      "data": {},
+      "content": [
+        "a1",
+        "a2"
+      ]
+    },
+    {
+      "id": "a1",
+      "type": "paragraph",
+      "data": {},
+      "parent": "a"
+    },
+    {
+      "id": "a2",
+      "type": "paragraph",
+      "data": {},
+      "parent": "a"
+    },
+    {
+      "id": "b",
+      "type": "paragraph",
+      "data": {}
+    }
+  ],
+  "cases": [
+    {
+      "name": "root-into-parent-first",
+      "id": "b",
+      "parent": "a",
+      "after": null,
+      "expected": [
+        {
+          "id": "a",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "b",
+            "a1",
+            "a2"
+          ]
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        },
+        {
+          "id": "a1",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        },
+        {
+          "id": "a2",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        }
+      ]
+    },
+    {
+      "name": "child-to-root-after",
+      "id": "a1",
+      "parent": null,
+      "after": "b",
+      "expected": [
+        {
+          "id": "a",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "a2"
+          ]
+        },
+        {
+          "id": "a2",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          }
+        },
+        {
+          "id": "a1",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "reorder-siblings",
+      "id": "a1",
+      "parent": "a",
+      "after": "a2",
+      "expected": [
+        {
+          "id": "a",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "a2",
+            "a1"
+          ]
+        },
+        {
+          "id": "a2",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        },
+        {
+          "id": "a1",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "root-reorder-first",
+      "id": "b",
+      "parent": null,
+      "after": null,
+      "expected": [
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          }
+        },
+        {
+          "id": "a",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "a1",
+            "a2"
+          ]
+        },
+        {
+          "id": "a1",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        },
+        {
+          "id": "a2",
+          "type": "paragraph",
+          "data": {
+            "text": ""
+          },
+          "parent": "a"
+        }
+      ]
+    }
+  ]
+}

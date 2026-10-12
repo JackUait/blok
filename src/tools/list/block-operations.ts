@@ -216,6 +216,7 @@ export const renderListSettings = (
 ): MenuConfig => {
   return availableStyles.map(styleConfig => ({
     icon: styleConfig.icon,
+    name: `list-style-${styleConfig.style}`,
     title: t(`toolNames.${styleConfig.titleKey}`),
     onActivate: (): void => setStyle(styleConfig.style),
     closeOnActivate: true,

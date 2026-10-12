@@ -6,6 +6,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../src/blok';
+import { Block } from '../../../../src/components/block';
+import { ConvertConflictError } from '../../../../src/components/errors/convert-conflict';
+import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
+import { YjsManager } from '../../../../src/components/modules/yjs';
 import { CalloutTool } from '../../../../src/tools/callout';
 import { DividerTool } from '../../../../src/tools/divider';
 import { Header } from '../../../../src/tools/header';
@@ -247,4 +252,66 @@ describe('callout: turn into another block', () => {
 
     expect(JSON.stringify((savedAsHtml(await instance.save())).blocks)).toBe(before);
   }, 30_000);
+
+  it('reports the callout id when its first line cannot be read without peer changes', async () => {
+    const state: { local?: YjsManager } = {};
+    const originalFromJSON = YjsManager.prototype.fromJSON;
+
+    vi.spyOn(YjsManager.prototype, 'fromJSON').mockImplementation(function (
+      this: YjsManager,
+      blocks: Parameters<YjsManager['fromJSON']>[0]
+    ) {
+      state.local = this;
+
+      return originalFromJSON.call(this, blocks);
+    });
+
+    const instance = await boot();
+    const local = state.local;
+
+    if (local === undefined) {
+      throw new Error('The callout fixture has no YjsManager.');
+    }
+    const peer = new DocumentStore(new YBlockSerializer());
+    const originalSave = Block.prototype.save;
+    let racing = true;
+    let changes = 0;
+
+    try {
+      peer.applyRemoteUpdate(local.encodeStateAsUpdate(peer.getStateVector()));
+      vi.spyOn(Block.prototype, 'save').mockImplementation(function (this: Block) {
+        return originalSave.call(this).then(result => {
+          if (racing && this.id === 'c1') {
+            changes++;
+            peer.updateBlockData('c1', 'text', `Peer ${changes}`);
+            local.applyRemoteUpdate(peer.encodeStateAsUpdate(local.getStateVector()));
+          }
+
+          return result;
+        });
+      });
+
+      const rejection: unknown = await instance.blocks.convert('C', 'paragraph')
+        .catch((error: unknown) => error)
+        .finally(() => { racing = false; });
+
+      expect(rejection).toBeInstanceOf(ConvertConflictError);
+      expect(rejection).toHaveProperty('blockId', 'C');
+      expect(rejection).toHaveProperty('message', 'Could not convert Block «C»: it is being edited by someone else. Nothing was changed.');
+      expect(rejection).toHaveProperty('name', 'Error');
+      expect(String(rejection)).toBe('Error: Could not convert Block «C»: it is being edited by someone else. Nothing was changed.');
+      await settleFrame();
+      expect(await tree(instance)).toEqual([
+        'before:paragraph:root',
+        'C:callout:root',
+        'c1:paragraph:C',
+        'c2:paragraph:C',
+        'after:paragraph:root',
+      ]);
+      expect(await textOf(instance, 'c1')).toBe(`Peer ${changes}`);
+    } finally {
+      racing = false;
+      peer.destroy();
+    }
+  });
 });

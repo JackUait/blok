@@ -1,4 +1,4 @@
-import type { BlockToolDescription } from '../../../types/tools/tool-description';
+import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 import { ALIGNMENT } from './rich-text';
 
 export const EMBED_DATA = {
@@ -20,9 +20,26 @@ export const EMBED_DATA = {
   },
 };
 
+export const EMBED_ACTIONS: ToolActionDeclaration[] = [
+  {
+    name: 'setUrl',
+    summary: 'Set or change the embedded URL. The provider is found from the URL.',
+    target: 'block',
+    preconditions: ['The URL belongs to a known provider.'],
+    args: {
+      type: 'object',
+      required: ['url'],
+      additionalProperties: false,
+      properties: { url: { type: 'string', pattern: '^https?://' } },
+    },
+    mirrors: [],
+  },
+];
+
 export const describeEmbed = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A live embed from a known provider (YouTube, Figma, …).',
   guidance: 'Set or change the URL with embed.setUrl: it finds the provider and fills service, embed and kind. Never write embed yourself. caption is plain text.',
   data: EMBED_DATA,
   summaryFields: ['service', 'source'],
+  actions: EMBED_ACTIONS,
 });

@@ -45,6 +45,28 @@ internal abstract record CollabEditOp
   /// Restore only: <see cref="CollabEditOps.Parse"/> never makes one.
   /// </summary>
   internal sealed record PatchMaps(IReadOnlyList<CollabMapPatch> Patches) : CollabEditOp;
+
+  /// <summary>Agent path only, never on the /edit wire. Writes the page title or icon; null or "" deletes it.</summary>
+  internal sealed record SetPageField(string Key, JsonNode? Value) : CollabEditOp;
+
+  /// <summary>
+  /// Agent path only. Places an existing block after <paramref name="After"/>
+  /// (null = first) under <paramref name="Parent"/> (null = the root order),
+  /// keeping its block map so a peer's concurrent edit inside it merges.
+  /// </summary>
+  internal sealed record Move(string Id, string? After, string? Parent) : CollabEditOp;
+
+  /// <summary>Agent path only. Moves the block's children into its own slot, in order, right after it.</summary>
+  internal sealed record Lift(string Id) : CollabEditOp;
+
+  /// <summary>Agent path only. Sets the type and replaces the data, keeping the block map, children and tunes.</summary>
+  internal sealed record Retype(string Id, string Type, JsonObject Data) : CollabEditOp;
+
+  /// <summary>Agent path only. Writes each named tune; a null value deletes it.</summary>
+  internal sealed record SetTunes(string Id, JsonObject Tunes) : CollabEditOp;
+
+  /// <summary>Agent path only. Writes the block's <c>lastEditedAt</c> and <c>lastEditedBy</c>.</summary>
+  internal sealed record SetMetadata(string Id, double LastEditedAt, string LastEditedBy) : CollabEditOp;
 }
 
 /// <summary>One key of a root map: set to <paramref name="Value"/>, or deleted when <paramref name="Remove"/>.</summary>
@@ -184,6 +206,47 @@ internal static class CollabEditOps
       case CollabEditOp.Remove remove:
         writer.WriteString("id", remove.Id);
         writer.WriteString("op", "remove");
+        break;
+
+      case CollabEditOp.Move move:
+        writer.WriteString("after", move.After);
+        writer.WriteString("id", move.Id);
+        writer.WriteString("op", "move");
+        writer.WriteString("parent", move.Parent);
+        break;
+
+      case CollabEditOp.Lift lift:
+        writer.WriteString("id", lift.Id);
+        writer.WriteString("op", "lift");
+        break;
+
+      case CollabEditOp.Retype retype:
+        writer.WritePropertyName("data");
+        WriteCanonicalNode(retype.Data, writer);
+        writer.WriteString("id", retype.Id);
+        writer.WriteString("op", "retype");
+        writer.WriteString("type", retype.Type);
+        break;
+
+      case CollabEditOp.SetTunes tunes:
+        writer.WriteString("id", tunes.Id);
+        writer.WriteString("op", "setTunes");
+        writer.WritePropertyName("tunes");
+        WriteCanonicalNode(tunes.Tunes, writer);
+        break;
+
+      case CollabEditOp.SetMetadata metadata:
+        writer.WriteString("id", metadata.Id);
+        writer.WriteNumber("lastEditedAt", metadata.LastEditedAt);
+        writer.WriteString("lastEditedBy", metadata.LastEditedBy);
+        writer.WriteString("op", "setMetadata");
+        break;
+
+      case CollabEditOp.SetPageField set:
+        writer.WriteString("key", set.Key);
+        writer.WriteString("op", "setPageField");
+        writer.WritePropertyName("value");
+        WriteCanonicalNode(set.Value, writer);
         break;
 
       // Only restore builds one, and restore digests its request line, never its plan.

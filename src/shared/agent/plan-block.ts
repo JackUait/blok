@@ -1,6 +1,9 @@
 import { isRichText } from '../rich-text/guards';
+import { cleanupEmptiedColumnList } from '../tool-actions/columns';
 import { checkChildType, checkMove, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
+import { createActionContext } from './tool-action-context';
+import { cloneRecord } from './snapshot';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { Refusal } from './placement-rules';
@@ -342,7 +345,7 @@ const buildBlock = (
     state.warn('DEMOTED', `"${spec.type}" is not allowed here and was inserted as "${type}".`);
   }
 
-  return { id, type, data, ...(spec.tunes !== undefined && { tunes: structuredClone(spec.tunes) }), children };
+  return { id, type, data, ...(spec.tunes !== undefined && { tunes: cloneRecord(spec.tunes) }), children };
 };
 
 export const buildPlannedBlock = (
@@ -456,11 +459,11 @@ export const emitPatch = (
     block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null && value !== undefined)),
     '/data', block.id, { normalize: false }
   );
-  const merged = { ...structuredClone(block.data), ...written };
+  const merged = { ...cloneRecord(block.data), ...written };
 
   removed.forEach(key => Reflect.deleteProperty(merged, key));
 
-  const normalized = tool.runtime.normalize === undefined ? merged : tool.runtime.normalize(structuredClone(merged));
+  const normalized = tool.runtime.normalize === undefined ? merged : tool.runtime.normalize(cloneRecord(merged));
 
   if (!isRecord(normalized)) {
     state.fail('INVALID_ARGS', 'Normalized block data must be a record.', '/data');
@@ -522,7 +525,7 @@ export const emitPatch = (
 export const planMove = (state: PlanState, args: Record<string, unknown>): unknown => {
   const block = state.requireBlock(args.id, '/id');
 
-  emitMove(state, block.id, args.parentId, args.position, { allowSelfPlaced: false });
+  emitMove(state, block.id, args.parentId, args.position, { allowSelfPlaced: false, cleanupEmptiedColumns: true });
 
   return { id: block.id };
 };
@@ -532,9 +535,10 @@ export const emitMove = (
   blockId: string,
   parentArg: unknown,
   position: unknown,
-  options: { allowSelfPlaced: boolean; isScopedContainer?: (id: string) => boolean }
+  options: { allowSelfPlaced: boolean; cleanupEmptiedColumns?: boolean; isScopedContainer?: (id: string) => boolean }
 ): void => {
   const block = state.requireBlock(blockId, '/id');
+  const previousParent = block.parent;
   const refKey = isRecord(position) && 'before' in position ? 'before' : 'after';
   const refId = isRecord(position) ? state.resolveId(position[refKey], `/position/${refKey}`) : undefined;
 
@@ -577,6 +581,18 @@ export const emitMove = (
   const afterId = placement.afterId === block.id ? previousId : placement.afterId;
 
   state.emit({ op: 'move', id: block.id, parentId: placement.parentId, afterId });
+
+  const oldParent = previousParent === null ? undefined : state.draft.get(previousParent);
+
+  if (options.cleanupEmptiedColumns === true && oldParent?.type === 'column' && oldParent.content.length === 0) {
+    const list = oldParent.parent === null ? undefined : state.draft.get(oldParent.parent);
+    const ctx = createActionContext(state, undefined, list?.type ?? 'column_list');
+
+    ctx.remove(oldParent.id);
+    if (list !== undefined) {
+      cleanupEmptiedColumnList(ctx, list.id);
+    }
+  }
 };
 
 export const planConvert = (state: PlanState, args: Record<string, unknown>): unknown => {
@@ -650,7 +666,7 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
     [to]: carried ?? (target.entry.richTextFields.includes(to) ? [] : ''),
     ...overrides,
   }, '/data', block.id, { normalize: false });
-  const normalized = target.runtime.normalize === undefined ? prepared : target.runtime.normalize(structuredClone(prepared));
+  const normalized = target.runtime.normalize === undefined ? prepared : target.runtime.normalize(cloneRecord(prepared));
 
   if (!isRecord(normalized)) {
     state.fail('INVALID_ARGS', 'Normalized block data must be a record.', '/data');
@@ -729,7 +745,7 @@ export const planDuplicate = (state: PlanState, args: Record<string, unknown>): 
   reserveCopyIds(source, '');
 
   const toSpec = (block: SnapBlock): InsertSpec => {
-    const data = structuredClone(block.data);
+    const data = cloneRecord(block.data);
 
     if (block.type === 'table' && isArray(data.content)) {
       data.content = data.content.map(row => !isArray(row) ? row : row.map(cell => {
@@ -748,7 +764,7 @@ export const planDuplicate = (state: PlanState, args: Record<string, unknown>): 
       type: block.type,
       id: ids.get(block.id) ?? state.fail('INVALID_ARGS', 'The copied block has no reserved ID.', '/id'),
       data,
-      ...(block.tunes !== undefined && { tunes: structuredClone(block.tunes) }),
+      ...(block.tunes !== undefined && { tunes: cloneRecord(block.tunes) }),
       children: block.content.map(id => toSpec(state.requireBlock(id, '/id'))),
     };
   };

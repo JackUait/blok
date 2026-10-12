@@ -1123,6 +1123,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     this.showMenu(anchor, this.bulkProperties().map((property) => ({
+      name: `database-bulk-edit-${property.id}`,
       title: property.name,
       icon: propertyTypeMeta(property.type).icon,
       closeOnActivate: true,
@@ -1143,12 +1144,14 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     this.showMenu(anchor, [
       {
+        name: 'database-table-selection-duplicate',
         title: this.t('tools.database.tableDuplicate'),
         icon: IconCopy,
         closeOnActivate: true,
         onActivate: () => rowIds.forEach((rowId) => handlers.duplicateRow(rowId)),
       },
       {
+        name: 'database-table-selection-delete',
         title: this.t('tools.database.tableMoveToTrash'),
         icon: IconTrash,
         closeOnActivate: true,

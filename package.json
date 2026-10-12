@@ -215,6 +215,7 @@
     "@angular/forms": "22.2.1",
     "@angular/platform-browser": "22.2.1",
     "@angular/platform-server": "22.2.1",
+    "@anthropic-ai/sdk": "0.132.0",
     "@axe-core/playwright": "4.13.0",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",

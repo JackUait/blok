@@ -49,7 +49,7 @@ const isOutputBlock = (value: unknown): value is OutputBlockData =>
   && (value.content === undefined
     || (isArray(value.content) && value.content.every((id) => typeof id === 'string')));
 
-const isSeed = (value: unknown): value is OutputData =>
+export const isSeed = (value: unknown): value is OutputData =>
   isRecord(value) && isArray(value.blocks) && value.blocks.every(isOutputBlock)
   && [value.id, value.version, value.title]
     .every((field) => field === undefined || typeof field === 'string')

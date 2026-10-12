@@ -1,0 +1,135 @@
+import type Anthropic from '@anthropic-ai/sdk';
+
+export interface MessagesClient {
+  create(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
+}
+
+export interface ToolOutcome {
+  content: string;
+  isError: boolean;
+}
+
+export type Execute = (name: string, input: unknown) => Promise<ToolOutcome>;
+
+export class TokenBudget {
+  private used = 0;
+
+  public constructor(private readonly total: number) {}
+
+  public spend(tokens: number): void {
+    this.used += tokens;
+  }
+
+  public get remaining(): number {
+    return this.total - this.used;
+  }
+
+  public get spent(): number {
+    return this.used;
+  }
+}
+
+export interface LoopResult {
+  stop: 'done' | 'turn-cap' | 'run-token-cap' | 'dispatch-token-cap' | 'refusal' | 'max-tokens';
+  answer: string;
+  turns: number;
+  inputTokens: number;
+  outputTokens: number;
+  toolCalls: string[];
+  detail?: string;
+}
+
+type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+// Non-streaming keeps requests under SDK timeouts at this size (claude-api skill, max_tokens defaults).
+const PER_CALL_MAX_TOKENS = 16_000;
+
+export const runModelLoop = async (o: {
+  client: MessagesClient;
+  model: string;
+  effort: Effort;
+  system: string;
+  prompt: string;
+  tools: Anthropic.Tool[];
+  execute: Execute;
+  budget: { maxTurns: number; maxOutputTokens: number };
+  dispatch: TokenBudget;
+}): Promise<LoopResult> => {
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: o.prompt }];
+  const result: LoopResult = { stop: 'turn-cap', answer: '', turns: 0, inputTokens: 0, outputTokens: 0, toolCalls: [] };
+
+  while (result.turns < o.budget.maxTurns) {
+    if (o.dispatch.remaining <= 0) {
+      return { ...result, stop: 'dispatch-token-cap' };
+    }
+
+    const params: Anthropic.MessageCreateParamsNonStreaming = {
+      model: o.model,
+      max_tokens: Math.max(1, Math.min(PER_CALL_MAX_TOKENS, o.budget.maxOutputTokens - result.outputTokens)),
+      system: o.system,
+      tools: o.tools,
+      // A copy: the array grows after this call, and a recorded request must not change.
+      messages: [...messages],
+      output_config: { effort: o.effort },
+    };
+    const response = await o.client.create(params);
+
+    result.turns += 1;
+    result.inputTokens += response.usage.input_tokens;
+    result.outputTokens += response.usage.output_tokens;
+    o.dispatch.spend(response.usage.input_tokens + response.usage.output_tokens);
+
+    if (response.stop_reason === 'refusal') {
+      return { ...result, stop: 'refusal', detail: JSON.stringify(response.stop_details) };
+    }
+
+    if (response.stop_reason === 'max_tokens') {
+      return { ...result, stop: 'max-tokens' };
+    }
+
+    messages.push({ role: 'assistant', content: response.content });
+
+    const uses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
+
+    if (uses.length === 0) {
+      const answer = response.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map((b) => b.text).join('\n');
+
+      return { ...result, stop: 'done', answer };
+    }
+
+    const toolResults: Anthropic.ToolResultBlockParam[] = [];
+
+    for (const use of uses) {
+      result.toolCalls.push(use.name);
+
+      const outcome = await o.execute(use.name, use.input);
+
+      toolResults.push({ type: 'tool_result', tool_use_id: use.id, content: outcome.content, is_error: outcome.isError });
+    }
+
+    messages.push({ role: 'user', content: toolResults });
+
+    if (result.outputTokens >= o.budget.maxOutputTokens) {
+      return { ...result, stop: 'run-token-cap' };
+    }
+
+    if (o.dispatch.remaining <= 0) {
+      return { ...result, stop: 'dispatch-token-cap' };
+    }
+  }
+
+  return result;
+};
+
+/** Infra stops and grader bugs are `error` and never count against the pass rate (05 §3.4). */
+export const classifyTrial = (loop: LoopResult, verdicts: Array<{ pass: boolean }>, graderThrew: boolean): 'pass' | 'fail' | 'error' => {
+  if (graderThrew || loop.stop === 'refusal' || loop.stop === 'dispatch-token-cap') {
+    return 'error';
+  }
+
+  if (loop.stop !== 'done') {
+    return 'fail';
+  }
+
+  return verdicts.every((v) => v.pass) ? 'pass' : 'fail';
+};

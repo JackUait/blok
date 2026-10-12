@@ -1,0 +1,102 @@
+name: Agent evals
+
+# Manual only (D3). Real model calls cost money and vary from run to run.
+on:
+  workflow_dispatch:
+    inputs:
+      tasks:
+        description: "Comma-separated task ids, or all"
+        type: string
+        default: "all"
+      trials:
+        description: "Trials per task"
+        type: number
+        default: 3
+      schema:
+        description: "envelope, full, or both (the one-off comparison)"
+        type: choice
+        options: [envelope, full, both]
+        default: envelope
+      model:
+        description: "Model id"
+        type: string
+        default: "claude-opus-5-5"
+      effort:
+        description: "Effort level, recorded with the results"
+        type: choice
+        options: [low, medium, high, xhigh, max]
+        default: high
+      max_total_tokens:
+        description: "Stop the whole dispatch after this many tokens"
+        type: number
+        default: 3000000
+
+concurrency:
+  group: agent-evals
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    name: Agent evals
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Setup Playwright browsers
+        uses: ./.github/actions/setup-playwright-browsers
+        with:
+          browsers: chromium
+          cache-key-prefix: playwright-chromium
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build the room server
+        run: dotnet build packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj --configuration Release --output .eval-server
+
+      - name: Build the MCP server
+        run: yarn build:mcp
+
+      # The live surface's human page loads dist/ from this server before Playwright starts.
+      - name: Build the test bundle and serve the fixture page
+        run: |
+          yarn build:test
+          (npx serve . -l 4444 --no-clipboard --no-compression > /dev/null 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:4444/test/playwright/fixtures/test.html > /dev/null && break; sleep 1; done
+
+      - name: Run evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BLOK_CONFORMANCE_SERVER: ${{ github.workspace }}/.eval-server/Blok.Server.Host
+          TASKS: ${{ inputs.tasks }}
+          TRIALS: ${{ inputs.trials }}
+          SCHEMA: ${{ inputs.schema }}
+          MODEL: ${{ inputs.model }}
+          EFFORT: ${{ inputs.effort }}
+          MAX_TOTAL_TOKENS: ${{ inputs.max_total_tokens }}
+        run: >
+          node test/evals/agent/runner/run.mjs
+          --tasks "$TASKS" --trials "$TRIALS" --schema "$SCHEMA"
+          --model "$MODEL" --effort "$EFFORT"
+          --max-total-tokens "$MAX_TOTAL_TOKENS"
+          --out .eval-results
+          --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agent-eval-results
+          path: .eval-results/
+          if-no-files-found: warn
+          retention-days: 90

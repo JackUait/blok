@@ -1105,7 +1105,7 @@ describe('BlockYjsSync — mutation kills', () => {
 
       harness.emit({ blockId: 'new', type: 'add', origin: 'remote' });
 
-      expect(harness.handlers.onBlockAdded).toHaveBeenCalledWith(created, 1);
+      expect(harness.handlers.onBlockAdded).toHaveBeenCalledWith(created, 1, 'remote');
       expect(harness.repository.blocks.map((block) => block.id)).toEqual(['a', 'new']);
     });
 

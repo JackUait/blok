@@ -30,6 +30,9 @@ const SPLIT_CALLS = new Set(['splitBlock']);
 const INSERT_CALLS = new Set(['insert', 'insertInsideParent']);
 const CARET_CALLS = new Set(['setToBlock', 'setCaretToBlockContent', 'setCaretToBlockContentOffset']);
 const KEY_HANDLER_NAME = /enter|^exit/i;
+// Only files matching this are parsed: parsing all of src/tools nears the 5s test timeout on CI.
+// It must name every entry of SPLIT_CALLS and INSERT_CALLS, or sites go unscanned.
+const MAY_HOLD_SITE = /splitBlock|\binsert(InsideParent)?\b/;
 
 /**
  * Sites exempt from the law, keyed `<file relative to src/tools>#<function>`,
@@ -141,9 +144,13 @@ const setsCaretInto = (declaration: ts.VariableDeclaration): boolean => {
 const scan = (): Site[] => {
   const sites: Site[] = [];
 
-  for (const file of collect(TOOLS_ROOT)) {
+  const files = collect(TOOLS_ROOT)
+    .map(file => ({ file, text: readFileSync(file, 'utf8') }))
+    .filter(({ text }) => MAY_HOLD_SITE.test(text));
+
+  for (const { file, text } of files) {
     const rel = relative(TOOLS_ROOT, file);
-    const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+    const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
     const keyboardFile = file.endsWith('-keyboard.ts');
 
     const visit = (node: ts.Node): void => {

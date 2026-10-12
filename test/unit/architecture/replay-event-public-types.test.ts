@@ -89,6 +89,9 @@ export function observe(api: API): void {
       strict: true,
       noEmit: true,
       skipLibCheck: false,
+      // Skips only TypeScript's own lib files, so the test fits the default timeout in CI.
+      // The types/ files are still checked, because skipLibCheck is false.
+      skipDefaultLibCheck: true,
       types: [],
       target: ts.ScriptTarget.ESNext,
       module: ts.ModuleKind.ESNext,

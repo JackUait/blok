@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Y from 'yjs';
 import { DatabaseBackendSync } from '../../../../src/tools/database/database-backend-sync';
-import type { DatabaseAdapter } from '../../../../src/tools/database/types';
-import type { BlockReplayCapture } from '../../../../types/events/editor-events';
+import type { DatabaseAdapter, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { BlockReplayCapture, BlockReplayNative } from '../../../../types/events/editor-events';
+
+/** JSON.parse makes "__proto__" an own key; an object literal would set the prototype instead. */
+const poisoned = (text: string): unknown => JSON.parse(text);
 
 const createMockAdapter = (): DatabaseAdapter => ({
   loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
@@ -1516,6 +1519,118 @@ describe('DatabaseBackendSync', () => {
       await vi.runAllTimersAsync();
 
       expect(storedTitle).toBe('C');
+    });
+  });
+
+  describe('replay writes carry only writable schema values', () => {
+    const schema: PropertyDefinition[] = [
+      { id: 't', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'notes', name: 'Notes', type: 'text', position: 'a1' },
+      {
+        id: 'stage', name: 'Stage', type: 'select', position: 'a2',
+        config: { options: [{ id: 'o-build', label: 'Build', position: 'a0' }] },
+      },
+      { id: 'link', name: 'Link', type: 'url', position: 'a3' },
+      { id: 'files', name: 'Files', type: 'files', position: 'a4' },
+      { id: 'num', name: 'ID', type: 'uniqueId', position: 'a5' },
+    ];
+    const native: BlockReplayNative = {
+      type: 'database-row', parent: { present: true, value: 'db' }, template: { present: false },
+    };
+    const set = (id: string, after: unknown): BlockReplayCapture['changes'][number] =>
+      ({ path: ['properties', id], beforePresent: true, afterPresent: true, after });
+    const update = (changes: BlockReplayCapture['changes']): BlockReplayCapture =>
+      ({ blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys', native, changes });
+
+    it('sends an undo update with only writable schema ids, never __proto__', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncReplayRow(update([
+        set('notes', 'short'),
+        set('__proto__', 'polluted'),
+        set('ghost', 'x'),
+        set('num', 7),
+      ]), schema);
+      await vi.runAllTimersAsync();
+
+      const sent = vi.mocked(adapter.updateRow).mock.calls.map(([params]) => params);
+
+      expect(sent.map((params) => Object.keys(params.properties))).toEqual([['notes']]);
+      expect(sent.some((params) => Object.hasOwn(params.properties, '__proto__'))).toBe(false);
+    });
+
+    it.each([
+      { name: 'an option id the schema does not hold', change: set('stage', 'o-evil') },
+      { name: 'a javascript: url', change: set('link', 'javascript:alert(1)') },
+      {
+        name: 'a file whose url fails safeHref',
+        change: set('files', [{ id: 'f1', name: 'a.txt', url: 'javascript:alert(1)' }]),
+      },
+    ])('skips the whole undo write when it carries $name', async ({ change }) => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncReplayRow(update([set('notes', 'short'), change]), schema);
+      await vi.runAllTimersAsync();
+
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+      expect(adapter.moveRow).not.toHaveBeenCalled();
+    });
+
+    // A skipped create would leave the row out of the backend for good, so a create is cleaned instead.
+    it('sends a redo create with only writable schema values and known options', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      const add = (rowId: string, properties: unknown): BlockReplayCapture => ({
+        blockId: rowId, type: 'add', origin: 'redo', scope: 'keys', native,
+        changes: [
+          { path: ['properties'], beforePresent: false, afterPresent: true, after: properties },
+          { path: ['position'], beforePresent: false, afterPresent: true, after: 'a0' },
+        ],
+      });
+
+      sync.syncReplayRow(add('r1', poisoned('{"t":"Ok","__proto__":"polluted","ghost":"x","stage":"o-evil","link":"javascript:alert(1)"}')), schema);
+      await vi.runAllTimersAsync();
+
+      const created = vi.mocked(adapter.createRow).mock.calls.map(([params]) => params);
+
+      expect(created.map((params) => params.properties)).toEqual([{ t: 'Ok', stage: null, link: null }]);
+      expect(created.some((params) => Object.hasOwn(params.properties, '__proto__'))).toBe(false);
+    });
+
+    it('refuses a relocation receipt with an unsafe file url, and drops __proto__ from a clean one', () => {
+      const sync = new DatabaseBackendSync(createMockAdapter());
+      const receipt = (properties: unknown): BlockReplayCapture => ({
+        blockId: 'r1', type: 'update', origin: 'undo', scope: 'keys', native, changes: [],
+        relocation: {
+          before: { type: 'database-row', parent: { present: true, value: 'other' }, template: { present: false } },
+          after: native,
+          row: { properties: properties as never, position: 'a0' },
+        },
+      });
+
+      const unsafe = sync.relocationCreateParams(
+        receipt({ t: 'A', files: [{ id: 'f1', name: 'a', url: 'javascript:alert(1)' }] }),
+        schema,
+      );
+      const clean = sync.relocationCreateParams(receipt(poisoned('{"t":"A","__proto__":"x","ghost":"y"}')), schema);
+
+      expect(unsafe).toBeUndefined();
+      expect(Object.keys(clean?.properties ?? {})).toEqual(['t']);
+    });
+
+    it('never sends __proto__ even without a schema', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncReplayRow(update([set('notes', 'short'), set('__proto__', 'polluted')]));
+      await vi.runAllTimersAsync();
+
+      const sent = vi.mocked(adapter.updateRow).mock.calls.map(([params]) => params);
+
+      expect(sent.some((params) => Object.hasOwn(params.properties, '__proto__'))).toBe(false);
+      expect(sent.map((params) => params.properties)).toEqual([{ notes: 'short' }]);
     });
   });
 

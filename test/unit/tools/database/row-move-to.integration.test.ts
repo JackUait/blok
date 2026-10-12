@@ -87,6 +87,35 @@ const doc = (): OutputBlockData[] => [
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
+/** JSON.parse makes "__proto__" an own key; an object literal would set the prototype instead. */
+const poisoned = (text: string): unknown => JSON.parse(text);
+
+/** Tasks with a files property and one row a peer poisoned: unknown option, unsafe file url, extra keys. */
+const poisonedDoc = (): OutputBlockData[] => {
+  const blocks = doc();
+  const database = blocks[0];
+  const data = database.data as DatabaseData;
+
+  blocks[0] = {
+    ...database,
+    data: { ...data, schema: [...data.schema, { id: 'files', name: 'Files', type: 'files', position: 'a5' }] },
+  };
+  blocks[1] = {
+    ...blocks[1],
+    data: {
+      title: 'Alpha',
+      position: 'a0',
+      properties: poisoned(
+        '{"t":"Alpha","notes":"short","stage":"o-evil","ghost":"peer","__proto__":"polluted",' +
+        '"files":[{"id":"f-bad","name":"bad","url":"javascript:alert(1)"},' +
+        '{"id":"f-ok","name":"ok","url":"https://example.com/ok"}]}',
+      ),
+    },
+  };
+
+  return blocks;
+};
+
 const make = async (
   blocks: OutputBlockData[],
   configs: Record<string, DatabaseConfig> = {},
@@ -4043,6 +4072,107 @@ describe('row ⋮⋮ menu with a real editor', () => {
         Object.defineProperty(globalThis, 'WebSocket', originalSocket);
       }
     }
+  });
+
+  it('sends a duplicated row to the backend with only writable schema values', async () => {
+    const blocks = poisonedDoc();
+    const backend = backendFor(blocks, 'db');
+    const createRow = vi.spyOn(backend.adapter, 'createRow');
+
+    await make(blocks, { db: { adapter: backend.adapter } });
+    const before = (await saved('r1'))?.data.properties;
+
+    if (before?.stage !== 'o-evil' || !Object.hasOwn(before, 'ghost')) throw new Error('poison did not survive boot');
+    holder?.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+    holder?.querySelector<HTMLElement>('[role="grid"]')?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true, cancelable: true }),
+    );
+    await quiet();
+
+    const sent = createRow.mock.calls.map(([params]) => params);
+
+    expect(sent.some((params) => Object.hasOwn(params.properties, '__proto__') || Object.hasOwn(params.properties, 'ghost'))).toBe(false);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].properties.stage).toBeNull();
+    expect(sent[0].properties.files).toEqual([{ id: 'f-ok', name: 'ok', url: 'https://example.com/ok' }]);
+  });
+
+  it('sends a duplicated template to the backend with only writable schema values', async () => {
+    const blocks = poisonedDoc();
+
+    blocks[0] = { ...blocks[0], content: ['r1', 'r2', 'tpl'] };
+    blocks.push({
+      id: 'tpl', type: 'database-row', parent: 'db',
+      data: { ...blocks[1].data, title: 'Tpl', position: 'a2', template: true },
+    });
+    const backend = backendFor(blocks, 'db');
+    const createRow = vi.spyOn(backend.adapter, 'createRow');
+
+    await make(blocks, { db: { adapter: backend.adapter } });
+    if ((await saved('tpl'))?.data.properties.stage !== 'o-evil') throw new Error('poison did not survive boot');
+    editor?.blocks.getById('db')?.call('duplicateTemplate', 'tpl' as never);
+    await quiet();
+
+    const sent = createRow.mock.calls.map(([params]) => params);
+
+    expect(sent.some((params) => Object.hasOwn(params.properties, '__proto__') || Object.hasOwn(params.properties, 'ghost'))).toBe(false);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].properties.stage).toBeNull();
+    expect(sent[0].properties.files).toEqual([{ id: 'f-ok', name: 'ok', url: 'https://example.com/ok' }]);
+  });
+
+  it('does not send an undo that restores an unknown option id to the backend', async () => {
+    const blocks = poisonedDoc();
+    const backend = backendFor(blocks, 'db');
+    const updateRow = vi.spyOn(backend.adapter, 'updateRow');
+
+    await make(blocks, { db: { adapter: backend.adapter } });
+    if ((await saved('r1'))?.data.properties.stage !== 'o-evil') throw new Error('poison did not survive boot');
+    editor?.blocks.getById('db')?.call('writeRelatedRow', { rowId: 'r1', changes: { stage: 'o-build' } });
+    await quiet();
+    await new Promise((resolve) => { setTimeout(resolve, 650); });
+    updateRow.mockClear();
+
+    editor?.history.undo();
+    await quiet();
+    await new Promise((resolve) => { setTimeout(resolve, 650); });
+
+    expect(updateRow.mock.calls.some(([params]) => params.properties.stage === 'o-evil')).toBe(false);
+    expect(backend.rows.get('r1')?.properties.stage).toBe('o-build');
+    expect((await saved('r1'))?.data.properties.stage).toBe('o-evil');
+  });
+
+  it('sends a redone CSV merge row with the option the same step created', async () => {
+    const blocks = doc();
+    const backend = backendFor(blocks, 'db');
+    const createRow = vi.spyOn(backend.adapter, 'createRow');
+    const stageOptions = async (): Promise<string[]> =>
+      (((await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData)
+        .schema.find((property) => property.id === 'stage')?.config?.options ?? []).map((option) => option.label);
+
+    await make(blocks, { db: { adapter: backend.adapter } });
+    editor?.blocks.getById('db')?.call('mergeCsv', 'Name,Stage\nShip it,Ship' as never);
+    await quiet();
+    await new Promise((resolve) => { setTimeout(resolve, 650); });
+    const shipId = ((await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData)
+      .schema.find((property) => property.id === 'stage')?.config?.options.find((option) => option.label === 'Ship')?.id;
+    const rowId = editor?.blocks.getChildren('db').map((block) => block.id).find((id) => !['r1', 'r2'].includes(id));
+
+    if (shipId === undefined || rowId === undefined) throw new Error('mergeCsv made no new option or row');
+    editor?.history.undo();
+    await quiet();
+    await new Promise((resolve) => { setTimeout(resolve, 650); });
+    // Undo removes the row but keeps the new option, so redo is filtered against a schema that holds it.
+    if (editor?.blocks.getChildren('db').some((block) => block.id === rowId) || !(await stageOptions()).includes('Ship')) {
+      throw new Error('undo of mergeCsv no longer removes only the row');
+    }
+    createRow.mockClear();
+    editor?.history.redo();
+    await quiet();
+    await new Promise((resolve) => { setTimeout(resolve, 650); });
+
+    expect(createRow.mock.calls.find(([params]) => params.id === rowId)?.[0].properties.stage).toBe(shipId);
+    expect(backend.rows.get(rowId)?.properties.stage).toBe(shipId);
   });
 
   it('persists local undo after another local row refreshes the database model', async () => {

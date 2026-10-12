@@ -1,5 +1,6 @@
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import type { DatabaseAdapter, DatabaseRow, PropertyDefinition, DatabaseViewConfig, PropertyValue } from './types';
+import { adapterRowValues } from './property-values';
 
 const UPDATE_DEBOUNCE_MS = 500;
 
@@ -295,7 +296,8 @@ export class DatabaseBackendSync {
     });
   }
 
-  syncReplayRow(capture: BlockReplayCapture): void {
+  /** `schema` is the owning database's: writes keep only its writable properties. */
+  syncReplayRow(capture: BlockReplayCapture, schema?: readonly PropertyDefinition[]): void {
     if (
       (capture.origin !== 'undo' && capture.origin !== 'redo') ||
       capture.scope !== 'keys' ||
@@ -311,9 +313,11 @@ export class DatabaseBackendSync {
     }
 
     if (capture.type === 'add') {
-      const params = getReplayCreateParams(capture, rowId);
+      const captured = getReplayCreateParams(capture, rowId);
 
-      if (params === undefined) return;
+      if (captured === undefined) return;
+      // A create is cleaned, never skipped: a skipped create leaves the row out of the backend for good.
+      const params = { ...captured, properties: adapterRowValues(captured.properties, schema).properties };
 
       this.cancelRow(rowId);
       void this.sendRowWrite(
@@ -329,11 +333,15 @@ export class DatabaseBackendSync {
     if (parsed === undefined) return;
 
     const { entries, seen, position } = parsed;
-    const properties = Object.fromEntries(entries);
+    const safe = adapterRowValues(Object.fromEntries(entries), schema);
 
-    if (entries.length > 0) this.pruneReplayRow(rowId, properties, seen);
+    if (safe.altered) return;
+    const { properties } = safe;
+    const sending = Object.keys(properties).length > 0;
 
-    const updateParams = entries.length === 0 ? undefined : { rowId, properties };
+    if (sending) this.pruneReplayRow(rowId, properties, seen);
+
+    const updateParams = sending ? { rowId, properties } : undefined;
     const moveParams = position === undefined ? undefined : { rowId, position };
 
     if (updateParams === undefined && moveParams === undefined) return;
@@ -355,7 +363,10 @@ export class DatabaseBackendSync {
    * each one waits for the forward move's write still in flight.
    */
   /** The new owner's createRow for a relocation receipt, or undefined when the receipt is not usable. */
-  relocationCreateParams(capture: BlockReplayCapture): Parameters<DatabaseAdapter['createRow']>[0] | undefined {
+  relocationCreateParams(
+    capture: BlockReplayCapture,
+    schema?: readonly PropertyDefinition[],
+  ): Parameters<DatabaseAdapter['createRow']>[0] | undefined {
     const { native, relocation } = capture;
 
     if (
@@ -369,10 +380,13 @@ export class DatabaseBackendSync {
     const properties = getReplayProperties(relocation.row.properties, isReplayUpdateValue);
 
     if (properties === undefined || typeof relocation.row.position !== 'string') return undefined;
+    const safe = adapterRowValues(Object.fromEntries(properties), schema);
+
+    if (safe.altered) return undefined;
 
     return {
       id: capture.blockId,
-      properties: Object.fromEntries(properties),
+      properties: safe.properties,
       position: relocation.row.position,
       ...(native.template.present ? { template: native.template.value } : {}),
     };

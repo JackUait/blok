@@ -39,7 +39,13 @@ export interface BlockReplayRelocation {
   }>;
 }
 
-/** A sparse transaction record, not a current-state snapshot. */
+/**
+ * A sparse transaction record, not a current-state snapshot.
+ *
+ * `changes[].after` and `relocation.row` are raw document values. Blok has
+ * not sanitized them, and a collaborator may have written them. Do not render
+ * them as HTML or use them as a link without your own check.
+ */
 export interface BlockReplayCapture {
   readonly blockId: string;
   readonly type: 'add' | 'remove' | 'update';
@@ -153,6 +159,17 @@ export interface CollaborationParticipant {
     glyph: string | null;
     /** Localized anonymous phrase for that silhouette, else null. */
     label: string | null;
+  };
+
+  /**
+   * Set when this participant is an agent connected through MCP, and its
+   * `agent` awareness field passed Blok's checks. `onBehalfOf` is the user id
+   * the agent works for. Treat every field as untrusted text.
+   */
+  agent?: {
+    via: string;
+    onBehalfOf: string;
+    onBehalfOfName: string | null;
   };
 }
 

@@ -4,7 +4,7 @@ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData,
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import type { AutofillSettings, DatabaseData, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget } from './types';
 import { countFilterRules } from './filter-tree';
-import { assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
+import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData } from './tier3-values';
 import { DatabaseHostLevers } from './database-host-levers';
 import { DatabaseFormView } from './database-form-view';
@@ -1223,7 +1223,7 @@ export class DatabaseTool implements BlockTool {
     // make the next receipt create the row twice or delete its last copy.
     if (relocation !== undefined) {
       const from = relocation.before.parent.present ? this.api.blocks.getById(relocation.before.parent.value) : null;
-      const params = this.sync.relocationCreateParams(capture);
+      const params = this.sync.relocationCreateParams(capture, this.model.getSchema());
 
       if (
         !relocation.after.parent.present || relocation.after.parent.value !== this.block.id ||
@@ -1238,7 +1238,7 @@ export class DatabaseTool implements BlockTool {
     }
     if (!native.parent.present || native.parent.value !== this.block.id) return;
 
-    this.sync.syncReplayRow(capture);
+    this.sync.syncReplayRow(capture, this.model.getSchema());
   };
 
   /**
@@ -4024,7 +4024,7 @@ export class DatabaseTool implements BlockTool {
         this.updateRowBlock(grandparent, { [pair.backward]: addRelatedIds(this.model.getRow(grandparent)?.properties[pair.backward], copy, null) });
       }
     });
-    created.forEach((copy) => void this.sync.syncCreateRow(copy));
+    created.forEach((copy) => void this.sync.syncCreateRow({ ...copy, properties: adapterRowValues(copy.properties, this.model.getSchema()).properties }));
     this.syncRowsFromBlocks();
     this.rerenderView({ keepDrawer: true });
   }
@@ -4219,7 +4219,7 @@ export class DatabaseTool implements BlockTool {
       }, { parentId: this.dataId, position: 'end', id });
       this.copyChildBlocks(templateId, id);
     });
-    void this.sync.syncCreateRow({ id, properties, position, template: true });
+    void this.sync.syncCreateRow({ id, properties: adapterRowValues(properties, this.model.getSchema()).properties, position, template: true });
     this.syncRowsFromBlocks();
 
     return id;

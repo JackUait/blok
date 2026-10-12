@@ -65,6 +65,7 @@ export interface BlockReplayRelocation {
   }>;
 }
 
+/** Values in `changes[].after` and `relocation.row` are raw document data, not sanitized. */
 export interface BlockReplayCapture {
   readonly blockId: string;
   readonly type: 'add' | 'remove' | 'update';

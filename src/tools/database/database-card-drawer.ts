@@ -1384,15 +1384,17 @@ export class DatabaseCardDrawer {
     }
     if (onContent || search !== '') {
       const group = [this.buildPropsToggle(), this.buildPropsSection(layout, row)];
+      const page: HTMLElement[] = layout.groupIn === 'page' ? [...group] : [];
 
-      if (layout.groupIn === 'page') {
-        regions.push(...group);
-      }
       if (layout.pageModules.length > 0) {
-        regions.push(this.moduleList('data-blok-database-drawer-modules', 'page', layout.pageModules, row));
+        page.push(this.moduleList('data-blok-database-drawer-modules', 'page', layout.pageModules, row));
       }
       if (layout.groupIn === 'panel' || layout.panelModules.length > 0) {
-        regions.push(...this.buildDetails(layout, layout.groupIn === 'panel' ? group : [], row));
+        const [toggle, panel] = this.buildDetails(layout, layout.groupIn === 'panel' ? group : [], row);
+
+        regions.push(toggle, page.length > 0 ? this.buildColumns(page, panel) : panel);
+      } else {
+        regions.push(...page);
       }
     }
     for (const region of regions) {
@@ -1477,8 +1479,21 @@ export class DatabaseCardDrawer {
     return list;
   }
 
+  /** The page column, then the details panel at its inline end. The panel comes second in focus order. */
+  private buildColumns(page: HTMLElement[], panel: HTMLElement): HTMLElement {
+    const columns = document.createElement('div');
+    const main = document.createElement('div');
+
+    columns.setAttribute('data-blok-database-drawer-columns', '');
+    main.setAttribute('data-blok-database-drawer-main', '');
+    main.append(...page);
+    columns.append(main, panel);
+
+    return columns;
+  }
+
   /** "View details" and the panel it opens and closes. Open or closed is this viewer's own. */
-  private buildDetails(layout: ResolvedPageLayout, group: HTMLElement[], row: DatabaseRow): HTMLElement[] {
+  private buildDetails(layout: ResolvedPageLayout, group: HTMLElement[], row: DatabaseRow): [HTMLElement, HTMLElement] {
     const toggle = document.createElement('button');
     const panel = document.createElement('div');
 
@@ -1489,6 +1504,8 @@ export class DatabaseCardDrawer {
     toggle.innerHTML = IconSplitView;
     toggle.append(this.label('tools.database.layoutViewDetails'));
     panel.setAttribute('data-blok-database-drawer-details', '');
+    panel.id = `blok-database-details-${nanoid()}`;
+    toggle.setAttribute('aria-controls', panel.id);
     panel.setAttribute('role', 'region');
     panel.setAttribute('aria-label', this.label('tools.database.layoutDetailsPanel'));
     panel.hidden = this.layoutDraft === null && !this.detailsOpen;

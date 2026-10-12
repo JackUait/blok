@@ -37,8 +37,8 @@ const blocks = (title: Record<string, unknown> = {}): OutputBlockData[] => [
   { id: 'r2', type: 'database-row', parent: 'db-1', data: { position: 'a1', properties: { 'p-title': 'Bravo', 'p-due': 'Monday', 'p-owner': 'Bo' } } },
 ];
 
-const mount = async (page: Page, data: OutputBlockData[]): Promise<void> => {
-  await page.evaluate(async ({ data: input }) => {
+const mount = async (page: Page, data: OutputBlockData[], dir: 'ltr' | 'rtl' = 'ltr'): Promise<void> => {
+  await page.evaluate(async ({ data: input, dir: direction }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -49,9 +49,9 @@ const mount = async (page: Page, data: OutputBlockData[]): Promise<void> => {
     holder.id = 'blok';
     holder.style.cssText = 'max-width:900px;margin:40px auto 0';
     document.body.appendChild(holder);
-    window.blokInstance = new window.Blok({ holder, data: { blocks: input } });
+    window.blokInstance = new window.Blok({ holder, data: { blocks: input }, i18n: { direction } });
     await window.blokInstance.isReady;
-  }, { data });
+  }, { data, dir });
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
@@ -71,6 +71,19 @@ const openRow = async (page: Page, rowId: string): Promise<void> => {
 };
 
 const peek = (page: Page): Locator => page.locator('[data-blok-database-drawer]');
+
+const layoutBounds = async (page: Page): Promise<Record<'panelLeft' | 'panelRight' | 'panelTop' | 'groupLeft' | 'groupRight' | 'groupBottom', number>> =>
+  peek(page).evaluate((drawer) => {
+    const panel = drawer.querySelector('[data-blok-database-drawer-details]');
+    const group = drawer.querySelector('[data-blok-database-drawer-props]');
+
+    if (panel === null || group === null) throw new Error('missing layout regions');
+    const p = panel.getBoundingClientRect();
+    const g = group.getBoundingClientRect();
+
+    return { panelLeft: p.left, panelRight: p.right, panelTop: p.top, groupLeft: g.left, groupRight: g.right, groupBottom: g.bottom };
+  });
+
 const pins = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-pins]');
 
 const layoutMenu = async (page: Page, propertyId: string): Promise<void> => {
@@ -130,9 +143,7 @@ test.describe('row page layout', () => {
     await expect(details).toBeHidden();
   });
 
-  // Not built: the panel stacks below the group. Known divergence, see
-  // docs/plans/2026-10-09-database-notion-parity/10-backlog.md (P6, "Diverges").
-  test.fixme('places the details panel to the right of the page properties', async ({ page }) => {
+  test('places the details panel to the right of the page properties', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }));
     await openRow(page, 'r1');
     const details = peek(page).getByRole('region', { name: 'Details' });
@@ -140,21 +151,33 @@ test.describe('row page layout', () => {
 
     await expect(details).toBeVisible();
     await expect(properties).toBeVisible();
-    const bounds = await peek(page).evaluate((drawer) => {
-      const panel = drawer.querySelector('[data-blok-database-drawer-details]');
-      const group = drawer.querySelector('[data-blok-database-drawer-props]');
-
-      if (panel === null || group === null) throw new Error('missing layout regions');
-      const panelRect = panel.getBoundingClientRect();
-      const groupRect = group.getBoundingClientRect();
-
-      return { panelLeft: panelRect.left, groupRight: groupRect.right, panelTop: panelRect.top, groupBottom: groupRect.bottom };
-    });
+    const bounds = await layoutBounds(page);
 
     expect(bounds.panelLeft).toBeGreaterThanOrEqual(bounds.groupRight - 1);
     expect(bounds.panelTop).toBeLessThan(bounds.groupBottom);
     await peek(page).getByRole('button', { name: 'View details' }).click();
     await expect(details).toBeHidden();
+  });
+
+  test('mirrors the details panel to the left of the page properties in RTL', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), 'rtl');
+    await openRow(page, 'r1');
+    await expect(peek(page).getByRole('region', { name: 'Details' })).toBeVisible();
+    const bounds = await layoutBounds(page);
+
+    expect(bounds.panelRight).toBeLessThanOrEqual(bounds.groupLeft + 1);
+    expect(bounds.panelTop).toBeLessThan(bounds.groupBottom);
+  });
+
+  // Notion's narrow-width behaviour was not measured; Blok stacks the panel below.
+  test('stacks the details panel below the page properties when the page is narrow', async ({ page }) => {
+    await page.setViewportSize({ width: 700, height: 900 });
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }));
+    await openRow(page, 'r1');
+    await expect(peek(page).getByRole('region', { name: 'Details' })).toBeVisible();
+    const bounds = await layoutBounds(page);
+
+    expect(bounds.panelTop).toBeGreaterThanOrEqual(bounds.groupBottom - 1);
   });
 
   test('switches to a Tabbed page from Page settings and resets to the original layout', async ({ page }) => {

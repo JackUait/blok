@@ -1,5 +1,5 @@
 import { getElementDirection, inlineStartOffset } from '../../components/utils/direction';
-import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
+import { copyGhostContext, copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
@@ -162,6 +162,10 @@ export class DatabaseColumnDrag {
       ghost.appendChild(clone);
 
       copyGhostRadius(this.sourceColumn, ghost);
+      copyGhostContext(this.sourceColumn, this.sourceColumn.closest('[data-blok-database-board]'), ghost, {
+        properties: ['--blok-database-card-preview-height'],
+        attributes: ['data-fit-image'],
+      });
 
       const rect = this.sourceColumn.getBoundingClientRect();
 

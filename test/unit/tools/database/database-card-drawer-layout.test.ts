@@ -143,6 +143,26 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
   });
 
+  it('puts the details panel beside the page column, after it in focus order, with View details first', () => {
+    const options = createOptions({
+      schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-owner', place: 'page' }, { id: 'p-due', place: 'panel' }] }),
+    });
+
+    new DatabaseCardDrawer(options).open(ROW);
+    const columns = q('[data-blok-database-drawer-columns]');
+    const main = q('[data-blok-database-drawer-columns] > [data-blok-database-drawer-main]');
+    const panel = q('[data-blok-database-drawer-columns] > [data-blok-database-drawer-details]');
+    const toggle = q('[data-blok-database-drawer-details-toggle]');
+
+    expect(main?.querySelector('[data-blok-database-drawer-props]')).not.toBeNull();
+    expect(main?.querySelector('[data-blok-database-drawer-modules]')).not.toBeNull();
+    expect(panel?.nextElementSibling).toBeNull();
+    expect(main?.nextElementSibling).toBe(panel);
+    expect(toggle?.nextElementSibling).toBe(columns);
+    expect(toggle?.getAttribute('aria-controls')).toBe(panel?.id);
+    expect(panel?.id).not.toBe('');
+  });
+
   it('moves the property group into the details panel', () => {
     const options = createOptions({ schema: schemaWith({ pageLayoutGroupIn: 'panel' }) });
 

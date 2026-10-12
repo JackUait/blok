@@ -777,8 +777,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_STRUCTURE_BYTES = 10_030;
     // database.css: backlog fixes: the lane column body radius, the timeline table footer, the empty gallery group drop ring, the AA yellow and brown accents, the board column "Load more".
     const DATABASE_BACKLOG_BYTES = 825;
-    // database.css: the row page layout (pins, sections, modules, details panel, tabs, builder bar).
-    const DATABASE_ROW_PAGE_LAYOUT_BYTES = 5_720;
+    // database.css: the row page layout (pins, sections, modules, details panel, tabs, builder bar), plus 543 for the panel beside the page.
+    const DATABASE_ROW_PAGE_LAYOUT_BYTES = 5_720 + 543;
     // database.css: Tier 3 (D6) form, map and dashboard views.
     const DATABASE_TIER3_VIEWS_BYTES = 2_255;
     // database.css: the side peek narrowing past the isolation reset, its 34px property rows, the selection bar in the toolbar row, the gray fill handle ring.
@@ -797,7 +797,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the AI Autofill setup dialog.
     const DATABASE_AI_AUTOFILL_BYTES = 2_772;
     // database.css: drag ghosts repeat the fitted-image and vertical-line rules of the view they leave.
-    const DATABASE_GHOST_CONTEXT_BYTES = 174;
+    // 174 for card and table row ghosts, 152 for board and table column ghosts.
+    const DATABASE_GHOST_CONTEXT_BYTES = 174 + 152;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

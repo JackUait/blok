@@ -299,6 +299,50 @@ test.describe('drag ghosts look like their source', () => {
     });
   }
 
+  for (const size of ['small', 'large'] as const) {
+    test(`a ${size} board column ghost keeps the card preview box and image fit`, async ({ page }) => {
+      await mount(page, imageBoard(size), 'v2');
+      const column = '[data-blok-database-column][data-option-id="o-idea"]';
+      const preview = page.locator(`${column} [data-blok-database-card][data-row-id="r1"] [data-blok-database-card-preview]`);
+
+      await expect(preview).toBeVisible();
+      const source = await preview.boundingBox();
+      const sourceFit = await preview.locator('[data-blok-database-card-image]').evaluate((el) => getComputedStyle(el).objectFit);
+
+      if (source === null) throw new Error('no preview box');
+      await dragBy(page, page.locator(`${column} [data-blok-database-column-header]`), 200, 0);
+      const ghost = page.locator('[data-blok-database-column-ghost]');
+      const clone = ghost.locator('[data-blok-database-card][data-row-id="r1"] [data-blok-database-card-preview]');
+
+      await expect(ghost).toBeVisible();
+      expect((await clone.boundingBox())?.height).toBeCloseTo(source.height, 1);
+      await expect(clone.locator('[data-blok-database-card-image]')).toHaveCSS('object-fit', sourceFit);
+      expect(sourceFit).toBe('contain');
+      await page.mouse.up();
+    });
+  }
+
+  for (const showVerticalLines of [true, false]) {
+    test(`a table column ghost preserves vertical lines set to ${showVerticalLines}`, async ({ page }) => {
+      await mount(page, blocks({ showVerticalLines }));
+      const header = page.getByRole('columnheader', { name: 'Notes' });
+      const source = await header.evaluate((el) => {
+        const style = getComputedStyle(el);
+
+        return { width: style.borderInlineEndWidth, style: style.borderInlineEndStyle, color: style.borderInlineEndColor };
+      });
+
+      await dragBy(page, header, 120, 0);
+      const ghost = page.locator('[data-blok-database-table-column-ghost]');
+
+      await expect(ghost).toHaveCSS('border-inline-end-width', source.width);
+      await expect(ghost).toHaveCSS('border-inline-end-style', source.style);
+      await expect(ghost).toHaveCSS('border-inline-end-color', source.color);
+      expect(source.width).toBe(showVerticalLines ? '1px' : '0px');
+      await page.mouse.up();
+    });
+  }
+
   test('a board card ghost keeps the card box', async ({ page }) => {
     await mount(page, blocks(), 'v2');
     const card = page.locator('[data-blok-database-card][data-row-id="r1"]');

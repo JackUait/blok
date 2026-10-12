@@ -2111,6 +2111,24 @@
   margin-inline-start: calc(-1 * var(--blok-space-2));
 }
 
+/* Notion's panel and page widths were not measured. 240px matches the pin width. */
+[data-blok-database-drawer-columns] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 var(--blok-space-4);
+}
+
+/* The 999 grow keeps the panel near its basis beside the page; too narrow for both and it wraps below. */
+[data-blok-database-drawer-columns] > [data-blok-database-drawer-main] {
+  flex: 999 1 240px;
+  min-inline-size: 0;
+}
+
+[data-blok-database-drawer-columns] > [data-blok-database-drawer-details] {
+  flex: 1 1 240px;
+}
+
 [data-blok-database-drawer-details] {
   margin-bottom: var(--blok-space-4);
   padding: var(--blok-space-3);
@@ -3516,7 +3534,8 @@
 
 [data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell],
 [data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-column-header],
-[data-blok-database-table-row-ghost][data-vertical-lines="true"] [data-blok-database-table-cell] {
+[data-blok-database-table-row-ghost][data-vertical-lines="true"] [data-blok-database-table-cell],
+[data-blok-database-table-column-ghost][data-vertical-lines="true"] {
   border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
@@ -5499,7 +5518,8 @@
 }
 
 [data-blok-database-board][data-fit-image] [data-blok-database-card-image],
-[data-blok-database-ghost][data-fit-image] [data-blok-database-card-image] {
+[data-blok-database-ghost][data-fit-image] [data-blok-database-card-image],
+[data-blok-database-column-ghost][data-fit-image] [data-blok-database-card-image] {
   object-fit: contain;
 }
 

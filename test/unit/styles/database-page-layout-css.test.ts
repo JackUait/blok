@@ -20,7 +20,7 @@ const ruleBody = (selector: string): string => {
 };
 
 const layoutRules = (): string =>
-  [...database.matchAll(/([^{}]*\[data-blok-database-(?:drawer-(?:pins|pin|modules|panel-modules|module|section[a-z-]*|details[a-z-]*|tabs|tab-panel|customize|layout-bar)|layout-[a-z-]+)\][^{}]*)\{([^{}]*)\}/g)]
+  [...database.matchAll(/([^{}]*\[data-blok-database-(?:drawer-(?:pins|pin|modules|panel-modules|module|section[a-z-]*|details[a-z-]*|columns|main|tabs|tab-panel|customize|layout-bar)|layout-[a-z-]+)\][^{}]*)\{([^{}]*)\}/g)]
     .map((m) => `${m[1]}{${m[2]}}`)
     .join('\n');
 
@@ -47,6 +47,20 @@ describe('database row page layout css', () => {
 
   it('turns the section caret and the details panel motion off for reduced motion', () => {
     expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{ \[data-blok-database-drawer-section-toggle\] svg \{ transition: none; \}/);
+  });
+
+  it('sets the details panel beside the page column and wraps it below when narrow', () => {
+    const columns = ruleBody('[data-blok-database-drawer-columns]');
+    const main = ruleBody('[data-blok-database-drawer-columns] > [data-blok-database-drawer-main]');
+    const panel = ruleBody('[data-blok-database-drawer-columns] > [data-blok-database-drawer-details]');
+
+    expect(columns).toContain('display: flex');
+    expect(columns).toContain('flex-wrap: wrap');
+    expect(columns).toContain('align-items: flex-start');
+    expect(columns).not.toMatch(/row-reverse/);
+    expect(main).toContain('flex: 999 1 240px');
+    expect(main).toContain('min-inline-size: 0');
+    expect(panel).toContain('flex: 1 1 240px');
   });
 
   it('uses logical properties and radius role tokens only', () => {

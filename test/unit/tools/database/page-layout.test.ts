@@ -4,21 +4,30 @@ import {
   PAGE_LAYOUT_PIN_LIMIT,
   addModule,
   addSection,
+  applyDraft,
   canPlaceInPanel,
   deleteSection,
+  isDraftEmpty,
   moveInPlace,
+  moveSection,
   moveToSection,
   pageLayoutFields,
   pageLayoutOf,
   pin,
+  pinFirst,
   removeFromLayout,
   renameSection,
   resetPageLayout,
   resolvePageLayout,
+  setFullWidth,
   setGroupIn,
   setPropertyIcons,
+  setPropertyLabels,
   setStructure,
+  setTemplates,
 } from '../../../../src/tools/database/page-layout';
+import type { PageLayoutDraft } from '../../../../src/tools/database/page-layout';
+import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
 const prop = (id: string, type: PropertyDefinition['type'] = 'text'): PropertyDefinition =>
@@ -76,6 +85,27 @@ describe('page layout — reading the title property', () => {
     expect(ids(resolved.heading)).toEqual(['a']);
     expect(resolved.pageModules).toEqual([]);
     expect(ids(resolved.group)).toEqual(['b', 'c', 'rel']);
+  });
+
+  it.each([
+    ['section first', [{ id: 'a', place: 'section' as const, sectionId: 's1' }, { id: 'a', place: 'heading' as const }]],
+    ['pin first', [{ id: 'a', place: 'heading' as const }, { id: 'a', place: 'section' as const, sectionId: 's1' }]],
+  ])('lets a pin beat a section entry when a merge left one property in both (%s)', (_, placements) => {
+    const layout = pageLayoutOf({ ...TITLE, pageLayoutSections: [{ id: 's1', name: 'One' }], pageLayoutPlacements: placements });
+    const resolved = resolvePageLayout(layout, PROPS);
+
+    expect(ids(resolved.heading)).toEqual(['a']);
+    expect(resolved.sections.map((s) => ids(s.properties))).toEqual([[]]);
+  });
+
+  it('moves a pin that a merge also left in a section', () => {
+    const layout = pageLayoutOf({
+      ...TITLE,
+      pageLayoutSections: [{ id: 's1', name: 'One' }],
+      pageLayoutPlacements: [{ id: 'a', place: 'section', sectionId: 's1' }, { id: 'b', place: 'heading' }, { id: 'a', place: 'heading' }],
+    });
+
+    expect(ids(resolvePageLayout(moveInPlace('a', -1)(layout), PROPS).heading)).toEqual(['a', 'b']);
   });
 
   it('drops placements of deleted properties and sends a deleted section back to the group', () => {
@@ -159,7 +189,7 @@ describe('page layout — edits', () => {
   });
 
   it('adds, renames and deletes a section; deleting returns its properties to the group', () => {
-    const withSection = moveToSection('a', 's1')(addSection('s1', 'Dates')(empty));
+    const withSection = moveToSection('a', 's1')(addSection('s1', 'Dates', [])(empty));
 
     expect(withSection.placements).toEqual([{ id: 'a', place: 'section', sectionId: 's1' }]);
     expect(renameSection('s1', 'When')(withSection).sections).toEqual([{ id: 's1', name: 'When' }]);
@@ -171,7 +201,7 @@ describe('page layout — edits', () => {
   });
 
   it('sets the structure and where the group sits, and resets to the original layout', () => {
-    const changed = setGroupIn('panel')(setStructure('tabbed')(pin('a')(addSection('s1', 'X')(empty))));
+    const changed = setGroupIn('panel')(setStructure('tabbed')(pin('a')(addSection('s1', 'X', [])(empty))));
 
     expect(changed.structure).toBe('tabbed');
     expect(changed.groupIn).toBe('panel');
@@ -198,4 +228,122 @@ describe('page layout — edits', () => {
     expect(resolvePageLayout(off, PROPS).propertyIcons).toBe(false);
     expect(resetPageLayout()(off).propertyIcons).toBe(true);
   });
+
+  it('adds the first section at the top and moves every group property into it', () => {
+    const start = [pin('a'), addModule('b', 'page'), moveToSection('c', 'gone')].reduce((acc, op) => op(acc), empty);
+    const layout = addSection('s1', 'New section', ids(PROPS))(start);
+    const resolved = resolvePageLayout(layout, PROPS);
+
+    expect(layout.sections).toEqual([{ id: 's1', name: 'New section' }]);
+    expect(resolved.sections.map((s) => [s.section.id, ids(s.properties)])).toEqual([['s1', ['c', 'rel']]]);
+    expect(resolved.group).toEqual([]);
+    expect(ids(resolved.heading)).toEqual(['a']);
+    expect(ids(resolved.pageModules)).toEqual(['b']);
+  });
+
+  it('adds a later section at the top, empty', () => {
+    const first = addSection('s1', 'One', ids(PROPS))(empty);
+    const layout = addSection('s2', 'Two', ids(PROPS))(first);
+    const resolved = resolvePageLayout(layout, PROPS);
+
+    expect(layout.sections.map((s) => s.id)).toEqual(['s2', 's1']);
+    expect(resolved.sections.map((s) => [s.section.id, ids(s.properties)])).toEqual([['s2', []], ['s1', ['a', 'b', 'c', 'rel']]]);
+  });
+
+  it('moves a section up and down', () => {
+    const layout = [addSection('s1', 'One', []), addSection('s2', 'Two', []), addSection('s3', 'Three', [])].reduce((acc, op) => op(acc), empty);
+
+    expect(layout.sections.map((s) => s.id)).toEqual(['s3', 's2', 's1']);
+    expect(moveSection('s3', 1)(layout).sections.map((s) => s.id)).toEqual(['s2', 's3', 's1']);
+    expect(moveSection('s1', -1)(layout).sections.map((s) => s.id)).toEqual(['s3', 's1', 's2']);
+    expect(moveSection('s3', -1)(layout)).toEqual(layout);
+    expect(moveSection('s1', 1)(layout)).toEqual(layout);
+    expect(moveSection('missing', 1)(layout)).toEqual(layout);
+  });
+
+  it('pins a property made from the Pinned list first', () => {
+    const layout = [pin('a'), addModule('b', 'page'), pin('c')].reduce((acc, op) => op(acc), empty);
+    const resolved = resolvePageLayout(pinFirst('rel')(layout), PROPS);
+
+    expect(ids(resolved.heading)).toEqual(['rel', 'a', 'c']);
+    expect(ids(resolved.pageModules)).toEqual(['b']);
+
+    const full = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT }, (_, i) => `p${i}`).reduce((acc, id) => pin(id)(acc), empty);
+
+    expect(pinFirst('extra')(full)).toEqual(full);
+  });
+
+  it('writes property labels off as false, templates off as false, full width on as true, and drops each key at its default', () => {
+    expect(empty.propertyLabels).toBe(true);
+    expect(empty.templates).toBe(true);
+    expect(empty.fullWidth).toBe(false);
+    const changed = [setPropertyLabels(false), setTemplates(false), setFullWidth(true)].reduce((acc, op) => op(acc), empty);
+    const fields = pageLayoutFields(changed);
+
+    expect(fields.pageLayoutPropertyLabels).toBe(false);
+    expect(fields.pageLayoutTemplates).toBe(false);
+    expect(fields.pageLayoutFullWidth).toBe(true);
+    expect(pageLayoutOf({ ...TITLE, ...fields })).toMatchObject({ propertyLabels: false, templates: false, fullWidth: true });
+
+    const back = pageLayoutFields([setPropertyLabels(true), setTemplates(true), setFullWidth(false)].reduce((acc, op) => op(acc), changed));
+
+    expect(back.pageLayoutPropertyLabels).toBeUndefined();
+    expect(back.pageLayoutTemplates).toBeUndefined();
+    expect(back.pageLayoutFullWidth).toBeUndefined();
+  });
+
+  it('resets property labels, templates and full width to their defaults', () => {
+    const model = new DatabaseModel({ schema: [TITLE, ...PROPS], views: [], activeViewId: '' });
+    const changed = [setPropertyLabels(false), setTemplates(false), setFullWidth(true)].reduce((acc, op) => op(acc), model.getPageLayout());
+
+    model.setPageLayout(changed);
+    expect(model.getSchema().find((p) => p.type === 'title')).toMatchObject({ pageLayoutPropertyLabels: false, pageLayoutTemplates: false, pageLayoutFullWidth: true });
+    model.setPageLayout(resetPageLayout()(changed));
+    const title = model.getSchema().find((p) => p.type === 'title');
+
+    expect(title).not.toHaveProperty('pageLayoutPropertyLabels');
+    expect(title).not.toHaveProperty('pageLayoutTemplates');
+    expect(title).not.toHaveProperty('pageLayoutFullWidth');
+    expect(model.getPageLayout()).toMatchObject({ propertyLabels: true, templates: true, fullWidth: false });
+  });
+
+  it('puts group placements first, in placement order, and the rest in schema order', () => {
+    const layout = pageLayoutOf({
+      ...TITLE,
+      pageLayoutPlacements: [{ id: 'c', place: 'group' }, { id: 'a', place: 'heading' }, { id: 'rel', place: 'group' }],
+    });
+
+    expect(ids(resolvePageLayout(layout, PROPS).group)).toEqual(['c', 'rel', 'b']);
+  });
+
+  it('never changes a property position for layout order', () => {
+    const model = new DatabaseModel({ schema: [TITLE, ...PROPS], views: [], activeViewId: '' });
+    const before = model.getSchema().map((p) => [p.id, p.position]);
+    const layout = [
+      addSection('s1', 'One', ids(PROPS)),
+      addSection('s2', 'Two', ids(PROPS)),
+      moveSection('s2', 1),
+      pinFirst('c'),
+      moveInPlace('c', 1),
+    ].reduce((acc, op) => op(acc), model.getPageLayout());
+
+    model.setPageLayout({ ...layout, placements: [...layout.placements, { id: 'rel', place: 'group' }] });
+
+    expect(model.getSchema().map((p) => [p.id, p.position])).toEqual(before);
+  });
+
+  it('a draft with only visibility edits is not empty, and applying it replays the ops on the newest layout', () => {
+    const blank: PageLayoutDraft = { ops: [], visibility: new Map(), madeProperties: [] };
+
+    expect(isDraftEmpty(blank)).toBe(true);
+    expect(isDraftEmpty({ ...blank, visibility: new Map([['a', 'hidden']]) })).toBe(false);
+    expect(isDraftEmpty({ ...blank, madeProperties: ['a'] })).toBe(false);
+    expect(isDraftEmpty({ ...blank, ops: [pin('a')] })).toBe(false);
+
+    const draft: PageLayoutDraft = { ops: [pin('a')], visibility: new Map([['b', 'hidden']]), madeProperties: [] };
+    const newest = pin('c')(empty);
+
+    expect(applyDraft(draft, newest).placements).toEqual([{ id: 'c', place: 'heading' }, { id: 'a', place: 'heading' }]);
+  });
 });
+

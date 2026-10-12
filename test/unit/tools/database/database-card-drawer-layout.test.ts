@@ -695,7 +695,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
     });
 
-    it('adds and names a section, then moves a property into it', () => {
+    it('adds the first section with every group property in it, then a second, empty one at the top', () => {
       const options = createOptions();
 
       new DatabaseCardDrawer(options).open(ROW);
@@ -706,15 +706,27 @@ describe('DatabaseCardDrawer — page layout', () => {
       if (name === null) throw new Error('no section name field');
       name.value = 'Planning';
       name.dispatchEvent(new Event('change'));
+      q('[data-blok-database-layout-add-section]')?.click();
+      const second = q<HTMLInputElement>('[data-blok-database-layout-section-name]');
+
+      if (second === null) throw new Error('no second section name field');
+      second.value = 'Later';
+      second.dispatchEvent(new Event('change'));
       openItemMenu('p-due');
-      const move = all('[data-blok-popover-item]').find((item) => item.textContent?.includes('Planning'));
+      const move = all('[data-blok-popover-item]').find((item) => item.textContent?.includes('Later'));
 
       move?.click();
       q('[data-blok-database-layout-apply]')?.click();
       const layout = written(options);
+      const [later, planning] = layout?.sections ?? [];
 
-      expect(layout?.sections).toEqual([{ id: expect.any(String), name: 'Planning' }]);
-      expect(layout?.placements).toEqual([{ id: 'p-due', place: 'section', sectionId: layout?.sections[0]?.id }]);
+      expect(layout?.sections.map((section) => section.name)).toEqual(['Later', 'Planning']);
+      expect(layout?.placements).toEqual([
+        { id: 'p-status', place: 'section', sectionId: planning?.id },
+        { id: 'p-owner', place: 'section', sectionId: planning?.id },
+        { id: 'p-rel', place: 'section', sectionId: planning?.id },
+        { id: 'p-due', place: 'section', sectionId: later?.id },
+      ]);
     });
 
     it('sets the structure from Page settings and resets to the original layout at once', () => {
@@ -730,7 +742,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       clickItem('reset');
 
       expect(written(options, { pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutStructure: 'tabbed' }))
-        .toEqual({ structure: 'simple', groupIn: 'page', propertyIcons: true, placements: [], sections: [] });
+        .toEqual({ structure: 'simple', groupIn: 'page', propertyIcons: true, propertyLabels: true, templates: true, fullWidth: false, placements: [], sections: [] });
       expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
     });
 

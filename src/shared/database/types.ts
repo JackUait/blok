@@ -45,8 +45,11 @@ export interface PropertyDefinition extends PropertySettingsV2, PageLayoutFields
 
 // ─── Page layout ───
 
-/** Where a property sits on a row page. `page` and `panel` give it a module of its own. */
-export type PageLayoutPlace = 'heading' | 'page' | 'panel' | 'section';
+/**
+ * Where a property sits on a row page. `page` and `panel` give it a module of its own.
+ * `group` keeps it in the property group, ahead of the properties with no entry.
+ */
+export type PageLayoutPlace = 'heading' | 'page' | 'panel' | 'section' | 'group';
 
 /** One property's place on the row page. `id` is the property id. */
 export interface PageLayoutPlacement {
@@ -74,6 +77,12 @@ export interface PageLayoutFields {
   pageLayoutGroupIn?: 'page' | 'panel';
   /** `false` hides the icon beside each property label. Default shown. */
   pageLayoutPropertyIcons?: false;
+  /** `false` hides the property labels in the heading. Default shown. */
+  pageLayoutPropertyLabels?: false;
+  /** `false` hides the database templates on an empty row page. Default shown. */
+  pageLayoutTemplates?: false;
+  /** `true` lays every row page out full width. Default off. */
+  pageLayoutFullWidth?: true;
   /** A property with no entry sits in the property group. */
   pageLayoutPlacements?: PageLayoutPlacement[];
   pageLayoutSections?: PageLayoutSection[];

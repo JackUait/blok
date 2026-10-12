@@ -31,8 +31,10 @@ import {
   PAGE_LAYOUT_PIN_LIMIT,
   addModule,
   addSection,
+  applyDraft,
   canPlaceInPanel,
   deleteSection,
+  isDraftEmpty,
   moveInPlace,
   moveToSection,
   pageLayoutOf,
@@ -45,7 +47,7 @@ import {
   setPropertyIcons,
   setStructure,
 } from './page-layout';
-import type { PageLayoutOp, ResolvedPageLayout } from './page-layout';
+import type { PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 
@@ -273,9 +275,7 @@ export class DatabaseCardDrawer {
   private readonly onPageLayoutBirth: CardDrawerOptions['onPageLayoutBirth'];
   private readonly databaseLocked: () => boolean;
   /** The edits of an open Customize layout, or null when not customizing. */
-  private layoutDraft: PageLayoutOp[] | null = null;
-  /** Properties made while customizing. Discard deletes them (research/09 §3b). */
-  private draftProperties: string[] = [];
+  private draft: PageLayoutDraft | null = null;
   private layoutMenu: PopoverDesktop | null = null;
   /** Watches the pins scroller for overflow. Replaced on every redraw. */
   private pinsObserver: ResizeObserver | null = null;
@@ -532,7 +532,7 @@ export class DatabaseCardDrawer {
         return;
       }
       // A full page is left with its back button, not Escape. Customize layout is left with Cancel or Apply (research/10 §2).
-      if (e.key !== 'Escape' || this.mode === 'full' || this.layoutDraft !== null) {
+      if (e.key !== 'Escape' || this.mode === 'full' || this.draft !== null) {
         return;
       }
 
@@ -649,7 +649,7 @@ export class DatabaseCardDrawer {
     this.closeModeMenu();
     this.closeLayoutMenu();
     this.stopWatchingPins();
-    this.layoutDraft = null;
+    this.draft = null;
     this.drawer?.querySelector('[data-blok-database-drawer-layout-bar]')?.remove();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
@@ -891,8 +891,8 @@ export class DatabaseCardDrawer {
 
     toggle.type = 'button';
     toggle.setAttribute('data-blok-database-drawer-props-toggle', '');
-    toggle.disabled = this.layoutDraft !== null;
-    toggle.setAttribute('aria-expanded', String(this.layoutDraft !== null || !this.propsCollapsed));
+    toggle.disabled = this.draft !== null;
+    toggle.setAttribute('aria-expanded', String(this.draft !== null || !this.propsCollapsed));
     toggle.innerHTML = IconChevronDown;
     toggle.append(this.label('tools.database.propertiesSection'));
     toggle.addEventListener('click', () => {
@@ -1235,9 +1235,9 @@ export class DatabaseCardDrawer {
 
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
-    propsSection.hidden = this.layoutDraft === null && this.propsCollapsed;
+    propsSection.hidden = this.draft === null && this.propsCollapsed;
     const hidden = (def: PropertyDefinition): boolean => !isShownOnPage(def, readPropertyValue(row, def) ?? null);
-    const shown = (def: PropertyDefinition): boolean => this.layoutDraft !== null || this.showHiddenProps || !hidden(def);
+    const shown = (def: PropertyDefinition): boolean => this.draft !== null || this.showHiddenProps || !hidden(def);
     const hiddenCount = [...layout.group, ...layout.sections.flatMap((s) => s.properties)].filter(hidden).length;
 
     for (const def of layout.group.filter(shown)) {
@@ -1263,9 +1263,9 @@ export class DatabaseCardDrawer {
       propsSection.appendChild(reveal);
     }
 
-    if (this.layoutDraft !== null) {
+    if (this.draft !== null) {
       propsSection.appendChild(this.textButton('data-blok-database-layout-add-section', 'tools.database.layoutAddSection', () => {
-        this.editLayout(addSection(nanoid(), this.label('tools.database.layoutNewSection')));
+        this.editLayout(addSection(nanoid(), this.label('tools.database.layoutNewSection'), this.getRenderableSchema().map((def) => def.id)));
       }));
     }
 
@@ -1284,7 +1284,7 @@ export class DatabaseCardDrawer {
   /** "+ Add a property". From the pins row, the new property becomes a draft pin; the property itself is written at once. */
   private openAddProperty(anchor: HTMLElement, pinIt: boolean): void {
     if (this.onOpenAddProperty !== undefined) {
-      this.onOpenAddProperty(anchor, pinIt || this.layoutDraft !== null ? (id) => this.addedWhileCustomizing(id, pinIt) : undefined);
+      this.onOpenAddProperty(anchor, pinIt || this.draft !== null ? (id) => this.addedWhileCustomizing(id, pinIt) : undefined);
 
       return;
     }
@@ -1311,7 +1311,7 @@ export class DatabaseCardDrawer {
   }
 
   private addedWhileCustomizing(id: string, pinIt: boolean): void {
-    if (this.layoutDraft !== null) this.draftProperties.push(id);
+    this.draft?.madeProperties.push(id);
     if (pinIt) this.editLayout(pin(id));
   }
 
@@ -1320,7 +1320,7 @@ export class DatabaseCardDrawer {
     const section = document.createElement('div');
     const header = document.createElement('div');
     const body = document.createElement('div');
-    const collapsed = this.collapsedSections.has(id) && this.layoutDraft === null;
+    const collapsed = this.collapsedSections.has(id) && this.draft === null;
 
     section.setAttribute('data-blok-database-drawer-section', '');
     section.setAttribute('data-section-id', id);
@@ -1328,7 +1328,7 @@ export class DatabaseCardDrawer {
     body.setAttribute('data-blok-database-drawer-section-body', '');
     body.hidden = collapsed;
 
-    if (this.layoutDraft !== null) {
+    if (this.draft !== null) {
       const input = document.createElement('input');
 
       input.type = 'text';
@@ -1380,7 +1380,7 @@ export class DatabaseCardDrawer {
   /** The saved layout, with an open draft's edits replayed on top. */
   private resolvedLayout(): ResolvedPageLayout {
     const saved = pageLayoutOf(this.schema.find((p) => p.type === 'title'));
-    const layout = (this.layoutDraft ?? []).reduce((acc, op) => op(acc), saved);
+    const layout = this.draft === null ? saved : applyDraft(this.draft, saved);
 
     return resolvePageLayout(layout, this.getRenderableSchema());
   }
@@ -1402,7 +1402,7 @@ export class DatabaseCardDrawer {
     const resolved = this.resolvedLayout();
 
     this.propertyIcons = resolved.propertyIcons;
-    const search = this.layoutDraft === null ? '' : this.drawer?.querySelector<HTMLInputElement>('[data-blok-database-layout-search]')?.value.trim().toLowerCase() ?? '';
+    const search = this.draft === null ? '' : this.drawer?.querySelector<HTMLInputElement>('[data-blok-database-layout-search]')?.value.trim().toLowerCase() ?? '';
     const matches = (def: PropertyDefinition): boolean => def.name.toLowerCase().includes(search);
     const layout: ResolvedPageLayout = {
       ...resolved,
@@ -1418,7 +1418,7 @@ export class DatabaseCardDrawer {
     if (!tabs.some((def) => def.id === this.activeTab)) {
       this.activeTab = 'content';
     }
-    if (layout.heading.length > 0 || this.layoutDraft !== null) {
+    if (layout.heading.length > 0 || this.draft !== null) {
       regions.push(this.buildPinsRow(layout.heading, resolved.heading.length, row));
     }
     if (layout.structure === 'tabbed') {
@@ -1569,7 +1569,7 @@ export class DatabaseCardDrawer {
       this.pinsObserver = new ResizeObserver(sync);
       this.pinsObserver.observe(scroller);
     }
-    if (this.layoutDraft !== null) {
+    if (this.draft !== null) {
       const add = this.textButton('data-blok-database-layout-add-pin', 'tools.database.addProperty', () => this.openAddProperty(add, true));
 
       add.disabled = pinned >= PAGE_LAYOUT_PIN_LIMIT;
@@ -1634,8 +1634,8 @@ export class DatabaseCardDrawer {
 
     toggle.type = 'button';
     toggle.setAttribute('data-blok-database-drawer-details-toggle', '');
-    toggle.disabled = this.layoutDraft !== null;
-    toggle.setAttribute('aria-expanded', String(this.layoutDraft !== null || this.detailsOpen));
+    toggle.disabled = this.draft !== null;
+    toggle.setAttribute('aria-expanded', String(this.draft !== null || this.detailsOpen));
     toggle.innerHTML = IconSplitView;
     toggle.append(this.label('tools.database.layoutViewDetails'));
     panel.setAttribute('data-blok-database-drawer-details', '');
@@ -1643,7 +1643,7 @@ export class DatabaseCardDrawer {
     toggle.setAttribute('aria-controls', panel.id);
     panel.setAttribute('role', 'region');
     panel.setAttribute('aria-label', this.label('tools.database.layoutDetailsPanel'));
-    panel.hidden = this.layoutDraft === null && !this.detailsOpen;
+    panel.hidden = this.draft === null && !this.detailsOpen;
     this.drawer?.toggleAttribute('data-details-open', !panel.hidden);
     panel.append(...group);
     if (layout.panelModules.length > 0) {
@@ -1661,47 +1661,45 @@ export class DatabaseCardDrawer {
   }
 
   startCustomizing(): void {
-    if (!this.customizable || this.layoutDraft !== null || this.currentRow === null) {
+    if (!this.customizable || this.draft !== null || this.currentRow === null) {
       return;
     }
     this.onPageLayoutBirth?.();
-    this.layoutDraft = [];
-    this.draftProperties = [];
+    this.draft = { ops: [], visibility: new Map(), madeProperties: [] };
     this.renderRegions(this.currentRow);
   }
 
   private editLayout(op: PageLayoutOp): void {
-    if (this.layoutDraft === null || this.currentRow === null) {
+    if (this.draft === null || this.currentRow === null) {
       return;
     }
-    this.layoutDraft.push(op);
+    this.draft.ops.push(op);
     this.renderRegions(this.currentRow);
   }
 
   /** Leaves Customize layout. With `apply`, replays the edits on the newest saved layout. */
   private finishCustomizing(apply: boolean): void {
-    const draft = this.layoutDraft;
+    const draft = this.draft;
 
     this.closeLayoutMenu();
-    this.layoutDraft = null;
-    this.draftProperties = [];
-    if (apply && draft !== null && draft.length > 0) {
-      this.onPageLayoutChange?.((layout) => draft.reduce((acc, op) => op(acc), layout));
+    this.draft = null;
+    if (apply && draft !== null && draft.ops.length > 0) {
+      this.onPageLayoutChange?.((layout) => applyDraft(draft, layout));
     }
     if (this.currentRow !== null) this.renderRegions(this.currentRow);
   }
 
   /** Cancel: with edits, asks first. Discard also deletes the properties made meanwhile (research/09 §3b). */
   private cancelCustomizing(): void {
-    if (this.layoutDraft === null) {
+    if (this.draft === null) {
       return;
     }
-    if (this.layoutDraft.length === 0 && this.draftProperties.length === 0) {
+    if (isDraftEmpty(this.draft)) {
       this.finishCustomizing(false);
 
       return;
     }
-    const draft = this.layoutDraft;
+    const draft = this.draft;
 
     this.closeLayoutMenu();
     void openDatabaseConfirm({
@@ -1715,8 +1713,8 @@ export class DatabaseCardDrawer {
       ...(this.drawer === null || this.mode === 'full' ? {} : { container: this.drawer }),
     }).then((discard) => {
       // The page closed or customizing ended while the question was open.
-      if (!discard || this.layoutDraft !== draft) return;
-      const made = this.draftProperties;
+      if (!discard || this.draft !== draft) return;
+      const made = draft.madeProperties;
 
       this.finishCustomizing(false);
       for (const id of made) this.onDeleteProperty?.(id);
@@ -1728,7 +1726,7 @@ export class DatabaseCardDrawer {
     const content = this.drawer?.querySelector('[data-blok-database-drawer-content]') ?? null;
     const existing = content?.querySelector(':scope > [data-blok-database-drawer-layout-bar]') ?? null;
 
-    if (this.layoutDraft === null || content === null) {
+    if (this.draft === null || content === null) {
       existing?.remove();
 
       return;
@@ -1816,7 +1814,7 @@ export class DatabaseCardDrawer {
 
   /** "Reset to original page layout" writes at once. No property is deleted. */
   private resetLayout(): void {
-    this.layoutDraft = null;
+    this.draft = null;
     this.onPageLayoutChange?.(resetPageLayout());
     if (this.currentRow !== null) this.renderRegions(this.currentRow);
   }
@@ -2094,7 +2092,7 @@ export class DatabaseCardDrawer {
     }
 
     row.appendChild(valueEl);
-    if (this.layoutDraft !== null) {
+    if (this.draft !== null) {
       const more = this.iconButton('data-blok-database-layout-item-menu', 'tools.database.layoutItemOptions', IconDotsHorizontal, (el) => this.openItemMenu(def, el));
 
       more.setAttribute('data-property-id', def.id);

@@ -53,12 +53,12 @@ const bear = (store: DocumentStore): void => {
   store.updateBlockData('db1', 'schema', model.snapshot().schema);
 };
 
-const seed = (): [DocumentStore, DocumentStore] => {
+const seed = (clientA = 1, clientB = 2): [DocumentStore, DocumentStore] => {
   const storeA = createStore();
   const storeB = createStore();
 
-  pinClientId(storeA, 1);
-  pinClientId(storeB, 2);
+  pinClientId(storeA, clientA);
+  pinClientId(storeB, clientB);
   storeA.fromJSON([{ id: 'db1', type: 'database', data: { title: 'Tasks', schema: SCHEMA, views: [VIEW], activeViewId: 'v1' } }]);
   storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
 
@@ -141,7 +141,7 @@ describe('page layout — two peers editing it', () => {
     bear(storeA);
     sync(storeA, storeB);
     editLayout(storeA, pin('p-due'));
-    editLayout(storeB, addSection('s1', 'People'), moveToSection('p-owner', 's1'));
+    editLayout(storeB, addSection('s1', 'People', []), moveToSection('p-owner', 's1'));
     sync(storeA, storeB);
 
     const onA = resolvedOf(storeA);
@@ -169,8 +169,8 @@ describe('page layout — two peers editing it', () => {
 
     bear(storeA);
     sync(storeA, storeB);
-    editLayout(storeA, addSection('sa', 'Dates'));
-    editLayout(storeB, addSection('sb', 'People'));
+    editLayout(storeA, addSection('sa', 'Dates', []));
+    editLayout(storeB, addSection('sb', 'People', []));
     sync(storeA, storeB);
 
     expect(resolvedOf(storeA).sections.map((s) => s.section.name).sort()).toEqual(['Dates', 'People']);
@@ -215,4 +215,41 @@ describe('page layout — two peers editing it', () => {
 
     expect(resolvedOf(storeA).heading.map((p) => p.id)).toEqual(['p-status', 'p-due']);
   });
+
+  it.each([
+    ['the section writer has the lower client id', 1, 2],
+    ['the section writer has the higher client id', 2, 1],
+  ])('keeps a peer\'s pin made while the first section was being added (%s)', (_, clientA, clientB) => {
+    const [storeA, storeB] = seed(clientA, clientB);
+    const groupIds = SCHEMA.filter((p) => p.type !== 'title').map((p) => p.id);
+
+    bear(storeA);
+    sync(storeA, storeB);
+    editLayout(storeA, addSection('s1', 'New section', groupIds));
+    editLayout(storeB, pin('p-due'));
+    sync(storeA, storeB);
+
+    const onA = resolvedOf(storeA);
+
+    expect(onA.heading.map((p) => p.id)).toEqual(['p-due']);
+    expect(onA.sections.map((s) => [s.section.id, s.properties.map((p) => p.id)])).toEqual([['s1', ['p-status', 'p-owner']]]);
+    expect(resolvedOf(storeB)).toEqual(onA);
+  });
+
+  it('keeps a peer\'s pin made while the first section sat in a draft, when the draft is applied', () => {
+    const [storeA, storeB] = seed();
+    const groupIds = SCHEMA.filter((p) => p.type !== 'title').map((p) => p.id);
+    const draft: PageLayoutOp[] = [addSection('s1', 'New section', groupIds)];
+
+    bear(storeA);
+    sync(storeA, storeB);
+    editLayout(storeB, pin('p-due'));
+    sync(storeA, storeB);
+    editLayout(storeA, ...draft);
+    sync(storeA, storeB);
+
+    expect(resolvedOf(storeA).heading.map((p) => p.id)).toEqual(['p-due']);
+    expect(resolvedOf(storeA).sections.map((s) => s.properties.map((p) => p.id))).toEqual([['p-status', 'p-owner']]);
+  });
 });
+

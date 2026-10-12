@@ -160,17 +160,6 @@ export interface CollaborationParticipant {
     /** Localized anonymous phrase for that silhouette, else null. */
     label: string | null;
   };
-
-  /**
-   * Set when this participant is an agent connected through MCP, and its
-   * `agent` awareness field passed Blok's checks. `onBehalfOf` is the user id
-   * the agent works for. Treat every field as untrusted text.
-   */
-  agent?: {
-    via: string;
-    onBehalfOf: string;
-    onBehalfOfName: string | null;
-  };
 }
 
 /**

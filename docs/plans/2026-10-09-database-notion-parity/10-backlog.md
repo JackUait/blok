@@ -31,10 +31,15 @@ Full parity is unfinished. The integrated candidate has additional regression te
   - Enter in the select editor picks and moves down. Pinned by "Enter in the select editor picks the option and moves the selection down". Notion's multi-select Enter is unmeasured.
 - [x] P1: The calculation footer menu: None / Count › / Percent › / More options › (number) / Date › (date). Checkbox gets Checked/Unchecked. The label is 10px uppercase.
   - Landed earlier (audited 2026-10-09, unit tests run and green): 51ba04e3, f53d3057; database-table-view.test.ts "offers None, Count and Percent…", "gives a checkbox column Checked and Unchecked". The 10px uppercase label is pinned only by the CSS snapshot.
-- [ ] P1: The column header menu items per type (research/08 table).
-  - Partial (audit): Edit property is missing for select, multi-select, person and status; the title's "Show page icon" lives in the settings panel instead; "Property access" is not built.
-- [ ] P1: The row ⋮⋮ menu: Edit icon, Edit property ›, Open in ›, Comment, Copy link, Duplicate (⌘D), Move to, Move to Trash (Del). Footer: "Last edited by …".
-  - Partial (audit): "Open in" offers only Side peek; "Move to" and the "Last edited by" footer are missing. Comment comes with the Tier 3 `config.comments` hook.
+- [x] P1: The column header menu items per type (research/08 table).
+  - Edit property for number, select, multi-select, status, date, created time, ID, relation, rollup, formula and button: database-property-menu.test.ts "property menu entries …".
+  - Title menu starts Show page icon, AI Autofill, Filter: database-ai-autofill-header-placement.public-path.test.ts "Name (title) lists Show page icon, then AI Autofill, then Filter". No Description entry on the title (d0c05c78).
+  - Button says "Edit automation": database-property-menu.test.ts "labels a button column edit entry \"Edit automation\"".
+  - Not built, by decision: Property access (USER chose skip, 2026-10-13; Business-only in Notion). Person Edit property stays blocked (its panel is unmeasured).
+- [x] P1: The row ⋮⋮ menu: Edit icon, Edit property ›, Open in ›, Comment, Copy link, Duplicate (⌘D), Move to, Move to Trash (Del). Footer: "Last edited by …".
+  - Open in › Side/Center/Full, Move to, Last edited by: database-row-menu.test.ts and row-move-to.integration.test.ts.
+  - ⌘⇧M / ⌘⇧P labels and the word/character count line: d0c05c78 (labels only; Blok binds no such keys). The count reads "Words: 1, characters: 5" because Blok i18n has no plurals.
+  - Omitted on purpose: Add to Favorites. Move to targets databases in the same document only.
 - [x] P1: The OPEN button on the title cell shows a side-peek icon before "OPEN".
   - Landed earlier: 51ba04e3. Pinned now by database-table-view.test.ts "the OPEN button shows the side-peek icon before its label".
 - [x] P1: The board card: 10px radius, a 3-layer shadow whose 1px ring takes the column hue, and a 15px/500 title. The column tint has a 10px bottom radius.

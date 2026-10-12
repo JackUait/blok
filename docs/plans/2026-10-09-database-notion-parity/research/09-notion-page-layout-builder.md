@@ -168,6 +168,7 @@ There is no "Customizing page layout" bar in this build. The builder is a full-w
 
 - **Property access**: yes. The table column header menu (on "Text") lists, in order: Property name field, **Property access**, Change type, AI Autofill, Filter, Sort, Group, Calculate, Freeze, Hide, Unwrap content, Insert left, Insert right, Duplicate property, Delete property (`63-column-header-menu.png`). It also appears in the property edit panel opened from the builder.
 - **Plan**: the workspace switcher (read only, not Settings) shows "Personal — **Free Plan** · 1 member" with an "Upgrade" button (not clicked) (`64-workspace-switcher.png`). So the builder, Property access and Tabbed structure are all offered on the Free plan here.
+  - Correction (research 10): Property access appears in the menus on Free, but its dialog is locked behind the Business plan. Every control is disabled.
 - Not exercised: the **Tabbed** structure, "Add section", "Property labels" OFF, "Reset to original page layout", "Database templates" OFF, dark theme. UNMEASURED: these were seen but not toggled, for time.
 - The expanded state of "N more properties" carried across rows in one session (Alpha → Beta both expanded) and reset to collapsed after a reload.
 

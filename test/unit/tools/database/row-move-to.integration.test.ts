@@ -4142,6 +4142,36 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect((await saved('r1'))?.data.properties.stage).toBe('o-evil');
   });
 
+  it('undoes a CSV merge and the option it created in one undo step, and redo brings both back', async () => {
+    const stageOptions = async (): Promise<string[]> =>
+      (((await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData)
+        .schema.find((property) => property.id === 'stage')?.config?.options ?? []).map((option) => option.label);
+    const rows = (): string[] => editor?.blocks.getChildren('db').map((block) => block.id) ?? [];
+
+    await make(doc());
+    editor?.blocks.getById('db')?.call('mergeCsv', 'Name,Stage\nShip it,Ship' as never);
+    await quiet();
+    if (!(await stageOptions()).includes('Ship') || rows().length !== 3) throw new Error('mergeCsv made no new option or row');
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await stageOptions()).toEqual(['Build']);
+    expect(rows()).toEqual(['r1', 'r2']);
+
+    editor?.history.redo();
+    await quiet();
+    const output = await editor?.save();
+    const shipId = (output?.blocks.find((block) => block.id === 'db')?.data as DatabaseData)
+      .schema.find((property) => property.id === 'stage')?.config?.options.find((option) => option.label === 'Ship')?.id;
+    const merged = output?.blocks.find((block) => block.parent === 'db' && !['r1', 'r2'].includes(block.id ?? ''));
+
+    expect(await stageOptions()).toEqual(['Build', 'Ship']);
+    expect(rows()).toHaveLength(3);
+    expect(shipId).toBeDefined();
+    expect((merged?.data as DatabaseRowData | undefined)?.properties.stage).toBe(shipId);
+  });
+
   it('sends a redone CSV merge row with the option the same step created', async () => {
     const blocks = doc();
     const backend = backendFor(blocks, 'db');
@@ -4162,9 +4192,9 @@ describe('row ⋮⋮ menu with a real editor', () => {
     editor?.history.undo();
     await quiet();
     await new Promise((resolve) => { setTimeout(resolve, 650); });
-    // Undo removes the row but keeps the new option, so redo is filtered against a schema that holds it.
-    if (editor?.blocks.getChildren('db').some((block) => block.id === rowId) || !(await stageOptions()).includes('Ship')) {
-      throw new Error('undo of mergeCsv no longer removes only the row');
+    // Undo takes the option out with the row, so redo must bring the option back before the row is filtered.
+    if (editor?.blocks.getChildren('db').some((block) => block.id === rowId) || (await stageOptions()).includes('Ship')) {
+      throw new Error('undo of mergeCsv no longer removes the row and its new option');
     }
     createRow.mockClear();
     editor?.history.redo();

@@ -1241,6 +1241,14 @@ export class DatabaseTool implements BlockTool {
     }
     if (!native.parent.present || native.parent.value !== this.block.id) return;
 
+    // A redone row add replays before this block's own setData, so a create
+    // reads the schema a microtask later: an option the same step brings back
+    // must be in it, or the filter drops the row's value.
+    if (capture.type === 'add') {
+      queueMicrotask(() => this.sync.syncReplayRow(capture, this.model.getSchema()));
+
+      return;
+    }
     this.sync.syncReplayRow(capture, this.model.getSchema());
   };
 
@@ -2537,6 +2545,9 @@ export class DatabaseTool implements BlockTool {
         this.model.updateProperty(propertyId, { config: { options } });
         void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options } } });
       }
+      // Before the rows: each row insert keeps a sync window open to the next
+      // frame, and a change dispatched inside it is dropped as an echo.
+      if (Object.keys(plan.newOptions).length > 0) this.block.dispatchChange();
       plan.rows.reduce<string | null>((previous, csvProperties) => {
         const properties = withEmptyLists(this.model.getSchema(), csvProperties);
         const position = DatabaseModel.positionBetween(previous, null);
@@ -2555,7 +2566,6 @@ export class DatabaseTool implements BlockTool {
     };
 
     this.inOneStep(write);
-    if (Object.keys(plan.newOptions).length > 0) this.block.dispatchChange();
     this.rerenderView({ keepDrawer: true });
     const skipped = plan.skippedColumns.length > 0
       ? ` ${this.api.i18n.t('tools.database.csvSkipped', { columns: plan.skippedColumns.join(', ') })}`

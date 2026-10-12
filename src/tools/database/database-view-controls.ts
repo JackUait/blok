@@ -56,6 +56,8 @@ export interface ViewControlsHost {
   layoutItems?: () => PopoverItemParams[];
   /** One-shot actions for the settings root page. */
   actions?: () => ViewSettingsAction[];
+  /** "Customize page layout" in More settings. */
+  customizeLayout?: () => ViewSettingsAction | undefined;
   automations?: AutomationSettings;
   /** Database settings: sub-items and dependencies. */
   structure?: StructureSettings;
@@ -350,6 +352,7 @@ export class DatabaseViewControls {
       ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),
       ...(this.host.layoutItems !== undefined ? { layoutItems: this.host.layoutItems } : {}),
       ...(this.host.actions !== undefined ? { actions: this.host.actions } : {}),
+      ...(this.host.customizeLayout !== undefined ? { customizeLayout: this.host.customizeLayout } : {}),
       ...(this.host.automations !== undefined ? { automations: this.host.automations } : {}),
       ...(this.host.structure !== undefined ? { structure: this.host.structure } : {}),
     };

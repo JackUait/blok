@@ -63,6 +63,31 @@ describe('database row page layout css', () => {
     expect(panel).toContain('flex: 1 1 240px');
   });
 
+  // research/09 §9: full page, a 385px column at the window's right edge, full height, 1px left border.
+  it('docks the details panel to the window edge on a full page', () => {
+    const panel = ruleBody('[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-details]');
+
+    expect(panel).toContain('position: fixed');
+    expect(panel).toContain('inset-block: 0');
+    expect(panel).toContain('inset-inline-end: 0');
+    expect(panel).toContain('inline-size: 385px');
+    expect(panel).toContain('border-inline-start: 1px solid');
+    expect(panel).toContain('border-radius: 0');
+  });
+
+  // research/09 §9: center peek, a 280px column inside the modal; the page narrows beside it.
+  it('docks the details panel inside the center peek modal', () => {
+    const panel = ruleBody('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-details]');
+
+    expect(panel).toContain('position: absolute');
+    expect(panel).toContain('inset-inline-end: 0');
+    expect(panel).toContain('inset-block-end: 0');
+    expect(panel).toContain('inline-size: 280px');
+    expect(panel).toContain('border-inline-start: 1px solid');
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-content]'))
+      .toContain('padding-inline-end: calc(280px + 60px)');
+  });
+
   it('puts a 16px icon in the label column, which keeps the label width', () => {
     const head = ruleBody('[data-blok-database-drawer-prop-head]');
 
@@ -72,11 +97,40 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-label]')).not.toContain('min-width');
   });
 
-  it('lets the pins scroller shrink between its arrows, and flips the arrows in RTL', () => {
+  it('lets the pins scroller shrink in its row, and flips the arrows in RTL', () => {
     expect(ruleBody('[data-blok-database-drawer-pins-row]')).toContain('display: flex');
     expect(ruleBody('[data-blok-database-drawer-pins-row] > [data-blok-database-drawer-pins]')).toContain('min-inline-size: 0');
-    expect(ruleBody('[data-blok-database-drawer-pins-back][hidden], [data-blok-database-drawer-pins-forward][hidden]')).toContain('display: none');
     expect(ruleBody('[dir="rtl"] [data-blok-database-drawer-pins-back] svg, [dir="rtl"] [data-blok-database-drawer-pins-forward] svg')).toContain('transform: scaleX(-1)');
+  });
+
+  // research/09 §4: 32x32, radius 6px, no fill, 20px chevron, 0.1s ease-in fade, shown per side.
+  it('draws the pin arrows as Notion measured them', () => {
+    const arrow = ruleBody('[data-blok-database-drawer-pins-back], [data-blok-database-drawer-pins-forward]');
+
+    expect(arrow).toContain('position: absolute');
+    expect(arrow).toContain('inline-size: 32px');
+    expect(arrow).toContain('block-size: 32px');
+    expect(arrow).toContain('border-radius: var(--blok-radius-control)');
+    expect(arrow).toContain('background: none');
+    expect(arrow).toContain('opacity: 0');
+    expect(arrow).toContain('visibility: hidden');
+    expect(arrow).toContain('transition: opacity 0.1s ease-in, visibility 0.1s ease-in');
+    expect(ruleBody('[data-blok-database-drawer-pins-back]')).toContain('inset-inline-start: -4px');
+    expect(ruleBody('[data-blok-database-drawer-pins-forward]')).toContain('inset-inline-end: -4px');
+    expect(ruleBody('[data-blok-database-drawer-pins-back] svg, [data-blok-database-drawer-pins-forward] svg')).toContain('inline-size: 20px');
+    const shown = ruleBody('[data-blok-database-drawer-pins-row][data-scroll-back] > [data-blok-database-drawer-pins-back], [data-blok-database-drawer-pins-row][data-scroll-forward] > [data-blok-database-drawer-pins-forward]');
+
+    expect(shown).toContain('opacity: 1');
+    expect(shown).toContain('visibility: visible');
+    expect(database).not.toMatch(/\[data-blok-database-drawer-pins-(?:back|forward)\]:hover[^{]*\{[^}]*background/);
+    expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-drawer-pins-back\], \[data-blok-database-drawer-pins-forward\] \{ transition: none; \}/);
+  });
+
+  it('fades 100px at each pins edge that still hides content', () => {
+    expect(ruleBody('[data-blok-database-drawer-pins-row][data-scroll-back] > [data-blok-database-drawer-pins]')).toContain('--_blok-pins-fade-start: 100px');
+    expect(ruleBody('[data-blok-database-drawer-pins-row][data-scroll-forward] > [data-blok-database-drawer-pins]')).toContain('--_blok-pins-fade-end: 100px');
+    expect(ruleBody('[data-blok-database-drawer-pins]')).toMatch(/mask-image: linear-gradient\(to right, transparent, #000 var\(--_blok-pins-fade-start, 0px\), #000 calc\(100% - var\(--_blok-pins-fade-end, 0px\)\), transparent\)/);
+    expect(ruleBody('[dir="rtl"] [data-blok-database-drawer-pins]')).toContain('to left');
   });
 
   it('uses logical properties and radius role tokens only', () => {
@@ -84,7 +138,8 @@ describe('database row page layout css', () => {
 
     expect(rules.length).toBeGreaterThan(0);
     expect(rules).not.toMatch(/(?:margin|padding|border)-(?:left|right)\b|\b(?:left|right):/);
-    expect(rules).not.toMatch(/border-radius: \d/);
+    // 0 is allowed, as the radius law allows it.
+    expect(rules).not.toMatch(/border-radius: (?!0;)\d/);
     expect(rules).not.toMatch(/:focus(?![-\w])/);
   });
 });

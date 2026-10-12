@@ -587,6 +587,7 @@ describe('view settings panel — sub-items and dependencies', () => {
 
     h.ctx.structure = calls.settings;
     h.open();
+    click('database-settings-more');
     click('database-settings-subitems');
     click('database-settings-subitems-switch');
 
@@ -599,6 +600,7 @@ describe('view settings panel — sub-items and dependencies', () => {
 
     h.ctx.structure = structure({ subItems: true, dependencies: false }).settings;
     h.open();
+    click('database-settings-more');
     click('database-settings-subitems');
     click('database-settings-subitems-display-flattened');
     click('database-settings-subitems-filter-parentsAndSubItems');
@@ -612,11 +614,64 @@ describe('view settings panel — sub-items and dependencies', () => {
 
     h.ctx.structure = structure({ subItems: true, dependencies: false }).settings;
     h.open();
+    click('database-settings-more');
     click('database-settings-subitems');
 
     expect(exists('database-settings-subitems-display-card')).toBe(true);
     expect(exists('database-settings-subitems-display-nested')).toBe(false);
     expect(exists('database-settings-subitems-filter-subItems')).toBe(false);
+  });
+
+  const rowIds = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid^="database-settings-"]')]
+    .map((el) => el.getAttribute('data-blok-testid') ?? '');
+
+  // research/09 §1: More settings holds Sub-items, Dependencies, Connections, Customize page layout (last).
+  it('puts Sub-items, Dependencies and Customize page layout in More settings, after Automations', () => {
+    const h = harness();
+    const customize = vi.fn();
+
+    h.ctx.structure = structure({ subItems: false, dependencies: false }).settings;
+    h.ctx.customizeLayout = () => ({ testId: 'database-settings-customize-layout', label: 'Customize page layout', icon: '', onClick: customize });
+    h.ctx.automations = {
+      read: () => undefined,
+      schema: () => [],
+      views: () => [],
+      writable: () => true,
+      write: () => true,
+    };
+    const panel = h.open();
+    const close = vi.spyOn(panel, 'close');
+    const root = rowIds();
+
+    expect(root).not.toContain('database-settings-subitems');
+    expect(root).not.toContain('database-settings-dependencies');
+    expect(root).not.toContain('database-settings-customize-layout');
+    expect(root[root.indexOf('database-settings-more') - 1]).toBe('database-settings-automations');
+    expect(document.querySelector('[data-blok-testid="database-settings-more"]')?.textContent).toContain('tools.database.settingsMoreSettings');
+    click('database-settings-more');
+
+    expect(rowIds().filter((id) => /^database-settings-(?:subitems|dependencies|customize-layout)$/.test(id)))
+      .toEqual(['database-settings-subitems', 'database-settings-dependencies', 'database-settings-customize-layout']);
+    expect(rowIds().at(-1)).toBe('database-settings-customize-layout');
+    click('database-settings-customize-layout');
+
+    expect(close).toHaveBeenCalled();
+    expect(customize).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows More settings for Customize page layout alone, and hides it when nothing goes in it', () => {
+    const h = harness();
+
+    h.ctx.customizeLayout = () => ({ testId: 'database-settings-customize-layout', label: 'Customize page layout', icon: '', disabled: true, onClick: vi.fn() });
+    h.open();
+    click('database-settings-more');
+
+    expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-settings-customize-layout"]')?.disabled).toBe(true);
+    expect(exists('database-settings-subitems')).toBe(false);
+    document.body.innerHTML = '';
+    harness().open();
+
+    expect(exists('database-settings-more')).toBe(false);
   });
 
   it('turns dependencies on and picks a date shifting rule', () => {
@@ -625,6 +680,7 @@ describe('view settings panel — sub-items and dependencies', () => {
 
     h.ctx.structure = calls.settings;
     h.open();
+    click('database-settings-more');
     click('database-settings-dependencies');
     click('database-settings-dependencies-shift-maintain');
     click('database-settings-dependencies-weekends');

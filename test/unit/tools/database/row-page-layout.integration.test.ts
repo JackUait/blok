@@ -85,6 +85,7 @@ const savedTitle = async (): Promise<Record<string, unknown> | undefined> => {
 
 const customizeAction = async (databaseId = 'db'): Promise<HTMLButtonElement | null> => {
   await click(q(`[data-blok-element][data-blok-id="${databaseId}"] [data-blok-testid="database-toolbar-settings"]`));
+  await click(document.querySelector('[data-blok-testid="database-settings-more"]'));
 
   return document.querySelector<HTMLButtonElement>('[data-blok-testid="database-settings-customize-layout"]');
 };
@@ -154,7 +155,7 @@ describe('row page layout through the database tool', () => {
     expect(shownTitle()).toBe('Two');
   });
 
-  it('opens the first row page in Customize from Customize page layout in the settings panel', async () => {
+  it('opens the first row page in Customize from More settings > Customize page layout', async () => {
     await make(doc());
     const action = await customizeAction();
 
@@ -218,17 +219,33 @@ describe('row page layout through the database tool', () => {
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: added?.id, place: 'heading' }] });
   });
 
-  it('cancels the pin but keeps a property added from the pins row', async () => {
+  // research/09 §3b: after Discard, the property made in the builder is gone.
+  it('deletes a property added from the pins row when Cancel is confirmed with Discard', async () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
     await click(q('[data-blok-database-layout-add-pin]'));
     await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
-    await click(q('[data-blok-database-layout-cancel]'));
 
     expect((await editorSchema()).some((property) => property.type === 'number')).toBe(true);
+    await click(q('[data-blok-database-layout-cancel]'));
+    await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+    expect((await editorSchema()).some((property) => property.type === 'number')).toBe(false);
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [] });
     expect(q('[data-blok-database-drawer-pins]')).toBeNull();
+    expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    expect(drawer()?.isConnected).toBe(true);
+  });
+
+  it('closes Customize at once on Cancel with no edits', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(q('[data-blok-database-layout-cancel]'));
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+    expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
   });
 
   it('saves Property icons off on the title property, and Reset drops the key', async () => {

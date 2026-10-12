@@ -119,6 +119,8 @@ export interface ViewSettingsContext {
   structure?: StructureSettings;
   /** One-shot tool actions on the root page (CSV export and import, saving a chart). */
   actions?: () => ViewSettingsAction[];
+  /** "Customize page layout": the last row of More settings (research/09 §1). */
+  customizeLayout?: () => ViewSettingsAction | undefined;
   automations?: AutomationSettings;
 }
 
@@ -281,25 +283,13 @@ export class ViewSettingsPages {
 
           rows.push(control);
         }
-        const structure = this.ctx.structure;
-
-        if (structure !== undefined) {
-          rows.push(
-            panelRow({
-              label: this.t('settingsSubItems'),
-              testId: 'database-settings-subitems',
-              value: this.t(structure.subItems() ? 'settingsOn' : 'settingsOff'),
-              opensPage: true,
-              onClick: () => panel.push(this.subItems(structure)),
-            }),
-            panelRow({
-              label: this.t('settingsDependencies'),
-              testId: 'database-settings-dependencies',
-              value: this.t(structure.dependencies() !== undefined ? 'settingsOn' : 'settingsOff'),
-              opensPage: true,
-              onClick: () => panel.push(this.dependencies(structure)),
-            })
-          );
+        if (this.ctx.structure !== undefined || this.ctx.customizeLayout?.() !== undefined) {
+          rows.push(panelRow({
+            label: this.t('settingsMoreSettings'),
+            testId: 'database-settings-more',
+            opensPage: true,
+            onClick: () => panel.push(this.moreSettings()),
+          }));
         }
         for (const action of this.ctx.actions?.() ?? []) {
           rows.push(panelRow({
@@ -347,6 +337,54 @@ export class ViewSettingsPages {
             },
           })
         );
+
+        return rows;
+      },
+    };
+  }
+
+  // ─── More settings: Sub-items, Dependencies, then Customize page layout (research/09 §1) ───
+
+  private moreSettings(): PanelPage {
+    return {
+      title: this.t('settingsMoreSettings'),
+      build: (panel) => {
+        const rows: HTMLElement[] = [];
+        const structure = this.ctx.structure;
+        const customize = this.ctx.customizeLayout?.();
+
+        if (structure !== undefined) {
+          rows.push(
+            panelRow({
+              label: this.t('settingsSubItems'),
+              testId: 'database-settings-subitems',
+              value: this.t(structure.subItems() ? 'settingsOn' : 'settingsOff'),
+              opensPage: true,
+              onClick: () => panel.push(this.subItems(structure)),
+            }),
+            panelRow({
+              label: this.t('settingsDependencies'),
+              testId: 'database-settings-dependencies',
+              value: this.t(structure.dependencies() !== undefined ? 'settingsOn' : 'settingsOff'),
+              opensPage: true,
+              onClick: () => panel.push(this.dependencies(structure)),
+            })
+          );
+        }
+        if (customize !== undefined) {
+          // Notion draws a chevron on every row here, this one included.
+          rows.push(panelRow({
+            label: customize.label,
+            testId: customize.testId,
+            icon: customize.icon,
+            opensPage: true,
+            disabled: customize.disabled === true,
+            onClick: () => {
+              panel.close();
+              customize.onClick();
+            },
+          }));
+        }
 
         return rows;
       },

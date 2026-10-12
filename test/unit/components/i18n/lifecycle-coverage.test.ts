@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1017 + 118 + 410 + 4 closure for all 1549 keys', () => {
+  it('rebuilds a disjoint 1019 + 118 + 411 + 4 closure for all 1552 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1549);
+    expect(lifecycle.size).toBe(1552);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -343,7 +343,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +4: the layout builder's Customize page layout, pin arrows and Property icons call their keys by literal.
       // +3: the agent turn summary (agent.changedOneBlock/changedBlocks) and the
       // agent presence label (presence.agentFor) are called by literal.
-      'executable-literal': 1017,
+      // +2: the layout builder's discard question (layoutDiscardTitle, layoutDiscard) calls its keys by literal.
+      'executable-literal': 1019,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -365,7 +366,8 @@ describe('current English catalog lifecycle coverage', () => {
       // the any/every/none rollup filter operators are composed from tools.database.* namespaces.
       // -1: tools.database.settingsOpenPagesIn moved to executable-literal (see above).
       // +43: the chart settings rows build their tools.database.chart* keys from a short name.
-      'registered-namespace-compatible': 410,
+      // +1: the view settings panel builds tools.database.settingsMoreSettings from a short name.
+      'registered-namespace-compatible': 411,
       'catalog-only': 4,
     });
     expect(

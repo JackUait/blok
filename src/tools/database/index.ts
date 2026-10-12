@@ -2611,14 +2611,11 @@ export class DatabaseTool implements BlockTool {
     input.click();
   }
 
-  /**
-   * "Customize page layout" (Notion's settings menu label). It opens the first
-   * row page and starts customizing. Its place in the panel is a Blok choice.
-   */
-  private layoutActions(): ViewSettingsAction[] {
-    if (this.readOnly || this.structureLocked() || this.linked) return [];
+  /** "Customize page layout", last in More settings. It opens the first row page and starts customizing. */
+  private customizeLayoutAction(): ViewSettingsAction | undefined {
+    if (this.readOnly || this.structureLocked() || this.linked) return undefined;
 
-    return [{
+    return {
       testId: 'database-settings-customize-layout',
       label: this.api.i18n.t('tools.database.layoutCustomizePage'),
       icon: IconSplitView,
@@ -2630,7 +2627,7 @@ export class DatabaseTool implements BlockTool {
         this.handleRowClick(first.id);
         this.cardDrawer?.startCustomizing();
       },
-    }];
+    };
   }
 
   /** "…" panel actions: save the chart, export the view, import or merge a CSV. */
@@ -3097,7 +3094,8 @@ export class DatabaseTool implements BlockTool {
       groups: (sub) => this.groupEntries(sub),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
       layoutItems: () => this.layoutItems(),
-      actions: () => [...(context === undefined ? this.layoutActions() : []), ...this.csvActions()],
+      actions: () => this.csvActions(),
+      ...(context === undefined ? { customizeLayout: () => this.customizeLayoutAction() } : {}),
       automations: {
         read: () => owner.savedAutomations,
         schema: () => owner.model.getSchema(),
@@ -5153,6 +5151,10 @@ export class DatabaseTool implements BlockTool {
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
           onAdded?.(created.id);
         }),
+        onDeleteProperty: (propertyId) => {
+          this.deleteProperty(propertyId);
+          this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+        },
         hasPeople: this.hasPeople,
         cellContext: () => this.cellContext(),
         onPropertyValueChange: (rowId, propertyId, input) => {

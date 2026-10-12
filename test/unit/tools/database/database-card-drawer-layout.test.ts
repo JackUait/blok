@@ -141,7 +141,8 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(q('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-section-body]')?.hidden).toBe(true);
   });
 
-  it('draws modules in the page and in a details panel that View details closes', () => {
+  // research/09 §9: the panel starts closed; View details opens it.
+  it('draws modules in the page and in a details panel that View details opens and closes', () => {
     const options = createOptions({
       schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-owner', place: 'page' }, { id: 'p-due', place: 'panel' }] }),
     });
@@ -152,11 +153,40 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(idsIn('[data-blok-database-drawer-details]')).toEqual(['p-due']);
     const toggle = q('[data-blok-database-drawer-details-toggle]');
 
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    toggle?.click();
-
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
+    expect(q('[data-blok-database-drawer]')?.hasAttribute('data-details-open')).toBe(false);
+    toggle?.click();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
+    expect(q('[data-blok-database-drawer]')?.hasAttribute('data-details-open')).toBe(true);
+    toggle?.click();
+
+    expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
+    expect(q('[data-blok-database-drawer]')?.hasAttribute('data-details-open')).toBe(false);
+  });
+
+  // research/09 §9: closed on every navigation measured; it does not persist.
+  it('starts the details panel closed on every open and on the next row', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
+    const drawer = new DatabaseCardDrawer(options);
+    const details = (): HTMLElement | null => q('[data-blok-database-drawer-details]');
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+
+    expect(details()?.hidden).toBe(false);
+    drawer.open({ ...ROW, id: 'row-2' });
+
+    expect(details()?.hidden).toBe(true);
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+    drawer.close();
+    drawer.open(ROW);
+
+    expect(details()?.hidden).toBe(true);
+    expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('false');
+    drawer.destroy();
   });
 
   it('puts the details panel beside the page column, after it in focus order, with View details first', () => {
@@ -389,7 +419,6 @@ describe('DatabaseCardDrawer — page layout', () => {
       const drawer = new DatabaseCardDrawer(options);
 
       drawer.open(ROW);
-      q('[data-blok-database-drawer-details-toggle]')?.click();
       q('[data-blok-database-drawer-customize]')?.click();
 
       expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
@@ -471,7 +500,20 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
     });
 
-    it('drops the draft on Cancel', () => {
+    // research/09 §3b: Cancel with no edits closes at once.
+    it('closes at once on Cancel with no edits, without asking', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    });
+
+    // research/09 §3b: "Discard all layout changes?" with Discard (red) and Cancel.
+    it('asks before dropping edits on Cancel, and keeps customizing when that is cancelled', async () => {
       const options = createOptions();
 
       new DatabaseCardDrawer(options).open(ROW);
@@ -479,9 +521,104 @@ describe('DatabaseCardDrawer — page layout', () => {
       openItemMenu('p-due');
       clickItem('pin');
       q('[data-blok-database-layout-cancel]')?.click();
+      const dialog = q('[data-blok-database-confirm-dialog]');
 
+      expect(dialog).not.toBeNull();
+      expect(dialog?.closest('[data-blok-database-drawer]')).not.toBeNull();
+      expect(q('[data-blok-database-confirm-title]')?.textContent).toBe('Discard all layout changes?');
+      expect(q('[data-blok-database-confirm-action="confirm"]')?.textContent).toBe('Discard');
+      expect(q('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-destructive')).toBe(true);
+      expect(q('[data-blok-database-confirm-action="cancel"]')?.textContent).toBe('Cancel');
+      q('[data-blok-database-confirm-action="cancel"]')?.click();
+      await Promise.resolve();
+
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
+    });
+
+    it('drops the draft and every property made while customizing on Discard', async () => {
+      const added: PropertyDefinition[] = [];
+      const options = createOptions({ onDeleteProperty: vi.fn() });
+      const drawer = new DatabaseCardDrawer({
+        ...options,
+        onAddProperty: () => {
+          added.push({ id: `p-new-${added.length}`, name: 'Budget', type: 'number', position: `a9${added.length}` });
+          drawer.refreshSchema([...schemaWith(), ...added]);
+        },
+      });
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-drawer-add-prop]')?.click();
+      q('[data-blok-database-property-type-option="number"]')?.click();
+      q('[data-blok-database-layout-add-pin]')?.click();
+      q('[data-blok-database-property-type-option="number"]')?.click();
+      q('[data-blok-database-layout-cancel]')?.click();
+      q('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+
+      expect(vi.mocked(options.onDeleteProperty)?.mock.calls.map(([id]) => id)).toEqual(['p-new-0', 'p-new-1']);
+      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
       expect(q('[data-blok-database-drawer-pins]')).toBeNull();
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('asks on Cancel after only adding a property through the host menu, and deletes it on Discard', async () => {
+      const options = createOptions({ onOpenAddProperty: vi.fn(), onDeleteProperty: vi.fn() });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      q('[data-blok-database-drawer-add-prop]')?.click();
+      const [, onAdded] = vi.mocked(options.onOpenAddProperty)?.mock.calls[0] ?? [];
+
+      drawer.refreshSchema([...schemaWith(), { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' }]);
+      onAdded?.('p-new');
+      q('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-confirm-dialog]')).not.toBeNull();
+      q('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+
+      expect(options.onDeleteProperty).toHaveBeenCalledWith('p-new');
+      drawer.destroy();
+    });
+
+    it('keeps the drawer and the draft when Escape closes the discard question', async () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+      q('[data-blok-database-layout-cancel]')?.click();
+      q('[data-blok-database-confirm-action="cancel"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await Promise.resolve();
+
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      expect(q('[data-blok-database-drawer]')).not.toBeNull();
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
+      drawer.destroy();
+    });
+
+    it('keeps the page and the draft open on Escape while customizing', () => {
+      const options = createOptions({ onEscapeClose: vi.fn() });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openItemMenu('p-due');
+      clickItem('pin');
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('[data-blok-database-drawer]')).not.toBeNull();
+      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
+      expect(options.onEscapeClose).not.toHaveBeenCalled();
+      drawer.destroy();
     });
 
     it('keeps the draft across a remote schema refresh and applies it over the newest layout', () => {
@@ -756,26 +893,65 @@ describe('DatabaseCardDrawer — page layout', () => {
 
     afterEach(() => {
       vi.unstubAllGlobals();
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo');
     });
 
-    it('shows only the forward arrow while the pins overflow at the start', () => {
+    const row = (): HTMLElement | null => q('[data-blok-database-drawer-pins-row]');
+
+    // research/09 §4: each arrow shows only while the strip can scroll its way.
+    it('marks only the forward side scrollable while the pins overflow at the start', () => {
       box(600, 300);
       new DatabaseCardDrawer(createOptions({ schema: PINNED })).open(ROW);
       observers.at(-1)?.fire();
 
-      expect(q('[data-blok-database-drawer-pins-forward]')?.hidden).toBe(false);
-      expect(q('[data-blok-database-drawer-pins-back]')?.hidden).toBe(true);
-      expect(q('[data-blok-database-drawer-pins-forward]')?.getAttribute('aria-label')).toBe('Show more pinned properties');
+      expect(row()?.hasAttribute('data-scroll-forward')).toBe(true);
+      expect(row()?.hasAttribute('data-scroll-back')).toBe(false);
+      expect(q('[data-blok-database-drawer-pins-forward]')?.getAttribute('aria-label')).toBe('Scroll to next pinned properties');
       expect(observers.at(-1)?.observe).toHaveBeenCalledWith(q('[data-blok-database-drawer-pins]'));
     });
 
-    it('hides both arrows when the pins fit', () => {
+    it('marks neither side scrollable when the pins fit', () => {
       box(300, 300);
       new DatabaseCardDrawer(createOptions({ schema: PINNED })).open(ROW);
       observers.at(-1)?.fire();
 
-      expect(q('[data-blok-database-drawer-pins-forward]')?.hidden).toBe(true);
-      expect(q('[data-blok-database-drawer-pins-back]')?.hidden).toBe(true);
+      expect(row()?.hasAttribute('data-scroll-forward')).toBe(false);
+      expect(row()?.hasAttribute('data-scroll-back')).toBe(false);
+    });
+
+    // research/09 §4: 0 → 400 → 682 (max) and 682 → 282 → 0 at width 600, scrollWidth 1282.
+    it('scrolls 400px per click, clamped to both ends', () => {
+      box(1282, 600);
+      const scrollLeft = vi.spyOn(HTMLElement.prototype, 'scrollLeft', 'get').mockReturnValue(0);
+      const scrollTo = vi.fn();
+
+      Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, writable: true, value: scrollTo });
+      new DatabaseCardDrawer(createOptions({ schema: PINNED })).open(ROW);
+      const forward = q('[data-blok-database-drawer-pins-forward]');
+      const back = q('[data-blok-database-drawer-pins-back]');
+      const lefts = (): unknown[] => scrollTo.mock.calls.map(([arg]) => (arg as ScrollToOptions).left);
+
+      forward?.click();
+      scrollLeft.mockReturnValue(400);
+      forward?.click();
+      scrollLeft.mockReturnValue(682);
+      back?.click();
+      scrollLeft.mockReturnValue(282);
+      back?.click();
+
+      expect(lefts()).toEqual([400, 682, 282, 0]);
+    });
+
+    // research/09 §4: inside the builder there are no arrows, only the edge fade.
+    it('draws no arrows while customizing but still marks the fade sides', () => {
+      box(600, 300);
+      new DatabaseCardDrawer(createOptions({ schema: PINNED })).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      observers.at(-1)?.fire();
+
+      expect(q('[data-blok-database-drawer-pins-forward]')).toBeNull();
+      expect(q('[data-blok-database-drawer-pins-back]')).toBeNull();
+      expect(row()?.hasAttribute('data-scroll-forward')).toBe(true);
     });
 
     it('disconnects the pins observer on redraw, close and destroy', () => {

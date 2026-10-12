@@ -47,9 +47,16 @@ import {
 } from './page-layout';
 import type { PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
+import { openDatabaseConfirm } from './database-confirm-dialog';
 
 /** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
+/** The full-page details panel's width (research/09 §9). Must match database.css. */
+const DETAILS_DOCK_WIDTH = 385;
+/** Space between the narrowed full page and the panel. Blok's; Notion's page padding was 96px. */
+const DETAILS_DOCK_GAP = 24;
+/** Notion's pin arrows scroll 400px per click (research/09 §4). */
+const PIN_SCROLL_STEP = 400;
 
 /**
  * Runs `done` once, when the drawer's slide ends. Reduced motion turns that
@@ -115,6 +122,8 @@ export interface CardDrawerOptions {
    * `onAdded` gets the new property's id after the schema refresh.
    */
   onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string) => void) => void;
+  /** Discard in Customize layout: delete a property made while customizing. */
+  onDeleteProperty?: (propertyId: string) => void;
   /** A property label was clicked: open its property menu under `anchor`. */
   onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement) => void;
   /** Offer Person when adding a property. */
@@ -246,6 +255,7 @@ export class DatabaseCardDrawer {
   private readonly onAddProperty: CardDrawerOptions['onAddProperty'];
   private readonly onOpenPropertyMenu: CardDrawerOptions['onOpenPropertyMenu'];
   private readonly onOpenAddProperty: CardDrawerOptions['onOpenAddProperty'];
+  private readonly onDeleteProperty: CardDrawerOptions['onDeleteProperty'];
   private readonly hasPeople: boolean;
   private readonly cellContext: () => Partial<CellContext>;
   private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
@@ -264,12 +274,15 @@ export class DatabaseCardDrawer {
   private readonly databaseLocked: () => boolean;
   /** The edits of an open Customize layout, or null when not customizing. */
   private layoutDraft: PageLayoutOp[] | null = null;
+  /** Properties made while customizing. Discard deletes them (research/09 §3b). */
+  private draftProperties: string[] = [];
   private layoutMenu: PopoverDesktop | null = null;
   /** Watches the pins scroller for overflow. Replaced on every redraw. */
   private pinsObserver: ResizeObserver | null = null;
   /** The resolved layout's "Property icons", read while drawing property rows. */
   private propertyIcons = true;
-  private detailsOpen = true;
+  /** "View details". Closed on every open, as in Notion (research/09 §9). */
+  private detailsOpen = false;
   private readonly collapsedSections = new Set<string>();
   /** The open tab of a Tabbed page: 'content' or a relation property id. */
   private activeTab = 'content';
@@ -304,6 +317,7 @@ export class DatabaseCardDrawer {
   private readonly failedLookupRows = new Set<string>();
   private isBodyChanged: ((data: OutputData) => boolean) | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
+  private resizeHandler: (() => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
   private propertyTypePopover: DatabasePropertyTypePopover | null = null;
   /** The built-in type menu was opened from the pins row: pin what it adds. */
@@ -325,6 +339,7 @@ export class DatabaseCardDrawer {
     this.onAddProperty = options.onAddProperty;
     this.onOpenPropertyMenu = options.onOpenPropertyMenu;
     this.onOpenAddProperty = options.onOpenAddProperty;
+    this.onDeleteProperty = options.onDeleteProperty;
     this.hasPeople = options.hasPeople === true;
     this.cellContext = options.cellContext ?? ((): Partial<CellContext> => ({}));
     this.onPropertyValueChange = options.onPropertyValueChange;
@@ -393,6 +408,7 @@ export class DatabaseCardDrawer {
         return;
       }
 
+      this.detailsOpen = false;
       this.loadCard(row);
 
       return;
@@ -404,6 +420,7 @@ export class DatabaseCardDrawer {
     this.releaseLeavingBody();
     exiting?.remove();
 
+    this.detailsOpen = false;
     this.currentRowId = row.id;
     this.currentRow = row;
     this.updateActiveCard(row.id);
@@ -514,8 +531,8 @@ export class DatabaseCardDrawer {
 
         return;
       }
-      // A full page is left with its back button, not Escape.
-      if (e.key !== 'Escape' || this.mode === 'full') {
+      // A full page is left with its back button, not Escape. Customize layout is left with Cancel or Apply (research/10 §2).
+      if (e.key !== 'Escape' || this.mode === 'full' || this.layoutDraft !== null) {
         return;
       }
 
@@ -533,6 +550,8 @@ export class DatabaseCardDrawer {
       }
     };
     document.addEventListener('keydown', this.escapeHandler);
+    this.resizeHandler = (): void => this.syncDetailsDock();
+    window.addEventListener('resize', this.resizeHandler);
 
     this.outsideClickHandler = (e: MouseEvent): void => {
       const target = e.target as Node | null;
@@ -1051,6 +1070,7 @@ export class DatabaseCardDrawer {
     }
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
     this.syncStepButtons();
+    this.syncDetailsDock();
   }
 
   private ensureBackdrop(drawer: HTMLElement): void {
@@ -1264,7 +1284,7 @@ export class DatabaseCardDrawer {
   /** "+ Add a property". From the pins row, the new property becomes a draft pin; the property itself is written at once. */
   private openAddProperty(anchor: HTMLElement, pinIt: boolean): void {
     if (this.onOpenAddProperty !== undefined) {
-      this.onOpenAddProperty(anchor, pinIt ? (id) => this.editLayout(pin(id)) : undefined);
+      this.onOpenAddProperty(anchor, pinIt || this.layoutDraft !== null ? (id) => this.addedWhileCustomizing(id, pinIt) : undefined);
 
       return;
     }
@@ -1276,9 +1296,9 @@ export class DatabaseCardDrawer {
 
           this.onAddProperty?.(type, name);
           // onAddProperty refreshes the schema synchronously, so the new property is there now.
-          const added = this.pinNextAdded ? this.schema.find((p) => !before.has(p.id)) : undefined;
+          const added = this.schema.find((p) => !before.has(p.id));
 
-          if (added !== undefined) this.editLayout(pin(added.id));
+          if (added !== undefined) this.addedWhileCustomizing(added.id, this.pinNextAdded);
           this.propertyTypePopover?.close();
         },
         i18n: this.i18n,
@@ -1288,6 +1308,11 @@ export class DatabaseCardDrawer {
     }
 
     this.propertyTypePopover.open(anchor);
+  }
+
+  private addedWhileCustomizing(id: string, pinIt: boolean): void {
+    if (this.layoutDraft !== null) this.draftProperties.push(id);
+    if (pinIt) this.editLayout(pin(id));
   }
 
   /** A named section of the property group. Folding it is this viewer's own. */
@@ -1372,6 +1397,7 @@ export class DatabaseCardDrawer {
       return;
     }
     content.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
+    this.drawer?.removeAttribute('data-details-open');
     this.stopWatchingPins();
     const resolved = this.resolvedLayout();
 
@@ -1429,6 +1455,36 @@ export class DatabaseCardDrawer {
       content.insertBefore(region, divider);
     }
     this.renderLayoutBar();
+    this.syncDetailsDock();
+  }
+
+  /**
+   * The details panel docks at the window's edge on a full page and inside the
+   * center peek's modal (research/09 §9). The full page narrows so the panel
+   * does not cover it; the center panel starts below the peek's toolbar.
+   */
+  private syncDetailsDock(): void {
+    const drawer = this.drawer;
+
+    if (drawer === null) {
+      return;
+    }
+    drawer.style.removeProperty('padding-inline-end');
+    const toolbar = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-toolbar]');
+
+    drawer.style.setProperty('--_blok-peek-toolbar-size', `${toolbar?.offsetHeight ?? 0}px`);
+    if (this.mode !== 'full' || !drawer.hasAttribute('data-details-open')) {
+      return;
+    }
+    const rect = drawer.getBoundingClientRect();
+    const viewport = document.documentElement.clientWidth;
+    const covered = getElementDirection(drawer) === 'rtl'
+      ? DETAILS_DOCK_WIDTH - rect.left
+      : rect.right - (viewport - DETAILS_DOCK_WIDTH);
+
+    if (covered > 0) {
+      drawer.style.paddingInlineEnd = `${covered + DETAILS_DOCK_GAP}px`;
+    }
   }
 
   /**
@@ -1491,42 +1547,49 @@ export class DatabaseCardDrawer {
     return panel;
   }
 
-  /** The pins scroller, and "+ Add a property" while customizing. `pinned` counts pins search hides too. */
+  /**
+   * The pins scroller, and "+ Add a property" while customizing. `pinned` counts pins search hides too.
+   * Outside the builder, < > arrows step 400px; inside it there is only the edge fade (research/09 §4).
+   */
   private buildPinsRow(pins: PropertyDefinition[], pinned: number, row: DatabaseRow): HTMLElement {
     const wrap = document.createElement('div');
     const scroller = this.moduleList('data-blok-database-drawer-pins', 'heading', pins, row);
-    // Notion's arrows were not measured: the step (most of the visible width) and the look are Blok's.
-    const scrollPins = (step: 1 | -1): void => {
-      const rtl = getElementDirection(scroller) === 'rtl' ? -1 : 1;
-
-      scroller.scrollBy({ left: step * rtl * scroller.clientWidth * 0.8, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    };
-    const back = this.iconButton('data-blok-database-drawer-pins-back', 'tools.database.layoutPinsBack', IconChevronLeft, () => scrollPins(-1));
-    const forward = this.iconButton('data-blok-database-drawer-pins-forward', 'tools.database.layoutPinsForward', IconChevronRight, () => scrollPins(1));
     // RTL scrolls toward negative scrollLeft, so the distance from the start is its absolute value.
     const sync = (): void => {
       const start = Math.abs(scroller.scrollLeft);
       const overflow = scroller.scrollWidth - scroller.clientWidth > 1;
 
-      back.hidden = !overflow || start <= 1;
-      forward.hidden = !overflow || start + scroller.clientWidth >= scroller.scrollWidth - 1;
+      wrap.toggleAttribute('data-scroll-back', overflow && start > 1);
+      wrap.toggleAttribute('data-scroll-forward', overflow && start + scroller.clientWidth < scroller.scrollWidth - 1);
     };
 
     wrap.setAttribute('data-blok-database-drawer-pins-row', '');
-    back.hidden = true;
-    forward.hidden = true;
     scroller.addEventListener('scroll', sync, { passive: true });
     if (typeof ResizeObserver !== 'undefined') {
       this.pinsObserver = new ResizeObserver(sync);
       this.pinsObserver.observe(scroller);
     }
-    wrap.append(back, scroller, forward);
     if (this.layoutDraft !== null) {
       const add = this.textButton('data-blok-database-layout-add-pin', 'tools.database.addProperty', () => this.openAddProperty(add, true));
 
       add.disabled = pinned >= PAGE_LAYOUT_PIN_LIMIT;
-      wrap.appendChild(add);
+      wrap.append(scroller, add);
+
+      return wrap;
     }
+    const scrollPins = (step: 1 | -1): void => {
+      const rtl = getElementDirection(scroller) === 'rtl' ? -1 : 1;
+      const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      const next = Math.min(max, Math.max(0, Math.abs(scroller.scrollLeft) + step * PIN_SCROLL_STEP));
+
+      scroller.scrollTo({ left: rtl * next, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    };
+
+    wrap.append(
+      this.iconButton('data-blok-database-drawer-pins-back', 'tools.database.layoutPinsBack', IconChevronLeft, () => scrollPins(-1)),
+      scroller,
+      this.iconButton('data-blok-database-drawer-pins-forward', 'tools.database.layoutPinsForward', IconChevronRight, () => scrollPins(1))
+    );
 
     return wrap;
   }
@@ -1581,6 +1644,7 @@ export class DatabaseCardDrawer {
     panel.setAttribute('role', 'region');
     panel.setAttribute('aria-label', this.label('tools.database.layoutDetailsPanel'));
     panel.hidden = this.layoutDraft === null && !this.detailsOpen;
+    this.drawer?.toggleAttribute('data-details-open', !panel.hidden);
     panel.append(...group);
     if (layout.panelModules.length > 0) {
       panel.appendChild(this.moduleList('data-blok-database-drawer-panel-modules', 'panel', layout.panelModules, row));
@@ -1589,6 +1653,8 @@ export class DatabaseCardDrawer {
       this.detailsOpen = !this.detailsOpen;
       toggle.setAttribute('aria-expanded', String(this.detailsOpen));
       panel.hidden = !this.detailsOpen;
+      this.drawer?.toggleAttribute('data-details-open', this.detailsOpen);
+      this.syncDetailsDock();
     });
 
     return [toggle, panel];
@@ -1600,6 +1666,7 @@ export class DatabaseCardDrawer {
     }
     this.onPageLayoutBirth?.();
     this.layoutDraft = [];
+    this.draftProperties = [];
     this.renderRegions(this.currentRow);
   }
 
@@ -1617,10 +1684,43 @@ export class DatabaseCardDrawer {
 
     this.closeLayoutMenu();
     this.layoutDraft = null;
+    this.draftProperties = [];
     if (apply && draft !== null && draft.length > 0) {
       this.onPageLayoutChange?.((layout) => draft.reduce((acc, op) => op(acc), layout));
     }
     if (this.currentRow !== null) this.renderRegions(this.currentRow);
+  }
+
+  /** Cancel: with edits, asks first. Discard also deletes the properties made meanwhile (research/09 §3b). */
+  private cancelCustomizing(): void {
+    if (this.layoutDraft === null) {
+      return;
+    }
+    if (this.layoutDraft.length === 0 && this.draftProperties.length === 0) {
+      this.finishCustomizing(false);
+
+      return;
+    }
+    const draft = this.layoutDraft;
+
+    this.closeLayoutMenu();
+    void openDatabaseConfirm({
+      title: this.label('tools.database.layoutDiscardTitle'),
+      confirmLabel: this.label('tools.database.layoutDiscard'),
+      cancelLabel: this.label('tools.database.layoutCancel'),
+      destructive: true,
+      directionSource: this.drawer,
+      // A peek closes on a click outside it, so the dialog mounts inside. A full page does not,
+      // and there the docked details panel would paint over an in-page dialog.
+      ...(this.drawer === null || this.mode === 'full' ? {} : { container: this.drawer }),
+    }).then((discard) => {
+      // The page closed or customizing ended while the question was open.
+      if (!discard || this.layoutDraft !== draft) return;
+      const made = this.draftProperties;
+
+      this.finishCustomizing(false);
+      for (const id of made) this.onDeleteProperty?.(id);
+    });
   }
 
   /** The builder bar at the top of the page while customizing. */
@@ -1660,7 +1760,7 @@ export class DatabaseCardDrawer {
       title,
       search,
       settings,
-      this.textButton('data-blok-database-layout-cancel', 'tools.database.layoutCancel', () => this.finishCustomizing(false)),
+      this.textButton('data-blok-database-layout-cancel', 'tools.database.layoutCancel', () => this.cancelCustomizing()),
       this.textButton('data-blok-database-layout-apply', 'tools.database.layoutApply', () => this.finishCustomizing(true))
     );
     content.prepend(bar);
@@ -2025,6 +2125,10 @@ export class DatabaseCardDrawer {
     if (this.outsideClickHandler) {
       document.removeEventListener('mousedown', this.outsideClickHandler);
       this.outsideClickHandler = null;
+    }
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
     }
   }
 

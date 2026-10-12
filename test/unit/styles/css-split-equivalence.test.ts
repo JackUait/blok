@@ -778,8 +778,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: backlog fixes: the lane column body radius, the timeline table footer, the empty gallery group drop ring, the AA yellow and brown accents, the board column "Load more".
     const DATABASE_BACKLOG_BYTES = 825;
     // database.css: the row page layout (pins, sections, modules, details panel, tabs, builder bar), plus 543 for the panel beside the page,
-    // plus 2_017 for the property label icon, the pin scroll arrows and the pinned "+ Add a property".
-    const DATABASE_ROW_PAGE_LAYOUT_BYTES = 5_720 + 543 + 2_017;
+    // plus 2_017 for the property label icon, the pin scroll arrows and the pinned "+ Add a property",
+    // plus 2_658 for research/09: the measured pin arrows and edge fades, and the docked details panels.
+    const DATABASE_ROW_PAGE_LAYOUT_BYTES = 5_720 + 543 + 2_017 + 2_658;
     // database.css: Tier 3 (D6) form, map and dashboard views.
     const DATABASE_TIER3_VIEWS_BYTES = 2_255;
     // database.css: the side peek narrowing past the isolation reset, its 34px property rows, the selection bar in the toolbar row, the gray fill handle ring.

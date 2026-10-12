@@ -2097,14 +2097,29 @@
   block-size: 16px;
 }
 
+/* A 100px fade at each edge that still hides pins (research/09 §4). A mask keeps it right in dark mode. */
 [data-blok-database-drawer-pins] {
   display: flex;
   gap: var(--blok-space-4);
   overflow-x: auto;
+  mask-image: linear-gradient(to right, transparent, #000 var(--_blok-pins-fade-start, 0px), #000 calc(100% - var(--_blok-pins-fade-end, 0px)), transparent);
 }
 
-/* Arrows and "+ Add a property" sit beside the scroller. Notion's arrows were not measured; sizes are Blok's. */
+[dir="rtl"] [data-blok-database-drawer-pins] {
+  mask-image: linear-gradient(to left, transparent, #000 var(--_blok-pins-fade-start, 0px), #000 calc(100% - var(--_blok-pins-fade-end, 0px)), transparent);
+}
+
+[data-blok-database-drawer-pins-row][data-scroll-back] > [data-blok-database-drawer-pins] {
+  --_blok-pins-fade-start: 100px;
+}
+
+[data-blok-database-drawer-pins-row][data-scroll-forward] > [data-blok-database-drawer-pins] {
+  --_blok-pins-fade-end: 100px;
+}
+
+/* The arrows lie over the strip's edges; "+ Add a property" sits beside it while customizing. */
 [data-blok-database-drawer-pins-row] {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--blok-space-1);
@@ -2116,20 +2131,41 @@
   min-inline-size: 0;
 }
 
+/* research/09 §4: 32x32, no fill, shown only while the strip can scroll that way. */
 [data-blok-database-drawer-pins-back],
 [data-blok-database-drawer-pins-forward] {
+  position: absolute;
+  inset-block: 0;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  inline-size: 24px;
-  block-size: 24px;
+  inline-size: 32px;
+  block-size: 32px;
+  margin-block: auto;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-control);
   background: none;
   color: var(--blok-database-add-text);
   cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s ease-in, visibility 0.1s ease-in;
+}
+
+[data-blok-database-drawer-pins-back] {
+  inset-inline-start: -4px;
+}
+
+[data-blok-database-drawer-pins-forward] {
+  inset-inline-end: -4px;
+}
+
+[data-blok-database-drawer-pins-row][data-scroll-back] > [data-blok-database-drawer-pins-back],
+[data-blok-database-drawer-pins-row][data-scroll-forward] > [data-blok-database-drawer-pins-forward] {
+  opacity: 1;
+  visibility: visible;
 }
 
 [data-blok-database-layout-add-pin]:disabled {
@@ -2137,15 +2173,10 @@
   cursor: default;
 }
 
-[data-blok-database-drawer-pins-back][hidden],
-[data-blok-database-drawer-pins-forward][hidden] {
-  display: none;
-}
-
 [data-blok-database-drawer-pins-back] svg,
 [data-blok-database-drawer-pins-forward] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: 20px;
+  block-size: 20px;
 }
 
 [dir="rtl"] [data-blok-database-drawer-pins-back] svg,
@@ -2213,6 +2244,39 @@
   background-color: var(--blok-database-column-bg);
 }
 
+/* research/09 §9, full page: a 385px column at the window's inline end, full height. 385 is DETAILS_DOCK_WIDTH in database-card-drawer.ts. */
+[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-details] {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: var(--blok-z-drawer);
+  inline-size: 385px;
+  margin: 0;
+  overflow-y: auto;
+  border-inline-start: 1px solid var(--blok-database-drawer-border);
+  border-radius: 0;
+  background-color: var(--blok-bg-primary);
+}
+
+/* research/09 §9, center peek: a 280px column inside the modal, below its toolbar; the page narrows beside it. */
+[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-details] {
+  position: absolute;
+  inset-block-start: var(--_blok-peek-toolbar-size, 0px);
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  inline-size: 280px;
+  margin: 0;
+  overflow-y: auto;
+  border-inline-start: 1px solid var(--blok-database-drawer-border);
+  border-radius: 0;
+  background-color: var(--blok-popover-bg);
+}
+
+/* 60px is the content's own inline padding. */
+[data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-content] {
+  padding-inline-end: calc(280px + 60px);
+}
+
 [data-blok-database-drawer-details][hidden],
 [data-blok-database-drawer-section-body][hidden],
 [data-blok-database-drawer-editor][hidden] { display: none; }
@@ -2274,8 +2338,6 @@
   [data-blok-database-layout-apply]:hover,
   [data-blok-database-layout-add-section]:hover,
   [data-blok-database-layout-add-pin]:not(:disabled):hover,
-  [data-blok-database-drawer-pins-back]:hover,
-  [data-blok-database-drawer-pins-forward]:hover,
   [data-blok-database-layout-item-menu]:hover,
   [data-blok-database-layout-section-delete]:hover,
   [data-blok-database-drawer-details-toggle]:hover,
@@ -2284,9 +2346,17 @@
   }
 }
 
+@media (hover: hover) {
+  [data-blok-database-drawer-pins-back]:hover,
+  [data-blok-database-drawer-pins-forward]:hover {
+    color: var(--blok-text-primary);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-drawer-section-toggle] svg { transition: none; }
   [data-blok-database-drawer-customize] { transition: none; }
+  [data-blok-database-drawer-pins-back], [data-blok-database-drawer-pins-forward] { transition: none; }
 }
 
 /* ─── Property type popover ──────────────────────────────────────────────── */

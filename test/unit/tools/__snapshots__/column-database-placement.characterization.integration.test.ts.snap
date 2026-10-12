@@ -1330,6 +1330,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-board",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -1479,6 +1483,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-board",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -1615,6 +1623,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-board",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -1764,6 +1776,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-board",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -1898,6 +1914,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-board",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2029,6 +2049,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-board",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2161,6 +2185,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-list",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2309,6 +2337,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-list",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2444,6 +2476,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-list",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2592,6 +2628,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-list",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2725,6 +2765,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-list",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",
@@ -2856,6 +2900,10 @@ exports[`column and database placement — characterization > adds a database ro
         ],
         "data": {
           "activeViewId": "v-list",
+          "automations": {
+            "definitions": [],
+            "version": 1,
+          },
           "schema": [
             {
               "id": "p-title",

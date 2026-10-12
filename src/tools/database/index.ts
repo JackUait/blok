@@ -884,7 +884,8 @@ export class DatabaseTool implements BlockTool {
     return {
       ...structuredClone(this.unknown),
       ...this.model.snapshot(),
-      ...(this.savedAutomations !== undefined ? { automations: structuredClone(this.savedAutomations) } : {}),
+      // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
+      automations: structuredClone(this.savedAutomations ?? { version: 1, definitions: [] }),
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
       title: currentTitle,

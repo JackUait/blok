@@ -748,7 +748,7 @@ describe('DatabaseTool', () => {
 
       expect(saved.title).toBe('Typed');
       expect(saved.futureKey).toBe(1);
-      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'futureKey', 'schema', 'title', 'views']);
+      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'automations', 'futureKey', 'schema', 'title', 'views']);
     });
 
     it('keeps a newer client key after the backend snapshot hydrates the model', async () => {

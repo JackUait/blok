@@ -36,7 +36,7 @@ const LAYOUT_LOAD_LIMITS: Partial<Record<string, LoadLimit>> = { board: BOARD_DE
 export { resolveViewProperties, resolveWrapCells, visibleRowPropertyIds } from '../../shared/database/view-properties';
 export type { ResolvedViewProperty } from '../../shared/database/view-properties';
 
-export type ViewPropertyPatch = Partial<Pick<ViewPropertySetting, 'visible' | 'width' | 'wrap' | 'required' | 'description' | 'questionName' | 'longAnswer' | 'maxSelections'>>;
+export type ViewPropertyPatch = Partial<Pick<ViewPropertySetting, 'visible' | 'width' | 'wrap' | 'required' | 'description' | 'questionName' | 'longAnswer' | 'maxSelections' | 'showOptionsAs'>>;
 
 /**
  * The stored `properties` list to write. Unknown fields and entries for ids

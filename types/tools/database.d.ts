@@ -768,6 +768,8 @@ export interface AutofillSettings {
   onCreate?: boolean;
   /** Fill again when another value of the row changes. Default false. */
   onEdit?: boolean;
+  /** With `onEdit`: only a change to one of these property ids fills again. Absent means any property. */
+  onEditProperties?: string[];
 }
 
 export interface PropertySettingsV2 {
@@ -781,10 +783,15 @@ export interface ViewPropertySetting {
   description?: string;
   /** Form: absent follows the property name. */
   questionName?: string;
-  /** Form: absent keeps the existing long-text field. */
+  /** Form: a multi-line answer box. Absent means a one-line answer. */
   longAnswer?: boolean;
   /** Form: a positive integer; absent leaves selections unlimited. */
   maxSelections?: number;
+  /**
+   * Form: how a choice question lists its options. Absent: `'list'` for
+   * multi-select, `'dropdown'` for select and status.
+   */
+  showOptionsAs?: 'list' | 'dropdown';
 }
 
 export interface FormSettings {

@@ -102,6 +102,11 @@ const setSwitch = (id: string, checked: boolean): void => {
 };
 
 const notes: PropertyDefinition = { id: 'notes', name: 'Notes', type: 'text', position: 'a1' };
+const tags: PropertyDefinition = { id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
+  options: [{ id: 'one', label: 'One', position: 'a0' }, { id: 'two', label: 'Two', position: 'a1' }],
+} };
+const formSetting = (output: OutputData, id: string): unknown =>
+  (output.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.views[0]?.properties?.find((entry) => entry.id === id);
 
 describe('local form question builder', () => {
   beforeEach(() => {
@@ -428,6 +433,82 @@ describe('local form question builder', () => {
     expect(q(`${question('notes')} [data-blok-database-form-description]`)?.textContent).toBe('Include the project goal');
   });
 
+  it('starts a new text question as a one-line answer', async () => {
+    await mount(blocksFor([notes]));
+    openQuestionMenu('notes');
+
+    expect(q(byTestId('database-form-question-long-answer'))?.getAttribute('aria-checked')).toBe('false');
+    dismiss();
+    expect(q(`${question('notes')} textarea`)).toBeNull();
+    expect(q(`${question('notes')} input[type="text"]`)).not.toBeNull();
+  });
+
+  it('shows a multiple choice question as a dropdown after reload and in read-only, and back as a list', async () => {
+    await mount(blocksFor([tags]));
+    openQuestionMenu('tags');
+    const showAs = requireElement(byTestId('database-form-question-show-options-as'));
+
+    expect(showAs.querySelector('[data-blok-database-panel-value]')?.textContent).toBe('List view');
+    showAs.click();
+    expect(q(byTestId('database-form-question-show-options-as-list'))?.getAttribute('aria-checked')).toBe('true');
+    requireElement(byTestId('database-form-question-show-options-as-dropdown')).click();
+    expect(q(`${byTestId('database-form-question-show-options-as')} [data-blok-database-panel-value]`)?.textContent).toBe('Dropdown');
+    dismiss();
+    const dropdown = await save();
+
+    expect(formSetting(dropdown, 'tags')).toMatchObject({ showOptionsAs: 'dropdown' });
+    await mount(dropdown.blocks, true);
+    expect(q(`${question('tags')} button[data-blok-database-form-provider-answer]`)).not.toBeNull();
+    expect(q(`${question('tags')} fieldset`)).toBeNull();
+    await mount(dropdown.blocks);
+    openQuestionMenu('tags');
+    requireElement(byTestId('database-form-question-show-options-as')).click();
+    requireElement(byTestId('database-form-question-show-options-as-list')).click();
+    dismiss();
+    const list = await save();
+
+    expect(formSetting(list, 'tags')).toMatchObject({ showOptionsAs: 'list' });
+    await mount(list.blocks, true);
+    expect(q(`${question('tags')} fieldset input[type="checkbox"]`)).not.toBeNull();
+  });
+
+  it('picks a preset or custom selection limit, shows it under the question title, and goes back to unlimited', async () => {
+    await mount(blocksFor([tags]));
+    expect(q(`${question('tags')} [data-blok-database-form-selection-limit]`)?.textContent)
+      .toBe('(Respondents can select as many as they like)');
+    openQuestionMenu('tags');
+    const row = requireElement(byTestId('database-form-question-max-selection'));
+
+    expect(row.querySelector('[data-blok-database-panel-value]')?.textContent).toBe('Unlimited');
+    row.click();
+    expect([...document.querySelectorAll(`${byTestId('database-form-question-settings')} [role="menuitemradio"]`)]
+      .map((choice) => choice.getAttribute('data-blok-testid'))).toEqual(['unlimited', '1', '2', '3', '4', '5', '10']
+      .map((choice) => `database-form-question-max-selection-${choice}`));
+    requireElement(byTestId('database-form-question-max-selection-1')).click();
+    dismiss();
+    const one = await save();
+
+    expect(formSetting(one, 'tags')).toMatchObject({ maxSelections: 1 });
+    await mount(one.blocks, true);
+    expect(q(`${question('tags')} [data-blok-database-form-selection-limit]`)?.textContent).toBe('(Respondents can select up to 1)');
+    await mount(one.blocks);
+    openQuestionMenu('tags');
+    requireElement(byTestId('database-form-question-max-selection')).click();
+    edit('database-form-question-max-selections', '7');
+    dismiss();
+    const custom = await save();
+
+    expect(formSetting(custom, 'tags')).toMatchObject({ maxSelections: 7 });
+    await mount(custom.blocks);
+    openQuestionMenu('tags');
+    requireElement(byTestId('database-form-question-max-selection')).click();
+    requireElement(byTestId('database-form-question-max-selection-unlimited')).click();
+    dismiss();
+    const unlimited = await save();
+
+    expect(formSetting(unlimited, 'tags')).not.toHaveProperty('maxSelections');
+  });
+
   it('changes the question type through the database property and submits the new value shape', async () => {
     await mount(blocksFor([notes]));
     openQuestionMenu('notes');
@@ -531,12 +612,15 @@ describe('local form question builder', () => {
   ])('keeps a one-selection limit for $property.type questions after reload', async ({ property, first, second, allowedAnswers }) => {
     await mount(blocksFor([property]));
     openQuestionMenu(property.id);
+    requireElement(byTestId('database-form-question-max-selection')).click();
     edit('database-form-question-max-selections', '1');
     dismiss();
     const saved = await save();
 
     await mount(saved.blocks);
     openQuestionMenu(property.id);
+    expect(q(`${byTestId('database-form-question-max-selection')} [data-blok-database-panel-value]`)?.textContent).toBe('1');
+    requireElement(byTestId('database-form-question-max-selection')).click();
     expect(q<HTMLInputElement>(byTestId('database-form-question-max-selections'))?.value).toBe('1');
     dismiss();
     if (property.type !== 'multiSelect') {

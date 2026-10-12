@@ -6,7 +6,7 @@ import { DatabasePanel, panelInput, panelRow, panelSwitch } from './database-pan
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { isReadOnlyType } from './property-values';
-import type { DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, ViewPropertySetting } from './types';
+import type { DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, SelectOption, ViewPropertySetting } from './types';
 import { resolveViewProperties, withPropertySetting } from './view-settings';
 import type { ViewPropertyPatch } from './view-settings';
 
@@ -39,6 +39,13 @@ const ASKABLE: readonly PropertyType[] = [
 const INPUT_TYPES: Partial<Record<PropertyType, string>> = {
   url: 'url', email: 'email', phone: 'tel', number: 'number', date: 'date', checkbox: 'checkbox',
 };
+
+/** Notion's "Max selection" presets (research/12 §4); any other count goes in the custom field. */
+const MAX_SELECTION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
+
+/** Multi-select defaults to a list (measured). Select and status keep a dropdown: Notion's choice there is unmeasured. */
+const showOptionsAs = (property: PropertyDefinition, setting: ViewPropertySetting): 'list' | 'dropdown' =>
+  setting.showOptionsAs ?? (property.type === 'multiSelect' ? 'list' : 'dropdown');
 
 type Field = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLFieldSetElement | HTMLButtonElement;
 
@@ -79,7 +86,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       const value = { answer: this.answers.get(id) };
 
       if (field instanceof HTMLFieldSetElement) {
-        value.answer = [...field.querySelectorAll<HTMLInputElement>('input:checked')].map((box) => box.value);
+        value.answer = this.answer(property, field) ?? [];
       } else if (field instanceof HTMLInputElement && field.type === 'checkbox') {
         value.answer = field.checked;
       } else if (!(field instanceof HTMLButtonElement)) {
@@ -113,8 +120,10 @@ export class DatabaseFormView implements DatabaseViewRenderer {
         else this.answers.set(id, structuredClone(value));
         this.paintProviderField(property, field);
       } else if (field instanceof HTMLFieldSetElement) {
+        const chosen = Array.isArray(value) ? value : [value];
+
         for (const box of field.querySelectorAll<HTMLInputElement>('input')) {
-          box.checked = Array.isArray(value) && value.some((selected) => selected === box.value);
+          box.checked = chosen.some((selected) => selected === box.value);
         }
       } else if (field instanceof HTMLInputElement && field.type === 'checkbox') {
         field.checked = value === true;
@@ -277,15 +286,29 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     } else {
       wrapper.appendChild(label);
     }
+    const hints: string[] = [];
+
+    if (property.type === 'multiSelect') {
+      const limit = document.createElement('p');
+
+      limit.id = `${id}-limit`;
+      limit.setAttribute('data-blok-database-form-selection-limit', '');
+      limit.textContent = setting.maxSelections === undefined
+        ? i18n.t('tools.database.formSelectionUnlimited')
+        : i18n.t('tools.database.formSelectionLimit', { count: setting.maxSelections });
+      hints.push(limit.id);
+      wrapper.appendChild(limit);
+    }
     if (setting.description !== undefined && setting.description !== '') {
       const help = document.createElement('p');
 
       help.id = `${id}-help`;
       help.setAttribute('data-blok-database-form-description', '');
       help.textContent = setting.description;
-      field.setAttribute('aria-describedby', help.id);
+      hints.push(help.id);
       wrapper.appendChild(help);
     }
+    if (hints.length > 0) field.setAttribute('aria-describedby', hints.join(' '));
     if (field instanceof HTMLFieldSetElement || field instanceof HTMLButtonElement) {
       if (required) field.setAttribute('aria-required', 'true');
     } else {
@@ -322,6 +345,12 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (property.type === 'person' || property.type === 'files' || property.type === 'relation') {
       return this.providerField(property, id, setting);
     }
+    if ((property.type === 'select' || property.type === 'status') && showOptionsAs(property, setting) === 'list') {
+      return this.choiceList(options, id, 'radio');
+    }
+    if (property.type === 'multiSelect' && showOptionsAs(property, setting) === 'dropdown') {
+      return this.providerField(property, id, setting);
+    }
     if (property.type === 'select' || property.type === 'status') {
       const select = document.createElement('select');
       const none = document.createElement('option');
@@ -340,27 +369,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       return select;
     }
     if (property.type === 'multiSelect') {
-      const set = document.createElement('fieldset');
-
-      set.id = id;
-      options.forEach((option) => {
-        const choice = document.createElement('label');
-        const box = document.createElement('input');
-
-        box.type = 'checkbox';
-        box.value = option.id;
-        box.addEventListener('change', () => {
-          if (box.checked && setting.maxSelections !== undefined && set.querySelectorAll('input:checked').length > setting.maxSelections) {
-            box.checked = false;
-          }
-        });
-        choice.append(box, document.createTextNode(option.label));
-        set.appendChild(choice);
-      });
-
-      return set;
+      return this.choiceList(options, id, 'checkbox', setting.maxSelections);
     }
-    const field = (property.type === 'text' || property.type === 'richText') && setting.longAnswer !== false
+    const field = (property.type === 'text' || property.type === 'richText') && setting.longAnswer === true
       ? document.createElement('textarea')
       : document.createElement('input');
 
@@ -368,6 +379,29 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     field.id = id;
 
     return field;
+  }
+
+  private choiceList(options: SelectOption[], id: string, kind: 'radio' | 'checkbox', maxSelections?: number): HTMLFieldSetElement {
+    const set = document.createElement('fieldset');
+
+    set.id = id;
+    options.forEach((option) => {
+      const choice = document.createElement('label');
+      const box = document.createElement('input');
+
+      box.type = kind;
+      box.name = id;
+      box.value = option.id;
+      box.addEventListener('change', () => {
+        if (box.checked && maxSelections !== undefined && set.querySelectorAll('input:checked').length > maxSelections) {
+          box.checked = false;
+        }
+      });
+      choice.append(box, document.createTextNode(option.label));
+      set.appendChild(choice);
+    });
+
+    return set;
   }
 
   private paintProviderField(property: PropertyDefinition, field: HTMLButtonElement): void {
@@ -534,28 +568,77 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             rows.push(panelSwitch({
               label: i18n.t('tools.database.formLongAnswer'),
               testId: 'database-form-question-long-answer',
-              checked: state.setting.longAnswer !== false,
+              checked: state.setting.longAnswer === true,
               onToggle: (longAnswer) => change({ longAnswer }),
             }));
           }
+          if (state.property.type === 'select' || state.property.type === 'status' || state.property.type === 'multiSelect') {
+            const shown = showOptionsAs(state.property, state.setting);
+            const label = (choice: 'list' | 'dropdown'): string =>
+              i18n.t(choice === 'list' ? 'tools.database.formShowOptionsList' : 'tools.database.formShowOptionsDropdown');
+
+            rows.push(panelRow({
+              label: i18n.t('tools.database.formShowOptionsAs'),
+              value: label(shown),
+              testId: 'database-form-question-show-options-as',
+              opensPage: true,
+              onClick: () => panel.push({
+                title: i18n.t('tools.database.formShowOptionsAs'),
+                build: () => (['list', 'dropdown'] as const).map((choice) => panelRow({
+                  label: label(choice),
+                  testId: `database-form-question-show-options-as-${choice}`,
+                  checked: choice === showOptionsAs(state.property, state.setting),
+                  onClick: () => {
+                    change({ showOptionsAs: choice });
+                    panel.back();
+                  },
+                })),
+              }),
+            }));
+          }
           if (state.property.type === 'multiSelect' || state.property.type === 'person' || state.property.type === 'relation') {
-            const maximum = panelInput({
-              value: state.setting.maxSelections === undefined ? '' : String(state.setting.maxSelections),
-              placeholder: i18n.t('tools.database.relationLimitNone'),
+            const unlimited = i18n.t('tools.database.formSelectionUnlimitedChoice');
+
+            rows.push(panelRow({
               label: i18n.t('tools.database.formMaxSelections'),
-              testId: 'database-form-question-max-selections',
-              onInput: (value) => {
-                const count = Number(value);
+              value: state.setting.maxSelections === undefined ? unlimited : String(state.setting.maxSelections),
+              testId: 'database-form-question-max-selection',
+              opensPage: true,
+              onClick: () => panel.push({
+                title: i18n.t('tools.database.formMaxSelections'),
+                build: () => {
+                  const custom = panelInput({
+                    value: state.setting.maxSelections === undefined ? '' : String(state.setting.maxSelections),
+                    placeholder: i18n.t('tools.database.formSelectionCustom'),
+                    label: i18n.t('tools.database.formSelectionCustom'),
+                    testId: 'database-form-question-max-selections',
+                    onInput: (value) => {
+                      const count = Number(value);
 
-                if (value === '') change({ maxSelections: undefined });
-                else if (Number.isInteger(count) && count > 0) change({ maxSelections: count });
-              },
-            });
+                      if (value === '') change({ maxSelections: undefined });
+                      else if (Number.isInteger(count) && count > 0) change({ maxSelections: count });
+                    },
+                  });
 
-            maximum.type = 'number';
-            maximum.min = '1';
-            maximum.step = '1';
-            rows.push(maximum);
+                  custom.type = 'number';
+                  custom.min = '1';
+                  custom.step = '1';
+
+                  return [
+                    ...[undefined, ...MAX_SELECTION_PRESETS].map((count) => panelRow({
+                      label: count === undefined ? unlimited : String(count),
+                      testId: `database-form-question-max-selection-${count ?? 'unlimited'}`,
+                      checked: state.setting.maxSelections === count,
+                      onClick: () => {
+                        change({ maxSelections: count });
+                        panel.back();
+                      },
+                    })),
+                    custom,
+                  ];
+                },
+              }),
+            }));
           }
           rows.push(
             panelRow({
@@ -600,7 +683,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (field instanceof HTMLFieldSetElement) {
       const picked = [...field.querySelectorAll<HTMLInputElement>('input:checked')].map((box) => box.value);
 
-      return picked.length > 0 ? picked : undefined;
+      if (picked.length === 0) return undefined;
+
+      return property.type === 'multiSelect' ? picked : picked[0];
     }
     if (field instanceof HTMLInputElement && field.type === 'checkbox') return field.checked ? true : undefined;
     const text = field.value.trim();

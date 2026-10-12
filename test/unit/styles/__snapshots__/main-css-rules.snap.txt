@@ -9997,13 +9997,13 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
-[data-blok-database-form-description] {
+[data-blok-database-form-description], [data-blok-database-form-selection-limit] {
   margin: 0;
   color: var(--blok-text-secondary);
   font-size: 0.875em;
 }
 
-[data-blok-database-form-question] :is(input:not([type="checkbox"]), textarea, select, [data-blok-database-form-provider-answer]) {
+[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"]), textarea, select, [data-blok-database-form-provider-answer]) {
   padding-block: var(--blok-space-1);
   padding-inline: var(--blok-space-2);
   border: 1px solid var(--blok-border-primary);

@@ -152,6 +152,98 @@ describe('DatabaseFormView', () => {
     expect(setRequired).toHaveBeenCalledWith('title', true);
   });
 
+  describe('question options', () => {
+    const tags: PropertyDefinition = {
+      id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a7', config: {
+        options: [{ id: 't1', label: 'Red', position: 'a0' }, { id: 't2', label: 'Blue', position: 'a1' }],
+      },
+    };
+    const notes: PropertyDefinition = { id: 'notes', name: 'Notes', type: 'text', position: 'a8' };
+    const ask = (properties: DatabaseViewConfig['properties'], readOnly = false): ReturnType<typeof mount> => mount({
+      schema: [...schema, tags, notes],
+      view: view({ properties }),
+      readOnly,
+      i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${JSON.stringify(vars)}`) },
+    });
+    const helper = (root: HTMLElement, id: string): string | null | undefined =>
+      question(root, id)?.querySelector('[data-blok-database-form-selection-limit]')?.textContent;
+
+    it('a text answer is one line until Long answer is on', () => {
+      const short = ask([{ id: 'notes', visible: true }]).root;
+
+      expect(question(short, 'notes')?.querySelector('textarea')).toBeNull();
+      expect(question(short, 'notes')?.querySelector('input[type="text"]')).not.toBeNull();
+      document.body.innerHTML = '';
+      const long = ask([{ id: 'notes', visible: true, longAnswer: true }]).root;
+
+      expect(question(long, 'notes')?.querySelector('textarea')).not.toBeNull();
+    });
+
+    it('a select question shown as a list takes one radio pick and submits the option id', () => {
+      const { root, submit } = ask([{ id: 'pick', visible: true, showOptionsAs: 'list' }]);
+      const radios = [...(question(root, 'pick')?.querySelectorAll<HTMLInputElement>('input[type="radio"]') ?? [])];
+
+      expect(question(root, 'pick')?.querySelector('select')).toBeNull();
+      expect(radios.map((radio) => radio.value)).toEqual(['o1', 'o2']);
+      radios[0].click();
+      radios[1].click();
+      submitForm(root);
+
+      expect(submit).toHaveBeenCalledWith({ pick: 'o2' });
+    });
+
+    it('a select question is a dropdown by default', () => {
+      const { root } = ask([{ id: 'pick', visible: true }]);
+
+      expect(question(root, 'pick')?.querySelector('select')).not.toBeNull();
+    });
+
+    it('a multiple choice question is a checkbox list by default and says respondents can pick any number', () => {
+      const { root } = ask([{ id: 'tags', visible: true }]);
+
+      expect(helper(root, 'tags')).toBe('tools.database.formSelectionUnlimited');
+      expect(question(root, 'tags')?.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+    });
+
+    it('a multiple choice question with a limit says so, links the hint and blocks extra picks', () => {
+      const { root, submit } = ask([{ id: 'tags', visible: true, maxSelections: 1, description: 'Pick a color' }]);
+      const boxes = [...(question(root, 'tags')?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? [])];
+      const set = question(root, 'tags')?.querySelector('fieldset');
+      const hint = question(root, 'tags')?.querySelector('[data-blok-database-form-selection-limit]');
+
+      expect(helper(root, 'tags')).toBe('tools.database.formSelectionLimit:{"count":1}');
+      expect(set?.getAttribute('aria-describedby')?.split(' ')).toContain(hint?.id);
+      expect(set?.getAttribute('aria-describedby')?.split(' ')).toHaveLength(2);
+      boxes[0].click();
+      boxes[1].click();
+      submitForm(root);
+
+      expect(submit).toHaveBeenCalledWith({ tags: ['t1'] });
+    });
+
+    it('read-only still shows the selection limit', () => {
+      const { root } = ask([{ id: 'tags', visible: true, maxSelections: 2 }], true);
+
+      expect(helper(root, 'tags')).toBe('tools.database.formSelectionLimit:{"count":2}');
+    });
+
+    it('a multiple choice dropdown opens the option picker without option editing and stops at the limit', () => {
+      const { root, submit } = ask([{ id: 'tags', visible: true, showOptionsAs: 'dropdown', maxSelections: 1 }]);
+      const answer = question(root, 'tags')?.querySelector<HTMLButtonElement>('button[data-blok-database-form-provider-answer]');
+
+      expect(question(root, 'tags')?.querySelector('fieldset')).toBeNull();
+      expect(answer).not.toBeNull();
+      answer?.click();
+      expect(document.querySelector('[data-blok-database-select-editor="multiSelect"]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-database-select-option-menu]')).toBeNull();
+      document.querySelector<HTMLElement>('[data-blok-database-select-option="t1"]')?.click();
+      document.querySelector<HTMLElement>('[data-blok-database-select-option="t2"]')?.click();
+      submitForm(root);
+
+      expect(submit).toHaveBeenCalledWith({ tags: ['t1'] });
+    });
+  });
+
   it('read-only shows no Required toggles', () => {
     const { root } = mount({ readOnly: true, setRequired: vi.fn() });
 

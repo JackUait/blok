@@ -193,6 +193,7 @@ class SelectEditor {
 
   private pick(id: string): void {
     if (this.multi) {
+      if (!this.selected.includes(id) && this.ctx.maxSelections !== undefined && this.selected.length >= this.ctx.maxSelections) return;
       this.selected = this.selected.includes(id) ? this.selected.filter((s) => s !== id) : [...this.selected, id];
       this.commit();
       this.clearSearch();

@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1020 + 118 + 411 + 4 closure for all 1553 keys', () => {
+  it('rebuilds a disjoint 1027 + 118 + 411 + 4 closure for all 1560 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1553);
+    expect(lifecycle.size).toBe(1560);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -345,7 +345,8 @@ describe('current English catalog lifecycle coverage', () => {
       // agent presence label (presence.agentFor) are called by literal.
       // +2: the layout builder's discard question (layoutDiscardTitle, layoutDiscard) calls its keys by literal.
       // +1: the row menu footer calls tools.database.rowWordCount by literal.
-      'executable-literal': 1020,
+      // +7: the form question menu calls its tools.database.formShowOptions* and formSelection* keys by literal.
+      'executable-literal': 1027,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

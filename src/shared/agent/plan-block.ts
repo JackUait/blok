@@ -605,8 +605,9 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
   }
 
   const target = state.tool(targetType) ?? state.fail('UNKNOWN_TOOL', `No block tool "${targetType}" is registered.`, '/type');
-  const from = source.entry.conversion.export;
-  const to = target.entry.conversion.import;
+  // The runtime copy covers tools whose own conversionConfig is functions (list), which the manifest cannot carry.
+  const from = source.entry.conversion.export ?? source.runtime.conversion?.export;
+  const to = target.entry.conversion.import ?? target.runtime.conversion?.import;
 
   if (typeof from !== 'string' || typeof to !== 'string') {
     const missing = [

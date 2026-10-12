@@ -4,6 +4,7 @@ import type { ToolRuntime, ToolRuntimeRegistry } from '../../shared/tool-actions
 import { CalloutTool } from '../../tools/callout';
 import { Column } from '../../tools/column';
 import { ColumnList } from '../../tools/column-list';
+import { ListItem } from '../../tools/list';
 import { TabsTool } from '../../tools/tabs';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 import { Table } from '../../tools/table';
@@ -114,7 +115,9 @@ export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new 
       const listParts = Object.is(toolClass, ColumnList) ? BUILT_IN_RUNTIME_PARTS.column_list : tableParts;
       const columnParts = Object.is(toolClass, Column) ? BUILT_IN_RUNTIME_PARTS.column : listParts;
       const tabsParts = Object.is(toolClass, TabsTool) ? BUILT_IN_RUNTIME_PARTS.tabs : columnParts;
-      const parts = Object.is(toolClass, CalloutTool) ? BUILT_IN_RUNTIME_PARTS.callout : tabsParts;
+      const calloutParts = Object.is(toolClass, CalloutTool) ? BUILT_IN_RUNTIME_PARTS.callout : tabsParts;
+      // Feeds only the agent planner; in-editor conversion still runs the list's conversionConfig functions.
+      const parts = Object.is(toolClass, ListItem) ? BUILT_IN_RUNTIME_PARTS.list : calloutParts;
 
       return [tool.name, {
         name: tool.name,
@@ -122,6 +125,7 @@ export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new 
         ...(parts?.normalize === undefined ? {} : { normalize: parts.normalize }),
         ...(parts?.defaultChildren === undefined ? {} : { defaultChildren: parts.defaultChildren }),
         actions: toolClass.actionHandlers ?? {},
+        ...(parts?.conversion === undefined ? {} : { conversion: parts.conversion }),
       }];
     })
 );

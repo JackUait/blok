@@ -4,7 +4,7 @@ import { buildPlannedBlock, emitMove, emitPatch } from './plan-block';
 import { PREPARE_PENDING } from './plan-state';
 import { cloneRecord } from './snapshot';
 
-import type { PlannedBlock } from '../../../types/agent';
+import type { InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { ToolActionContext } from '../../../types/tools/tool-description';
 import type { PlanState } from './plan-state';
 import type { SnapBlock } from './snapshot';
@@ -24,6 +24,14 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
   const roots = new Set<string>(block === undefined ? [] : [block.id]);
   const isScopedContainer = (id: string): boolean =>
     [...roots].some(root => id === root || state.draft.isUnder(id, root));
+  // Ids from newId that a child spec may still claim, e.g. a table's cell blocks named in its content.
+  const minted = new Set<string>();
+  const claimMinted = (specs: readonly InsertSpec[]): void => specs.forEach((spec) => {
+    if (spec.id !== undefined && minted.delete(spec.id)) {
+      state.releaseReservation(spec.id);
+    }
+    claimMinted(spec.children ?? []);
+  });
 
   return {
     tool,
@@ -37,6 +45,8 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
     },
     insert: input => {
       const { parentId, position, ...spec } = input;
+
+      claimMinted(spec.children ?? []);
       const placement = state.place(parentId, position ?? 'end');
       const planned = buildPlannedBlock(state, spec, { id: placement.parentId }, '', false, undefined, {
         allowSelfPlaced: true, tool, isScopedContainer,
@@ -85,7 +95,13 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
         withChildren: opts.withChildren ?? (entry?.children.deletedWithParent === true || entry?.selfPlacesChildren === true),
       });
     },
-    newId: () => state.reserveFreshId('/id'),
+    newId: () => {
+      const id = state.reserveFreshId('/id');
+
+      minted.add(id);
+
+      return id;
+    },
     richText: state.ctx.richText,
     fail: (code, message) => state.fail(code, message),
   };

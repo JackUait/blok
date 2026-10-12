@@ -519,6 +519,40 @@ describe('recording context reads and inserts', () => {
     expect(plan.changed.created).toEqual(['n2']);
     expect(draft.cellOf('n2')).toEqual({ tableId: 'tbl', row: 1, col: 0 });
   });
+
+  it('lets a child spec use an id the same action minted, so a container is written whole in one insert', () => {
+    const setup = withActions('paragraph', {
+      add: { run: (ctx: ToolActionContext) => {
+        const childId = ctx.newId();
+        const id = ctx.insert({ type: 'column_list', children: [{ id: childId, type: 'column' }] });
+
+        return { id, childId, child: ctx.read(childId)?.parentId };
+      } },
+    });
+    const { plan, draft } = planOn(doc, [{ name: 'paragraph.add', args: { id: 'p' } }], setup);
+
+    expect(plan.results).toEqual([{ id: 'n2', childId: 'n1', child: 'n2' }]);
+    expect(draft.childrenOf('n2')).toEqual(['n1']);
+    expect(plan.changed.created).toEqual(['n2', 'n1']);
+  });
+
+  it('still refuses a minted id used for two blocks, and an id the action did not mint', () => {
+    const twice = withActions('paragraph', {
+      add: { run: (ctx: ToolActionContext) => {
+        const childId = ctx.newId();
+
+        ctx.insert({ type: 'column_list', children: [{ id: childId, type: 'column' }] });
+
+        return ctx.insert({ type: 'column_list', children: [{ id: childId, type: 'column' }] });
+      } },
+    });
+    const foreign = withActions('paragraph', {
+      add: { run: (ctx: ToolActionContext) => ctx.insert({ type: 'column_list', children: [{ id: 'p', type: 'column' }] }) },
+    });
+
+    expect(failOf(() => planOn(doc, [{ name: 'paragraph.add', args: { id: 'p' } }], twice))).toMatchObject({ code: 'INVALID_ARGS' });
+    expect(failOf(() => planOn(doc, [{ name: 'paragraph.add', args: { id: 'p' } }], foreign))).toMatchObject({ code: 'INVALID_ARGS' });
+  });
 });
 
 describe('recording context patches and rich text', () => {

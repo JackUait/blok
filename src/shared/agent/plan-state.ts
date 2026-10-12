@@ -81,6 +81,13 @@ export class PlanState {
     this.reserved.set(id, slot);
   }
 
+  /** Frees an id reserved by reserveFreshId so one explicit block spec can claim it. */
+  public releaseReservation(id: string): void {
+    if (!this.allocated.has(id) && !this.draft.has(id)) {
+      this.reserved.delete(id);
+    }
+  }
+
   public newBlockId(explicit: string | undefined, path: string): string {
     if (explicit !== undefined) {
       if (explicit === '' || this.draft.has(explicit) || this.allocated.has(explicit)) {

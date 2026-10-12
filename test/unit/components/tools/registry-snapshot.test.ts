@@ -29,7 +29,7 @@ import { destroy as destroyTooltip } from '../../../../src/components/utils/tool
 import { BUILT_IN_RUNTIME_PARTS } from '../../../../src/shared/tool-actions';
 import { describeTable } from '../../../../src/shared/tool-descriptions/table';
 import { buildToolManifest } from '../../../../src/shared/tool-manifest';
-import { Callout, Header, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
+import { Callout, Header, List, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
 
 const hasMarkDestroyed = (value: unknown): value is { markDestroyed(): void } =>
   typeof value === 'object' && value !== null &&
@@ -677,6 +677,18 @@ describe('browser tool registry snapshot', () => {
     }
 
     expect(runtimesFromTools(instance.moduleInstances.Tools).get('tabs')?.defaultChildren).toBe(tabsParts.defaultChildren);
+  });
+
+  it('gives the list tool its text conversion, so the agent can turn a paragraph into a list in the editor', async () => {
+    const instance = await boot({ tools: { paragraph: Paragraph, list: List } });
+    const listParts = BUILT_IN_RUNTIME_PARTS.list;
+
+    if (listParts?.conversion === undefined) {
+      throw new Error('List runtime parts are missing.');
+    }
+
+    expect(runtimesFromTools(instance.moduleInstances.Tools).get('list')?.conversion).toBe(listParts.conversion);
+    expect(runtimesFromTools(instance.moduleInstances.Tools).get('paragraph')).not.toHaveProperty('conversion');
   });
 
   it('does not grant built-in runtime parts to a custom class registered under a built-in name', async () => {

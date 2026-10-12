@@ -40,6 +40,8 @@ export interface PlannerToolRuntime {
   normalize?(data: Record<string, unknown>): Record<string, unknown>;
   defaultChildren?: InsertSpec[];
   actions: Readonly<Record<string, ToolActionImpl>>;
+  /** Text fields for block.convert when the manifest entry has none. */
+  conversion?: { import?: string; export?: string };
 }
 
 export interface PlannerTool { entry: PlannerToolEntry; runtime: PlannerToolRuntime }

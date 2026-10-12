@@ -172,35 +172,28 @@ interface CreateArgs {
 
 const create: ToolActionImpl<CreateArgs, undefined, { id: string; childIds: string[] }> = {
   run: (ctx, args) => {
+    const columnIds = Array.from({ length: args.cols }, () => ctx.newId());
+    const cells = Array.from({ length: args.rows }, (_, row) => {
+      const rowId = ctx.newId();
+
+      return columnIds.map((columnId, col) => ({ blockId: ctx.newId(), id: columnId, rowId, text: args.cells?.[row]?.[col] ?? [] }));
+    });
+    // One insert with the whole grid: an editor table rendered with empty content seeds a
+    // default 3x3 grid of its own, whose blocks no later content write references.
     const id = ctx.insert({
+      // The host's registry key, not 'table'.
       type: ctx.tool,
       data: {
         withHeadings: args.withHeadings ?? false,
         withHeadingColumn: args.withHeadingColumn ?? false,
-        content: [],
+        content: cells.map(row => row.map(cell => ({ blocks: [cell.blockId], id: cell.id, rowId: cell.rowId }))),
       },
+      children: cells.flat().map(cell => ({ id: cell.blockId, type: 'paragraph', data: { text: cell.text } })),
       parentId: args.parentId,
       position: args.position,
     });
-    const columnIds = Array.from({ length: args.cols }, () => ctx.newId());
-    const childIds: string[] = [];
-    const content = Array.from({ length: args.rows }, (_, row) => {
-      const rowId = ctx.newId();
 
-      return columnIds.map((columnId, col) => {
-        const blockId = ctx.insert({
-          type: 'paragraph', data: { text: args.cells?.[row]?.[col] ?? [] }, parentId: id,
-        });
-
-        childIds.push(blockId);
-
-        return { blocks: [blockId], id: columnId, rowId };
-      });
-    });
-
-    ctx.update(id, { content });
-
-    return { id, childIds };
+    return { id, childIds: cells.flat().map(cell => cell.blockId) };
   },
 };
 

@@ -65,6 +65,7 @@ export const TABS_ACTIONS: ToolActionDeclaration[] = [
       'tabId must be a tab of this tabs block.',
       'Deleting the last tab deletes the whole tabs block.',
     ],
+    mirrors: ['menu:tabs/tabs-delete'],
   },
 ];
 

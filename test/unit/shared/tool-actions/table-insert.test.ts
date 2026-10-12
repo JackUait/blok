@@ -353,7 +353,7 @@ describe('table insertion declarations, aliases and controls', () => {
     expect(ctx.edits).toEqual([]);
   });
 
-  it.each(actions)('%s declares block targeting, count defaults and no mirrors', name => {
+  it.each(actions)('%s declares block targeting, count defaults and the menu items it mirrors', name => {
     const action = actionOf(name);
 
     expect(action.target).toBe('block');
@@ -361,7 +361,9 @@ describe('table insertion declarations, aliases and controls', () => {
       required: ['at'], additionalProperties: false,
       properties: { at: { type: 'integer', minimum: 0 }, count: { type: 'integer', minimum: 1, default: 1 } },
     });
-    expect(action.mirrors ?? []).toEqual([]);
+    expect(action.mirrors).toEqual(name === 'insertRows'
+      ? ['menu:table/table-insert-row-above', 'menu:table/table-insert-row-below', 'action:table/insert-row-above', 'action:table/insert-row-below']
+      : ['menu:table/table-insert-column-left', 'menu:table/table-insert-column-right', 'action:table/insert-col-left', 'action:table/insert-col-right']);
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.actions[name]).toBe(handlerOf(name));
   });
 

@@ -689,7 +689,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     summary: 'Rename a view.',
     target: 'block',
     args: closed({ viewId: VIEW_ID, name: { type: 'string' } }, ['viewId', 'name']),
-    mirrors: [],
+    mirrors: ['menu:database/database-view-rename'],
   },
   {
     name: 'duplicateView',
@@ -697,7 +697,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     args: closed({ viewId: VIEW_ID }, ['viewId']),
     result: closed({ viewId: { type: 'string' } }, ['viewId']),
-    mirrors: [],
+    mirrors: ['menu:database/database-view-duplicate'],
   },
   {
     name: 'deleteView',
@@ -705,7 +705,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     preconditions: ['At least one view must remain.'],
     args: closed({ viewId: VIEW_ID }, ['viewId']),
-    mirrors: [],
+    mirrors: ['menu:database/database-view-delete'],
   },
   {
     name: 'moveView',
@@ -775,7 +775,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     args: closed({ values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID }),
     result: closed({ rowId: { type: 'string' } }, ['rowId']),
-    mirrors: [],
+    mirrors: ['menu:database/template-empty-use'],
   },
   {
     name: 'moveRow',
@@ -792,7 +792,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     summary: 'Set property values on a row. Values not named stay. The row title mirrors the title property.',
     target: 'block',
     args: closed({ rowId: ROW_ID, values: ROW_VALUES }, ['rowId', 'values']),
-    mirrors: [],
+    mirrors: ['menu:database/database-row-edit-property-*', 'menu:database/database-bulk-edit-*'],
   },
 ];
 

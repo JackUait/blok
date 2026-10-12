@@ -89,7 +89,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
       required: ['childIds'],
       properties: { childIds: { type: 'array', items: { type: 'string' } } },
     },
-    mirrors: [],
+    mirrors: ['menu:table/table-insert-row-above', 'menu:table/table-insert-row-below', 'action:table/insert-row-above', 'action:table/insert-row-below'],
   },
   {
     name: 'insertColumns',
@@ -110,7 +110,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
       required: ['childIds'],
       properties: { childIds: { type: 'array', items: { type: 'string' } } },
     },
-    mirrors: [],
+    mirrors: ['menu:table/table-insert-column-left', 'menu:table/table-insert-column-right', 'action:table/insert-col-left', 'action:table/insert-col-right'],
   },
   {
     name: 'deleteRows',
@@ -118,7 +118,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     preconditions: ['At least one row must remain.'],
     args: LINE_ARGS,
-    mirrors: [],
+    mirrors: ['menu:table/table-delete-row', 'action:table/delete-row'],
   },
   {
     name: 'deleteColumns',
@@ -126,7 +126,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     preconditions: ['At least one column must remain.'],
     args: LINE_ARGS,
-    mirrors: [],
+    mirrors: ['menu:table/table-delete-column', 'action:table/delete-col'],
   },
   {
     name: 'moveRow',
@@ -134,7 +134,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     preconditions: ['The row is not part of a merge and does not land inside one.'],
     args: MOVE_ARGS,
-    mirrors: [],
+    mirrors: ['action:table/move-row'],
   },
   {
     name: 'moveColumn',
@@ -142,28 +142,28 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     preconditions: ['The column is not part of a merge and does not land inside one.'],
     args: MOVE_ARGS,
-    mirrors: [],
+    mirrors: ['action:table/move-col'],
   },
   {
     name: 'duplicateRows',
     summary: 'Copy rows, with their blocks, colours and placement, right after the copied range.',
     target: 'block',
     args: LINE_ARGS,
-    mirrors: [],
+    mirrors: ['menu:table/table-duplicate-*', 'action:table/duplicate-row'],
   },
   {
     name: 'duplicateColumns',
     summary: 'Copy columns, with their blocks, colours, placement and width, right after the copied range.',
     target: 'block',
     args: LINE_ARGS,
-    mirrors: [],
+    mirrors: ['menu:table/table-duplicate-*', 'action:table/duplicate-col'],
   },
   {
     name: 'clearCells',
     summary: 'Empty the cells in a range; each keeps one empty paragraph.',
     target: 'block',
     args: { type: 'object', required: ['range'], additionalProperties: false, properties: { range: RANGE_ARGS } },
-    mirrors: [],
+    mirrors: ['menu:table/table-clear-*', 'menu:table/table-clear-selection'],
   },
   {
     name: 'styleCells',
@@ -181,7 +181,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
         placement: { anyOf: [{ enum: PLACEMENTS }, { type: 'null' }], description: 'Where content sits in the cell.' },
       },
     },
-    mirrors: [],
+    mirrors: ['menu:table/cellColor', 'menu:table/cellPlacement'],
   },
   {
     name: 'fillCells',
@@ -201,7 +201,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     preconditions: ['The range has at least two cells and does not cut through another merged cell.'],
     args: { type: 'object', required: ['range'], additionalProperties: false, properties: { range: RANGE_ARGS } },
-    mirrors: [],
+    mirrors: ['menu:table/table-merge-cells'],
   },
   {
     name: 'splitCell',
@@ -214,7 +214,7 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
       additionalProperties: false,
       properties: { row: { type: 'integer', minimum: 0 }, col: { type: 'integer', minimum: 0 } },
     },
-    mirrors: [],
+    mirrors: ['menu:table/table-split-cell'],
   },
 ];
 

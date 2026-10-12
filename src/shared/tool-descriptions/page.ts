@@ -38,6 +38,7 @@ export const PAGE_ACTIONS: ToolActionDeclaration[] = [
       additionalProperties: false,
       properties: { title: { type: 'string' } },
     },
+    mirrors: ['menu:page/page-rename'],
   },
   {
     name: 'setIcon',
@@ -53,6 +54,7 @@ export const PAGE_ACTIONS: ToolActionDeclaration[] = [
       additionalProperties: false,
       properties: { icon: { anyOf: [PAGE_ICON_SCHEMA, { type: 'null' }] } },
     },
+    mirrors: ['menu:page/page-edit-icon'],
   },
 ];
 

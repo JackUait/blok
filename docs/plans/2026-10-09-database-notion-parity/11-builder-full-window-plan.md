@@ -849,3 +849,18 @@ If Q8 says to skip ↑/↓, the picker copy drops the parenthesis.
    - An empty *template* row: show no picker (proposed), or something else?
 9. **Q9 Page discussions.** Skip (proposed), or back a Page discussions module with `config.comments`?
 10. **Q10 Full width page override.** It needs a row actions menu ("•••") that Blok's row page does not have. Build that menu as its own feature, or ship only the layout-level switch?
+
+### Answers (2026-10-13)
+
+- Q1: USER chose the shared tabs block.
+- Q2: USER chose to measure Notion first. Phase 12 waits for that measurement.
+- Q3: USER chose per viewer, local storage.
+- Q7: USER chose to skip Property access.
+- Defaults taken by the coordinator (the user can overturn them):
+  - Q4: view order.
+  - Q5: no onboarding card.
+  - Q6: neutral tokens for the canvas outline, module strips and "+". They mark the active canvas, so they fall under the no-blue rule.
+  - Q8: Blok's usual menu keys; no picker on an empty template row.
+  - Q9: skip Page discussions.
+  - Q10: layout-level Full width switch only.
+- Q2 measured (research/11): Discard removes tabs made in the session; Reset trashes the tab views and returns to Simple; switching to Simple keeps the views and Tabbed brings them back. Tabs are per database, shared by every row, and are not views of the database itself.

@@ -22,4 +22,5 @@ export const DATABASE_DEFAULT_TEXT = {
   viewTypeFeed: 'Feed',
   viewTypeForm: 'Form',
   viewTypeMap: 'Map',
+  duplicatePropertyName: '{name} (copy)',
 } as const;

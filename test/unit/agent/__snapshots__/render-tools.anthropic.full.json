@@ -919,6 +919,35 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.addTemplate"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.addView"
                   },
                   "args": {
@@ -1094,6 +1123,41 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.deleteProperty"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.deleteView"
                   },
                   "args": {
@@ -1108,6 +1172,41 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Id of a view in views."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.duplicateProperty"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
                       },
                       "id": {
                         "type": "string",
@@ -1346,6 +1445,63 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.recolorOption"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId",
+                      "optionId",
+                      "color"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "optionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of an option in the property's config.options."
+                      },
+                      "color": {
+                        "type": "string",
+                        "enum": [
+                          "default",
+                          "gray",
+                          "brown",
+                          "orange",
+                          "yellow",
+                          "green",
+                          "blue",
+                          "purple",
+                          "pink",
+                          "red"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.renameOption"
                   },
                   "args": {
@@ -1431,6 +1587,47 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.setDefaultTemplate"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "templateId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "templateId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.setRowValues"
                   },
                   "args": {
@@ -1451,6 +1648,638 @@
                         "type": "object",
                         "additionalProperties": true,
                         "description": "Values keyed by property id, in the shapes schema describes."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.setTemplateRepeat"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "templateId",
+                      "repeat"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "templateId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "repeat": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "description": "Templates only: a repeating schedule. The host runs it.",
+                            "required": [
+                              "frequency",
+                              "start"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "frequency": {
+                                "type": "string",
+                                "enum": [
+                                  "daily",
+                                  "weekly",
+                                  "monthly",
+                                  "yearly"
+                                ]
+                              },
+                              "interval": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "start": {
+                                "type": "string",
+                                "description": "ISO date-time of the first run."
+                              },
+                              "lastRunAt": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.updateProperty"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "settings": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "icon": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "An emoji."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageVisibility": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "always",
+                                  "hideWhenEmpty",
+                                  "hidden"
+                                ],
+                                "description": "How the row page shows the property. Default always."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "number": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "format": {
+                                    "type": "string",
+                                    "enum": [
+                                      "number",
+                                      "number_with_commas",
+                                      "percent",
+                                      "dollar",
+                                      "australian_dollar",
+                                      "canadian_dollar",
+                                      "singapore_dollar",
+                                      "euro",
+                                      "pound",
+                                      "yen",
+                                      "ruble",
+                                      "rupee",
+                                      "won",
+                                      "yuan",
+                                      "real",
+                                      "lira",
+                                      "rupiah",
+                                      "franc",
+                                      "hong_kong_dollar",
+                                      "new_zealand_dollar",
+                                      "krona",
+                                      "norwegian_krone",
+                                      "mexican_peso",
+                                      "rand",
+                                      "new_taiwan_dollar",
+                                      "danish_krone",
+                                      "zloty",
+                                      "baht",
+                                      "forint",
+                                      "koruna",
+                                      "shekel",
+                                      "chilean_peso",
+                                      "philippine_peso",
+                                      "dirham",
+                                      "colombian_peso",
+                                      "riyal",
+                                      "ringgit",
+                                      "leu",
+                                      "argentine_peso",
+                                      "uruguayan_peso",
+                                      "peruvian_sol",
+                                      "vietnamese_dong",
+                                      "pakistani_rupee",
+                                      "nigerian_naira",
+                                      "bitcoin"
+                                    ]
+                                  },
+                                  "decimals": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 10
+                                  },
+                                  "showAs": {
+                                    "type": "string",
+                                    "enum": [
+                                      "number",
+                                      "bar",
+                                      "ring"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "default",
+                                      "gray",
+                                      "brown",
+                                      "orange",
+                                      "yellow",
+                                      "green",
+                                      "blue",
+                                      "purple",
+                                      "pink",
+                                      "red"
+                                    ]
+                                  },
+                                  "divideBy": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "date": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Display of date, created time and last edited time values.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "dateFormat": {
+                                    "type": "string",
+                                    "enum": [
+                                      "full",
+                                      "short",
+                                      "month_day_year",
+                                      "day_month_year",
+                                      "year_month_day",
+                                      "relative"
+                                    ]
+                                  },
+                                  "timeFormat": {
+                                    "type": "string",
+                                    "enum": [
+                                      "12_hour",
+                                      "24_hour",
+                                      "hidden"
+                                    ]
+                                  },
+                                  "timeZone": {
+                                    "type": "string",
+                                    "description": "IANA zone. Absent means the viewer's zone."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "groups"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "groups": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "id",
+                                        "kind",
+                                        "name",
+                                        "position"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "todo",
+                                            "inProgress",
+                                            "complete"
+                                          ]
+                                        },
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "color": {
+                                          "type": "string"
+                                        },
+                                        "position": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "showAs": {
+                                    "type": "string",
+                                    "enum": [
+                                      "select",
+                                      "checkbox"
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "uniqueId": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "prefix": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "formula": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "expression"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "expression": {
+                                    "type": "string",
+                                    "description": "Formulas 2.0 source. prop(\"Name\") is stored as {{property:<id>}}, so a rename keeps working."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "relation": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Values are id objects of rows of the target database: [{ \"id\": \"<row block id>\" }].",
+                                "required": [
+                                  "targetDatabaseId"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "targetDatabaseId": {
+                                    "type": "string",
+                                    "description": "A database block in this document. The database's own id makes a self-relation."
+                                  },
+                                  "targetDocumentId": {
+                                    "type": "string",
+                                    "description": "A database in another document, resolved by the host."
+                                  },
+                                  "limit": {
+                                    "enum": [
+                                      1,
+                                      null
+                                    ],
+                                    "description": "1 keeps one related row. Absent or null means no limit."
+                                  },
+                                  "twoWay": {
+                                    "type": "boolean"
+                                  },
+                                  "syncedPropertyId": {
+                                    "type": "string",
+                                    "description": "Two-way: the mirroring property on the target database."
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "parentItem",
+                                      "subItems",
+                                      "blockedBy",
+                                      "blocking"
+                                    ],
+                                    "description": "A self-relation that drives sub-items (parentItem/subItems) or dependencies (blockedBy/blocking)."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "autofill": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "AI autofill. Blok has no AI: the host config.ai.autofill lever fills the value.",
+                                "required": [
+                                  "mode"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "summary",
+                                      "translate",
+                                      "keyInfo",
+                                      "custom"
+                                    ]
+                                  },
+                                  "instruction": {
+                                    "type": "string"
+                                  },
+                                  "language": {
+                                    "type": "string",
+                                    "description": "Translate: the target language, a BCP 47 tag."
+                                  },
+                                  "onCreate": {
+                                    "type": "boolean",
+                                    "description": "Fill when a row is added. Default false."
+                                  },
+                                  "onEdit": {
+                                    "type": "boolean",
+                                    "description": "Fill again when another value of the row changes. Default false."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "rollup": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "relationPropertyId",
+                                  "targetPropertyId",
+                                  "function"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "relationPropertyId": {
+                                    "type": "string"
+                                  },
+                                  "targetPropertyId": {
+                                    "type": "string",
+                                    "description": "A property of the related database."
+                                  },
+                                  "function": {
+                                    "type": "string",
+                                    "enum": [
+                                      "show_original",
+                                      "show_unique",
+                                      "count",
+                                      "count_values",
+                                      "unique",
+                                      "empty",
+                                      "not_empty",
+                                      "percent_empty",
+                                      "percent_not_empty",
+                                      "sum",
+                                      "average",
+                                      "median",
+                                      "min",
+                                      "max",
+                                      "range",
+                                      "earliest_date",
+                                      "latest_date",
+                                      "date_range",
+                                      "checked",
+                                      "unchecked",
+                                      "percent_checked",
+                                      "percent_unchecked",
+                                      "count_per_group",
+                                      "percent_per_group"
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "button": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "buttonActions": {
+                                    "type": "array",
+                                    "description": "Run in order on a click, as one undo step.",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "id",
+                                        "type"
+                                      ],
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "editProperty",
+                                            "insertBlocks",
+                                            "openPage",
+                                            "callback"
+                                          ]
+                                        },
+                                        "propertyId": {
+                                          "type": "string",
+                                          "description": "editProperty: the property to set."
+                                        },
+                                        "value": {
+                                          "description": "editProperty: the new value. [{ \"id\": \"@me\" }] and \"@today\" are filled in on click."
+                                        },
+                                        "blocks": {
+                                          "type": "array",
+                                          "description": "insertBlocks: added at the end of the row page body.",
+                                          "items": {
+                                            "type": "object",
+                                            "required": [
+                                              "id",
+                                              "type",
+                                              "data"
+                                            ],
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "id": {
+                                                "type": "string"
+                                              },
+                                              "type": {
+                                                "type": "string"
+                                              },
+                                              "data": {
+                                                "type": "object"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "url": {
+                                          "type": "string",
+                                          "description": "openPage: a URL. Absent opens the row page."
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "description": "callback: what the host should do."
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "dependency": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Read on the blockedBy relation only.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "shift": {
+                                    "type": "string",
+                                    "enum": [
+                                      "overlap",
+                                      "maintain",
+                                      "none"
+                                    ],
+                                    "description": "How a date change moves blocked items. Default none."
+                                  },
+                                  "avoidWeekends": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
                       },
                       "id": {
                         "type": "string",

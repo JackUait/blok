@@ -1,3 +1,5 @@
+import { DATABASE_ROW_DATA } from './database-row';
+
 import type { BlockToolDescription, BlokSchema, ToolActionDeclaration } from '../../../types/tools/tool-description';
 
 /** The Notion API's 45 number formats. Kept equal to cells/number-format.ts NUMBER_FORMATS by a test. */
@@ -401,6 +403,9 @@ export const DATABASE_DATA = {
           pageLayoutStructure: { type: 'string', enum: ['simple', 'tabbed'], description: 'Read on the title property only: the row page structure. Default simple.' },
           pageLayoutGroupIn: { type: 'string', enum: ['page', 'panel'], description: 'Read on the title property only: where the row page property group sits. Default page.' },
           pageLayoutPropertyIcons: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the icon beside each row page property label. Absent means shown.' },
+          pageLayoutPropertyLabels: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the property labels in the row page heading. Absent means shown.' },
+          pageLayoutTemplates: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the database templates on an empty row page. Absent means shown.' },
+          pageLayoutFullWidth: { type: 'boolean', enum: [true], description: 'Read on the title property only: true lays every row page out full width. Absent means off.' },
           pageLayoutPlacements: {
             type: 'array',
             description: 'Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.',
@@ -410,7 +415,7 @@ export const DATABASE_DATA = {
               additionalProperties: false,
               properties: {
                 id: { type: 'string', description: 'The property id.' },
-                place: { type: 'string', enum: ['heading', 'page', 'panel', 'section'], description: 'heading pins it under the title; page and panel give it a module of its own.' },
+                place: { type: 'string', enum: ['heading', 'page', 'panel', 'section', 'group'], description: 'heading pins it under the title; page and panel give it a module of its own; group keeps it in the property group, ahead of the properties with no entry.' },
                 sectionId: { type: 'string', description: 'With place "section": the section it sits in.' },
               },
             },
@@ -793,6 +798,72 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     args: closed({ rowId: ROW_ID, values: ROW_VALUES }, ['rowId', 'values']),
     mirrors: ['menu:database/database-row-edit-property-*', 'menu:database/database-bulk-edit-*'],
+  },
+  {
+    name: 'updateProperty',
+    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, ID, formula, relation, rollup, button, dependency, autofill).',
+    guidance: 'settings keys follow schema; null removes one. The type cannot change here.',
+    target: 'block',
+    args: closed({
+      propertyId: PROPERTY_ID,
+      name: { type: 'string', minLength: 1 },
+      settings: {
+        type: 'object',
+        additionalProperties: false,
+        properties: Object.fromEntries(Object.entries(PROPERTY_SETTINGS).map(([key, setting]) => [key, { anyOf: [setting, { type: 'null' }] }])),
+      },
+    }, ['propertyId']),
+    mirrors: [],
+  },
+  {
+    name: 'duplicateProperty',
+    summary: 'Copy a property right after itself, named "<name> (copy)", with every row\'s value.',
+    target: 'block',
+    preconditions: ['The title and ID properties cannot be duplicated.'],
+    args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
+    result: closed({ propertyId: { type: 'string' } }, ['propertyId']),
+    mirrors: [],
+  },
+  {
+    name: 'deleteProperty',
+    summary: 'Remove a property from the schema. Row values stay in the rows.',
+    target: 'block',
+    preconditions: ['The title property cannot be deleted.'],
+    args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
+    mirrors: [],
+  },
+  {
+    name: 'recolorOption',
+    summary: 'Set the color of a select, multi-select or status option.',
+    target: 'block',
+    args: closed({ propertyId: PROPERTY_ID, optionId: OPTION_ID, color: COLOR }, ['propertyId', 'optionId', 'color']),
+    mirrors: ['menu:database/color-*'],
+  },
+  {
+    name: 'addTemplate',
+    summary: 'Add an empty page template (a database-row child with template true), after the last template.',
+    guidance: 'Fill it with database.setRowValues and ordinary child blocks. Templates are not rows: views skip them.',
+    target: 'block',
+    args: closed({}),
+    result: closed({ templateId: { type: 'string' } }, ['templateId']),
+    mirrors: ['menu:database/template-add'],
+  },
+  {
+    name: 'setDefaultTemplate',
+    summary: 'Set the template new rows start from, or null for none.',
+    target: 'block',
+    args: closed({ templateId: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] } }, ['templateId']),
+    mirrors: ['menu:database/template-empty-default'],
+  },
+  {
+    name: 'setTemplateRepeat',
+    summary: 'Set or clear (null) a template\'s repeating schedule. Blok stores it; the host makes the rows.',
+    target: 'block',
+    args: closed({
+      templateId: { type: 'string', minLength: 1 },
+      repeat: { anyOf: [DATABASE_ROW_DATA.properties.repeat, { type: 'null' }] },
+    }, ['templateId', 'repeat']),
+    mirrors: [],
   },
 ];
 

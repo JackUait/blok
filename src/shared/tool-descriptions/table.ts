@@ -181,7 +181,9 @@ export const TABLE_ACTIONS: ToolActionDeclaration[] = [
         placement: { anyOf: [{ enum: PLACEMENTS }, { type: 'null' }], description: 'Where content sits in the cell.' },
       },
     },
-    mirrors: ['menu:table/cellColor', 'menu:table/cellPlacement'],
+    // The colour and placement items open picker panels with no onActivate, so the coverage scan names the
+    // placement picker by file. The colour picker has no ledger id of its own.
+    mirrors: ['ui-file:src/tools/table/table-cell-placement-picker.ts'],
   },
   {
     name: 'fillCells',

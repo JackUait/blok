@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,7 +31,7 @@ afterEach(() => {
 describe('mirrors', () => {
   it('actions mirror the menu items and row/column actions they perform', () => {
     expect(mirrored).toEqual(expect.arrayContaining([
-      'menu:table/table-insert-row-above', 'menu:table/table-merge-cells', 'menu:table/cellColor',
+      'menu:table/table-insert-row-above', 'menu:table/table-merge-cells', 'ui-file:src/tools/table/table-cell-placement-picker.ts',
       'action:table/move-row', 'menu:database/database-view-rename', 'menu:tabs/tabs-delete', 'menu:page/page-rename',
     ]));
   });
@@ -45,6 +45,14 @@ describe('mirrors', () => {
 
   it.each(mirrorsOf.filter(({ id }) => Object.hasOwn(LEDGER, id)))('$id is routed to $command in the coverage ledger too', ({ id, command }) => {
     expect(JSON.stringify(LEDGER[id])).toContain(command);
+  });
+
+  it.each(mirrored.filter(id => id.startsWith('ui-file:')))('%s names a source file that exists', (id) => {
+    expect(existsSync(resolve(__dirname, '../../../..', id.slice('ui-file:'.length)))).toBe(true);
+  });
+
+  it('every mirror is an id the coverage scan can produce: menu, action or ui-file', () => {
+    expect(mirrored.filter(id => !/^(menu|action|ui-file):/.test(id))).toEqual([]);
   });
 
   it('every action id names a RowColAction member of its tool', () => {

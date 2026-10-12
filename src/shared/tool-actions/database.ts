@@ -12,7 +12,7 @@ import {
 
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
-import type { DatabaseViewConfig, PropertyDefinition, PropertyType, SelectOption, ViewType } from '../database/types';
+import type { DatabaseViewConfig, PropertyDefinition, PropertyType, SelectOption, TemplateRepeat, ViewType } from '../database/types';
 
 type TargetBlock = NonNullable<ToolActionContext['block']>;
 
@@ -231,10 +231,11 @@ interface RowRef {
   id: string;
   position: string;
   properties: Record<string, unknown>;
+  template: boolean;
 }
 
-/** The database's rows: its database-row children. Their order key is `data.position`. */
-export const rowsOf = (ctx: ToolActionContext, databaseId: string): RowRef[] =>
+/** Every database-row child, templates included. The order key is `data.position`. */
+const rowBlocksOf = (ctx: ToolActionContext, databaseId: string): RowRef[] =>
   (ctx.read(databaseId)?.children ?? []).flatMap((rowId) => {
     const row = ctx.read(rowId);
     const data: Record<string, unknown> = typeof row?.data === 'object' && row.data !== null ? { ...row.data } : {};
@@ -246,8 +247,16 @@ export const rowsOf = (ctx: ToolActionContext, databaseId: string): RowRef[] =>
         id: rowId,
         position: typeof data.position === 'string' ? data.position : '',
         properties: typeof properties === 'object' && properties !== null ? { ...properties } : {},
+        template: data.template === true,
       }];
   });
+
+/** The database's rows. A template is a row block too, but no view, query or row write sees it (DatabaseTool.syncRowsFromBlocks). */
+export const rowsOf = (ctx: ToolActionContext, databaseId: string): RowRef[] =>
+  rowBlocksOf(ctx, databaseId).filter(row => !row.template);
+
+const templatesOf = (ctx: ToolActionContext, databaseId: string): RowRef[] =>
+  rowBlocksOf(ctx, databaseId).filter(row => row.template);
 
 const propertyAt = (ctx: ToolActionContext, state: DatabaseState, propertyId: string): number => {
   const index = state.schema.findIndex(property => property.id === propertyId);
@@ -466,6 +475,10 @@ const rowOf = (ctx: ToolActionContext, databaseId: string, rowId: string): RowRe
   rowsOf(ctx, databaseId).find(row => row.id === rowId)
     ?? ctx.fail('PRECONDITION_FAILED', `Block ${rowId} is not a row of this database.`);
 
+const templateOf = (ctx: ToolActionContext, databaseId: string, templateId: string): RowRef =>
+  templatesOf(ctx, databaseId).find(row => row.id === templateId)
+    ?? ctx.fail('PRECONDITION_FAILED', `Block ${templateId} is not a template of this database.`);
+
 const addRow: ToolActionImpl<{ values?: Record<string, unknown>; group?: string } & Placement, undefined, { rowId: string }> = {
   run: (ctx, args) => {
     if (args.before !== undefined && args.after !== undefined) {
@@ -492,7 +505,10 @@ const addRow: ToolActionImpl<{ values?: Record<string, unknown>; group?: string 
 const setRowValues: ToolActionImpl<{ rowId: string; values: Record<string, unknown> }> = {
   run: (ctx, args) => {
     const block = databaseTarget(ctx);
-    const properties = { ...rowOf(ctx, block.id, args.rowId).properties, ...args.values };
+    // Editing a template's values is a row edit too (the editor's template page).
+    const row = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+      ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
+    const properties = { ...row.properties, ...args.values };
     const title = titleOf(readDatabase(block), properties);
 
     ctx.update(args.rowId, { properties, ...(title === undefined ? {} : { title }) });
@@ -518,8 +534,152 @@ const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
   },
 };
 
+// ─── Property settings, option colour, templates (the editor's property and template menus) ───
+
+/** Setting keys a property menu writes (PropertySettingsV2). `type` and `config` are not settings. */
+const SETTING_KEYS = ['description', 'icon', 'pageVisibility', 'number', 'date', 'status', 'uniqueId', 'formula', 'relation', 'rollup', 'button', 'dependency', 'autofill'] as const;
+
+/** As DatabaseModel.updateProperty: a key given as null is removed, any other value replaces it. */
+const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settings?: Record<string, unknown> }> = {
+  run: (ctx, args) => {
+    const name = args.name?.trim();
+
+    if (name === '') {
+      ctx.fail('INVALID_ARGS', 'A property name cannot be empty.');
+    }
+    const { block, state } = openDatabase(ctx);
+    const index = propertyAt(ctx, state, args.propertyId);
+    const settings = Object.entries(args.settings ?? {}).filter(([key]) => SETTING_KEYS.some(known => known === key));
+    const schema = state.schema.map((property, i) => (i !== index
+      ? property
+      : {
+        ...Object.fromEntries(Object.entries(property).filter(([key]) => !settings.some(([changed, value]) => changed === key && value === null))),
+        ...Object.fromEntries(settings.filter(([, value]) => value !== null)),
+        ...(name === undefined ? {} : { name }),
+      } as PropertyDefinition));
+
+    ctx.update(block.id, { schema });
+
+    return undefined;
+  },
+};
+
+/** As DatabaseTool.duplicateProperty: a copy right after the original, named "<name> (copy)", with every row's value. */
+const duplicateProperty: ToolActionImpl<{ propertyId: string }, undefined, { propertyId: string }> = {
+  run: (ctx, args) => {
+    const { block, state } = openDatabase(ctx);
+    const source = state.schema[propertyAt(ctx, state, args.propertyId)];
+
+    if (source === undefined || source.type === 'title' || source.type === 'uniqueId') {
+      return ctx.fail('PRECONDITION_FAILED', 'The title and ID properties cannot be duplicated.');
+    }
+    const { id: _id, position: _position, name, ...rest } = jsonCopy(source);
+    const copy: PropertyDefinition = {
+      ...rest,
+      id: ctx.newId(),
+      name: DATABASE_DEFAULT_TEXT.duplicatePropertyName.replace('{name}', name),
+      position: positionAround(ctx, state.schema, { after: source.id }),
+    };
+
+    ctx.update(block.id, { schema: [...state.schema, copy] });
+    for (const row of rowsOf(ctx, block.id)) {
+      const value = row.properties[source.id];
+      const empty = value === undefined || value === null;
+
+      if (!empty || isListValueType(copy.type)) {
+        ctx.update(row.id, { properties: { ...row.properties, [copy.id]: empty ? [] : jsonCopy(value) } });
+      }
+    }
+
+    return { propertyId: copy.id };
+  },
+};
+
+/** As DatabaseTool.deleteProperty: the schema entry goes, row values stay (D9). The title cannot go. */
+const deleteProperty: ToolActionImpl<{ propertyId: string }> = {
+  run: (ctx, args) => {
+    const { block, state } = openDatabase(ctx);
+    const index = propertyAt(ctx, state, args.propertyId);
+
+    if (state.schema[index]?.type === 'title') {
+      ctx.fail('PRECONDITION_FAILED', 'A database keeps its title property.');
+    }
+    ctx.update(block.id, { schema: state.schema.filter((_, i) => i !== index) });
+
+    return undefined;
+  },
+};
+
+const recolorOption: ToolActionImpl<OptionArgs & { color: string }> = {
+  run: (ctx, args) => {
+    const { block, state, index, options } = openOption(ctx, args);
+
+    ctx.update(block.id, { schema: withOptions(state, index, options.map(option => (option.id === args.optionId ? { ...option, color: args.color } : option))) });
+
+    return undefined;
+  },
+};
+
+/** As DatabaseTool.addTemplate: an empty template row after the last template. */
+const addTemplate: ToolActionImpl<Record<string, never>, undefined, { templateId: string }> = {
+  run: (ctx) => {
+    const block = databaseTarget(ctx);
+    const titleId = readDatabase(block).schema.find(property => property.type === 'title')?.id;
+    const templateId = ctx.insert({
+      type: 'database-row',
+      data: {
+        properties: titleId === undefined ? {} : { [titleId]: '' },
+        position: positionAround(ctx, templatesOf(ctx, block.id)),
+        title: '',
+        template: true,
+      },
+      parentId: block.id,
+    });
+
+    return { templateId };
+  },
+};
+
+/** As DatabaseTool.setDefaultTemplate: the id lives on the title property; null clears it. */
+const setDefaultTemplate: ToolActionImpl<{ templateId: string | null }> = {
+  run: (ctx, args) => {
+    const block = databaseTarget(ctx);
+    const state = readDatabase(block);
+
+    if (args.templateId !== null) {
+      templateOf(ctx, block.id, args.templateId);
+    }
+    const schema = state.schema.map((property) => {
+      if (property.type !== 'title') {
+        return property;
+      }
+      const { defaultTemplateId: _previous, ...rest } = property;
+
+      return args.templateId === null ? rest : { ...rest, defaultTemplateId: args.templateId };
+    });
+
+    ctx.update(block.id, { schema });
+
+    return undefined;
+  },
+};
+
+/** As DatabaseTool.setTemplateRepeat: Blok stores the schedule, the host runs it. null clears it. */
+const setTemplateRepeat: ToolActionImpl<{ templateId: string; repeat: TemplateRepeat | null }> = {
+  run: (ctx, args) => {
+    const block = databaseTarget(ctx);
+
+    templateOf(ctx, block.id, args.templateId);
+    ctx.update(args.templateId, { repeat: args.repeat ?? undefined });
+
+    return undefined;
+  },
+};
+
 export const DATABASE_ACTION_HANDLERS: Readonly<Record<string, ToolActionImpl>> = {
   create, addView, renameView, duplicateView, deleteView, moveView,
   addProperty, addOption, renameOption, moveOption, deleteOption,
   addRow, moveRow, setRowValues,
+  updateProperty, duplicateProperty, deleteProperty, recolorOption,
+  addTemplate, setDefaultTemplate, setTemplateRepeat,
 };

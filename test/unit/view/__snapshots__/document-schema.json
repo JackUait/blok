@@ -2024,6 +2024,27 @@
                 ],
                 "description": "Read on the title property only: false hides the icon beside each row page property label. Absent means shown."
               },
+              "pageLayoutPropertyLabels": {
+                "type": "boolean",
+                "enum": [
+                  false
+                ],
+                "description": "Read on the title property only: false hides the property labels in the row page heading. Absent means shown."
+              },
+              "pageLayoutTemplates": {
+                "type": "boolean",
+                "enum": [
+                  false
+                ],
+                "description": "Read on the title property only: false hides the database templates on an empty row page. Absent means shown."
+              },
+              "pageLayoutFullWidth": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ],
+                "description": "Read on the title property only: true lays every row page out full width. Absent means off."
+              },
               "pageLayoutPlacements": {
                 "type": "array",
                 "description": "Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.",
@@ -2045,9 +2066,10 @@
                         "heading",
                         "page",
                         "panel",
-                        "section"
+                        "section",
+                        "group"
                       ],
-                      "description": "heading pins it under the title; page and panel give it a module of its own."
+                      "description": "heading pins it under the title; page and panel give it a module of its own; group keeps it in the property group, ahead of the properties with no entry."
                     },
                     "sectionId": {
                       "type": "string",

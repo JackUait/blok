@@ -27,6 +27,7 @@ const KEYS: Record<keyof typeof DATABASE_DEFAULT_TEXT, string> = {
   viewTypeFeed: 'tools.database.viewTypeFeed',
   viewTypeForm: 'tools.database.viewTypeForm',
   viewTypeMap: 'tools.database.viewTypeMap',
+  duplicatePropertyName: 'tools.database.duplicatePropertyName',
 };
 
 const english: Record<string, unknown> = en;

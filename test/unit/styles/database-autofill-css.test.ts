@@ -50,6 +50,12 @@ describe('AI Autofill setup css', () => {
       .toContain('display: inline-flex');
   });
 
+  // Cmd/Ctrl+Enter presses the selected title cell's Open button, so sighted keyboard users must see it.
+  it('shows the title cell Open button on the keyboard-selected cell too', () => {
+    expect(rulesFor('[data-blok-database-table-cell][data-blok-database-table-cell-anchor] [data-blok-database-table-open]').join(' '))
+      .toContain('display: inline-flex');
+  });
+
   // A sibling of the header button now: it must keep its place at the header's end.
   it('keeps the header sparkle at the header\'s inline end, inside its padding', () => {
     const sparkle = rulesFor('[data-blok-database-table-autofill-open]').join(' ');

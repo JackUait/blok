@@ -193,6 +193,22 @@ test.describe('cell keyboard model', () => {
     expect((await savedRow(page, 'r1'))['p-notes']).toBe('');
   });
 
+  test('Mod+Enter on the selected title cell presses its hover-only Open button', async ({ page }) => {
+    await cell(page, 'r2', 'p-title').click();
+    await page.keyboard.press('Escape');
+    await expect(editor(page)).toHaveCount(0);
+
+    const title = cell(page, 'r2', 'p-title');
+
+    await expect(title).toHaveAttribute('aria-keyshortcuts', 'Meta+Enter Control+Enter');
+    await expect(title).toHaveAccessibleDescription('Open');
+
+    await page.keyboard.press('ControlOrMeta+Enter');
+
+    await expect(page.getByRole('complementary', { name: 'Card details' })).toBeVisible();
+    await expect(editor(page)).toHaveCount(0);
+  });
+
   test('clicking another cell while editing saves the first and opens the second', async ({ page }) => {
     await cell(page, 'r1', 'p-notes').click();
     await page.keyboard.press('ControlOrMeta+a');

@@ -583,6 +583,103 @@ describe('DatabaseTableView', () => {
     });
   });
 
+  describe('cell buttons from the keyboard', () => {
+    it.each([
+      ['Meta', { metaKey: true }],
+      ['Control', { ctrlKey: true }],
+    ])('%s+Enter on the selected title cell opens the row page, not the editor', (_name, init) => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-title');
+      const event = press(grid(root), 'Enter', init);
+
+      expect(handlers.openRow).toHaveBeenCalledWith('r1');
+      expect(editor()).toBeNull();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('Mod+Enter on the selected autofill cell runs autofill for that cell', () => {
+      const autofillSchema = schema.map((p) => (p.id === 'p-notes' ? { ...p, autofill: { mode: 'summary' as const } } : p));
+      const run = vi.fn();
+      const { root } = mount({ schema: autofillSchema, autofill: { filling: () => false, run, open: vi.fn() } });
+
+      selectCell(root, 'r2', 'p-notes');
+      press(grid(root), 'Enter', { metaKey: true });
+
+      expect(run).toHaveBeenCalledWith('r2', 'p-notes');
+      expect(editor()).toBeNull();
+    });
+
+    it('Mod+Enter on a cell with no button still opens its editor', () => {
+      const { root } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      press(grid(root), 'Enter', { ctrlKey: true });
+
+      expect(editorField().value).toBe('short');
+    });
+
+    it('Mod+Enter opens the row page in a read-only table', () => {
+      const openRow = vi.fn();
+      const view = new DatabaseTableView({
+        readOnly: true,
+        i18n: { t: (key: string) => key } as DatabaseTableViewOptions['i18n'],
+        view: tableView(),
+        schema,
+        rows: rows(),
+        titlePropertyId: 'p-title',
+        state: createTableState(),
+        openRow,
+      });
+      const root = view.createView();
+
+      document.body.appendChild(root);
+      cell(root, 'r2', 'p-title').click();
+      press(grid(root), 'Enter', { metaKey: true });
+
+      expect(openRow).toHaveBeenCalledWith('r2');
+    });
+
+    it('Mod+Enter on a range does nothing to the buttons', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-title');
+      press(grid(root), 'ArrowDown', { shiftKey: true });
+      press(grid(root), 'Enter', { metaKey: true });
+
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('the selected cell names its button and shortcut for a screen reader', () => {
+      const { root } = mount();
+
+      selectCell(root, 'r1', 'p-title');
+      const title = cell(root, 'r1', 'p-title');
+      const describedBy = title.getAttribute('aria-describedby');
+
+      expect(title.getAttribute('aria-keyshortcuts')).toBe('Meta+Enter Control+Enter');
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy ?? '')).toBe(title.querySelector('[data-blok-database-table-open]'));
+
+      press(grid(root), 'ArrowRight');
+
+      expect(title.hasAttribute('aria-keyshortcuts')).toBe(false);
+      expect(title.hasAttribute('aria-describedby')).toBe(false);
+      expect(cell(root, 'r1', 'p-notes').hasAttribute('aria-keyshortcuts')).toBe(false);
+      expect(cell(root, 'r1', 'p-notes').hasAttribute('aria-describedby')).toBe(false);
+    });
+
+    it('the description still points at the button after the title repaints', () => {
+      const { root, view } = mount();
+
+      selectCell(root, 'r1', 'p-title');
+      view.updateRowTitle(root, 'r1', 'Renamed');
+      const title = cell(root, 'r1', 'p-title');
+
+      expect(document.getElementById(title.getAttribute('aria-describedby') ?? '')).toBe(title.querySelector('[data-blok-database-table-open]'));
+    });
+  });
+
   describe('rows', () => {
     it('the header checkbox selects every row and shows the mixed state when some are selected', () => {
       const { root } = mount();

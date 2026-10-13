@@ -828,6 +828,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       open.type = 'button';
       open.setAttribute('data-blok-database-table-open', '');
       open.tabIndex = -1;
+      // The grid points the selected cell's aria-describedby here; a repaint must keep the id.
+      open.id = `${cell.id}-open`;
       const icon = document.createElement('span');
 
       icon.setAttribute('aria-hidden', 'true');
@@ -860,6 +862,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     run.type = 'button';
     run.tabIndex = -1;
     run.setAttribute('data-blok-database-table-autofill', '');
+    run.id = `${cell.id}-autofill`;
     run.setAttribute('aria-label', this.t('tools.database.aiAutofillCell'));
     run.innerHTML = IconWand;
     onHover(run, this.t('tools.database.aiAutofillCell'));

@@ -132,6 +132,30 @@ describe('AI Autofill cell button', () => {
     expect(autofillButton()).not.toBeNull();
   });
 
+  it('Mod+Enter on the selected autofill cell runs it from the keyboard', async () => {
+    await mount({ text: 'Old summary' });
+    /** Read again each time: closing an editor redraws the table. */
+    const grid = (): HTMLElement => {
+      if (holder === undefined) throw new Error('Missing editor holder');
+
+      return within(holder).getByRole('grid');
+    };
+
+    fireEvent.click(cell('notes'));
+    fireEvent.keyDown(await findByRole(document.body, 'textbox'), { key: 'Escape' });
+    fireEvent.keyDown(grid(), { key: 'ArrowLeft' });
+
+    expect(cell('text')).toHaveAttribute('aria-keyshortcuts', 'Meta+Enter Control+Enter');
+    fireEvent.keyDown(grid(), { key: 'Enter', ctrlKey: true });
+
+    expect(autofill).toHaveBeenCalledTimes(1);
+    expect(autofill.mock.calls[0]?.[0]).toMatchObject({ rowId: 'row', propertyId: 'text' });
+    expect(within(document.body).queryByRole('textbox')).toBeNull();
+    await vi.waitFor(() => expect(within(cell('text')).getByText('Thinking…')).toBeInTheDocument());
+    expect(cell('text')).not.toHaveAttribute('aria-keyshortcuts');
+    await answer('New summary');
+  });
+
   it('a filled cell is replaced at once, with no confirm', async () => {
     await mount({ text: 'Old summary' });
     const button = autofillButton();

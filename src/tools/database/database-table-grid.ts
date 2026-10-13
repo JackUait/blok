@@ -123,6 +123,12 @@ export const emptyValueOf = (property: PropertyDefinition): PropertyValue | unde
   }
 };
 
+/** A cell's own button: the title's OPEN or an AI Autofill. Hover-only, so Mod+Enter presses it. */
+const CELL_BUTTON = '[data-blok-database-table-open], [data-blok-database-table-autofill]';
+
+/** Mod+Enter, the way the checklist uses it. Grid keys treat Meta and Control alike. */
+const CELL_BUTTON_KEYS = 'Meta+Enter Control+Enter';
+
 const isPrintableKey = (event: KeyboardEvent): boolean =>
   event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.isComposing;
 
@@ -471,6 +477,7 @@ export class DatabaseTableGrid {
         cellEl.setAttribute('aria-selected', selected ? 'true' : 'false');
         cellEl.toggleAttribute('data-blok-database-table-cell-anchor', isAnchor);
         cellEl.tabIndex = isAnchor ? 0 : -1;
+        this.paintCellButton(cellEl, isAnchor && inRange.size === 1);
       }
     }
 
@@ -483,6 +490,19 @@ export class DatabaseTableGrid {
       this.root.removeAttribute('aria-activedescendant');
     }
     this.callbacks.selectionChanged();
+  }
+
+  private paintCellButton(cellEl: HTMLElement, selected: boolean): void {
+    const button = selected ? cellEl.querySelector<HTMLElement>(CELL_BUTTON) : null;
+
+    if (button === null || button.id === '') {
+      cellEl.removeAttribute('aria-describedby');
+      cellEl.removeAttribute('aria-keyshortcuts');
+
+      return;
+    }
+    cellEl.setAttribute('aria-describedby', button.id);
+    cellEl.setAttribute('aria-keyshortcuts', CELL_BUTTON_KEYS);
   }
 
   private repaintCell(ref: CellRef): void {
@@ -862,6 +882,9 @@ export class DatabaseTableGrid {
       }
       case 'Enter':
         event.preventDefault();
+        if (this.pressCellButton(event, selection)) {
+          return;
+        }
         this.openEditor(selection.anchor);
 
         return;
@@ -884,6 +907,20 @@ export class DatabaseTableGrid {
       event.preventDefault();
       this.openEditor(selection.anchor, event.key);
     }
+  }
+
+  /** Mod+Enter on one selected cell clicks its button, read-only too: OPEN only reads. */
+  private pressCellButton(event: KeyboardEvent, selection: Extract<TableSelection, { kind: 'cell' }>): boolean {
+    const single = selection.anchor.rowId === selection.focus.rowId && selection.anchor.propertyId === selection.focus.propertyId;
+
+    if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || !single) {
+      return false;
+    }
+    const button = this.cellEl(selection.anchor)?.querySelector<HTMLElement>(CELL_BUTTON) ?? null;
+
+    button?.click();
+
+    return button !== null;
   }
 
   private clearRange(): void {

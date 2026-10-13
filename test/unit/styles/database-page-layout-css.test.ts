@@ -218,6 +218,45 @@ describe('database row page layout css', () => {
     expect(selected).not.toMatch(/accent|blue|focus-ring|#2383e2|toggle-on/i);
   });
 
+  // research/10 §8: white 8px cards with a hairline ring and a header strip. Notion's are blue; Q6 makes them neutral.
+  it('draws module cards with a neutral ring and header strip', () => {
+    const card = ruleBody('[data-blok-database-layout-module]');
+    const strip = ruleBody('[data-blok-database-layout-module-header]');
+    const name = ruleBody('[data-blok-database-layout-module-name]');
+
+    expect(card).toContain('background-color: var(--blok-bg-primary)');
+    expect(card).toContain('border-radius: var(--blok-radius-control-lg)');
+    expect(card).toContain('box-shadow: inset 0 0 0 1px var(--blok-database-builder-canvas-ring)');
+    expect(strip).toContain('background-color: var(--blok-database-builder-canvas-ring)');
+    expect(name).toContain('color: var(--blok-text-secondary)');
+    expect(name).toContain('font-weight: 500');
+    for (const body of [card, strip, name]) expect(body).not.toMatch(/accent|blue|#2383e2|rgb\(35, 131, 226\)|rgb\(182, 212, 243\)/i);
+  });
+
+  // A selected module is a selected state: no fill, primary ink, no blue (blue law).
+  it('marks the selected module without blue', () => {
+    const card = ruleBody('[data-blok-database-layout-module]');
+    const selected = ruleBody('[data-blok-database-layout-module][data-selected]');
+
+    expect(selected).toContain('var(--blok-database-card-border-active)');
+    expect(selected).not.toMatch(/background/);
+    expect(selected).not.toMatch(/(?:^|;)\s*color:/);
+    expect(card).not.toMatch(/(?:^|;)\s*color:/);
+    expect(selected).not.toMatch(/accent|blue|focus-ring|#2383e2|toggle-on/i);
+  });
+
+  // research/09 §3: 28px rows, a 24x24 pin button in primary ink whatever its state.
+  it('draws the Heading menu rows 28px high with a 24px pin button in primary ink', () => {
+    const row = ruleBody('[data-blok-database-layout-pin-row]');
+    const toggle = ruleBody('[data-blok-database-layout-pin-toggle]');
+
+    expect(row).toContain('min-block-size: 28px');
+    expect(toggle).toContain('inline-size: 24px');
+    expect(toggle).toContain('block-size: 24px');
+    expect(toggle).toContain('color: var(--blok-text-primary)');
+    expect(database).not.toMatch(/\[data-blok-database-layout-pin-toggle\]\[data-pinned\][^{]*\{[^}]*color/);
+  });
+
   // research/09 §10: a 290px column with a 16px/500 title.
   it('draws Page settings as a 290px column with a 16px title', () => {
     expect(ruleBody('[data-blok-database-layout-side]')).toContain('inline-size: 290px');

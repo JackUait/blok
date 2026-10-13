@@ -1,4 +1,5 @@
 import { syncPortalDirection } from '../../components/utils/portal-direction';
+import { TOP_LAYER_MARKER_ATTR } from '../../components/utils/top-layer';
 import type { I18n } from '../../../types';
 import type { PropertyType } from './types';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
@@ -84,7 +85,15 @@ export class DatabasePropertyTypePopover {
       popover.appendChild(item);
     }
 
-    document.body.appendChild(popover);
+    // Inside a top-layer modal (the layout builder): on body the top layer covers the menu and the focus trap takes the name field.
+    // Not the center peek: it is modal but not in the top layer, and its transform would shift a fixed menu.
+    const modal = anchor.closest<HTMLElement>(`[aria-modal="true"][${TOP_LAYER_MARKER_ATTR}]`);
+
+    if (modal !== null) {
+      modal.appendChild(popover);
+    } else {
+      document.body.appendChild(popover);
+    }
     const reposition = (): void => {
       positionFixedAnchored(popover, anchor, { side: 'bottom', offset: 4 });
     };

@@ -98,8 +98,13 @@ const builder = (page: Page): Locator => page.getByRole('dialog', { name: 'Custo
 /** The pins live in the peek, or in the builder's canvas while customizing. Never both. */
 const pins = (page: Page): Locator => page.locator('[data-blok-database-drawer-pins]');
 
-const layoutMenu = async (page: Page, propertyId: string): Promise<void> => {
-  await builder(page).locator(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`).click();
+/** Pins from the Heading module's ••• menu (research/09 §3), then closes the menu. */
+const pinFromHeadingMenu = async (page: Page, name: string): Promise<void> => {
+  await builder(page).getByRole('button', { name: 'Action menu for module' }).click();
+  await page.getByRole('button', { name: `Show ${name} as pinned` }).click();
+  await expect(page.getByRole('button', { name: `Do not show ${name} as pinned` })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: `Do not show ${name} as pinned` })).toHaveCount(0);
 };
 
 test.beforeAll(ensureBlokBundleBuilt);
@@ -142,14 +147,61 @@ test.describe('row page layout', () => {
 
     expect(new Set(bar).size).toBe(1);
 
-    await layoutMenu(page, 'p-due');
-    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await pinFromHeadingMenu(page, 'Due');
     await expect(dialog.locator('[data-blok-database-drawer-pins] [data-property-id="p-due"]').first()).toBeVisible();
     await apply.click();
 
     await expect(dialog).toBeHidden();
     expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-due', place: 'heading' }]);
     await expect(peek(page).locator('[data-blok-database-drawer-pins] [data-property-id="p-due"]').first()).toBeVisible();
+  });
+
+  // research/09 §3, research/10 §8: a click in the Heading module opens its menu; a pin moves at once.
+  test('opens the Heading menu from a click in the module and pins without losing focus', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+
+    await dialog.getByRole('heading', { name: 'Alpha' }).click();
+    await expect(page.getByPlaceholder('Search properties…')).toBeFocused();
+    const pinDue = page.getByRole('button', { name: 'Show Due as pinned' });
+
+    await pinDue.click();
+    const unpinDue = page.getByRole('button', { name: 'Do not show Due as pinned' });
+
+    await expect(unpinDue).toBeFocused();
+    await expect(dialog.locator('[data-blok-database-drawer-pins] [data-property-id="p-due"]').first()).toBeVisible();
+    await expect(page.getByRole('switch', { name: 'Property labels' })).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
+
+    await expect(unpinDue).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    // The selected module is marked in neutral ink, never blue.
+    const ring = await dialog.locator('[data-blok-database-layout-module="heading"]').evaluate((el) => getComputedStyle(el).boxShadow);
+
+    expect(ring).not.toMatch(/rgb\(35, 131, 226\)|rgb\(182, 212, 243\)|rgb\(206, 227, 247\)/);
+  });
+
+  // research/10 §7: "+ Add a property" in the Pinned list makes a property pinned first, not in the group.
+  test('adds a property from the Heading menu first among the pins', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+
+    await dialog.getByRole('button', { name: 'Action menu for module' }).click();
+    await page.locator('[data-blok-testid="database-layout-heading-menu"] [data-blok-database-layout-add-pin]').click();
+    await page.locator('[data-blok-database-property-type-option="number"]').click();
+    const pinned = dialog.locator('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-value]');
+
+    await expect(pinned).toHaveCount(2);
+    await expect(pinned.first()).not.toHaveAttribute('data-property-id', 'p-due');
+    await expect(pinned.nth(1)).toHaveAttribute('data-property-id', 'p-due');
+    await expect(dialog.locator('[data-blok-database-drawer-props] [data-blok-database-drawer-prop-value]')).toHaveCount(1);
+    await expect(dialog).toBeVisible();
   });
 
   // research/09 §10: at 756px the bar stays on one 60px line.
@@ -193,8 +245,7 @@ test.describe('row page layout', () => {
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
     await expect(builder(page)).toBeVisible();
 
-    await layoutMenu(page, 'p-due');
-    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await pinFromHeadingMenu(page, 'Due');
     await expect(pins(page).locator('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toContainText('Friday');
     expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([]);
 
@@ -213,8 +264,7 @@ test.describe('row page layout', () => {
     await openRow(page, 'r1');
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await layoutMenu(page, 'p-due');
-    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await pinFromHeadingMenu(page, 'Due');
     await expect(pins(page).locator('[data-property-id="p-due"]').first()).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -230,8 +280,7 @@ test.describe('row page layout', () => {
     await openRow(page, 'r1');
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await layoutMenu(page, 'p-due');
-    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await pinFromHeadingMenu(page, 'Due');
     await expect(pins(page).locator('[data-property-id="p-due"]').first()).toBeVisible();
 
     await builder(page).getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -251,8 +300,7 @@ test.describe('row page layout', () => {
     await openRow(page, 'r1');
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await layoutMenu(page, 'p-due');
-    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await pinFromHeadingMenu(page, 'Due');
     await builder(page).getByRole('button', { name: 'Cancel', exact: true }).click();
     const discard = page.getByRole('alertdialog', { name: 'Discard all layout changes?' }).getByRole('button', { name: 'Discard' });
 
@@ -498,8 +546,7 @@ test.describe('row page layout', () => {
     await openRow(page, 'r1');
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await layoutMenu(page, 'p-due');
-    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await pinFromHeadingMenu(page, 'Due');
 
     await builder(page).getByRole('button', { name: 'Preview: Alpha' }).click();
     await expect(page.getByPlaceholder('Search pages…')).toBeFocused();

@@ -70,6 +70,27 @@ const clickItem = (name: string): void => {
   item.click();
 };
 
+/** The Heading module's ••• menu (plan Phase 5a). */
+const openHeadingMenu = (): void => {
+  if (q('[data-blok-testid="database-layout-heading-menu"]') !== null) return;
+  q('[data-blok-database-layout-module="heading"] [data-blok-database-layout-module-menu]')?.click();
+};
+
+const pinButton = (propertyId: string): HTMLButtonElement | null => q<HTMLButtonElement>(`[data-blok-testid="database-layout-pin-${propertyId}"]`);
+
+/** "+ Add a property" at the end of the Heading menu's Pinned list. */
+const addPin = (): HTMLButtonElement | null => {
+  openHeadingMenu();
+
+  return q<HTMLButtonElement>('[data-blok-testid="database-layout-heading-menu"] [data-blok-database-layout-add-pin]');
+};
+
+const pinFromMenu = (propertyId: string): void => {
+  openHeadingMenu();
+  pinButton(propertyId)?.click();
+  (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+};
+
 const openItemMenu = (propertyId: string): void => {
   const button = q(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`);
 
@@ -488,8 +509,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
 
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
@@ -518,8 +538,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
       q('[data-blok-database-layout-cancel]')?.click();
       const dialog = q('[data-blok-database-confirm-dialog]');
 
@@ -552,7 +571,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-drawer-customize]')?.click();
       q('[data-blok-database-drawer-add-prop]')?.click();
       q('[data-blok-database-property-type-option="number"]')?.click();
-      q('[data-blok-database-layout-add-pin]')?.click();
+      addPin()?.click();
       q('[data-blok-database-property-type-option="number"]')?.click();
       q('[data-blok-database-layout-cancel]')?.click();
       q('[data-blok-database-confirm-action="confirm"]')?.click();
@@ -592,8 +611,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
       q('[data-blok-database-layout-cancel]')?.click();
       q('[data-blok-database-confirm-action="cancel"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await Promise.resolve();
@@ -610,8 +628,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
       expect(q('[data-blok-database-drawer]')).not.toBeNull();
@@ -627,8 +644,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
       drawer.refreshSchema(schemaWith({ pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }], pageLayoutSections: [] }));
 
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-status', 'p-due']);
@@ -638,7 +654,7 @@ describe('DatabaseCardDrawer — page layout', () => {
         .toEqual([{ id: 'p-status', place: 'heading' }, { id: 'p-due', place: 'heading' }]);
     });
 
-    it('disables Pin to heading at the pin limit', () => {
+    it('disables the pin buttons at the pin limit', () => {
       const many: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT + 1 }, (_, i) =>
         ({ id: `x${i}`, name: `X${i}`, type: 'text' as const, position: `b${String(i).padStart(2, '0')}` }));
       const options = createOptions({
@@ -650,12 +666,14 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu(`x${PAGE_LAYOUT_PIN_LIMIT}`);
+      openHeadingMenu();
 
-      expect(q('[data-blok-popover-item][data-blok-item-name="pin"]')?.getAttribute('aria-disabled')).toBe('true');
+      expect(pinButton(`x${PAGE_LAYOUT_PIN_LIMIT}`)?.disabled).toBe(true);
+      // Unpinning stays possible at the limit.
+      expect(pinButton('x0')?.disabled).toBe(false);
     });
 
-    it('keeps Pin to heading disabled when search hides all 15 existing pins', () => {
+    it('keeps the pin buttons disabled when the property search hides all 15 existing pins', () => {
       const pins: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT }, (_, i) =>
         ({ id: `pin-${i}`, name: `Pinned ${i}`, type: 'text', position: `b${String(i).padStart(2, '0')}` }));
       const options = createOptions({
@@ -677,9 +695,9 @@ describe('DatabaseCardDrawer — page layout', () => {
       if (search === null) throw new Error('missing property search');
       search.value = 'candidate';
       search.dispatchEvent(new Event('input', { bubbles: true }));
-      openItemMenu('candidate');
+      openHeadingMenu();
 
-      expect(q('[data-blok-popover-item][data-blok-item-name="pin"]')?.getAttribute('aria-disabled')).toBe('true');
+      expect(pinButton('candidate')?.disabled).toBe(true);
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual([]);
       expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['candidate']);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
@@ -775,8 +793,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
       q('[data-blok-database-peek-next]')?.click();
 
       expect(q('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.textContent).toContain('Monday');
@@ -784,20 +801,20 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
     });
 
-    it('adds a property from the pins row as a draft pin, even with no pins yet', () => {
+    it('adds a property from the Heading menu as a draft pin, even with no pins yet', () => {
       const added: PropertyDefinition = { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' };
       const options = createOptions({ onOpenAddProperty: vi.fn() });
       const drawer = new DatabaseCardDrawer(options);
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      const add = q<HTMLButtonElement>('[data-blok-database-drawer-pins-row] [data-blok-database-layout-add-pin]');
+      const add = addPin();
 
       expect(add?.disabled).toBe(false);
       add?.click();
       const [anchor, onAdded] = vi.mocked(options.onOpenAddProperty)?.mock.calls[0] ?? [];
 
-      expect(anchor).toBe(add);
+      expect(anchor).toBe(q('[data-blok-database-layout-module="heading"] [data-blok-database-layout-module-menu]'));
       drawer.refreshSchema([...schemaWith(), added]);
       onAdded?.('p-new');
 
@@ -808,7 +825,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(written(options)?.placements).toEqual([{ id: 'p-new', place: 'heading' }]);
     });
 
-    it('pins a property made with the built-in type menu from the pins row only', () => {
+    it('pins a property made with the built-in type menu from the Heading menu only', () => {
       const added: PropertyDefinition[] = [];
       const options = createOptions();
       const drawer = new DatabaseCardDrawer({
@@ -825,14 +842,14 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-property-type-option="number"]')?.click();
 
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual([]);
-      q('[data-blok-database-layout-add-pin]')?.click();
+      addPin()?.click();
       q('[data-blok-database-property-type-option="number"]')?.click();
 
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-new-1']);
       drawer.destroy();
     });
 
-    it('disables Add a property in the pins row at the pin limit, counting pins search hides', () => {
+    it('disables Add a property in the Heading menu at the pin limit, counting pins search hides', () => {
       const pins: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT }, (_, i) =>
         ({ id: `pin-${i}`, name: `Pinned ${i}`, type: 'text', position: `b${String(i).padStart(2, '0')}` }));
       const options = createOptions({
@@ -852,10 +869,10 @@ describe('DatabaseCardDrawer — page layout', () => {
       search.value = 'candidate';
       search.dispatchEvent(new Event('input', { bubbles: true }));
 
-      expect(q<HTMLButtonElement>('[data-blok-database-layout-add-pin]')?.disabled).toBe(true);
+      expect(addPin()?.disabled).toBe(true);
     });
 
-    it('shows Add a property in the pins row only while customizing', () => {
+    it('draws no Add a property in the pins row', () => {
       new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) })).open(ROW);
 
       expect(q('[data-blok-database-drawer-pins]')).not.toBeNull();
@@ -868,8 +885,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-due');
-      clickItem('pin');
+      pinFromMenu('p-due');
       drawer.close();
       drawer.open(ROW);
 

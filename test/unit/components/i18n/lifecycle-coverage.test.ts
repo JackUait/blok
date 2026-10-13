@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1044 + 118 + 413 + 4 closure for all 1579 keys', () => {
+  it('rebuilds a disjoint 1052 + 118 + 413 + 4 closure for all 1587 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1579);
+    expect(lifecycle.size).toBe(1587);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -353,7 +353,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the comment badge calls tools.database.openComments by literal.
       // +4: the builder's Preview switch, its search and empty line, and the New page placeholder call their keys by literal.
       // +6: the builder's Page settings column calls its Structure, Options, Full width and Database templates keys and hints by literal.
-      'executable-literal': 1044,
+      // +10 / -2: the builder's module cards and Heading menu call their keys by literal;
+      // tools.database.layoutPin and layoutUnpin left with the per-property pin items.
+      'executable-literal': 1052,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

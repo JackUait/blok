@@ -34,6 +34,40 @@ describe('DatabasePropertyTypePopover', () => {
       expect(el).not.toBeNull();
     });
 
+    // A top-layer modal pulls focus back into itself; a menu on body would hide under it.
+    it('mounts inside the top-layer modal that holds its anchor, and focuses its name field there', () => {
+      const dialog = document.createElement('div');
+      const named = new DatabasePropertyTypePopover({ onSelect, withNameField: true });
+
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('data-blok-top-layer', 'true');
+      dialog.appendChild(anchor);
+      document.body.appendChild(dialog);
+      named.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]');
+
+      expect(el?.parentElement).toBe(dialog);
+      expect(el?.querySelector('[data-blok-database-property-name-input]')).toHaveFocus();
+      named.destroy();
+      dialog.remove();
+
+      expect(document.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
+    });
+
+    it('stays on body for a modal outside the top layer, like the center peek', () => {
+      const peek = document.createElement('div');
+
+      peek.setAttribute('aria-modal', 'true');
+      peek.appendChild(anchor);
+      document.body.appendChild(peek);
+      popover.open(anchor);
+
+      expect(document.querySelector('[data-blok-database-property-type-popover]')?.parentElement).toBe(document.body);
+      popover.destroy();
+      peek.remove();
+    });
+
     it('takes the anchor direction so it mirrors in an RTL editor', () => {
       anchor.style.direction = 'rtl';
       popover.open(anchor);

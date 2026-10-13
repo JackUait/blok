@@ -78,9 +78,31 @@ const clickItem = (name: string): void => {
   item.click();
 };
 
+const moduleCard = (kind: 'heading' | 'group' | 'content'): HTMLElement => {
+  const el = builder().querySelector<HTMLElement>(`[data-blok-database-layout-module="${kind}"]`);
+
+  if (el === null) throw new Error(`no ${kind} module`);
+
+  return el;
+};
+
+const headingMenuButton = (): HTMLElement => {
+  const el = moduleCard('heading').querySelector<HTMLElement>('[data-blok-database-layout-module-menu]');
+
+  if (el === null) throw new Error('no Heading module menu button');
+
+  return el;
+};
+
+const headingMenu = (): HTMLElement | null => q('[data-blok-testid="database-layout-heading-menu"]');
+
+const pinButton = (id: string): HTMLButtonElement | null => q<HTMLButtonElement>(`[data-blok-testid="database-layout-pin-${id}"]`);
+
+/** Pins from the Heading menu's pin button, then closes the menu. */
 const pinDue = (): void => {
-  q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
-  clickItem('pin');
+  if (headingMenu() === null) headingMenuButton().click();
+  pinButton('p-due')?.click();
+  (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 };
 
 const customize = (overrides: Partial<CardDrawerOptions> = {}): { drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
@@ -425,7 +447,7 @@ describe('PageLayoutBuilder', () => {
 
     it.each([
       ['More save options', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click(), 'reset'],
-      ['an item menu', () => q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click(), 'pin'],
+      ['an item menu', () => q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click(), 'add-to-page'],
       ['the Preview switch', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]')?.click(), 'preview-row-1'],
     ])('closes %s and leaves the toast and the builder', (_name, openMenu, item) => {
       const toast = showToast();
@@ -640,6 +662,186 @@ describe('PageLayoutBuilder', () => {
         expect(switchNamed('Property icons').closest('[data-blok-database-layout-option]')?.querySelector('[data-blok-database-layout-hint]')).toBeNull();
         drawer.destroy();
       });
+    });
+  });
+
+  // research/09 anatomy L39, research/10 §8: the canvas holds module cards, each with a header strip.
+  describe('Heading module menu', () => {
+    const PINNED = schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] });
+    const rowsIn = (list: 'pinned' | 'unpinned'): string[] =>
+      [...(headingMenu()?.querySelectorAll<HTMLElement>(`[data-blok-database-layout-pin-list="${list}"] [data-blok-database-layout-pin-row]`) ?? [])]
+        .filter((row) => !row.hidden)
+        .map((row) => row.getAttribute('data-property-id') ?? '');
+    const canvasPins = (): string[] =>
+      [...builder().querySelectorAll<HTMLElement>('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-value]')].map((el) => el.getAttribute('data-property-id') ?? '');
+    const groupIds = (): string[] =>
+      [...builder().querySelectorAll<HTMLElement>('[data-blok-database-drawer-props] [data-blok-database-drawer-prop-value]')].map((el) => el.getAttribute('data-property-id') ?? '');
+
+    // research/09 §3, research/10 §7: header, focused search, two lists, a pin button per row.
+    it('lists pinned and unpinned properties in the Heading menu with a pin button each', () => {
+      const { drawer } = customize({ schema: PINNED });
+
+      expect([...builder().querySelectorAll('[data-blok-database-layout-module]')].map((el) => el.getAttribute('data-blok-database-layout-module')))
+        .toEqual(['heading', 'group', 'content']);
+      expect([...builder().querySelectorAll('[data-blok-database-layout-module-name]')].map((el) => el.textContent)).toEqual(['Heading', 'Property group', 'Content']);
+      expect(headingMenuButton().getAttribute('aria-label')).toBe('Action menu for module');
+      headingMenuButton().click();
+      const menu = headingMenu();
+
+      expect(menu?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('Heading');
+      const search = menu?.querySelector<HTMLInputElement>('[data-blok-testid="database-layout-heading-search"]');
+
+      expect(search?.placeholder).toBe('Search properties…');
+      expect(search).toHaveFocus();
+      expect([...(menu?.querySelectorAll('[data-blok-database-panel-section]') ?? [])].map((el) => el.textContent))
+        .toEqual(['Pinned properties', 'Unpinned properties', 'Options']);
+      expect(rowsIn('pinned')).toEqual(['p-due']);
+      expect(rowsIn('unpinned')).toEqual(['p-status']);
+      expect(pinButton('p-due')?.getAttribute('aria-label')).toBe('Do not show Due as pinned');
+      expect(pinButton('p-status')?.getAttribute('aria-label')).toBe('Show Status as pinned');
+      expect(pinButton('p-due')?.hasAttribute('data-pinned')).toBe(true);
+      expect(pinButton('p-status')?.hasAttribute('data-pinned')).toBe(false);
+      if (search === null || search === undefined) throw new Error('no property search');
+      search.value = 'sta';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(rowsIn('pinned')).toEqual([]);
+      expect(rowsIn('unpinned')).toEqual(['p-status']);
+      expect(search).toHaveFocus();
+      drawer.destroy();
+    });
+
+    // research/09 §3: a pin moves the row between the lists at once; the canvas follows.
+    it('pins and unpins at once from the pin button, and the canvas follows', () => {
+      const { drawer, options } = customize();
+
+      headingMenuButton().click();
+      pinButton('p-status')?.focus();
+      pinButton('p-status')?.click();
+
+      expect(rowsIn('pinned')).toEqual(['p-status']);
+      expect(rowsIn('unpinned')).toEqual(['p-due']);
+      expect(pinButton('p-status')).toHaveFocus();
+      expect(pinButton('p-status')?.getAttribute('aria-label')).toBe('Do not show Status as pinned');
+      expect(canvasPins()).toEqual(['p-status']);
+      expect(groupIds()).toEqual(['p-due']);
+      pinButton('p-due')?.click();
+      pinButton('p-status')?.click();
+
+      expect(rowsIn('pinned')).toEqual(['p-due']);
+      expect(canvasPins()).toEqual(['p-due']);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.placements).toEqual([{ id: 'p-due', place: 'heading' }]);
+      expect(headingMenu()).toBeNull();
+      drawer.destroy();
+    });
+
+    it('disables the pin buttons of unpinned rows at the pin limit, even when search hides the pins', () => {
+      const many: PropertyDefinition[] = Array.from({ length: 16 }, (_, i) =>
+        ({ id: `x${i}`, name: `X${i}`, type: 'text' as const, position: `b${String(i).padStart(2, '0')}` }));
+      const { drawer } = customize({
+        schema: [
+          { id: 'p-title', name: 'Title', type: 'title', position: 'a0', pageLayoutPlacements: many.slice(0, 15).map((p) => ({ id: p.id, place: 'heading' as const })) },
+          ...many,
+        ],
+      });
+
+      headingMenuButton().click();
+      const search = headingMenu()?.querySelector<HTMLInputElement>('[data-blok-testid="database-layout-heading-search"]');
+
+      if (search === null || search === undefined) throw new Error('no property search');
+      search.value = 'x15';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(pinButton('x15')?.disabled).toBe(true);
+      expect(pinButton('x0')?.disabled).toBe(false);
+      expect(headingMenu()?.querySelector<HTMLButtonElement>('[data-blok-database-layout-add-pin]')?.disabled).toBe(true);
+      drawer.destroy();
+    });
+
+    // research/10 §7: the new property lands pinned, first in the Pinned list, never in the group.
+    it('adds a property from the Pinned list first among pins, never in the group', () => {
+      const options = createOptions({ schema: PINNED, onOpenAddProperty: vi.fn() });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      headingMenuButton().click();
+      const add = headingMenu()?.querySelector<HTMLButtonElement>('[data-blok-database-layout-add-pin]');
+
+      expect(add?.textContent).toBe('+ Add a property');
+      add?.click();
+      const [anchor, onAdded] = vi.mocked(options.onOpenAddProperty)?.mock.calls[0] ?? [];
+
+      expect(headingMenu()).toBeNull();
+      expect(anchor).toBe(headingMenuButton());
+      drawer.refreshSchema([...PINNED, { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' }]);
+      onAdded?.('p-new');
+
+      expect(canvasPins()).toEqual(['p-new', 'p-due']);
+      expect(groupIds()).not.toContain('p-new');
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      const edit = vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0];
+
+      expect(edit?.(pageLayoutOf(PINNED[0])).placements).toEqual([{ id: 'p-new', place: 'heading' }, { id: 'p-due', place: 'heading' }]);
+      drawer.destroy();
+    });
+
+    // research/10 §7: "Options > Property labels", ON, present with zero pins. Its rendering is plan Phase 7.
+    it('turns Property labels off from the Heading menu as a draft edit', () => {
+      const { drawer, options } = customize();
+
+      headingMenuButton().click();
+      const labels = headingMenu()?.querySelector<HTMLElement>('[role="switch"]');
+
+      expect(labels?.textContent?.trim()).toBe('Property labels');
+      expect(labels?.getAttribute('aria-checked')).toBe('true');
+      labels?.click();
+
+      expect(headingMenu()?.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.propertyLabels).toBe(false);
+      drawer.destroy();
+    });
+
+    // research/10 §8: a click anywhere in a module selects it and opens its menu.
+    it('selects a module and opens its menu on a click anywhere in it', () => {
+      const { drawer } = customize();
+
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-canvas-title]')?.click();
+
+      expect(moduleCard('heading').hasAttribute('data-selected')).toBe(true);
+      expect(headingMenu()).not.toBeNull();
+      headingMenuButton().click();
+
+      // The ••• click inside the card toggles once, not twice.
+      expect(headingMenu()).toBeNull();
+      moduleCard('group').click();
+
+      expect(moduleCard('group').hasAttribute('data-selected')).toBe(true);
+      expect(moduleCard('heading').hasAttribute('data-selected')).toBe(false);
+      // A control inside a module keeps its own click.
+      q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
+
+      expect(headingMenu()).toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
+      drawer.destroy();
+    });
+
+    it('keeps no Pin or Unpin in the per-property menu', () => {
+      const { drawer } = customize({ schema: PINNED });
+
+      q('[data-blok-database-layout-item-menu][data-property-id="p-status"]')?.click();
+      expect(q('[data-blok-popover-item][data-blok-item-name="pin"]')).toBeNull();
+      q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
+      expect(q('[data-blok-popover-item][data-blok-item-name="unpin"]')).toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
+      drawer.destroy();
     });
   });
 

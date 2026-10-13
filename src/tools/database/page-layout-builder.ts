@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconCheck, IconChevronDown, IconCross, IconDatabase, IconInfo, IconPage, IconSplitView, IconTabs } from '../../components/icons';
+import { IconCheck, IconChevronDown, IconCross, IconDatabase, IconDotsHorizontal, IconInfo, IconPage, IconPin, IconPinFilled, IconSplitView, IconTabs } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { onHover } from '../../components/utils/tooltip';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
@@ -12,9 +12,22 @@ import type { PopoverItemParams } from '../../components/utils/popover/component
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { openDatabaseConfirm } from './database-confirm-dialog';
-import { panelSwitch } from './database-panel';
-import { setFullWidth, setGroupIn, setPropertyIcons, setStructure, setTemplates } from './page-layout';
+import { DatabasePanel, panelInput, panelLabel, panelSwitch } from './database-panel';
+import { propertyTypeMeta } from './database-property-types';
+import {
+  PAGE_LAYOUT_PIN_LIMIT,
+  pin,
+  removeFromLayout,
+  resolvePageLayout,
+  setFullWidth,
+  setGroupIn,
+  setPropertyIcons,
+  setPropertyLabels,
+  setStructure,
+  setTemplates,
+} from './page-layout';
 import type { PageLayoutData, PageLayoutOp } from './page-layout';
+import type { PropertyDefinition } from './types';
 
 /** A page the Preview switch offers. */
 export interface PreviewPage {
@@ -45,7 +58,23 @@ export interface PageLayoutBuilderOptions {
   /** The page in the canvas. Null is the "New page" placeholder. */
   previewId: () => string | null;
   onPreview: (id: string) => void;
+  /** The properties the layout places, in schema order. */
+  properties: () => PropertyDefinition[];
+  /** "+ Add a property" in the Heading menu. The new property is pinned first. */
+  onAddPin: (anchor: HTMLElement) => void;
 }
+
+/** The canvas modules (research/09 anatomy L39). Page discussions is skipped (plan §2.4). */
+export type PageLayoutModule = 'heading' | 'group' | 'content';
+
+const MODULE_NAMES: Record<PageLayoutModule, string> = {
+  heading: 'tools.database.layoutModuleHeading',
+  group: 'tools.database.layoutModuleGroup',
+  content: 'tools.database.layoutModuleContent',
+};
+
+/** A click on one of these inside a module is the control's own, not a module pick. */
+const MODULE_CONTROL = 'button, input, select, textarea, a[href], [role="button"], [tabindex]';
 
 /**
  * The full-window "Customize page layout" builder (research/09 §1, §10). UI
@@ -53,6 +82,11 @@ export interface PageLayoutBuilderOptions {
  */
 export class PageLayoutBuilder {
   readonly canvas: HTMLElement;
+  /** Module cards are built once, so a menu's trigger outlives a redraw. The drawer fills their bodies. */
+  private readonly modules = new Map<PageLayoutModule, { card: HTMLElement; body: HTMLElement }>();
+  private readonly headingMenuButton: HTMLButtonElement;
+  private headingMenu: DatabasePanel | null = null;
+  private headingQuery = '';
   private readonly search: HTMLInputElement;
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
@@ -111,6 +145,10 @@ export class PageLayoutBuilder {
     body.setAttribute('data-blok-database-layout-body', '');
     this.canvas = document.createElement('div');
     this.canvas.setAttribute('data-blok-database-layout-canvas', '');
+    this.headingMenuButton = this.button('data-blok-database-layout-module-menu', IconDotsHorizontal, null, () => this.toggleHeadingMenu());
+    this.headingMenuButton.setAttribute('aria-label', this.label('tools.database.layoutModuleMenu'));
+    this.headingMenuButton.setAttribute('aria-expanded', 'false');
+    for (const kind of ['heading', 'group', 'content'] as const) this.canvas.appendChild(this.module(kind));
     side.setAttribute('data-blok-database-layout-side', '');
     this.search = document.createElement('input');
     this.search.type = 'search';
@@ -157,6 +195,7 @@ export class PageLayoutBuilder {
     const layout = this.options.layout();
 
     for (const { control, state, on } of this.settings) control.setAttribute(state, String(on(layout)));
+    this.headingMenu?.refresh();
   }
 
   /** Is `target` inside the builder or one of its menus? */
@@ -168,7 +207,175 @@ export class PageLayoutBuilder {
     this.confirm?.abort();
     this.confirm = null;
     this.closeMenu();
+    this.closeHeadingMenu();
     this.dialog.close();
+  }
+
+  /** Puts the drawn regions of the previewed page into the module cards. */
+  fill(regions: Record<PageLayoutModule, HTMLElement[]>): void {
+    for (const [kind, { body }] of this.modules) body.replaceChildren(...regions[kind]);
+  }
+
+  /** A card with a header strip; a click anywhere in it selects it and opens its menu (research/10 §8). */
+  private module(kind: PageLayoutModule): HTMLElement {
+    const card = document.createElement('section');
+    const header = document.createElement('div');
+    const name = document.createElement('span');
+    const body = document.createElement('div');
+
+    card.setAttribute('data-blok-database-layout-module', kind);
+    header.setAttribute('data-blok-database-layout-module-header', '');
+    name.setAttribute('data-blok-database-layout-module-name', '');
+    name.textContent = this.label(MODULE_NAMES[kind]);
+    body.setAttribute('data-blok-database-layout-module-body', '');
+    header.append(name);
+    // Only Heading has a menu yet: Property group's is plan Phase 5b, and Content's was not measured.
+    if (kind === 'heading') header.append(this.headingMenuButton);
+    card.append(header, body);
+    card.addEventListener('click', (event) => {
+      if (event.target instanceof Element && event.target.closest(MODULE_CONTROL) !== null) return;
+      this.select(kind);
+      if (kind === 'heading' && this.headingMenu === null) this.openHeadingMenu();
+    });
+    this.modules.set(kind, { card, body });
+
+    return card;
+  }
+
+  private select(kind: PageLayoutModule): void {
+    for (const [other, { card }] of this.modules) card.toggleAttribute('data-selected', other === kind);
+    if (kind !== 'heading') this.closeHeadingMenu();
+  }
+
+  private toggleHeadingMenu(): void {
+    if (this.headingMenu !== null) {
+      this.closeHeadingMenu();
+
+      return;
+    }
+    this.select('heading');
+    this.openHeadingMenu();
+  }
+
+  /** research/09 §3, research/10 §7: search, Pinned / Unpinned with a pin button per row, then Options. */
+  private openHeadingMenu(): void {
+    this.closeMenu();
+    const menu = new DatabasePanel({
+      anchor: this.headingMenuButton,
+      testId: 'database-layout-heading-menu',
+      width: 290,
+      backLabel: this.label('tools.database.settingsBack'),
+      root: { title: this.label('tools.database.layoutModuleHeading'), build: () => this.headingMenuPage() },
+      onClose: () => {
+        if (this.headingMenu !== menu) return;
+        this.headingMenu = null;
+        this.headingMenuButton.setAttribute('aria-expanded', 'false');
+      },
+    });
+
+    this.headingQuery = '';
+    this.headingMenu = menu;
+    this.headingMenuButton.setAttribute('aria-expanded', 'true');
+    menu.open();
+  }
+
+  private closeHeadingMenu(): void {
+    const menu = this.headingMenu;
+
+    this.headingMenu = null;
+    this.headingMenuButton.setAttribute('aria-expanded', 'false');
+    menu?.close();
+  }
+
+  private headingMenuPage(): HTMLElement[] {
+    const layout = this.options.layout();
+    const properties = this.options.properties();
+    // Counts every pin, so a search that hides some never lifts the limit.
+    const pinned = resolvePageLayout(layout, properties).heading;
+    const pinnedIds = new Set(pinned.map((def) => def.id));
+    const full = pinned.length >= PAGE_LAYOUT_PIN_LIMIT;
+    const rows: HTMLElement[] = [];
+    const list = (kind: 'pinned' | 'unpinned', defs: PropertyDefinition[]): HTMLElement => {
+      const el = document.createElement('div');
+
+      el.setAttribute('data-blok-database-layout-pin-list', kind);
+      for (const def of defs) {
+        const row = this.pinRow(def, kind === 'pinned', kind === 'unpinned' && full);
+
+        rows.push(row);
+        el.appendChild(row);
+      }
+
+      return el;
+    };
+    const filter = (): void => {
+      for (const row of rows) row.hidden = !(row.getAttribute('data-name') ?? '').includes(this.headingQuery.trim().toLowerCase());
+    };
+    const search = panelInput({
+      value: this.headingQuery,
+      placeholder: this.label('tools.database.layoutSearchProperties'),
+      testId: 'database-layout-heading-search',
+      label: this.label('tools.database.layoutSearchProperties'),
+      onInput: (value) => {
+        this.headingQuery = value;
+        filter();
+      },
+    });
+    const pinnedList = list('pinned', pinned);
+    const add = this.button('data-blok-database-layout-add-pin', null, 'tools.database.addProperty', () => {
+      this.closeHeadingMenu();
+      this.options.onAddPin(this.headingMenuButton);
+    });
+
+    add.disabled = full;
+    pinnedList.appendChild(add);
+    search.type = 'search';
+    filter();
+
+    return [
+      search,
+      panelLabel(this.label('tools.database.layoutPinnedProperties')),
+      pinnedList,
+      panelLabel(this.label('tools.database.layoutUnpinnedProperties')),
+      list('unpinned', properties.filter((def) => !pinnedIds.has(def.id))),
+      panelLabel(this.label('tools.database.layoutOptions')),
+      panelSwitch({
+        label: this.label('tools.database.layoutPropertyLabels'),
+        testId: 'database-layout-option-layoutPropertyLabels',
+        checked: layout.propertyLabels,
+        onToggle: (next) => this.options.edit(setPropertyLabels(next)),
+      }),
+    ];
+  }
+
+  /** research/09 §3: type glyph, name, and an always-visible pin button. */
+  private pinRow(def: PropertyDefinition, pinned: boolean, disabled: boolean): HTMLElement {
+    const row = document.createElement('div');
+    const icon = document.createElement('span');
+    const name = document.createElement('span');
+    const toggle = this.button('data-blok-database-layout-pin-toggle', pinned ? IconPinFilled : IconPin, null, () => {
+      this.options.edit(pinned ? removeFromLayout(def.id) : pin(def.id));
+    });
+
+    row.setAttribute('data-blok-database-layout-pin-row', '');
+    row.setAttribute('data-property-id', def.id);
+    row.setAttribute('data-name', def.name.toLowerCase());
+    icon.setAttribute('data-blok-database-layout-pin-icon', '');
+    icon.setAttribute('aria-hidden', 'true');
+    if (def.icon !== undefined && def.icon !== '') {
+      icon.textContent = def.icon;
+    } else {
+      icon.innerHTML = propertyTypeMeta(def.type).icon;
+    }
+    name.setAttribute('data-blok-database-layout-pin-name', '');
+    name.textContent = def.name;
+    toggle.setAttribute('data-blok-testid', `database-layout-pin-${def.id}`);
+    toggle.setAttribute('aria-label', this.label(pinned ? 'tools.database.layoutUnpinAria' : 'tools.database.layoutPinAria', { name: def.name }));
+    toggle.toggleAttribute('data-pinned', pinned);
+    toggle.disabled = disabled;
+    row.append(icon, name, toggle);
+
+    return row;
   }
 
   /**
@@ -277,6 +484,7 @@ export class PageLayoutBuilder {
     const confirm = new AbortController();
 
     this.closeMenu();
+    this.closeHeadingMenu();
     this.confirm = confirm;
     void openDatabaseConfirm({
       title: this.label('tools.database.layoutDiscardTitle'),
@@ -352,6 +560,7 @@ export class PageLayoutBuilder {
 
   private showMenu(menu: PopoverDesktop): void {
     this.closeMenu();
+    this.closeHeadingMenu();
     menu.on(PopoverEvent.Closed, () => {
       if (this.menu === menu) {
         this.menu = null;

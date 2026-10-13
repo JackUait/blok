@@ -5866,6 +5866,134 @@ span[data-blok-slash-search] {
   box-shadow: 0 0 0 3px var(--blok-database-builder-canvas-ring);
 }
 
+[data-blok-database-layout-module] {
+  margin-block-end: var(--blok-space-3);
+  border-radius: var(--blok-radius-control-lg);
+  background-color: var(--blok-bg-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-database-builder-canvas-ring);
+  cursor: pointer;
+}
+
+[data-blok-database-layout-module][data-selected] {
+  box-shadow: inset 0 0 0 1px var(--blok-database-card-border-active), 0 0 0 1px var(--blok-database-card-border-active);
+}
+
+[data-blok-database-layout-module-header] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  block-size: 32px;
+  padding-inline: var(--blok-space-3) var(--blok-space-1);
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background-color: var(--blok-database-builder-canvas-ring);
+}
+
+[data-blok-database-layout-module-name] {
+  color: var(--blok-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-blok-database-layout-module-menu] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+}
+
+[data-blok-database-layout-module][data-selected] [data-blok-database-layout-module-menu], [data-blok-database-layout-module-menu][aria-expanded="true"], [data-blok-database-layout-module-menu]:focus-visible {
+  opacity: 1;
+}
+
+[data-blok-database-layout-module-menu] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-layout-module-body] {
+  padding: var(--blok-space-3);
+  cursor: auto;
+}
+
+[data-blok-database-layout-pin-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-block-size: 28px;
+  padding-inline: var(--blok-space-2) var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
+  font-size: 14px;
+}
+
+[data-blok-database-layout-pin-row][hidden] {
+  display: none;
+}
+
+[data-blok-database-layout-pin-icon] {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-layout-pin-icon] svg, [data-blok-database-layout-pin-toggle] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-layout-pin-name] {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-layout-pin-toggle] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: var(--blok-text-primary);
+  cursor: pointer;
+}
+
+[data-blok-database-layout-pin-toggle]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+[data-blok-database-layout-pin-list] [data-blok-database-layout-add-pin] {
+  inline-size: 100%;
+}
+
+[@media (hover: hover)] [data-blok-database-layout-module]:hover [data-blok-database-layout-module-menu] {
+  opacity: 1;
+}
+
+[@media (hover: hover)] [data-blok-database-layout-pin-row]:hover, [data-blok-database-layout-module-menu]:hover, [data-blok-database-layout-pin-toggle]:not(:disabled):hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-layout-module-menu]:focus-visible, [data-blok-database-layout-pin-toggle]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: -2px;
+}
+
 [data-blok-database-layout-canvas-title] {
   margin-block: 0 var(--blok-space-3);
   font-size: 32px;

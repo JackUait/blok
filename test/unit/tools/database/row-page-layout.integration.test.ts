@@ -103,6 +103,24 @@ const editorSchema = async (): Promise<Array<Record<string, unknown>>> => {
 
 const item = (name: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-popover-item][data-blok-item-name="${name}"]`);
 
+const headingMenu = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-testid="database-layout-heading-menu"]');
+
+/** Opens the Heading module's ••• menu (plan Phase 5a). */
+const openHeadingMenu = async (): Promise<void> => {
+  if (headingMenu() === null) await click(b('[data-blok-database-layout-module="heading"] [data-blok-database-layout-module-menu]'));
+};
+
+const pinFromMenu = async (propertyId: string): Promise<void> => {
+  await openHeadingMenu();
+  await click(document.querySelector(`[data-blok-testid="database-layout-pin-${propertyId}"]`));
+};
+
+const addPin = async (): Promise<HTMLElement | null> => {
+  await openHeadingMenu();
+
+  return headingMenu()?.querySelector<HTMLElement>('[data-blok-database-layout-add-pin]') ?? null;
+};
+
 describe('row page layout through the database tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -124,8 +142,7 @@ describe('row page layout through the database tool', () => {
     await click(q('[data-blok-database-drawer-customize]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
-    await click(b('[data-blok-database-layout-item-menu][data-property-id="due"]'));
-    await click(item('pin'));
+    await pinFromMenu('due');
     await click(b('[data-blok-database-layout-apply]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: 'due', place: 'heading' }] });
@@ -141,8 +158,7 @@ describe('row page layout through the database tool', () => {
 
     expect(editor?.history.canUndo()).toBe(false);
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(b('[data-blok-database-layout-item-menu][data-property-id="due"]'));
-    await click(item('pin'));
+    await pinFromMenu('due');
     await click(b('[data-blok-database-layout-apply]'));
     editor?.history.undo();
     await quiet();
@@ -194,8 +210,7 @@ describe('row page layout through the database tool', () => {
     expect(b('[data-blok-database-layout-canvas-title]')?.textContent).toBe('New page');
     expect(b('[data-blok-database-layout-preview]')?.textContent?.trim()).toBe('Preview: New page');
     expect(drawer()).toBeNull();
-    await click(b('[data-blok-database-layout-item-menu][data-property-id="due"]'));
-    await click(item('pin'));
+    await pinFromMenu('due');
     await click(b('[data-blok-database-layout-apply]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: 'due', place: 'heading' }] });
@@ -269,11 +284,11 @@ describe('row page layout through the database tool', () => {
     expect(q('[data-blok-element][data-blok-id="linked"] [data-blok-testid="database-toolbar-settings"]')).not.toBeNull();
   });
 
-  it('adds a pinned property from the pins row: the property saves at once, the pin on Apply', async () => {
+  it('adds a pinned property from the Heading menu: the property saves at once, the pin on Apply', async () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(b('[data-blok-database-layout-add-pin]'));
+    await click(await addPin());
     await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
     const added = (await editorSchema()).find((property) => property.type === 'number');
 
@@ -286,11 +301,11 @@ describe('row page layout through the database tool', () => {
   });
 
   // research/09 §3b: after Discard, the property made in the builder is gone.
-  it('deletes a property added from the pins row when Cancel is confirmed with Discard', async () => {
+  it('deletes a property added from the Heading menu when Cancel is confirmed with Discard', async () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(b('[data-blok-database-layout-add-pin]'));
+    await click(await addPin());
     await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
 
     expect((await editorSchema()).some((property) => property.type === 'number')).toBe(true);
@@ -312,6 +327,18 @@ describe('row page layout through the database tool', () => {
 
     expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
     expect(document.querySelector(BUILDER)).toBeNull();
+  });
+
+  // research/10 §7: the switch sits in the Heading menu's Options.
+  it('saves Property labels off on the title property', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await openHeadingMenu();
+    await click(headingMenu()?.querySelector('[data-blok-testid="database-layout-option-layoutPropertyLabels"]') ?? null);
+    await click(b('[data-blok-database-layout-apply]'));
+
+    expect(await savedTitle()).toMatchObject({ pageLayoutPropertyLabels: false });
   });
 
   it('saves Property icons off on the title property, and Reset drops the key', async () => {

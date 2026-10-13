@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PropertyDefinition, Pr
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconInsertAbove, IconMinus, IconPlus, IconPreview, IconSplitView, IconTrash } from '../../components/icons';
+import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconMinus, IconPlus, IconPreview, IconSplitView, IconTrash } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -29,7 +29,6 @@ import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
 import type { PopoverItemParams } from '../../components/utils/popover/components/popover-item';
 import {
-  PAGE_LAYOUT_PIN_LIMIT,
   addModule,
   addSection,
   applyDraft,
@@ -39,7 +38,7 @@ import {
   moveInPlace,
   moveToSection,
   pageLayoutOf,
-  pin,
+  pinFirst,
   removeFromLayout,
   renameSection,
   resetPageLayout,
@@ -1341,7 +1340,8 @@ export class DatabaseCardDrawer {
 
   private addedWhileCustomizing(id: string, pinIt: boolean): void {
     this.draft?.madeProperties.push(id);
-    if (pinIt) this.editLayout(pin(id));
+    // research/10 §7: a property made from the Pinned list goes first among the pins.
+    if (pinIt) this.editLayout(pinFirst(id));
   }
 
   /** A named section of the property group. Folding it is this viewer's own. */
@@ -1427,14 +1427,13 @@ export class DatabaseCardDrawer {
     const divider = content?.querySelector<HTMLElement>(':scope > hr') ?? null;
 
     this.syncBuilder();
-    const canvas = this.builder?.canvas ?? null;
+    const builder = this.builder;
 
     // The placeholder draws into the builder only: there is no page behind it.
-    if (canvas === null && (content === null || divider === null)) {
+    if (builder === null && (content === null || divider === null)) {
       return;
     }
     content?.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
-    canvas?.replaceChildren();
     this.drawer?.removeAttribute('data-details-open');
     this.stopWatchingPins();
     const resolved = this.resolvedLayout();
@@ -1456,8 +1455,10 @@ export class DatabaseCardDrawer {
     if (!tabs.some((def) => def.id === this.activeTab)) {
       this.activeTab = 'content';
     }
-    if (layout.heading.length > 0 || this.draft !== null) {
-      regions.push(this.buildPinsRow(layout.heading, resolved.heading.length, row));
+    const pins = layout.heading.length > 0 || this.draft !== null ? this.buildPinsRow(layout.heading, row) : null;
+
+    if (pins !== null) {
+      regions.push(pins);
     }
     if (layout.structure === 'tabbed') {
       regions.push(this.buildTabs(tabs));
@@ -1493,22 +1494,27 @@ export class DatabaseCardDrawer {
     for (const region of regions) {
       region.setAttribute('data-blok-database-drawer-region', '');
     }
-    if (canvas !== null) {
+    if (builder !== null) {
       const title = document.createElement('h1');
       const name = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
+      const body: HTMLElement[] = [];
 
       title.setAttribute('data-blok-database-layout-canvas-title', '');
       title.textContent = name.trim() !== '' ? name : this.label('tools.database.layoutNewPage');
       title.toggleAttribute('data-placeholder', name.trim() === '');
-      canvas.append(title, ...regions);
       // research/09 §1: the placeholder page's Content reads "Empty".
       if (this.placeholder !== null) {
-        const body = document.createElement('div');
+        const empty = document.createElement('div');
 
-        body.setAttribute('data-blok-database-layout-canvas-content', '');
-        body.textContent = this.label('tools.database.cellEmpty');
-        canvas.append(body);
+        empty.setAttribute('data-blok-database-layout-canvas-content', '');
+        empty.textContent = this.label('tools.database.cellEmpty');
+        body.push(empty);
       }
+      builder.fill({
+        heading: pins === null ? [title] : [title, pins],
+        group: regions.filter((region) => region !== pins),
+        content: body,
+      });
     } else if (content !== null && divider !== null) {
       for (const region of regions) content.insertBefore(region, divider);
     }
@@ -1605,10 +1611,10 @@ export class DatabaseCardDrawer {
   }
 
   /**
-   * The pins scroller, and "+ Add a property" while customizing. `pinned` counts pins search hides too.
-   * Outside the builder, < > arrows step 400px; inside it there is only the edge fade (research/09 §4).
+   * The pins scroller. Outside the builder, < > arrows step 400px; inside it
+   * there is only the edge fade (research/09 §4).
    */
-  private buildPinsRow(pins: PropertyDefinition[], pinned: number, row: DatabaseRow): HTMLElement {
+  private buildPinsRow(pins: PropertyDefinition[], row: DatabaseRow): HTMLElement {
     const wrap = document.createElement('div');
     const scroller = this.moduleList('data-blok-database-drawer-pins', 'heading', pins, row);
     // RTL scrolls toward negative scrollLeft, so the distance from the start is its absolute value.
@@ -1627,10 +1633,7 @@ export class DatabaseCardDrawer {
       this.pinsObserver.observe(scroller);
     }
     if (this.draft !== null) {
-      const add = this.textButton('data-blok-database-layout-add-pin', 'tools.database.addProperty', () => this.openAddProperty(add, true));
-
-      add.disabled = pinned >= PAGE_LAYOUT_PIN_LIMIT;
-      wrap.append(scroller, add);
+      wrap.append(scroller);
 
       return wrap;
     }
@@ -1805,6 +1808,8 @@ export class DatabaseCardDrawer {
       onSearch: () => this.rerender(),
       pages: () => this.previewRows().map((row) => ({ id: row.id, title: (row.properties[this.titlePropertyId] as string | undefined) ?? '' })),
       previewId: () => this.currentRowId,
+      properties: () => this.getRenderableSchema(),
+      onAddPin: (anchor) => this.openAddProperty(anchor, true),
       onPreview: (id) => {
         const row = this.previewRows().find((candidate) => candidate.id === id);
 
@@ -1878,18 +1883,16 @@ export class DatabaseCardDrawer {
     const moves = [item('move-up', 'tools.database.layoutMoveUp', moveInPlace(def.id, -1), { icon: IconArrowUp }), item('move-down', 'tools.database.layoutMoveDown', moveInPlace(def.id, 1))];
     const items: PopoverItemParams[] = [];
 
+    // Pin and unpin live on the Heading menu's pin buttons (plan Phase 5a).
     if (pinned) {
-      items.push(item('unpin', 'tools.database.layoutUnpin', removeFromLayout(def.id), { icon: IconMinus }), ...moves);
+      items.push(...moves);
     } else if (module !== null) {
       items.push(...moves);
       if (module === 'page' && canPlaceInPanel(def)) items.push(item('move-to-panel', 'tools.database.layoutMoveToPanel', addModule(def.id, 'panel', def), { icon: IconSplitView }));
       if (module === 'panel') items.push(item('move-to-page', 'tools.database.layoutMoveToPage', addModule(def.id, 'page', def)));
       items.push(item('remove', 'tools.database.layoutRemove', removeFromLayout(def.id), { icon: IconMinus }));
     } else {
-      items.push(
-        item('pin', 'tools.database.layoutPin', pin(def.id), { icon: IconInsertAbove, isDisabled: layout.heading.length >= PAGE_LAYOUT_PIN_LIMIT }),
-        item('add-to-page', 'tools.database.layoutAddToPage', addModule(def.id, 'page', def), { icon: IconPlus })
-      );
+      items.push(item('add-to-page', 'tools.database.layoutAddToPage', addModule(def.id, 'page', def), { icon: IconPlus }));
       if (canPlaceInPanel(def)) items.push(item('add-to-panel', 'tools.database.layoutAddToPanel', addModule(def.id, 'panel', def), { icon: IconSplitView }));
       const targets = layout.sections.filter((s) => s.section.id !== sectionOf?.id);
 

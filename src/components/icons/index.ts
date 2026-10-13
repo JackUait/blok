@@ -433,6 +433,21 @@ export const IconDotsHorizontal = `
 </svg>
 `;
 
+// Pushpin: a cap, a body that flares into a collar, and the needle.
+export const IconPin = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7 3.5H13M8.5 3.5V8L6 11H14L11.5 8V3.5M10 11V16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// IconPin with its body filled: the pinned state.
+export const IconPinFilled = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M8.5 3.5H11.5V8L14 11H6L8.5 8Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M7 3.5H13M8.5 3.5V8L6 11H14L11.5 8V3.5M10 11V16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Toggle Heading 1 icon: triangle, H, digit (Notion layout)
 export const IconToggleH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -613,6 +613,16 @@ describe('server release wiring', () => {
     );
     expect(project).toContain('Version="$(BlokServerPackageVersion)"');
     expect(project).not.toContain('PackageReference Include="Blok.Server"');
+  });
+
+  it('copies every workspace manifest before the immutable yarn install', () => {
+    const dockerfile = read('packages/server/Dockerfile');
+    const beforeInstall = dockerfile.slice(0, dockerfile.indexOf('yarn install --immutable'));
+    const workspaces = readdirSync(join(repoRoot, 'packages'))
+      .filter((name) => existsSync(join(repoRoot, 'packages', name, 'package.json')));
+
+    // yarn.lock lists every workspace; a missing manifest makes --immutable refuse the install.
+    expect(workspaces.filter((name) => !beforeInstall.includes(`COPY packages/${name}/package.json packages/${name}/package.json`))).toEqual([]);
   });
 
   it('builds the C# host from the root context into .NET 10 runtime-deps', () => {

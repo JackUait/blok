@@ -8,6 +8,7 @@ WORKDIR /workspace
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY packages/angular/package.json packages/angular/package.json
 COPY packages/cli/package.json packages/cli/package.json
+COPY packages/mcp/package.json packages/mcp/package.json
 COPY packages/presets/package.json packages/presets/package.json
 COPY packages/react/package.json packages/react/package.json
 COPY packages/server/package.json packages/server/package.json

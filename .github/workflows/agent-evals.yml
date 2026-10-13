@@ -72,7 +72,7 @@ jobs:
         run: |
           yarn build:test
           (npx serve . -l 4444 --no-clipboard --no-compression > /dev/null 2>&1 &)
-          for i in $(seq 1 60); do curl -sf http://localhost:4444/test/playwright/fixtures/test.html > /dev/null && break; sleep 1; done
+          for _ in $(seq 1 60); do curl -sf http://localhost:4444/test/playwright/fixtures/test.html > /dev/null && break; sleep 1; done
 
       - name: Run evals
         env:

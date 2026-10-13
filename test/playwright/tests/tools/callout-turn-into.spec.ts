@@ -64,6 +64,9 @@ const savedBlocks = async (page: Page): Promise<string[]> =>
 const turnCalloutInto = async (page: Page, title: string, caretIn = 'c2'): Promise<void> => {
   await page.locator(`[data-blok-id="${caretIn}"] [contenteditable="true"]`).click();
   await page.locator(CALLOUT_SELECTOR).hover();
+  // Wait until the hover moves the toolbar into the callout's own holder. Until then
+  // it sits on the caret's block, and its handle opens that block's menu.
+  await expect(page.getByTestId('toolbar').locator('xpath=..')).toHaveAttribute('data-blok-id', 'C');
   await page.getByTestId('settings-toggler').click();
   await expect(page.locator(TUNES_POPOVER)).toBeVisible();
 

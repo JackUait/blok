@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconMinus, IconPlus, IconPreview, IconSplitView, IconTrash } from '../../components/icons';
+import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconPreview, IconSplitView, IconTrash } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -31,7 +31,6 @@ import type { PopoverItemParams } from '../../components/utils/popover/component
 import {
   addModule,
   applyDraft,
-  canPlaceInPanel,
   deleteSection,
   groupFirst,
   isDraftEmpty,
@@ -39,7 +38,6 @@ import {
   moveToSection,
   pageLayoutOf,
   pinFirst,
-  removeFromLayout,
   renameSection,
   resetPageLayout,
   resolvePageLayout,
@@ -47,6 +45,10 @@ import {
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
+import type { PageLayoutModuleEntry } from './page-layout-builder';
+
+/** Where a property made from a builder menu goes. */
+type AddedPlace = 'pin' | 'group' | 'page' | 'panel';
 
 /** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
@@ -333,7 +335,7 @@ export class DatabaseCardDrawer {
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
   private propertyTypePopover: DatabasePropertyTypePopover | null = null;
   /** Where the built-in type menu places what it adds, when a builder menu opened it. */
-  private nextAddedPlace: 'pin' | 'group' | null = null;
+  private nextAddedPlace: AddedPlace | null = null;
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
@@ -1317,7 +1319,7 @@ export class DatabaseCardDrawer {
    * "+ Add a property". From a builder menu the new property goes first among the
    * pins or at the top of the group, as a draft edit; the property itself is written at once.
    */
-  private openAddProperty(anchor: HTMLElement, place: 'pin' | 'group' | null): void {
+  private openAddProperty(anchor: HTMLElement, place: AddedPlace | null): void {
     if (this.onOpenAddProperty !== undefined) {
       this.onOpenAddProperty(anchor, place !== null || this.draft !== null ? (id) => this.addedWhileCustomizing(id, place) : undefined);
 
@@ -1345,11 +1347,13 @@ export class DatabaseCardDrawer {
     this.propertyTypePopover.open(anchor);
   }
 
-  private addedWhileCustomizing(id: string, place: 'pin' | 'group' | null): void {
+  private addedWhileCustomizing(id: string, place: AddedPlace | null): void {
     this.draft?.madeProperties.push(id);
     // research/10 §7 and research/09 §3 L57.
     if (place === 'pin') this.editLayout(pinFirst(id));
     if (place === 'group') this.editLayout(groupFirst(id));
+    // A relation made from "Add to panel" stays in the group: it cannot sit in the panel.
+    if (place === 'page' || place === 'panel') this.editLayout(addModule(id, place, this.schema.find((def) => def.id === id)));
   }
 
   /** A property's page visibility, with the open draft's eye edit if any. */
@@ -1490,7 +1494,8 @@ export class DatabaseCardDrawer {
     if (!onContent) {
       regions.push(this.tabPanel(tabs.find((def) => def.id === this.activeTab), row));
     }
-    if (onContent) {
+    // The builder draws the group and the modules into their own cards (fillBuilder).
+    if (onContent && builder === null) {
       const group = [this.buildPropsToggle(), this.buildPropsSection(layout, row)];
       const page: HTMLElement[] = layout.groupIn === 'page' ? [...group] : [];
 
@@ -1509,30 +1514,47 @@ export class DatabaseCardDrawer {
       region.setAttribute('data-blok-database-drawer-region', '');
     }
     if (builder !== null) {
-      const title = document.createElement('h1');
-      const name = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
-      const body: HTMLElement[] = [];
-
-      title.setAttribute('data-blok-database-layout-canvas-title', '');
-      title.textContent = name.trim() !== '' ? name : this.label('tools.database.layoutNewPage');
-      title.toggleAttribute('data-placeholder', name.trim() === '');
-      // research/09 §1: the placeholder page's Content reads "Empty".
-      if (this.placeholder !== null) {
-        const empty = document.createElement('div');
-
-        empty.setAttribute('data-blok-database-layout-canvas-content', '');
-        empty.textContent = this.label('tools.database.cellEmpty');
-        body.push(empty);
-      }
-      builder.fill({
-        heading: pins === null ? [title] : [title, pins],
-        group: regions.filter((region) => region !== pins),
-        content: body,
-      });
+      this.fillBuilder(builder, layout, row, regions);
     } else if (content !== null && divider !== null) {
       for (const region of regions) content.insertBefore(region, divider);
     }
     this.syncDetailsDock();
+  }
+
+  /**
+   * The builder draws each module apart: pins, tabs and "View details" in the
+   * Heading (research/10 §8 L172), the group, and one card per page or panel
+   * module (research/09 anatomy L39-40).
+   */
+  private fillBuilder(builder: PageLayoutBuilder, layout: ResolvedPageLayout, row: DatabaseRow, regions: HTMLElement[]): void {
+    const title = document.createElement('h1');
+    const name = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
+    const body: HTMLElement[] = [];
+    const onContent = this.activeTab === 'content';
+    const heading = [title, ...regions.filter((region) => region.matches('[data-blok-database-drawer-pins-row], [data-blok-database-drawer-tabs], [data-blok-database-drawer-tab-panel]'))];
+    const entry = (def: PropertyDefinition): PageLayoutModuleEntry => ({ def, element: this.createPropertyRow(def, readPropertyValue(row, def) ?? null) });
+
+    title.setAttribute('data-blok-database-layout-canvas-title', '');
+    title.textContent = name.trim() !== '' ? name : this.label('tools.database.layoutNewPage');
+    title.toggleAttribute('data-placeholder', name.trim() === '');
+    if (onContent && (layout.groupIn === 'panel' || layout.panelModules.length > 0)) {
+      heading.push(this.buildDetails(layout, [], row)[0]);
+    }
+    // research/09 §1: the placeholder page's Content reads "Empty".
+    if (this.placeholder !== null) {
+      const empty = document.createElement('div');
+
+      empty.setAttribute('data-blok-database-layout-canvas-content', '');
+      empty.textContent = this.label('tools.database.cellEmpty');
+      body.push(empty);
+    }
+    builder.fill({
+      heading,
+      group: onContent ? [this.buildPropsToggle(), this.buildPropsSection(layout, row)] : [],
+      page: onContent ? layout.pageModules.map(entry) : [],
+      panel: onContent ? layout.panelModules.map(entry) : [],
+      content: body,
+    });
   }
 
   /**
@@ -1824,6 +1846,7 @@ export class DatabaseCardDrawer {
       properties: () => this.getRenderableSchema(),
       onAddPin: (anchor) => this.openAddProperty(anchor, 'pin'),
       onAddToGroup: (anchor) => this.openAddProperty(anchor, 'group'),
+      onAddModule: (anchor, place) => this.openAddProperty(anchor, place),
       visibility: (id) => this.pageVisibility(id),
       setVisibility: (id, visibility) => this.setPageVisibility(id, visibility),
       onPreview: (id) => {
@@ -1879,14 +1902,18 @@ export class DatabaseCardDrawer {
     this.rerender();
   }
 
+  /** A pin has its moves; a group property has section moves once there is a section. */
+  private hasItemMenu(def: PropertyDefinition): boolean {
+    const layout = this.resolvedLayout();
+
+    return layout.heading.some((p) => p.id === def.id)
+      || (layout.sections.length > 0 && [...layout.group, ...layout.sections.flatMap((s) => s.properties)].some((p) => p.id === def.id));
+  }
+
   /** The ⋯ menu on a property while customizing; its items depend on where it sits. */
   private openItemMenu(def: PropertyDefinition, anchor: HTMLElement): void {
     const layout = this.resolvedLayout();
     const pinned = layout.heading.some((p) => p.id === def.id);
-    const inPage = layout.pageModules.some((p) => p.id === def.id);
-    const inPanel = layout.panelModules.some((p) => p.id === def.id);
-    const placedIn = { page: inPage, panel: inPanel };
-    const module = (['page', 'panel'] as const).find((place) => placedIn[place]) ?? null;
     const sectionOf = layout.sections.find((s) => s.properties.some((p) => p.id === def.id))?.section;
     const item = (name: string, key: string, op: PageLayoutOp, extra: Partial<PopoverItemParams> = {}): PopoverItemParams => ({
       type: PopoverItemType.Default,
@@ -1899,20 +1926,12 @@ export class DatabaseCardDrawer {
     const moves = [item('move-up', 'tools.database.layoutMoveUp', moveInPlace(def.id, -1), { icon: IconArrowUp }), item('move-down', 'tools.database.layoutMoveDown', moveInPlace(def.id, 1))];
     const items: PopoverItemParams[] = [];
 
-    // Pin and unpin live on the Heading menu's pin buttons (plan Phase 5a).
+    // Pins: the Heading menu's pin buttons (plan Phase 5a). Modules: their ••• menu, "+" and "Add to panel" (5c).
     if (pinned) {
       items.push(...moves);
-    } else if (module !== null) {
-      items.push(...moves);
-      if (module === 'page' && canPlaceInPanel(def)) items.push(item('move-to-panel', 'tools.database.layoutMoveToPanel', addModule(def.id, 'panel', def), { icon: IconSplitView }));
-      if (module === 'panel') items.push(item('move-to-page', 'tools.database.layoutMoveToPage', addModule(def.id, 'page', def)));
-      items.push(item('remove', 'tools.database.layoutRemove', removeFromLayout(def.id), { icon: IconMinus }));
     } else {
-      items.push(item('add-to-page', 'tools.database.layoutAddToPage', addModule(def.id, 'page', def), { icon: IconPlus }));
-      if (canPlaceInPanel(def)) items.push(item('add-to-panel', 'tools.database.layoutAddToPanel', addModule(def.id, 'panel', def), { icon: IconSplitView }));
       const targets = layout.sections.filter((s) => s.section.id !== sectionOf?.id);
 
-      if (targets.length > 0 || sectionOf !== undefined) items.push({ type: PopoverItemType.Separator });
       for (const { section } of targets) {
         items.push({
           type: PopoverItemType.Default,
@@ -2156,7 +2175,7 @@ export class DatabaseCardDrawer {
     }
 
     row.appendChild(valueEl);
-    if (this.draft !== null) {
+    if (this.draft !== null && this.hasItemMenu(def)) {
       const more = this.iconButton('data-blok-database-layout-item-menu', 'tools.database.layoutItemOptions', IconDotsHorizontal, (el) => this.openItemMenu(def, el));
 
       more.setAttribute('data-property-id', def.id);

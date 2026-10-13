@@ -15,8 +15,11 @@ export class DatabaseDropLine {
   /** Lines fading out, each with the timer that removes it. */
   private readonly leaving = new Map<HTMLElement, number>();
 
-  /** @param tokenSource - an element inside the editor, where the colour token resolves */
-  constructor(private readonly tokenSource?: HTMLElement) {}
+  /**
+   * @param tokenSource - an element inside the editor, where the colour token resolves
+   * @param host - where the line mounts; a top-layer dialog needs it inside, or the line paints under it
+   */
+  constructor(private readonly tokenSource?: HTMLElement, private readonly host?: HTMLElement) {}
 
   public showHorizontal({ left, centerY, width }: { left: number; centerY: number; width: number }): void {
     this.place(left, centerY - THICKNESS / 2, width, THICKNESS);
@@ -85,6 +88,7 @@ export class DatabaseDropLine {
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-database-drop-line', '');
+    el.setAttribute('data-blok-testid', 'database-drop-line');
     el.setAttribute('aria-hidden', 'true');
     el.style.position = 'fixed';
     el.style.pointerEvents = 'none';
@@ -96,7 +100,11 @@ export class DatabaseDropLine {
     if (color !== '') {
       el.style.backgroundColor = color;
     }
-    document.body.appendChild(el);
+    if (this.host === undefined) {
+      document.body.appendChild(el);
+    } else {
+      this.host.appendChild(el);
+    }
     this.el = el;
 
     return el;

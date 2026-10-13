@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1051 + 118 + 415 + 4 closure for all 1588 keys', () => {
+  it('rebuilds a disjoint 1056 + 118 + 415 + 4 closure for all 1593 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1588);
+    expect(lifecycle.size).toBe(1593);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -358,7 +358,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +5 / -4 / -2: the Property group eye and "N more properties" toggles call their keys by literal;
       // hiddenProperties, hideHiddenProperties and layoutGroupIn* left with the old toggle and Page settings choice;
       // tools.database.searchLabel and searchPlaceholder moved to registered-namespace (see below).
-      'executable-literal': 1051,
+      // +5: the builder's Add page module button, its add menu rows and the sidebar toggle call their keys by literal.
+      'executable-literal': 1056,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

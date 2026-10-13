@@ -284,7 +284,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       expect(options.onPageLayoutBirth).toHaveBeenCalledTimes(1);
       expect(q('[data-blok-interface="database-layout-builder"]')).not.toBeNull();
-      expect(q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')).not.toBeNull();
+      expect(q('[data-blok-database-layout-add-module]')).not.toBeNull();
     });
 
     it('hides Customize layout when read-only or locked', () => {
@@ -311,8 +311,8 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-drawer-customize]')?.click();
 
       expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-pins]')).toEqual(['p-due']);
-      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-modules]')).toEqual(['p-owner']);
-      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-panel-modules]')).toEqual(['p-status']);
+      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-layout-module="property"]')).toEqual(['p-owner']);
+      expect(idsIn('[data-blok-database-layout-panel-column] [data-blok-database-layout-module="property"]')).toEqual(['p-status']);
       expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-props]')).toEqual(['p-rel']);
       q('[data-blok-database-layout-cancel]')?.click();
 
@@ -351,13 +351,13 @@ describe('DatabaseCardDrawer — page layout', () => {
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
 
-      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
+      // While customizing, the panel's modules sit in the builder's side panel column.
       expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.closest('[hidden]')).toBeNull();
-      expect(idsIn('[data-blok-database-drawer-panel-modules]')).toEqual(['p-due']);
+      expect(idsIn('[data-blok-database-layout-panel-column] [data-blok-database-layout-module="property"]')).toEqual(['p-due']);
       expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('true');
       q('[data-blok-database-drawer-details-toggle]')?.click();
 
-      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
+      expect(idsIn('[data-blok-database-layout-panel-column] [data-blok-database-layout-module="property"]')).toEqual(['p-due']);
       q('[data-blok-database-layout-cancel]')?.click();
 
       expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
@@ -559,15 +559,6 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(pinButton('pin-0')?.closest<HTMLElement>('[data-blok-database-layout-pin-row]')?.hidden).toBe(true);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       drawer.destroy();
-    });
-
-    it('never offers the details panel for a relation', () => {
-      new DatabaseCardDrawer(createOptions()).open(ROW);
-      q('[data-blok-database-drawer-customize]')?.click();
-      openItemMenu('p-rel');
-
-      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-panel"]')).toBeNull();
-      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
     });
 
     it('adds the first section with every group property in it, then a second, empty one at the top', () => {

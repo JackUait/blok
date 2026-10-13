@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconCheck, IconChevronDown, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconPage, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs } from '../../components/icons';
+import { IconArrowUp, IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { onHover } from '../../components/utils/tooltip';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
@@ -11,14 +11,19 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import type { PopoverItemParams } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { DatabaseDropLine } from './database-drop-line';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSeparator, panelSwitch } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { propertyTypeMeta } from './database-property-types';
 import {
   PAGE_LAYOUT_PIN_LIMIT,
+  addModule,
   addSection,
+  canPlaceInPanel,
+  moveInPlace,
   pin,
+  placeBefore,
   removeFromLayout,
   resolvePageLayout,
   setFullWidth,
@@ -68,6 +73,25 @@ export interface PageLayoutBuilderOptions {
   visibility: (id: string) => PageVisibility;
   /** An eye edit. It is a draft: Apply writes it on the property. */
   setVisibility: (id: string, visibility: PageVisibility) => void;
+  /** "Create new property" from "+" or "Add to panel". The new property becomes a module there. */
+  onAddModule: (anchor: HTMLElement, place: 'page' | 'panel') => void;
+}
+
+/** A single-property module and its drawn property row. */
+export interface PageLayoutModuleEntry {
+  def: PropertyDefinition;
+  element: HTMLElement;
+}
+
+/** What the drawer draws for the previewed page, module by module. */
+export interface PageLayoutRegions {
+  heading: HTMLElement[];
+  group: HTMLElement[];
+  content: HTMLElement[];
+  /** Modules in the page, in layout order. */
+  page: PageLayoutModuleEntry[];
+  /** Modules in the side panel, in layout order. */
+  panel: PageLayoutModuleEntry[];
 }
 
 /** The canvas modules (research/09 anatomy L39). Page discussions is skipped (plan §2.4). */
@@ -79,8 +103,20 @@ const MODULE_NAMES: Record<PageLayoutModule, string> = {
   content: 'tools.database.layoutModuleContent',
 };
 
-/** Modules with a ••• menu. Content's menu was not measured. */
-type MenuModule = 'heading' | 'group';
+/** A property module's key in the module maps. */
+const propertyKey = (id: string): string => `property:${id}`;
+
+/**
+ * research/09 §10 L164 shows the column collapsed at 756px and open at 1512px.
+ * Notion's breakpoint was not measured; 1000px leaves the canvas room beside both columns.
+ */
+const NARROW_BUILDER = '(max-width: 1000px)';
+
+/** A pointer must travel this far before a press on a handle becomes a drag. */
+const DRAG_THRESHOLD = 4;
+
+/** Half the gap between module cards, where the drop line sits. */
+const CARD_GAP_HALF = 6;
 
 /** research/09 §5: Notion's `eyeFill`, `eyeSlash`, `eyeClosed`. */
 const EYE: Record<PageVisibility, string> = { always: IconPreview, hideWhenEmpty: IconEyeSlash, hidden: IconEyeClosed };
@@ -94,11 +130,20 @@ const MODULE_CONTROL = 'button, input, select, textarea, a[href], [role="button"
  */
 export class PageLayoutBuilder {
   readonly canvas: HTMLElement;
-  /** Module cards are built once, so a menu's trigger outlives a redraw. The drawer fills their bodies. */
-  private readonly modules = new Map<PageLayoutModule, { card: HTMLElement; body: HTMLElement }>();
-  private readonly menuButtons: Record<MenuModule, HTMLButtonElement>;
-  /** The one open module menu. */
-  private moduleMenu: { kind: MenuModule; panel: DatabasePanel } | null = null;
+  /**
+   * Module cards are built once (property modules on first sight), so a menu's
+   * trigger outlives a redraw. The drawer fills their bodies. Keyed by
+   * PageLayoutModule or `propertyKey(id)`.
+   */
+  private readonly modules = new Map<string, { card: HTMLElement; body: HTMLElement; menu: HTMLButtonElement | null }>();
+  /** The one open builder menu: a module's •••, "+" or "Add to panel". */
+  private moduleMenu: { key: string; anchor: HTMLElement; panel: DatabasePanel } | null = null;
+  private readonly addModuleButton: HTMLButtonElement;
+  private readonly panelColumn: HTMLElement;
+  private readonly panelBody: HTMLElement;
+  private readonly panelToggle: HTMLButtonElement;
+  private readonly addToPanelButton: HTMLButtonElement;
+  private unwatchNarrow: () => void = () => undefined;
   private menuQuery = '';
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
@@ -157,12 +202,27 @@ export class PageLayoutBuilder {
     body.setAttribute('data-blok-database-layout-body', '');
     this.canvas = document.createElement('div');
     this.canvas.setAttribute('data-blok-database-layout-canvas', '');
-    this.menuButtons = { heading: this.menuButton('heading'), group: this.menuButton('group') };
-    for (const kind of ['heading', 'group', 'content'] as const) this.canvas.appendChild(this.module(kind));
+    for (const kind of ['heading', 'group', 'content'] as const) this.module(kind);
+    this.addModuleButton = this.button('data-blok-database-layout-add-module', IconPlus, null, (el) => this.toggleAddMenu('page', el));
+    this.addModuleButton.setAttribute('aria-label', this.label('tools.database.layoutAddModule'));
+    this.addModuleButton.setAttribute('aria-expanded', 'false');
+    this.canvas.append(...['heading', 'group'].map((key) => this.cardOf(key)), this.addModuleButton, this.cardOf('content'));
+    this.panelColumn = document.createElement('div');
+    this.panelBody = document.createElement('div');
+    this.panelToggle = this.button('data-blok-database-layout-panel-toggle', null, null, () => this.setSidebar(!this.panelColumn.hasAttribute('data-collapsed')));
+    this.addToPanelButton = this.button('data-blok-database-layout-add-to-panel', IconPlus, 'tools.database.layoutAddToPanel', (el) => this.toggleAddMenu('panel', el));
+    this.addToPanelButton.setAttribute('aria-expanded', 'false');
+    this.panelColumn.setAttribute('data-blok-database-layout-panel-column', '');
+    this.panelBody.setAttribute('data-blok-database-layout-panel-body', '');
+    this.panelBody.id = `blok-database-layout-panel-${nanoid()}`;
+    this.panelToggle.setAttribute('aria-controls', this.panelBody.id);
+    this.panelBody.append(this.addToPanelButton);
+    this.panelColumn.append(this.panelToggle, this.panelBody);
+    this.watchNarrow();
     side.setAttribute('data-blok-database-layout-side', '');
     side.setAttribute('data-blok-database-layout-settings-column', '');
     side.append(...this.pageSettings());
-    body.append(this.canvas, side);
+    body.append(this.canvas, this.panelColumn, side);
     this.root.append(bar, body);
 
     // Escape never closes the builder; only Cancel and Apply do (research/10 §9).
@@ -203,82 +263,166 @@ export class PageLayoutBuilder {
   close(): void {
     this.confirm?.abort();
     this.confirm = null;
+    this.unwatchNarrow();
     this.closeMenu();
     this.closeModuleMenu();
     this.dialog.close();
   }
 
-  /** Puts the drawn regions of the previewed page into the module cards. */
-  fill(regions: Record<PageLayoutModule, HTMLElement[]>): void {
-    for (const [kind, { body }] of this.modules) body.replaceChildren(...regions[kind]);
+  /**
+   * Puts the drawn regions of the previewed page into the module cards. Page
+   * modules sit between the group and "+"; the group sits in the side panel
+   * column when the layout puts it there (research/09 anatomy L39-40).
+   */
+  fill(regions: PageLayoutRegions): void {
+    for (const kind of ['heading', 'group', 'content'] as const) this.modules.get(kind)?.body.replaceChildren(...regions[kind]);
+    for (const pinEl of this.modules.get('heading')?.body.querySelectorAll<HTMLElement>('[data-blok-database-drawer-pin]') ?? []) {
+      const id = pinEl.querySelector('[data-blok-database-drawer-prop-label]')?.getAttribute('data-property-id');
+
+      pinEl.querySelector('[data-blok-database-drawer-prop-head]')?.addEventListener('pointerdown', (event) => {
+        if (id !== null && id !== undefined) this.startDrag(event as PointerEvent, id, 'heading', pinEl);
+      });
+    }
+    const live = new Set<string>();
+    const cards = (entries: PageLayoutModuleEntry[], place: 'page' | 'panel'): HTMLElement[] => entries.map(({ def, element }) => {
+      const key = propertyKey(def.id);
+      const module = this.modules.get(key) ?? this.propertyModule(def);
+      const name = module.card.querySelector('[data-blok-database-layout-module-name]');
+
+      live.add(key);
+      if (name !== null) name.textContent = def.name;
+      module.card.setAttribute('data-place', place);
+      module.body.replaceChildren(element);
+
+      return module.card;
+    });
+    const pageCards = cards(regions.page, 'page');
+    const panelCards = cards(regions.panel, 'panel');
+
+    for (const [key, { card }] of this.modules) {
+      if (!key.startsWith('property:') || live.has(key)) continue;
+      if (this.moduleMenu?.key === key) this.closeModuleMenu();
+      card.remove();
+      this.modules.delete(key);
+    }
+    const inPanel = this.options.layout().groupIn === 'panel';
+    const group = inPanel ? [] : [this.cardOf('group')];
+
+    syncChildren(this.canvas, [this.cardOf('heading'), ...group, ...pageCards, this.addModuleButton, this.cardOf('content')]);
+    syncChildren(this.panelBody, [...(inPanel ? [this.cardOf('group')] : []), ...panelCards, this.addToPanelButton]);
+  }
+
+  private cardOf(key: string): HTMLElement {
+    const module = this.modules.get(key);
+
+    if (module === undefined) throw new Error(`no ${key} module`);
+
+    return module.card;
+  }
+
+  /** research/09 anatomy L39: Heading, Property group and Content. Content has no menu (not measured). */
+  private module(kind: PageLayoutModule): void {
+    this.card(kind, kind, this.label(MODULE_NAMES[kind]), kind !== 'content', null);
+  }
+
+  /** A single-property module: a ⠿ handle, the property's name and a ••• menu. */
+  private propertyModule(def: PropertyDefinition): { card: HTMLElement; body: HTMLElement; menu: HTMLButtonElement | null } {
+    const handle = document.createElement('span');
+    const key = propertyKey(def.id);
+
+    // research/10 §9 L71: only the ••• is a tab stop. Move up / Move down are the keyboard path.
+    handle.setAttribute('data-blok-database-layout-module-handle', '');
+    handle.setAttribute('data-blok-testid', `database-layout-module-handle-${def.id}`);
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = IconMenu;
+    const module = this.card(key, 'property', def.name, true, handle);
+
+    module.card.setAttribute('data-property-id', def.id);
+    handle.addEventListener('pointerdown', (event) => this.startDrag(event, def.id, 'module', module.card));
+
+    return module;
   }
 
   /** A card with a header strip; a click anywhere in it selects it and opens its menu (research/10 §8). */
-  private module(kind: PageLayoutModule): HTMLElement {
+  private card(key: string, kind: string, title: string, withMenu: boolean, handle: HTMLElement | null): { card: HTMLElement; body: HTMLElement; menu: HTMLButtonElement | null } {
     const card = document.createElement('section');
     const header = document.createElement('div');
     const name = document.createElement('span');
     const body = document.createElement('div');
+    const menu = withMenu ? this.button('data-blok-database-layout-module-menu', IconDotsHorizontal, null, () => this.toggleModuleMenu(key)) : null;
 
     card.setAttribute('data-blok-database-layout-module', kind);
     header.setAttribute('data-blok-database-layout-module-header', '');
     name.setAttribute('data-blok-database-layout-module-name', '');
-    name.textContent = this.label(MODULE_NAMES[kind]);
+    name.textContent = title;
     body.setAttribute('data-blok-database-layout-module-body', '');
+    if (handle !== null) header.append(handle);
     header.append(name);
-    if (kind !== 'content') header.append(this.menuButtons[kind]);
+    if (menu !== null) {
+      menu.setAttribute('aria-label', this.label('tools.database.layoutModuleMenu'));
+      menu.setAttribute('aria-expanded', 'false');
+      header.append(menu);
+    }
     card.append(header, body);
     card.addEventListener('click', (event) => {
       if (event.target instanceof Element && event.target.closest(MODULE_CONTROL) !== null) return;
-      this.select(kind);
-      if (kind !== 'content' && this.moduleMenu?.kind !== kind) this.openModuleMenu(kind);
+      this.select(key);
+      if (menu !== null && this.moduleMenu?.key !== key) this.openModuleMenu(key);
     });
-    this.modules.set(kind, { card, body });
+    const module = { card, body, menu };
 
-    return card;
+    this.modules.set(key, module);
+
+    return module;
   }
 
-  private menuButton(kind: MenuModule): HTMLButtonElement {
-    const button = this.button('data-blok-database-layout-module-menu', IconDotsHorizontal, null, () => this.toggleModuleMenu(kind));
-
-    button.setAttribute('aria-label', this.label('tools.database.layoutModuleMenu'));
-    button.setAttribute('aria-expanded', 'false');
-
-    return button;
+  private select(key: string): void {
+    for (const [other, { card }] of this.modules) card.toggleAttribute('data-selected', other === key);
+    if (this.moduleMenu !== null && this.moduleMenu.key !== key) this.closeModuleMenu();
   }
 
-  private select(kind: PageLayoutModule): void {
-    for (const [other, { card }] of this.modules) card.toggleAttribute('data-selected', other === kind);
-    if (this.moduleMenu !== null && this.moduleMenu.kind !== kind) this.closeModuleMenu();
-  }
-
-  private toggleModuleMenu(kind: MenuModule): void {
-    if (this.moduleMenu?.kind === kind) {
+  private toggleModuleMenu(key: string): void {
+    if (this.moduleMenu?.key === key) {
       this.closeModuleMenu();
 
       return;
     }
-    this.select(kind);
-    this.openModuleMenu(kind);
+    this.select(key);
+    this.openModuleMenu(key);
   }
 
   /** research/09 §3: each module's ••• menu has a header, a focused property search, and its lists. */
-  private openModuleMenu(kind: MenuModule): void {
-    this.closeMenu();
-    this.closeModuleMenu();
-    const anchor = this.menuButtons[kind];
-    const root: PanelPage = kind === 'heading'
-      ? { title: this.label('tools.database.layoutModuleHeading'), build: () => this.headingMenuPage() }
-      : {
+  private openModuleMenu(key: string): void {
+    const anchor = this.modules.get(key)?.menu ?? null;
+
+    if (anchor === null) return;
+    const id = key.startsWith('property:') ? key.slice('property:'.length) : null;
+    const pages: Record<string, () => PanelPage> = {
+      heading: () => ({ title: this.label('tools.database.layoutModuleHeading'), build: () => this.headingMenuPage() }),
+      group: () => ({
         title: this.label('tools.database.layoutModuleGroup'),
         headerAction: () => this.button('data-blok-database-layout-add-section', IconPlus, 'tools.database.layoutAddSection', () => {
           this.options.edit(addSection(nanoid(), this.label('tools.database.layoutNewSection'), this.options.properties().map((def) => def.id)));
         }),
         build: (panel) => this.groupMenuPage(panel),
-      };
+      }),
+    };
+    const root: PanelPage = id === null
+      ? pages[key]()
+      : { title: this.options.properties().find((def) => def.id === id)?.name ?? '', build: () => this.propertyMenuPage(id) };
+
+    this.openPanel(key, anchor, id !== null ? 'database-layout-module-menu' : `database-layout-${key}-menu`, root);
+    // The panel focuses its first control, which in the group menu is the header's Add section.
+    this.moduleMenu?.panel.root.querySelector<HTMLElement>('[data-blok-database-panel-input]')?.focus();
+  }
+
+  /** Opens one builder menu on `anchor`, closing any other. */
+  private openPanel(key: string, anchor: HTMLElement, testId: string, root: PanelPage): void {
+    this.closeMenu();
+    this.closeModuleMenu();
     const panel = new DatabasePanel({
       anchor,
-      testId: `database-layout-${kind}-menu`,
+      testId,
       width: 290,
       backLabel: this.label('tools.database.settingsBack'),
       root,
@@ -290,11 +434,9 @@ export class PageLayoutBuilder {
     });
 
     this.menuQuery = '';
-    this.moduleMenu = { kind, panel };
+    this.moduleMenu = { key, anchor, panel };
     anchor.setAttribute('aria-expanded', 'true');
     panel.open();
-    // The panel focuses its first control, which in the group menu is the header's Add section.
-    panel.root.querySelector<HTMLElement>('[data-blok-database-panel-input]')?.focus();
   }
 
   /** Closes the open module menu, if any. The drawer's canvas ⋯ menu calls it, so only one menu is open. */
@@ -303,8 +445,214 @@ export class PageLayoutBuilder {
 
     this.moduleMenu = null;
     if (menu === null) return;
-    this.menuButtons[menu.kind].setAttribute('aria-expanded', 'false');
+    menu.anchor.setAttribute('aria-expanded', 'false');
     menu.panel.close();
+  }
+
+  /**
+   * A property module's ••• menu: Move up / Move down (the keyboard path of the
+   * drag), Move to panel or page, and Remove, which returns it to the group.
+   */
+  private propertyMenuPage(id: string): HTMLElement[] {
+    const resolved = resolvePageLayout(this.options.layout(), this.options.properties());
+    const place = resolved.pageModules.some((def) => def.id === id) ? 'page' : 'panel';
+    const list = place === 'page' ? resolved.pageModules : resolved.panelModules;
+    const at = list.findIndex((def) => def.id === id);
+    const def = list[at];
+
+    if (def === undefined) return [];
+    const rows: HTMLElement[] = [
+      panelRow({ label: this.label('tools.database.layoutMoveUp'), testId: 'database-layout-module-move-up', icon: IconArrowUp, disabled: at === 0, onClick: () => this.options.edit(moveInPlace(id, -1)) }),
+      panelRow({ label: this.label('tools.database.layoutMoveDown'), testId: 'database-layout-module-move-down', icon: IconMoveDown, disabled: at === list.length - 1, onClick: () => this.options.edit(moveInPlace(id, 1)) }),
+    ];
+
+    if (place === 'panel' || canPlaceInPanel(def)) {
+      const to = place === 'page' ? 'panel' : 'page';
+
+      rows.push(panelRow({
+        label: this.label(to === 'panel' ? 'tools.database.layoutMoveToPanel' : 'tools.database.layoutMoveToPage'),
+        testId: 'database-layout-module-move-panel',
+        icon: IconSplitView,
+        onClick: () => this.options.edit(addModule(id, to, def)),
+      }));
+    }
+    rows.push(panelSeparator(), panelRow({
+      label: this.label('tools.database.layoutRemove'),
+      testId: 'database-layout-module-remove',
+      icon: IconMinus,
+      onClick: () => {
+        this.closeModuleMenu();
+        this.options.edit(removeFromLayout(id));
+      },
+    }));
+
+    return rows;
+  }
+
+  private toggleAddMenu(place: 'page' | 'panel', anchor: HTMLElement): void {
+    const key = `add-${place}`;
+
+    if (this.moduleMenu?.key === key) {
+      this.closeModuleMenu();
+
+      return;
+    }
+    this.openPanel(key, anchor, place === 'page' ? 'database-layout-add-module-menu' : 'database-layout-add-panel-menu', {
+      title: this.label(place === 'page' ? 'tools.database.layoutAddToPage' : 'tools.database.layoutAddToPanel'),
+      build: () => this.addMenuPage(place, anchor),
+    });
+  }
+
+  /**
+   * research/09 §3b L65: "Use an existing property", then "Create new property".
+   * Existing ones are those still in the group; a relation never goes to the panel.
+   */
+  private addMenuPage(place: 'page' | 'panel', anchor: HTMLElement): HTMLElement[] {
+    const resolved = resolvePageLayout(this.options.layout(), this.options.properties());
+    const existing = [...resolved.group, ...resolved.sections.flatMap((entry) => entry.properties)]
+      .filter((def) => place === 'page' || canPlaceInPanel(def));
+    const rows: HTMLElement[] = existing.length === 0 ? [] : [
+      panelLabel(this.label('tools.database.layoutUseExisting')),
+      ...existing.map((def) => panelRow({
+        label: def.name,
+        testId: `database-layout-add-existing-${def.id}`,
+        icon: def.icon !== undefined && def.icon !== '' ? def.icon : propertyTypeMeta(def.type).icon,
+        onClick: () => {
+          this.closeModuleMenu();
+          this.options.edit(addModule(def.id, place, def));
+        },
+      })),
+      panelSeparator(),
+    ];
+
+    return [...rows, panelRow({
+      label: this.label('tools.database.layoutCreateNew'),
+      testId: 'database-layout-create-module',
+      icon: IconPlus,
+      onClick: () => {
+        this.closeModuleMenu();
+        // The persistent button, so the type menu still has an anchor after the redraw.
+        this.options.onAddModule(anchor, place);
+      },
+    })];
+  }
+
+  /** research/09 anatomy L40: "»" Hide sidebar; collapsed, the column is a "«" button. */
+  private setSidebar(collapsed: boolean): void {
+    if (collapsed && this.moduleMenu?.key === 'add-panel') this.closeModuleMenu();
+    this.panelColumn.toggleAttribute('data-collapsed', collapsed);
+    this.panelBody.hidden = collapsed;
+    this.panelToggle.innerHTML = collapsed ? IconChevronLeft : IconChevronRight;
+    this.panelToggle.setAttribute('aria-label', this.label(collapsed ? 'tools.database.layoutShowSidebar' : 'tools.database.layoutHideSidebar'));
+    this.panelToggle.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  /** research/09 §10 L164: the column collapses on a narrow window. A later widening opens it again. */
+  private watchNarrow(): void {
+    const query = typeof window.matchMedia === 'function' ? window.matchMedia(NARROW_BUILDER) : null;
+    const onChange = (event: { matches: boolean }): void => this.setSidebar(event.matches);
+
+    this.setSidebar(query?.matches === true);
+    if (query === null) return;
+    query.addEventListener('change', onChange);
+    this.unwatchNarrow = () => query.removeEventListener('change', onChange);
+  }
+
+  /**
+   * Pointer drag from a module's ⠿ or a pin's label (research/09 anatomy L39,
+   * §8 L83). A module lands in the canvas or the side panel column, a pin among
+   * the pins; the drop line marks where. A press that does not travel is a click.
+   */
+  private startDrag(event: PointerEvent, id: string, kind: 'module' | 'heading', source: HTMLElement): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const def = this.options.properties().find((candidate) => candidate.id === id);
+    const line = new DatabaseDropLine(this.root, this.root);
+    const state: { dragging: boolean; target: { place: 'heading' | 'page' | 'panel'; beforeId: string | null } | null } = { dragging: false, target: null };
+    const move = (moveEvent: PointerEvent): void => {
+      if (!state.dragging && Math.hypot(moveEvent.clientX - event.clientX, moveEvent.clientY - event.clientY) < DRAG_THRESHOLD) return;
+      state.dragging = true;
+      source.setAttribute('data-dragging', '');
+      state.target = kind === 'heading' ? this.pinTarget(moveEvent, id, line) : this.moduleTarget(moveEvent, def, line);
+    };
+    const end = (drop: boolean): void => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      line.destroy();
+      source.removeAttribute('data-dragging');
+      if (!state.dragging) return;
+      this.swallowClick();
+      if (drop && state.target !== null) this.options.edit(placeBefore(id, state.target.place, state.target.beforeId, def));
+    };
+    const up = (): void => end(true);
+    const cancel = (): void => end(false);
+
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  }
+
+  /** The column under the pointer, and the module card the dragged one lands before. */
+  private moduleTarget(event: PointerEvent, def: PropertyDefinition | undefined, line: DatabaseDropLine): { place: 'page' | 'panel'; beforeId: string | null } | null {
+    const rect = this.panelColumn.getBoundingClientRect();
+    const place = !this.panelBody.hidden && event.clientX >= rect.left && event.clientX <= rect.right ? 'panel' : 'page';
+
+    if (def === undefined || (place === 'panel' && !canPlaceInPanel(def))) {
+      line.hide();
+
+      return null;
+    }
+    const container = place === 'panel' ? this.panelBody : this.canvas;
+    const cards = [...container.querySelectorAll<HTMLElement>(':scope > [data-blok-database-layout-module="property"]')]
+      .filter((card) => card.getAttribute('data-property-id') !== def.id);
+    const before = cards.find((card) => {
+      const box = card.getBoundingClientRect();
+
+      return event.clientY < box.top + box.height / 2;
+    });
+    const end = place === 'panel' ? this.addToPanelButton : this.addModuleButton;
+    const edge = before?.getBoundingClientRect().top ?? (cards.at(-1)?.getBoundingClientRect().bottom ?? end.getBoundingClientRect().top);
+    const span = (place === 'panel' ? this.panelBody : this.cardOf('heading')).getBoundingClientRect();
+
+    line.showHorizontal({ left: span.left, width: span.width, centerY: before === undefined && cards.length > 0 ? edge + CARD_GAP_HALF : edge - CARD_GAP_HALF });
+
+    return { place, beforeId: before?.getAttribute('data-property-id') ?? null };
+  }
+
+  /** The pin the dragged one lands before, along the strip's reading direction. */
+  private pinTarget(event: PointerEvent, id: string, line: DatabaseDropLine): { place: 'heading'; beforeId: string | null } {
+    const rtl = getComputedStyle(this.canvas).direction === 'rtl';
+    const pins = [...this.cardOf('heading').querySelectorAll<HTMLElement>('[data-blok-database-drawer-pin]')]
+      .filter((pinEl) => pinEl.querySelector('[data-blok-database-drawer-prop-label]')?.getAttribute('data-property-id') !== id);
+    const before = pins.find((pinEl) => {
+      const box = pinEl.getBoundingClientRect();
+      const middle = box.left + box.width / 2;
+
+      return rtl ? event.clientX > middle : event.clientX < middle;
+    });
+    const last = pins.at(-1)?.getBoundingClientRect();
+    const box = before?.getBoundingClientRect() ?? last;
+
+    if (box !== undefined) {
+      const startEdge = rtl ? box.right : box.left;
+      const endEdge = rtl ? box.left : box.right;
+
+      line.showVertical({ centerX: before !== undefined ? startEdge : endEdge, top: box.top, height: box.height });
+    }
+
+    return { place: 'heading', beforeId: before?.querySelector('[data-blok-database-drawer-prop-label]')?.getAttribute('data-property-id') ?? null };
+  }
+
+  /** The click that ends a drag is not a module pick. */
+  private swallowClick(): void {
+    const stop = (click: Event): void => {
+      click.stopPropagation();
+      click.preventDefault();
+    };
+
+    this.root.addEventListener('click', stop, { capture: true, once: true });
+    window.setTimeout(() => this.root.removeEventListener('click', stop, { capture: true }), 0);
   }
 
   /** The menu's property search. It filters `rows` by name, live, and keeps focus. */
@@ -338,9 +686,9 @@ export class PageLayoutBuilder {
     const resolved = resolvePageLayout(layout, this.options.properties());
     const list = document.createElement('div');
     const rows = [...resolved.group, ...resolved.sections.flatMap((entry) => entry.properties)].map((def) => this.groupRow(def, panel));
-    const add = this.button('data-blok-database-layout-add-group-property', null, 'tools.database.addProperty', () => {
+    const add = this.button('data-blok-database-layout-add-group-property', null, 'tools.database.addProperty', (el) => {
       this.closeModuleMenu();
-      this.options.onAddToGroup(this.menuButtons.group);
+      this.options.onAddToGroup(this.modules.get('group')?.menu ?? el);
     });
     const toPanel = layout.groupIn === 'page';
 
@@ -433,9 +781,9 @@ export class PageLayoutBuilder {
     };
     const pinnedList = list('pinned', pinned);
     const unpinnedList = list('unpinned', properties.filter((def) => !pinnedIds.has(def.id)));
-    const add = this.button('data-blok-database-layout-add-pin', null, 'tools.database.addProperty', () => {
+    const add = this.button('data-blok-database-layout-add-pin', null, 'tools.database.addProperty', (el) => {
       this.closeModuleMenu();
-      this.options.onAddPin(this.menuButtons.heading);
+      this.options.onAddPin(this.modules.get('heading')?.menu ?? el);
     });
 
     add.disabled = full;
@@ -684,3 +1032,11 @@ export class PageLayoutBuilder {
     return this.options.i18n?.t(key, vars) ?? fallback.replace(/\{(\w+)\}/g, (match, name: string) => vars?.[name] ?? match);
   }
 }
+
+/** Puts `children` in `parent` in order, moving only what is out of place, so focus stays put. */
+const syncChildren = (parent: HTMLElement, children: HTMLElement[]): void => {
+  children.forEach((child, index) => {
+    if (parent.children[index] !== child) parent.insertBefore(child, parent.children[index] ?? null);
+  });
+  while (parent.children.length > children.length) parent.lastElementChild?.remove();
+};

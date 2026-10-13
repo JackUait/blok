@@ -807,7 +807,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +26: the Preview padding names its spacing tokens (css-vars-extraction R2) instead of 3px/6px.
     // +2_774: the Page settings column, its Structure cards, Options switches and (i) hints (Phase 4, measured database.css growth).
     // +3_990: the module cards, the Heading menu with its pin buttons and Property labels switch (Phase 5a).
-    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774 + 3_990;
+    // +3_833: the Add page module "+", the side panel column, module cards with drag handles and their menus (Phase 5c).
+    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774 + 3_990 + 3_833;
     // database.css: the title cell Open button shows on the keyboard-selected cell (Cmd/Ctrl+Enter presses it).
     const DATABASE_CELL_BUTTON_KEYBOARD_BYTES = 92;
     // database.css: the comment count badge after a row title (research/12 §3).

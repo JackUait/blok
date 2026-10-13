@@ -448,7 +448,10 @@ describe('PageLayoutBuilder', () => {
 
     it.each([
       ['More save options', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click(), 'reset'],
-      ['an item menu', () => q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click(), 'add-to-page'],
+      ['an item menu', () => {
+        pinDue();
+        q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
+      }, 'move-up'],
       ['the Preview switch', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]')?.click(), 'preview-row-1'],
     ])('closes %s and leaves the toast and the builder', (_name, openMenu, item) => {
       const toast = showToast();
@@ -804,7 +807,7 @@ describe('PageLayoutBuilder', () => {
 
     // research/10 §8: a click anywhere in a module selects it and opens its menu.
     it('selects a module and opens its menu on a click anywhere in it', () => {
-      const { drawer } = customize();
+      const { drawer } = customize({ schema: PINNED });
 
       builder().querySelector<HTMLElement>('[data-blok-database-layout-canvas-title]')?.click();
 
@@ -822,7 +825,7 @@ describe('PageLayoutBuilder', () => {
       q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
 
       expect(headingMenu()).toBeNull();
-      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
       drawer.destroy();
     });
 
@@ -961,17 +964,17 @@ describe('PageLayoutBuilder', () => {
     });
 
     it('keeps one menu open: the canvas ⋯ menu closes the group menu', () => {
-      const { drawer } = customize();
+      const { drawer } = customize({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) });
 
       openGroupMenu();
       q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
 
-      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
       expect(groupMenu()).toBeNull();
       groupMenuButton().click();
 
       expect(groupMenu()).not.toBeNull();
-      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).toBeNull();
       drawer.destroy();
     });
 
@@ -1035,15 +1038,264 @@ describe('PageLayoutBuilder', () => {
       openGroupMenu();
       move()?.click();
 
-      expect(builder().querySelector('[data-blok-database-drawer-details] [data-blok-database-drawer-props]')).not.toBeNull();
+      expect(builder().querySelector('[data-blok-database-layout-panel-column] [data-blok-database-drawer-props]')).not.toBeNull();
       expect(move()?.textContent?.trim()).toBe('Move to page');
       move()?.click();
 
-      expect(builder().querySelector('[data-blok-database-drawer-details]')).toBeNull();
+      expect(builder().querySelector('[data-blok-database-layout-panel-column] [data-blok-database-drawer-props]')).toBeNull();
+      expect(builder().querySelector('[data-blok-database-layout-canvas] [data-blok-database-drawer-props]')).not.toBeNull();
       move()?.click();
       apply();
 
       expect(written(options)?.groupIn).toBe('panel');
+      drawer.destroy();
+    });
+  });
+
+  // research/09 anatomy L39-40, §3b L65: page modules, "+" Add page module and the side panel column (plan Phase 5c).
+  describe('page modules and the side panel column', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const REL: PropertyDefinition = { id: 'p-rel', name: 'Tasks', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'other' } };
+    const OWNER: PropertyDefinition = { id: 'p-owner', name: 'Owner', type: 'text', position: 'a4' };
+    const column = (): HTMLElement => {
+      const el = builder().querySelector<HTMLElement>('[data-blok-database-layout-panel-column]');
+
+      if (el === null) throw new Error('no side panel column');
+
+      return el;
+    };
+    const canvas = (): HTMLElement => {
+      const el = builder().querySelector<HTMLElement>('[data-blok-database-layout-canvas]');
+
+      if (el === null) throw new Error('no canvas');
+
+      return el;
+    };
+    /** The canvas or the column, read as its module cards and "+" in order. */
+    const cardsIn = (el: HTMLElement): string[] =>
+      [...el.querySelectorAll<HTMLElement>(':scope > [data-blok-database-layout-module], :scope > [data-blok-database-layout-add-module], [data-blok-database-layout-panel-body] > [data-blok-database-layout-module]')]
+        .map((card) => card.hasAttribute('data-blok-database-layout-add-module') ? '+' : card.getAttribute('data-property-id') ?? card.getAttribute('data-blok-database-layout-module') ?? '');
+    const propertyCard = (id: string): HTMLElement => {
+      const el = builder().querySelector<HTMLElement>(`[data-blok-database-layout-module="property"][data-property-id="${id}"]`);
+
+      if (el === null) throw new Error(`no module card for ${id}`);
+
+      return el;
+    };
+    const moduleMenu = (): HTMLElement | null => q('[data-blok-testid="database-layout-module-menu"]');
+    const openModuleMenu = (id: string): HTMLElement => {
+      if (moduleMenu() === null) propertyCard(id).querySelector<HTMLElement>('[data-blok-database-layout-module-menu]')?.click();
+      const menu = moduleMenu();
+
+      if (menu === null) throw new Error(`no module menu for ${id}`);
+
+      return menu;
+    };
+    const addModuleButton = (): HTMLButtonElement => {
+      const el = canvas().querySelector<HTMLButtonElement>('[data-blok-database-layout-add-module]');
+
+      if (el === null) throw new Error('no Add page module button');
+
+      return el;
+    };
+    const addToPanelButton = (): HTMLButtonElement => {
+      const el = column().querySelector<HTMLButtonElement>('[data-blok-database-layout-add-to-panel]');
+
+      if (el === null) throw new Error('no Add to panel button');
+
+      return el;
+    };
+    const listed = (menu: HTMLElement | null): string[] =>
+      [...(menu?.querySelectorAll<HTMLElement>('[data-blok-testid^="database-layout-add-existing-"]') ?? [])].map((row) => row.getAttribute('data-blok-testid')?.replace('database-layout-add-existing-', '') ?? '');
+    const apply = (): void => {
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+    };
+
+    it('adds an existing property as a page module from +', () => {
+      const { drawer, options } = customize();
+      const add = addModuleButton();
+
+      expect(add.getAttribute('aria-label')).toBe('Add page module');
+      expect(cardsIn(canvas())).toEqual(['heading', 'group', '+', 'content']);
+      add.click();
+      const menu = q('[data-blok-testid="database-layout-add-module-menu"]');
+
+      expect(menu?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('Add to page');
+      expect(menu?.textContent).toContain('Use an existing property');
+      expect(menu?.textContent).toContain('Create new property');
+      expect(listed(menu)).toEqual(['p-status', 'p-due']);
+      q('[data-blok-testid="database-layout-add-existing-p-due"]')?.click();
+
+      expect(q('[data-blok-testid="database-layout-add-module-menu"]')).toBeNull();
+      expect(cardsIn(canvas())).toEqual(['heading', 'group', 'p-due', '+', 'content']);
+      expect(propertyCard('p-due').querySelector('[data-blok-database-layout-module-name]')?.textContent).toBe('Due');
+      expect(propertyCard('p-due').querySelector('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')).not.toBeNull();
+      expect(moduleCard('group').querySelector('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toBeNull();
+      apply();
+
+      expect(written(options)?.placements).toEqual([{ id: 'p-due', place: 'page' }]);
+      drawer.destroy();
+    });
+
+    it('creates a property into the panel from Add to panel', () => {
+      const { drawer, options } = customize({ onOpenAddProperty: vi.fn() });
+      const add = addToPanelButton();
+
+      expect(add.textContent?.trim()).toBe('Add to panel');
+      add.click();
+      const menu = q('[data-blok-testid="database-layout-add-panel-menu"]');
+
+      expect(menu?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('Add to panel');
+      q('[data-blok-testid="database-layout-create-module"]')?.click();
+      const [anchor, onAdded] = vi.mocked(options.onOpenAddProperty)?.mock.calls[0] ?? [];
+
+      expect(q('[data-blok-testid="database-layout-add-panel-menu"]')).toBeNull();
+      expect(anchor).toBe(addToPanelButton());
+      drawer.refreshSchema([...schemaWith(), { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' }]);
+      onAdded?.('p-new');
+
+      expect(cardsIn(column())).toEqual(['p-new']);
+      apply();
+
+      expect(written(options)?.placements).toEqual([{ id: 'p-new', place: 'panel' }]);
+      drawer.destroy();
+    });
+
+    it('never offers Add to panel for a relation', () => {
+      const { drawer } = customize({ schema: [...schemaWith(), REL] });
+
+      addToPanelButton().click();
+      expect(listed(q('[data-blok-testid="database-layout-add-panel-menu"]'))).toEqual(['p-status', 'p-due']);
+      addModuleButton().click();
+      expect(listed(q('[data-blok-testid="database-layout-add-module-menu"]'))).toEqual(['p-status', 'p-due', 'p-rel']);
+      drawer.destroy();
+    });
+
+    it('drags a module below another, and Move down does the same from the keyboard', () => {
+      const { drawer, options } = customize({
+        schema: [...schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'page' }, { id: 'p-status', place: 'page' }] })],
+      });
+
+      expect(cardsIn(canvas())).toEqual(['heading', 'group', 'p-due', 'p-status', '+', 'content']);
+      const handle = propertyCard('p-due').querySelector<HTMLElement>('[data-blok-database-layout-module-handle]');
+
+      // research/10 §9 L71: only the ••• is a tab stop; the handle is for the pointer.
+      expect(handle?.getAttribute('aria-hidden')).toBe('true');
+      expect(handle?.matches('button, [tabindex]')).toBe(false);
+      const menu = openModuleMenu('p-due');
+
+      expect(menu.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('Due');
+      expect(q<HTMLButtonElement>('[data-blok-testid="database-layout-module-move-up"]')?.disabled).toBe(true);
+      q('[data-blok-testid="database-layout-module-move-down"]')?.click();
+
+      expect(cardsIn(canvas())).toEqual(['heading', 'group', 'p-status', 'p-due', '+', 'content']);
+      // The menu stays open on its card, which is still in the page.
+      expect(moduleMenu()).not.toBeNull();
+      expect(q<HTMLButtonElement>('[data-blok-testid="database-layout-module-move-down"]')?.disabled).toBe(true);
+      apply();
+      const edit = vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0];
+
+      expect(edit?.(pageLayoutOf(options.schema[0])).placements).toEqual([{ id: 'p-status', place: 'page' }, { id: 'p-due', place: 'page' }]);
+      drawer.destroy();
+    });
+
+    it('moves a module to the panel and back, and removes it, from its ••• menu', () => {
+      const { drawer, options } = customize({ schema: [...schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'page' }] }), OWNER] });
+
+      openModuleMenu('p-due');
+      q('[data-blok-testid="database-layout-module-move-panel"]')?.click();
+
+      expect(cardsIn(column())).toEqual(['p-due']);
+      expect(q('[data-blok-testid="database-layout-module-move-panel"]')?.textContent?.trim()).toBe('Move to page');
+      q('[data-blok-testid="database-layout-module-move-panel"]')?.click();
+
+      expect(cardsIn(column())).toEqual([]);
+      expect(cardsIn(canvas())).toContain('p-due');
+      q('[data-blok-testid="database-layout-module-remove"]')?.click();
+
+      expect(moduleMenu()).toBeNull();
+      expect(builder().querySelector('[data-blok-database-layout-module="property"]')).toBeNull();
+      expect(moduleCard('group').querySelector('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')).not.toBeNull();
+      apply();
+      const edit = vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0];
+
+      expect(edit?.(pageLayoutOf(options.schema[0])).placements).toEqual([]);
+      drawer.destroy();
+    });
+
+    it('offers no Move to panel in the ••• menu of a relation module', () => {
+      const { drawer } = customize({ schema: [...schemaWith({ pageLayoutPlacements: [{ id: 'p-rel', place: 'page' }] }), REL] });
+
+      openModuleMenu('p-rel');
+      expect(q('[data-blok-testid="database-layout-module-move-panel"]')).toBeNull();
+      expect(q('[data-blok-testid="database-layout-module-remove"]')).not.toBeNull();
+      drawer.destroy();
+    });
+
+    it('puts the property group and panel modules in the side panel column, and the View details line in the heading', () => {
+      const { drawer } = customize({
+        schema: [...schemaWith({ pageLayoutGroupIn: 'panel', pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] })],
+      });
+
+      expect(cardsIn(column())).toEqual(['group', 'p-due']);
+      expect(cardsIn(canvas())).toEqual(['heading', '+', 'content']);
+      expect(moduleCard('heading').querySelector('[data-blok-database-drawer-details-toggle]')).not.toBeNull();
+      expect(builder().querySelector('[data-blok-database-drawer-details]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('hides and shows the side panel column from its own button', () => {
+      const { drawer } = customize();
+      const toggle = (): HTMLButtonElement | null => column().querySelector<HTMLButtonElement>('[data-blok-database-layout-panel-toggle]');
+      const body = (): HTMLElement | null => column().querySelector<HTMLElement>('[data-blok-database-layout-panel-body]');
+
+      expect(toggle()?.getAttribute('aria-label')).toBe('Hide sidebar');
+      expect(toggle()?.getAttribute('aria-expanded')).toBe('true');
+      expect(body()?.hidden).toBe(false);
+      toggle()?.click();
+
+      expect(toggle()?.getAttribute('aria-label')).toBe('Show sidebar');
+      expect(toggle()?.getAttribute('aria-expanded')).toBe('false');
+      expect(body()?.hidden).toBe(true);
+      expect(column().hasAttribute('data-collapsed')).toBe(true);
+      toggle()?.click();
+
+      expect(body()?.hidden).toBe(false);
+      drawer.destroy();
+    });
+
+    // research/09 §10 L164: at 756px the column is a "«" button. Notion's breakpoint was not measured.
+    it('collapses the side panel column at a narrow width', () => {
+      const listeners: Array<(event: { matches: boolean }) => void> = [];
+      const query = { matches: true, addEventListener: (_: string, fn: (event: { matches: boolean }) => void) => listeners.push(fn), removeEventListener: vi.fn() };
+
+      vi.stubGlobal('matchMedia', vi.fn(() => query));
+      const { drawer } = customize();
+      const toggle = column().querySelector<HTMLButtonElement>('[data-blok-database-layout-panel-toggle]');
+
+      expect(column().hasAttribute('data-collapsed')).toBe(true);
+      expect(toggle?.getAttribute('aria-label')).toBe('Show sidebar');
+      for (const fn of listeners) fn({ matches: false });
+
+      expect(column().hasAttribute('data-collapsed')).toBe(false);
+      drawer.close();
+
+      expect(query.removeEventListener).toHaveBeenCalled();
+    });
+
+    it('keeps no module jobs in the per-property menu, and no ⋯ where nothing is left', () => {
+      const { drawer } = customize({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }] }) });
+
+      expect(q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')).toBeNull();
+      q('[data-blok-database-layout-item-menu][data-property-id="p-status"]')?.click();
+
+      for (const name of ['add-to-page', 'add-to-panel', 'move-to-panel', 'move-to-page', 'remove']) {
+        expect(q(`[data-blok-popover-item][data-blok-item-name="${name}"]`)).toBeNull();
+      }
+      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
       drawer.destroy();
     });
   });

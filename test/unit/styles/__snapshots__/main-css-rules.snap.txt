@@ -5924,6 +5924,133 @@ span[data-blok-slash-search] {
   cursor: auto;
 }
 
+[data-blok-database-layout-module-handle] {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-inline-end: var(--blok-space-1);
+  color: var(--blok-text-tertiary);
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-database-layout-module-handle] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-layout-module-header] > [data-blok-database-layout-module-name] {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-layout-canvas] [data-blok-database-drawer-pin] [data-blok-database-drawer-prop-head] {
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-database-layout-module][data-dragging], [data-blok-database-drawer-pin][data-dragging] {
+  opacity: 0.5;
+}
+
+[data-blok-database-layout-add-module] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  margin: 0 auto var(--blok-space-3);
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-builder-canvas-ring);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-layout-add-module] svg, [data-blok-database-layout-add-to-panel] svg, [data-blok-database-layout-panel-toggle] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-layout-panel-column] {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--blok-space-2);
+  box-sizing: border-box;
+  inline-size: 240px;
+  overflow-y: auto;
+  padding-inline: var(--blok-space-4) 0;
+  padding-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-layout-panel-column][data-collapsed] {
+  inline-size: auto;
+}
+
+[data-blok-database-layout-panel-body] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-layout-panel-body][hidden] {
+  display: none;
+}
+
+[data-blok-database-layout-panel-body] > [data-blok-database-layout-module] {
+  margin-block-end: 0;
+}
+
+[data-blok-database-layout-panel-toggle] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[dir="rtl"] [data-blok-database-layout-panel-toggle] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-layout-add-to-panel] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-1);
+  min-block-size: 28px;
+  padding: 0 var(--blok-space-3);
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-builder-canvas-ring);
+  color: var(--blok-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[@media (hover: hover)] [data-blok-database-layout-add-module]:hover, [data-blok-database-layout-add-to-panel]:hover, [data-blok-database-layout-panel-toggle]:hover {
+  background-color: var(--blok-item-hover-bg);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-layout-add-module]:focus-visible, [data-blok-database-layout-add-to-panel]:focus-visible, [data-blok-database-layout-panel-toggle]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
 [data-blok-database-layout-pin-row], [data-blok-database-layout-group-row] {
   display: flex;
   align-items: center;

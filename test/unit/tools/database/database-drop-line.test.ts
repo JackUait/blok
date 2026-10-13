@@ -47,6 +47,17 @@ describe('DatabaseDropLine', () => {
     expect(el?.style.pointerEvents).toBe('none');
   });
 
+  // A top-layer dialog paints over body, so a line for it must mount inside it.
+  it('mounts in the given host instead of body', () => {
+    const host = document.createElement('div');
+
+    document.body.appendChild(host);
+    new DatabaseDropLine(undefined, host).showHorizontal({ left: 0, centerY: 10, width: 100 });
+
+    expect(line()?.parentElement).toBe(host);
+    expect(line()?.getAttribute('data-blok-testid')).toBe('database-drop-line');
+  });
+
   it('draws a 4px vertical line centred on the given x', () => {
     const drop = new DatabaseDropLine();
 

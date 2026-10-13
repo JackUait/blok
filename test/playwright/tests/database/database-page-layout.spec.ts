@@ -234,6 +234,115 @@ test.describe('row page layout', () => {
     await expect(dialog).toBeVisible();
   });
 
+  // research/09 §3b L65: "+" Add page module → "Add to page" → an existing property becomes its own module.
+  test('adds an existing property as a page module from +', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+
+    await dialog.getByRole('button', { name: 'Add page module' }).click();
+    const menu = page.getByTestId('database-layout-add-module-menu');
+
+    await expect(menu.getByText('Add to page')).toBeVisible();
+    await menu.getByRole('button', { name: 'Due' }).click();
+
+    await expect(menu).toHaveCount(0);
+    await expect(dialog.getByTestId('database-layout-module-handle-p-due')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Apply to all pages' }).click();
+
+    expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-due', place: 'page' }]);
+  });
+
+  // research/09 anatomy L39: modules drag by their ⠿; the drop ends no click on the card.
+  test('drags a page module below another with the pointer', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'page' }, { id: 'p-owner', place: 'page' }] }));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+    const due = dialog.getByTestId('database-layout-module-handle-p-due');
+    const owner = dialog.getByTestId('database-layout-module-handle-p-owner');
+    const from = await due.boundingBox();
+    const to = await dialog.getByRole('button', { name: 'Add page module' }).boundingBox();
+
+    if (from === null || to === null) throw new Error('missing drag geometry');
+    expect(from.y).toBeLessThan((await owner.boundingBox())?.y ?? 0);
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await expect(dialog.getByTestId('database-drop-line')).toHaveCount(1);
+    await page.mouse.up();
+
+    await expect.poll(async () => ((await due.boundingBox())?.y ?? 0) > ((await owner.boundingBox())?.y ?? 0)).toBe(true);
+    await expect(page.getByTestId('database-layout-module-menu')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Apply to all pages' }).click();
+
+    expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-owner', place: 'page' }, { id: 'p-due', place: 'page' }]);
+  });
+
+  /** Presses at the centre of `from`, travels in steps and releases at `to`. */
+  const drag = async (page: Page, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> => {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 12 });
+    await page.mouse.up();
+  };
+
+  // research/09 anatomy L40: a page module dropped on the side panel column moves to the panel.
+  test('drags a page module into the side panel column', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'page' }] }));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+    const from = await dialog.getByTestId('database-layout-module-handle-p-due').boundingBox();
+    const to = await dialog.getByRole('button', { name: 'Add to panel' }).boundingBox();
+
+    if (from === null || to === null) throw new Error('missing drag geometry');
+    await drag(page, { x: from.x + from.width / 2, y: from.y + from.height / 2 }, { x: to.x + to.width / 2, y: to.y + to.height / 2 });
+    await dialog.getByRole('button', { name: 'Apply to all pages' }).click();
+
+    expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-due', place: 'panel' }]);
+  });
+
+  // research/09 §8 L83: in the builder a pin drags by its label.
+  test('drags a pin before another', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }, { id: 'p-owner', place: 'heading' }] }));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+    const due = await dialog.getByText('Due', { exact: true }).boundingBox();
+    const owner = await dialog.getByText('Owner', { exact: true }).boundingBox();
+
+    if (due === null || owner === null) throw new Error('missing drag geometry');
+    await drag(page, { x: owner.x + owner.width / 2, y: owner.y + owner.height / 2 }, { x: due.x + 2, y: due.y + due.height / 2 });
+    await expect(page.getByTestId('database-layout-heading-menu')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Apply to all pages' }).click();
+
+    expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-owner', place: 'heading' }, { id: 'p-due', place: 'heading' }]);
+  });
+
+  // research/09 §10 L164: at 756px the side panel column is a "«" button.
+  test('collapses the side panel column at a narrow width', async ({ page }) => {
+    await page.setViewportSize({ width: 756, height: 717 });
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+    const addToPanel = dialog.getByRole('button', { name: 'Add to panel' });
+
+    await expect(dialog.getByRole('button', { name: 'Show sidebar' })).toBeVisible();
+    await expect(addToPanel).toBeHidden();
+    await dialog.getByRole('button', { name: 'Show sidebar' }).click();
+    await expect(addToPanel).toBeVisible();
+    await dialog.getByRole('button', { name: 'Hide sidebar' }).click();
+    await expect(addToPanel).toBeHidden();
+  });
+
   // research/09 §10: at 756px the bar stays on one 60px line.
   test('keeps the builder top bar on one line at 756px', async ({ page }) => {
     await page.setViewportSize({ width: 756, height: 717 });

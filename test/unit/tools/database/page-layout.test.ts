@@ -16,6 +16,7 @@ import {
   pageLayoutOf,
   pin,
   pinFirst,
+  placeBefore,
   removeFromLayout,
   renameSection,
   resetPageLayout,
@@ -187,6 +188,46 @@ describe('page layout — edits', () => {
 
     expect(moved.placements.filter((p) => p.place === 'page').map((p) => p.id)).toEqual(['c', 'a']);
     expect(moveInPlace('c', 1)(layout)).toEqual(layout);
+  });
+
+  // A dragged module or pin lands before another one of its place, or at the end (plan Phase 5c).
+  describe('placeBefore', () => {
+    const base = [addModule('a', 'page'), addModule('b', 'panel'), addModule('c', 'page'), pin('p1'), pin('p2')].reduce((acc, op) => op(acc), empty);
+    const order = (layout: typeof empty, place: string): string[] => layout.placements.filter((p) => p.place === place).map((p) => p.id);
+
+    it('moves a module before another of the same place', () => {
+      expect(order(placeBefore('c', 'page', 'a')(base), 'page')).toEqual(['c', 'a']);
+    });
+
+    it('moves a module to the end of its place with no target', () => {
+      expect(order(placeBefore('a', 'page', null)(base), 'page')).toEqual(['c', 'a']);
+    });
+
+    it('moves a page module into the panel, before a panel module', () => {
+      const moved = placeBefore('a', 'panel', 'b')(base);
+
+      expect(order(moved, 'panel')).toEqual(['a', 'b']);
+      expect(order(moved, 'page')).toEqual(['c']);
+    });
+
+    it('lands at the end when the target is gone or sits in another place', () => {
+      expect(order(placeBefore('a', 'panel', 'gone')(base), 'panel')).toEqual(['b', 'a']);
+      expect(order(placeBefore('a', 'panel', 'c')(base), 'panel')).toEqual(['b', 'a']);
+    });
+
+    it('never puts a relation into the panel', () => {
+      const layout = addModule('rel', 'page')(base);
+
+      expect(placeBefore('rel', 'panel', 'b', prop('rel', 'relation'))(layout)).toEqual(layout);
+    });
+
+    it('reorders pins', () => {
+      expect(order(placeBefore('p2', 'heading', 'p1')(base), 'heading')).toEqual(['p2', 'p1']);
+    });
+
+    it('keeps the layout when the property is its own target', () => {
+      expect(placeBefore('a', 'page', 'a')(base)).toEqual(base);
+    });
   });
 
   it('adds, renames and deletes a section; deleting returns its properties to the group', () => {

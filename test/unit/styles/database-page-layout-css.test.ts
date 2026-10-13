@@ -282,6 +282,43 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-layout-settings-title]')).toContain('font-weight: 500');
   });
 
+  // research/10 §8 L46: a 32px round "+" with the strip's fill. Notion's is blue; Q6 makes it neutral.
+  it('draws the Add page module button as a neutral 32px circle', () => {
+    const add = ruleBody('[data-blok-database-layout-add-module]');
+
+    expect(add).toContain('inline-size: 32px');
+    expect(add).toContain('block-size: 32px');
+    expect(add).toContain('border-radius: var(--blok-radius-pill)');
+    expect(add).toContain('background-color: var(--blok-database-builder-canvas-ring)');
+    expect(add).toContain('color: var(--blok-text-secondary)');
+    expect(add).not.toMatch(/accent|blue|#2383e2|rgb\(35, 131, 226\)|rgb\(39, 131, 222\)/i);
+  });
+
+  // research/09 anatomy L40: the side panel column with "»" and a pill "+ Add to panel"; collapsed, only the button.
+  it('draws the side panel column, its pill and its collapsed state', () => {
+    const column = ruleBody('[data-blok-database-layout-panel-column]');
+    const pill = ruleBody('[data-blok-database-layout-add-to-panel]');
+
+    expect(column).toContain('display: flex');
+    expect(column).toContain('flex-direction: column');
+    expect(column).toContain('overflow-y: auto');
+    expect(ruleBody('[data-blok-database-layout-panel-column][data-collapsed]')).toContain('inline-size: auto');
+    expect(ruleBody('[data-blok-database-layout-panel-body][hidden]')).toContain('display: none');
+    expect(pill).toContain('border-radius: var(--blok-radius-pill)');
+    expect(pill).not.toMatch(/accent|blue|#2383e2/i);
+    expect(database).toMatch(/\[dir="rtl"\] \[data-blok-database-layout-panel-toggle\] svg \{ transform: scaleX\(-1\); \}/);
+  });
+
+  // The ⠿ handle takes the pointer only; touch must not scroll instead of dragging.
+  it('lets module handles and builder pins drag on touch, and dims the dragged one', () => {
+    const handle = ruleBody('[data-blok-database-layout-module-handle]');
+
+    expect(handle).toContain('cursor: grab');
+    expect(handle).toContain('touch-action: none');
+    expect(ruleBody('[data-blok-database-layout-canvas] [data-blok-database-drawer-pin] [data-blok-database-drawer-prop-head]')).toContain('touch-action: none');
+    expect(ruleBody('[data-blok-database-layout-module][data-dragging], [data-blok-database-drawer-pin][data-dragging]')).toContain('opacity: 0.5');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

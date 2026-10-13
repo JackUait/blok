@@ -205,6 +205,21 @@ export const moveInPlace = (id: string, step: 1 | -1): PageLayoutOp => (layout) 
 };
 
 /**
+ * A dragged pin or module lands before `beforeId` in `place`, or at the end of
+ * `place` when that target is gone or sits elsewhere (a peer may have moved it).
+ */
+export const placeBefore = (id: string, place: 'heading' | 'page' | 'panel', beforeId: string | null, property?: PropertyDefinition): PageLayoutOp => (layout) => {
+  if (id === beforeId || (place === 'panel' && !canPlaceInPanel(property))) return layout;
+  const rest = layout.placements.filter((p) => p.id !== id);
+  const target = rest.findIndex((p) => p.id === beforeId && p.place === place);
+  const last = rest.map((p) => p.place).lastIndexOf(place);
+  const end = last === -1 ? rest.length : last + 1;
+  const at = target === -1 ? end : target;
+
+  return { ...layout, placements: [...rest.slice(0, at), { id, place }, ...rest.slice(at)] };
+};
+
+/**
  * A new section goes at the top. The first one takes every property still in the
  * group (research/10 §3). `propertyIds` are all the database's properties; which of
  * them sit in the group is read when the op runs, so a pin made since is kept.

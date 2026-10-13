@@ -9,8 +9,9 @@ import { surfaceError } from '../errors';
 import type { DocumentSource } from './types';
 import { assertDocumentShape, isRecord } from './types';
 
-// Starts with a letter or digit, so ".", ".." and dotfiles never match; no "/" or "\" can appear.
-const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
+// Never starts with ".", so ".", ".." and dotfiles never match; no "/" or "\" can appear.
+// "-" and "_" may lead: nanoid page and document ids use them.
+const SAFE_ID = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,199}$/;
 
 // Only the native realpath reports the on-disk case of a name.
 const nativeRealpath = promisify(realpath.native);
@@ -138,9 +139,6 @@ export const createFilesSource = (dir: string): DocumentSource => {
 
       if (current !== null) {
         await assertExactName(documentId, path);
-      } else if (documentId !== documentId.toLowerCase()) {
-        // Otherwise `SECRET` could create the file a later `secret` must open.
-        throw surfaceError('INVALID_ARGS', 'New document ids must be lower case.');
       }
       if ((current === null ? null : hash(current)) !== ifVersion) {
         throw surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.');

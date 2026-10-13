@@ -116,6 +116,14 @@ describe('files source', () => {
     expect(await codeOf(() => createFilesSource(dir).load('bad'))).toBe('SOURCE_UNAVAILABLE');
   });
 
+  it.each(['-x3kQ9aB2c', '_x3kQ9aB2c'])('stores nanoid id %j, which may start with "-" or "_"', async (id: string) => {
+    const source = createFilesSource(dir);
+    const { version } = await source.save(id, { blocks: [], title: 't' }, { ifVersion: null });
+
+    expect(await source.load(id)).toEqual({ raw: { blocks: [], title: 't' }, version });
+    expect((await source.list({ limit: 10 })).documents.map((doc) => doc.id)).toEqual([id]);
+  });
+
   it.each(['../escape', 'a/b', '', '.', '..', '%2e%2e', 'x'.repeat(201), '.hidden'])(
     'rejects id %j with INVALID_ARGS and leaves fixture directory entries unchanged',
     async (id: string) => {
@@ -297,12 +305,11 @@ describe('files source', () => {
     expect(statSync(path).mode & 0o777).toBe(mode);
   });
 
-  it('creates only lower-case ids, so a new id can never take a name another case already owns', async () => {
+  it('creates a document whose id has capitals, as page ids from nanoid do', async () => {
     const source = createFilesSource(dir);
 
-    expect(await codeOf(() => source.save('NewDoc', { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
-    expect(readdirSync(dir)).toEqual([]);
-    expect(await codeOf(() => source.save('newdoc', { blocks: [] }, { ifVersion: null }))).toBeUndefined();
+    expect(await codeOf(() => source.save('Vx3kQ9aB2c', { blocks: [] }, { ifVersion: null }))).toBeUndefined();
+    expect(readdirSync(dir)).toEqual(['Vx3kQ9aB2c.json']);
   });
 
   it('keeps opening and saving an existing document whose id has capitals', async () => {

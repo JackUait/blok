@@ -82,10 +82,11 @@ Pick a source with `--source`.
 
 **`--source files:<dir>`** stores each document as `<dir>/<id>.json`. It is meant for local use.
 
-- An id uses letters, digits, `.`, `_` and `-`, starts with a letter or digit, and is at most 200 characters.
-- Saves are atomic: a temp file, then a rename.
+- An id uses letters, digits, `.`, `_` and `-`, does not start with `.`, and is at most 200 characters.
+- Ids are case-sensitive. An id that matches a stored file only when case is ignored is refused.
+- Saves are atomic: a temp file, then a rename. The file keeps its permissions.
 - A save checks a SHA-256 hash of the file first. If the file changed since it was opened, the save is refused.
-- The check and the rename are not locked together. Two local writers can still race in that window.
+- Saves of one document run one at a time in this process. Another process writing the same file can still race in the window between the check and the rename.
 
 Stored mode is refused when `--sync-url` is set. A sync service owns those documents, and a stored write would fight the room.
 

@@ -1119,7 +1119,8 @@
   cursor: pointer;
 }
 
-[data-blok-database-drawer-icon]:disabled {
+[data-blok-database-drawer-icon]:disabled,
+[data-blok-database-drawer-hidden-props]:disabled {
   cursor: default;
 }
 
@@ -1183,7 +1184,7 @@
 @media (hover: hover) {
   [data-blok-database-drawer-add-icon]:hover,
   [data-blok-database-drawer-props-toggle]:hover,
-  [data-blok-database-drawer-hidden-props]:hover,
+  [data-blok-database-drawer-hidden-props]:not(:disabled):hover,
   [data-blok-database-drawer-icon]:not(:disabled):hover {
     background-color: var(--blok-database-drawer-border);
   }
@@ -2225,8 +2226,7 @@
 [data-blok-database-layout-cancel]:focus-visible,
 [data-blok-database-layout-apply]:focus-visible,
 [data-blok-database-layout-more-save]:focus-visible,
-[data-blok-database-layout-structure-card]:focus-visible,
-[data-blok-database-layout-group-in]:focus-visible {
+[data-blok-database-layout-structure-card]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
@@ -2318,7 +2318,8 @@
 }
 
 /* research/09 §3: 28px rows; type glyph, name, and the pin button at the end. */
-[data-blok-database-layout-pin-row] {
+[data-blok-database-layout-pin-row],
+[data-blok-database-layout-group-row] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
@@ -2328,23 +2329,28 @@
   font-size: 14px;
 }
 
-[data-blok-database-layout-pin-row][hidden] {
+[data-blok-database-layout-pin-row][hidden],
+[data-blok-database-layout-group-row][hidden] {
   display: none;
 }
 
-[data-blok-database-layout-pin-icon] {
+[data-blok-database-layout-pin-icon],
+[data-blok-database-layout-group-icon] {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--blok-text-secondary);
 }
 
 [data-blok-database-layout-pin-icon] svg,
-[data-blok-database-layout-pin-toggle] svg {
+[data-blok-database-layout-group-icon] svg,
+[data-blok-database-layout-pin-toggle] svg,
+[data-blok-database-layout-eye] svg {
   inline-size: 16px;
   block-size: 16px;
 }
 
-[data-blok-database-layout-pin-name] {
+[data-blok-database-layout-pin-name],
+[data-blok-database-layout-group-name] {
   flex: 1;
   min-inline-size: 0;
   overflow: hidden;
@@ -2353,7 +2359,8 @@
 }
 
 /* Always visible; the glyph (outline or filled) shows the state, in one ink (research/09 §3). */
-[data-blok-database-layout-pin-toggle] {
+[data-blok-database-layout-pin-toggle],
+[data-blok-database-layout-eye] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2373,7 +2380,19 @@
   cursor: default;
 }
 
-[data-blok-database-layout-pin-list] [data-blok-database-layout-add-pin] {
+/* research/09 §5: Always hide's glyph is drawn lighter. */
+[data-blok-database-layout-eye][data-visibility="hidden"] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-panel-header] [data-blok-database-layout-add-section] {
+  margin-inline-start: auto;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+[data-blok-database-layout-pin-list] [data-blok-database-layout-add-pin],
+[data-blok-database-layout-add-group-property] {
   inline-size: 100%;
 }
 
@@ -2383,14 +2402,17 @@
   }
 
   [data-blok-database-layout-pin-row]:hover,
+  [data-blok-database-layout-group-row]:hover,
   [data-blok-database-layout-module-menu]:hover,
-  [data-blok-database-layout-pin-toggle]:not(:disabled):hover {
+  [data-blok-database-layout-pin-toggle]:not(:disabled):hover,
+  [data-blok-database-layout-eye]:hover {
     background-color: var(--blok-item-hover-bg);
   }
 }
 
 [data-blok-database-layout-module-menu]:focus-visible,
-[data-blok-database-layout-pin-toggle]:focus-visible {
+[data-blok-database-layout-pin-toggle]:focus-visible,
+[data-blok-database-layout-eye]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: -2px;
 }
@@ -2509,49 +2531,9 @@
   block-size: 14px;
 }
 
-[data-blok-database-layout-group-in-choice] {
-  display: flex;
-  flex-direction: column;
-  padding-block-start: var(--blok-space-2);
-  border-block-start: 1px solid var(--blok-database-drawer-border);
-}
-
-[data-blok-database-layout-group-in] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--blok-space-2);
-  min-block-size: 28px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--blok-text-primary);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-/* A checkmark marks the chosen place, never a fill (no-blue law). */
-[data-blok-database-layout-group-in-check] {
-  display: inline-flex;
-  visibility: hidden;
-}
-
-[data-blok-database-layout-group-in][aria-pressed="true"] [data-blok-database-layout-group-in-check] {
-  visibility: visible;
-}
-
-[data-blok-database-layout-group-in-check] svg {
-  inline-size: 16px;
-  block-size: 16px;
-}
-
-[data-blok-database-layout-side] [data-blok-database-search-input] {
-  inline-size: 100%;
-}
-
 [data-blok-database-layout-add-section],
 [data-blok-database-layout-add-pin],
+[data-blok-database-layout-add-group-property],
 [data-blok-database-drawer-details-toggle],
 [data-blok-database-drawer-section-toggle],
 [data-blok-database-drawer-tabs] [role="tab"] {
@@ -2831,6 +2813,7 @@
   [data-blok-database-layout-cancel]:hover,
   [data-blok-database-layout-add-section]:hover,
   [data-blok-database-layout-add-pin]:not(:disabled):hover,
+  [data-blok-database-layout-add-group-property]:hover,
   [data-blok-database-layout-item-menu]:hover,
   [data-blok-database-layout-section-delete]:hover,
   [data-blok-database-drawer-details-toggle]:hover,

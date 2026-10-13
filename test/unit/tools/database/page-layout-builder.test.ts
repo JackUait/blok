@@ -293,7 +293,8 @@ describe('PageLayoutBuilder', () => {
       expect(value?.getAttribute('role')).toBeNull();
       value?.click();
 
-      expect(q('[data-blok-database-cell-editor]')).toBeNull();
+      // The click opens the Property group menu (research/10 §8), never a value editor.
+      expect(q('[data-blok-database-cell-editor]:not([data-blok-database-panel])')).toBeNull();
       expect(options.onPropertyValueChange).not.toHaveBeenCalled();
       drawer.destroy();
     });
@@ -592,21 +593,13 @@ describe('PageLayoutBuilder', () => {
       drawer.destroy();
     });
 
-    // Kept in the column until "Move to panel" lands (plan Phase 4, 5b).
-    it('moves the property group into the details panel and back as a draft edit', () => {
-      const { drawer, options } = customize();
-      const place = (): HTMLElement[] => [...column().querySelectorAll<HTMLElement>('[data-blok-database-layout-group-in]')];
+    // plan Phase 5b: the place choice and the property search moved into the Property group menu.
+    it('holds no group place choice and no property search', () => {
+      const { drawer } = customize();
 
-      expect(place().map((el) => [el.textContent?.trim(), el.getAttribute('aria-pressed')])).toEqual([
-        ['Properties in the page', 'true'],
-        ['Properties in the details panel', 'false'],
-      ]);
-      place()[1].click();
-
-      expect(place().map((el) => el.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
-      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
-
-      expect(written(options)?.groupIn).toBe('panel');
+      expect(column().querySelector('[data-blok-database-layout-group-in]')).toBeNull();
+      expect(builder().querySelector('[data-blok-database-layout-search]')).toBeNull();
+      expect(column().textContent).not.toContain('Properties in the');
       drawer.destroy();
     });
 
@@ -841,6 +834,216 @@ describe('PageLayoutBuilder', () => {
       q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
       expect(q('[data-blok-popover-item][data-blok-item-name="unpin"]')).toBeNull();
       expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
+      drawer.destroy();
+    });
+  });
+
+  // research/09 §3 L56, §5: header + Add section, search, a row per property with an eye, Add a property, Move to panel.
+  describe('Property group module menu', () => {
+    const NOTES: PropertyDefinition = { id: 'p-notes', name: 'Notes', type: 'text', position: 'a3' };
+    const groupMenuButton = (): HTMLElement => {
+      const el = moduleCard('group').querySelector<HTMLElement>('[data-blok-database-layout-module-menu]');
+
+      if (el === null) throw new Error('no Property group module menu button');
+
+      return el;
+    };
+    const groupMenu = (): HTMLElement | null => q('[data-blok-testid="database-layout-group-menu"]');
+    const openGroupMenu = (): HTMLElement => {
+      if (groupMenu() === null) groupMenuButton().click();
+      const menu = groupMenu();
+
+      if (menu === null) throw new Error('no Property group menu');
+
+      return menu;
+    };
+    const menuRows = (): string[] =>
+      [...openGroupMenu().querySelectorAll<HTMLElement>('[data-blok-database-layout-group-row]')]
+        .filter((row) => !row.hidden)
+        .map((row) => row.getAttribute('data-property-id') ?? '');
+    const eye = (id: string): HTMLButtonElement | null => q<HTMLButtonElement>(`[data-blok-testid="database-layout-eye-${id}"]`);
+    const groupIds = (): string[] =>
+      [...builder().querySelectorAll<HTMLElement>('[data-blok-database-drawer-props] [data-blok-database-drawer-prop-value]')].map((el) => el.getAttribute('data-property-id') ?? '');
+    const more = (): HTMLButtonElement | null => builder().querySelector<HTMLButtonElement>('[data-blok-database-drawer-hidden-props]');
+    const pick = (id: string, visibility: 'always' | 'hideWhenEmpty' | 'hidden'): void => {
+      openGroupMenu();
+      eye(id)?.click();
+      q(`[data-blok-testid="database-layout-visibility-${visibility}"]`)?.click();
+    };
+    const apply = (): void => {
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+    };
+
+    it('lists the group properties with an eye each, between Add section and search, and Add a property and Move to panel', () => {
+      const { drawer } = customize({
+        schema: [...schemaWith({
+          pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }, { id: 'p-notes', place: 'section', sectionId: 's1' }],
+          pageLayoutSections: [{ id: 's1', name: 'Planning' }],
+        }), { ...NOTES, pageVisibility: 'hidden' }],
+      });
+
+      expect(groupMenuButton().getAttribute('aria-label')).toBe('Action menu for module');
+      groupMenuButton().click();
+      const menu = openGroupMenu();
+
+      expect(moduleCard('group').hasAttribute('data-selected')).toBe(true);
+      expect(menu.querySelector('[data-blok-database-panel-header]')?.textContent).toContain('Property group');
+      expect(menu.querySelector('[data-blok-database-panel-header] [data-blok-database-layout-add-section]')?.textContent?.trim()).toBe('Add section');
+      expect(menu.querySelector('[data-blok-database-panel-header] [data-blok-database-layout-add-section] svg')).not.toBeNull();
+      const search = menu.querySelector<HTMLInputElement>('[data-blok-testid="database-layout-group-search"]');
+
+      expect(search?.placeholder).toBe('Search properties…');
+      expect(search).toHaveFocus();
+      // Pins live in the Heading menu; a hidden or sectioned property is still in the group.
+      expect(menuRows()).toEqual(['p-due', 'p-notes']);
+      expect(eye('p-due')?.getAttribute('aria-label')).toBe('Visibility of Due');
+      expect(menu.querySelector('[data-blok-database-layout-add-group-property]')?.textContent).toBe('+ Add a property');
+      expect(menu.querySelector('[data-blok-testid="database-layout-group-move"]')?.textContent?.trim()).toBe('Move to panel');
+      if (search === null) throw new Error('no property search');
+      search.value = 'NOT';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(menuRows()).toEqual(['p-notes']);
+      expect(search).toHaveFocus();
+      headingMenuButton().click();
+
+      expect(groupMenu()).toBeNull();
+      expect(headingMenu()).not.toBeNull();
+      drawer.destroy();
+    });
+
+    // research/09 §5: three states; the eye glyph shows the current one. The canvas follows; nothing is written before Apply.
+    it('sets Always show, Hide when empty and Always hide from the eye button as a draft', () => {
+      const { drawer, options } = customize({ schema: [...schemaWith(), NOTES] });
+
+      openGroupMenu();
+      expect(eye('p-status')?.getAttribute('data-visibility')).toBe('always');
+      eye('p-status')?.click();
+      const choices = [...openGroupMenu().querySelectorAll<HTMLElement>('[data-blok-database-panel-row]')];
+
+      expect(choices.map((row) => row.textContent?.trim())).toEqual(['Always show', 'Hide when empty', 'Always hide']);
+      expect(choices.map((row) => row.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+      q('[data-blok-testid="database-layout-visibility-hidden"]')?.click();
+
+      expect(eye('p-status')?.getAttribute('data-visibility')).toBe('hidden');
+      expect(eye('p-status')).toHaveFocus();
+      expect(groupIds()).toEqual(['p-due', 'p-notes']);
+      pick('p-notes', 'hideWhenEmpty');
+      pick('p-due', 'hideWhenEmpty');
+
+      expect(groupIds()).toEqual(['p-due']);
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      expect(options.schema.find((p) => p.id === 'p-status')?.pageVisibility).toBeUndefined();
+      apply();
+
+      expect(options.onPageLayoutChange).toHaveBeenCalledTimes(1);
+      const [edit, visibility] = vi.mocked(options.onPageLayoutChange)?.mock.calls[0] ?? [];
+
+      expect(edit).toBeNull();
+      expect([...(visibility ?? [])]).toEqual([['p-status', 'hidden'], ['p-notes', 'hideWhenEmpty'], ['p-due', 'hideWhenEmpty']]);
+      drawer.destroy();
+    });
+
+    it('returns focus to the eye on Escape and on Back from its menu', () => {
+      const { drawer } = customize();
+
+      openGroupMenu();
+      eye('p-due')?.click();
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(groupMenu()).not.toBeNull();
+      expect(eye('p-due')).toHaveFocus();
+      eye('p-due')?.click();
+      q('[data-blok-testid="database-panel-back"]')?.click();
+
+      expect(eye('p-due')).toHaveFocus();
+      drawer.destroy();
+    });
+
+    it('keeps one menu open: the canvas ⋯ menu closes the group menu', () => {
+      const { drawer } = customize();
+
+      openGroupMenu();
+      q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
+
+      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).not.toBeNull();
+      expect(groupMenu()).toBeNull();
+      groupMenuButton().click();
+
+      expect(groupMenu()).not.toBeNull();
+      expect(q('[data-blok-popover-item][data-blok-item-name="add-to-page"]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('drops an eye edit set back to the saved value', () => {
+      const { drawer, options } = customize({ schema: [...schemaWith(), { ...NOTES, pageVisibility: 'hidden' }] });
+
+      pick('p-notes', 'always');
+      pick('p-notes', 'hidden');
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-cancel]')?.click();
+
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      expect(q(BUILDER)).toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    // research/09 §5 L75: "1 more property", then "2 more properties"; a click in the builder does not expand it.
+    it('shows N more properties for hidden properties and does not expand it while customizing', () => {
+      const { drawer } = customize({ schema: [...schemaWith(), NOTES] });
+
+      expect(more()).toBeNull();
+      pick('p-status', 'hidden');
+
+      expect(more()?.textContent).toBe('1 more property');
+      pick('p-notes', 'hideWhenEmpty');
+
+      expect(more()?.textContent).toBe('2 more properties');
+      more()?.click();
+
+      expect(more()?.textContent).toBe('2 more properties');
+      expect(more()?.getAttribute('aria-expanded')).toBe('false');
+      expect(groupIds()).toEqual(['p-due']);
+      drawer.destroy();
+    });
+
+    // research/09 §3 L57: the new property lands at the top of the group.
+    it('adds a property from the Property group menu at the top of the group', () => {
+      const { drawer, options } = customize({ onOpenAddProperty: vi.fn() });
+      const add = openGroupMenu().querySelector<HTMLElement>('[data-blok-database-layout-add-group-property]');
+
+      add?.click();
+      const [anchor, onAdded] = vi.mocked(options.onOpenAddProperty)?.mock.calls[0] ?? [];
+
+      expect(groupMenu()).toBeNull();
+      expect(anchor).toBe(groupMenuButton());
+      drawer.refreshSchema([...schemaWith(), { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' }]);
+      onAdded?.('p-new');
+
+      expect(groupIds()).toEqual(['p-new', 'p-status', 'p-due']);
+      apply();
+
+      expect(written(options)?.placements).toEqual([{ id: 'p-new', place: 'group' }]);
+      drawer.destroy();
+    });
+
+    // research/10 §8 L172: "Move to panel" on the group, and back.
+    it('moves the property group to the panel and back', () => {
+      const { drawer, options } = customize();
+      const move = (): HTMLElement | null => q('[data-blok-testid="database-layout-group-move"]');
+
+      openGroupMenu();
+      move()?.click();
+
+      expect(builder().querySelector('[data-blok-database-drawer-details] [data-blok-database-drawer-props]')).not.toBeNull();
+      expect(move()?.textContent?.trim()).toBe('Move to page');
+      move()?.click();
+
+      expect(builder().querySelector('[data-blok-database-drawer-details]')).toBeNull();
+      move()?.click();
+      apply();
+
+      expect(written(options)?.groupIn).toBe('panel');
       drawer.destroy();
     });
   });

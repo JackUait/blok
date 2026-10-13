@@ -173,7 +173,14 @@ export const pinFirst = (id: string): PageLayoutOp => (layout) => {
   return { ...layout, placements: at === -1 ? [...rest, placement] : [...rest.slice(0, at), placement, ...rest.slice(at)] };
 };
 
-export const addModule = (id: string, place: 'page' | 'panel', property?: PropertyDefinition): PageLayoutOp => (layout) =>
+/** A property made from the Property group menu goes to the top of the group (research/09 §3 L57). */
+export const groupFirst = (id: string): PageLayoutOp => (layout) => {
+  const rest = layout.placements.filter((p) => p.id !== id);
+
+  return { ...layout, placements: [{ id, place: 'group' }, ...rest] };
+};
+
+export const addModule =(id: string, place: 'page' | 'panel', property?: PropertyDefinition): PageLayoutOp => (layout) =>
   place === 'panel' && !canPlaceInPanel(property) ? layout : withPlacement(layout, { id, place }, id);
 
 export const removeFromLayout = (id: string): PageLayoutOp => (layout) => withPlacement(layout, null, id);

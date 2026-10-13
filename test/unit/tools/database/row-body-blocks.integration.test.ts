@@ -552,7 +552,8 @@ describe('row page properties panel', () => {
   const shownProperties = (): string[] =>
     [...(holder?.querySelectorAll('[data-blok-database-drawer-prop-label]') ?? [])].map((label) => label.textContent ?? '');
 
-  it('gathers hidden properties into one "N hidden properties" item that shows them', async () => {
+  // research/09 §5b L91: "2 more properties".
+  it('gathers hidden properties into one "N more properties" item that shows them', async () => {
     await make(withProperties());
     await openRow('r1');
 
@@ -560,7 +561,7 @@ describe('row page properties panel', () => {
 
     const reveal = holder?.querySelector<HTMLElement>('[data-blok-database-drawer-hidden-props]');
 
-    expect(reveal?.textContent).toContain('2');
+    expect(reveal?.textContent).toBe('2 more properties');
     reveal?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(shownProperties()).toEqual(['Notes', 'Secret', 'Maybe']);
@@ -575,7 +576,7 @@ describe('row page properties panel', () => {
     reveal()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(reveal()?.getAttribute('aria-expanded')).toBe('true');
-    expect(reveal()?.textContent).toContain('2');
+    expect(reveal()?.textContent).toBe('Hide 2 properties');
     reveal()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(shownProperties()).toEqual(['Notes']);

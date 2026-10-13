@@ -167,6 +167,49 @@ describe('row page layout through the database tool', () => {
     expect(editor?.history.canUndo()).toBe(false);
   });
 
+  // research/09 §5: the eye is a draft; Apply writes it on the property, with the layout, as one step.
+  it('applies eye visibility and layout edits as one undo step', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(b('[data-blok-database-layout-module="group"] [data-blok-database-layout-module-menu]'));
+    await click(document.querySelector('[data-blok-testid="database-layout-eye-due"]'));
+    await click(document.querySelector('[data-blok-testid="database-layout-visibility-hidden"]'));
+    await pinFromMenu('due');
+
+    expect((await editorSchema()).find((property) => property.id === 'due')?.pageVisibility).toBeUndefined();
+    await click(b('[data-blok-database-layout-apply]'));
+    const due = (await editorSchema()).find((property) => property.id === 'due');
+
+    expect(due?.pageVisibility).toBe('hidden');
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: 'due', place: 'heading' }] });
+    expect(await savedTitle()).not.toHaveProperty('pageVisibility');
+    editor?.history.undo();
+    await quiet();
+
+    expect((await editorSchema()).find((property) => property.id === 'due')?.pageVisibility).toBeUndefined();
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
+    expect(editor?.history.canUndo()).toBe(false);
+  });
+
+  it('drops eye visibility edits on Discard', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(b('[data-blok-database-layout-module="group"] [data-blok-database-layout-module-menu]'));
+    await click(document.querySelector('[data-blok-testid="database-layout-eye-due"]'));
+    await click(document.querySelector('[data-blok-testid="database-layout-visibility-hidden"]'));
+
+    expect(b('[data-blok-database-drawer-prop-value][data-property-id="due"]')).toBeNull();
+    await click(b('[data-blok-database-layout-cancel]'));
+    await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+    expect(document.querySelector(BUILDER)).toBeNull();
+    expect((await editorSchema()).find((property) => property.id === 'due')?.pageVisibility).toBeUndefined();
+    expect(q('[data-blok-database-drawer-prop-value][data-property-id="due"]')).not.toBeNull();
+    expect(editor?.history.canUndo()).toBe(false);
+  });
+
   it('shows the saved layout on every row page', async () => {
     await make(doc({}, { pageLayoutPlacements: [{ id: 'due', place: 'heading' }] }));
     await openRow('r2');

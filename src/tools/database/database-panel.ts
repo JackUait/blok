@@ -7,6 +7,10 @@ import { CellPopover } from './cells/cell-popover';
  */
 export interface PanelPage {
   title?: string;
+  /** A control at the header's end, built on every render. */
+  headerAction?: () => HTMLElement;
+  /** `data-blok-testid` of the control that opened this page; leaving the page focuses it again. */
+  returnFocus?: string;
   build: (panel: DatabasePanel) => HTMLElement[];
 }
 
@@ -79,9 +83,18 @@ export class DatabasePanel {
 
       return;
     }
-    this.stack.pop();
+    const left = this.stack.pop();
+
     this.render();
-    this.focusFirst();
+    const opener = left?.returnFocus === undefined
+      ? null
+      : this.element.querySelector<HTMLElement>(`[data-blok-testid="${CSS.escape(left.returnFocus)}"]`);
+
+    if (opener === null) {
+      this.focusFirst();
+    } else {
+      opener.focus();
+    }
   }
 
   /** Rebuilds the current page, keeping focus on the same control when it still exists. */
@@ -114,13 +127,13 @@ export class DatabasePanel {
     const children: HTMLElement[] = [];
 
     if (this.stack.length > 1 || page.title !== undefined) {
-      children.push(this.header(page.title ?? ''));
+      children.push(this.header(page.title ?? '', page.headerAction?.()));
     }
     children.push(...page.build(this));
     this.element.replaceChildren(...children);
   }
 
-  private header(title: string): HTMLElement {
+  private header(title: string, action?: HTMLElement): HTMLElement {
     const header = document.createElement('div');
 
     header.setAttribute('data-blok-database-panel-header', '');
@@ -139,6 +152,7 @@ export class DatabasePanel {
 
     label.textContent = title;
     header.appendChild(label);
+    if (action !== undefined) header.appendChild(action);
 
     return header;
   }

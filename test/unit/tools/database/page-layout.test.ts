@@ -6,6 +6,7 @@ import {
   addSection,
   applyDraft,
   canPlaceInPanel,
+  groupFirst,
   deleteSection,
   isDraftEmpty,
   moveInPlace,
@@ -314,6 +315,17 @@ describe('page layout — edits', () => {
     });
 
     expect(ids(resolvePageLayout(layout, PROPS).group)).toEqual(['c', 'rel', 'b']);
+  });
+
+  // research/09 §3 L57: "+ Add a property" from the Property group lands at its top.
+  it('puts a property first in the group, ahead of earlier group placements', () => {
+    const layout = [pin('a'), groupFirst('c'), groupFirst('rel')].reduce((acc, op) => op(acc), empty);
+    const resolved = resolvePageLayout(layout, PROPS);
+
+    expect(ids(resolved.group)).toEqual(['rel', 'c', 'b']);
+    expect(ids(resolved.heading)).toEqual(['a']);
+    expect(ids(resolvePageLayout(groupFirst('a')(layout), PROPS).group)).toEqual(['a', 'rel', 'c', 'b']);
+    expect(ids(resolvePageLayout(groupFirst('a')(layout), PROPS).heading)).toEqual([]);
   });
 
   it('never changes a property position for layout order', () => {

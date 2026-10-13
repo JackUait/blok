@@ -247,14 +247,32 @@ describe('database row page layout css', () => {
 
   // research/09 §3: 28px rows, a 24x24 pin button in primary ink whatever its state.
   it('draws the Heading menu rows 28px high with a 24px pin button in primary ink', () => {
-    const row = ruleBody('[data-blok-database-layout-pin-row]');
-    const toggle = ruleBody('[data-blok-database-layout-pin-toggle]');
+    const row = ruleBody('[data-blok-database-layout-pin-row], [data-blok-database-layout-group-row]');
+    const toggle = ruleBody('[data-blok-database-layout-pin-toggle], [data-blok-database-layout-eye]');
 
     expect(row).toContain('min-block-size: 28px');
     expect(toggle).toContain('inline-size: 24px');
     expect(toggle).toContain('block-size: 24px');
     expect(toggle).toContain('color: var(--blok-text-primary)');
     expect(database).not.toMatch(/\[data-blok-database-layout-pin-toggle\]\[data-pinned\][^{]*\{[^}]*color/);
+  });
+
+  // research/09 §3 L56, §5: the Property group menu rows match the Heading menu's; the eye glyph alone shows the state.
+  it('draws the Property group menu rows like the Heading menu rows, with a 24px eye button in one ink', () => {
+    const row = ruleBody('[data-blok-database-layout-pin-row], [data-blok-database-layout-group-row]');
+    const toggle = ruleBody('[data-blok-database-layout-pin-toggle], [data-blok-database-layout-eye]');
+
+    expect(row).toContain('min-block-size: 28px');
+    expect(toggle).toContain('inline-size: 24px');
+    expect(toggle).toContain('color: var(--blok-text-primary)');
+    expect(database).not.toMatch(/\[data-blok-database-layout-eye\]\[data-visibility="(?:always|hideWhenEmpty)"\][^{]*\{[^}]*color/);
+    expect(ruleBody('[data-blok-database-panel-header] [data-blok-database-layout-add-section]')).toContain('margin-inline-start: auto');
+  });
+
+  // No-blue law: the chosen visibility is a checkmark in primary ink; the row keeps the unchosen rows' fill and ink.
+  it('marks the chosen visibility with a primary-ink check and no fill', () => {
+    expect(ruleBody('[data-blok-database-panel-check]')).toContain('color: var(--blok-icon-active-text)');
+    expect(database).not.toMatch(/\[data-blok-database-panel-row\]\[aria-checked[^{]*\{[^}]*(?:background|color)/);
   });
 
   // research/09 §10: a 290px column with a 16px/500 title.

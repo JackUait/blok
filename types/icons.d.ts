@@ -49,6 +49,8 @@ export declare const IconListChecklist: string;
 export declare const IconTable: string;
 export declare const IconHeaderRow: string;
 export declare const IconPreview: string;
+export declare const IconEyeSlash: string;
+export declare const IconEyeClosed: string;
 export declare const IconHeaderColumn: string;
 export declare const IconInsertAbove: string;
 export declare const IconInsertBelow: string;

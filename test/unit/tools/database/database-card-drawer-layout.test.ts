@@ -91,6 +91,27 @@ const pinFromMenu = (propertyId: string): void => {
   (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 };
 
+/** Types into the Heading menu's property search (plan Phase 5a). */
+const searchHeadingMenu = (value: string): void => {
+  openHeadingMenu();
+  const search = q<HTMLInputElement>('[data-blok-testid="database-layout-heading-search"]');
+
+  if (search === null) throw new Error('missing Heading menu search');
+  search.value = value;
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
+/** "+ Add section" in the Property group menu's header (plan Phase 5b). */
+const addSectionFromMenu = (): void => {
+  if (q('[data-blok-testid="database-layout-group-menu"]') === null) {
+    q('[data-blok-database-layout-module="group"] [data-blok-database-layout-module-menu]')?.click();
+  }
+  const add = q('[data-blok-testid="database-layout-group-menu"] [data-blok-database-panel-header] [data-blok-database-layout-add-section]');
+
+  if (add === null) throw new Error('no Add section in the Property group menu');
+  add.click();
+};
+
 const openItemMenu = (propertyId: string): void => {
   const button = q(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`);
 
@@ -275,91 +296,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(q('[data-blok-database-drawer-customize]')).toBeNull();
     });
 
-    it('searches property names live, including hidden properties and folded sections', () => {
-      const options = createOptions({
-        schema: schemaWith({
-          pageLayoutSections: [{ id: 's1', name: 'Planning' }],
-          pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }],
-        }).map((property) => property.id === 'p-status' ? { ...property, pageVisibility: 'hidden' as const } : property),
-      });
-      const drawer = new DatabaseCardDrawer(options);
-
-      drawer.open(ROW);
-      q('[data-blok-database-drawer-section-toggle][data-section-id="s1"]')?.click();
-      q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      expect(search).not.toBeNull();
-      if (search === null) throw new Error('missing property search');
-      search.value = 'STAT';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status']);
-      search.value = 'uE';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due']);
-      expect(q('[data-blok-database-drawer-section-body]')?.hidden).toBe(false);
-      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
-      drawer.destroy();
-    });
-
-    it('clearing property search restores every builder property without changing page visibility', () => {
-      const options = createOptions({
-        schema: schemaWith().map((property) => property.id === 'p-status' ? { ...property, pageVisibility: 'hidden' as const } : property),
-      });
-      const drawer = new DatabaseCardDrawer(options);
-
-      drawer.open(ROW);
-      q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      expect(search).not.toBeNull();
-      if (search === null) throw new Error('missing property search');
-      search.value = 'missing';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual([]);
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
-      q('[data-blok-database-layout-cancel]')?.click();
-
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due', 'p-owner', 'p-rel']);
-      expect(options.schema.find((property) => property.id === 'p-status')?.pageVisibility).toBe('hidden');
-      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
-      drawer.destroy();
-    });
-
-    it('keeps the selected relation tab when property search hides its value', () => {
-      const drawer = new DatabaseCardDrawer(createOptions({
-        schema: schemaWith({ pageLayoutStructure: 'tabbed' }),
-      }));
-
-      drawer.open(ROW);
-      q('[data-blok-database-drawer-tabs] [data-tab-id="p-rel"]')?.click();
-      q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      if (search === null) throw new Error('missing property search');
-      search.value = 'due';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
-      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual([]);
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
-      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
-      q('[data-blok-database-layout-cancel]')?.click();
-
-      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
-      drawer.destroy();
-    });
-
-    it('searches pins and page and panel modules without changing their saved placement', () => {
+    it('draws pins and page and panel modules in the canvas without changing their saved placement', () => {
       const layout: PageLayoutFields = {
         pageLayoutPlacements: [
           { id: 'p-due', place: 'heading' },
@@ -372,32 +309,17 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
 
-      if (search === null) throw new Error('missing property search');
-      for (const [query, region, id] of [
-        ['due', '[data-blok-database-drawer-pins]', 'p-due'],
-        ['owner', '[data-blok-database-drawer-modules]', 'p-owner'],
-        ['status', '[data-blok-database-drawer-panel-modules]', 'p-status'],
-        ['tasks', '[data-blok-database-drawer-props]', 'p-rel'],
-      ]) {
-        search.value = query;
-        search.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-pins]')).toEqual(['p-due']);
+      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-modules]')).toEqual(['p-owner']);
+      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-panel-modules]')).toEqual(['p-status']);
+      expect(idsIn('[data-blok-database-layout-canvas] [data-blok-database-drawer-props]')).toEqual(['p-rel']);
+      q('[data-blok-database-layout-cancel]')?.click();
 
-        expect(idsIn(region)).toEqual([id]);
-        expect(idsIn('[data-blok-database-layout-canvas]')).toEqual([id]);
-      }
       expect(options.schema.find((property) => property.type === 'title')?.pageLayoutPlacements).toEqual(layout.pageLayoutPlacements);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
-      expect(idsIn('[data-blok-database-drawer-modules]')).toEqual(['p-owner']);
-      expect(idsIn('[data-blok-database-drawer-panel-modules]')).toEqual(['p-status']);
       drawer.destroy();
     });
-
     it('opens a collapsed property group in Customize and restores it on Cancel', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
@@ -407,25 +329,12 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-drawer-customize]')?.click();
 
       expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      if (search === null) throw new Error('missing property search');
-      search.value = 'status';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
       expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-status"]')?.closest('[hidden]')).toBeNull();
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status']);
       expect(q('[data-blok-database-drawer-props-toggle]')?.getAttribute('aria-expanded')).toBe('true');
       q('[data-blok-database-drawer-props-toggle]')?.click();
 
       expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
       expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
-      search.value = 'status';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
       q('[data-blok-database-layout-cancel]')?.click();
 
       expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(true);
@@ -443,63 +352,17 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-drawer-customize]')?.click();
 
       expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      if (search === null) throw new Error('missing property search');
-      search.value = 'due';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
       expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.closest('[hidden]')).toBeNull();
       expect(idsIn('[data-blok-database-drawer-panel-modules]')).toEqual(['p-due']);
       expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('true');
       q('[data-blok-database-drawer-details-toggle]')?.click();
 
       expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(false);
-      search.value = 'due';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
       q('[data-blok-database-layout-cancel]')?.click();
 
       expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
       expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('false');
       expect(options.schema.find((property) => property.type === 'title')?.pageLayoutPlacements).toEqual(layout.pageLayoutPlacements);
-      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
-      drawer.destroy();
-    });
-
-    it('shows searched content beside a relation tab and restores the tab on clear', () => {
-      const options = createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }) });
-      const drawer = new DatabaseCardDrawer(options);
-
-      drawer.open(ROW);
-      q('[data-blok-database-drawer-tabs] [data-tab-id="p-rel"]')?.click();
-      q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      if (search === null) throw new Error('missing property search');
-      search.value = 'due';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.closest('[hidden]')).toBeNull();
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due']);
-      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
-      expect(q('[data-blok-database-drawer-editor]')?.hidden).toBe(true);
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
-      expect(q('[data-blok-database-drawer-props]')).toBeNull();
-      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
-      search.value = 'due';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-      q('[data-blok-database-layout-cancel]')?.click();
-
-      expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
-      expect(q('[data-blok-database-drawer-props]')).toBeNull();
-      expect(q('[data-blok-database-drawer-tabs] [aria-selected="true"]')?.getAttribute('data-tab-id')).toBe('p-rel');
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       drawer.destroy();
     });
@@ -673,7 +536,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       expect(pinButton('x0')?.disabled).toBe(false);
     });
 
-    it('keeps the pin buttons disabled when the property search hides all 15 existing pins', () => {
+    it('keeps the pin buttons disabled when the Heading menu search hides all 15 existing pins', () => {
       const pins: PropertyDefinition[] = Array.from({ length: PAGE_LAYOUT_PIN_LIMIT }, (_, i) =>
         ({ id: `pin-${i}`, name: `Pinned ${i}`, type: 'text', position: `b${String(i).padStart(2, '0')}` }));
       const options = createOptions({
@@ -690,16 +553,10 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       drawer.open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      if (search === null) throw new Error('missing property search');
-      search.value = 'candidate';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-      openHeadingMenu();
+      searchHeadingMenu('candidate');
 
       expect(pinButton('candidate')?.disabled).toBe(true);
-      expect(idsIn('[data-blok-database-drawer-pins]')).toEqual([]);
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['candidate']);
+      expect(pinButton('pin-0')?.closest<HTMLElement>('[data-blok-database-layout-pin-row]')?.hidden).toBe(true);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       drawer.destroy();
     });
@@ -718,13 +575,13 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      q('[data-blok-database-layout-add-section]')?.click();
+      addSectionFromMenu();
       const name = q<HTMLInputElement>('[data-blok-database-layout-section-name]');
 
       if (name === null) throw new Error('no section name field');
       name.value = 'Planning';
       name.dispatchEvent(new Event('change'));
-      q('[data-blok-database-layout-add-section]')?.click();
+      addSectionFromMenu();
       const second = q<HTMLInputElement>('[data-blok-database-layout-section-name]');
 
       if (second === null) throw new Error('no second section name field');
@@ -863,11 +720,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      const search = q<HTMLInputElement>('[data-blok-database-layout-search]');
-
-      if (search === null) throw new Error('missing property search');
-      search.value = 'candidate';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
+      searchHeadingMenu('candidate');
 
       expect(addPin()?.disabled).toBe(true);
     });

@@ -89,6 +89,19 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(valueOf(options, 'prop-maybe')).toBeNull();
   });
 
+  // research/09 §5b L91-92: one hidden property reads in the singular.
+  it('reads 1 more property, then Hide 1 property', () => {
+    const options = createOptions();
+
+    new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
+    const reveal = (): HTMLElement | null => options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-hidden-props]');
+
+    expect(reveal()?.textContent).toBe('1 more property');
+    reveal()?.click();
+
+    expect(reveal()?.textContent).toBe('Hide 1 property');
+  });
+
   it('shows a hide-when-empty property once it has a value', () => {
     const options = createOptions();
 

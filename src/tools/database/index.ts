@@ -5315,7 +5315,14 @@ export class DatabaseTool implements BlockTool {
           return true;
         },
         peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,
-        onPageLayoutChange: (edit) => this.setPageLayout(edit),
+        onPageLayoutChange: (edit, visibility) => {
+          if (this.readOnly || this.structureLocked()) return;
+          // One undo step. The layout goes last, so its drawer refresh sees the new visibility.
+          this.inOneStep(() => {
+            for (const [propertyId, pageVisibility] of visibility ?? []) this.updatePropertySettings(propertyId, { pageVisibility });
+            if (edit !== null) this.setPageLayout(edit);
+          });
+        },
         onPageLayoutBirth: () => {
           // Derived: undoing the birth would also drop entries a peer pushed into the lists.
           if (!this.readOnly && this.model.bearPageLayout()) this.block.dispatchChange({ derived: true });

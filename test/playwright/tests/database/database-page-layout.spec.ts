@@ -95,12 +95,15 @@ const layoutBounds = async (page: Page): Promise<Record<'panelLeft' | 'panelRigh
 /** The full-window layout builder (research/09 §1). It sits on body, outside the peek. */
 const builder = (page: Page): Locator => page.getByRole('dialog', { name: 'Customize page layout' });
 
+/** Heading and Property group each have an "Action menu for module" button. */
+const headingModule = (page: Page): Locator => builder(page).locator('[data-blok-database-layout-module="heading"]');
+
 /** The pins live in the peek, or in the builder's canvas while customizing. Never both. */
 const pins = (page: Page): Locator => page.locator('[data-blok-database-drawer-pins]');
 
 /** Pins from the Heading module's ••• menu (research/09 §3), then closes the menu. */
 const pinFromHeadingMenu = async (page: Page, name: string): Promise<void> => {
-  await builder(page).getByRole('button', { name: 'Action menu for module' }).click();
+  await headingModule(page).getByRole('button', { name: 'Action menu for module' }).click();
   await page.getByRole('button', { name: `Show ${name} as pinned` }).click();
   await expect(page.getByRole('button', { name: `Do not show ${name} as pinned` })).toBeVisible();
   await page.keyboard.press('Escape');
@@ -184,6 +187,33 @@ test.describe('row page layout', () => {
     expect(ring).not.toMatch(/rgb\(35, 131, 226\)|rgb\(182, 212, 243\)|rgb\(206, 227, 247\)/);
   });
 
+  // research/09 §5: the eye is a draft that hides at once; Apply writes it, and the row page agrees.
+  test('hides a property from the Property group eye and applies it to the row page', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+
+    await dialog.locator('[data-blok-database-layout-module="group"]').getByRole('button', { name: 'Action menu for module' }).click();
+    await expect(page.getByPlaceholder('Search properties…')).toBeFocused();
+    const eye = page.getByRole('button', { name: 'Visibility of Due' });
+
+    await eye.click();
+    await page.getByRole('menuitemradio', { name: 'Always hide' }).click();
+    await expect(eye).toBeFocused();
+    await expect(eye).toHaveAttribute('data-visibility', 'hidden');
+    await expect(dialog.locator('[data-blok-database-drawer-props] [data-property-id="p-due"]')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: '1 more property' })).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await dialog.getByRole('button', { name: 'Apply to all pages' }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(peek(page).locator('[data-blok-database-drawer-props] [data-property-id="p-due"]')).toHaveCount(0);
+    await peek(page).getByRole('button', { name: '1 more property' }).click();
+    await expect(peek(page).locator('[data-blok-database-drawer-props] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toBeVisible();
+  });
+
   // research/10 §7: "+ Add a property" in the Pinned list makes a property pinned first, not in the group.
   test('adds a property from the Heading menu first among the pins', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }));
@@ -192,7 +222,7 @@ test.describe('row page layout', () => {
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
     const dialog = builder(page);
 
-    await dialog.getByRole('button', { name: 'Action menu for module' }).click();
+    await headingModule(page).getByRole('button', { name: 'Action menu for module' }).click();
     await page.locator('[data-blok-testid="database-layout-heading-menu"] [data-blok-database-layout-add-pin]').click();
     await page.locator('[data-blok-database-property-type-option="number"]').click();
     const pinned = dialog.locator('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-value]');

@@ -317,6 +317,22 @@ export const IconPreview = `
 </svg>
 `;
 
+// IconPreview struck through: shown only when it has a value.
+export const IconEyeSlash = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 10C5.25 4 14.75 4 17 10C14.75 16 5.25 16 3 10Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 4L15.5 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// A closed eye: IconPreview's lower lid, raised to center, with three lashes.
+export const IconEyeClosed = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 7.5C5.25 13.5 14.75 13.5 17 7.5M10 12V15M5.8 10.9L4.6 13.2M14.2 10.9L15.4 13.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Table with highlighted left column (header column)
 export const IconHeaderColumn = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

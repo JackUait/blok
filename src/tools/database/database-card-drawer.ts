@@ -2,7 +2,7 @@ import type { I18n, OutputData } from '../../../types';
 import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
-import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
@@ -30,10 +30,10 @@ import { declaredRichTextFields } from '../../components/tools/base';
 import type { PopoverItemParams } from '../../components/utils/popover/components/popover-item';
 import {
   addModule,
-  addSection,
   applyDraft,
   canPlaceInPanel,
   deleteSection,
+  groupFirst,
   isDraftEmpty,
   moveInPlace,
   moveToSection,
@@ -180,8 +180,10 @@ export interface CardDrawerOptions {
   /**
    * "Apply to all pages" or a reset. The tool applies the edit to the model's
    * own layout, so a peer's change the drawer has not seen yet survives.
+   * Apply also hands the eye edits, which write each property; both are one
+   * undo step. `edit` is null when only the eye changed.
    */
-  onPageLayoutChange?: (edit: PageLayoutOp) => void;
+  onPageLayoutChange?: (edit: PageLayoutOp | null, visibility?: ReadonlyMap<string, PageVisibility>) => void;
   /** Customize layout opened: write the empty layout lists before any edit. */
   onPageLayoutBirth?: () => void;
   /** A locked database keeps its layout. */
@@ -330,8 +332,8 @@ export class DatabaseCardDrawer {
   private resizeHandler: (() => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
   private propertyTypePopover: DatabasePropertyTypePopover | null = null;
-  /** The built-in type menu was opened from the pins row: pin what it adds. */
-  private pinNextAdded = false;
+  /** Where the built-in type menu places what it adds, when a builder menu opened it. */
+  private nextAddedPlace: 'pin' | 'group' | null = null;
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
@@ -1255,8 +1257,11 @@ export class DatabaseCardDrawer {
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
     propsSection.hidden = this.draft === null && this.propsCollapsed;
-    const hidden = (def: PropertyDefinition): boolean => !isShownOnPage(def, readPropertyValue(row, def) ?? null);
-    const shown = (def: PropertyDefinition): boolean => this.draft !== null || this.showHiddenProps || !hidden(def);
+    // While customizing, the eye's draft value hides at once (research/09 §5).
+    const hidden = (def: PropertyDefinition): boolean =>
+      !isShownOnPage({ ...def, pageVisibility: this.pageVisibility(def.id) }, readPropertyValue(row, def) ?? null);
+    const expanded = this.draft === null && this.showHiddenProps;
+    const shown = (def: PropertyDefinition): boolean => expanded || !hidden(def);
     const hiddenCount = [...layout.group, ...layout.sections.flatMap((s) => s.properties)].filter(hidden).length;
 
     for (const def of layout.group.filter(shown)) {
@@ -1267,14 +1272,19 @@ export class DatabaseCardDrawer {
     }
 
     // Notion gathers hidden properties into one item at the bottom; a click shows them, another folds them back.
+    // In the builder it does not expand (research/09 §5 L75).
     if (hiddenCount > 0) {
       const reveal = document.createElement('button');
-      const key = this.showHiddenProps ? 'tools.database.hideHiddenProperties' : 'tools.database.hiddenProperties';
+      const [one, many] = expanded
+        ? ['tools.database.layoutHideMorePropertiesOne', 'tools.database.layoutHideMoreProperties']
+        : ['tools.database.layoutMorePropertiesOne', 'tools.database.layoutMoreProperties'];
+      const key = hiddenCount === 1 ? one : many;
 
       reveal.type = 'button';
       reveal.setAttribute('data-blok-database-drawer-hidden-props', '');
-      reveal.setAttribute('aria-expanded', String(this.showHiddenProps));
-      reveal.textContent = this.i18n?.t(key, { count: hiddenCount }) ?? `${hiddenCount}`;
+      reveal.setAttribute('aria-expanded', String(expanded));
+      reveal.disabled = this.draft !== null;
+      reveal.textContent = this.label(key).replace('{count}', String(hiddenCount));
       reveal.addEventListener('click', () => {
         this.showHiddenProps = !this.showHiddenProps;
         this.refreshSchema(this.schema);
@@ -1283,7 +1293,7 @@ export class DatabaseCardDrawer {
     }
 
     // research/09 §1: a property group with nothing in it reads "Empty" in the builder.
-    if (this.draft !== null && layout.group.length === 0 && layout.sections.length === 0 && (this.builder?.query ?? '') === '') {
+    if (this.draft !== null && layout.group.length === 0 && layout.sections.length === 0) {
       const empty = document.createElement('div');
 
       empty.setAttribute('data-blok-database-layout-group-empty', '');
@@ -1291,32 +1301,29 @@ export class DatabaseCardDrawer {
       propsSection.appendChild(empty);
     }
 
-    if (this.draft !== null) {
-      propsSection.appendChild(this.textButton('data-blok-database-layout-add-section', 'tools.database.layoutAddSection', () => {
-        this.editLayout(addSection(nanoid(), this.label('tools.database.layoutNewSection'), this.getRenderableSchema().map((def) => def.id)));
-      }));
-    }
-
     if (!this.readOnly) {
       const addBtn = document.createElement('button');
 
       addBtn.setAttribute('data-blok-database-drawer-add-prop', '');
       addBtn.textContent = this.t('tools.database.addProperty');
-      addBtn.addEventListener('click', () => this.openAddProperty(addBtn, false));
+      addBtn.addEventListener('click', () => this.openAddProperty(addBtn, null));
       propsSection.appendChild(addBtn);
     }
 
     return propsSection;
   }
 
-  /** "+ Add a property". From the pins row, the new property becomes a draft pin; the property itself is written at once. */
-  private openAddProperty(anchor: HTMLElement, pinIt: boolean): void {
+  /**
+   * "+ Add a property". From a builder menu the new property goes first among the
+   * pins or at the top of the group, as a draft edit; the property itself is written at once.
+   */
+  private openAddProperty(anchor: HTMLElement, place: 'pin' | 'group' | null): void {
     if (this.onOpenAddProperty !== undefined) {
-      this.onOpenAddProperty(anchor, pinIt || this.draft !== null ? (id) => this.addedWhileCustomizing(id, pinIt) : undefined);
+      this.onOpenAddProperty(anchor, place !== null || this.draft !== null ? (id) => this.addedWhileCustomizing(id, place) : undefined);
 
       return;
     }
-    this.pinNextAdded = pinIt;
+    this.nextAddedPlace = place;
     if (this.propertyTypePopover === null) {
       this.propertyTypePopover = new DatabasePropertyTypePopover({
         onSelect: (type, name) => {
@@ -1326,7 +1333,7 @@ export class DatabaseCardDrawer {
           // onAddProperty refreshes the schema synchronously, so the new property is there now.
           const added = this.schema.find((p) => !before.has(p.id));
 
-          if (added !== undefined) this.addedWhileCustomizing(added.id, this.pinNextAdded);
+          if (added !== undefined) this.addedWhileCustomizing(added.id, this.nextAddedPlace);
           this.propertyTypePopover?.close();
         },
         i18n: this.i18n,
@@ -1338,10 +1345,27 @@ export class DatabaseCardDrawer {
     this.propertyTypePopover.open(anchor);
   }
 
-  private addedWhileCustomizing(id: string, pinIt: boolean): void {
+  private addedWhileCustomizing(id: string, place: 'pin' | 'group' | null): void {
     this.draft?.madeProperties.push(id);
-    // research/10 §7: a property made from the Pinned list goes first among the pins.
-    if (pinIt) this.editLayout(pinFirst(id));
+    // research/10 §7 and research/09 §3 L57.
+    if (place === 'pin') this.editLayout(pinFirst(id));
+    if (place === 'group') this.editLayout(groupFirst(id));
+  }
+
+  /** A property's page visibility, with the open draft's eye edit if any. */
+  private pageVisibility(id: string): PageVisibility {
+    return this.draft?.visibility.get(id) ?? this.schema.find((def) => def.id === id)?.pageVisibility ?? 'always';
+  }
+
+  /** An eye edit. Setting the saved value back drops the edit. */
+  private setPageVisibility(id: string, visibility: PageVisibility): void {
+    if (this.draft === null) return;
+    if (visibility === (this.schema.find((def) => def.id === id)?.pageVisibility ?? 'always')) {
+      this.draft.visibility.delete(id);
+    } else {
+      this.draft.visibility.set(id, visibility);
+    }
+    this.rerender();
   }
 
   /** A named section of the property group. Folding it is this viewer's own. */
@@ -1436,21 +1460,11 @@ export class DatabaseCardDrawer {
     content?.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
     this.drawer?.removeAttribute('data-details-open');
     this.stopWatchingPins();
-    const resolved = this.resolvedLayout();
+    const layout = this.resolvedLayout();
 
-    this.propertyIcons = resolved.propertyIcons;
-    const search = this.builder?.query ?? '';
-    const matches = (def: PropertyDefinition): boolean => def.name.toLowerCase().includes(search);
-    const layout: ResolvedPageLayout = {
-      ...resolved,
-      heading: resolved.heading.filter(matches),
-      pageModules: resolved.pageModules.filter(matches),
-      panelModules: resolved.panelModules.filter(matches),
-      group: resolved.group.filter(matches),
-      sections: resolved.sections.map((entry) => ({ ...entry, properties: entry.properties.filter(matches) })),
-    };
+    this.propertyIcons = layout.propertyIcons;
     const regions: HTMLElement[] = [];
-    const tabs = resolved.structure === 'tabbed' ? this.tabProperties(resolved) : [];
+    const tabs = layout.structure === 'tabbed' ? this.tabProperties(layout) : [];
 
     if (!tabs.some((def) => def.id === this.activeTab)) {
       this.activeTab = 'content';
@@ -1474,9 +1488,9 @@ export class DatabaseCardDrawer {
       editor.hidden = !onContent;
     }
     if (!onContent) {
-      regions.push(this.tabPanel(tabs.find((def) => def.id === this.activeTab && matches(def)), row));
+      regions.push(this.tabPanel(tabs.find((def) => def.id === this.activeTab), row));
     }
-    if (onContent || search !== '') {
+    if (onContent) {
       const group = [this.buildPropsToggle(), this.buildPropsSection(layout, row)];
       const page: HTMLElement[] = layout.groupIn === 'page' ? [...group] : [];
 
@@ -1762,8 +1776,8 @@ export class DatabaseCardDrawer {
 
     this.closeLayoutMenu();
     this.draft = null;
-    if (apply && draft !== null && draft.ops.length > 0) {
-      this.onPageLayoutChange?.((layout) => applyDraft(draft, layout));
+    if (apply && draft !== null && (draft.ops.length > 0 || draft.visibility.size > 0)) {
+      this.onPageLayoutChange?.(draft.ops.length > 0 ? (layout) => applyDraft(draft, layout) : null, draft.visibility);
     }
     this.rerender();
   }
@@ -1805,11 +1819,13 @@ export class DatabaseCardDrawer {
       onReset: () => this.resetLayout(),
       layout: () => this.draftLayout(),
       edit: (op) => this.editLayout(op),
-      onSearch: () => this.rerender(),
       pages: () => this.previewRows().map((row) => ({ id: row.id, title: (row.properties[this.titlePropertyId] as string | undefined) ?? '' })),
       previewId: () => this.currentRowId,
       properties: () => this.getRenderableSchema(),
-      onAddPin: (anchor) => this.openAddProperty(anchor, true),
+      onAddPin: (anchor) => this.openAddProperty(anchor, 'pin'),
+      onAddToGroup: (anchor) => this.openAddProperty(anchor, 'group'),
+      visibility: (id) => this.pageVisibility(id),
+      setVisibility: (id, visibility) => this.setPageVisibility(id, visibility),
       onPreview: (id) => {
         const row = this.previewRows().find((candidate) => candidate.id === id);
 
@@ -1913,6 +1929,7 @@ export class DatabaseCardDrawer {
 
   private openLayoutMenu(anchor: HTMLElement, items: PopoverItemParams[]): void {
     this.closeLayoutMenu();
+    this.builder?.closeModuleMenu();
     const menu = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
       trigger: anchor,

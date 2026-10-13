@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1052 + 118 + 413 + 4 closure for all 1587 keys', () => {
+  it('rebuilds a disjoint 1051 + 118 + 415 + 4 closure for all 1588 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1587);
+    expect(lifecycle.size).toBe(1588);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -355,7 +355,10 @@ describe('current English catalog lifecycle coverage', () => {
       // +6: the builder's Page settings column calls its Structure, Options, Full width and Database templates keys and hints by literal.
       // +10 / -2: the builder's module cards and Heading menu call their keys by literal;
       // tools.database.layoutPin and layoutUnpin left with the per-property pin items.
-      'executable-literal': 1052,
+      // +5 / -4 / -2: the Property group eye and "N more properties" toggles call their keys by literal;
+      // hiddenProperties, hideHiddenProperties and layoutGroupIn* left with the old toggle and Page settings choice;
+      // tools.database.searchLabel and searchPlaceholder moved to registered-namespace (see below).
+      'executable-literal': 1051,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -380,7 +383,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the view settings panel builds tools.database.settingsMoreSettings from a short name.
       // +1: tools.database.layoutCustomizing, the old builder bar's title. Still shipped in every locale.
       // +1: tools.database.aiAutofillTriggerOn, the old trigger value. Still shipped in every locale.
-      'registered-namespace-compatible': 413,
+      // +2: tools.database.searchLabel and searchPlaceholder lost their last literal caller with the builder bar search.
+      'registered-namespace-compatible': 415,
       'catalog-only': 4,
     });
     expect(

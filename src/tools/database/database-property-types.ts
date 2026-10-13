@@ -72,4 +72,5 @@ export const addablePropertyTypes = (hasPeople: boolean): PropertyType[] =>
 
 /** The meta of a type, or text's for a type from a newer client. */
 export const propertyTypeMeta = (type: PropertyType): PropertyTypeMeta =>
-  (PROPERTY_TYPE_META as Partial<Record<string, PropertyTypeMeta>>)[type] ?? PROPERTY_TYPE_META.text;
+  // Own keys only: saved data can name "__proto__" or "constructor", which a plain lookup resolves to Object built-ins.
+  Object.hasOwn(PROPERTY_TYPE_META, type) ? PROPERTY_TYPE_META[type] : PROPERTY_TYPE_META.text;

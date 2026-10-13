@@ -2225,7 +2225,8 @@
 [data-blok-database-layout-cancel]:focus-visible,
 [data-blok-database-layout-apply]:focus-visible,
 [data-blok-database-layout-more-save]:focus-visible,
-[data-blok-database-layout-settings]:focus-visible {
+[data-blok-database-layout-structure-card]:focus-visible,
+[data-blok-database-layout-group-in]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
@@ -2275,24 +2276,135 @@
   font-size: 14px;
 }
 
-/* Page settings column (research/09 §10: 290px). Phase 4 fills it. */
+/* Page settings column (research/09 §10: 290px, title 16px/500). */
 [data-blok-database-layout-side] {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: var(--blok-space-2);
   box-sizing: border-box;
   inline-size: 290px;
   max-inline-size: 40%;
+  overflow-y: auto;
   padding-inline: var(--blok-space-4);
+  padding-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-layout-settings-title] {
+  margin: 0;
+  padding-block: var(--blok-space-1);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+[data-blok-database-layout-options-title] {
+  margin: var(--blok-space-2) 0 0;
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+[data-blok-database-layout-structure] {
+  display: flex;
+  gap: var(--blok-space-2);
+}
+
+/*
+ * research/10 §2: 117x80 white cards, radius 6. Notion rings the selected one
+ * blue and greys the other label; the blue law draws it neutral, with one ink.
+ */
+[data-blok-database-layout-structure-card] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-1);
+  box-sizing: border-box;
+  inline-size: 117px;
+  block-size: 80px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-bg-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-database-drawer-border);
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+[data-blok-database-layout-structure-card][aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px var(--blok-database-drawer-border), 0 0 0 1px var(--blok-database-card-border-active);
+  font-weight: 600;
+}
+
+[data-blok-database-layout-structure-art] svg {
+  inline-size: 24px;
+  block-size: 24px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-layout-option] [data-blok-database-panel-row] {
+  padding-inline: 0;
+}
+
+/* The (i) sits right after its label, not pushed to the end with the switch. */
+[data-blok-database-layout-option] [data-blok-database-panel-label] {
+  flex: 0 1 auto;
+}
+
+[data-blok-database-layout-hint] {
+  display: inline-flex;
+  color: var(--blok-text-tertiary);
+}
+
+[data-blok-database-layout-hint] svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+[data-blok-database-layout-group-in-choice] {
+  display: flex;
+  flex-direction: column;
+  padding-block-start: var(--blok-space-2);
+  border-block-start: 1px solid var(--blok-database-drawer-border);
+}
+
+[data-blok-database-layout-group-in] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-2);
+  min-block-size: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--blok-text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* A checkmark marks the chosen place, never a fill (no-blue law). */
+[data-blok-database-layout-group-in-check] {
+  display: inline-flex;
+  visibility: hidden;
+}
+
+[data-blok-database-layout-group-in][aria-pressed="true"] [data-blok-database-layout-group-in-check] {
+  visibility: visible;
+}
+
+[data-blok-database-layout-group-in-check] svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 [data-blok-database-layout-side] [data-blok-database-search-input] {
   inline-size: 100%;
 }
 
-[data-blok-database-layout-settings],
 [data-blok-database-layout-add-section],
 [data-blok-database-layout-add-pin],
 [data-blok-database-drawer-details-toggle],
@@ -2571,7 +2683,6 @@
 
 @media (hover: hover) {
   [data-blok-database-drawer-customize]:hover,
-  [data-blok-database-layout-settings]:hover,
   [data-blok-database-layout-cancel]:hover,
   [data-blok-database-layout-add-section]:hover,
   [data-blok-database-layout-add-pin]:not(:disabled):hover,

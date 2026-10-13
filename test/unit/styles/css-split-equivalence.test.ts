@@ -805,7 +805,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the full-window layout builder (top bar, Apply split, canvas card, its tokens), less the old builder bar.
     // +1_760: the Preview switch, its menu and the New page placeholder (Phase 3).
     // +26: the Preview padding names its spacing tokens (css-vars-extraction R2) instead of 3px/6px.
-    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26;
+    // +2_774: the Page settings column, its Structure cards, Options switches and (i) hints (Phase 4, measured database.css growth).
+    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774;
     // database.css: the title cell Open button shows on the keyboard-selected cell (Cmd/Ctrl+Enter presses it).
     const DATABASE_CELL_BUTTON_KEYBOARD_BYTES = 92;
     // database.css: the comment count badge after a row title (research/12 §3).

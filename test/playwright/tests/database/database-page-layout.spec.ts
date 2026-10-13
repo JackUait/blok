@@ -468,15 +468,16 @@ test.describe('row page layout', () => {
     await expect(peek(page).getByRole('button', { name: 'Scroll to previous pinned properties' })).toBeHidden();
   });
 
-  test('switches to a Tabbed page from Page settings and resets to the original layout', async ({ page }) => {
+  test('switches to a Tabbed page from the Page settings column and resets to the original layout', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }));
     await openRow(page, 'r1');
     await expect(pins(page)).toBeVisible();
 
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await builder(page).getByRole('button', { name: 'Page settings' }).click();
-    await page.getByRole('menuitem', { name: 'Tabbed' }).click();
+    await expect(builder(page).getByRole('button', { name: 'Simple' })).toHaveAttribute('aria-pressed', 'true');
+    await builder(page).getByRole('button', { name: 'Tabbed' }).click();
+    await expect(builder(page).getByRole('button', { name: 'Tabbed' })).toHaveAttribute('aria-pressed', 'true');
     await expect(builder(page).getByRole('tablist')).toBeVisible();
     await expect(builder(page).getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
 

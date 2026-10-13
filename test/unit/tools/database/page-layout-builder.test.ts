@@ -5,6 +5,7 @@ import type { CardDrawerOptions } from '../../../../src/tools/database/database-
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import { getTabbables } from '../../../../src/components/utils/modal-dialog';
 import { registerLayer } from '../../../../src/components/utils/dismissable-layer';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { pageLayoutOf } from '../../../../src/tools/database/page-layout';
 import type { PageLayoutData } from '../../../../src/tools/database/page-layout';
 import type { DatabaseRow, PageLayoutFields, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -424,7 +425,6 @@ describe('PageLayoutBuilder', () => {
 
     it.each([
       ['More save options', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click(), 'reset'],
-      ['Page settings', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-settings]')?.click(), 'structure-simple'],
       ['an item menu', () => q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click(), 'pin'],
       ['the Preview switch', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]')?.click(), 'preview-row-1'],
     ])('closes %s and leaves the toast and the builder', (_name, openMenu, item) => {
@@ -477,14 +477,170 @@ describe('PageLayoutBuilder', () => {
     drawer.destroy();
   });
 
-  it('no longer offers Reset in Page settings', () => {
-    const { drawer } = customize();
+  describe('Page settings column', () => {
+    const column = (): HTMLElement => {
+      const el = builder().querySelector<HTMLElement>('[data-blok-database-layout-settings-column]');
 
-    builder().querySelector<HTMLElement>('[data-blok-database-layout-settings]')?.click();
+      if (el === null) throw new Error('no Page settings column');
 
-    expect(q('[data-blok-popover-item][data-blok-item-name="structure-simple"]')).not.toBeNull();
-    expect(q('[data-blok-popover-item][data-blok-item-name="reset"]')).toBeNull();
-    drawer.destroy();
+      return el;
+    };
+    const cards = (): HTMLElement[] => [...column().querySelectorAll<HTMLElement>('[data-blok-database-layout-structure-card]')];
+    const switches = (): HTMLElement[] => [...column().querySelectorAll<HTMLElement>('[role="switch"]')];
+    const switchNamed = (name: string): HTMLElement => {
+      const found = switches().find((el) => el.textContent?.trim() === name);
+
+      if (found === undefined) throw new Error(`no ${name} switch`);
+
+      return found;
+    };
+
+    // research/09 §10: a fixed column, always visible, titled "Page settings".
+    it('shows Page settings as a column, not a menu, with no Reset in it', () => {
+      const { drawer } = customize();
+
+      expect(column().querySelector('[data-blok-database-layout-settings-title]')?.textContent).toBe('Page settings');
+      expect(builder().querySelector('[data-blok-database-layout-settings]')).toBeNull();
+      expect(column().textContent).not.toContain('Reset');
+      drawer.destroy();
+    });
+
+    // research/10 §2: two cards, Simple (default) and Tabbed.
+    it('sets Simple or Tabbed from the Structure cards as a draft edit', () => {
+      const { drawer, options } = customize();
+
+      expect(column().querySelector('[data-blok-database-layout-structure]')?.getAttribute('aria-label')).toBe('Structure');
+      expect(cards().map((card) => [card.textContent?.trim(), card.getAttribute('aria-pressed')])).toEqual([['Simple', 'true'], ['Tabbed', 'false']]);
+      cards()[1].focus();
+      cards()[1].click();
+
+      expect(cards().map((card) => card.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+      expect(cards()[1]).toHaveFocus();
+      expect(builder().querySelector('[data-blok-database-drawer-tabs]')).not.toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.structure).toBe('tabbed');
+      drawer.destroy();
+    });
+
+    // research/09 anatomy L41-43: Property icons ON, Full width OFF, Database templates ON; 30x18 role=switch.
+    it('turns Property icons, Full width and Database templates on and off as draft edits, with switches', () => {
+      const { drawer, options } = customize();
+
+      expect(column().querySelector('[data-blok-database-layout-options-title]')?.textContent).toBe('Options');
+      expect(switches().map((el) => [el.textContent?.trim(), el.getAttribute('aria-checked')])).toEqual([
+        ['Property icons', 'true'],
+        ['Full width', 'false'],
+        ['Database templates', 'true'],
+      ]);
+      const fullWidth = switchNamed('Full width');
+
+      fullWidth.focus();
+      fullWidth.click();
+      expect(switchNamed('Full width').getAttribute('aria-checked')).toBe('true');
+      // An edit redraws the page; the switch under the caret must keep focus.
+      expect(fullWidth).toHaveFocus();
+      switchNamed('Property icons').click();
+      expect(builder().querySelector('[data-blok-database-drawer-prop-icon]')).toBeNull();
+      switchNamed('Database templates').click();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)).toMatchObject({ propertyIcons: false, fullWidth: true, templates: false });
+      drawer.destroy();
+    });
+
+    it('drops a switch edit that is turned back', () => {
+      const { drawer, options } = customize();
+
+      switchNamed('Full width').click();
+      switchNamed('Full width').click();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.fullWidth).toBe(false);
+      drawer.destroy();
+    });
+
+    it('shows the saved layout in the column', () => {
+      const { drawer } = customize({ schema: schemaWith({ pageLayoutStructure: 'tabbed', pageLayoutFullWidth: true, pageLayoutTemplates: false, pageLayoutPropertyIcons: false }) });
+
+      expect(cards().map((card) => card.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+      expect(switches().map((el) => el.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+      drawer.destroy();
+    });
+
+    // Kept in the column until "Move to panel" lands (plan Phase 4, 5b).
+    it('moves the property group into the details panel and back as a draft edit', () => {
+      const { drawer, options } = customize();
+      const place = (): HTMLElement[] => [...column().querySelectorAll<HTMLElement>('[data-blok-database-layout-group-in]')];
+
+      expect(place().map((el) => [el.textContent?.trim(), el.getAttribute('aria-pressed')])).toEqual([
+        ['Properties in the page', 'true'],
+        ['Properties in the details panel', 'false'],
+      ]);
+      place()[1].click();
+
+      expect(place().map((el) => el.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.groupIn).toBe('panel');
+      drawer.destroy();
+    });
+
+    describe('hints', () => {
+      beforeEach(() => {
+        // Earlier tests empty body, which detaches the shared tooltip's node.
+        destroyTooltip();
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        destroyTooltip();
+        vi.useRealTimers();
+      });
+
+      const shownHint = (): string | null => {
+        const wrapper = q('[data-blok-testid="tooltip"]');
+
+        return wrapper?.getAttribute('data-blok-shown') === 'true' ? (q('[data-blok-testid="tooltip-content"]')?.textContent ?? '') : null;
+      };
+
+      it.each([
+        ['Full width', 'Page width can be overwritten on individual pages.'],
+        ['Database templates', 'If enabled, empty pages will show the template picker.'],
+      ])('shows the %s hint only after a hover delay, never on focus', (name, hint) => {
+        const { drawer } = customize();
+        const row = switchNamed(name).closest('[data-blok-database-layout-option]');
+        const info = row?.querySelector<HTMLElement>('[data-blok-database-layout-hint]');
+
+        if (info === null || info === undefined) throw new Error(`no ${name} hint`);
+        switchNamed(name).focus();
+        switchNamed(name).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+        info.dispatchEvent(new FocusEvent('focus'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toBeNull();
+
+        info.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+
+        expect(shownHint()).toBe(hint);
+        // The hint is a hover target only, so keyboard users get it from the switch.
+        const describedBy = switchNamed(name).getAttribute('aria-describedby') ?? '';
+
+        expect(document.getElementById(describedBy)?.textContent).toBe(hint);
+        drawer.destroy();
+      });
+
+      it('has no hint on Property icons', () => {
+        const { drawer } = customize();
+
+        expect(switchNamed('Property icons').closest('[data-blok-database-layout-option]')?.querySelector('[data-blok-database-layout-hint]')).toBeNull();
+        drawer.destroy();
+      });
+    });
   });
 
   // research/09 §3b.

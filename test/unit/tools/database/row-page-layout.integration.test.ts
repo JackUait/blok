@@ -318,8 +318,7 @@ describe('row page layout through the database tool', () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(b('[data-blok-database-layout-settings]'));
-    await click(item('property-icons'));
+    await click(b('[data-blok-testid="database-layout-option-layoutPropertyIcons"]'));
     await click(b('[data-blok-database-layout-apply]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPropertyIcons: false });

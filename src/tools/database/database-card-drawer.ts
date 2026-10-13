@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PropertyDefinition, Pr
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconInsertAbove, IconMinus, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
+import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconInsertAbove, IconMinus, IconPlus, IconPreview, IconSplitView, IconTrash } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -44,11 +44,8 @@ import {
   renameSection,
   resetPageLayout,
   resolvePageLayout,
-  setGroupIn,
-  setPropertyIcons,
-  setStructure,
 } from './page-layout';
-import type { PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
+import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
 
@@ -1410,11 +1407,15 @@ export class DatabaseCardDrawer {
   }
 
   /** The saved layout, with an open draft's edits replayed on top. */
-  private resolvedLayout(): ResolvedPageLayout {
+  /** The saved layout, with the draft applied while customizing. */
+  private draftLayout(): PageLayoutData {
     const saved = pageLayoutOf(this.schema.find((p) => p.type === 'title'));
-    const layout = this.draft === null ? saved : applyDraft(this.draft, saved);
 
-    return resolvePageLayout(layout, this.getRenderableSchema());
+    return this.draft === null ? saved : applyDraft(this.draft, saved);
+  }
+
+  private resolvedLayout(): ResolvedPageLayout {
+    return resolvePageLayout(this.draftLayout(), this.getRenderableSchema());
   }
 
   /**
@@ -1787,6 +1788,7 @@ export class DatabaseCardDrawer {
       // The host refreshes the drawer after a rename (setData), so the title can change while open.
       this.builder.setTitle(this.databaseTitle());
       this.builder.setPreview(previewTitle);
+      this.builder.refresh();
 
       return;
     }
@@ -1798,7 +1800,8 @@ export class DatabaseCardDrawer {
       onApply: () => this.finishCustomizing(true),
       onDiscard: () => this.discardCustomizing(),
       onReset: () => this.resetLayout(),
-      onPageSettings: (anchor) => this.openPageSettings(anchor),
+      layout: () => this.draftLayout(),
+      edit: (op) => this.editLayout(op),
       onSearch: () => this.rerender(),
       pages: () => this.previewRows().map((row) => ({ id: row.id, title: (row.properties[this.titlePropertyId] as string | undefined) ?? '' })),
       previewId: () => this.currentRowId,
@@ -1846,22 +1849,6 @@ export class DatabaseCardDrawer {
     button.addEventListener('click', () => onClick(button));
 
     return button;
-  }
-
-  private openPageSettings(anchor: HTMLElement): void {
-    const layout = this.resolvedLayout();
-    const check = (on: boolean): Partial<PopoverItemParams> => (on ? { trailingIcon: IconCheck } : {});
-
-    this.openLayoutMenu(anchor, [
-      { type: PopoverItemType.Default, name: 'structure-simple', title: this.label('tools.database.layoutStructureSimple'), icon: IconSplitView, ...check(layout.structure === 'simple'), closeOnActivate: true, onActivate: () => this.editLayout(setStructure('simple')) },
-      { type: PopoverItemType.Default, name: 'structure-tabbed', title: this.label('tools.database.layoutStructureTabbed'), icon: IconTabs, ...check(layout.structure === 'tabbed'), closeOnActivate: true, onActivate: () => this.editLayout(setStructure('tabbed')) },
-      { type: PopoverItemType.Separator },
-      { type: PopoverItemType.Default, name: 'group-in-page', title: this.label('tools.database.layoutGroupInPage'), ...check(layout.groupIn === 'page'), closeOnActivate: true, onActivate: () => this.editLayout(setGroupIn('page')) },
-      { type: PopoverItemType.Default, name: 'group-in-panel', title: this.label('tools.database.layoutGroupInPanel'), ...check(layout.groupIn === 'panel'), closeOnActivate: true, onActivate: () => this.editLayout(setGroupIn('panel')) },
-      { type: PopoverItemType.Separator },
-      // Notion's toggle here was never measured; a check item matches the rows above.
-      { type: PopoverItemType.Default, name: 'property-icons', title: this.label('tools.database.layoutPropertyIcons'), ...check(layout.propertyIcons), closeOnActivate: true, onActivate: () => this.editLayout(setPropertyIcons(!layout.propertyIcons)) },
-    ] as PopoverItemParams[]);
   }
 
   /** "Reset to original page layout" writes at once. No property is deleted. */

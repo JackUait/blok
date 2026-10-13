@@ -233,6 +233,15 @@ export const IconTextSizeLarge = `
 </svg>
 `;
 
+// Info icon: the (i) beside a setting that has a hover hint
+export const IconInfo = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 9.25v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="6.5" r="0.75" fill="currentColor"/>
+</svg>
+`;
+
 // Warning icon
 export const IconWarning = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

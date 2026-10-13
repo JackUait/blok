@@ -202,6 +202,29 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-layout-preview-empty]')).toContain('padding-inline: var(--blok-space-2)');
   });
 
+  // research/10 §2: 117x80 cards. Notion rings the selected one blue; the blue law makes it neutral.
+  it('marks the selected Structure card with primary ink and no blue', () => {
+    const card = ruleBody('[data-blok-database-layout-structure-card]');
+    const selected = ruleBody('[data-blok-database-layout-structure-card][aria-pressed="true"]');
+    const ink = (body: string): string | undefined => body.match(/(?:^|;)\s*color: ([^;]+);/)?.[1];
+
+    expect(card).toContain('inline-size: 117px');
+    expect(card).toContain('block-size: 80px');
+    expect(ink(card)).toBe('var(--blok-text-primary)');
+    expect(selected).not.toMatch(/background/);
+    expect(ink(selected) ?? ink(card)).toBe(ink(card));
+    expect(selected).toContain('font-weight: 600');
+    expect(selected).toContain('var(--blok-database-card-border-active)');
+    expect(selected).not.toMatch(/accent|blue|focus-ring|#2383e2|toggle-on/i);
+  });
+
+  // research/09 §10: a 290px column with a 16px/500 title.
+  it('draws Page settings as a 290px column with a 16px title', () => {
+    expect(ruleBody('[data-blok-database-layout-side]')).toContain('inline-size: 290px');
+    expect(ruleBody('[data-blok-database-layout-settings-title]')).toContain('font-size: 16px');
+    expect(ruleBody('[data-blok-database-layout-settings-title]')).toContain('font-weight: 500');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

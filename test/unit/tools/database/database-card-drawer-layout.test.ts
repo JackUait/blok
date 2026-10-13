@@ -734,8 +734,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      q('[data-blok-database-layout-settings]')?.click();
-      clickItem('structure-tabbed');
+      [...document.querySelectorAll<HTMLElement>('[data-blok-database-layout-structure-card]')].find((card) => card.textContent?.trim() === 'Tabbed')?.click();
 
       expect(q('[data-blok-database-drawer-tabs]')).not.toBeNull();
       q('[data-blok-database-layout-more-save]')?.click();
@@ -751,10 +750,10 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
-      q('[data-blok-database-layout-settings]')?.click();
+      const toggle = q('[data-blok-testid="database-layout-option-layoutPropertyIcons"]');
 
-      expect(q('[data-blok-popover-item][data-blok-item-name="property-icons"] svg')).not.toBeNull();
-      clickItem('property-icons');
+      expect(toggle?.getAttribute('role')).toBe('switch');
+      toggle?.click();
 
       expect(q('[data-blok-database-drawer-prop-icon]')).toBeNull();
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();

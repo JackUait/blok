@@ -63,13 +63,18 @@ describe('tools documentation coverage', () => {
   });
 
   it('database description only names real PropertyType values', () => {
-    // Root cause: the example type list was hand-authored and drifted from the
-    // real union. "status" is not a PropertyType — a status column is a `select`.
-    // See src/tools/database/types.ts.
-    const typesSrc = readSource('src/tools/database/types.ts');
-    const union = typesSrc.match(/export type PropertyType\s*=\s*([^;]+);/)?.[1] ?? '';
-    const members = [...union.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    // The example type list is hand-authored, so it is pinned to the real union.
+    // The types live in src/shared/database/types.ts; src/tools/database/types.ts
+    // only re-exports them. The union names aliases too (PropertyTypeV2,
+    // ComputedPropertyType), so those are expanded one level.
+    const typesSrc = readSource('src/shared/database/types.ts');
+    const aliasBody = (name: string): string =>
+      typesSrc.match(new RegExp(`export type ${name}\\s*=\\s*([^;]+);`))?.[1] ?? '';
+    const union = aliasBody('PropertyType');
+    const aliases = [...union.matchAll(/\|\s*([A-Z]\w*)/g)].map((m) => aliasBody(m[1]));
+    const members = [union, ...aliases].flatMap((body) => [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]));
     expect(members).toContain('select');
+    expect(members).toContain('status');
 
     const description = TOOL_SECTIONS.find((s) => s.id === 'database')?.description ?? '';
     const listed = description.match(/typed properties \(([^)]+)\)/)?.[1] ?? '';

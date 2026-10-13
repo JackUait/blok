@@ -175,6 +175,7 @@ describe('createLiveSession', () => {
 
     expect(await pending).toMatchObject({ ok: false, error: { code: 'FORBIDDEN' }, delivery: { durable: false, pending: false } });
     expect(endListeners).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
     expect(await live.close('closed')).toMatchObject({ unsavedBatches: 1 });
   });
 

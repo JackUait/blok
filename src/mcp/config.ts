@@ -22,6 +22,7 @@ const SWITCH_FLAGS = new Set(['--public']);
 // `flag()` looks names up by exact match, so `--auth=oauth` or a typo would be silently ignored.
 const checkArgs = (argv: string[]): void => {
   const at = { index: 0 };
+  const seen = new Set<string>();
 
   while (at.index < argv.length) {
     const arg = argv[at.index];
@@ -37,6 +38,11 @@ const checkArgs = (argv: string[]): void => {
     if (!VALUE_FLAGS.has(arg) && !SWITCH_FLAGS.has(arg)) {
       throw new McpConfigError(`Unknown flag ${arg}`);
     }
+    // flag() reads the first copy only, so a second one would be silently ignored.
+    if (seen.has(arg)) {
+      throw new McpConfigError(`${arg} is given twice`);
+    }
+    seen.add(arg);
     at.index += VALUE_FLAGS.has(arg) ? 2 : 1;
   }
 };

@@ -357,6 +357,10 @@ describe('parseMcpArgs', () => {
     });
   });
 
+  it.each([['--auth', 'none', '--auth', 'oauth'], ['--public', '--public']])('refuses flag given twice: %j', (...argv: string[]) => {
+    expect(() => parseMcpArgs(['--http', '127.0.0.1:1', ...argv], {})).toThrow(McpConfigError);
+  });
+
   it('refuses --public without --http, where it would mean nothing', () => {
     expect(() => parseMcpArgs(['--public'], {})).toThrow(McpConfigError);
   });

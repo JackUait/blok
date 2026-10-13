@@ -131,4 +131,20 @@ describe('TrackingOutbox', () => {
     expect(outbox.isAcked(refused.operationId)).toBe(false);
     expect(outbox.isAcked('never-appended')).toBe(false);
   });
+
+  it('drops a wait, its timer and its listener once its signal aborts', async () => {
+    vi.useFakeTimers();
+    try {
+      const row = await outbox.appendLocal(new Uint8Array([1]));
+      const controller = new AbortController();
+      const wait = outbox.waitFor([row.operationId], 10_000, controller.signal);
+
+      expect(vi.getTimerCount()).toBe(1);
+      controller.abort();
+      await wait;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

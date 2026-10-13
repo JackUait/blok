@@ -65,10 +65,14 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
       }
     });
 
+    const losing = new AbortController();
+
     try {
-      return await Promise.race([room.outbox.waitFor(ids, ackTimeoutMs), ended]);
+      return await Promise.race([room.outbox.waitFor(ids, ackTimeoutMs, losing.signal), ended]);
     } finally {
       ending.stop();
+      // Frees the ack wait's timer and listener when the end won the race.
+      losing.abort();
     }
   };
 

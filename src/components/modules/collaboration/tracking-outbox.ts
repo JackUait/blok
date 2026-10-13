@@ -90,11 +90,14 @@ export class TrackingOutbox implements CollabOutbox {
    * Settles once every id is acked, or any one is quarantined.
    * The server acks in order on one socket, so the last id's sequence is the batch's highest.
    */
-  public waitFor(ids: readonly string[], timeoutMs: number): Promise<BatchDelivery> {
+  /** An aborted signal settles the wait as a timeout and frees its timer and listener. */
+  public waitFor(ids: readonly string[], timeoutMs: number, signal?: AbortSignal): Promise<BatchDelivery> {
     return new Promise((resolve) => {
       const wait: { timer: ReturnType<typeof setTimeout> | undefined } = { timer: undefined };
+      const abort = (): void => finish({ state: 'timeout' });
       const finish = (delivery: BatchDelivery): void => {
         this.listeners.delete(listener);
+        signal?.removeEventListener('abort', abort);
         if (wait.timer !== undefined) {
           clearTimeout(wait.timer);
         }
@@ -126,7 +129,13 @@ export class TrackingOutbox implements CollabOutbox {
       if (check()) {
         return;
       }
+      if (signal?.aborted === true) {
+        abort();
+
+        return;
+      }
       this.listeners.add(listener);
+      signal?.addEventListener('abort', abort);
       wait.timer = setTimeout(() => finish({ state: 'timeout' }), timeoutMs);
     });
   }

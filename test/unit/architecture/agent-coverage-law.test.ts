@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LEDGER, isExempt } from './agent-coverage.ledger';
-import { ENUMERATORS, SCAN_FLOORS, enumerateAll, enumerateTunes, scanToolMenus } from './agent-coverage/enumerators';
+import { ENUMERATORS, SCAN_FLOORS, enumerateTunes, scanToolMenus } from './agent-coverage/enumerators';
+import type { Capability } from './agent-coverage/scan';
 import type { CapabilitySource } from './agent-coverage/enumerators';
 import { isInstrumented } from '../helpers/instrumented';
 
@@ -30,8 +31,23 @@ const once = <T>(scan: () => T): (() => T) => {
   };
 };
 
+// The first test to scan pays for parsing src/: up to 21 s on a CI unit shard (run 38334145403), above vitest's 5 s default.
+const SCAN_TIMEOUT_MS = 60_000;
+
 const toolMenus = once(scanToolMenus);
-const allCapabilities = once(enumerateAll);
+// One scan per source, shared by assertions 7 and 1. Same first-wins order as enumerateAll.
+const bySource = once(() => (Object.keys(ENUMERATORS) as CapabilitySource[]).map((source) => ({ source, found: ENUMERATORS[source]() })));
+const allCapabilities = once(() => {
+  const all = new Map<string, Capability>();
+
+  bySource().flatMap(({ found }) => found).forEach((c) => {
+    if (!all.has(c.id)) {
+      all.set(c.id, c);
+    }
+  });
+
+  return all;
+});
 
 const namesCoveredId = (reason: string): boolean =>
   (reason.match(ID_TOKEN) ?? []).some((token) => LEDGER[token] !== undefined && !isExempt(LEDGER[token]));
@@ -54,7 +70,7 @@ describe('agent coverage law', () => {
         '(prefix it with the tool, e.g. `table-merge-cells`). It also becomes data-blok-item-name ' +
         'for e2e locators. Only if a name is impossible, add the file:line to UNNAMED_MENU_ITEMS with a reason.'
     ).toEqual([]);
-  });
+  }, SCAN_TIMEOUT_MS);
 
   it.skipIf(isInstrumented())('no tool menu name collides with a block settings item', () => {
     const settingsNames = new Set(enumerateTunes().map((c) => c.id.replace(/^tune:/, '')));
@@ -90,13 +106,13 @@ describe('agent coverage law', () => {
   });
 
   it.skipIf(isInstrumented())('every enumerator still finds its floor (assertion 7)', () => {
-    const below = (Object.keys(ENUMERATORS) as CapabilitySource[])
-      .map((source) => ({ source, found: new Set(ENUMERATORS[source]().map((c) => c.id)).size }))
+    const below = bySource()
+      .map(({ source, found }) => ({ source, found: new Set(found.map((c) => c.id)).size }))
       .filter(({ source, found }) => found < SCAN_FLOORS[source])
       .map(({ source, found }) => `${source}: found ${found}, floor ${SCAN_FLOORS[source]}`);
 
     expect(below).toEqual([]);
-  });
+  }, SCAN_TIMEOUT_MS);
 
   it.skipIf(isInstrumented())('every capability has a ledger row (assertion 1)', () => {
     const missing = [...allCapabilities().values()]
@@ -109,7 +125,7 @@ describe('agent coverage law', () => {
         'whose `mirrors` lists the id (02), or add a LEDGER row in agent-coverage.ledger.ts naming the ' +
         'command / field, or exempt it with a category and a reason.'
     ).toEqual([]);
-  });
+  }, SCAN_TIMEOUT_MS);
 
   it.skipIf(isInstrumented())('no ledger row is stale (assertion 4)', () => {
     const found = allCapabilities();

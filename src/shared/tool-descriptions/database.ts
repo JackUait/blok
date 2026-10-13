@@ -109,6 +109,7 @@ const PROPERTY_SETTINGS = {
       language: { type: 'string', description: 'Translate: the target language, a BCP 47 tag.' },
       onCreate: { type: 'boolean', description: 'Fill when a row is added. Default false.' },
       onEdit: { type: 'boolean', description: 'Fill again when another value of the row changes. Default false.' },
+      onEditProperties: { type: 'array', items: { type: 'string' }, description: 'With onEdit: only a change to one of these property ids fills again. Absent means any property.' },
     },
   },
   rollup: {
@@ -518,8 +519,9 @@ export const DATABASE_DATA = {
                 required: { type: 'boolean', description: 'Form: the question must be answered.' },
                 description: { type: 'string', description: 'Form: help text under the question.' },
                 questionName: { type: 'string', description: 'Form: a detached question label; absent follows the property name.' },
-                longAnswer: { type: 'boolean', description: 'Form: long or short text; absent keeps the long-text field.' },
+                longAnswer: { type: 'boolean', description: 'Form: a multi-line text answer; absent means a one-line answer.' },
                 maxSelections: { type: 'integer', minimum: 1, description: 'Form: maximum multi-select, people or relation selections.' },
+                showOptionsAs: { type: 'string', enum: ['list', 'dropdown'], description: 'Form: how a choice question lists its options; absent is list for multi-select, dropdown for select and status.' },
               },
             },
           },

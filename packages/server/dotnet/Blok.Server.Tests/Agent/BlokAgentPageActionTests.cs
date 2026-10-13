@@ -232,7 +232,9 @@ public sealed class BlokAgentPageActionTests
     var sourceRevision = await ReadRevisionAsync(executor, Source);
     var options = new BlokAgentOptions
     {
-      PageTitles = true, PageTarget = pages, OverridesJson = overridesJson,
+      PageTitles = true,
+      PageTarget = pages,
+      OverridesJson = overridesJson,
     };
 
     var execution = await executor.ExecuteAsync(Source, RenameBatch, Actor, options);
@@ -309,7 +311,8 @@ public sealed class BlokAgentPageActionTests
     {
       ["commands"] = new JsonArray(new JsonObject
       {
-        ["name"] = "doc.setIcon", ["args"] = targetArgs.DeepClone(),
+        ["name"] = "doc.setIcon",
+        ["args"] = targetArgs.DeepClone(),
       }),
     };
     var targetExecution = await executor.ExecuteAsync(Target, targetBatch.ToJsonString(), Actor);

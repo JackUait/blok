@@ -64,18 +64,18 @@ internal static class RoomEditTranslator
           ops.Add(new CollabEditOp.Update(id, Object(changed["data"]).DeepClone().AsObject()));
           break;
         case "setTunes" when id is not null && blocks.TryGetValue(id, out var tuned):
-        {
-          // The final value of each tune the edit named; null where the batch removed it.
-          var tunes = new JsonObject();
-
-          foreach (var (name, _) in Object(edit["tunes"]))
           {
-            tunes[name] = tuned["tunes"]?[name]?.DeepClone();
-          }
+            // The final value of each tune the edit named; null where the batch removed it.
+            var tunes = new JsonObject();
 
-          ops.Add(new CollabEditOp.SetTunes(id, tunes));
-          break;
-        }
+            foreach (var (name, _) in Object(edit["tunes"]))
+            {
+              tunes[name] = tuned["tunes"]?[name]?.DeepClone();
+            }
+
+            ops.Add(new CollabEditOp.SetTunes(id, tunes));
+            break;
+          }
         case "replaceType" when id is not null && blocks.TryGetValue(id, out var retyped):
           ops.Add(new CollabEditOp.Retype(
               id,

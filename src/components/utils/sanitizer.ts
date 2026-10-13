@@ -242,7 +242,7 @@ export const stripUnsafeUrlsDeep = (
   data: BlockToolData,
   rules?: SanitizerConfig | ToolSanitizerConfig
 ): BlockToolData => {
-  return stripUnsafeUrlsDeepValue(data, rules as DeepSanitizerRule) as BlockToolData;
+  return stripUnsafeUrlsDeepValue(data, rules) as BlockToolData;
 };
 
 const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule, depth = 0): DeepData => {

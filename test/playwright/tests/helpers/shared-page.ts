@@ -1,5 +1,5 @@
 import { test as base } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
 
 import { TEST_PAGE_URL } from './ensure-build';
 
@@ -28,18 +28,54 @@ const lastSpecFile = new WeakMap<Page, string>();
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 const needsFreshNavigation = new WeakSet<Page>();
 
-export const test = base.extend<NonNullable<unknown>, { __sharedPage: Page }>({
+/** Contexts whose clock a test faked. */
+const fakedClock = new WeakSet<BrowserContext>();
+
+const openPage = async (browser: Browser): Promise<Page> => {
+  const context = await browser.newContext();
+  // page.clock IS context.clock. A fake clock cannot be uninstalled and comes
+  // back on every navigation, so a frozen Date.now would reach every later
+  // test on this worker (undo steps never close, undo presses get deduped).
+  const { clock } = context;
+  const mark = <A extends unknown[], R>(method: (...args: A) => Promise<R>) =>
+    (...args: A): Promise<R> => {
+      fakedClock.add(context);
+
+      return method.apply(clock, args);
+    };
+
+  clock.install = mark(clock.install);
+  clock.fastForward = mark(clock.fastForward);
+  clock.pauseAt = mark(clock.pauseAt);
+  clock.resume = mark(clock.resume);
+  clock.runFor = mark(clock.runFor);
+  clock.setFixedTime = mark(clock.setFixedTime);
+  clock.setSystemTime = mark(clock.setSystemTime);
+
+  return context.newPage();
+};
+
+export const test = base.extend<NonNullable<unknown>, { __sharedPage: () => Promise<Page> }>({
   __sharedPage: [
     async ({ browser }, use) => {
-      const context = await browser.newContext();
-      const page = await context.newPage();
+      let page = await openPage(browser);
 
-      await use(page);
-      await context.close().catch(() => undefined);
+      await use(async () => {
+        // A test that faked the clock hands the next test a fresh context.
+        if (fakedClock.has(page.context())) {
+          await page.context().close().catch(() => undefined);
+          page = await openPage(browser);
+        }
+
+        return page;
+      });
+      await page.context().close().catch(() => undefined);
     },
     { scope: 'worker' },
   ],
   page: async ({ __sharedPage }, use, testInfo) => {
+    const page = await __sharedPage();
+
     // In-place reset is only allowed WITHIN a spec file, where test order is
     // fixed and any state dependency is deterministic. When the worker moves
     // to a different file, gotoTestPage performs a real navigation — a fresh
@@ -47,20 +83,20 @@ export const test = base.extend<NonNullable<unknown>, { __sharedPage: Page }>({
     // is work-stealing roulette and would make the suite non-deterministic).
     // The reload is cheap here: the worker-lived context has a warm HTTP
     // cache, unlike the default fixture's brand-new context per test.
-    if (lastSpecFile.get(__sharedPage) !== testInfo.file) {
-      lastSpecFile.set(__sharedPage, testInfo.file);
-      needsFreshNavigation.add(__sharedPage);
+    if (lastSpecFile.get(page) !== testInfo.file) {
+      lastSpecFile.set(page, testInfo.file);
+      needsFreshNavigation.add(page);
 
       // Navigation does not reset the viewport: a spec that resized it would
       // shrink every later file on this worker (whichever file follows is
       // work-stealing roulette, so the leak only shows up on some shards).
       const viewport = testInfo.project.use.viewport ?? DEFAULT_VIEWPORT;
 
-      await __sharedPage.setViewportSize(viewport);
+      await page.setViewportSize(viewport);
       // Media emulation survives navigation too: a spec that set reduced
       // motion would strip every animation from the next file on this worker.
       // null = the bare newContext() default the page was created with.
-      await __sharedPage.emulateMedia({
+      await page.emulateMedia({
         media: null,
         colorScheme: null,
         reducedMotion: null,
@@ -68,7 +104,7 @@ export const test = base.extend<NonNullable<unknown>, { __sharedPage: Page }>({
         contrast: null,
       });
     }
-    await use(__sharedPage);
+    await use(page);
   },
 });
 

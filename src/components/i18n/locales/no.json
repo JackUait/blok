@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Sideinnstillinger",
   "tools.database.layoutApply": "Bruk på alle sider",
   "tools.database.layoutCancel": "Avbryt",
+  "tools.database.layoutMoreSaveOptions": "Flere lagringsalternativer",
   "tools.database.layoutDiscardTitle": "Vil du forkaste alle endringer i oppsettet?",
   "tools.database.layoutDiscard": "Forkast",
   "tools.database.layoutReset": "Tilbakestill til opprinnelig sideoppsett",

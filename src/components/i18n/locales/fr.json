@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Paramètres de la page",
   "tools.database.layoutApply": "Appliquer à toutes les pages",
   "tools.database.layoutCancel": "Annuler",
+  "tools.database.layoutMoreSaveOptions": "Plus d’options d’enregistrement",
   "tools.database.layoutDiscardTitle": "Ignorer toutes les modifications de la disposition ?",
   "tools.database.layoutDiscard": "Ignorer",
   "tools.database.layoutReset": "Réinitialiser à la disposition d’origine de la page",

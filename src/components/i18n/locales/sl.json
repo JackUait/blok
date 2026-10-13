@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Nastavitve strani",
   "tools.database.layoutApply": "Uporabi za vse strani",
   "tools.database.layoutCancel": "Prekliči",
+  "tools.database.layoutMoreSaveOptions": "Več možnosti shranjevanja",
   "tools.database.layoutDiscardTitle": "Želite zavreči vse spremembe postavitve?",
   "tools.database.layoutDiscard": "Zavrzi",
   "tools.database.layoutReset": "Ponastavi na izvirno postavitev strani",

@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Nastavení stránky",
   "tools.database.layoutApply": "Použít na všechny stránky",
   "tools.database.layoutCancel": "Zrušit",
+  "tools.database.layoutMoreSaveOptions": "Další možnosti uložení",
   "tools.database.layoutDiscardTitle": "Zahodit všechny změny rozvržení?",
   "tools.database.layoutDiscard": "Zahodit",
   "tools.database.layoutReset": "Obnovit původní rozvržení stránky",

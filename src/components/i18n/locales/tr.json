@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Sayfa ayarları",
   "tools.database.layoutApply": "Tüm sayfalara uygula",
   "tools.database.layoutCancel": "İptal",
+  "tools.database.layoutMoreSaveOptions": "Diğer kaydetme seçenekleri",
   "tools.database.layoutDiscardTitle": "Tüm düzen değişiklikleri atılsın mı?",
   "tools.database.layoutDiscard": "Değişiklikleri at",
   "tools.database.layoutReset": "Orijinal sayfa düzenine sıfırla",

@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Sideindstillinger",
   "tools.database.layoutApply": "Anvend på alle sider",
   "tools.database.layoutCancel": "Annuller",
+  "tools.database.layoutMoreSaveOptions": "Flere gemmeindstillinger",
   "tools.database.layoutDiscardTitle": "Vil du kassere alle ændringer i opsætningen?",
   "tools.database.layoutDiscard": "Kassér",
   "tools.database.layoutReset": "Nulstil til sidens oprindelige opsætning",

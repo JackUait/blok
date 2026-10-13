@@ -87,6 +87,11 @@
   /* Calendar (research/07 chrome, research/08 event card). */
   --blok-database-calendar-border: rgb(230, 229, 227);
   --blok-database-calendar-weekend-bg: rgb(249, 248, 247);
+  /* Layout builder: backdrop and split line measured (research/10 §8, research/09 §10).
+     Notion's canvas ring is blue; Blok's is neutral (plan 11 Q6). */
+  --blok-database-builder-backdrop: rgb(249, 248, 247);
+  --blok-database-builder-canvas-ring: rgba(42, 28, 0, 0.07);
+  --blok-database-builder-split-line: rgba(28, 19, 1, 0.11);
   --blok-database-calendar-muted-text: rgb(161, 158, 153);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
@@ -230,6 +235,10 @@
     /* Dark calendar is unmeasured: table and gallery dark values stand in. */
     --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
     --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+    /* Dark builder is unmeasured: the dark card fill and table line stand in. */
+    --blok-database-builder-backdrop: rgb(32, 32, 32);
+    --blok-database-builder-canvas-ring: rgba(255, 255, 243, 0.082);
+    --blok-database-builder-split-line: rgba(255, 255, 255, 0.16);
     --blok-database-calendar-muted-text: rgb(125, 122, 117);
     --blok-database-calendar-day-text: rgb(240, 239, 237);
     --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -361,6 +370,10 @@
   /* Dark calendar is unmeasured: table and gallery dark values stand in. */
   --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
   --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+  /* Dark builder is unmeasured: the dark card fill and table line stand in. */
+  --blok-database-builder-backdrop: rgb(32, 32, 32);
+  --blok-database-builder-canvas-ring: rgba(255, 255, 243, 0.082);
+  --blok-database-builder-split-line: rgba(255, 255, 255, 0.16);
   --blok-database-calendar-muted-text: rgb(125, 122, 117);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -2025,31 +2038,197 @@
 [data-blok-database-drawer-content]:hover [data-blok-database-drawer-customize],
 [data-blok-database-drawer-customize]:focus-visible { opacity: 1; }
 
-[data-blok-database-drawer-layout-bar] {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+/*
+ * The full-window "Customize page layout" builder (research/09 §1, §10;
+ * research/10 §8). It mounts on body, so only attribute selectors reach it.
+ */
+[data-blok-database-layout-builder] {
+  position: fixed;
+  inset: 0;
+  z-index: var(--blok-z-drawer);
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--blok-space-1);
-  margin-bottom: var(--blok-space-3);
-  padding: var(--blok-space-1-5) var(--blok-space-2);
-  border: 1px solid var(--blok-database-drawer-border);
-  border-radius: var(--blok-radius-control);
-  background-color: var(--blok-bg-primary);
+  flex-direction: column;
+  background-color: var(--blok-database-builder-backdrop);
+  color: var(--blok-text-primary);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: 14px;
 }
 
-[data-blok-database-layout-bar-title] {
-  flex: 1;
-  color: var(--blok-text-primary);
+/* Beats the top-layer reset's inset: auto and the data-blok-popover reset's transparent background. */
+[data-blok-database-layout-builder][data-blok-top-layer][popover] {
+  inset: 0;
+  background-color: var(--blok-database-builder-backdrop);
+}
+
+[data-blok-database-layout-topbar] {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  align-items: center;
+  block-size: 60px;
+  padding-inline: var(--blok-space-4);
+}
+
+/* Centered on the window, not between the bar's items. Not focusable. */
+[data-blok-database-layout-heading] {
+  position: absolute;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-1-5);
+  margin-inline: auto;
+  inline-size: fit-content;
+  max-inline-size: 40%;
+  font-size: 16px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+[data-blok-database-layout-heading] svg {
+  flex-shrink: 0;
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+[data-blok-database-layout-title] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-layout-actions] {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--blok-space-2);
+  margin-inline-start: auto;
+}
+
+[data-blok-database-layout-apply-split] {
+  display: inline-flex;
+}
+
+[data-blok-database-layout-cancel],
+[data-blok-database-layout-apply] {
+  display: inline-flex;
+  align-items: center;
+  block-size: 32px;
+  border: none;
+  border-radius: var(--blok-radius-control);
   font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* research/09 §10: x + "Cancel", 0 12px padding, 8px gap, no fill. */
+[data-blok-database-layout-cancel] {
+  gap: var(--blok-space-2);
+  padding-inline: var(--blok-space-3);
+  background: none;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-layout-cancel] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+/* research/09 §10: the primary action keeps its blue fill (a button, not a selected state). */
+[data-blok-database-layout-apply] {
+  gap: var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  background-color: var(--blok-accent);
+  color: var(--blok-text-on-dark);
   font-weight: 500;
 }
 
+[data-blok-database-layout-apply] svg,
+[data-blok-database-layout-more-save] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+/* research/09 §10: the 24x32 chevron half "More save options". */
+[data-blok-database-layout-more-save] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 32px;
+  padding: 0;
+  border: none;
+  border-inline-start: 1px solid var(--blok-database-builder-split-line);
+  border-radius: var(--blok-radius-control);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  background-color: var(--blok-accent);
+  color: var(--blok-text-on-dark);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  [data-blok-database-layout-apply]:hover,
+  [data-blok-database-layout-more-save]:hover {
+    background-color: color-mix(in srgb, var(--blok-accent) 88%, black);
+  }
+}
+
+[data-blok-database-layout-cancel]:focus-visible,
+[data-blok-database-layout-apply]:focus-visible,
+[data-blok-database-layout-more-save]:focus-visible,
+[data-blok-database-layout-settings]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-database-layout-body] {
+  display: flex;
+  flex: 1;
+  min-block-size: 0;
+}
+
+/* research/10 §8: white card, top corners rounded, running off the bottom. The ring is neutral (Q6). */
+[data-blok-database-layout-canvas] {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  overflow-y: auto;
+  margin-inline-start: var(--blok-space-6);
+  padding: var(--blok-space-10) 60px var(--blok-space-5);
+  border-start-start-radius: var(--blok-radius-dialog);
+  border-start-end-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-bg-primary);
+  box-shadow: 0 0 0 3px var(--blok-database-builder-canvas-ring);
+}
+
+[data-blok-database-layout-canvas-title] {
+  margin-block: 0 var(--blok-space-3);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Page settings column (research/09 §10: 290px). Phase 4 fills it. */
+[data-blok-database-layout-side] {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+  box-sizing: border-box;
+  inline-size: 290px;
+  max-inline-size: 40%;
+  padding-inline: var(--blok-space-4);
+}
+
+[data-blok-database-layout-side] [data-blok-database-search-input] {
+  inline-size: 100%;
+}
+
 [data-blok-database-layout-settings],
-[data-blok-database-layout-cancel],
-[data-blok-database-layout-apply],
 [data-blok-database-layout-add-section],
 [data-blok-database-layout-add-pin],
 [data-blok-database-drawer-details-toggle],
@@ -2066,11 +2245,6 @@
   color: var(--blok-database-add-text);
   font-size: 14px;
   cursor: pointer;
-}
-
-[data-blok-database-layout-apply] {
-  color: var(--blok-text-primary);
-  font-weight: 500;
 }
 
 [data-blok-database-layout-item-menu],
@@ -2335,7 +2509,6 @@
   [data-blok-database-drawer-customize]:hover,
   [data-blok-database-layout-settings]:hover,
   [data-blok-database-layout-cancel]:hover,
-  [data-blok-database-layout-apply]:hover,
   [data-blok-database-layout-add-section]:hover,
   [data-blok-database-layout-add-pin]:not(:disabled):hover,
   [data-blok-database-layout-item-menu]:hover,

@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Mga setting ng pahina",
   "tools.database.layoutApply": "Ilapat sa lahat ng pahina",
   "tools.database.layoutCancel": "Kanselahin",
+  "tools.database.layoutMoreSaveOptions": "Iba pang opsyon sa pag-save",
   "tools.database.layoutDiscardTitle": "Itapon ang lahat ng pagbabago sa ayos?",
   "tools.database.layoutDiscard": "Itapon",
   "tools.database.layoutReset": "I-reset sa orihinal na ayos ng pahina",

@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Configuración de la página",
   "tools.database.layoutApply": "Aplicar a todas las páginas",
   "tools.database.layoutCancel": "Cancelar",
+  "tools.database.layoutMoreSaveOptions": "Más opciones de guardado",
   "tools.database.layoutDiscardTitle": "¿Descartar todos los cambios del diseño?",
   "tools.database.layoutDiscard": "Descartar",
   "tools.database.layoutReset": "Restablecer el diseño original de la página",

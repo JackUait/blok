@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "הגדרות דף",
   "tools.database.layoutApply": "החל על כל הדפים",
   "tools.database.layoutCancel": "ביטול",
+  "tools.database.layoutMoreSaveOptions": "אפשרויות שמירה נוספות",
   "tools.database.layoutDiscardTitle": "להשליך את כל השינויים בפריסה?",
   "tools.database.layoutDiscard": "השלך",
   "tools.database.layoutReset": "אפס לפריסת הדף המקורית",

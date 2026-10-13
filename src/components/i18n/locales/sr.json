@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Подешавања странице",
   "tools.database.layoutApply": "Примени на све странице",
   "tools.database.layoutCancel": "Откажи",
+  "tools.database.layoutMoreSaveOptions": "Још опција чувања",
   "tools.database.layoutDiscardTitle": "Одбацити све измене распореда?",
   "tools.database.layoutDiscard": "Одбаци",
   "tools.database.layoutReset": "Ресетуј на првобитни распоред странице",

@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Cilësimet e faqes",
   "tools.database.layoutApply": "Zbato në të gjitha faqet",
   "tools.database.layoutCancel": "Anulo",
+  "tools.database.layoutMoreSaveOptions": "Më shumë opsione ruajtjeje",
   "tools.database.layoutDiscardTitle": "Të hidhen poshtë të gjitha ndryshimet e strukturës?",
   "tools.database.layoutDiscard": "Hidh poshtë",
   "tools.database.layoutReset": "Rivendos në strukturën origjinale të faqes",

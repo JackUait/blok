@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Cài đặt trang",
   "tools.database.layoutApply": "Áp dụng cho tất cả trang",
   "tools.database.layoutCancel": "Hủy",
+  "tools.database.layoutMoreSaveOptions": "Tùy chọn lưu khác",
   "tools.database.layoutDiscardTitle": "Bỏ tất cả thay đổi bố cục?",
   "tools.database.layoutDiscard": "Bỏ",
   "tools.database.layoutReset": "Đặt lại về bố cục trang ban đầu",

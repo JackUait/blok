@@ -133,6 +133,53 @@ describe('database row page layout css', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-drawer-pins]')).toContain('to left');
   });
 
+  // research/10 §8: backdrop rgb(249,248,247). The canvas ring is neutral, not Notion's blue (Q6).
+  it('paints the backdrop and the canvas ring with builder tokens', () => {
+    const root = ruleBody('[data-blok-database-layout-builder]');
+    const canvas = ruleBody('[data-blok-database-layout-canvas]');
+
+    expect(root).toContain('position: fixed');
+    expect(root).toContain('inset: 0');
+    expect(root).toContain('background-color: var(--blok-database-builder-backdrop)');
+    // Body-mounted: nothing else gives it the editor's font.
+    expect(root).toContain('font-family: var(--blok-font-family, var(--blok-font-sans))');
+    expect(database).toMatch(/--blok-database-builder-backdrop: rgb\(249, 248, 247\);/);
+    expect(canvas).toContain('background-color: var(--blok-bg-primary)');
+    expect(canvas).toContain('box-shadow: 0 0 0 3px var(--blok-database-builder-canvas-ring)');
+    expect(canvas).toContain('border-start-start-radius: var(--blok-radius-dialog)');
+    expect(canvas).toContain('border-start-end-radius: var(--blok-radius-dialog)');
+    const rings = [...database.matchAll(/--blok-database-builder-canvas-ring: ([^;]+);/g)].map((m) => m[1]);
+
+    expect(rings.length).toBeGreaterThan(0);
+    for (const ring of rings) expect(ring).not.toMatch(/rgb\(206, 227, 247\)|accent|blue|#2383e2/i);
+  });
+
+  // research/09 §10: 60px bar, 16px side padding; at 756px nothing wraps.
+  it('keeps the top bar on one line at 756px', () => {
+    const bar = ruleBody('[data-blok-database-layout-topbar]');
+
+    expect(bar).toContain('display: flex');
+    expect(bar).toContain('flex-wrap: nowrap');
+    expect(bar).toContain('block-size: 60px');
+    expect(bar).toContain('padding-inline: var(--blok-space-4)');
+    expect(ruleBody('[data-blok-database-layout-actions]')).toContain('flex-shrink: 0');
+    expect(ruleBody('[data-blok-database-layout-cancel], [data-blok-database-layout-apply]')).toContain('white-space: nowrap');
+  });
+
+  // research/09 §10: Cancel has no fill; Apply is the primary action, so it stays blue.
+  it('fills only Apply, and joins its chevron half to it', () => {
+    expect(ruleBody('[data-blok-database-layout-cancel]')).toContain('background: none');
+    expect(ruleBody('[data-blok-database-layout-apply]')).toContain('background-color: var(--blok-accent)');
+    expect(ruleBody('[data-blok-database-layout-apply]')).toContain('border-start-end-radius: 0');
+    expect(ruleBody('[data-blok-database-layout-more-save]')).toContain('background-color: var(--blok-accent)');
+    expect(ruleBody('[data-blok-database-layout-more-save]')).toContain('border-start-start-radius: 0');
+  });
+
+  // Rings follow keyboard modality, never a click.
+  it('rings builder controls on keyboard focus only', () => {
+    expect(database).toMatch(/\[data-blok-database-layout-cancel\]:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--blok-focus-ring\)/);
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

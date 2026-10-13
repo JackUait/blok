@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Налаштування сторінки",
   "tools.database.layoutApply": "Застосувати до всіх сторінок",
   "tools.database.layoutCancel": "Скасувати",
+  "tools.database.layoutMoreSaveOptions": "Інші параметри збереження",
   "tools.database.layoutDiscardTitle": "Відхилити всі зміни макета?",
   "tools.database.layoutDiscard": "Відхилити",
   "tools.database.layoutReset": "Скинути до початкового макета сторінки",

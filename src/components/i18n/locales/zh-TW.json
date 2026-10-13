@@ -686,6 +686,7 @@
   "tools.database.layoutPageSettings": "頁面設定",
   "tools.database.layoutApply": "套用至所有頁面",
   "tools.database.layoutCancel": "取消",
+  "tools.database.layoutMoreSaveOptions": "更多儲存選項",
   "tools.database.layoutDiscardTitle": "要捨棄所有版面配置變更嗎？",
   "tools.database.layoutDiscard": "捨棄",
   "tools.database.layoutReset": "重設為原始頁面版面配置",

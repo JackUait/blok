@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "页面设置",
   "tools.database.layoutApply": "应用于所有页面",
   "tools.database.layoutCancel": "取消",
+  "tools.database.layoutMoreSaveOptions": "更多保存选项",
   "tools.database.layoutDiscardTitle": "要放弃所有布局更改吗？",
   "tools.database.layoutDiscard": "放弃",
   "tools.database.layoutReset": "重置为原始页面布局",

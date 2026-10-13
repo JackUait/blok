@@ -5241,6 +5241,7 @@ export class DatabaseTool implements BlockTool {
           if (!this.readOnly && this.model.bearPageLayout()) this.block.dispatchChange({ derived: true });
         },
         databaseLocked: () => this.structureLocked(),
+        databaseTitle: () => this.titleElement?.textContent ?? this.title,
       });
     }
 

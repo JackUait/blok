@@ -820,6 +820,7 @@ export type BlokMessageKey =
   | 'tools.database.layoutGroupInPanel'
   | 'tools.database.layoutItemOptions'
   | 'tools.database.layoutLeaveSection'
+  | 'tools.database.layoutMoreSaveOptions'
   | 'tools.database.layoutMoveDown'
   | 'tools.database.layoutMoveToPage'
   | 'tools.database.layoutMoveToPanel'

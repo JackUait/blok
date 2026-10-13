@@ -581,6 +581,7 @@
   "tools.database.layoutPageSettings": "ການຕັ້ງຄ່າໜ້າ",
   "tools.database.layoutApply": "ນຳໃຊ້ກັບທຸກໜ້າ",
   "tools.database.layoutCancel": "ຍົກເລີກ",
+  "tools.database.layoutMoreSaveOptions": "ຕົວເລືອກການບັນທຶກເພີ່ມເຕີມ",
   "tools.database.layoutDiscardTitle": "ລະທິ້ງການປ່ຽນແປງໂຄງຮ່າງທັງໝົດບໍ່?",
   "tools.database.layoutDiscard": "ລະທິ້ງ",
   "tools.database.layoutReset": "ຕັ້ງຄືນໃໝ່ເປັນໂຄງຮ່າງໜ້າເດີມ",

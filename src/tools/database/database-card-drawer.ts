@@ -49,7 +49,7 @@ import {
 } from './page-layout';
 import type { PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
-import { openDatabaseConfirm } from './database-confirm-dialog';
+import { PageLayoutBuilder } from './page-layout-builder';
 
 /** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
@@ -184,6 +184,8 @@ export interface CardDrawerOptions {
   onPageLayoutBirth?: () => void;
   /** A locked database keeps its layout. */
   databaseLocked?: () => boolean;
+  /** The database's name, for the layout builder's top bar. */
+  databaseTitle?: () => string;
 }
 
 const isEmptyValue = (value: PropertyValue): boolean =>
@@ -274,8 +276,11 @@ export class DatabaseCardDrawer {
   private readonly onPageLayoutChange: CardDrawerOptions['onPageLayoutChange'];
   private readonly onPageLayoutBirth: CardDrawerOptions['onPageLayoutBirth'];
   private readonly databaseLocked: () => boolean;
+  private readonly databaseTitle: () => string;
   /** The edits of an open Customize layout, or null when not customizing. */
   private draft: PageLayoutDraft | null = null;
+  /** Open exactly while `draft` is. It makes the rest of the page inert, so every exit must close it. */
+  private builder: PageLayoutBuilder | null = null;
   private layoutMenu: PopoverDesktop | null = null;
   /** Watches the pins scroller for overflow. Replaced on every redraw. */
   private pinsObserver: ResizeObserver | null = null;
@@ -356,6 +361,7 @@ export class DatabaseCardDrawer {
     this.onPageLayoutChange = options.onPageLayoutChange;
     this.onPageLayoutBirth = options.onPageLayoutBirth;
     this.databaseLocked = options.databaseLocked ?? ((): boolean => false);
+    this.databaseTitle = options.databaseTitle ?? ((): string => '');
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -556,7 +562,7 @@ export class DatabaseCardDrawer {
     this.outsideClickHandler = (e: MouseEvent): void => {
       const target = e.target as Node | null;
 
-      if ((target && drawer.contains(target)) || this.mode === 'full') {
+      if ((target && drawer.contains(target)) || this.mode === 'full' || (target !== null && this.builder?.contains(target) === true)) {
         return;
       }
 
@@ -650,7 +656,7 @@ export class DatabaseCardDrawer {
     this.closeLayoutMenu();
     this.stopWatchingPins();
     this.draft = null;
-    this.drawer?.querySelector('[data-blok-database-drawer-layout-bar]')?.remove();
+    this.closeBuilder();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
     this.emojiPicker = null;
@@ -696,6 +702,8 @@ export class DatabaseCardDrawer {
     this.releasePeekHost();
     this.closeModeMenu();
     this.closeLayoutMenu();
+    this.draft = null;
+    this.closeBuilder();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
     this.emojiPicker = null;
@@ -1396,13 +1404,17 @@ export class DatabaseCardDrawer {
     if (content === null || divider === null) {
       return;
     }
+    this.syncBuilder();
+    const canvas = this.builder?.canvas ?? null;
+
     content.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
+    canvas?.replaceChildren();
     this.drawer?.removeAttribute('data-details-open');
     this.stopWatchingPins();
     const resolved = this.resolvedLayout();
 
     this.propertyIcons = resolved.propertyIcons;
-    const search = this.draft === null ? '' : this.drawer?.querySelector<HTMLInputElement>('[data-blok-database-layout-search]')?.value.trim().toLowerCase() ?? '';
+    const search = this.builder?.query ?? '';
     const matches = (def: PropertyDefinition): boolean => def.name.toLowerCase().includes(search);
     const layout: ResolvedPageLayout = {
       ...resolved,
@@ -1452,9 +1464,16 @@ export class DatabaseCardDrawer {
     }
     for (const region of regions) {
       region.setAttribute('data-blok-database-drawer-region', '');
-      content.insertBefore(region, divider);
     }
-    this.renderLayoutBar();
+    if (canvas !== null) {
+      const title = document.createElement('h1');
+
+      title.setAttribute('data-blok-database-layout-canvas-title', '');
+      title.textContent = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
+      canvas.append(title, ...regions);
+    } else {
+      for (const region of regions) content.insertBefore(region, divider);
+    }
     this.syncDetailsDock();
   }
 
@@ -1644,7 +1663,8 @@ export class DatabaseCardDrawer {
     panel.setAttribute('role', 'region');
     panel.setAttribute('aria-label', this.label('tools.database.layoutDetailsPanel'));
     panel.hidden = this.draft === null && !this.detailsOpen;
-    this.drawer?.toggleAttribute('data-details-open', !panel.hidden);
+    // While customizing the panel is in the builder's canvas, so the page must not dock it.
+    this.drawer?.toggleAttribute('data-details-open', this.draft === null && !panel.hidden);
     panel.append(...group);
     if (layout.panelModules.length > 0) {
       panel.appendChild(this.moduleList('data-blok-database-drawer-panel-modules', 'panel', layout.panelModules, row));
@@ -1689,79 +1709,47 @@ export class DatabaseCardDrawer {
     if (this.currentRow !== null) this.renderRegions(this.currentRow);
   }
 
-  /** Cancel: with edits, asks first. Discard also deletes the properties made meanwhile (research/09 §3b). */
-  private cancelCustomizing(): void {
+  /** Discard drops the draft and deletes the properties made meanwhile (research/09 §3b). */
+  private discardCustomizing(): void {
+    const made = this.draft?.madeProperties ?? [];
+
+    this.finishCustomizing(false);
+    for (const id of made) this.onDeleteProperty?.(id);
+  }
+
+  /** Opens the full-window builder while a draft is open, and closes it once the draft is gone. */
+  private syncBuilder(): void {
     if (this.draft === null) {
-      return;
-    }
-    if (isDraftEmpty(this.draft)) {
-      this.finishCustomizing(false);
+      this.closeBuilder();
 
       return;
     }
-    const draft = this.draft;
+    if (this.builder !== null) {
+      // The host refreshes the drawer after a rename (setData), so the title can change while open.
+      this.builder.setTitle(this.databaseTitle());
 
-    this.closeLayoutMenu();
-    void openDatabaseConfirm({
-      title: this.label('tools.database.layoutDiscardTitle'),
-      confirmLabel: this.label('tools.database.layoutDiscard'),
-      cancelLabel: this.label('tools.database.layoutCancel'),
-      destructive: true,
+      return;
+    }
+    this.builder = new PageLayoutBuilder({
+      i18n: this.i18n,
+      title: this.databaseTitle(),
       directionSource: this.drawer,
-      // A peek closes on a click outside it, so the dialog mounts inside. A full page does not,
-      // and there the docked details panel would paint over an in-page dialog.
-      ...(this.drawer === null || this.mode === 'full' ? {} : { container: this.drawer }),
-    }).then((discard) => {
-      // The page closed or customizing ended while the question was open.
-      if (!discard || this.draft !== draft) return;
-      const made = draft.madeProperties;
-
-      this.finishCustomizing(false);
-      for (const id of made) this.onDeleteProperty?.(id);
+      hasEdits: () => this.draft !== null && !isDraftEmpty(this.draft),
+      onApply: () => this.finishCustomizing(true),
+      onDiscard: () => this.discardCustomizing(),
+      onReset: () => this.resetLayout(),
+      onPageSettings: (anchor) => this.openPageSettings(anchor),
+      onSearch: () => {
+        if (this.currentRow !== null) this.renderRegions(this.currentRow);
+      },
     });
   }
 
-  /** The builder bar at the top of the page while customizing. */
-  private renderLayoutBar(): void {
-    const content = this.drawer?.querySelector('[data-blok-database-drawer-content]') ?? null;
-    const existing = content?.querySelector(':scope > [data-blok-database-drawer-layout-bar]') ?? null;
+  private closeBuilder(): void {
+    const builder = this.builder;
 
-    if (this.draft === null || content === null) {
-      existing?.remove();
-
-      return;
-    }
-    if (existing !== null) {
-      return;
-    }
-    const bar = document.createElement('div');
-    const title = document.createElement('span');
-
-    bar.setAttribute('data-blok-database-drawer-layout-bar', '');
-    bar.setAttribute('role', 'toolbar');
-    bar.setAttribute('aria-label', this.label('tools.database.layoutCustomize'));
-    title.setAttribute('data-blok-database-layout-bar-title', '');
-    title.textContent = this.label('tools.database.layoutCustomizing');
-    const search = document.createElement('input');
-
-    search.type = 'search';
-    search.setAttribute('data-blok-database-layout-search', '');
-    search.setAttribute('data-blok-database-search-input', '');
-    search.setAttribute('aria-label', this.label('tools.database.searchLabel'));
-    search.placeholder = this.label('tools.database.searchPlaceholder');
-    search.addEventListener('input', () => {
-      if (this.currentRow !== null) this.renderRegions(this.currentRow);
-    });
-    const settings = this.textButton('data-blok-database-layout-settings', 'tools.database.layoutPageSettings', () => this.openPageSettings(settings));
-
-    bar.append(
-      title,
-      search,
-      settings,
-      this.textButton('data-blok-database-layout-cancel', 'tools.database.layoutCancel', () => this.cancelCustomizing()),
-      this.textButton('data-blok-database-layout-apply', 'tools.database.layoutApply', () => this.finishCustomizing(true))
-    );
-    content.prepend(bar);
+    this.builder = null;
+    builder?.close();
   }
 
   private textButton(attr: string, key: string, onClick: () => void): HTMLButtonElement {
@@ -1800,15 +1788,6 @@ export class DatabaseCardDrawer {
       { type: PopoverItemType.Separator },
       // Notion's toggle here was never measured; a check item matches the rows above.
       { type: PopoverItemType.Default, name: 'property-icons', title: this.label('tools.database.layoutPropertyIcons'), ...check(layout.propertyIcons), closeOnActivate: true, onActivate: () => this.editLayout(setPropertyIcons(!layout.propertyIcons)) },
-      { type: PopoverItemType.Separator },
-      {
-        type: PopoverItemType.Default,
-        name: 'reset',
-        title: this.label('tools.database.layoutReset'),
-        secondaryLabel: this.label('tools.database.layoutResetDescription'),
-        closeOnActivate: true,
-        onActivate: () => this.resetLayout(),
-      },
     ] as PopoverItemParams[]);
   }
 
@@ -2050,7 +2029,8 @@ export class DatabaseCardDrawer {
       head.appendChild(icon);
     }
     head.appendChild(label);
-    if (!this.readOnly && this.onOpenPropertyMenu !== undefined) {
+    // The live property menu writes at once, so it would skip the draft.
+    if (!this.readOnly && this.onOpenPropertyMenu !== undefined && this.draft === null) {
       const openMenu = this.onOpenPropertyMenu;
 
       label.setAttribute('role', 'button');

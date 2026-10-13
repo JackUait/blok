@@ -581,6 +581,7 @@
   "tools.database.layoutPageSettings": "페이지 설정",
   "tools.database.layoutApply": "모든 페이지에 적용",
   "tools.database.layoutCancel": "취소",
+  "tools.database.layoutMoreSaveOptions": "추가 저장 옵션",
   "tools.database.layoutDiscardTitle": "레이아웃 변경 사항을 모두 버릴까요?",
   "tools.database.layoutDiscard": "버리기",
   "tools.database.layoutReset": "원래 페이지 레이아웃으로 초기화",

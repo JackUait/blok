@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "পৃষ্ঠার সেটিংস",
   "tools.database.layoutApply": "সব পৃষ্ঠায় প্রয়োগ করুন",
   "tools.database.layoutCancel": "বাতিল",
+  "tools.database.layoutMoreSaveOptions": "আরও সংরক্ষণ বিকল্প",
   "tools.database.layoutDiscardTitle": "লেআউটের সব পরিবর্তন বাদ দেবেন?",
   "tools.database.layoutDiscard": "বাদ দিন",
   "tools.database.layoutReset": "মূল পৃষ্ঠা লেআউটে রিসেট করুন",

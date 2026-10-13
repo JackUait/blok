@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Postavke stranice",
   "tools.database.layoutApply": "Primijeni na sve stranice",
   "tools.database.layoutCancel": "Otkaži",
+  "tools.database.layoutMoreSaveOptions": "Više opcija čuvanja",
   "tools.database.layoutDiscardTitle": "Odbaciti sve promjene rasporeda?",
   "tools.database.layoutDiscard": "Odbaci",
   "tools.database.layoutReset": "Resetuj na izvorni raspored stranice",

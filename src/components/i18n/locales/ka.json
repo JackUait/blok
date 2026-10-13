@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "გვერდის პარამეტრები",
   "tools.database.layoutApply": "ყველა გვერდზე გამოყენება",
   "tools.database.layoutCancel": "გაუქმება",
+  "tools.database.layoutMoreSaveOptions": "შენახვის მეტი პარამეტრები",
   "tools.database.layoutDiscardTitle": "უარვყოთ განლაგების ყველა ცვლილება?",
   "tools.database.layoutDiscard": "უარყოფა",
   "tools.database.layoutReset": "გვერდის საწყის განლაგებაზე გადაყენება",

@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Lehe sätted",
   "tools.database.layoutApply": "Rakenda kõigile lehtedele",
   "tools.database.layoutCancel": "Tühista",
+  "tools.database.layoutMoreSaveOptions": "Rohkem salvestusvalikuid",
   "tools.database.layoutDiscardTitle": "Kas loobuda kõigist paigutuse muudatustest?",
   "tools.database.layoutDiscard": "Loobu",
   "tools.database.layoutReset": "Lähtesta lehe algne paigutus",

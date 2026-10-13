@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Ρυθμίσεις σελίδας",
   "tools.database.layoutApply": "Εφαρμογή σε όλες τις σελίδες",
   "tools.database.layoutCancel": "Ακύρωση",
+  "tools.database.layoutMoreSaveOptions": "Περισσότερες επιλογές αποθήκευσης",
   "tools.database.layoutDiscardTitle": "Απόρριψη όλων των αλλαγών διάταξης;",
   "tools.database.layoutDiscard": "Απόρριψη",
   "tools.database.layoutReset": "Επαναφορά στην αρχική διάταξη σελίδας",

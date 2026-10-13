@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Sivun asetukset",
   "tools.database.layoutApply": "Käytä kaikilla sivuilla",
   "tools.database.layoutCancel": "Peruuta",
+  "tools.database.layoutMoreSaveOptions": "Lisää tallennusvaihtoehtoja",
   "tools.database.layoutDiscardTitle": "Hylätäänkö kaikki asettelun muutokset?",
   "tools.database.layoutDiscard": "Hylkää",
   "tools.database.layoutReset": "Palauta sivun alkuperäinen asettelu",

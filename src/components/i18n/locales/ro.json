@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Setările paginii",
   "tools.database.layoutApply": "Aplică la toate paginile",
   "tools.database.layoutCancel": "Anulează",
+  "tools.database.layoutMoreSaveOptions": "Mai multe opțiuni de salvare",
   "tools.database.layoutDiscardTitle": "Renunțați la toate modificările aspectului?",
   "tools.database.layoutDiscard": "Renunță",
   "tools.database.layoutReset": "Resetează la aspectul original al paginii",

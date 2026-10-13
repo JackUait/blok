@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Pagina-instellingen",
   "tools.database.layoutApply": "Toepassen op alle pagina's",
   "tools.database.layoutCancel": "Annuleren",
+  "tools.database.layoutMoreSaveOptions": "Meer opslagopties",
   "tools.database.layoutDiscardTitle": "Alle indelingswijzigingen negeren?",
   "tools.database.layoutDiscard": "Negeren",
   "tools.database.layoutReset": "Oorspronkelijke pagina-indeling herstellen",

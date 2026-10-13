@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "Oldalbeállítások",
   "tools.database.layoutApply": "Alkalmazás minden oldalra",
   "tools.database.layoutCancel": "Mégse",
+  "tools.database.layoutMoreSaveOptions": "További mentési lehetőségek",
   "tools.database.layoutDiscardTitle": "Elveti az összes elrendezésmódosítást?",
   "tools.database.layoutDiscard": "Elvetés",
   "tools.database.layoutReset": "Visszaállítás az eredeti oldalelrendezésre",

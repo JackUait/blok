@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Настройки страницы",
   "tools.database.layoutApply": "Применить ко всем страницам",
   "tools.database.layoutCancel": "Отмена",
+  "tools.database.layoutMoreSaveOptions": "Другие параметры сохранения",
   "tools.database.layoutDiscardTitle": "Сбросить все изменения макета?",
   "tools.database.layoutDiscard": "Сбросить",
   "tools.database.layoutReset": "Сбросить до исходного макета страницы",

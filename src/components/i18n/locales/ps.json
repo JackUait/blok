@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "د پاڼې تنظیمات",
   "tools.database.layoutApply": "په ټولو پاڼو یې پلي کړئ",
   "tools.database.layoutCancel": "لغوه کړئ",
+  "tools.database.layoutMoreSaveOptions": "د خوندي کولو نور اختیارونه",
   "tools.database.layoutDiscardTitle": "د جوړښت ټول بدلونونه دې پرېښودل شي؟",
   "tools.database.layoutDiscard": "پرېږدئ",
   "tools.database.layoutReset": "د پاڼې اصلي جوړښت ته بیا تنظیم کړئ",

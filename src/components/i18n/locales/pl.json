@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Ustawienia strony",
   "tools.database.layoutApply": "Zastosuj do wszystkich stron",
   "tools.database.layoutCancel": "Anuluj",
+  "tools.database.layoutMoreSaveOptions": "Więcej opcji zapisywania",
   "tools.database.layoutDiscardTitle": "Odrzucić wszystkie zmiany układu?",
   "tools.database.layoutDiscard": "Odrzuć",
   "tools.database.layoutReset": "Resetuj do pierwotnego układu strony",

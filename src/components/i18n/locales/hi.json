@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "पृष्ठ सेटिंग",
   "tools.database.layoutApply": "सभी पृष्ठों पर लागू करें",
   "tools.database.layoutCancel": "रद्द करें",
+  "tools.database.layoutMoreSaveOptions": "सहेजने के और विकल्प",
   "tools.database.layoutDiscardTitle": "लेआउट के सभी बदलाव छोड़ें?",
   "tools.database.layoutDiscard": "छोड़ें",
   "tools.database.layoutReset": "मूल पृष्ठ लेआउट पर रीसेट करें",

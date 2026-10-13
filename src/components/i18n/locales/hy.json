@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Էջի կարգավորումներ",
   "tools.database.layoutApply": "Կիրառել բոլոր էջերի համար",
   "tools.database.layoutCancel": "Չեղարկել",
+  "tools.database.layoutMoreSaveOptions": "Պահելու այլ ընտրանքներ",
   "tools.database.layoutDiscardTitle": "Հրաժարվե՞լ դասավորության բոլոր փոփոխություններից",
   "tools.database.layoutDiscard": "Հրաժարվել",
   "tools.database.layoutReset": "Վերակայել էջի սկզբնական դասավորությունը",

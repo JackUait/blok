@@ -581,6 +581,7 @@
   "tools.database.layoutPageSettings": "Puslapio nustatymai",
   "tools.database.layoutApply": "Taikyti visiems puslapiams",
   "tools.database.layoutCancel": "Atšaukti",
+  "tools.database.layoutMoreSaveOptions": "Daugiau išsaugojimo parinkčių",
   "tools.database.layoutDiscardTitle": "Atmesti visus išdėstymo pakeitimus?",
   "tools.database.layoutDiscard": "Atmesti",
   "tools.database.layoutReset": "Atkurti pradinį puslapio išdėstymą",

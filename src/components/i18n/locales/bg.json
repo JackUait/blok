@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Настройки на страницата",
   "tools.database.layoutApply": "Приложи към всички страници",
   "tools.database.layoutCancel": "Отказ",
+  "tools.database.layoutMoreSaveOptions": "Още опции за запазване",
   "tools.database.layoutDiscardTitle": "Да се отхвърлят ли всички промени в оформлението?",
   "tools.database.layoutDiscard": "Отхвърли",
   "tools.database.layoutReset": "Нулирай до първоначалното оформление на страницата",

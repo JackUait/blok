@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "የገጽ ቅንብሮች",
   "tools.database.layoutApply": "በሁሉም ገጾች ላይ ተግብር",
   "tools.database.layoutCancel": "ይቅር",
+  "tools.database.layoutMoreSaveOptions": "ተጨማሪ የማስቀመጫ አማራጮች",
   "tools.database.layoutDiscardTitle": "ሁሉም የአቀማመጥ ለውጦች ይወገዱ?",
   "tools.database.layoutDiscard": "አስወግድ",
   "tools.database.layoutReset": "ወደ መጀመሪያው የገጽ አቀማመጥ ዳግም አስጀምር",

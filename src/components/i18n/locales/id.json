@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "Pengaturan halaman",
   "tools.database.layoutApply": "Terapkan ke semua halaman",
   "tools.database.layoutCancel": "Batal",
+  "tools.database.layoutMoreSaveOptions": "Opsi simpan lainnya",
   "tools.database.layoutDiscardTitle": "Buang semua perubahan tata letak?",
   "tools.database.layoutDiscard": "Buang",
   "tools.database.layoutReset": "Atur ulang ke tata letak halaman asli",

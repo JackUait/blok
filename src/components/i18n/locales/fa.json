@@ -568,6 +568,7 @@
   "tools.database.layoutPageSettings": "تنظیمات صفحه",
   "tools.database.layoutApply": "اعمال روی همه صفحه‌ها",
   "tools.database.layoutCancel": "لغو",
+  "tools.database.layoutMoreSaveOptions": "گزینه‌های بیشتر ذخیره",
   "tools.database.layoutDiscardTitle": "همه تغییرات چیدمان دور انداخته شود؟",
   "tools.database.layoutDiscard": "دور انداختن",
   "tools.database.layoutReset": "بازنشانی به چیدمان اصلی صفحه",

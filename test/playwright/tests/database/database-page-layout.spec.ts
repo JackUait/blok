@@ -92,10 +92,14 @@ const layoutBounds = async (page: Page): Promise<Record<'panelLeft' | 'panelRigh
     return { panelLeft: p.left, panelRight: p.right, panelTop: p.top, groupLeft: g.left, groupRight: g.right, groupBottom: g.bottom };
   });
 
-const pins = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-pins]');
+/** The full-window layout builder (research/09 §1). It sits on body, outside the peek. */
+const builder = (page: Page): Locator => page.getByRole('dialog', { name: 'Customize page layout' });
+
+/** The pins live in the peek, or in the builder's canvas while customizing. Never both. */
+const pins = (page: Page): Locator => page.locator('[data-blok-database-drawer-pins]');
 
 const layoutMenu = async (page: Page, propertyId: string): Promise<void> => {
-  await peek(page).locator(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`).click();
+  await builder(page).locator(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`).click();
 };
 
 test.beforeAll(ensureBlokBundleBuilt);
@@ -107,21 +111,74 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('row page layout', () => {
+  // research/09 §1 + §10, research/10 §8-9: a full-window takeover with its own top bar.
+  test('opens Customize page layout full window and applies from its top bar', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+
+    const dialog = builder(page);
+
+    await expect(dialog).toBeVisible();
+    expect(await dialog.boundingBox()).toEqual({ x: 0, y: 0, width: 1400, height: 900 });
+    expect(await dialog.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(249, 248, 247)');
+    await expect(dialog.getByRole('heading', { name: 'Alpha' })).toBeVisible();
+
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    const apply = dialog.getByRole('button', { name: 'Apply to all pages' });
+    const more = dialog.getByRole('button', { name: 'More save options' });
+
+    await cancel.focus();
+    await page.keyboard.press('Tab');
+    await expect(apply).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(more).toBeFocused();
+    const bar = await Promise.all([cancel, apply, more].map(async (el) => (await el.boundingBox())?.y));
+
+    expect(new Set(bar).size).toBe(1);
+
+    await layoutMenu(page, 'p-due');
+    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+    await expect(dialog.locator('[data-blok-database-drawer-pins] [data-property-id="p-due"]').first()).toBeVisible();
+    await apply.click();
+
+    await expect(dialog).toBeHidden();
+    expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-due', place: 'heading' }]);
+    await expect(peek(page).locator('[data-blok-database-drawer-pins] [data-property-id="p-due"]').first()).toBeVisible();
+  });
+
+  // research/09 §10: at 756px the bar stays on one 60px line.
+  test('keeps the builder top bar on one line at 756px', async ({ page }) => {
+    await page.setViewportSize({ width: 756, height: 717 });
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+    const boxes = await Promise.all(['Cancel', 'Apply to all pages', 'More save options'].map(async (name) =>
+      dialog.getByRole('button', { name, exact: true }).boundingBox()));
+
+    expect(new Set(boxes.map((box) => box?.y)).size).toBe(1);
+    for (const box of boxes) expect(box?.height).toBe(32);
+    expect(Math.max(...boxes.map((box) => (box?.x ?? 0) + (box?.width ?? 0)))).toBeLessThanOrEqual(756 - 16);
+  });
+
   test('pins a property for every page with Apply to all pages', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');
 
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeVisible();
+    await expect(builder(page)).toBeVisible();
 
     await layoutMenu(page, 'p-due');
     await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
     await expect(pins(page).locator('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toContainText('Friday');
     expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([]);
 
-    await peek(page).getByRole('button', { name: 'Apply to all pages' }).click();
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeHidden();
+    await builder(page).getByRole('button', { name: 'Apply to all pages' }).click();
+    await expect(builder(page)).toBeHidden();
     expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([{ id: 'p-due', place: 'heading' }]);
 
     await page.keyboard.press('Escape');
@@ -142,7 +199,7 @@ test.describe('row page layout', () => {
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
 
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeVisible();
+    await expect(builder(page)).toBeVisible();
     await expect(pins(page).locator('[data-property-id="p-due"]').first()).toBeVisible();
   });
 
@@ -156,13 +213,13 @@ test.describe('row page layout', () => {
     await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
     await expect(pins(page).locator('[data-property-id="p-due"]').first()).toBeVisible();
 
-    await peek(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+    await builder(page).getByRole('button', { name: 'Cancel', exact: true }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Discard all layout changes?' });
 
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Discard' }).click();
     await expect(dialog).toBeHidden();
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeHidden();
+    await expect(builder(page)).toBeHidden();
     await expect(pins(page)).toHaveCount(0);
     await expect(peek(page)).toBeVisible();
   });
@@ -175,7 +232,7 @@ test.describe('row page layout', () => {
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
     await layoutMenu(page, 'p-due');
     await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
-    await peek(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+    await builder(page).getByRole('button', { name: 'Cancel', exact: true }).click();
     const discard = page.getByRole('alertdialog', { name: 'Discard all layout changes?' }).getByRole('button', { name: 'Discard' });
 
     await expect(discard).toBeVisible();
@@ -185,7 +242,7 @@ test.describe('row page layout', () => {
       return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === el;
     })).toBe(true);
     await discard.click();
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeHidden();
+    await expect(builder(page)).toBeHidden();
     await expect(pins(page)).toHaveCount(0);
   });
 
@@ -324,9 +381,9 @@ test.describe('row page layout', () => {
     await expect(page.getByTestId('database-settings-subitems')).toBeVisible();
     await page.getByTestId('database-settings-customize-layout').click();
 
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeVisible();
-    await expect(peek(page).locator('[data-blok-database-drawer-title]')).toHaveValue('Alpha');
-    await expect(peek(page).locator('[data-blok-database-drawer-prop-icon]').first()).toBeVisible();
+    await expect(builder(page)).toBeVisible();
+    await expect(builder(page).getByRole('heading', { name: 'Alpha' })).toBeVisible();
+    await expect(builder(page).locator('[data-blok-database-drawer-prop-icon]').first()).toBeVisible();
   });
 
   // research/09 §4: 400px per click, clamped; each arrow shows only while the strip can scroll its way.
@@ -375,10 +432,10 @@ test.describe('row page layout', () => {
     await openRow(page, 'r1');
     await expect(peek(page).getByRole('button', { name: 'Scroll to next pinned properties' })).toBeVisible();
     await peek(page).locator('[data-blok-database-drawer-customize]').click();
-    await expect(peek(page).getByRole('toolbar', { name: 'Customize layout' })).toBeVisible();
+    await expect(builder(page)).toBeVisible();
 
-    await expect(peek(page).getByRole('button', { name: 'Scroll to next pinned properties' })).toHaveCount(0);
-    await expect(peek(page).locator('[data-blok-database-drawer-pins-row]')).toHaveAttribute('data-scroll-forward', '');
+    await expect(page.getByRole('button', { name: 'Scroll to next pinned properties' })).toHaveCount(0);
+    await expect(builder(page).locator('[data-blok-database-drawer-pins-row]')).toHaveAttribute('data-scroll-forward', '');
   });
 
   test('shows no pin arrows when the pins fit', async ({ page }) => {
@@ -397,13 +454,16 @@ test.describe('row page layout', () => {
 
     await peek(page).hover();
     await peek(page).getByRole('button', { name: 'Customize layout' }).click();
-    await peek(page).getByRole('button', { name: 'Page settings' }).click();
+    await builder(page).getByRole('button', { name: 'Page settings' }).click();
     await page.getByRole('menuitem', { name: 'Tabbed' }).click();
-    await expect(peek(page).getByRole('tablist')).toBeVisible();
-    await expect(peek(page).getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
+    await expect(builder(page).getByRole('tablist')).toBeVisible();
+    await expect(builder(page).getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
 
-    await peek(page).getByRole('button', { name: 'Page settings' }).click();
+    // research/10 §5: Reset sits in Apply's "More save options" and closes the builder.
+    await builder(page).getByRole('button', { name: 'More save options' }).click();
     await page.getByRole('menuitem', { name: /Reset to original page layout/ }).click();
+
+    await expect(builder(page)).toBeHidden();
 
     await expect(pins(page)).toHaveCount(0);
     await expect(peek(page).getByRole('tablist')).toHaveCount(0);

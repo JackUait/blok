@@ -63,6 +63,9 @@ const make = async (blocks: OutputBlockData[], config: Record<string, unknown> =
 };
 
 const q = <T extends Element = HTMLElement>(selector: string): T | null => holder?.querySelector<T>(selector) ?? null;
+const BUILDER = '[data-blok-interface="database-layout-builder"]';
+/** The layout builder mounts on body, outside the holder. */
+const b = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(`${BUILDER} ${selector}`);
 
 const click = async (el: Element | null): Promise<void> => {
   el?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -120,9 +123,9 @@ describe('row page layout through the database tool', () => {
     await click(q('[data-blok-database-drawer-customize]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
-    await click(q('[data-blok-database-layout-item-menu][data-property-id="due"]'));
+    await click(b('[data-blok-database-layout-item-menu][data-property-id="due"]'));
     await click(item('pin'));
-    await click(q('[data-blok-database-layout-apply]'));
+    await click(b('[data-blok-database-layout-apply]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: 'due', place: 'heading' }] });
     expect(q('[data-blok-database-drawer-pins] [data-property-id="due"]')).not.toBeNull();
@@ -133,13 +136,13 @@ describe('row page layout through the database tool', () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-cancel]'));
+    await click(b('[data-blok-database-layout-cancel]'));
 
     expect(editor?.history.canUndo()).toBe(false);
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-item-menu][data-property-id="due"]'));
+    await click(b('[data-blok-database-layout-item-menu][data-property-id="due"]'));
     await click(item('pin'));
-    await click(q('[data-blok-database-layout-apply]'));
+    await click(b('[data-blok-database-layout-apply]'));
     editor?.history.undo();
     await quiet();
 
@@ -163,7 +166,7 @@ describe('row page layout through the database tool', () => {
     await click(action);
 
     expect(shownTitle()).toBe('One');
-    expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+    expect(document.querySelector(BUILDER)).not.toBeNull();
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
   });
 
@@ -207,14 +210,14 @@ describe('row page layout through the database tool', () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-add-pin]'));
+    await click(b('[data-blok-database-layout-add-pin]'));
     await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
     const added = (await editorSchema()).find((property) => property.type === 'number');
 
     expect(added).toBeDefined();
-    expect(q(`[data-blok-database-drawer-pins] [data-property-id="${String(added?.id)}"]`)).not.toBeNull();
+    expect(b(`[data-blok-database-drawer-pins] [data-property-id="${String(added?.id)}"]`)).not.toBeNull();
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [] });
-    await click(q('[data-blok-database-layout-apply]'));
+    await click(b('[data-blok-database-layout-apply]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: added?.id, place: 'heading' }] });
   });
@@ -224,17 +227,17 @@ describe('row page layout through the database tool', () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-add-pin]'));
+    await click(b('[data-blok-database-layout-add-pin]'));
     await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
 
     expect((await editorSchema()).some((property) => property.type === 'number')).toBe(true);
-    await click(q('[data-blok-database-layout-cancel]'));
+    await click(b('[data-blok-database-layout-cancel]'));
     await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
 
     expect((await editorSchema()).some((property) => property.type === 'number')).toBe(false);
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [] });
     expect(q('[data-blok-database-drawer-pins]')).toBeNull();
-    expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    expect(document.querySelector(BUILDER)).toBeNull();
     expect(drawer()?.isConnected).toBe(true);
   });
 
@@ -242,24 +245,24 @@ describe('row page layout through the database tool', () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-cancel]'));
+    await click(b('[data-blok-database-layout-cancel]'));
 
     expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
-    expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+    expect(document.querySelector(BUILDER)).toBeNull();
   });
 
   it('saves Property icons off on the title property, and Reset drops the key', async () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-settings]'));
+    await click(b('[data-blok-database-layout-settings]'));
     await click(item('property-icons'));
-    await click(q('[data-blok-database-layout-apply]'));
+    await click(b('[data-blok-database-layout-apply]'));
 
     expect(await savedTitle()).toMatchObject({ pageLayoutPropertyIcons: false });
     expect(q('[data-blok-database-drawer-prop-icon]')).toBeNull();
     await click(q('[data-blok-database-drawer-customize]'));
-    await click(q('[data-blok-database-layout-settings]'));
+    await click(b('[data-blok-database-layout-more-save]'));
     await click(item('reset'));
 
     expect(await savedTitle()).not.toHaveProperty('pageLayoutPropertyIcons');

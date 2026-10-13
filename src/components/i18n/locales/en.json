@@ -686,6 +686,7 @@
   "tools.database.layoutPageSettings": "Page settings",
   "tools.database.layoutApply": "Apply to all pages",
   "tools.database.layoutCancel": "Cancel",
+  "tools.database.layoutMoreSaveOptions": "More save options",
   "tools.database.layoutDiscardTitle": "Discard all layout changes?",
   "tools.database.layoutDiscard": "Discard",
   "tools.database.layoutReset": "Reset to original page layout",

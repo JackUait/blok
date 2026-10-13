@@ -801,6 +801,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: drag ghosts repeat the fitted-image and vertical-line rules of the view they leave.
     // 174 for card and table row ghosts, 152 for board and table column ghosts.
     const DATABASE_GHOST_CONTEXT_BYTES = 174 + 152;
+    // database.css: the full-window layout builder (top bar, Apply split, canvas card, its tokens), less the old builder bar.
+    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -879,7 +881,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TITLE_ICON_MENU_BYTES
       + DATABASE_FORM_PROVIDER_BUILDER_BYTES
       + DATABASE_AI_AUTOFILL_BYTES
-      + DATABASE_GHOST_CONTEXT_BYTES;
+      + DATABASE_GHOST_CONTEXT_BYTES
+      + DATABASE_LAYOUT_BUILDER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

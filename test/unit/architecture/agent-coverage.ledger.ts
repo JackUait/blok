@@ -103,6 +103,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-tab-bar.ts': ui(['database.addView', 'database.renameView', 'database.duplicateView', 'database.deleteView', 'database.moveView', 'block.update'], 'View tabs; switching writes database.activeViewId.'),
   'ui-file:src/tools/database/database-view-popover.ts': ui(['database.addView'], 'Choose a new view type.'),
   'ui-file:src/tools/database/index.ts': ui(['block.update', 'database.addRow'], 'Title edit writes database.title; add-row buttons.'),
+  'ui-file:src/tools/database/page-layout-builder.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'ui-file:src/tools/file/index.ts': ui(['file.setSource'], 'Upload or URL.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
   'ui-file:src/tools/file/ui.ts': ui(['block.update'], 'Rename and caption: file.fileName, file.caption.'),

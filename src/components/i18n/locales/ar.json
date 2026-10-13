@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "إعدادات الصفحة",
   "tools.database.layoutApply": "تطبيق على كل الصفحات",
   "tools.database.layoutCancel": "إلغاء",
+  "tools.database.layoutMoreSaveOptions": "المزيد من خيارات الحفظ",
   "tools.database.layoutDiscardTitle": "تجاهل كل تغييرات التخطيط؟",
   "tools.database.layoutDiscard": "تجاهل",
   "tools.database.layoutReset": "إعادة تعيين إلى تخطيط الصفحة الأصلي",

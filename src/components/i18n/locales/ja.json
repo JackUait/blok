@@ -570,6 +570,7 @@
   "tools.database.layoutPageSettings": "ページ設定",
   "tools.database.layoutApply": "すべてのページに適用",
   "tools.database.layoutCancel": "キャンセル",
+  "tools.database.layoutMoreSaveOptions": "その他の保存オプション",
   "tools.database.layoutDiscardTitle": "レイアウトの変更をすべて破棄しますか？",
   "tools.database.layoutDiscard": "破棄",
   "tools.database.layoutReset": "元のページレイアウトにリセット",

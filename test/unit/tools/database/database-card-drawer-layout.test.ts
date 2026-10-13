@@ -234,14 +234,14 @@ describe('DatabaseCardDrawer — page layout', () => {
   });
 
   describe('customizing', () => {
-    it('offers Customize layout, which bears the layout lists and shows the builder bar', () => {
+    it('offers Customize layout, which bears the layout lists and opens the builder', () => {
       const options = createOptions();
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
 
       expect(options.onPageLayoutBirth).toHaveBeenCalledTimes(1);
-      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).not.toBeNull();
       expect(q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')).not.toBeNull();
     });
 
@@ -364,7 +364,7 @@ describe('DatabaseCardDrawer — page layout', () => {
         search.dispatchEvent(new Event('input', { bubbles: true }));
 
         expect(idsIn(region)).toEqual([id]);
-        expect(idsIn('[data-blok-database-drawer-content]')).toEqual([id]);
+        expect(idsIn('[data-blok-database-layout-canvas]')).toEqual([id]);
       }
       expect(options.schema.find((property) => property.type === 'title')?.pageLayoutPlacements).toEqual(layout.pageLayoutPlacements);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
@@ -497,7 +497,7 @@ describe('DatabaseCardDrawer — page layout', () => {
 
       expect(options.onPageLayoutChange).toHaveBeenCalledTimes(1);
       expect(written(options)?.placements).toEqual([{ id: 'p-due', place: 'heading' }]);
-      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).toBeNull();
     });
 
     // research/09 §3b: Cancel with no edits closes at once.
@@ -509,7 +509,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-layout-cancel]')?.click();
 
       expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
-      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).toBeNull();
     });
 
     // research/09 §3b: "Discard all layout changes?" with Discard (red) and Cancel.
@@ -524,7 +524,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       const dialog = q('[data-blok-database-confirm-dialog]');
 
       expect(dialog).not.toBeNull();
-      expect(dialog?.closest('[data-blok-database-drawer]')).not.toBeNull();
+      expect(dialog?.closest('[data-blok-interface="database-layout-builder"]')).not.toBeNull();
       expect(q('[data-blok-database-confirm-title]')?.textContent).toBe('Discard all layout changes?');
       expect(q('[data-blok-database-confirm-action="confirm"]')?.textContent).toBe('Discard');
       expect(q('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-destructive')).toBe(true);
@@ -533,7 +533,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       await Promise.resolve();
 
       expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
-      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).not.toBeNull();
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
     });
 
@@ -559,7 +559,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       await Promise.resolve();
 
       expect(vi.mocked(options.onDeleteProperty)?.mock.calls.map(([id]) => id)).toEqual(['p-new-0', 'p-new-1']);
-      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).toBeNull();
       expect(q('[data-blok-database-drawer-pins]')).toBeNull();
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       drawer.destroy();
@@ -615,7 +615,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
       expect(q('[data-blok-database-drawer]')).not.toBeNull();
-      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).not.toBeNull();
       expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
       expect(options.onEscapeClose).not.toHaveBeenCalled();
       drawer.destroy();
@@ -729,7 +729,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       ]);
     });
 
-    it('sets the structure from Page settings and resets to the original layout at once', () => {
+    it('sets the structure from Page settings and resets to the original layout at once from More save options', () => {
       const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }) });
 
       new DatabaseCardDrawer(options).open(ROW);
@@ -738,12 +738,12 @@ describe('DatabaseCardDrawer — page layout', () => {
       clickItem('structure-tabbed');
 
       expect(q('[data-blok-database-drawer-tabs]')).not.toBeNull();
-      q('[data-blok-database-layout-settings]')?.click();
+      q('[data-blok-database-layout-more-save]')?.click();
       clickItem('reset');
 
       expect(written(options, { pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutStructure: 'tabbed' }))
         .toEqual({ structure: 'simple', groupIn: 'page', propertyIcons: true, propertyLabels: true, templates: true, fullWidth: false, placements: [], sections: [] });
-      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).toBeNull();
     });
 
     it('turns property icons off from Page settings as a draft edit', () => {
@@ -781,7 +781,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-peek-next]')?.click();
 
       expect(q('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.textContent).toContain('Monday');
-      expect(q('[data-blok-database-drawer-layout-bar]')).not.toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).not.toBeNull();
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
     });
 
@@ -875,7 +875,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       drawer.open(ROW);
 
       expect(q('[data-blok-database-drawer-pins]')).toBeNull();
-      expect(q('[data-blok-database-drawer-layout-bar]')).toBeNull();
+      expect(q('[data-blok-interface="database-layout-builder"]')).toBeNull();
     });
   });
 

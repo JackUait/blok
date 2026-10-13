@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "اللوحة الجانبية",
   "tools.database.tableCopyLink": "نسخ الرابط",
   "tools.database.tableComment": "تعليق",
+  "tools.database.openComments": "فتح التعليقات",
   "tools.database.tableMoveTo": "نقل إلى",
   "tools.database.searchActions": "البحث في الإجراءات…",
   "tools.database.rowLastEditedBy": "آخر تعديل بواسطة {name}",

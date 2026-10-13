@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Sidepanel",
   "tools.database.tableCopyLink": "Kopier lenke",
   "tools.database.tableComment": "Kommenter",
+  "tools.database.openComments": "Åpne kommentarer",
   "tools.database.tableMoveTo": "Flytt til",
   "tools.database.searchActions": "Søk etter handlinger…",
   "tools.database.rowLastEditedBy": "Sist redigert av {name}",

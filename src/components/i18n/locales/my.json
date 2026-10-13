@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "ဘေးဘောင်",
   "tools.database.tableCopyLink": "လင့်ခ်ကူးယူရန်",
   "tools.database.tableComment": "မှတ်ချက်ပေးရန်",
+  "tools.database.openComments": "မှတ်ချက်များ ဖွင့်ရန်",
   "tools.database.tableMoveTo": "သို့ ရွှေ့ရန်",
   "tools.database.searchActions": "လုပ်ဆောင်ချက်များ ရှာပါ…",
   "tools.database.rowLastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",

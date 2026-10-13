@@ -30,7 +30,9 @@ import { templateMenuItems } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
-import { calculationItems, openMenu } from './database-table-menus';
+import { calculationItems, commentMenuItem, openMenu } from './database-table-menus';
+import { refreshCommentBadges } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
@@ -347,6 +349,7 @@ export class DatabaseTool implements BlockTool {
   private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
+  private stopComments: (() => void) | undefined;
   /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
   private readonly tableStates = new Map<string, TableState>();
   private readonly dashboardStates = new Map<string, DashboardWidgetState>();
@@ -624,14 +627,58 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** The host's comments for a row or a cell, unless permissions deny `comment`. */
-  private commentLever(): { comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void } {
+  private commentLever(): { comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void; commentBadges?: CommentBadges } {
     const comments = this.config.comments;
 
     if (comments === undefined || !this.permits('comment')) return {};
 
     return {
       comment: (rowId, propertyId, anchor) => comments.open({ databaseId: this.block.id, rowId, ...(propertyId !== undefined ? { propertyId } : {}) }, anchor),
+      ...this.commentBadgeLever(),
     };
+  }
+
+  /** Row comment counts, when the host gives `count`. A throw counts as zero. */
+  private commentBadgeLever(): { commentBadges?: CommentBadges } {
+    const comments = this.config.comments;
+
+    if (comments?.count === undefined || !this.permits('comment')) return {};
+
+    return {
+      commentBadges: {
+        databaseId: this.block.id,
+        count: (rowId) => {
+          try {
+            const count = comments.count?.({ databaseId: this.block.id, rowId });
+
+            return typeof count === 'number' && count > 0 ? count : 0;
+          } catch {
+            return 0;
+          }
+        },
+        open: (rowId, anchor) => comments.open({ databaseId: this.block.id, rowId }, anchor),
+      },
+    };
+  }
+
+  /** The host says comments changed: badges update in place, since its thread popover is anchored to one. */
+  private subscribeComments(): void {
+    const comments = this.config.comments;
+
+    if (this.stopComments !== undefined || comments?.subscribe === undefined) return;
+    this.stopComments = (): void => undefined;
+    try {
+      const stop = comments.subscribe(this.block.id, () => {
+        const lever = this.commentBadgeLever().commentBadges;
+
+        if (this.destroyed || lever === undefined || this.element === null) return;
+        refreshCommentBadges(this.element, lever, this.api.i18n);
+      });
+
+      if (typeof stop === 'function') this.stopComments = stop;
+    } catch {
+      // Fails closed, like `count`: the badges just stop updating.
+    }
   }
 
   /** Locked by the document, or by the host's permissions. */
@@ -823,6 +870,7 @@ export class DatabaseTool implements BlockTool {
     const hadRows = this.model.getOrderedRows().length > 0;
 
     this.syncRowsFromBlocks();
+    this.subscribeComments();
     // A database that rendered first read this one before its tool existed.
     this.api.events.emit(DATABASE_RENDERED_EVENT, { databaseId: this.block.id });
     this.offerDueTemplates();
@@ -929,6 +977,7 @@ export class DatabaseTool implements BlockTool {
     this.addPropertyPopover = null;
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
+    this.stopComments?.();
     this.destroyView();
     this.groupMenuPopover?.destroy();
     this.cardCellEditor?.cancel();
@@ -2276,6 +2325,7 @@ export class DatabaseTool implements BlockTool {
       titlePropertyId: titlePropId,
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
       cellContext: this.cellContext(),
+      ...this.commentBadgeLever(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         addRow: (groupKey) => {
@@ -3277,6 +3327,7 @@ export class DatabaseTool implements BlockTool {
       cellContext: this.cellContext(),
       onPropertyEdit: (rowId, propertyId, anchor) => this.editCardProperty(rowId, propertyId, anchor),
       ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
+      ...this.commentBadgeLever(),
       onTitleEdit: (rowId, newTitle) => {
         const titlePropId = this.titlePropertyId();
         this.updateRowTitleBlock(rowId, titlePropId, newTitle);
@@ -4454,6 +4505,7 @@ export class DatabaseTool implements BlockTool {
       schema,
       visiblePropertyIds: visibleRowPropertyIds(viewConfig, this.model.getSchema()),
       cellContext: this.cellContext(),
+      ...this.commentBadgeLever(),
       locale: resolveLocale(undefined),
       onPropertyEdit: (rowId: string, propertyId: string, anchor: HTMLElement) =>
         this.editCardProperty(rowId, propertyId, anchor, () => this.focusListProperty(rowId, propertyId, context), context),
@@ -4649,6 +4701,20 @@ export class DatabaseTool implements BlockTool {
   }
 
   private attachReadListeners(boardEl: HTMLDivElement): void {
+    // Notion: a right-click on a card or list row opens its menu, with Comment.
+    boardEl.addEventListener('contextmenu', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const rowEl = target?.closest<HTMLElement>('[data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-list-row]');
+      const rowId = rowEl?.getAttribute('data-row-id');
+
+      // A field being edited keeps the native menu, for copy and paste.
+      if ((target?.closest('input, textarea, [contenteditable="true"]') ?? null) !== null) return;
+      if (rowEl === null || rowEl === undefined || rowId === null || rowId === undefined || this.commentLever().comment === undefined) return;
+      event.preventDefault();
+      // Core opens its block menu on a right-click; this menu replaces it.
+      event.stopPropagation();
+      this.openCardMenu(rowEl, rowEl, rowId, boardEl);
+    });
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
 
@@ -4700,6 +4766,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, boardEl: HTMLElement): void {
+    const { comment } = this.commentLever();
+
     cardEl.setAttribute('data-popover-open', '');
 
     this.cardMenuPopover = new PopoverDesktop({
@@ -4710,8 +4778,10 @@ export class DatabaseTool implements BlockTool {
       minWidth: '140px',
       autoFocusFirstItem: false,
       items: [
-        {
-          type: PopoverItemType.Default,
+        // The ••• button hides once the menu closes; the composer sits under the card, as in Notion.
+        ...(comment !== undefined ? [{ ...commentMenuItem(this.api.i18n), name: 'database-card-comment', onActivate: () => comment(rowId, undefined, cardEl) }] : []),
+        ...(this.readOnly ? [] : [{
+          type: PopoverItemType.Default as const,
           name: 'database-card-delete',
           title: this.api.i18n.t('tools.database.deleteCard'),
           icon: IconTrash,
@@ -4720,7 +4790,7 @@ export class DatabaseTool implements BlockTool {
             this.view.removeRow(boardEl, rowId);
             void this.sync.syncDeleteRow({ rowId });
           },
-        },
+        }]),
       ],
     });
 

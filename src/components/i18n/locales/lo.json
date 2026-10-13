@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "ແຜງດ້ານຂ້າງ",
   "tools.database.tableCopyLink": "ສຳເນົາລິ້ງ",
   "tools.database.tableComment": "ສະແດງຄວາມຄິດເຫັນ",
+  "tools.database.openComments": "ເປີດຄຳເຫັນ",
   "tools.database.tableMoveTo": "ຍ້າຍໄປ",
   "tools.database.searchActions": "ຄົ້ນຫາການດຳເນີນການ…",
   "tools.database.rowLastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",

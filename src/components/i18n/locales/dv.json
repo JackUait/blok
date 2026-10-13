@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "ސައިޑް ޕެނަލް",
   "tools.database.tableCopyLink": "ލިންކް ކޮޕީކުރޭ",
   "tools.database.tableComment": "ކޮމެންޓް ކުރޭ",
+  "tools.database.openComments": "ކޮމެންޓްތައް ހުޅުވާ",
   "tools.database.tableMoveTo": "ބަދަލުކުރޭ",
   "tools.database.searchActions": "އަމަލުތައް ހޯދާ…",
   "tools.database.rowLastEditedBy": "{name} އެންމެ ފަހުން އެޑިޓްކުރީ",

@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "มุมมองด้านข้าง",
   "tools.database.tableCopyLink": "คัดลอกลิงก์",
   "tools.database.tableComment": "แสดงความคิดเห็น",
+  "tools.database.openComments": "เปิดความคิดเห็น",
   "tools.database.tableMoveTo": "ย้ายไปที่",
   "tools.database.searchActions": "ค้นหาการดำเนินการ…",
   "tools.database.rowLastEditedBy": "แก้ไขล่าสุดโดย {name}",

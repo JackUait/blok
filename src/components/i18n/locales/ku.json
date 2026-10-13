@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "پانێڵی لاتەنیشت",
   "tools.database.tableCopyLink": "لەبەرگرتنەوەی بەستەر",
   "tools.database.tableComment": "لێدوان",
+  "tools.database.openComments": "کردنەوەی لێدوانەکان",
   "tools.database.tableMoveTo": "گواستنەوە بۆ",
   "tools.database.searchActions": "گەڕان لە کردارەکان…",
   "tools.database.rowLastEditedBy": "دوایین دەستکاری لەلایەن {name}",

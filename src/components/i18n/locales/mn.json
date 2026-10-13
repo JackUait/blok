@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Хажуугийн самбар",
   "tools.database.tableCopyLink": "Холбоос хуулах",
   "tools.database.tableComment": "Сэтгэгдэл бичих",
+  "tools.database.openComments": "Сэтгэгдэл нээх",
   "tools.database.tableMoveTo": "Зөөх",
   "tools.database.searchActions": "Үйлдэл хайх…",
   "tools.database.rowLastEditedBy": "{name} сүүлд засварласан",

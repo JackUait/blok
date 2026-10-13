@@ -8,6 +8,8 @@ import { createCardPreview } from './database-card-preview';
 import { readPropertyValue } from './property-values';
 import type { BodyBlock } from './row-body';
 import { resolveCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
+import { syncCommentBadge } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus } from '../../components/icons';
 
@@ -56,6 +58,8 @@ export interface DatabaseGalleryViewOptions {
   locale?: string;
   /** What cells need from the host: relation titles, computed result types. */
   cellContext?: Partial<CellContext>;
+  /** The host's comment counts. Without it there are no badges. */
+  commentBadges?: CommentBadges;
 }
 
 /** Pixels the pointer must travel before a press becomes a drag. */
@@ -221,6 +225,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
         card.appendChild(icon);
       }
       card.appendChild(titleEl);
+      if (this.options.commentBadges !== undefined) syncCommentBadge(titleEl, row.id, this.options.commentBadges, this.options.i18n);
     }
 
     const shown = properties.filter((p) => p.visible && p.id !== this.options.titlePropertyId);

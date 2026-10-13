@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Panoul lateral",
   "tools.database.tableCopyLink": "Copiază linkul",
   "tools.database.tableComment": "Comentează",
+  "tools.database.openComments": "Deschide comentariile",
   "tools.database.tableMoveTo": "Mută în",
   "tools.database.searchActions": "Căutați acțiuni…",
   "tools.database.rowLastEditedBy": "Ultima editare de {name}",

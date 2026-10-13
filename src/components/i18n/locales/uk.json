@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Бічній панелі",
   "tools.database.tableCopyLink": "Копіювати посилання",
   "tools.database.tableComment": "Коментувати",
+  "tools.database.openComments": "Відкрити коментарі",
   "tools.database.tableMoveTo": "Перемістити в",
   "tools.database.searchActions": "Шукати дії…",
   "tools.database.rowLastEditedBy": "Останнє редагування: {name}",

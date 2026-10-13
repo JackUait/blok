@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "സൈഡ് പാനൽ",
   "tools.database.tableCopyLink": "ലിങ്ക് പകർത്തുക",
   "tools.database.tableComment": "കമന്റ് ചെയ്യുക",
+  "tools.database.openComments": "കമന്റുകൾ തുറക്കുക",
   "tools.database.tableMoveTo": "ഇതിലേക്ക് നീക്കുക",
   "tools.database.searchActions": "പ്രവർത്തനങ്ങൾ തിരയുക…",
   "tools.database.rowLastEditedBy": "അവസാനം തിരുത്തിയത്: {name}",

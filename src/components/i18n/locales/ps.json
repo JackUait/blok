@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "څنګ پینل",
   "tools.database.tableCopyLink": "لینک کاپي کړئ",
   "tools.database.tableComment": "تبصره وکړئ",
+  "tools.database.openComments": "تبصرې خلاص کړئ",
   "tools.database.tableMoveTo": "ولېږدوئ",
   "tools.database.searchActions": "کړنې ولټوئ…",
   "tools.database.rowLastEditedBy": "د {name} لخوا وروستی سمون",

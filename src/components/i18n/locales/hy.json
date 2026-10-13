@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Կողային վահանակ",
   "tools.database.tableCopyLink": "Պատճենել հղումը",
   "tools.database.tableComment": "Մեկնաբանել",
+  "tools.database.openComments": "Բացել մեկնաբանությունները",
   "tools.database.tableMoveTo": "Տեղափոխել",
   "tools.database.searchActions": "Որոնել գործողություններ…",
   "tools.database.rowLastEditedBy": "Վերջին անգամ խմբագրել է {name}",

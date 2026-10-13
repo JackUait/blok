@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Yan panel",
   "tools.database.tableCopyLink": "Bağlantıyı kopyala",
   "tools.database.tableComment": "Yorum yap",
+  "tools.database.openComments": "Yorumları aç",
   "tools.database.tableMoveTo": "Şuraya taşı",
   "tools.database.searchActions": "Eylem arayın…",
   "tools.database.rowLastEditedBy": "Son düzenleyen: {name}",

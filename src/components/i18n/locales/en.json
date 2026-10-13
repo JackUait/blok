@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Side peek",
   "tools.database.tableCopyLink": "Copy link",
   "tools.database.tableComment": "Comment",
+  "tools.database.openComments": "Open comments",
   "tools.database.tableMoveTo": "Move to",
   "tools.database.searchActions": "Search actions…",
   "tools.database.rowLastEditedBy": "Last edited by {name}",

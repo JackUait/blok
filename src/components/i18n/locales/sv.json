@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Sidovy",
   "tools.database.tableCopyLink": "Kopiera länk",
   "tools.database.tableComment": "Kommentera",
+  "tools.database.openComments": "Öppna kommentarer",
   "tools.database.tableMoveTo": "Flytta till",
   "tools.database.searchActions": "Sök efter åtgärder…",
   "tools.database.rowLastEditedBy": "Senast redigerad av {name}",

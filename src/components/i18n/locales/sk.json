@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Bočnom paneli",
   "tools.database.tableCopyLink": "Kopírovať odkaz",
   "tools.database.tableComment": "Komentovať",
+  "tools.database.openComments": "Otvoriť komentáre",
   "tools.database.tableMoveTo": "Presunúť do",
   "tools.database.searchActions": "Hľadať akcie…",
   "tools.database.rowLastEditedBy": "Autor poslednej úpravy: {name}",

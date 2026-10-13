@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "পার্শ্ব প্যানেল",
   "tools.database.tableCopyLink": "লিঙ্ক কপি করুন",
   "tools.database.tableComment": "মন্তব্য করুন",
+  "tools.database.openComments": "মন্তব্যগুলি খুলুন",
   "tools.database.tableMoveTo": "এতে সরান",
   "tools.database.searchActions": "অ্যাকশন খুঁজুন…",
   "tools.database.rowLastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",

@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "זײַט־פּאַנעל",
   "tools.database.tableCopyLink": "קאָפּיר לינק",
   "tools.database.tableComment": "קאָמענטירן",
+  "tools.database.openComments": "עפֿענען קאָמענטאַרן",
   "tools.database.tableMoveTo": "אַריבערפֿירן צו",
   "tools.database.searchActions": "זוכן אַקציעס…",
   "tools.database.rowLastEditedBy": "לעצט רעדאַקטירט דורך {name}",

@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Страничния панел",
   "tools.database.tableCopyLink": "Копирай връзката",
   "tools.database.tableComment": "Коментирай",
+  "tools.database.openComments": "Отвори коментарите",
   "tools.database.tableMoveTo": "Премести в",
   "tools.database.searchActions": "Търсене на действия…",
   "tools.database.rowLastEditedBy": "Последна редакция от {name}",

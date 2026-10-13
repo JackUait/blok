@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { rowMenuItems } from '../../../../src/tools/database/database-table-menus';
 import type { RowMenuContext } from '../../../../src/tools/database/database-table-menus';
-import { buildTool, fakeRow, makeDoc } from './tier3-harness';
+import type { DatabaseData } from '../../../../src/tools/database/types';
+import { SCHEMA, buildTool, fakeRow, makeDoc, tableData } from './tier3-harness';
+import type { Doc } from './tier3-harness';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -110,5 +112,204 @@ describe('DatabaseTool — config.comments', () => {
     if (comment === undefined || !('onActivate' in comment) || comment.onActivate === undefined) throw new Error('no Comment item');
     comment.onActivate(comment, undefined);
     expect(onComment).toHaveBeenCalledTimes(1);
+  });
+});
+
+const BOARD_SCHEMA = [
+  ...SCHEMA,
+  { id: 'status', name: 'Status', type: 'select' as const, position: 'a3', config: { options: [{ id: 'o1', label: 'Todo', color: 'gray' as const, position: 'a0' }] } },
+];
+
+const viewData = (type: 'board' | 'gallery' | 'list' | 'table'): DatabaseData =>
+  tableData(BOARD_SCHEMA, { type, ...(type === 'board' ? { groupBy: 'status' } : {}) });
+
+const ROW_SELECTOR: Record<'board' | 'gallery' | 'list' | 'table', string> = {
+  board: '[data-blok-database-card][data-row-id="a"]',
+  gallery: '[data-blok-database-gallery-card][data-row-id="a"]',
+  list: '[data-blok-database-list-row][data-row-id="a"]',
+  table: '[data-blok-database-table-row][data-row-id="a"]',
+};
+
+const rowEl = (el: HTMLElement, type: keyof typeof ROW_SELECTOR): HTMLElement => {
+  const found = el.querySelector<HTMLElement>(ROW_SELECTOR[type]);
+
+  if (found === null) throw new Error(`no ${type} row`);
+
+  return found;
+};
+
+const menuItem = (name: string): HTMLElement | null =>
+  document.querySelector<HTMLElement>(`[data-blok-popover-item][data-blok-item-name="${name}"]`);
+
+const badgeIn = (scope: Element): HTMLButtonElement | null => scope.querySelector<HTMLButtonElement>('[data-blok-database-comment-badge]');
+
+const oneRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0')]);
+
+describe('DatabaseTool — comments on cards and list rows', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('the board card ••• menu offers Comment ⌘⇧M before Delete, and it opens the row\'s comments', () => {
+    const open = vi.fn();
+    const { el } = buildTool(oneRow(), { comments: { open } }, viewData('board'));
+    const card = rowEl(el, 'board');
+    const more = card.querySelector<HTMLElement>('[data-blok-database-card-menu]');
+
+    more?.click();
+    const comment = menuItem('database-card-comment');
+
+    expect(comment).not.toBeNull();
+    expect(comment?.textContent).toContain('tools.database.tableComment');
+    expect(comment?.textContent).toContain('M');
+    expect(comment?.compareDocumentPosition(menuItem('database-card-delete') as Node) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    comment?.click();
+    // The ••• button hides once the menu closes; the composer sits under the card, as in Notion.
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, card);
+  });
+
+  it('the board card ••• menu has no Comment without the lever', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+
+    rowEl(el, 'board').querySelector<HTMLElement>('[data-blok-database-card-menu]')?.click();
+
+    expect(menuItem('database-card-delete')).not.toBeNull();
+    expect(menuItem('database-card-comment')).toBeNull();
+  });
+
+  it.each(['board', 'gallery', 'list'] as const)('a right-click on a %s row opens the menu with Comment, instead of the block menu', (type) => {
+    const open = vi.fn();
+    const { el } = buildTool(oneRow(), { comments: { open } }, viewData(type));
+    const row = rowEl(el, type);
+    const event = rightClick(row.firstElementChild ?? row);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(menuItem('database-card-delete')).not.toBeNull();
+    menuItem('database-card-comment')?.click();
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, row);
+  });
+
+  it.each(['board', 'gallery', 'list'] as const)('read-only: a right-click on a %s row offers Comment without Delete', (type) => {
+    const open = vi.fn();
+    const { el } = buildTool(oneRow(), { comments: { open } }, viewData(type), true);
+
+    rightClick(rowEl(el, type));
+
+    expect(menuItem('database-card-delete')).toBeNull();
+    menuItem('database-card-comment')?.click();
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, expect.any(HTMLElement));
+  });
+
+  it('a right-click inside a list title being edited keeps the native menu, for copy and paste', () => {
+    const { el } = buildTool(oneRow(), { comments: { open: vi.fn() } }, viewData('list'));
+    const input = document.createElement('input');
+
+    rowEl(el, 'list').appendChild(input);
+
+    expect(rightClick(input).defaultPrevented).toBe(false);
+    expect(menuItem('database-card-comment')).toBeNull();
+  });
+
+  it.each(['board', 'gallery', 'list'] as const)('a right-click on a %s row is left to core without the lever or when comment is denied', (type) => {
+    const open = vi.fn();
+    const plain = buildTool(oneRow(), {}, viewData(type)).el;
+    const denied = buildTool(oneRow(), { comments: { open }, permissions: { can: (action) => action !== 'comment' } }, viewData(type)).el;
+
+    expect(rightClick(rowEl(plain, type)).defaultPrevented).toBe(false);
+    expect(rightClick(rowEl(denied, type)).defaultPrevented).toBe(false);
+    expect(menuItem('database-card-comment')).toBeNull();
+  });
+
+  it.each(['board', 'gallery', 'list', 'table'] as const)('a %s row with comments shows an "Open comments" badge with the count, which opens the thread', (type) => {
+    const open = vi.fn();
+    const count = vi.fn((target: { rowId: string }) => (target.rowId === 'a' ? 2 : 0));
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0'), fakeRow('b', 'db', { title: 'Beta', status: 'o1' }, 'a1')]);
+    const { el } = buildTool(doc, { comments: { open, count } }, viewData(type));
+    const badge = badgeIn(rowEl(el, type));
+
+    expect(badge?.tagName).toBe('BUTTON');
+    expect(badge?.getAttribute('aria-label')).toBe('tools.database.openComments');
+    expect(badge?.textContent?.trim()).toBe('2');
+    expect(count).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' });
+    expect(badgeIn(el.querySelector(ROW_SELECTOR[type].replace('"a"', '"b"')) as Element)).toBeNull();
+
+    badge?.click();
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, badge);
+    // The badge acts on its own: the row page stays shut.
+    expect(document.querySelector('[data-blok-database-drawer]')).toBeNull();
+  });
+
+  it('shows no badge without a count lever, when the count throws, or when comment is denied', () => {
+    const open = vi.fn();
+    const none = buildTool(oneRow(), { comments: { open } }, viewData('list')).el;
+    const throws = buildTool(oneRow(), { comments: { open, count: () => { throw new Error('down'); } } }, viewData('list')).el;
+    const denied = buildTool(oneRow(), { comments: { open, count: () => 3 }, permissions: { can: (action) => action !== 'comment' } }, viewData('list')).el;
+
+    expect(badgeIn(none)).toBeNull();
+    expect(badgeIn(throws)).toBeNull();
+    expect(badgeIn(denied)).toBeNull();
+  });
+
+  it('a host change updates the badges in place, so a composer anchored to one stays attached', () => {
+    let counts: Record<string, number> = { a: 1, b: 0 };
+    let notify = (): void => undefined;
+    const stop = vi.fn();
+    const subscribe = vi.fn((_databaseId: string, onChange: () => void) => {
+      notify = onChange;
+
+      return stop;
+    });
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0'), fakeRow('b', 'db', { title: 'Beta', status: 'o1' }, 'a1')]);
+    const { tool, el } = buildTool(doc, { comments: { open: vi.fn(), count: ({ rowId }) => counts[rowId] ?? 0, subscribe } }, viewData('list'));
+    const rowB = (): Element => el.querySelector('[data-blok-database-list-row][data-row-id="b"]') as Element;
+    const badgeA = badgeIn(rowEl(el, 'list'));
+
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(subscribe).toHaveBeenCalledWith('db', expect.any(Function));
+    counts = { a: 2, b: 1 };
+    notify();
+
+    expect(badgeIn(rowEl(el, 'list'))).toBe(badgeA);
+    expect(badgeA?.isConnected).toBe(true);
+    expect(badgeA?.textContent?.trim()).toBe('2');
+    expect(badgeIn(rowB())?.textContent?.trim()).toBe('1');
+
+    counts = { a: 0, b: 1 };
+    notify();
+    expect(badgeIn(rowEl(el, 'list'))).toBeNull();
+
+    tool.destroy();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('a refresh leaves badges of another database alone, as a dashboard shows them', () => {
+    let notify = (): void => undefined;
+    const { el } = buildTool(oneRow(), { comments: { open: vi.fn(), count: () => 4, subscribe: (_id, onChange) => { notify = onChange; } } }, viewData('list'));
+    const foreign = document.createElement('div');
+
+    // A widget row of database "other", drawn by that database's own tool.
+    foreign.setAttribute('data-blok-database-comment-anchor', 'x');
+    foreign.setAttribute('data-blok-database-comment-database', 'other');
+    el.appendChild(foreign);
+    notify();
+
+    expect(foreign.nextElementSibling).toBeNull();
+    expect(badgeIn(rowEl(el, 'list'))?.textContent?.trim()).toBe('4');
+  });
+
+  it('a host subscribe that throws does not break the block', () => {
+    const subscribe = vi.fn(() => {
+      throw new Error('down');
+    });
+    const { tool, el } = buildTool(oneRow(), { comments: { open: vi.fn(), count: () => 1, subscribe } }, viewData('list'));
+
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(badgeIn(rowEl(el, 'list'))).not.toBeNull();
+    expect(() => tool.destroy()).not.toThrow();
   });
 });

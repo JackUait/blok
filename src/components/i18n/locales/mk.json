@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Страничен панел",
   "tools.database.tableCopyLink": "Копирај врска",
   "tools.database.tableComment": "Коментирај",
+  "tools.database.openComments": "Отвори коментари",
   "tools.database.tableMoveTo": "Премести во",
   "tools.database.searchActions": "Пребарајте дејства…",
   "tools.database.rowLastEditedBy": "Последно уредено од {name}",

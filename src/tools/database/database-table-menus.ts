@@ -308,6 +308,17 @@ const rowFooter = (i18n: T, lastEdited: RowMenuContext['lastEdited'], counts: Ro
   return { type: PopoverItemType.Html, element: footer, name: 'last-edited' };
 };
 
+/**
+ * "Comment ⌘⇧M", shared by the table row menu and the card menu so they cannot drift.
+ * Callers add `name` and `onActivate` literally: the agent-coverage scan reads menu ids from them.
+ */
+export const commentMenuItem = (i18n: T): { type: PopoverItemType.Default; title: string; icon: string; secondaryLabel: string } => ({
+  type: PopoverItemType.Default,
+  title: i18n.t('tools.database.tableComment'),
+  icon: IconMessage,
+  secondaryLabel: beautifyShortcut('CMD+SHIFT+M'),
+});
+
 /** The row ⋮⋮ menu (research/08), without Add to Favorites. Comment needs the host's lever. */
 export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
   const { i18n } = ctx;
@@ -338,9 +349,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
       },
     },
     { type: PopoverItemType.Separator },
-    ...(ctx.onComment !== undefined
-      ? [{ type: PopoverItemType.Default as const, name: 'database-row-comment', title: i18n.t('tools.database.tableComment'), icon: IconMessage, secondaryLabel: beautifyShortcut('CMD+SHIFT+M'), onActivate: ctx.onComment }]
-      : []),
+    ...(ctx.onComment !== undefined ? [{ ...commentMenuItem(i18n), name: 'database-row-comment', onActivate: ctx.onComment }] : []),
     { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
     { type: PopoverItemType.Default, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
     ...(onMoveTo !== undefined && targets.length > 0

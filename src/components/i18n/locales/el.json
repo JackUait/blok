@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Πλαϊνό πλαίσιο",
   "tools.database.tableCopyLink": "Αντιγραφή συνδέσμου",
   "tools.database.tableComment": "Σχόλιο",
+  "tools.database.openComments": "Άνοιγμα σχολίων",
   "tools.database.tableMoveTo": "Μετακίνηση σε",
   "tools.database.searchActions": "Αναζήτηση ενεργειών…",
   "tools.database.rowLastEditedBy": "Τελευταία επεξεργασία από {name}",

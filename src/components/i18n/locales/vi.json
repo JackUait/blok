@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Chế độ xem bên",
   "tools.database.tableCopyLink": "Sao chép liên kết",
   "tools.database.tableComment": "Bình luận",
+  "tools.database.openComments": "Mở bình luận",
   "tools.database.tableMoveTo": "Chuyển đến",
   "tools.database.searchActions": "Tìm thao tác…",
   "tools.database.rowLastEditedBy": "Chỉnh sửa lần cuối bởi {name}",

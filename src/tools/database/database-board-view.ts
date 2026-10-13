@@ -12,6 +12,8 @@ import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewP
 import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { syncCommentBadge } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 
 interface DatabaseBoardViewOptions {
   readOnly: boolean;
@@ -42,6 +44,8 @@ interface DatabaseBoardViewOptions {
   getTotal?: (optionId: string) => number;
   /** "Load more" under a column that holds more rows than it shows. */
   onLoadMore?: (optionId: string) => void;
+  /** The host's comment counts. Without it there are no badges. */
+  commentBadges?: CommentBadges;
 }
 
 export interface BoardLane {
@@ -70,7 +74,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
   private readonly hiddenGroupCount: number;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext' | 'getTotal' | 'onLoadMore'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges'>;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, ...settings
@@ -572,6 +576,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       cardEl.appendChild(icon);
     }
     cardEl.appendChild(titleEl);
+    if (this.settings.commentBadges !== undefined) syncCommentBadge(titleEl, row.id, this.settings.commentBadges, this.i18n);
 
     const properties = this.createCardProperties(row);
 

@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Oldalsó panelen",
   "tools.database.tableCopyLink": "Hivatkozás másolása",
   "tools.database.tableComment": "Megjegyzés",
+  "tools.database.openComments": "Megjegyzések megnyitása",
   "tools.database.tableMoveTo": "Áthelyezés ide",
   "tools.database.searchActions": "Műveletek keresése…",
   "tools.database.rowLastEditedBy": "Utoljára szerkesztette: {name}",

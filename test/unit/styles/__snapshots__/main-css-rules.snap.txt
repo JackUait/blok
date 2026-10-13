@@ -5710,21 +5710,60 @@ span[data-blok-slash-search] {
   position: absolute;
   inset-inline: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--blok-space-1-5);
   margin-inline: auto;
   inline-size: fit-content;
-  max-inline-size: 40%;
-  font-size: 16px;
-  font-weight: 500;
+  max-inline-size: min(40%, calc(100% - 640px));
   pointer-events: none;
 }
 
-[data-blok-database-layout-heading] svg {
+[data-blok-database-layout-heading-name] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  max-inline-size: 100%;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+[data-blok-database-layout-heading-name] svg {
   flex-shrink: 0;
   inline-size: 20px;
   block-size: 20px;
+}
+
+[data-blok-database-layout-preview] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  max-inline-size: 100%;
+  padding-block: 3px;
+  padding-inline: 6px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+[data-blok-database-layout-preview] span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-layout-preview] svg {
+  flex-shrink: 0;
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+[@media (hover: hover)] [data-blok-database-layout-preview]:hover {
+  background-color: var(--blok-item-hover-bg);
 }
 
 [data-blok-database-layout-title] {
@@ -5804,7 +5843,7 @@ span[data-blok-slash-search] {
   background-color: color-mix(in srgb, var(--blok-accent) 88%, black);
 }
 
-[data-blok-database-layout-cancel]:focus-visible, [data-blok-database-layout-apply]:focus-visible, [data-blok-database-layout-more-save]:focus-visible, [data-blok-database-layout-settings]:focus-visible {
+[data-blok-database-layout-preview]:focus-visible, [data-blok-database-layout-cancel]:focus-visible, [data-blok-database-layout-apply]:focus-visible, [data-blok-database-layout-more-save]:focus-visible, [data-blok-database-layout-settings]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
@@ -5832,6 +5871,23 @@ span[data-blok-slash-search] {
   font-size: 32px;
   font-weight: 700;
   line-height: 1.2;
+}
+
+[data-blok-database-layout-canvas-title][data-placeholder] {
+  color: var(--blok-text-tertiary);
+}
+
+[data-blok-database-layout-canvas-content], [data-blok-database-layout-group-empty] {
+  padding-block: var(--blok-space-1);
+  color: var(--blok-text-tertiary);
+  font-size: 14px;
+}
+
+[data-blok-database-layout-preview-empty] {
+  padding-block: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-2);
+  color: var(--blok-text-secondary);
+  font-size: 14px;
 }
 
 [data-blok-database-layout-side] {
@@ -7455,12 +7511,53 @@ span[data-blok-slash-search] {
   height: 14px;
 }
 
-[data-blok-database-table-row]:hover [data-blok-database-table-open], [data-blok-database-table-cell][data-blok-database-table-cell-anchor] [data-blok-database-table-open] {
+[data-blok-database-table-row]:hover [data-blok-database-table-open] {
   display: inline-flex;
 }
 
 [data-blok-database-table-open]:hover {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+}
+
+[data-blok-database-comment-badge] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  height: 20px;
+  padding: 0 var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+[data-blok-database-comment-badge]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-comment-badge] svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-gallery-title] + [data-blok-database-comment-badge] {
+  margin: 0 var(--blok-space-2) var(--blok-space-1);
+}
+
+[data-blok-database-list-row-title]:has(+ [data-blok-database-comment-badge]) {
+  flex: 0 1 auto;
+}
+
+[data-blok-database-list-row-title] + [data-blok-database-comment-badge] {
+  margin-inline-end: auto;
 }
 
 [data-blok-database-table-autofill] {

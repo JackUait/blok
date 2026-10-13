@@ -34,6 +34,8 @@ import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { onHover } from '../../components/utils/tooltip';
+import { syncCommentBadge } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
 import {
@@ -137,6 +139,8 @@ export interface DatabaseTableViewOptions {
   nesting?: TableNesting;
   /** The host's comments for a row or a cell. Works in read-only too. */
   comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void;
+  /** The host's comment counts. Without it there are no badges. */
+  commentBadges?: CommentBadges;
   /** Where the selection bar goes: the view toolbar row, which it replaces (research/08). Else the table's top. */
   selectionBarSlot?: () => HTMLElement | null;
   /** AI Autofill run actions. The tool leaves it out when read-only, locked or without `config.ai`. */
@@ -820,6 +824,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     if (nested !== undefined) {
       cell.insertBefore(this.createSubItemToggle(nested), cell.firstChild);
+    }
+    if (column.property.type === 'title' && this.options.commentBadges !== undefined) {
+      syncCommentBadge(value, rowId, this.options.commentBadges, this.options.i18n, { tabIndex: -1 });
     }
 
     if (column.property.type === 'title' && (this.handlers !== undefined || this.options.openRow !== undefined)) {

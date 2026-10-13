@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "侧边预览",
   "tools.database.tableCopyLink": "复制链接",
   "tools.database.tableComment": "评论",
+  "tools.database.openComments": "打开评论",
   "tools.database.tableMoveTo": "移至",
   "tools.database.searchActions": "搜索操作…",
   "tools.database.rowLastEditedBy": "最后由 {name} 编辑",

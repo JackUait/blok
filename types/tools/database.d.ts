@@ -961,6 +961,16 @@ export interface DatabaseCommentTarget {
 
 export interface DatabaseComments {
   open(target: DatabaseCommentTarget, anchor: HTMLElement): void;
+  /**
+   * The row's comment count. Above zero, the row shows an "Open comments"
+   * badge. Read on every redraw and on each `subscribe` change; a throw counts as zero.
+   */
+  count?(target: DatabaseCommentTarget): number;
+  /**
+   * Hears about comment changes. Call `onChange` and Blok reads `count` again,
+   * keeping the badges in place. Return a function that stops it when the block goes away.
+   */
+  subscribe?(databaseId: string, onChange: () => void): (() => void) | void;
 }
 
 export interface DatabaseConfig {

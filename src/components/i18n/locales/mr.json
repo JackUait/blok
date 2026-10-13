@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "बाजूचे पॅनेल",
   "tools.database.tableCopyLink": "दुवा कॉपी करा",
   "tools.database.tableComment": "टिप्पणी करा",
+  "tools.database.openComments": "टिप्पण्या उघडा",
   "tools.database.tableMoveTo": "येथे हलवा",
   "tools.database.searchActions": "क्रिया शोधा…",
   "tools.database.rowLastEditedBy": "{name} ने शेवटचे संपादन केले",

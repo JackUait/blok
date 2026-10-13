@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "سائیڈ پینل",
   "tools.database.tableCopyLink": "لنک کاپی کریں",
   "tools.database.tableComment": "تبصرہ کریں",
+  "tools.database.openComments": "تبصرے کھولیں",
   "tools.database.tableMoveTo": "منتقل کریں",
   "tools.database.searchActions": "کارروائیاں تلاش کریں…",
   "tools.database.rowLastEditedBy": "{name} نے آخری ترمیم کی",

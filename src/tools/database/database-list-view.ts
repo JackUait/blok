@@ -7,6 +7,8 @@ import { renderCellValue } from './cells';
 import type { CellContext } from './cells';
 import { IconChevronDown } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { syncCommentBadge } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 
 interface DatabaseListViewOptions {
   readOnly: boolean;
@@ -24,6 +26,8 @@ interface DatabaseListViewOptions {
   showPageIcon?: boolean;
   /** What cells need from the host: people, computed result types, relation titles. */
   cellContext?: Partial<CellContext>;
+  /** The host's comment counts. Without it there are no badges. */
+  commentBadges?: CommentBadges;
   locale?: string;
   /** A click or Enter on an editable property: edit it in place. */
   onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
@@ -64,7 +68,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
   private readonly settings: Pick<DatabaseListViewOptions,
-    'cellContext' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'total' | 'getTotal' | 'onLoadMore'>;
+    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'total' | 'getTotal' | 'onLoadMore'>;
   private wrapper: HTMLDivElement | null = null;
 
   constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon, ...settings }: DatabaseListViewOptions) {
@@ -469,7 +473,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
     if (icon !== null) {
       rowEl.appendChild(icon);
     }
-    rowEl.appendChild(this.createTitleElement(title));
+    const titleEl = this.createTitleElement(title);
+
+    rowEl.appendChild(titleEl);
+    if (this.settings.commentBadges !== undefined) syncCommentBadge(titleEl, row.id, this.settings.commentBadges, this.i18n);
 
     const propertiesEl = this.createPropertiesElement(row);
 

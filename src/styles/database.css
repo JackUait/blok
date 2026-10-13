@@ -3986,6 +3986,50 @@
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
+/* ─── Comment badge: a row's comment count, after its title (research/12 §3) ─── */
+
+[data-blok-database-comment-badge] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  height: 20px;
+  padding: 0 var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+[data-blok-database-comment-badge]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-comment-badge] svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* The gallery card has no padding of its own; the title pads itself. */
+[data-blok-database-gallery-title] + [data-blok-database-comment-badge] {
+  margin: 0 var(--blok-space-2) var(--blok-space-1);
+}
+
+[data-blok-database-list-row-title]:has(+ [data-blok-database-comment-badge]) {
+  flex: 0 1 auto;
+}
+
+[data-blok-database-list-row-title] + [data-blok-database-comment-badge] {
+  margin-inline-end: auto;
+}
+
 /* ─── AI Autofill: cell button, Thinking… and the header sparkle (research/12 §2) ─── */
 
 /* Notion: 24x20 at the cell's right edge, shown on hover. */

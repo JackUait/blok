@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1033 + 118 + 413 + 4 closure for all 1568 keys', () => {
+  it('rebuilds a disjoint 1034 + 118 + 413 + 4 closure for all 1569 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1568);
+    expect(lifecycle.size).toBe(1569);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -350,7 +350,8 @@ describe('current English catalog lifecycle coverage', () => {
       // tools.database.layoutCustomizing lost its caller with the old builder bar (see below).
       // +7 / -1: the AI Autofill cell button, header ••• menu and Notion trigger choices call their
       // tools.database.aiAutofill* keys by literal; tools.database.aiAutofillTriggerOn lost its caller (see below).
-      'executable-literal': 1033,
+      // +1: the comment badge calls tools.database.openComments by literal.
+      'executable-literal': 1034,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

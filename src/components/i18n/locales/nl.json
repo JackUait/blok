@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Zijweergave",
   "tools.database.tableCopyLink": "Link kopiëren",
   "tools.database.tableComment": "Opmerking toevoegen",
+  "tools.database.openComments": "Opmerkingen openen",
   "tools.database.tableMoveTo": "Verplaatsen naar",
   "tools.database.searchActions": "Acties zoeken…",
   "tools.database.rowLastEditedBy": "Laatst bewerkt door {name}",

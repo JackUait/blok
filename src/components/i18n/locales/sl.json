@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Stranski plošči",
   "tools.database.tableCopyLink": "Kopiraj povezavo",
   "tools.database.tableComment": "Komentiraj",
+  "tools.database.openComments": "Odpri komentarje",
   "tools.database.tableMoveTo": "Premakni v",
   "tools.database.searchActions": "Poiščite dejanja…",
   "tools.database.rowLastEditedBy": "Nazadnje urejeno: {name}",

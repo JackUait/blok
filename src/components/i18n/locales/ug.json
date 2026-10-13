@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "يان تاختا",
   "tools.database.tableCopyLink": "ئۇلانمىنى كۆچۈر",
   "tools.database.tableComment": "ئىنكاس يېزىش",
+  "tools.database.openComments": "ئىنكاسلارنى ئېچىش",
   "tools.database.tableMoveTo": "يۆتكەش",
   "tools.database.searchActions": "مەشغۇلات ئىزدەش…",
   "tools.database.rowLastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",

@@ -906,6 +906,7 @@ export type BlokMessageKey =
   | 'tools.database.numberFormat.yen'
   | 'tools.database.numberFormat.yuan'
   | 'tools.database.numberFormat.zloty'
+  | 'tools.database.openComments'
   | 'tools.database.openPagesCenter'
   | 'tools.database.openPagesCenterDescription'
   | 'tools.database.openPagesDefaultFor'

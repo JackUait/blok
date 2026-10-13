@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Sivupaneelissa",
   "tools.database.tableCopyLink": "Kopioi linkki",
   "tools.database.tableComment": "Kommentoi",
+  "tools.database.openComments": "Avaa kommentit",
   "tools.database.tableMoveTo": "Siirrä kohteeseen",
   "tools.database.searchActions": "Etsi toimintoja…",
   "tools.database.rowLastEditedBy": "Viimeksi muokannut {name}",

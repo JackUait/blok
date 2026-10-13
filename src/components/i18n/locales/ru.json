@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "Боковой панели",
   "tools.database.tableCopyLink": "Копировать ссылку",
   "tools.database.tableComment": "Комментировать",
+  "tools.database.openComments": "Открыть комментарии",
   "tools.database.tableMoveTo": "Переместить в",
   "tools.database.searchActions": "Поиск действий…",
   "tools.database.rowLastEditedBy": "Автор последнего изменения: {name}",

@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "사이드 보기",
   "tools.database.tableCopyLink": "링크 복사",
   "tools.database.tableComment": "댓글 달기",
+  "tools.database.openComments": "댓글 열기",
   "tools.database.tableMoveTo": "다음으로 이동",
   "tools.database.searchActions": "작업 검색…",
   "tools.database.rowLastEditedBy": "{name} 님이 마지막으로 수정",

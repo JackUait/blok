@@ -870,6 +870,7 @@
   "tools.database.tableSidePeek": "የጎን ፓነል",
   "tools.database.tableCopyLink": "አገናኝ ቅዳ",
   "tools.database.tableComment": "አስተያየት ስጥ",
+  "tools.database.openComments": "አስተያየቶችን ክፈት",
   "tools.database.tableMoveTo": "አንቀሳቅስ ወደ",
   "tools.database.searchActions": "እርምጃዎችን ፈልግ…",
   "tools.database.rowLastEditedBy": "የመጨረሻው አርትዖት በ{name}",

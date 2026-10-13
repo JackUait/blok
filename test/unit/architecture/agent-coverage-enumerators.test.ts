@@ -52,6 +52,9 @@ const firstExpression = (code: string): ts.Expression => {
   return statement.expression;
 };
 
+// Scans of the real source take over 5 s on a loaded CI runner.
+const SCAN_TIMEOUT_MS = 60_000;
+
 describe('agent coverage enumerators', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -186,7 +189,7 @@ describe('agent coverage enumerators', () => {
     expect(ids(capabilities)).toContain('insert:table');
     expect(ids(capabilities)).toContain('insert:column_list/column_list-2');
     expect(capabilities).toEqual(insertIds(BLOCK_TOOL_CLASSES));
-  });
+  }, SCAN_TIMEOUT_MS);
 
   it('format: one id per default inline tool', () => {
     expect(ids(formatIds())).toEqual(Object.keys(defaultInlineTools).map((key) => `format:${key}`).sort());
@@ -266,7 +269,7 @@ describe('agent coverage enumerators', () => {
       'src/components/modules/toolbar/blockSettings.ts',
       'src/components/modules/tools.ts',
     ]);
-  });
+  }, SCAN_TIMEOUT_MS);
 });
 
 describe('menu enumerator', () => {
@@ -338,7 +341,7 @@ describe('action, shortcut, key, typing and drag enumerators', () => {
     const found = enumerateActionUnions().filter((c) => c.id === 'action:database/sendSlack');
 
     expect(found.map((c) => c.file)).toEqual(['src/shared/database/types.ts']);
-  });
+  }, SCAN_TIMEOUT_MS);
 
   it('shortcut: literal, constant and dynamic names (mutation check)', () => {
     const source = parseSource(`

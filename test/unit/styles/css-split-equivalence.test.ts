@@ -803,7 +803,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // 174 for card and table row ghosts, 152 for board and table column ghosts.
     const DATABASE_GHOST_CONTEXT_BYTES = 174 + 152;
     // database.css: the full-window layout builder (top bar, Apply split, canvas card, its tokens), less the old builder bar.
-    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143;
+    // +1_760: the Preview switch, its menu and the New page placeholder (Phase 3).
+    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760;
     // database.css: the title cell Open button shows on the keyboard-selected cell (Cmd/Ctrl+Enter presses it).
     const DATABASE_CELL_BUTTON_KEYBOARD_BYTES = 92;
     // database.css: the comment count badge after a row title (research/12 §3).

@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import { IconPageLayout } from '../../../../src/components/icons';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -170,10 +171,72 @@ describe('row page layout through the database tool', () => {
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
   });
 
-  it('disables Customize page layout with no rows', async () => {
-    await make([{ ...doc()[0], content: [] }]);
+  // research/09 §1: the `layout` glyph, and the chevron every More settings row carries.
+  it('draws Customize page layout with the page layout icon and a chevron', async () => {
+    await make(doc());
+    const action = await customizeAction();
 
-    expect((await customizeAction())?.disabled).toBe(true);
+    const glyph = (svg: Element | null | undefined): string[] => [...(svg?.querySelectorAll('rect') ?? [])].map((rect) => ['x', 'y', 'width', 'height'].map((name) => rect.getAttribute(name)).join(' '));
+    const expected = new DOMParser().parseFromString(IconPageLayout, 'image/svg+xml').documentElement;
+
+    expect(glyph(action?.querySelector('svg'))).toEqual(glyph(expected));
+    expect(action?.querySelector('[data-blok-database-panel-chevron]')).not.toBeNull();
+  });
+
+  // research/09 §1: with zero rows the builder previews a "New page" placeholder.
+  it('opens Customize page layout on a placeholder page with no rows', async () => {
+    await make([{ ...doc()[0], content: [] }]);
+    const action = await customizeAction();
+
+    expect(action?.disabled).toBe(false);
+    await click(action);
+
+    expect(b('[data-blok-database-layout-canvas-title]')?.textContent).toBe('New page');
+    expect(b('[data-blok-database-layout-preview]')?.textContent?.trim()).toBe('Preview: New page');
+    expect(drawer()).toBeNull();
+    await click(b('[data-blok-database-layout-item-menu][data-property-id="due"]'));
+    await click(item('pin'));
+    await click(b('[data-blok-database-layout-apply]'));
+
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: 'due', place: 'heading' }] });
+    expect(document.querySelector(BUILDER)).toBeNull();
+    expect(drawer()).toBeNull();
+    expect((await editor?.save())?.blocks.filter((block) => block.type === 'database-row')).toHaveLength(0);
+  });
+
+  // Q4: the Preview switch lists the view's rows in view order.
+  it('previews another row from the Preview switch, in view order', async () => {
+    await make(doc({ sorts: [{ propertyId: 't', direction: 'desc' }] }));
+    await click(await customizeAction());
+    await click(b('[data-blok-database-layout-preview]'));
+    const pages = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item][data-blok-item-name^="preview-"]')];
+
+    expect(pages.map((page) => page.textContent?.trim())).toEqual(['Two', 'Three', 'One']);
+    await click(item('preview-r3'));
+
+    expect(b('[data-blok-database-layout-canvas-title]')?.textContent).toBe('Three');
+    expect(shownTitle()).toBe('Three');
+  });
+
+  // research/09 §1b: the row page's property menu ends with Customize layout; a column header's does not (research/10 §1).
+  it('ends the row page property menu with Customize layout, which opens the builder on this page', async () => {
+    await make(doc());
+    await openRow('r2');
+    await click(q('[data-blok-database-drawer-prop-label][data-property-id="due"]'));
+    const items = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-popover-item]')];
+
+    expect(items.at(-1)?.getAttribute('data-blok-item-name')).toBe('customize-layout');
+    await click(item('customize-layout'));
+
+    expect(b('[data-blok-database-layout-preview]')?.textContent?.trim()).toBe('Preview: Two');
+  });
+
+  it('offers no Customize layout in the column header menu', async () => {
+    await make(doc());
+    await click(q('[data-blok-database-table-column-header][data-property-id="due"]'));
+
+    expect(document.querySelector('[data-blok-popover-opened] [data-blok-popover-item]')).not.toBeNull();
+    expect(item('customize-layout')).toBeNull();
   });
 
   it('hides Customize page layout when read-only or locked', async () => {

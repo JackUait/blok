@@ -115,7 +115,8 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
 
     label?.click();
 
-    expect(onOpenPropertyMenu).toHaveBeenCalledWith('prop-owner', label);
+    // No layout lever here, so the menu gets no Customize layout.
+    expect(onOpenPropertyMenu).toHaveBeenCalledWith('prop-owner', label, undefined);
   });
 
   it('adds a property named in the name field', () => {

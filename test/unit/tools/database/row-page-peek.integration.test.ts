@@ -45,9 +45,10 @@ const doc = (viewOverrides: Record<string, unknown> = {}): OutputBlockData[] => 
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}): Promise<void> => {
+const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}, readOnly = false): Promise<void> => {
   editor = new Blok({
     holder,
+    readOnly,
     dataModel: 'hierarchical',
     tools: {
       paragraph: Paragraph,
@@ -561,5 +562,59 @@ describe('row page peek modes', () => {
 
     expect(drawer()?.getAttribute('data-peek-mode')).toBe('center');
     expect((await savedView())?.openPagesIn).toBe('center');
+  });
+
+  // One Escape = one layer: the menu first, the peek on the next press.
+  // Read-only has no editor keyboard handling, so the popover registry's own backstop closes the menu.
+  it.each([false, true])('closes only the Open pages in menu on the first Escape, and the peek on the second (read-only: %s)', async (readOnly) => {
+    await make(doc(), {}, readOnly);
+    await openRow('r1');
+    const trigger = q('[data-blok-database-peek-mode]');
+
+    await click(trigger);
+    trigger?.focus();
+    expect(drawer()?.hasAttribute('data-open')).toBe(true);
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+
+    trigger?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(drawer()?.hasAttribute('data-open')).toBe(true);
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(q('[data-blok-component="database"]')?.hasAttribute('data-blok-navigation-focused')).toBe(false);
+
+    trigger?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(drawer()?.hasAttribute('data-open') ?? false).toBe(false);
+  });
+
+  // Blok is published: closing a popover must not hide the Escape from a host's own listeners.
+  it.each([false, true])('still lets a window listener see the Escape that closed the Open pages in menu (read-only: %s)', async (readOnly) => {
+    await make(doc(), {}, readOnly);
+    await openRow('r1');
+    const trigger = q('[data-blok-database-peek-mode]');
+
+    await click(trigger);
+    trigger?.focus();
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+
+    const seen: KeyboardEvent[] = [];
+    const onKeydown = (event: KeyboardEvent): void => {
+      seen.push(event);
+    };
+
+    window.addEventListener('keydown', onKeydown);
+    try {
+      trigger?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+    } finally {
+      window.removeEventListener('keydown', onKeydown);
+    }
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.defaultPrevented).toBe(false);
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(drawer()?.hasAttribute('data-open')).toBe(true);
   });
 });

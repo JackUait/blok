@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconCheck, IconChevronDown, IconCross, IconDatabase } from '../../components/icons';
+import { IconCheck, IconChevronDown, IconCross, IconDatabase, IconPage } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -10,6 +10,12 @@ import type { PopoverItemParams } from '../../components/utils/popover/component
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { openDatabaseConfirm } from './database-confirm-dialog';
+
+/** A page the Preview switch offers. */
+export interface PreviewPage {
+  id: string;
+  title: string;
+}
 
 export interface PageLayoutBuilderOptions {
   i18n?: I18n;
@@ -26,6 +32,11 @@ export interface PageLayoutBuilderOptions {
   onPageSettings: (anchor: HTMLElement) => void;
   /** The property search changed. */
   onSearch: () => void;
+  /** Every page, in view order. Empty when the database has no rows. */
+  pages: () => PreviewPage[];
+  /** The page in the canvas. Null is the "New page" placeholder. */
+  previewId: () => string | null;
+  onPreview: (id: string) => void;
 }
 
 /**
@@ -37,6 +48,7 @@ export class PageLayoutBuilder {
   private readonly search: HTMLInputElement;
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
+  private readonly preview: HTMLElement;
   private readonly options: PageLayoutBuilderOptions;
   private readonly dialog: ModalDialogHandle;
   private menu: PopoverDesktop | null = null;
@@ -53,6 +65,7 @@ export class PageLayoutBuilder {
 
     const bar = document.createElement('div');
     const heading = document.createElement('div');
+    const name = document.createElement('div');
     const title = document.createElement('span');
     const actions = document.createElement('div');
     const split = document.createElement('div');
@@ -60,11 +73,20 @@ export class PageLayoutBuilder {
 
     bar.setAttribute('data-blok-database-layout-topbar', '');
     heading.setAttribute('data-blok-database-layout-heading', '');
-    heading.innerHTML = IconDatabase;
+    name.setAttribute('data-blok-database-layout-heading-name', '');
+    name.innerHTML = IconDatabase;
     title.setAttribute('data-blok-database-layout-title', '');
     this.title = title;
     this.setTitle(options.title);
-    heading.appendChild(title);
+    name.appendChild(title);
+    // research/09 §2: the Preview switch, centered under the database title.
+    const preview = this.button('data-blok-database-layout-preview', null, null, (el) => this.openPreview(el));
+
+    this.preview = document.createElement('span');
+    preview.setAttribute('aria-haspopup', 'menu');
+    preview.append(this.preview);
+    preview.insertAdjacentHTML('beforeend', IconChevronDown);
+    heading.append(name, preview);
     actions.setAttribute('data-blok-database-layout-actions', '');
     split.setAttribute('data-blok-database-layout-apply-split', '');
     more.setAttribute('aria-label', this.label('tools.database.layoutMoreSaveOptions'));
@@ -113,6 +135,11 @@ export class PageLayoutBuilder {
     this.title.textContent = title.trim() !== '' ? title : this.label('tools.database.titlePlaceholder');
   }
 
+  /** The page in the canvas. Empty shows the "New page" placeholder. */
+  setPreview(title: string): void {
+    this.preview.textContent = this.label('tools.database.layoutPreview', { page: this.pageTitle(title) });
+  }
+
   /** Is `target` inside the builder or one of its menus? */
   contains(target: Node): boolean {
     return this.root.contains(target);
@@ -152,10 +179,46 @@ export class PageLayoutBuilder {
     });
   }
 
+  /**
+   * research/09 §2: a focused "Search pages…" field over every page. The
+   * previewed one has a trailing check and no fill. Pages come in view order (Q4).
+   */
+  private openPreview(anchor: HTMLElement): void {
+    const pages = this.options.pages();
+    const current = this.options.previewId();
+    const empty = document.createElement('div');
+
+    empty.setAttribute('data-blok-database-layout-preview-empty', '');
+    empty.textContent = this.label('tools.database.layoutPreviewEmpty');
+    const items: PopoverItemParams[] = pages.length === 0
+      ? [{ type: PopoverItemType.Html, element: empty }]
+      : pages.map((page) => ({
+        type: PopoverItemType.Default,
+        name: `preview-${page.id}`,
+        title: this.pageTitle(page.title),
+        icon: IconPage,
+        ...(page.id === current ? { trailingIcon: IconCheck } : {}),
+        closeOnActivate: true,
+        onActivate: () => this.options.onPreview(page.id),
+      }));
+
+    this.showMenu(new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '300px',
+      searchable: true,
+      messages: {
+        search: this.label('tools.database.layoutPreviewSearch'),
+        nothingFound: this.label('tools.database.layoutPreviewEmpty'),
+      },
+      items,
+    }));
+  }
+
   /** Apply's chevron half: "Reset to original page layout" (research/10 §5). */
   private openMoreSave(anchor: HTMLElement): void {
-    this.closeMenu();
-    const menu = new PopoverDesktop({
+    this.showMenu(new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
       trigger: anchor,
       width: 'auto',
@@ -169,8 +232,11 @@ export class PageLayoutBuilder {
         closeOnActivate: true,
         onActivate: () => this.options.onReset(),
       }] as PopoverItemParams[],
-    });
+    }));
+  }
 
+  private showMenu(menu: PopoverDesktop): void {
+    this.closeMenu();
     menu.on(PopoverEvent.Closed, () => {
       if (this.menu === menu) {
         this.menu = null;
@@ -200,7 +266,13 @@ export class PageLayoutBuilder {
     return button;
   }
 
-  private label(key: string): string {
-    return this.options.i18n?.t(key) ?? (englishDictionary as Record<string, string>)[key] ?? key;
+  private pageTitle(title: string): string {
+    return title.trim() !== '' ? title : this.label('tools.database.layoutNewPage');
+  }
+
+  private label(key: string, vars?: Record<string, string>): string {
+    const fallback = (englishDictionary as Record<string, string>)[key] ?? key;
+
+    return this.options.i18n?.t(key, vars) ?? fallback.replace(/\{(\w+)\}/g, (match, name: string) => vars?.[name] ?? match);
   }
 }

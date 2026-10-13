@@ -1,3 +1,4 @@
+import { isEscapeConsumed, markEscapeConsumed } from '../consumed-escape';
 import { hasEscapeLayer } from '../dismissable-layer';
 
 import type { PopoverAbstract } from './popover-abstract';
@@ -262,7 +263,7 @@ export class PopoverRegistry {
      * Another dismissal path already consumed this press (the dismissable-layer
      * stack preventDefaults when it dismisses). One Escape = one dismissal.
      */
-    if (event.defaultPrevented) {
+    if (event.defaultPrevented || isEscapeConsumed(event)) {
       return;
     }
 
@@ -280,6 +281,8 @@ export class PopoverRegistry {
       return;
     }
 
+    // A later Blok Escape handler (a row peek) skips a consumed press.
+    markEscapeConsumed(event);
     this.closeTopmost();
   }
 

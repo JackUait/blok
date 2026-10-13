@@ -1,3 +1,4 @@
+import { isEscapeConsumed } from '../../../utils/consumed-escape';
 import { isPrintableKeyEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
@@ -19,7 +20,8 @@ export class NavigationMode extends BlockEventComposer {
    * @returns true if event was handled
    */
   public handleEscape(event: KeyboardEvent): boolean {
-    if (event.key !== 'Escape') {
+    // A popover closed on this press already. One Escape = one layer.
+    if (event.key !== 'Escape' || isEscapeConsumed(event)) {
       return false;
     }
 

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NavigationMode } from '../../../../../../src/components/modules/blockEvents/composers/navigationMode';
+import { markEscapeConsumed } from '../../../../../../src/components/utils/consumed-escape';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEvent => {
@@ -174,6 +175,44 @@ describe('NavigationMode', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(close).toHaveBeenCalledTimes(1);
       expect(enableNavigationMode).toHaveBeenCalledTimes(1);
+    });
+
+    // A popover closed on this Escape already; one press peels one layer.
+    it('does not enable navigation mode for an Escape a popover already consumed', () => {
+      const enableNavigationMode = vi.fn();
+      const blok = createBlokModules({
+        BlockSelection: {
+          enableNavigationMode,
+          anyBlockSelected: false,
+        } as unknown as BlokModules['BlockSelection'],
+      });
+      const navigationMode = new NavigationMode(blok);
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+
+      markEscapeConsumed(event);
+      const result = navigationMode.handleEscape(event);
+
+      expect(enableNavigationMode).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+
+    // A third-party tool may preventDefault Escape; Blok still enters navigation mode, as before.
+    it('enables navigation mode for an Escape a third party preventDefaulted', () => {
+      const enableNavigationMode = vi.fn();
+      const blok = createBlokModules({
+        BlockSelection: {
+          enableNavigationMode,
+          anyBlockSelected: false,
+        } as unknown as BlokModules['BlockSelection'],
+      });
+      const navigationMode = new NavigationMode(blok);
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+
+      event.preventDefault();
+      const result = navigationMode.handleEscape(event);
+
+      expect(enableNavigationMode).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
     });
   });
 

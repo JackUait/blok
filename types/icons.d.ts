@@ -103,6 +103,7 @@ export declare const IconCalendar: string;
 export declare const IconMergeCells: string;
 export declare const IconSplitCell: string;
 export declare const IconSplitView: string;
+export declare const IconPageLayout: string;
 export declare const IconPlacement: string;
 export declare const IconImage: string;
 export declare const IconImageBroken: string;

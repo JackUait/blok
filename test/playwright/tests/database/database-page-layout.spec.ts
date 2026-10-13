@@ -125,11 +125,15 @@ test.describe('row page layout', () => {
     expect(await dialog.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(249, 248, 247)');
     await expect(dialog.getByRole('heading', { name: 'Alpha' })).toBeVisible();
 
+    const preview = dialog.getByRole('button', { name: 'Preview: Alpha' });
     const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
     const apply = dialog.getByRole('button', { name: 'Apply to all pages' });
     const more = dialog.getByRole('button', { name: 'More save options' });
 
-    await cancel.focus();
+    // research/10 §9: Preview → Cancel → Apply → More save options.
+    await preview.focus();
+    await page.keyboard.press('Tab');
+    await expect(cancel).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(apply).toBeFocused();
     await page.keyboard.press('Tab');
@@ -162,6 +166,23 @@ test.describe('row page layout', () => {
     expect(new Set(boxes.map((box) => box?.y)).size).toBe(1);
     for (const box of boxes) expect(box?.height).toBe(32);
     expect(Math.max(...boxes.map((box) => (box?.x ?? 0) + (box?.width ?? 0)))).toBeLessThanOrEqual(756 - 16);
+  });
+
+  // The centered heading sits above the bar's buttons; a long page name must not cover Cancel.
+  test('keeps a long Preview page name clear of Cancel at 756px', async ({ page }) => {
+    await page.setViewportSize({ width: 756, height: 717 });
+    const data = blocks();
+
+    (data[1].data as { properties: Record<string, unknown> }).properties['p-title'] = 'A very long page name that runs on and on past the middle';
+    await mount(page, data);
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const preview = await builder(page).locator('[data-blok-database-layout-preview]').boundingBox();
+    const cancel = await builder(page).getByRole('button', { name: 'Cancel', exact: true }).boundingBox();
+
+    if (preview === null || cancel === null) throw new Error('missing top bar buttons');
+    expect(preview.x + preview.width).toBeLessThanOrEqual(cancel.x);
   });
 
   test('pins a property for every page with Apply to all pages', async ({ page }) => {
@@ -468,5 +489,65 @@ test.describe('row page layout', () => {
     await expect(pins(page)).toHaveCount(0);
     await expect(peek(page).getByRole('tablist')).toHaveCount(0);
     expect(await savedTitle(page)).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
+  });
+
+  // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.
+  test('previews another page from the Preview switch and keeps the draft', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    await layoutMenu(page, 'p-due');
+    await page.getByRole('menuitem', { name: 'Pin to heading' }).click();
+
+    await builder(page).getByRole('button', { name: 'Preview: Alpha' }).click();
+    await expect(page.getByPlaceholder('Search pages…')).toBeFocused();
+    await page.keyboard.type('bra');
+    await expect(page.getByRole('menuitem', { name: 'Alpha' })).toBeHidden();
+    await page.getByRole('menuitem', { name: 'Bravo' }).click();
+
+    await expect(builder(page).getByRole('heading', { name: 'Bravo' })).toBeVisible();
+    await expect(builder(page).getByRole('button', { name: 'Preview: Bravo' })).toBeVisible();
+    await expect(pins(page).locator('[data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toContainText('Monday');
+    expect((await savedTitle(page))?.pageLayoutPlacements ?? []).toEqual([]);
+  });
+
+  // research/09 §1: with zero rows the builder opens on a "New page" placeholder.
+  test('opens Customize page layout on a New page placeholder with no rows', async ({ page }) => {
+    const [database] = blocks();
+
+    await mount(page, [{ ...database, content: [] }]);
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-more').click();
+    await page.getByTestId('database-settings-customize-layout').click();
+
+    await expect(builder(page).getByRole('heading', { name: 'New page' })).toBeVisible();
+    await expect(peek(page)).toHaveCount(0);
+    await builder(page).getByRole('button', { name: 'Preview: New page' }).click();
+    const empty = page.getByTestId('popover-item-html').filter({ hasText: 'No results.' });
+
+    await expect(empty).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(empty).toBeHidden();
+    await expect(builder(page)).toBeVisible();
+    await builder(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(builder(page)).toBeHidden();
+  });
+
+  // One Escape = one layer: the peek's "Open pages in" menu closes first, the peek on the next press.
+  test('closes the Open pages in menu on the first Escape and the peek on the second', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).getByRole('button', { name: 'Open pages in' }).click();
+    await expect(page.getByRole('menuitem', { name: /Center peek/ })).toBeVisible();
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menuitem', { name: /Center peek/ })).toBeHidden();
+    // A closing side peek stays in the DOM while it slides out; data-open says whether it is open.
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+
+    await page.keyboard.press('Escape');
+    await expect(peek(page)).toHaveCount(0);
   });
 });

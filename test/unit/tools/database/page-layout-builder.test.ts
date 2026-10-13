@@ -154,13 +154,156 @@ describe('PageLayoutBuilder', () => {
     drawer.destroy();
   });
 
-  // research/10 §9: Preview → Cancel → Apply → More save options. Preview comes in Phase 3.
-  it('puts Cancel, Apply and More save options in that tab order', () => {
+  // research/10 §9: Preview → Cancel → Apply → More save options.
+  it('puts Preview, Cancel, Apply and More save options in that tab order', () => {
     const { drawer } = customize();
-    const order = getTabbables(builder()).slice(0, 3);
+    const order = getTabbables(builder()).slice(0, 4);
 
-    expect(order.map((el) => el.textContent?.trim() || el.getAttribute('aria-label'))).toEqual(['Cancel', 'Apply to all pages', 'More save options']);
+    expect(order.map((el) => el.textContent?.trim() || el.getAttribute('aria-label'))).toEqual(['Preview: Card', 'Cancel', 'Apply to all pages', 'More save options']);
     drawer.destroy();
+  });
+
+  describe('Preview switch', () => {
+    const SECOND: DatabaseRow = { id: 'row-2', position: 'a1', properties: { 'p-title': 'Second', 'p-status': 'Done', 'p-due': '' } };
+    const previewButton = (): HTMLElement | null => builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]');
+    const pageItem = (id: string): HTMLElement | null => q(`[data-blok-popover-item][data-blok-item-name="preview-${id}"]`);
+
+    // research/09 §2: switching swaps the canvas; unapplied edits survive.
+    it('previews the chosen page from the Preview switch and keeps the draft', () => {
+      const { drawer, options } = customize({ viewRows: () => [ROW, SECOND] });
+
+      pinDue();
+      previewButton()?.click();
+      pageItem('row-2')?.click();
+
+      expect(previewButton()?.textContent?.trim()).toBe('Preview: Second');
+      expect(builder().querySelector('[data-blok-database-layout-canvas-title]')?.textContent).toBe('Second');
+      expect(builder().querySelector('[data-blok-database-drawer-pins] [data-property-id="p-due"]')).not.toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    // Q4: view order, not Notion's single newest-first sample.
+    it('lists every page in view order, in a menu with a focused Search pages… field', async () => {
+      const { drawer } = customize({ viewRows: () => [SECOND, ROW] });
+
+      previewButton()?.click();
+      // The popover focuses its search field in a microtask.
+      await Promise.resolve();
+      const items = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item][data-blok-item-name^="preview-"]')];
+      const search = q<HTMLInputElement>('[data-blok-popover-opened] input');
+
+      expect(items.map((item) => item.textContent?.trim())).toEqual(['Second', 'Card']);
+      expect(search?.placeholder).toBe('Search pages…');
+      expect(search).toHaveFocus();
+      drawer.destroy();
+    });
+
+    it('searches pages in the Preview switch', () => {
+      const { drawer } = customize({ viewRows: () => [ROW, SECOND] });
+
+      previewButton()?.click();
+      const search = q<HTMLInputElement>('[data-blok-popover-opened] input');
+
+      if (search === null) throw new Error('no search field');
+      search.value = 'sec';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(pageItem('row-1')?.hasAttribute('data-blok-hidden')).toBe(true);
+      expect(pageItem('row-2')?.hasAttribute('data-blok-hidden')).toBe(false);
+      drawer.destroy();
+    });
+
+    // No blue selected states: a checkmark on a neutral row.
+    it('marks the previewed page with a check and no fill', () => {
+      const { drawer } = customize({ viewRows: () => [ROW, SECOND] });
+
+      previewButton()?.click();
+
+      const check = 'M4.5 10.25l3.5 3.5 7.5-7.5';
+
+      expect(pageItem('row-1')?.innerHTML).toContain(check);
+      expect(pageItem('row-1')?.hasAttribute('data-blok-popover-item-active')).toBe(false);
+      expect(pageItem('row-2')?.innerHTML).not.toContain(check);
+      drawer.destroy();
+    });
+
+    it('follows a rename of the previewed page', () => {
+      const { drawer } = customize({ viewRows: () => [ROW] });
+
+      drawer.syncOpenRow({ ...ROW, properties: { ...ROW.properties, 'p-title': 'Renamed' } });
+
+      expect(previewButton()?.textContent?.trim()).toBe('Preview: Renamed');
+      drawer.destroy();
+    });
+  });
+
+  // research/09 §1: with zero rows the builder still opens, on a "New page" placeholder.
+  describe('with no rows', () => {
+    const customizeNewPage = (overrides: Partial<CardDrawerOptions> = {}): { drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
+      const options = createOptions({ viewRows: () => [], ...overrides });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.customizeNewPage();
+
+      return { drawer, options };
+    };
+
+    it('opens on a New page placeholder when the database has no rows', () => {
+      const { drawer, options } = customizeNewPage();
+      const title = builder().querySelector('[data-blok-database-layout-canvas-title]');
+
+      expect(title?.textContent).toBe('New page');
+      expect(title?.hasAttribute('data-placeholder')).toBe(true);
+      expect(builder().querySelector('[data-blok-database-layout-preview]')?.textContent?.trim()).toBe('Preview: New page');
+      expect(builder().querySelector('[data-blok-database-layout-canvas-content]')?.textContent).toBe('Empty');
+      expect(drawer.isOpen).toBe(false);
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('keeps the placeholder values read-only', () => {
+      const { drawer, options } = customizeNewPage();
+      const value = builder().querySelector<HTMLElement>('[data-blok-database-drawer-prop-value][data-property-id="p-due"]');
+
+      expect(value).not.toBeNull();
+      expect(value?.getAttribute('role')).toBeNull();
+      value?.click();
+
+      expect(q('[data-blok-database-cell-editor]')).toBeNull();
+      expect(options.onPropertyValueChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('reads No results. in the Preview switch', () => {
+      const { drawer } = customizeNewPage();
+
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]')?.click();
+
+      expect(q('[data-blok-popover-opened]')?.textContent).toContain('No results.');
+      expect(document.querySelectorAll('[data-blok-popover-item][data-blok-item-name^="preview-"]')).toHaveLength(0);
+      drawer.destroy();
+    });
+
+    it('applies the layout and leaves no page open', () => {
+      const { drawer, options } = customizeNewPage();
+
+      pinDue();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.placements).toEqual([{ id: 'p-due', place: 'heading' }]);
+      expect(q(BUILDER)).toBeNull();
+      expect(drawer.isOpen).toBe(false);
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('reads Empty for a property group with no properties', () => {
+      const { drawer } = customizeNewPage({ schema: [{ id: 'p-title', name: 'Title', type: 'title', position: 'a0' }] });
+
+      expect(builder().querySelector('[data-blok-database-layout-group-empty]')?.textContent).toBe('Empty');
+      drawer.destroy();
+    });
   });
 
   // The editor's document keydown turns Tab into block navigation; inside the builder Tab must move focus.
@@ -223,6 +366,34 @@ describe('PageLayoutBuilder', () => {
     drawer.destroy();
   });
 
+  // research/09 §1b: the row page property menu ends with "Customize layout", which previews that page.
+  it('hands the row page property menu a Customize layout that opens the builder on this page', () => {
+    const options = createOptions();
+    const drawer = new DatabaseCardDrawer(options);
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-prop-label][data-property-id="p-due"]')?.click();
+    const customizeLayout = vi.mocked(options.onOpenPropertyMenu)?.mock.calls.at(-1)?.[2];
+
+    expect(customizeLayout).toBeTypeOf('function');
+    customizeLayout?.();
+
+    expect(builder().querySelector('[data-blok-database-layout-preview]')?.textContent?.trim()).toBe('Preview: Card');
+    drawer.destroy();
+  });
+
+  it('offers no Customize layout from the property menu of a locked database', () => {
+    const options = createOptions({ databaseLocked: () => true });
+    const drawer = new DatabaseCardDrawer(options);
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-prop-label][data-property-id="p-due"]')?.click();
+
+    expect(options.onOpenPropertyMenu).toHaveBeenCalled();
+    expect(vi.mocked(options.onOpenPropertyMenu)?.mock.calls.at(-1)?.[2]).toBeUndefined();
+    drawer.destroy();
+  });
+
   // research/10 §9: Escape never closes the builder.
   it('keeps the builder and its draft on Escape', () => {
     const { drawer, options } = customize({ onEscapeClose: vi.fn() });
@@ -255,6 +426,7 @@ describe('PageLayoutBuilder', () => {
       ['More save options', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click(), 'reset'],
       ['Page settings', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-settings]')?.click(), 'structure-simple'],
       ['an item menu', () => q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click(), 'pin'],
+      ['the Preview switch', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]')?.click(), 'preview-row-1'],
     ])('closes %s and leaves the toast and the builder', (_name, openMenu, item) => {
       const toast = showToast();
       const { drawer } = customize();

@@ -180,6 +180,28 @@ describe('database row page layout css', () => {
     expect(database).toMatch(/\[data-blok-database-layout-cancel\]:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--blok-focus-ring\)/);
   });
 
+  // research/09 §2: "Preview: <page>", 12px/500 grey, 3px 6px padding, no fill at rest, under the title.
+  it('draws the Preview switch as a grey text button under the title, with no fill', () => {
+    const preview = ruleBody('[data-blok-database-layout-preview]');
+
+    expect(ruleBody('[data-blok-database-layout-heading]')).toContain('flex-direction: column');
+    expect(preview).toContain('font-size: 12px');
+    expect(preview).toContain('font-weight: 500');
+    expect(preview).toContain('color: var(--blok-text-secondary)');
+    expect(preview).toContain('background: none');
+    expect(preview).toContain('pointer-events: auto');
+    expect(database).toMatch(/\[data-blok-database-layout-preview\]:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--blok-focus-ring\)/);
+  });
+
+  // research/09 §1: the zero-row heading shows the grey placeholder "New page".
+  it('greys the placeholder title and the empty lines of a placeholder page', () => {
+    expect(ruleBody('[data-blok-database-layout-canvas-title][data-placeholder]')).toContain('color: var(--blok-text-tertiary)');
+    expect(ruleBody('[data-blok-database-layout-canvas-content], [data-blok-database-layout-group-empty]')).toContain('color: var(--blok-text-tertiary)');
+    // research/09 §1: the zero-row Preview menu reads "No results." in grey, inset like a menu row.
+    expect(ruleBody('[data-blok-database-layout-preview-empty]')).toContain('color: var(--blok-text-secondary)');
+    expect(ruleBody('[data-blok-database-layout-preview-empty]')).toContain('padding-inline: var(--blok-space-2)');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

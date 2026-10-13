@@ -15,8 +15,10 @@ import {
   findCommonNestedContainer,
   scheduleCaretIntoNestedContainer,
 } from '../../../../../../src/components/utils/nested-container-caret';
+import { isEscapeConsumed } from '../../../../../../src/components/utils/consumed-escape';
 import { registerLayer } from '../../../../../../src/components/utils/dismissable-layer';
 import { deliverOnSubmit } from '../../../../../../src/components/utils/on-submit';
+import type { PopoverAbstract } from '../../../../../../src/components/utils/popover/popover-abstract';
 import { PopoverRegistry } from '../../../../../../src/components/utils/popover/popover-registry';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { API, BlokConfig, OutputData } from '../../../../../../types';
@@ -1310,6 +1312,51 @@ describe('KeyboardController — mutation coverage', () => {
 
       expect(closeTopmost).toHaveBeenCalledTimes(1);
       expect(harness.blok.Toolbar.close).not.toHaveBeenCalled();
+    });
+
+    // Blok is published: closing a popover must not change what a host sees on the press.
+    it('marks the Escape that closes a popover as consumed, without preventing its default', () => {
+      const harness = enabledHarness();
+
+      vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => true);
+      vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
+      const { event, reachedTarget } = harness.press(harness.inside, { key: 'Escape' });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(isEscapeConsumed(event)).toBe(true);
+      expect(reachedTarget).toBe(true);
+    });
+
+    // The registry's own Escape backstop runs after the controller; it must not close the parent too.
+    it('closes only the nested popover of an open pair: one Escape peels one layer', () => {
+      const harness = enabledHarness();
+      const makePopover = (el: HTMLElement): PopoverAbstract => ({
+        hide: vi.fn(() => PopoverRegistry.instance.unregister(popover(el))),
+        hasNode: (node: Node) => el.contains(node),
+        getElement: () => el,
+        getFocusHost: () => null,
+      }) as unknown as PopoverAbstract;
+      const popovers = new Map<HTMLElement, PopoverAbstract>();
+      const popover = (el: HTMLElement): PopoverAbstract => {
+        const known = popovers.get(el) ?? makePopover(el);
+
+        popovers.set(el, known);
+
+        return known;
+      };
+      const parentEl = document.createElement('div');
+      const childEl = document.createElement('div');
+
+      parentEl.appendChild(childEl);
+      document.body.appendChild(parentEl);
+      PopoverRegistry.instance.register(popover(parentEl), document.createElement('button'));
+      PopoverRegistry.instance.register(popover(childEl), document.createElement('button'));
+
+      harness.press(harness.inside, { key: 'Escape' });
+
+      expect(popover(childEl).hide).toHaveBeenCalledTimes(1);
+      expect(popover(parentEl).hide).not.toHaveBeenCalled();
+      expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(true);
     });
 
     it('closing a popover over a modal layer keeps the layer: one Escape peels one layer', () => {

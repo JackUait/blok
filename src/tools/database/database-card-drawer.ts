@@ -16,6 +16,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
+import { isEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection } from '../../components/utils/direction';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -126,8 +127,11 @@ export interface CardDrawerOptions {
   onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string) => void) => void;
   /** Discard in Customize layout: delete a property made while customizing. */
   onDeleteProperty?: (propertyId: string) => void;
-  /** A property label was clicked: open its property menu under `anchor`. */
-  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement) => void;
+  /**
+   * A property label was clicked: open its property menu under `anchor`.
+   * `onCustomizeLayout` is set when the page can be customized: the menu ends with "Customize layout".
+   */
+  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement, onCustomizeLayout?: () => void) => void;
   /** Offer Person when adding a property. */
   hasPeople?: boolean;
   /** What every cell needs from the host beyond i18n: people, uploads, locale. */
@@ -163,6 +167,8 @@ export interface CardDrawerOptions {
   onIconChange?: (rowId: string, icon: string | null) => void;
   /** The row before (-1) or after (1) the open one in the view, if any. */
   adjacentRow?: (rowId: string, direction: 1 | -1) => DatabaseRow | undefined;
+  /** The view's rows in its order, for the layout builder's Preview switch. */
+  viewRows?: () => DatabaseRow[];
   /**
    * A mode picked in the peek header. The tool saves it on the view; it may
    * also take the page away from the drawer (a host's full page).
@@ -267,6 +273,9 @@ export class DatabaseCardDrawer {
   private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
   private readonly rowBody: CardDrawerOptions['rowBody'];
   private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
+  private readonly viewRows: CardDrawerOptions['viewRows'];
+  /** The builder's "New page" preview when the database has no rows (research/09 §1). No drawer is open then. */
+  private placeholder: DatabaseRow | null = null;
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
@@ -352,6 +361,7 @@ export class DatabaseCardDrawer {
     this.savedOptionsOf = options.savedOptionsOf;
     this.rowBody = options.rowBody;
     this.adjacentRow = options.adjacentRow;
+    this.viewRows = options.viewRows;
     this.onModeChange = options.onModeChange;
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
@@ -542,6 +552,11 @@ export class DatabaseCardDrawer {
         return;
       }
 
+      // A popover closed on this press already. One Escape = one layer.
+      if (isEscapeConsumed(e)) {
+        return;
+      }
+
       const target = e.target as Node | null;
       const activeHolder = this.drawer?.querySelector('[data-blok-database-drawer-editor]');
 
@@ -656,6 +671,7 @@ export class DatabaseCardDrawer {
     this.closeLayoutMenu();
     this.stopWatchingPins();
     this.draft = null;
+    this.placeholder = null;
     this.closeBuilder();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
@@ -703,6 +719,7 @@ export class DatabaseCardDrawer {
     this.closeModeMenu();
     this.closeLayoutMenu();
     this.draft = null;
+    this.placeholder = null;
     this.closeBuilder();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
@@ -1227,11 +1244,9 @@ export class DatabaseCardDrawer {
   refreshSchema(schema: PropertyDefinition[]): void {
     this.schema = schema;
 
-    if (this.drawer === null || this.currentRow === null) {
-      return;
+    if (this.drawer !== null || this.placeholder !== null) {
+      this.rerender();
     }
-
-    this.renderRegions(this.currentRow);
   }
 
   /**
@@ -1269,6 +1284,15 @@ export class DatabaseCardDrawer {
         this.refreshSchema(this.schema);
       });
       propsSection.appendChild(reveal);
+    }
+
+    // research/09 §1: a property group with nothing in it reads "Empty" in the builder.
+    if (this.draft !== null && layout.group.length === 0 && layout.sections.length === 0 && (this.builder?.query ?? '') === '') {
+      const empty = document.createElement('div');
+
+      empty.setAttribute('data-blok-database-layout-group-empty', '');
+      empty.textContent = this.label('tools.database.cellEmpty');
+      propsSection.appendChild(empty);
     }
 
     if (this.draft !== null) {
@@ -1401,13 +1425,14 @@ export class DatabaseCardDrawer {
     const content = this.drawer?.querySelector('[data-blok-database-drawer-content]') ?? null;
     const divider = content?.querySelector<HTMLElement>(':scope > hr') ?? null;
 
-    if (content === null || divider === null) {
-      return;
-    }
     this.syncBuilder();
     const canvas = this.builder?.canvas ?? null;
 
-    content.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
+    // The placeholder draws into the builder only: there is no page behind it.
+    if (canvas === null && (content === null || divider === null)) {
+      return;
+    }
+    content?.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
     canvas?.replaceChildren();
     this.drawer?.removeAttribute('data-details-open');
     this.stopWatchingPins();
@@ -1438,10 +1463,12 @@ export class DatabaseCardDrawer {
     }
     const onContent = this.activeTab === 'content';
 
-    divider.hidden = !onContent;
-    const editor = content.querySelector<HTMLElement>(':scope > [data-blok-database-drawer-editor]');
+    if (divider !== null) {
+      divider.hidden = !onContent;
+    }
+    const editor = content?.querySelector<HTMLElement>(':scope > [data-blok-database-drawer-editor]');
 
-    if (editor !== null) {
+    if (editor !== null && editor !== undefined) {
       editor.hidden = !onContent;
     }
     if (!onContent) {
@@ -1467,11 +1494,21 @@ export class DatabaseCardDrawer {
     }
     if (canvas !== null) {
       const title = document.createElement('h1');
+      const name = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
 
       title.setAttribute('data-blok-database-layout-canvas-title', '');
-      title.textContent = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
+      title.textContent = name.trim() !== '' ? name : this.label('tools.database.layoutNewPage');
+      title.toggleAttribute('data-placeholder', name.trim() === '');
       canvas.append(title, ...regions);
-    } else {
+      // research/09 §1: the placeholder page's Content reads "Empty".
+      if (this.placeholder !== null) {
+        const body = document.createElement('div');
+
+        body.setAttribute('data-blok-database-layout-canvas-content', '');
+        body.textContent = this.label('tools.database.cellEmpty');
+        canvas.append(body);
+      }
+    } else if (content !== null && divider !== null) {
       for (const region of regions) content.insertBefore(region, divider);
     }
     this.syncDetailsDock();
@@ -1532,7 +1569,7 @@ export class DatabaseCardDrawer {
       el.textContent = text;
       el.addEventListener('click', () => {
         this.activeTab = id;
-        if (this.currentRow !== null) this.renderRegions(this.currentRow);
+        this.rerender();
         this.drawer?.querySelector<HTMLElement>(`[data-blok-database-drawer-tabs] [data-tab-id="${CSS.escape(id)}"]`)?.focus();
       });
       el.addEventListener('keydown', (event) => {
@@ -1689,12 +1726,30 @@ export class DatabaseCardDrawer {
     this.renderRegions(this.currentRow);
   }
 
+  /** With no rows the builder still opens, on a "New page" placeholder (research/09 §1). */
+  customizeNewPage(): void {
+    if (!this.customizable || this.draft !== null || this.drawer !== null) {
+      return;
+    }
+    this.onPageLayoutBirth?.();
+    this.placeholder = { id: '', position: '', properties: {} };
+    this.draft = { ops: [], visibility: new Map(), madeProperties: [] };
+    this.rerender();
+  }
+
+  /** Redraws the regions of the page in view: the open row, or the builder's placeholder. */
+  private rerender(): void {
+    const row = this.currentRow ?? this.placeholder;
+
+    if (row !== null) this.renderRegions(row);
+  }
+
   private editLayout(op: PageLayoutOp): void {
-    if (this.draft === null || this.currentRow === null) {
+    if (this.draft === null) {
       return;
     }
     this.draft.ops.push(op);
-    this.renderRegions(this.currentRow);
+    this.rerender();
   }
 
   /** Leaves Customize layout. With `apply`, replays the edits on the newest saved layout. */
@@ -1706,7 +1761,7 @@ export class DatabaseCardDrawer {
     if (apply && draft !== null && draft.ops.length > 0) {
       this.onPageLayoutChange?.((layout) => applyDraft(draft, layout));
     }
-    if (this.currentRow !== null) this.renderRegions(this.currentRow);
+    this.rerender();
   }
 
   /** Discard drops the draft and deletes the properties made meanwhile (research/09 §3b). */
@@ -1720,29 +1775,47 @@ export class DatabaseCardDrawer {
   /** Opens the full-window builder while a draft is open, and closes it once the draft is gone. */
   private syncBuilder(): void {
     if (this.draft === null) {
+      this.placeholder = null;
       this.closeBuilder();
 
       return;
     }
+    const previewed = this.currentRow ?? this.placeholder;
+    const previewTitle = (previewed?.properties[this.titlePropertyId] as string | undefined) ?? '';
+
     if (this.builder !== null) {
       // The host refreshes the drawer after a rename (setData), so the title can change while open.
       this.builder.setTitle(this.databaseTitle());
+      this.builder.setPreview(previewTitle);
 
       return;
     }
     this.builder = new PageLayoutBuilder({
       i18n: this.i18n,
       title: this.databaseTitle(),
-      directionSource: this.drawer,
+      directionSource: this.drawer ?? this.wrapper,
       hasEdits: () => this.draft !== null && !isDraftEmpty(this.draft),
       onApply: () => this.finishCustomizing(true),
       onDiscard: () => this.discardCustomizing(),
       onReset: () => this.resetLayout(),
       onPageSettings: (anchor) => this.openPageSettings(anchor),
-      onSearch: () => {
-        if (this.currentRow !== null) this.renderRegions(this.currentRow);
+      onSearch: () => this.rerender(),
+      pages: () => this.previewRows().map((row) => ({ id: row.id, title: (row.properties[this.titlePropertyId] as string | undefined) ?? '' })),
+      previewId: () => this.currentRowId,
+      onPreview: (id) => {
+        const row = this.previewRows().find((candidate) => candidate.id === id);
+
+        // The same path as the prev / next arrows, so the draft stays.
+        if (row !== undefined && this.drawer !== null) this.open(row);
       },
     });
+    this.builder.setPreview(previewTitle);
+  }
+
+  private previewRows(): DatabaseRow[] {
+    if (this.viewRows !== undefined) return this.viewRows();
+
+    return this.currentRow === null ? [] : [this.currentRow];
   }
 
   private closeBuilder(): void {
@@ -1795,7 +1868,7 @@ export class DatabaseCardDrawer {
   private resetLayout(): void {
     this.draft = null;
     this.onPageLayoutChange?.(resetPageLayout());
-    if (this.currentRow !== null) this.renderRegions(this.currentRow);
+    this.rerender();
   }
 
   /** The ⋯ menu on a property while customizing; its items depend on where it sits. */
@@ -2035,11 +2108,14 @@ export class DatabaseCardDrawer {
 
       label.setAttribute('role', 'button');
       label.tabIndex = 0;
-      label.addEventListener('click', () => openMenu(def.id, label));
+      // research/09 §1b: a row page property menu ends with "Customize layout".
+      const customize = this.customizable ? (): void => this.startCustomizing() : undefined;
+
+      label.addEventListener('click', () => openMenu(def.id, label, customize));
       label.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          openMenu(def.id, label);
+          openMenu(def.id, label, customize);
         }
       });
     }
@@ -2051,7 +2127,8 @@ export class DatabaseCardDrawer {
     valueEl.setAttribute('data-property-id', def.id);
     this.paintValue(valueEl, def, value);
 
-    if (!this.readOnly && this.onPropertyValueChange !== undefined && !isReadOnlyType(def.type)) {
+    // The placeholder page is no row, so it has no value to edit.
+    if (!this.readOnly && this.onPropertyValueChange !== undefined && !isReadOnlyType(def.type) && this.placeholder === null) {
       valueEl.setAttribute('role', 'button');
       valueEl.tabIndex = 0;
       valueEl.setAttribute('aria-label', def.name);

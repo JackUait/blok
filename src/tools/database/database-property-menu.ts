@@ -1,4 +1,4 @@
-import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconWand } from '../../components/icons';
+import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconPageLayout, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -112,6 +112,8 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
     hasDraft: (propertyId: string) => boolean;
     open: (propertyId: string) => void;
   };
+  /** Only the row page's menu ends with "Customize layout" (research/09 §1b); a column header's has none. */
+  onCustomizeLayout?: () => void;
 }
 
 const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
@@ -191,6 +193,7 @@ export class DatabasePropertyMenu {
       ...this.autofillItem(property),
       ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, ...(tail.length > 0 ? [{ type: PopoverItemType.Separator } as const] : [])] : []),
       ...tail.map((entry) => this.entry(entry, property)),
+      ...this.customizeItem(),
     ];
     const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
 
@@ -203,6 +206,24 @@ export class DatabasePropertyMenu {
       }
     });
     popover.show();
+  }
+
+  private customizeItem(): PopoverItemParams[] {
+    const customize = this.options.onCustomizeLayout;
+
+    if (customize === undefined) return [];
+
+    return [
+      { type: PopoverItemType.Separator },
+      {
+        type: PopoverItemType.Default,
+        name: 'customize-layout',
+        title: this.t('tools.database.layoutCustomize'),
+        icon: IconPageLayout,
+        closeOnActivate: true,
+        onActivate: () => customize(),
+      },
+    ];
   }
 
   /** research/08: after Change type. Once set up or drafted, it opens the setup directly. */

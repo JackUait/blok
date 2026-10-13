@@ -4,6 +4,7 @@ import { SelectionUtils as Selection } from '../../../selection/index';
 import { isIosDevice } from '../../../utils/browser';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { getCaretOffset } from '../../../utils/caret/selection';
+import { markEscapeConsumed } from '../../../utils/consumed-escape';
 import { runConvert } from '../../../utils/convert-refusal';
 import { hasEscapeLayer } from '../../../utils/dismissable-layer';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
@@ -820,6 +821,8 @@ export class KeyboardController extends Controller {
      * from being enabled when closing block settings.
      */
     if (PopoverRegistry.instance.hasOpenPopovers()) {
+      // Later Blok Escape handlers (navigation mode, a row peek) skip a consumed press.
+      markEscapeConsumed(event);
       // A layer (modal, toast) listens later on document and would also peel on this press.
       if (hasEscapeLayer()) {
         event.preventDefault();

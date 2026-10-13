@@ -96,7 +96,7 @@ import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconSplitView, IconUpload } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconPageLayout, IconUpload } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -2672,19 +2672,26 @@ export class DatabaseTool implements BlockTool {
     input.click();
   }
 
-  /** "Customize page layout", last in More settings. It opens the first row page and starts customizing. */
+  /**
+   * "Customize page layout", last in More settings. It opens the first row page and starts customizing.
+   * With no rows it opens on a "New page" placeholder (research/09 §1).
+   */
   private customizeLayoutAction(): ViewSettingsAction | undefined {
     if (this.readOnly || this.structureLocked() || this.linked) return undefined;
 
     return {
       testId: 'database-settings-customize-layout',
       label: this.api.i18n.t('tools.database.layoutCustomizePage'),
-      icon: IconSplitView,
-      disabled: this.viewRowOrder().length === 0,
+      icon: IconPageLayout,
       onClick: () => {
         const first = this.viewRowOrder()[0];
 
-        if (first === undefined) return;
+        if (first === undefined) {
+          this.ensureCardDrawer();
+          this.cardDrawer?.customizeNewPage();
+
+          return;
+        }
         this.handleRowClick(first.id);
         this.cardDrawer?.startCustomizing();
       },
@@ -5228,7 +5235,7 @@ export class DatabaseTool implements BlockTool {
             this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
           }
         },
-        onOpenPropertyMenu: (propertyId, anchor) => this.openPropertyMenu(propertyId, anchor),
+        onOpenPropertyMenu: (propertyId, anchor, onCustomizeLayout) => this.openPropertyMenu(propertyId, anchor, undefined, undefined, onCustomizeLayout),
         onOpenAddProperty: (anchor, onAdded) => this.openAddProperty(anchor, undefined, (created) => {
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
           onAdded?.(created.id);
@@ -5275,6 +5282,7 @@ export class DatabaseTool implements BlockTool {
           start: (rowId) => this.api.blocks.getById(rowId)?.call('startBody'),
         },
         adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
+        viewRows: () => this.viewRowOrder(),
         onEscapeClose: (rowId) => this.dropFreshRow(rowId),
         onCoverChange: (rowId, cover) => {
           if (!writable()) return;
@@ -7067,7 +7075,7 @@ export class DatabaseTool implements BlockTool {
     param.receive(prop.id);
   }
 
-  openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext): void {
+  openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext, onCustomizeLayout?: () => void): void {
     const hostTable = table ?? (this.view instanceof DatabaseTableView ? this.view : undefined);
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
     const saved = this.model.getProperty(propertyId);
@@ -7091,6 +7099,7 @@ export class DatabaseTool implements BlockTool {
     const menu = new DatabasePropertyMenu({
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
+      ...(onCustomizeLayout === undefined ? {} : { onCustomizeLayout }),
       onClose: () => {
         if (this.titleIconMenu?.menu === menu) this.titleIconMenu = null;
         if (this.propertyMenu !== menu || menu.isIconPickerOpen) return;

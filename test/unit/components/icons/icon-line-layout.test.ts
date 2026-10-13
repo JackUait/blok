@@ -20,6 +20,7 @@ import {
   IconList,
   IconMergeCells,
   IconMultiSelect,
+  IconPageLayout,
   IconPaintRoller,
   IconPlacement,
   IconPreview,
@@ -39,7 +40,7 @@ const layoutIcons = {
   IconEmojiBall, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile,
   IconEmojiSprout, IconEmojiStar, IconEmojiUtensils, IconGallery,
   IconHeaderColumn, IconHeaderRow, IconImage, IconList, IconMergeCells,
-  IconMultiSelect, IconPaintRoller, IconPlacement, IconPreview, IconSelect,
+  IconMultiSelect, IconPageLayout, IconPaintRoller, IconPlacement, IconPreview, IconSelect,
   IconSpacer, IconSplitCell, IconSplitView, IconTable, IconTabs, IconUpload,
 };
 
@@ -289,7 +290,7 @@ describe('Blok Line layout geometry', () => {
     });
   });
 
-  it.each(Object.entries({ IconGallery, IconList, IconMultiSelect, IconSplitView }))(
+  it.each(Object.entries({ IconGallery, IconList, IconMultiSelect, IconPageLayout, IconSplitView }))(
     '%s keeps miniature cards open and separated at 16px',
     (_name, icon) => {
       const cards = Array.from(svgOf(icon).querySelectorAll('rect'));
@@ -405,5 +406,16 @@ describe('Blok Line layout geometry', () => {
     expect(steps[1]).toBe(steps[0]);
     expect(Math.min(...pairs.flat(2))).toBe(3);
     expect(Math.max(...pairs.flat(2))).toBe(17);
+  });
+
+  // research/09 §1: Notion's `layout` glyph, a tall panel beside two squares. Its panel is the
+  // split view's first panel and its squares are the gallery's right column.
+  it('draws the page layout from the split view panel and the gallery column', () => {
+    const rectsOf = (icon: string): string[] => Array.from(svgOf(icon).querySelectorAll('rect'))
+      .map(rect => ['x', 'y', 'width', 'height', 'rx'].map(attribute => rect.getAttribute(attribute)).join(' '));
+    const [panel, ...squares] = rectsOf(IconPageLayout);
+
+    expect(panel).toBe(rectsOf(IconSplitView)[0]);
+    expect(squares).toEqual(rectsOf(IconGallery).filter(rect => rect.startsWith('11.5 ')));
   });
 });

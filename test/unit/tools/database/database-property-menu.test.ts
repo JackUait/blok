@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
+import { IconPageLayout } from '../../../../src/components/icons';
 
 interface CapturedItem {
   name?: string;
   title?: string;
+  icon?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
   isDestructive?: boolean;
@@ -107,6 +109,34 @@ describe('DatabasePropertyMenu', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
+  });
+
+  // research/09 §1b: a row page property menu ends with "Customize layout".
+  it('ends the menu with Customize layout after a separator when the host offers it', () => {
+    const onCustomizeLayout = vi.fn();
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks(), onCustomizeLayout });
+
+    menu.open(prop('text'), document.createElement('button'));
+    const items = lastItems();
+    const last = items[items.length - 1];
+
+    expect(items[items.length - 2]?.type).toBe('separator');
+    expect(last?.name).toBe('customize-layout');
+    expect(last?.title).toBe('tools.database.layoutCustomize');
+    expect(last?.icon).toBe(IconPageLayout);
+    last?.onActivate?.(last);
+
+    expect(onCustomizeLayout).toHaveBeenCalledTimes(1);
+    menu.destroy();
+  });
+
+  it('has no Customize layout without the host lever', () => {
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.open(prop('text'), document.createElement('button'));
+
+    expect(lastItems().some((i) => i.name === 'customize-layout')).toBe(false);
+    menu.destroy();
   });
 
   const open = (property: PropertyDefinition, hasPeople = false): ReturnType<typeof callbacks> => {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { isEscapeConsumed, markEscapeConsumed } from '../../../src/components/utils/consumed-escape';
 import { registerLayer } from '../../../src/components/utils/dismissable-layer';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
 import type { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
@@ -268,6 +269,21 @@ describe('PopoverRegistry', () => {
       expect(popover.hide).toHaveBeenCalledOnce();
     });
 
+    // Blok is published: closing a popover must not change what a host sees on the press.
+    it('marks the Escape it closes a popover on as consumed, without preventing its default', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+
+      document.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(isEscapeConsumed(event)).toBe(true);
+      expect(popover.hide).toHaveBeenCalledOnce();
+    });
+
     it('ignores Escape when no popovers are open', () => {
       // Register then unregister so listeners were installed at least once.
       const { popover, trigger } = createMockPopover();
@@ -309,6 +325,19 @@ describe('PopoverRegistry', () => {
       const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
 
       event.preventDefault();
+      document.dispatchEvent(event);
+
+      expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('ignores an Escape another Blok closer already consumed', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+
+      markEscapeConsumed(event);
       document.dispatchEvent(event);
 
       expect(popover.hide).not.toHaveBeenCalled();

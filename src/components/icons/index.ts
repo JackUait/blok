@@ -792,6 +792,16 @@ export const IconSplitView = `
 </svg>
 `;
 
+// Page layout (Notion's `layout`): IconSplitView's first panel beside
+// IconGallery's right column of tiles
+export const IconPageLayout = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="5.5" height="12" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="11.5" y="4" width="5.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="11.5" y="11.5" width="5.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Placement icon (3x3 alignment dot grid)
 export const IconPlacement = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

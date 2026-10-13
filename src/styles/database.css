@@ -2070,26 +2070,70 @@
   padding-inline: var(--blok-space-4);
 }
 
-/* Centered on the window, not between the bar's items. Not focusable. */
+/* Centered on the window, not between the bar's items. Only the Preview switch takes the pointer. */
 [data-blok-database-layout-heading] {
   position: absolute;
   inset-inline: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--blok-space-1-5);
   margin-inline: auto;
   inline-size: fit-content;
-  max-inline-size: 40%;
-  font-size: 16px;
-  font-weight: 500;
+  /* 640px keeps 320px clear on each side for Cancel and Apply; the clickable Preview must not cover them. */
+  max-inline-size: min(40%, calc(100% - 640px));
   pointer-events: none;
 }
 
-[data-blok-database-layout-heading] svg {
+/* research/09 §2: the database glyph + title, 16px/500. */
+[data-blok-database-layout-heading-name] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  max-inline-size: 100%;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+[data-blok-database-layout-heading-name] svg {
   flex-shrink: 0;
   inline-size: 20px;
   block-size: 20px;
+}
+
+/* research/09 §2: "Preview: <page>" + chevron, 12px/500 grey, 3px 6px, no fill at rest. */
+[data-blok-database-layout-preview] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  max-inline-size: 100%;
+  padding-block: 3px;
+  padding-inline: 6px;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+[data-blok-database-layout-preview] span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-layout-preview] svg {
+  flex-shrink: 0;
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-layout-preview]:hover {
+    background-color: var(--blok-item-hover-bg);
+  }
 }
 
 [data-blok-database-layout-title] {
@@ -2177,6 +2221,7 @@
   }
 }
 
+[data-blok-database-layout-preview]:focus-visible,
 [data-blok-database-layout-cancel]:focus-visible,
 [data-blok-database-layout-apply]:focus-visible,
 [data-blok-database-layout-more-save]:focus-visible,
@@ -2209,6 +2254,25 @@
   font-size: 32px;
   font-weight: 700;
   line-height: 1.2;
+}
+
+/* research/09 §1: an untitled page shows the grey "New page" placeholder. */
+[data-blok-database-layout-canvas-title][data-placeholder] {
+  color: var(--blok-text-tertiary);
+}
+
+[data-blok-database-layout-canvas-content],
+[data-blok-database-layout-group-empty] {
+  padding-block: var(--blok-space-1);
+  color: var(--blok-text-tertiary);
+  font-size: 14px;
+}
+
+[data-blok-database-layout-preview-empty] {
+  padding-block: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-2);
+  color: var(--blok-text-secondary);
+  font-size: 14px;
 }
 
 /* Page settings column (research/09 §10: 290px). Phase 4 fills it. */

@@ -9,6 +9,8 @@ export interface TicketRequest { documentId: string; write: boolean; principal: 
 // A collaboration pass is checked at the handshake only; 1800 s is the ceiling ticket.ts recommends.
 const TTL_SECONDS = 1800;
 const REFRESH_MARGIN_MS = 30_000;
+// blok_open waits on this request; a hung host must not hold the call open forever.
+const TICKET_FETCH_TIMEOUT_MS = 10_000;
 
 const ticketField = (text: string): unknown => {
   try {
@@ -49,17 +51,25 @@ export const createTicketProvider = (
         clientName: request.clientName,
         actorId: request.actorId,
       }),
+      signal: AbortSignal.timeout(TICKET_FETCH_TIMEOUT_MS),
     }).catch(() => {
       throw surfaceError('SOURCE_UNAVAILABLE', 'The ticket endpoint could not be reached.');
     });
 
-    if (response.status === 401 || response.status === 403) {
+    // 401 refuses our host token, not the agent: retryable, so a token rotation never ends live handles.
+    if (response.status === 401) {
+      throw surfaceError('SOURCE_UNAVAILABLE', 'The ticket endpoint refused the host token.');
+    }
+    if (response.status === 403) {
       throw surfaceError('FORBIDDEN', 'The host did not grant this document to this agent.');
     }
     if (!response.ok) {
       throw surfaceError('SOURCE_UNAVAILABLE', `The ticket endpoint answered ${response.status}.`);
     }
-    const ticket = ticketField(await response.text());
+    const text = await response.text().catch(() => {
+      throw surfaceError('SOURCE_UNAVAILABLE', 'The ticket endpoint could not be reached.');
+    });
+    const ticket = ticketField(text);
 
     if (typeof ticket !== 'string') {
       throw surfaceError('SOURCE_UNAVAILABLE', 'The ticket endpoint answered without a "ticket" field.');
@@ -70,6 +80,10 @@ export const createTicketProvider = (
     // The signature is not checked here; the room checks it.
     if (claims?.user !== request.actorId || claims.doc !== request.documentId) {
       throw surfaceError('FORBIDDEN', 'The host minted a ticket for another user or document. Its "user" must equal actorId.');
+    }
+    // The handle already refuses writes; a write ticket for a read-only open is still more than was asked.
+    if (claims.write === true && !request.write) {
+      throw surfaceError('FORBIDDEN', 'The host minted a write ticket for a read-only open.');
     }
 
     return { ticket, expiresAtMs: typeof claims.exp === 'number' ? claims.exp * 1000 : now() };

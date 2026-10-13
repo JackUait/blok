@@ -8,8 +8,10 @@ type Jwk = webcrypto.JsonWebKey & { kid: string };
 interface SigningKey { key: KeyObject; alg?: string }
 
 const JWKS_TTL_MS = 10 * 60_000;
-// Bounds how often tokens with made-up kids can make us fetch the JWKS.
+// Bounds how often tokens with made-up kids, or a down issuer, can make us fetch the JWKS.
 const MISS_REFETCH_COOLDOWN_MS = 30_000;
+// Each request waits on this fetch; a hung issuer must not hold requests open forever.
+const JWKS_FETCH_TIMEOUT_MS = 10_000;
 
 const invalid = (message: string): OAuthError => new OAuthError(OAuthErrorCode.InvalidToken, message);
 
@@ -58,7 +60,8 @@ const toSigningKey = (jwk: Jwk): SigningKey | undefined => {
 export const principalOf = (info: AuthInfo): string => {
   const sub = info.extra?.sub;
 
-  return typeof sub === 'string' && sub !== '' ? sub : info.clientId;
+  // A client id lives in another namespace than user subs; bare, a client "alice" would share user alice's handles.
+  return typeof sub === 'string' && sub !== '' ? sub : `client:${info.clientId}`;
 };
 
 export const createJwtVerifier = (
@@ -66,15 +69,16 @@ export const createJwtVerifier = (
   fetchImpl: typeof fetch = fetch,
   now: () => number = Date.now,
 ): OAuthTokenVerifier => {
-  const cache: { keys: Map<string, SigningKey>; fetchedAt: number; lastMissRefetchAt: number; pending?: Promise<void> } = {
+  const cache: { keys: Map<string, SigningKey>; fetchedAt: number; failedAt: number; lastMissRefetchAt: number; pending?: Promise<void> } = {
     keys: new Map(),
     fetchedAt: -Infinity,
+    failedAt: -Infinity,
     lastMissRefetchAt: -Infinity,
   };
 
   const fetchJwks = async (): Promise<unknown> => {
     try {
-      const response = await fetchImpl(config.jwksUrl);
+      const response = await fetchImpl(config.jwksUrl, { signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS) });
 
       if (response.ok) {
         return await response.json();
@@ -86,7 +90,10 @@ export const createJwtVerifier = (
   };
 
   const load = async (): Promise<void> => {
-    const body = await fetchJwks();
+    const body = await fetchJwks().catch((error: unknown) => {
+      cache.failedAt = now();
+      throw error;
+    });
     const keys: unknown[] = isRecord(body) && Array.isArray(body.keys) ? body.keys : [];
     const entries = keys.filter(isJwk).flatMap((jwk): Array<[string, SigningKey]> => {
       const signingKey = toSigningKey(jwk);
@@ -94,6 +101,11 @@ export const createJwtVerifier = (
       return signingKey === undefined ? [] : [[jwk.kid, signingKey]];
     });
 
+    // A set with no usable key would refuse every token, so treat it as a failed fetch.
+    if (entries.length === 0) {
+      cache.failedAt = now();
+      throw invalid('Signing keys unavailable');
+    }
     cache.keys = new Map(entries);
     cache.fetchedAt = now();
   };
@@ -107,23 +119,26 @@ export const createJwtVerifier = (
     return cache.pending;
   };
 
+  const coolingDown = (): boolean => now() - cache.failedAt < MISS_REFETCH_COOLDOWN_MS;
+
   const keyFor = async (kid: string): Promise<SigningKey> => {
-    if (now() - cache.fetchedAt > JWKS_TTL_MS) {
-      await refresh();
+    // A failed refresh keeps the keys we already trust; only an empty cache refuses.
+    if (now() - cache.fetchedAt > JWKS_TTL_MS && !coolingDown()) {
+      await refresh().catch(() => undefined);
     }
     // A miss may mean the issuer rotated keys: refetch, at most once per cooldown.
     if (!cache.keys.has(kid)) {
       if (cache.pending !== undefined) {
-        await cache.pending;
-      } else if (now() - cache.lastMissRefetchAt >= MISS_REFETCH_COOLDOWN_MS) {
+        await cache.pending.catch(() => undefined);
+      } else if (!coolingDown() && now() - cache.lastMissRefetchAt >= MISS_REFETCH_COOLDOWN_MS) {
         cache.lastMissRefetchAt = now();
-        await refresh();
+        await refresh().catch(() => undefined);
       }
     }
     const key = cache.keys.get(kid);
 
     if (key === undefined) {
-      throw invalid('Unknown signing key');
+      throw invalid(cache.keys.size === 0 ? 'Signing keys unavailable' : 'Unknown signing key');
     }
 
     return key;

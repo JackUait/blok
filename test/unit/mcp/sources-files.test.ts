@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -206,5 +206,175 @@ describe('files source', () => {
     });
     expect((await source.list({ limit: 10, query: 'PLAN' })).documents.map((document) => document.id))
       .toEqual(['a', 'c']);
+  });
+  const messageOf = async (operation: () => unknown): Promise<string> => {
+    try {
+      await operation();
+
+      return '';
+    } catch (thrown: unknown) {
+      return isMcpSurfaceError(thrown) ? thrown.agentError.message : `Non-surface error: ${String(thrown)}`;
+    }
+  };
+
+  it('keeps every edit when two saves of one document race', async () => {
+    const source = createFilesSource(dir);
+    let { version } = await source.save('doc', { blocks: [] }, { ifVersion: null });
+
+    for (let round = 0; round < 10; round += 1) {
+      const first = { blocks: [], title: `first ${round}` };
+      const second = { blocks: [], title: `second ${round}` };
+      const outcomes = await Promise.allSettled([
+        source.save('doc', first, { ifVersion: version }),
+        source.save('doc', second, { ifVersion: version }),
+      ]);
+      const winners = outcomes.flatMap((outcome, index) => (outcome.status === 'fulfilled'
+        ? [{ document: index === 0 ? first : second, version: outcome.value.version }]
+        : []));
+      const loserCodes = outcomes.flatMap((outcome): string[] => {
+        if (outcome.status === 'fulfilled') {
+          return [];
+        }
+        const reason: unknown = outcome.reason;
+
+        return [isMcpSurfaceError(reason) ? reason.agentError.code : String(reason)];
+      });
+      const winner = winners[0];
+
+      expect(winners).toHaveLength(1);
+      expect(loserCodes).toEqual(['DOCUMENT_CHANGED']);
+      if (winner === undefined) {
+        throw new Error('No save won the race');
+      }
+      const written: unknown = JSON.parse(readFileSync(join(dir, 'doc.json'), 'utf-8'));
+
+      expect(written).toEqual(winner.document);
+      version = winner.version;
+    }
+    expect(await codeOf(() => source.save('doc', { blocks: [] }, { ifVersion: version }))).toBeUndefined();
+  });
+
+  it('refuses an id that differs from a stored document only by case, on load and save', async () => {
+    const text = '{"blocks":[],"title":"secret"}';
+
+    writeFileSync(join(dir, 'secret.json'), text);
+    const source = createFilesSource(dir);
+
+    expect(await codeOf(() => source.load('SECRET'))).toBe('INVALID_ARGS');
+    expect(await codeOf(() => source.save('SECRET', { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
+    expect(await messageOf(() => source.load('SECRET'))).not.toContain('secret');
+    expect(readdirSync(dir)).toEqual(['secret.json']);
+    expect(readFileSync(join(dir, 'secret.json'), 'utf-8')).toBe(text);
+    expect((await source.load('secret')).raw).toEqual({ blocks: [], title: 'secret' });
+  });
+
+  it('lets only one of two first saves that differ by case win on a case-insensitive disk', async () => {
+    writeFileSync(join(dir, 'probe.json'), '{}');
+    const caseInsensitive = readdirSync(dir).includes('probe.json') && statSync(join(dir, 'PROBE.json'), { throwIfNoEntry: false }) !== undefined;
+
+    rmSync(join(dir, 'probe.json'));
+    if (!caseInsensitive) {
+      return;
+    }
+    const source = createFilesSource(dir);
+    const outcomes = await Promise.allSettled([
+      source.save('doc', { blocks: [], title: 'lower' }, { ifVersion: null }),
+      source.save('DOC', { blocks: [], title: 'upper' }, { ifVersion: null }),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+  });
+
+  it.each([0o600, 0o666])('keeps file mode %o across a save', async (mode) => {
+    const path = join(dir, 'doc.json');
+
+    writeFileSync(path, '{"blocks":[]}');
+    chmodSync(path, mode);
+    const source = createFilesSource(dir);
+    const { version } = await source.load('doc');
+
+    await source.save('doc', { blocks: [], title: 'x' }, { ifVersion: version });
+    expect(statSync(path).mode & 0o777).toBe(mode);
+  });
+
+  it('creates only lower-case ids, so a new id can never take a name another case already owns', async () => {
+    const source = createFilesSource(dir);
+
+    expect(await codeOf(() => source.save('NewDoc', { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
+    expect(readdirSync(dir)).toEqual([]);
+    expect(await codeOf(() => source.save('newdoc', { blocks: [] }, { ifVersion: null }))).toBeUndefined();
+  });
+
+  it('keeps opening and saving an existing document whose id has capitals', async () => {
+    writeFileSync(join(dir, 'Old.json'), '{"blocks":[]}');
+    const source = createFilesSource(dir);
+    const { version } = await source.load('Old');
+
+    expect(await codeOf(() => source.save('Old', { blocks: [], title: 't' }, { ifVersion: version }))).toBeUndefined();
+  });
+
+  it('loads a symlinked document through its exact name', async () => {
+    const outside = join(root, 'outside.json');
+
+    writeFileSync(outside, '{"blocks":[],"title":"linked"}');
+    symlinkSync(outside, join(dir, 'doc.json'));
+    expect((await createFilesSource(dir).load('doc')).raw).toEqual({ blocks: [], title: 'linked' });
+  });
+
+  it('replaces a symlinked document with a regular file and leaves the link target untouched', async () => {
+    const outside = join(root, 'outside.json');
+    const text = '{"blocks":[]}';
+
+    writeFileSync(outside, text);
+    symlinkSync(outside, join(dir, 'doc.json'));
+    const source = createFilesSource(dir);
+    const { version } = await source.load('doc');
+
+    await source.save('doc', { blocks: [], title: 'x' }, { ifVersion: version });
+    expect(readFileSync(outside, 'utf-8')).toBe(text);
+    expect(lstatSync(join(dir, 'doc.json')).isSymbolicLink()).toBe(false);
+  });
+
+  it('does not show server paths in read, write or list errors', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    mkdirSync(join(dir, 'folder.json'));
+    const source = createFilesSource(dir);
+    const readMessage = await messageOf(() => source.load('folder'));
+
+    expect(readMessage).not.toBe('');
+    expect(readMessage).not.toContain(root);
+    expect(readMessage).toContain('folder.json');
+
+    const notADir = join(root, 'plain-file');
+
+    writeFileSync(notADir, 'x');
+    const list = createFilesSource(notADir).list;
+
+    if (list === undefined) {
+      throw new Error('The files source must support list');
+    }
+    const listMessage = await messageOf(() => list({ limit: 2 }));
+
+    expect(listMessage).not.toBe('');
+    expect(listMessage).not.toContain(root);
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('does not show server paths when a write fails', async () => {
+    if (process.getuid?.() === 0) {
+      return;
+    }
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    chmodSync(dir, 0o500);
+    try {
+      const message = await messageOf(() => createFilesSource(dir).save('doc', { blocks: [] }, { ifVersion: null }));
+
+      expect(message).not.toBe('');
+      expect(message).not.toContain(root);
+      expect(message).toContain('doc.json');
+    } finally {
+      chmodSync(dir, 0o700);
+    }
   });
 });

@@ -120,6 +120,59 @@ describe('stored mode through the MCP dispatcher', () => {
     expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'READ_ONLY' } });
   });
 
+  it('answers model-fixable core errors as tool errors, not protocol errors', async () => {
+    const handle = await openWrite('doc');
+    const read = await mcp.dispatch('blok_read', { handle, detail: 'bogus' }, caller);
+    const described = await mcp.dispatch('blok_describe', { handle, tool: 'nosuchtool' }, caller);
+    const opened = await mcp.dispatch('blok_open', { documentId: 'doc', view: { nope: 1 } }, caller);
+
+    expect(read).toEqual({ isError: true, structuredContent: { error: expect.objectContaining({ code: 'INVALID_ARGS' }) } });
+    expect(described).toEqual({ isError: true, structuredContent: { error: expect.objectContaining({ code: 'UNKNOWN_TOOL' }) } });
+    expect(opened).toEqual({ isError: true, structuredContent: { error: expect.objectContaining({ code: 'INVALID_ARGS' }) } });
+    expect(mcp.handles.count('alice')).toBe(1);
+  });
+
+  it.each([null, 'block.insert', ['block.insert'], {}, { name: 7 }])('refuses command entry %j as INVALID_ARGS without saving', async (entry) => {
+    const handle = await openWrite('doc');
+    const outcome = await mcp.dispatch('blok_execute', { handle, commands: [entry] }, caller);
+
+    expect(outcome).toMatchObject({ isError: true, structuredContent: { ok: false, error: { code: 'INVALID_ARGS' } } });
+  });
+
+  it('keeps a non-string expectRevision as a refusal instead of dropping the guard', async () => {
+    const handle = await openWrite('doc');
+    const outcome = await mcp.dispatch('blok_execute', {
+      handle, expectRevision: 5, commands: [{ name: 'block.insert', args: { type: 'paragraph', id: 'p1', data: { text: 'x' } } }],
+    }, caller);
+
+    expect(outcome).toMatchObject({ isError: true, structuredContent: { ok: false, error: { code: 'INVALID_ARGS' } } });
+    expect(() => file('doc')).toThrow();
+  });
+
+  it('skips the save of a page.rename that leaves this document unchanged', async () => {
+    await mcp.stop();
+    mcp = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir }, pageTitles: 'page-map' });
+    writeFileSync(join(dir, 'parent.json'), JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'child' } }] }));
+    writeFileSync(join(dir, 'child.json'), JSON.stringify({ blocks: [], title: 'Old' }));
+    const renamer = await openWrite('parent');
+    const editor = await openWrite('parent');
+    const edited = await mcp.dispatch('blok_execute', {
+      handle: editor, commands: [{ name: 'block.insert', args: { type: 'paragraph', id: 'theirs', data: { text: 'x' } } }],
+    }, caller);
+
+    expect(edited.isError).toBe(false);
+    const renamed = await mcp.dispatch('blok_execute', {
+      handle: renamer, commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New name' } }],
+    }, caller);
+
+    expect(renamed).toMatchObject({
+      isError: false,
+      structuredContent: { ok: true, results: [{ pageId: 'child', applied: true }], delivery: { durable: false, pending: false, serverSequence: null, savedVersion: null } },
+    });
+    expect(file('child').title).toBe('New name');
+    expect((file('parent') as { blocks: Array<{ id: string }> }).blocks.map((block) => block.id)).toEqual(['pb', 'theirs']);
+  });
+
   it('lists the directory', async () => {
     writeFileSync(join(dir, 'a.json'), JSON.stringify({ blocks: [], title: 'Alpha' }));
     const listed = await mcp.dispatch('blok_list_documents', {}, caller);

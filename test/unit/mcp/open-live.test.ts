@@ -6,6 +6,7 @@ import { defaultAgentActor } from '../../../src/mcp/actor';
 import { buildMcpContracts } from '../../../src/mcp/contract';
 import type { Caller, OpenRequest } from '../../../src/mcp/dispatcher';
 import { createOpenLive, syncUrlFor } from '../../../src/mcp/live/open-live';
+import { surfaceError } from '../../../src/mcp/errors';
 import type { HandleSession } from '../../../src/mcp/session';
 import { createHeadlessPorts } from '../../../src/view/agent-runtime';
 
@@ -145,10 +146,90 @@ describe('createOpenLive', () => {
     expect(outcome).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } } });
   });
 
+  it('closes the room when building the session fails after the sync', async () => {
+    const failing = createOpenLive({
+      sync: { url: 'wss://sync.test/sync/' },
+      contracts,
+      socketFactory: factory,
+      syncTimeoutMs: 100,
+      portsFor: () => {
+        throw new Error('no ports');
+      },
+    });
+
+    await expect(failing({ documentId: 'doc', mode: 'auto', write: true }, caller, actor)).rejects.toThrow('no ports');
+    expect(sockets[0].readyState).toBe(3);
+  });
+
+  it('answers FORBIDDEN, not a retryable sync timeout, when the room\'s first ticket is refused', async () => {
+    const refusing = createOpenLive({
+      sync: { url: 'wss://sync.test/sync/' },
+      contracts,
+      socketFactory: factory,
+      syncTimeoutMs: 100,
+      ticketsFor: async () => async () => {
+        throw surfaceError('FORBIDDEN', 'The host did not grant this document to this agent.');
+      },
+      portsFor: () => createHeadlessPorts({
+        sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
+        richTextFieldsFor: contracts.richTextFieldsFor,
+      }),
+    });
+
+    await expect(refusing({ documentId: 'doc', mode: 'auto', write: true }, caller, actor))
+      .rejects.toMatchObject({ agentError: { code: 'FORBIDDEN' } });
+  });
+
+  it('ends the handle with FORBIDDEN once the ticket endpoint refuses a reconnect', async () => {
+    const mints = { count: 0 };
+    const revoking = createOpenLive({
+      sync: { url: 'wss://sync.test/sync/' },
+      contracts,
+      socketFactory: factory,
+      syncTimeoutMs: 100,
+      ticketsFor: async () => async () => {
+        mints.count += 1;
+        if (mints.count > 1) {
+          throw surfaceError('FORBIDDEN', 'The host did not grant this document to this agent.');
+        }
+
+        return 'ticket-1';
+      },
+      portsFor: () => createHeadlessPorts({
+        sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
+        richTextFieldsFor: contracts.richTextFieldsFor,
+      }),
+    });
+    const session = await revoking({ documentId: 'doc', mode: 'auto', write: true }, caller, actor);
+
+    sessions.push(session);
+    vi.useFakeTimers();
+    try {
+      sockets[0].readyState = 3;
+      sockets[0].onclose?.({ code: 1006, reason: 'dropped' });
+      await vi.advanceTimersByTimeAsync(120_000);
+      const callsAfterRevocation = mints.count;
+
+      const write = session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'x' } }] });
+
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect({ outcome: await write, mintsAfterMore: mints.count }).toMatchObject({
+        outcome: { ok: false, error: { code: 'FORBIDDEN' } },
+        mintsAfterMore: callsAfterRevocation,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('percent-encodes the document id into the sync URL', async () => {
     await open({ documentId: 'a/b c' });
 
     expect(urls[0]).toBe('wss://sync.test/sync/a%2Fb%20c');
     expect(syncUrlFor('wss://h/sync', 'x')).toBe('wss://h/sync/x');
+  });
+
+  it.each(['.', '..'])('refuses document id %j, which a URL resolves as a path step', (documentId) => {
+    expect(() => syncUrlFor('wss://h/sync', documentId)).toThrow(expect.objectContaining({ agentError: expect.objectContaining({ code: 'INVALID_ARGS' }) }));
   });
 });

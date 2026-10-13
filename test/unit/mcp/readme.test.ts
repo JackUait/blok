@@ -44,6 +44,16 @@ describe('@bloklabs/mcp README', () => {
     expect(mentions(readme, env)).toBe(true);
   });
 
+  it('states how an OAuth token names its principal', () => {
+    expect(readme).toMatch(/principal is the token's `sub`/);
+    expect(readme).toContain('`client:<client_id>`');
+  });
+
+  it('states that flag values are separate arguments and unknown flags are refused', () => {
+    expect(readme).toContain('`--auth=oauth`');
+    expect(readme).toMatch(/unknown flag.*refuse/i);
+  });
+
   it('states the version lockstep and the Markdown rule', () => {
     expect(readme).toMatch(/@bloklabs\/core[\s\S]*@bloklabs\/server|@bloklabs\/server[\s\S]*@bloklabs\/core/);
     expect(readme).toMatch(/never.*Markdown/i);

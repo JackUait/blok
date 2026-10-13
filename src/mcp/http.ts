@@ -47,7 +47,7 @@ const readBody = async (req: IncomingMessage): Promise<Buffer> => {
   return Buffer.concat(chunks);
 };
 
-const toRequest = async (req: IncomingMessage, url: URL): Promise<Request> => {
+const headersOf = (req: IncomingMessage): Headers => {
   const headers = new Headers();
 
   for (const [name, value] of Object.entries(req.headers)) {
@@ -57,14 +57,24 @@ const toRequest = async (req: IncomingMessage, url: URL): Promise<Request> => {
       headers.set(name, value.join(', '));
     }
   }
+
+  return headers;
+};
+
+const toRequest = async (req: IncomingMessage, url: URL, headers: Headers, signal: AbortSignal): Promise<Request> => {
   const method = req.method ?? 'GET';
   const hasBody = method !== 'GET' && method !== 'HEAD';
 
   // Uint8Array.from copies into a plain ArrayBuffer, which BodyInit accepts and Buffer is not typed as.
-  return new Request(url, { method, headers, ...(hasBody && { body: Uint8Array.from(await readBody(req)) }) });
+  return new Request(url, { method, headers, signal, ...(hasBody && { body: Uint8Array.from(await readBody(req)) }) });
 };
 
 const send = async (res: ServerResponse, response: Response): Promise<void> => {
+  if (res.destroyed) {
+    await response.body?.cancel();
+
+    return;
+  }
   res.writeHead(response.status, Object.fromEntries(response.headers));
   if (response.body === null) {
     res.end();
@@ -72,6 +82,10 @@ const send = async (res: ServerResponse, response: Response): Promise<void> => {
     return;
   }
   for await (const chunk of response.body) {
+    // Leaving the loop cancels the stream, so a gone client stops the SDK's writes too.
+    if (res.destroyed) {
+      return;
+    }
     res.write(chunk);
   }
   res.end();
@@ -134,20 +148,30 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
 
       return;
     }
-    const request = await toRequest(req, url);
-    const verdict = authenticate === null ? undefined : await authenticate(request);
+    const headers = headersOf(req);
+    // The bearer gate reads only the Authorization header, so an unauthenticated caller never gets a body read.
+    const verdict = authenticate === null ? undefined : await authenticate(new Request(url, { headers }));
 
     if (verdict instanceof Response) {
       await send(res, verdict);
 
       return;
     }
+    const disconnect = new AbortController();
+
+    res.once('close', () => {
+      if (!res.writableFinished) {
+        disconnect.abort();
+      }
+    });
+    const request = await toRequest(req, url, headers, disconnect.signal);
+
     await send(res, await handler.fetch(request, { authInfo: verdict }));
   };
 
   const server = createServer((req, res) => {
     serve(req, res).catch((error: unknown) => {
-      if (res.headersSent) {
+      if (res.headersSent || res.destroyed) {
         res.destroy();
 
         return;

@@ -1,7 +1,9 @@
 import {
   HeadlessRoomTerminalError,
   HeadlessRoomTimeoutError,
-  openHeadlessRoom
+  openHeadlessRoom,
+  type HeadlessRoom,
+  type HeadlessRoomEnd
 } from '../../components/modules/collaboration/headless-session';
 import type { CollabSocketFactory, CollabTicketSource } from '../../components/modules/collaboration/types';
 import { createStoreAgentSession } from '../../components/modules/agent/store-session';
@@ -11,7 +13,7 @@ import type { AgentPorts } from '../../shared/agent/types';
 import { htmlToSegmentsNode } from '../../view/rich-text-parse5';
 import type { McpContracts } from '../contract';
 import type { Caller, OpenRequest } from '../dispatcher';
-import { McpSurfaceError, surfaceError } from '../errors';
+import { isMcpSurfaceError, McpSurfaceError, surfaceError } from '../errors';
 import type { HandleSession } from '../session';
 import { createLiveSession, terminalToError } from './live-session';
 import { nodeSocketFactory } from './node-socket';
@@ -31,7 +33,14 @@ export interface OpenLiveDeps {
   syncTimeoutMs?: number;
 }
 
-export const syncUrlFor = (base: string, documentId: string): string => `${base.replace(/\/$/, '')}/${encodeURIComponent(documentId)}`;
+// encodeURIComponent keeps "." and "..", which the URL parser resolves as path steps to another route.
+export const syncUrlFor = (base: string, documentId: string): string => {
+  if (documentId === '.' || documentId === '..') {
+    throw surfaceError('INVALID_ARGS', `"${documentId}" is not a document id.`);
+  }
+
+  return `${base.replace(/\/$/, '')}/${encodeURIComponent(documentId)}`;
+};
 
 const toSurfaceError = (thrown: unknown): unknown => {
   if (thrown instanceof HeadlessRoomTimeoutError) {
@@ -46,10 +55,74 @@ const toSurfaceError = (thrown: unknown): unknown => {
   return thrown;
 };
 
+/**
+ * The provider retries a failed ticket mint forever, so a host's refusal on
+ * reconnect would never reach the agent. One FORBIDDEN from the ticket source
+ * ends the room for the session, and later mints are not attempted.
+ * @param source - the handle's ticket source
+ * @returns the guarded source, plus the end it raises
+ */
+const revocable = (source: CollabTicketSource): {
+  source: CollabTicketSource;
+  ended(): HeadlessRoomEnd | null;
+  refused(): unknown;
+  onEnd(listener: (end: HeadlessRoomEnd) => void): () => void;
+} => {
+  const state: { refused: unknown; end: HeadlessRoomEnd | null } = { refused: undefined, end: null };
+  const listeners = new Set<(end: HeadlessRoomEnd) => void>();
+
+  return {
+    source: async (options) => {
+      if (state.end !== null) {
+        throw state.refused;
+      }
+      try {
+        return await source(options);
+      } catch (thrown) {
+        if (isMcpSurfaceError(thrown) && thrown.agentError.code === 'FORBIDDEN') {
+          const end: HeadlessRoomEnd = { reason: 'terminal', error: 'forbidden' };
+
+          state.refused = thrown;
+          state.end = end;
+          [...listeners].forEach((listener) => listener(end));
+        }
+        throw thrown;
+      }
+    },
+    ended: () => state.end,
+    refused: () => state.refused,
+    onEnd: (listener) => {
+      listeners.add(listener);
+
+      return () => listeners.delete(listener);
+    },
+  };
+};
+
+const withRevocation = (room: HeadlessRoom, guard: ReturnType<typeof revocable>): HeadlessRoom => ({
+  store: room.store,
+  outbox: room.outbox,
+  get protocol() {
+    return room.protocol;
+  },
+  sendActivity: () => room.sendActivity(),
+  flushAppends: () => room.flushAppends(),
+  appendFailures: () => room.appendFailures(),
+  ended: () => room.ended() ?? guard.ended(),
+  onEnd: (listener) => {
+    const stops = [room.onEnd(listener), guard.onEnd(listener)];
+
+    return () => stops.forEach((stop) => stop());
+  },
+  close: () => room.close(),
+});
+
 export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenRequest, caller: Caller, actor: AgentActor): Promise<HandleSession> => {
-  const ticketSource = deps.ticketsFor === undefined ? undefined : await deps.ticketsFor(request, caller, actor);
-  const room = await openHeadlessRoom({
-    url: syncUrlFor(deps.sync.url, request.documentId),
+  const url = syncUrlFor(deps.sync.url, request.documentId);
+  const guard = deps.ticketsFor === undefined ? undefined : revocable(await deps.ticketsFor(request, caller, actor));
+  const ticketSource = guard?.source;
+  const opened = await openHeadlessRoom({
+    url,
     docId: request.documentId,
     serializer: new YBlockSerializer({ htmlToSegments: htmlToSegmentsNode, richTextFieldsFor: deps.contracts.richTextFieldsFor }),
     socketFactory: deps.socketFactory ?? nodeSocketFactory(deps.sync.origin ?? null),
@@ -57,22 +130,29 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
     writeDenied: !request.write,
     syncTimeoutMs: deps.syncTimeoutMs,
   }).catch((thrown: unknown) => {
-    throw toSurfaceError(thrown);
+    // A refused ticket shows up as a sync timeout; name the real, final cause.
+    throw guard !== undefined && guard.ended() !== null ? guard.refused() : toSurfaceError(thrown);
   });
+  const room = guard === undefined ? opened : withRevocation(opened, guard);
 
-  const agent = createStoreAgentSession({
-    store: room.store,
-    tools: deps.contracts.runtimes,
-    contract: deps.contracts.live,
-    actor,
-    ports: deps.portsFor(caller, actor),
-    richTextFieldsFor: deps.contracts.richTextFieldsFor,
-    ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
-  });
-  const presence = new AgentPresence(
-    { setAwarenessField: (field, value) => room.store.setAwarenessField(field, value), sendActivity: () => room.sendActivity() },
-    { actor, name: deps.presenceName?.(caller, actor) ?? actor.name }
-  );
+  try {
+    const agent = createStoreAgentSession({
+      store: room.store,
+      tools: deps.contracts.runtimes,
+      contract: deps.contracts.live,
+      actor,
+      ports: deps.portsFor(caller, actor),
+      richTextFieldsFor: deps.contracts.richTextFieldsFor,
+      ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
+    });
+    const presence = new AgentPresence(
+      { setAwarenessField: (field, value) => room.store.setAwarenessField(field, value), sendActivity: () => room.sendActivity() },
+      { actor, name: deps.presenceName?.(caller, actor) ?? actor.name }
+    );
 
-  return createLiveSession({ room, agent, contract: deps.contracts.live, presence, write: request.write });
+    return createLiveSession({ room, agent, contract: deps.contracts.live, presence, write: request.write });
+  } catch (thrown) {
+    await room.close().catch(() => undefined);
+    throw thrown;
+  }
 };

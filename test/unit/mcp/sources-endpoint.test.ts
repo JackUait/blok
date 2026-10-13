@@ -445,4 +445,73 @@ describe('endpoint source', () => {
   it('has no list without a configured list route', () => {
     expect(createEndpointSource({ url: base, endpointAuth: AUTH }).list).toBeUndefined();
   });
+  it.each(['.', '..', ''])('refuses id %j before any request, on load and save', async (id) => {
+    const source = createEndpointSource({ url: base, endpointAuth: AUTH });
+
+    expect(await codeOf(() => source.load(id))).toBe('INVALID_ARGS');
+    expect(await codeOf(() => source.save(id, { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
+    expect(seen).toHaveLength(0);
+  });
+
+  it.each(['load', 'save', 'list'] as const)('maps a hung %s to SOURCE_UNAVAILABLE after the timeout', async (operation) => {
+    answer = () => undefined;
+    const source = createEndpointSource({ url: base, endpointAuth: AUTH, list: `${base}-index`, timeoutMs: 50 });
+
+    expect(await codeOf(() => {
+      if (operation === 'load') {
+        return source.load('d');
+      }
+      if (operation === 'save') {
+        return source.save('d', { blocks: [] }, { ifVersion: null });
+      }
+      const list = source.list;
+
+      if (list === undefined) {
+        throw new Error('Configured source has no list method');
+      }
+
+      return list({ limit: 2 });
+    })).toBe('SOURCE_UNAVAILABLE');
+  });
+
+  it('does not follow a redirect with the PUT body', async () => {
+    answer = (request, response) => {
+      if (request.path === '/docs/d') {
+        response.writeHead(307, { Location: '/elsewhere/d' });
+        response.end();
+
+        return;
+      }
+      json(response, 200, { version: '1' });
+    };
+
+    expect(await codeOf(() => createEndpointSource({ url: base, endpointAuth: AUTH })
+      .save('d', { blocks: [] }, { ifVersion: '1' }))).toBe('SOURCE_UNAVAILABLE');
+    expect(seen.map((request) => request.path)).toEqual(['/docs/d']);
+  });
+
+  it.each(['load', 'save'] as const)('maps a body cut off mid-read during %s to SOURCE_UNAVAILABLE', async (operation) => {
+    answer = (_request, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '100' });
+      response.write('{"blocks":', () => {
+        setTimeout(() => response.socket?.destroy(), 20);
+      });
+    };
+    const source = createEndpointSource({ url: base, endpointAuth: AUTH });
+
+    expect(await codeOf(() => (operation === 'load'
+      ? source.load('d')
+      : source.save('d', { blocks: [] }, { ifVersion: '1' })))).toBe('SOURCE_UNAVAILABLE');
+  });
+  it.each(['load', 'save'] as const)('maps a body that stalls mid-read during %s to SOURCE_UNAVAILABLE after the timeout', async (operation) => {
+    answer = (_request, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '100' });
+      response.write('{"blocks":');
+    };
+    const source = createEndpointSource({ url: base, endpointAuth: AUTH, timeoutMs: 50 });
+
+    expect(await codeOf(() => (operation === 'load'
+      ? source.load('d')
+      : source.save('d', { blocks: [] }, { ifVersion: '1' })))).toBe('SOURCE_UNAVAILABLE');
+  });
 });

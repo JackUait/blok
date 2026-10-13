@@ -24,6 +24,7 @@ const unknownHandle = (): Error =>
 
 export class HandleRegistry<S> {
   private readonly entries = new Map<string, Entry<S>>();
+  private closed = false;
   private readonly now: () => number;
   private readonly newHandle: () => string;
 
@@ -32,10 +33,19 @@ export class HandleRegistry<S> {
     this.newHandle = options.newHandle ?? ((): string => randomBytes(16).toString('base64url'));
   }
 
-  public add(principal: string, documentId: string, session: S): string {
+  /** Throws when add would refuse, so callers can refuse before opening anything. */
+  public assertRoom(principal: string): void {
+    if (this.closed) {
+      throw surfaceError('SOURCE_UNAVAILABLE', 'The server is shutting down.');
+    }
     if (this.count(principal) >= this.options.maxPerPrincipal) {
       throw surfaceError('HANDLE_LIMIT', `You already have ${this.options.maxPerPrincipal} open documents. Close one with blok_close.`);
     }
+  }
+
+  public add(principal: string, documentId: string, session: S): string {
+    // Checked again here: concurrent opens can pass assertRoom together.
+    this.assertRoom(principal);
     const handle = this.newHandle();
 
     this.entries.set(handle, { principal, documentId, session, lastUsed: this.now(), busy: 0, queue: Promise.resolve() });
@@ -82,6 +92,7 @@ export class HandleRegistry<S> {
   public async sweep(): Promise<number> {
     const cutoff = this.now() - this.options.idleMs;
     const expired = { count: 0 };
+    const failures: unknown[] = [];
 
     for (const [handle, entry] of [...this.entries]) {
       // Earlier expirations can yield to use, remove, or closeAll.
@@ -90,7 +101,15 @@ export class HandleRegistry<S> {
       }
       this.entries.delete(handle);
       expired.count += 1;
-      await this.options.onExpire(entry.session);
+      await this.options.onExpire(entry.session).catch((thrown: unknown) => {
+        failures.push(thrown);
+      });
+    }
+    if (failures.length === 1) {
+      throw failures[0];
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, `${failures.length} idle handles failed to close.`);
     }
 
     return expired.count;
@@ -99,6 +118,7 @@ export class HandleRegistry<S> {
   public async closeAll(close: (session: S) => Promise<void>): Promise<void> {
     const all = [...this.entries.values()];
 
+    this.closed = true;
     this.entries.clear();
     await Promise.allSettled(all.map(async (entry) => {
       await entry.queue;

@@ -17,7 +17,12 @@ import { assembleMcp } from './server';
 export type { BlokMcpOptions } from './options';
 
 const readJsonFile = async (path: string): Promise<unknown> => {
-  const text = await readFile(path, 'utf-8');
+  const text = await readFile(path, 'utf-8').catch((thrown: unknown) => {
+    if (thrown instanceof Error && 'code' in thrown && thrown.code === 'ENOENT') {
+      throw new McpConfigError(`Cannot read "${path}": no such file`);
+    }
+    throw thrown;
+  });
 
   try {
     const value: unknown = JSON.parse(text);

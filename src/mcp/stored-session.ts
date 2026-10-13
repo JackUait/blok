@@ -1,6 +1,7 @@
 import type { AgentBatch, AgentSession } from '../../types/agent';
 import type { OutputData } from '../../types/data-formats/output-data';
 import type { AgentContract } from '../../types/tool-manifest';
+import { contentRevision } from '../shared/agent/revision';
 
 import { failedResult, isMcpSurfaceError, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleSession, McpExecuteResult } from './session';
@@ -61,9 +62,12 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       if (writing && !input.write) {
         return failedResult(surfaceError('READ_ONLY', 'This handle is read-only. Open the document with write: true.').agentError);
       }
+      // 01's result.revision is contentRevision of output(); equal means nothing changed here.
+      const before = contentRevision(state.agent.output());
       const result = await state.agent.execute(batch);
 
-      if (!result.ok || !writing) {
+      // An unchanged write (page.rename edits another document) has nothing to save.
+      if (!result.ok || !writing || result.revision === before) {
         return { ...result, delivery: NO_DELIVERY };
       }
       try {
@@ -73,12 +77,12 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
 
         return { ...result, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: saved.version } };
       } catch (thrown) {
-        if (!isMcpSurfaceError(thrown)) {
-          throw thrown;
-        }
         // Memory must match the source: drop the refused work. A failed reload retries on the next call.
         state.stale = true;
         await reload().catch(() => undefined);
+        if (!isMcpSurfaceError(thrown)) {
+          throw thrown;
+        }
 
         return failedResult(thrown.agentError, result.warnings);
       }

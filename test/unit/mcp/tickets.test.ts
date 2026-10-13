@@ -52,6 +52,24 @@ describe('ticket URL', () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(body), { status }));
   };
 
+  it('bounds the ticket request with a timeout signal and reports its abort as SOURCE_UNAVAILABLE', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'));
+
+    expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/mcp-tickets', hostToken: 'host-t' }, fetchMock)(request)))
+      .toBe('SOURCE_UNAVAILABLE');
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('reports a ticket body cut off by the timeout as SOURCE_UNAVAILABLE', async () => {
+    const stalled = new ReadableStream<Uint8Array>({
+      start: (controller) => controller.error(new DOMException('The operation timed out.', 'TimeoutError')),
+    });
+
+    fetchMock.mockResolvedValueOnce(new Response(stalled, { status: 200 }));
+    expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/mcp-tickets', hostToken: 'host-t' }, fetchMock)(request)))
+      .toBe('SOURCE_UNAVAILABLE');
+  });
+
   it('posts who and what to the host with the host token only', async () => {
     answer(200, { ticket: jwt({ user: 'agent:alice:claude', doc: 'doc-1', write: true, exp: 2_000_000_000 }) });
     const source = await createTicketProvider({ kind: 'url', url: 'https://app/mcp-tickets', hostToken: 'host-t' }, fetchMock)(request);
@@ -72,12 +90,18 @@ describe('ticket URL', () => {
     expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/t', hostToken: 'h' }, fetchMock)(request))).toBe('FORBIDDEN');
   });
 
+  it('refuses a write ticket for a read-only open', async () => {
+    answer(200, { ticket: jwt({ user: 'agent:alice:claude', doc: 'doc-1', write: true, exp: 2_000_000_000 }) });
+    expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/t', hostToken: 'h' }, fetchMock)({ ...request, write: false })))
+      .toBe('FORBIDDEN');
+  });
+
   it('refuses a ticket for another document', async () => {
     answer(200, { ticket: jwt({ user: 'agent:alice:claude', doc: 'other', exp: 2_000_000_000 }) });
     expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/t', hostToken: 'h' }, fetchMock)(request))).toBe('FORBIDDEN');
   });
 
-  it.each([[401, 'FORBIDDEN'], [403, 'FORBIDDEN'], [500, 'SOURCE_UNAVAILABLE']])('maps host %i to %s', async (status, code) => {
+  it.each([[401, 'SOURCE_UNAVAILABLE'], [403, 'FORBIDDEN'], [500, 'SOURCE_UNAVAILABLE']])('maps host %i to %s', async (status, code) => {
     answer(status, {});
     expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/t', hostToken: 'h' }, fetchMock)(request))).toBe(code);
   });

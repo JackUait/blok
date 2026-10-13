@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { realpath } from 'node:fs';
+import { chmod, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { promisify } from 'node:util';
 
 import { surfaceError } from '../errors';
 
@@ -10,15 +12,42 @@ import { assertDocumentShape, isRecord } from './types';
 // Starts with a letter or digit, so ".", ".." and dotfiles never match; no "/" or "\" can appear.
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
 
+// Only the native realpath reports the on-disk case of a name.
+const nativeRealpath = promisify(realpath.native);
+
 const hash = (bytes: Buffer | string): string => createHash('sha256').update(bytes).digest('hex');
 
 const isMissing = (thrown: unknown): boolean => isRecord(thrown) && thrown.code === 'ENOENT';
 
+// Agent-facing messages name only `<id>.json`; the full path goes to stderr (stdout is the MCP protocol).
+const unavailable = (message: string, path: string, thrown: unknown): Error => {
+  console.error(`blok-mcp files source: ${message} (${path}):`, thrown);
+
+  return surfaceError('SOURCE_UNAVAILABLE', message);
+};
+
 /**
- * Saves compare the file hash, then rename. The window between the two is not
- * locked, so two local writers can still race inside it.
+ * Saves of one document run one at a time inside this process, so the hash
+ * check and the rename cannot interleave. Other processes are not locked out.
  */
 export const createFilesSource = (dir: string): DocumentSource => {
+  const tails = new Map<string, Promise<unknown>>();
+
+  const serialized = <T>(documentId: string, run: () => Promise<T>): Promise<T> => {
+    const previous = tails.get(documentId) ?? Promise.resolve();
+    const result = previous.then(run, run);
+    const tail = result.catch(() => undefined);
+
+    tails.set(documentId, tail);
+    void tail.then(() => {
+      if (tails.get(documentId) === tail) {
+        tails.delete(documentId);
+      }
+    });
+
+    return result;
+  };
+
   const pathOf = (documentId: string): string => {
     if (!SAFE_ID.test(documentId)) {
       throw surfaceError('INVALID_ARGS', 'With the files source, a document id uses letters, digits, ".", "_" and "-" only (max 200).');
@@ -27,14 +56,44 @@ export const createFilesSource = (dir: string): DocumentSource => {
     return join(dir, `${documentId}.json`);
   };
 
-  const readBytes = async (path: string): Promise<Buffer | null> => {
+  /**
+   * On a case-insensitive disk `SECRET` would open `secret.json` and slip past
+   * an authorize hook that names `secret`. Run after the read, so a file that
+   * appears in between is still checked. realpath gives the on-disk name; a
+   * mismatch is either a case alias or a symlink, and only a listing tells them apart.
+   */
+  const assertExactName = async (documentId: string, path: string): Promise<void> => {
+    const name = `${documentId}.json`;
+    const real = await nativeRealpath(path).catch(() => null);
+
+    if (real === null || basename(real) === name) {
+      return;
+    }
+    const names = await readdir(dir).catch((thrown: unknown) => {
+      throw unavailable('Cannot list the documents directory.', dir, thrown);
+    });
+
+    if (!names.includes(name)) {
+      throw surfaceError('INVALID_ARGS', 'Document ids are case-sensitive. Use the id exactly as listed.');
+    }
+  };
+
+  const readBytes = async (documentId: string, path: string): Promise<Buffer | null> => {
     try {
       return await readFile(path);
     } catch (thrown) {
       if (isMissing(thrown)) {
         return null;
       }
-      throw surfaceError('SOURCE_UNAVAILABLE', `Cannot read ${path}.`);
+      throw unavailable(`Cannot read ${documentId}.json.`, path, thrown);
+    }
+  };
+
+  const modeOf = async (path: string): Promise<number | null> => {
+    try {
+      return (await stat(path)).mode & 0o7777;
+    } catch {
+      return null;
     }
   };
 
@@ -52,11 +111,12 @@ export const createFilesSource = (dir: string): DocumentSource => {
     kind: 'files',
     load: async (documentId) => {
       const path = pathOf(documentId);
-      const bytes = await readBytes(path);
+      const bytes = await readBytes(documentId, path);
 
       if (bytes === null) {
         return { raw: { blocks: [] }, version: null };
       }
+      await assertExactName(documentId, path);
       const raw: unknown = (() => {
         try {
           const parsed: unknown = JSON.parse(bytes.toString('utf-8'));
@@ -71,30 +131,43 @@ export const createFilesSource = (dir: string): DocumentSource => {
 
       return { raw, version: hash(bytes) };
     },
-    save: async (documentId, document, { ifVersion }) => {
+    // Keyed in lower case: on a case-insensitive disk `doc` and `DOC` are one file.
+    save: (documentId, document, { ifVersion }) => serialized(documentId.toLowerCase(), async () => {
       const path = pathOf(documentId);
-      const current = await readBytes(path);
+      const current = await readBytes(documentId, path);
 
+      if (current !== null) {
+        await assertExactName(documentId, path);
+      } else if (documentId !== documentId.toLowerCase()) {
+        // Otherwise `SECRET` could create the file a later `secret` must open.
+        throw surfaceError('INVALID_ARGS', 'New document ids must be lower case.');
+      }
       if ((current === null ? null : hash(current)) !== ifVersion) {
         throw surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.');
       }
       const text = `${JSON.stringify(document, null, 2)}\n`;
       // Same directory as the target, so the rename stays on one filesystem and is atomic.
+      // A symlinked document becomes a regular file here; its target is never written.
       const temp = join(dir, `.${documentId}.${randomBytes(6).toString('hex')}.tmp`);
+      const mode = await modeOf(path);
 
       try {
         await writeFile(temp, text);
+        // The umask filters a create mode, so set the original mode explicitly.
+        if (mode !== null) {
+          await chmod(temp, mode);
+        }
         await rename(temp, path);
-      } catch {
+      } catch (thrown) {
         await rm(temp, { force: true });
-        throw surfaceError('SOURCE_UNAVAILABLE', `Cannot write ${path}.`);
+        throw unavailable(`Cannot write ${documentId}.json.`, path, thrown);
       }
 
       return { version: hash(text) };
-    },
+    }),
     list: async ({ query, cursor, limit }) => {
-      const names = await readdir(dir).catch(() => {
-        throw surfaceError('SOURCE_UNAVAILABLE', `Cannot list ${dir}.`);
+      const names = await readdir(dir).catch((thrown: unknown) => {
+        throw unavailable('Cannot list the documents directory.', dir, thrown);
       });
       const ids = names
         .filter((name) => name.endsWith('.json'))

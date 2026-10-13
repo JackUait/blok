@@ -3,6 +3,9 @@ import { surfaceError } from '../errors';
 import type { DocumentSource, SourceListing } from './types';
 import { assertDocumentShape, isRecord } from './types';
 
+// No spec value; long enough for a slow host save.
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 const unavailable = (what: string): Error => surfaceError('SOURCE_UNAVAILABLE', `The document endpoint ${what}.`);
 
 const parseJson = (text: string, what: string): unknown => {
@@ -23,16 +26,38 @@ const hasStringId = (value: unknown): value is { id: string; title?: unknown } =
  * plus an optional list route that only MCP uses.
  */
 export const createEndpointSource = (
-  config: { url: string; endpointAuth: string; list?: string },
+  config: { url: string; endpointAuth: string; list?: string; timeoutMs?: number },
   fetchImpl: typeof fetch = fetch,
 ): DocumentSource => {
-  const urlOf = (documentId: string): string => `${config.url.replace(/\/$/, '')}/${encodeURIComponent(documentId)}`;
+  // encodeURIComponent keeps "." and "..", which the URL parser then resolves as path steps
+  // to other host routes. Checked here because page.rename targets skip the dispatcher.
+  const urlOf = (documentId: string): string => {
+    if (documentId === '' || documentId === '.' || documentId === '..') {
+      throw surfaceError('INVALID_ARGS', `"${documentId}" is not a document id.`);
+    }
+
+    return `${config.url.replace(/\/$/, '')}/${encodeURIComponent(documentId)}`;
+  };
 
   const call = async (url: string, init: RequestInit): Promise<Response> => {
     try {
-      return await fetchImpl(url, init);
+      return await fetchImpl(url, {
+        ...init,
+        // A followed redirect would carry the PUT body and Authorization to another route or origin.
+        redirect: 'error',
+        signal: AbortSignal.timeout(config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      });
     } catch {
       throw unavailable('could not be reached');
+    }
+  };
+
+  // The timeout signal also aborts a stalled body, and a dropped socket rejects here.
+  const textOf = async (response: Response): Promise<string> => {
+    try {
+      return await response.text();
+    } catch {
+      throw unavailable('dropped the connection while answering');
     }
   };
 
@@ -44,7 +69,7 @@ export const createEndpointSource = (
       if (response.status !== 200) {
         throw unavailable(`answered ${response.status} for ${documentId}`);
       }
-      const body = parseJson(await response.text(), `for ${documentId}`);
+      const body = parseJson(await textOf(response), `for ${documentId}`);
 
       if (body === null) {
         return { raw: { blocks: [] }, version: null };
@@ -81,7 +106,7 @@ export const createEndpointSource = (
       if (response.status < 200 || response.status > 299) {
         throw unavailable(`refused the save with ${response.status}`);
       }
-      const text = await response.text();
+      const text = await textOf(response);
 
       if (text === '') {
         return { version: ifVersion };
@@ -110,7 +135,7 @@ export const createEndpointSource = (
       if (response.status !== 200) {
         throw unavailable(`list answered ${response.status}`);
       }
-      const body = parseJson(await response.text(), 'for the list');
+      const body = parseJson(await textOf(response), 'for the list');
 
       if (!isRecord(body) || !Array.isArray(body.documents)) {
         throw unavailable('list answered without a "documents" array');

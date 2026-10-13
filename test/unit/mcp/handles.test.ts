@@ -391,4 +391,46 @@ describe('HandleRegistry', () => {
       await drainCalls(calls);
     }
   });
+  it('reports HANDLE_LIMIT from the room check without adding anything', async () => {
+    const registry = make(1);
+
+    expect(await codeOf(() => registry.assertRoom('alice'))).toBeUndefined();
+    registry.add('alice', 'd1', { id: '1' });
+    expect(await codeOf(() => registry.assertRoom('alice'))).toBe('HANDLE_LIMIT');
+    expect(await codeOf(() => registry.assertRoom('bob'))).toBeUndefined();
+    expect(registry.count('alice')).toBe(1);
+  });
+
+  it('refuses new handles once closeAll has run', async () => {
+    const registry = make();
+
+    await registry.closeAll(async () => undefined);
+
+    expect(await codeOf(() => registry.assertRoom('alice'))).toBe('SOURCE_UNAVAILABLE');
+    expect(await codeOf(() => registry.add('alice', 'doc', { id: 'late' }))).toBe('SOURCE_UNAVAILABLE');
+    expect(registry.count('alice')).toBe(0);
+  });
+
+  it('keeps sweeping after one expiry fails and then reports the failure', async () => {
+    const closed: string[] = [];
+    const registry = new HandleRegistry<Session>({
+      idleMs: 1000,
+      maxPerPrincipal: 8,
+      now: () => clock,
+      onExpire: async (session) => {
+        if (session.id === 'a') {
+          throw new Error('close failed');
+        }
+        closed.push(session.id);
+      },
+    });
+
+    registry.add('alice', 'd1', { id: 'a' });
+    registry.add('alice', 'd2', { id: 'b' });
+    clock = 1001;
+
+    await expect(registry.sweep()).rejects.toThrow('close failed');
+    expect(closed).toEqual(['b']);
+    expect(registry.count('alice')).toBe(0);
+  });
 });

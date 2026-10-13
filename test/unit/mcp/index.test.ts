@@ -283,7 +283,7 @@ describe('runCli', () => {
         principal: 'host-user',
         clientName: 'Entry-client',
         scopes: null,
-      });
+      }, { signal: expect.any(AbortSignal) });
       expect(result.structuredContent).toEqual({ documents: [], nextCursor: null, supported: false });
     } finally {
       const closed = await within(Promise.allSettled([
@@ -316,6 +316,19 @@ describe('runCli', () => {
     await expect(within(runCli(['--manifest', 'invalid.json'], {}))).rejects.toMatchObject({ code: 2 });
     expect(assembly.assembleMcp).not.toHaveBeenCalled();
     expect(serveStdio).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['--manifest', 'missing-manifest.json'],
+    ['--manifest-overrides', 'missing-overrides.json'],
+  ])('exits 2 with a blok-mcp message when the %s file does not exist', async (name, path) => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const missing = Object.assign(new Error(`ENOENT: no such file or directory, open '${path}'`), { code: 'ENOENT' });
+
+    vi.mocked(fs.readFile).mockRejectedValue(missing);
+    await expect(within(runCli([name, path], {}))).rejects.toMatchObject({ code: 2 });
+    expect(stderr.mock.calls.map((call) => String(call[0]))).toEqual([`blok-mcp: Cannot read "${path}": no such file`]);
+    expect(assembly.assembleMcp).not.toHaveBeenCalled();
   });
 
   it('does not start after a JSON file read fails', async () => {

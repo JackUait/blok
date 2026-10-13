@@ -3,7 +3,7 @@ import { AgentFailure } from '../shared/agent/errors';
 import type { AgentPorts } from '../shared/agent/types';
 
 import type { Caller, DispatcherDeps } from './dispatcher';
-import { isMcpSurfaceError } from './errors';
+import { failedResult, isMcpSurfaceError, surfaceError } from './errors';
 
 /**
  * Headless page.rename / page.setIcon: open the target page's own document
@@ -23,7 +23,14 @@ export const createOpenPageDocument = (
     actor,
     read: (args) => session.read(args ?? {}),
     describe: (query) => session.describe(query ?? {}),
-    execute: (batch) => session.execute(batch),
+    // close() follows at once and drops unacked rows, so a pending write is a failed one.
+    execute: async (batch) => {
+      const result = await session.execute(batch);
+
+      return result.ok && result.delivery.pending
+        ? failedResult(surfaceError('SOURCE_UNAVAILABLE', 'The room did not confirm the page write in time. It was not saved; try again.', { pending: true }).agentError, result.warnings)
+        : result;
+    },
     log: () => [],
     // execute already saved (stored) or waited for acks (live), so close has nothing to flush.
     close: () => {

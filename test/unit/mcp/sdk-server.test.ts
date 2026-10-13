@@ -137,7 +137,7 @@ describe.each(ERAS)('buildSdkServer over real SDK stdio (%s)', era => {
         principal: 'local',
         clientName: 'Desktop-1.0--mac-',
         scopes: null,
-      });
+      }, { signal: expect.any(AbortSignal) });
     });
   });
 
@@ -159,7 +159,53 @@ describe.each(ERAS)('buildSdkServer over real SDK stdio (%s)', era => {
         principal: 'local',
         clientName: 'Desktop-1.0--mac-',
         scopes: null,
+      }, { signal: expect.any(AbortSignal) });
+    });
+  });
+
+  it('hands the request abort signal to the dispatcher and aborts it on cancel', async () => {
+    const seen: AbortSignal[] = [];
+    let markStarted: (() => void) | undefined;
+    const started = new Promise<void>(resolve => {
+      markStarted = resolve;
+    });
+    const dispatch = vi.fn<Dispatch>(async (_name, _args, _caller, options) => {
+      const signal = options?.signal;
+
+      if (signal === undefined) {
+        return gone;
+      }
+      seen.push(signal);
+      markStarted?.();
+      await new Promise<void>(resolve => {
+        signal.addEventListener('abort', () => resolve(), { once: true });
       });
+
+      return gone;
+    });
+
+    await withClient(era, deploymentTools(), dispatch, async client => {
+      await client.listTools(undefined, REQUEST);
+      const controller = new AbortController();
+      const call = client.callTool({ name: 'blok_open', arguments: { documentId: 'doc' } }, { ...REQUEST, signal: controller.signal });
+
+      void call.catch(() => undefined);
+      await within(started);
+      controller.abort();
+      await expect(call).rejects.toBeDefined();
+      await within(new Promise<void>(resolve => {
+        const check = (): void => {
+          if (seen.some(signal => signal.aborted)) {
+            resolve();
+          } else {
+            setTimeout(check, 5);
+          }
+        };
+
+        check();
+      }));
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.aborted).toBe(true);
     });
   });
 

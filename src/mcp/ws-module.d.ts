@@ -11,5 +11,6 @@ declare module 'ws' {
     onerror: ((event: unknown) => void) | null;
     send(data: ArrayBufferLike | ArrayBufferView): void;
     close(code?: number, reason?: string): void;
+    on(event: 'error', listener: (error: Error) => void): this;
   }
 }

@@ -97,7 +97,10 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     const sweep = handles.sweep();
 
     sweeps.add(sweep);
-    void sweep.finally(() => sweeps.delete(sweep));
+    // stdout carries the protocol, so failures go to stderr.
+    void sweep
+      .catch((error: unknown) => console.error('blok-mcp: closing an idle handle failed', error))
+      .finally(() => sweeps.delete(sweep));
   }, Math.min(handleIdleMs, 30_000));
 
   sweeper.unref();

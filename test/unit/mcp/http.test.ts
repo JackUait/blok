@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { generateKeyPairSync, sign } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildMcpContracts } from '../../../src/mcp/contract';
 import type { Caller } from '../../../src/mcp/dispatcher';
+import type { Dispatch } from '../../../src/mcp/sdk-server';
 import { startHttpServer } from '../../../src/mcp/http';
 import { listMcpTools } from '../../../src/mcp/tools';
 
@@ -81,6 +83,40 @@ describe('startHttpServer', () => {
     expect(seen[0]).toMatchObject({ principal: 'local', scopes: null });
   });
 
+  it('aborts the call signal when the client disconnects mid-call', async () => {
+    const started: { resolve?: () => void } = {};
+    const startedCall = new Promise<void>((resolve) => {
+      started.resolve = resolve;
+    });
+    const abortedCall = new Promise<boolean>((resolve) => {
+      const hanging: Dispatch = async (_name, _args, _caller, options) => {
+        started.resolve?.();
+        await new Promise<void>((settle) => {
+          options?.signal?.addEventListener('abort', () => settle(), { once: true });
+          setTimeout(settle, 3_000);
+        });
+        resolve(options?.signal?.aborted === true);
+
+        return { structuredContent: { documents: [], nextCursor: null, supported: false }, isError: false };
+      };
+
+      void startHttpServer({ listen: '127.0.0.1:0', tools, dispatch: hanging, version: '0', auth: { kind: 'none' }, principal: 'local' })
+        .then((server) => {
+          servers.push(server);
+          const client = httpRequest(`${server.url}/mcp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+          });
+
+          client.on('error', () => undefined);
+          client.end(JSON.stringify(listCall));
+          void startedCall.then(() => client.destroy());
+        });
+    });
+
+    expect(await abortedCall).toBe(true);
+  });
+
   describe('with OAuth', () => {
     const keys = generateKeyPairSync('rsa', { modulusLength: 2048 });
     const config = { kind: 'oauth' as const, issuer: 'https://id.test', audience: 'https://mcp.test', jwksUrl: 'https://id.test/jwks' };
@@ -128,6 +164,24 @@ describe('startHttpServer', () => {
 
       expect(response.status).toBe(401);
       expect(seen).toEqual([]);
+    });
+
+    it('refuses a missing token from the headers alone, before reading the body', async () => {
+      const status = await new Promise<number | undefined>((resolve, reject) => {
+        const client = httpRequest(`${url}/mcp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+        }, (response) => {
+          resolve(response.statusCode);
+          client.destroy();
+        });
+
+        client.on('error', reject);
+        // Headers go out, the body never ends: an answer proves auth did not wait for it.
+        client.write('{"jsonrpc":"2.0",');
+      });
+
+      expect(status).toBe(401);
     });
 
     it('403s a token without blok.read', async () => {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { createServer as createTcpServer, type AddressInfo, type Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nodeSocketFactory } from '../../../src/mcp/live/node-socket';
 
@@ -62,5 +62,41 @@ describe('nodeSocketFactory', () => {
     expect(typeof socket.readyState).toBe('number');
     expect(socket.protocol).toBe('');
     socket.close();
+  });
+
+  it('survives teardown of a socket whose upgrade never got an answer', async () => {
+    const accepted: Socket[] = [];
+    const silent = createTcpServer((socket) => {
+      accepted.push(socket);
+    });
+    const uncaught: unknown[] = [];
+    const record = (error: unknown): void => {
+      uncaught.push(error);
+    };
+
+    await new Promise<void>((done) => silent.listen(0, '127.0.0.1', done));
+    const address = silent.address();
+
+    if (address === null || typeof address === 'string') {
+      throw new Error('The silent server has no TCP address');
+    }
+    process.prependListener('uncaughtException', record);
+    try {
+      const connected = new Promise<void>((done) => silent.once('connection', () => done()));
+      const socket = nodeSocketFactory(null)(`ws://127.0.0.1:${address.port}/sync/doc-1`, ['blok-sync.v2']);
+
+      await connected;
+      // The provider's teardown order: drop the handler, then close while CONNECTING.
+      socket.onerror = null;
+      socket.close(1000);
+      await new Promise<void>((done) => setImmediate(done));
+      await new Promise<void>((done) => setTimeout(done, 20));
+
+      expect(uncaught).toEqual([]);
+    } finally {
+      process.removeListener('uncaughtException', record);
+      accepted.forEach((socket) => socket.destroy());
+      await new Promise<void>((done) => silent.close(() => done()));
+    }
   });
 });

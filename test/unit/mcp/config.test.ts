@@ -357,6 +357,10 @@ describe('parseMcpArgs', () => {
     });
   });
 
+  it('refuses --public without --http, where it would mean nothing', () => {
+    expect(() => parseMcpArgs(['--public'], {})).toThrow(McpConfigError);
+  });
+
   it('records public HTTP transport without applying the safety check during parsing', () => {
     const { options } = parseMcpArgs(['--http', '0.0.0.0:4100', '--public'], {});
 
@@ -435,6 +439,44 @@ describe('parseMcpArgs', () => {
     it('does not consume the next flag as its value', () => {
       expect(() => parseMcpArgs(['--auth', 'oauth', ...others, flag, '--public'], {}))
         .toThrow(McpConfigError);
+    });
+  });
+
+  describe('flags it does not know', () => {
+    it.each([
+      ['--auth=oauth'],
+      ['--http=127.0.0.1:8080'],
+      ['--source=files:./docs'],
+      ['--public=true'],
+    ])('refuses the --name=value form %s instead of ignoring it', (arg) => {
+      expect(() => parseMcpArgs([arg], {})).toThrow(new McpConfigError(`${arg.slice(0, arg.indexOf('='))} takes its value as the next argument, not after "="`));
+    });
+
+    it.each([['--sorce'], ['--help'], ['--version'], ['--']])('refuses the unknown flag %s', (arg) => {
+      expect(() => parseMcpArgs(['--source', 'files:./docs', arg], {})).toThrow(new McpConfigError(`Unknown flag ${arg}`));
+    });
+
+    it('refuses a stray positional argument', () => {
+      expect(() => parseMcpArgs(['files:./docs'], {})).toThrow(new McpConfigError('Unexpected argument "files:./docs"'));
+    });
+
+    it('refuses a second value after a flag', () => {
+      expect(() => parseMcpArgs(['--schema', 'full', 'envelope'], {})).toThrow(new McpConfigError('Unexpected argument "envelope"'));
+    });
+
+    it('still accepts every flag the README documents', () => {
+      const { options, files } = parseMcpArgs([
+        '--source', 'endpoint:https://app.example/docs', '--source-list', 'https://app.example/list',
+        '--sync-url', 'wss://sync.example', '--origin', 'https://app.example', '--ticket-url', 'https://app.example/ticket',
+        '--http', '127.0.0.1:0', '--public', '--auth', 'oauth', '--oauth-issuer', 'https://id.example',
+        '--oauth-audience', 'https://mcp.example', '--oauth-jwks', 'https://id.example/jwks', '--authorize', './authorize.mjs',
+        '--principal', 'me', '--manifest', 'm.json', '--manifest-overrides', 'o.json', '--rich-text-fields', '{}',
+        '--page-titles', 'page-map', '--schema', 'full', '--handle-idle-ms', '5', '--max-handles', '2',
+      ], { BLOK_MCP_HOST_TOKEN: 'host-token' });
+
+      expect(options.transport).toEqual({ kind: 'http', listen: '127.0.0.1:0', public: true });
+      expect(options.auth.kind).toBe('oauth');
+      expect(files).toEqual({ manifest: 'm.json', overrides: 'o.json', authorize: './authorize.mjs' });
     });
   });
 });

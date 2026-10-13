@@ -12,6 +12,35 @@ export interface ParsedCli {
   files: { manifest?: string; overrides?: string; authorize?: string };
 }
 
+const VALUE_FLAGS = new Set([
+  '--http', '--auth', '--sync-url', '--origin', '--ticket-url', '--oauth-issuer', '--oauth-audience', '--oauth-jwks',
+  '--source', '--source-list', '--page-titles', '--rich-text-fields', '--schema', '--handle-idle-ms', '--max-handles',
+  '--principal', '--manifest', '--manifest-overrides', '--authorize',
+]);
+const SWITCH_FLAGS = new Set(['--public']);
+
+// `flag()` looks names up by exact match, so `--auth=oauth` or a typo would be silently ignored.
+const checkArgs = (argv: string[]): void => {
+  const at = { index: 0 };
+
+  while (at.index < argv.length) {
+    const arg = argv[at.index];
+
+    if (!arg.startsWith('--')) {
+      throw new McpConfigError(`Unexpected argument "${arg}"`);
+    }
+    const equals = arg.indexOf('=');
+
+    if (equals > 2) {
+      throw new McpConfigError(`${arg.slice(0, equals)} takes its value as the next argument, not after "="`);
+    }
+    if (!VALUE_FLAGS.has(arg) && !SWITCH_FLAGS.has(arg)) {
+      throw new McpConfigError(`Unknown flag ${arg}`);
+    }
+    at.index += VALUE_FLAGS.has(arg) ? 2 : 1;
+  }
+};
+
 const flag = (argv: string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
 
@@ -142,6 +171,7 @@ export const parseMcpArgs = (
   argv: string[],
   env: Record<string, string | undefined>
 ): ParsedCli => {
+  checkArgs(argv);
   const http = flag(argv, '--http') ?? env.BLOK_MCP_HTTP;
   const authKind = oneOf('--auth', flag(argv, '--auth'), ['none', 'oauth'] as const) ?? 'none';
   const syncUrl = flag(argv, '--sync-url') ?? env.BLOK_SYNC_URL;
@@ -149,6 +179,10 @@ export const parseMcpArgs = (
   const ticketUrl = flag(argv, '--ticket-url') ?? env.BLOK_TICKET_URL;
   const auth = parseAuth(argv, authKind);
   const tickets = parseTickets(ticketUrl, env);
+
+  if (http === undefined && argv.includes('--public')) {
+    throw new McpConfigError('--public applies to --http only');
+  }
 
   const options: ParsedCli['options'] = {
     transport: http === undefined

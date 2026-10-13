@@ -59,6 +59,7 @@ Pass `--sync-url` to join rooms on a Blok sync service.
 - `--sync-url` needs one of the two. Without a ticket the room cannot name the agent, so the server refuses to start.
 - `BLOK_SECRET` over `--http` also needs `--authorize`. Otherwise any caller could get a ticket for any document. Over stdio it is allowed alone.
 - The ticket's `user` must equal the agent's actor id, not the human's id. Otherwise the open is refused.
+- The ticket route answers 403 when the human may not open the document. The agent gets `FORBIDDEN`, and a live handle ends. A 401 means the host token was refused; the agent gets a retryable error.
 - `blok_open` reports the handle's `durability`:
   - `acknowledged`: the server has a journal, and each batch waits for its acks.
   - `best-effort`: the server has no journal and makes no durability claim.
@@ -99,6 +100,7 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - Tokens are checked against the issuer's JWKS. The audience must name this server.
   - Scopes: `blok.read` (list, open read-only, read, describe) and `blok.write` (open for writing, execute).
   - Protected Resource Metadata is served at `/.well-known/oauth-protected-resource`.
+  - The principal is the token's `sub`. A token with no `sub` gets `client:<client_id>` (or its `azp`), so a machine client never shares a user's handles or `--authorize` answers.
 - A request with a non-loopback `Origin` header is refused.
 - Live handles hold sockets, so run it as a long-lived process.
 - To scale out, route on the `Mcp-Param-Blok-Handle` header, so every call for a handle reaches the process that holds it.
@@ -124,6 +126,8 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
 ## All flags
 
 A flag wins over its environment variable.
+
+Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknown flag or a stray argument is refused at startup.
 
 | Flag | Env var | Default | What it does |
 |---|---|---|---|

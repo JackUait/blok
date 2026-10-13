@@ -1,7 +1,11 @@
+import { access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { McpConfigError } from '../config';
+
+// Every open waits on the webhook; a hung host must not hold the call open forever.
+const WEBHOOK_TIMEOUT_MS = 10_000;
 
 export type AuthorizeHook = (principal: string, documentId: string, write: boolean) => Promise<boolean>;
 
@@ -31,6 +35,7 @@ export const loadAuthorizeHook = async (
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ principal, documentId, write }),
+          signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
         });
 
         if (response.status !== 200) {
@@ -44,7 +49,12 @@ export const loadAuthorizeHook = async (
       }
     };
   }
-  const url = pathToFileURL(resolve(deps.cwd ?? process.cwd(), spec)).href;
+  const path = resolve(deps.cwd ?? process.cwd(), spec);
+
+  await access(path).catch(() => {
+    throw new McpConfigError(`--authorize ${spec}: no module at ${path}`);
+  });
+  const url = pathToFileURL(path).href;
   const loaded = await (deps.importModule ?? importFile)(url);
   const hook = isRecord(loaded) ? loaded.default : undefined;
 

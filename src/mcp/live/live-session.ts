@@ -1,4 +1,5 @@
 import type { HeadlessRoom, HeadlessRoomEnd } from '../../components/modules/collaboration/headless-session';
+import type { BatchDelivery } from '../../components/modules/collaboration/tracking-outbox';
 import type { CollabTerminalError } from '../../components/modules/collaboration/types';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { AgentBatch, AgentError, AgentResult, AgentSession } from '../../../types/agent';
@@ -34,14 +35,13 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
   const ackTimeoutMs = input.ackTimeoutMs ?? DEFAULT_ACK_TIMEOUT_MS;
   const readOnlyByName = new Map(input.contract.commands.map((entry) => [entry.name, entry.readOnly]));
   const state = { readOnly: !input.write, batch: 0 };
-  // Batch number -> its row ids, while any row is still unacknowledged.
+  // Batch number -> its row ids, until every row is acked.
   const unacked = new Map<number, string[]>();
 
+  // Only an ack clears a batch: a quarantined row is not pending either, and it was never saved.
   const notSaved = (): number[] => {
-    const pending = new Set(room.outbox.pendingIds());
-
     for (const [batch, ids] of unacked) {
-      if (ids.every((id) => !pending.has(id))) {
+      if (ids.every((id) => room.outbox.isAcked(id))) {
         unacked.delete(batch);
       }
     }
@@ -52,6 +52,25 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
   const endError = (end: HeadlessRoomEnd): AgentError => (end.reason === 'reset'
     ? surfaceError('ROOM_RESET', "The room's history was reset. Work not acknowledged is lost; open the document again.", { notSavedBatches: notSaved() }).agentError
     : terminalToError(end.error));
+
+  // onEnd does not replay a past end, so ended() is checked after subscribing.
+  const waitOrEnd = async (ids: string[]): Promise<BatchDelivery | { state: 'ended'; end: HeadlessRoomEnd }> => {
+    const ending: { stop: () => void } = { stop: () => undefined };
+    const ended = new Promise<{ state: 'ended'; end: HeadlessRoomEnd }>((resolve) => {
+      ending.stop = room.onEnd((end) => resolve({ state: 'ended', end }));
+      const end = room.ended();
+
+      if (end !== null) {
+        resolve({ state: 'ended', end });
+      }
+    });
+
+    try {
+      return await Promise.race([room.outbox.waitFor(ids, ackTimeoutMs), ended]);
+    } finally {
+      ending.stop();
+    }
+  };
 
   input.presence.announce();
 
@@ -100,8 +119,12 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
     const number = state.batch;
 
     unacked.set(number, ids);
-    const fate = await room.outbox.waitFor(ids, ackTimeoutMs);
+    const fate = await waitOrEnd(ids);
 
+    // The batch stays in unacked, so close() and ROOM_RESET still count it.
+    if (fate.state === 'ended') {
+      return failedResult(endError(fate.end), result.warnings);
+    }
     if (fate.state === 'acked') {
       unacked.delete(number);
 

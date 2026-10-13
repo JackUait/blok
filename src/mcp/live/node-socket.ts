@@ -9,7 +9,11 @@ import type { CollabSocketFactory, WebSocketLike } from '../../components/module
  * @returns a socket factory for the collaboration provider
  */
 export const nodeSocketFactory = (origin: string | null): CollabSocketFactory => (url, protocols) => {
-  const socket: WebSocketLike = new WebSocket(url, protocols, origin === null ? {} : { origin });
+  const socket = new WebSocket(url, protocols, origin === null ? {} : { origin });
 
-  return socket;
+  // The provider nulls onerror, then closes a CONNECTING socket; ws then emits
+  // 'error', and an emitter with no listener throws and kills the process.
+  socket.on('error', () => undefined);
+
+  return socket satisfies WebSocketLike;
 };

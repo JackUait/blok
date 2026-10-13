@@ -1,4 +1,5 @@
-import type { AgentBatch, AgentCommand, ViewArgs } from '../../types/agent';
+import type { AgentBatch, AgentCommand, AgentError, ViewArgs } from '../../types/agent';
+import { AgentFailure, failure } from '../shared/agent/errors';
 
 import { failedResult, isMcpSurfaceError, surfaceError } from './errors';
 import type { HandleRegistry } from './handles';
@@ -19,6 +20,11 @@ export interface OpenRequest {
   documentId: string;
   mode: 'auto' | 'live' | 'stored';
   write: boolean;
+}
+
+export interface CallOptions {
+  /** Aborted when the client cancels or its connection closes. */
+  signal?: AbortSignal;
 }
 
 export interface ListRequest {
@@ -62,6 +68,37 @@ const handleOf = (args: Record<string, unknown>): string => {
   return args.handle;
 };
 
+const MODES: ReadonlySet<unknown> = new Set(['auto', 'live', 'stored']);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isCommandShaped = (value: unknown): boolean =>
+  isPlainObject(value) && typeof value.name === 'string';
+
+// Core throws AgentFailure for model-fixable input (a bad view, an unknown tool).
+const modelFixable = (thrown: unknown): AgentError | null => {
+  if (isMcpSurfaceError(thrown)) {
+    return thrown.agentError;
+  }
+
+  return thrown instanceof AgentFailure ? thrown.error : null;
+};
+
+const listRequestOf = (args: Record<string, unknown>): ListRequest => {
+  if ((args.limit !== undefined && typeof args.limit !== 'number')
+    || (args.query !== undefined && typeof args.query !== 'string')
+    || (args.cursor !== undefined && typeof args.cursor !== 'string')) {
+    throw surfaceError('INVALID_ARGS', 'limit must be a number; query and cursor must be strings.');
+  }
+
+  return {
+    limit: typeof args.limit === 'number' ? Math.min(Math.max(Math.trunc(args.limit), 1), 100) : 25,
+    ...(typeof args.query === 'string' && { query: args.query }),
+    ...(typeof args.cursor === 'string' && { cursor: args.cursor }),
+  };
+};
+
 const ok = (structuredContent: Record<string, unknown>): ToolOutcome => ({
   structuredContent: structuredContent,
   isError: false,
@@ -69,7 +106,7 @@ const ok = (structuredContent: Record<string, unknown>): ToolOutcome => ({
 
 export const createToolDispatcher = (
   deps: DispatcherDeps,
-): ((name: string, args: Record<string, unknown>, caller: Caller) => Promise<ToolOutcome>) => {
+): ((name: string, args: Record<string, unknown>, caller: Caller, options?: CallOptions) => Promise<ToolOutcome>) => {
   const onHandle = <T>(
     caller: Caller,
     handle: string,
@@ -83,18 +120,35 @@ export const createToolDispatcher = (
     return operation(session);
   });
 
-  const openDocument = async (args: Record<string, unknown>, caller: Caller): Promise<ToolOutcome> => {
+  const openDocument = async (args: Record<string, unknown>, caller: Caller, signal?: AbortSignal): Promise<ToolOutcome> => {
+    if (args.write !== undefined && typeof args.write !== 'boolean') {
+      throw surfaceError('INVALID_ARGS', 'write must be true or false.');
+    }
     const write = args.write === true;
 
     requireScope(caller, write ? 'blok.write' : 'blok.read');
     if (typeof args.documentId !== 'string' || args.documentId === '' || args.documentId.length > 512) {
       throw surfaceError('INVALID_ARGS', 'documentId must be a string of 1 to 512 characters.');
     }
+    if (args.mode !== undefined && !MODES.has(args.mode)) {
+      throw surfaceError('INVALID_ARGS', 'mode must be "auto", "live" or "stored".');
+    }
+    if (args.view !== undefined && !isPlainObject(args.view)) {
+      throw surfaceError('INVALID_ARGS', 'view must be an object of blok_read arguments.');
+    }
     const mode = args.mode === 'live' || args.mode === 'stored' ? args.mode : 'auto';
+
+    // Opening can mint a ticket and join a room, so refuse at the cap first.
+    deps.handles.assertRoom(caller.principal);
     const session = await deps.open({ documentId: args.documentId, mode, write }, caller);
 
     try {
-      const view = typeof args.view === 'object' && args.view !== null ? await session.read(args.view) : undefined;
+      const view = isPlainObject(args.view) ? await session.read(args.view) : undefined;
+
+      // Nobody would hold the handle: the catch below closes the session.
+      if (signal?.aborted === true) {
+        throw failure('CANCELLED', 'The request was cancelled before the document opened.');
+      }
       const handle = deps.handles.add(caller.principal, args.documentId, session);
 
       return ok({
@@ -117,31 +171,32 @@ export const createToolDispatcher = (
     if (!Array.isArray(args.commands)) {
       throw surfaceError('INVALID_ARGS', 'commands must be an array of { name, args }.');
     }
-    const batch: AgentBatch = {
+    const badIndex = args.commands.findIndex(command => !isCommandShaped(command));
+
+    // Sessions read command.name before core validates the batch.
+    if (badIndex !== -1) {
+      throw surfaceError('INVALID_ARGS', `commands[${badIndex}] must be an object with a string name.`);
+    }
+    // A non-string is passed on so core refuses it instead of dropping the guard.
+    const batch = {
       commands: args.commands as AgentCommand[],
-      ...(typeof args.expectRevision === 'string' && { expectRevision: args.expectRevision }),
-    };
+      ...(args.expectRevision !== undefined && { expectRevision: args.expectRevision }),
+    } as AgentBatch;
     const result = await onHandle(caller, handleOf(args), true, session => session.execute(batch));
 
     return { structuredContent: result as unknown as Record<string, unknown>, isError: !result.ok };
   };
 
-  return async (name, args, caller): Promise<ToolOutcome> => {
+  return async (name, args, caller, options = {}): Promise<ToolOutcome> => {
     try {
       switch (name) {
         case 'blok_list_documents': {
           requireScope(caller, 'blok.read');
-          const limit = typeof args.limit === 'number' ? Math.min(Math.max(Math.trunc(args.limit), 1), 100) : 25;
-          const request: ListRequest = {
-            limit,
-            ...(typeof args.query === 'string' && { query: args.query }),
-            ...(typeof args.cursor === 'string' && { cursor: args.cursor }),
-          };
 
-          return ok({ ...await deps.list(request, caller) });
+          return ok({ ...await deps.list(listRequestOf(args), caller) });
         }
         case 'blok_open':
-          return await openDocument(args, caller);
+          return await openDocument(args, caller, options.signal);
         case 'blok_read': {
           requireScope(caller, 'blok.read');
           const viewArgs = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'handle'));
@@ -176,14 +231,14 @@ export const createToolDispatcher = (
           throw new UnknownToolError(name);
       }
     } catch (thrown) {
-      if (!isMcpSurfaceError(thrown)) {
+      const error = modelFixable(thrown);
+
+      if (error === null) {
         throw thrown;
       }
 
       return {
-        structuredContent: name === 'blok_execute'
-          ? failedResult(thrown.agentError)
-          : { error: thrown.agentError },
+        structuredContent: name === 'blok_execute' ? failedResult(error) : { error },
         isError: true,
       };
     }

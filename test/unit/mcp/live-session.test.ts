@@ -77,7 +77,9 @@ describe('createLiveSession', () => {
       onEnd: (listener) => {
         endListeners.push(listener);
 
-        return () => undefined;
+        return () => {
+          endListeners = endListeners.filter((entry) => entry !== listener);
+        };
       },
       close: roomClose,
     };
@@ -152,6 +154,63 @@ describe('createLiveSession', () => {
     expect(await live.close('closed')).toMatchObject({ unsavedBatches: 0 });
   });
 
+  it('still counts a timed-out batch the room later refused', async () => {
+    vi.useFakeTimers();
+    const live = session();
+    const pending = live.execute(insert);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await pending;
+    await outbox.quarantineLineage('L1', 'oversized-update', new Uint8Array(0));
+    expect(await live.close('closed')).toMatchObject({ unsavedBatches: 1 });
+  });
+
+  it('answers a room end that lands during the ack wait at once, without a pending success', async () => {
+    vi.useFakeTimers();
+    const live = session();
+    const pending = live.execute(insert);
+
+    await vi.waitFor(() => expect(outbox.pendingIds()).toEqual(['op-1']));
+    end({ reason: 'terminal', error: 'forbidden' });
+
+    expect(await pending).toMatchObject({ ok: false, error: { code: 'FORBIDDEN' }, delivery: { durable: false, pending: false } });
+    expect(endListeners).toEqual([]);
+    expect(await live.close('closed')).toMatchObject({ unsavedBatches: 1 });
+  });
+
+  it('answers a room end that landed before the ack wait began', async () => {
+    agentExecute.mockImplementationOnce(async () => {
+      await outbox.appendLocal(new Uint8Array([1]));
+      end({ reason: 'terminal', error: 'forbidden' });
+
+      return ok;
+    });
+    const live = session();
+
+    expect(await live.execute(insert)).toMatchObject({ ok: false, error: { code: 'FORBIDDEN' } });
+    expect(endListeners).toEqual([]);
+  });
+
+  it('leaves no end listener behind after acked, refused and timed-out batches', async () => {
+    vi.useFakeTimers();
+    const live = session();
+    const acked = live.execute(insert);
+
+    await vi.waitFor(() => expect(outbox.pendingIds()).toEqual(['op-1']));
+    await outbox.acknowledge('op-1');
+    await acked;
+    const refused = live.execute(insert);
+
+    await vi.waitFor(() => expect(outbox.pendingIds()).toEqual(['op-2']));
+    await outbox.quarantineLineage('L1', 'oversized-update', new Uint8Array(0));
+    await refused;
+    const timedOut = live.execute(insert);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await timedOut;
+    expect(endListeners).toEqual([]);
+  });
+
   it('never reports durable when the tap could not journal the batch', async () => {
     agentExecute.mockImplementationOnce(async () => {
       failures += 1;
@@ -214,6 +273,8 @@ describe('createLiveSession', () => {
 
     await vi.advanceTimersByTimeAsync(10_000);
     await first;
+    // The provider's order: quarantine the old lineage, then finish with 'reset'.
+    await outbox.quarantineLineage('L1', 'lineage-reset', new Uint8Array(0));
     end({ reason: 'reset' });
 
     expect(await live.execute(insert)).toMatchObject({ ok: false, error: { code: 'ROOM_RESET', details: { notSavedBatches: [1] } } });

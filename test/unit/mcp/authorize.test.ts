@@ -49,6 +49,21 @@ describe('loadAuthorizeHook', () => {
     await expect(loadAuthorizeHook('./bad.mjs', { cwd: dir })).rejects.toBeInstanceOf(McpConfigError);
   });
 
+  it('reports a missing module as a config error, not a raw import failure', async () => {
+    const dir = tempDir('blok-mcp-authz-');
+
+    await expect(loadAuthorizeHook('./missing.mjs', { cwd: dir }))
+      .rejects.toThrow(new McpConfigError(`--authorize ./missing.mjs: no module at ${join(dir, 'missing.mjs')}`));
+  });
+
+  it('bounds the webhook with a timeout signal and denies when it aborts', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'));
+    const hook = await loadAuthorizeHook('https://app/authz', { fetchImpl: fetchMock });
+
+    expect(await hook('alice', 'd', false)).toBe(false);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it('asks a webhook and fails closed', async () => {
     fetchMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ allowed: true }), { status: 200 }))

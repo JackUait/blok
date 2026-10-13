@@ -116,4 +116,19 @@ describe('TrackingOutbox', () => {
 
     expect(await outbox.waitFor(['op-1'], 10_000)).toEqual({ state: 'acked', serverSequence: '7' });
   });
+
+  it('calls a row acked only after its ack, never after a quarantine', async () => {
+    const acked = await outbox.appendLocal(new Uint8Array([1]));
+
+    expect(outbox.isAcked(acked.operationId)).toBe(false);
+    await outbox.acknowledge(acked.operationId);
+    expect(outbox.isAcked(acked.operationId)).toBe(true);
+
+    const refused = await outbox.appendLocal(new Uint8Array([2]));
+
+    await outbox.quarantineLineage('L1', 'lineage-reset', new Uint8Array(0));
+    expect(outbox.pendingIds()).toEqual([]);
+    expect(outbox.isAcked(refused.operationId)).toBe(false);
+    expect(outbox.isAcked('never-appended')).toBe(false);
+  });
 });

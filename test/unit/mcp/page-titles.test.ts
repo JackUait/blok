@@ -5,7 +5,9 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Caller } from '../../../src/mcp/dispatcher';
+import { createOpenPageDocument } from '../../../src/mcp/page-titles';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
+import type { HandleSession, McpExecuteResult } from '../../../src/mcp/session';
 
 const caller: Caller = { principal: 'alice', clientName: 'c', scopes: null };
 
@@ -59,5 +61,40 @@ describe('page titles through page-map', () => {
 
     expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'FORBIDDEN', details: { pageId: 'child' } } });
     expect(childTitle()).toBe('Old');
+  });
+});
+
+describe('createOpenPageDocument', () => {
+  const actor = { id: 'agent:a', name: 'a', kind: 'agent' as const };
+  const pendingWrite: McpExecuteResult = {
+    ok: true, revision: '1', results: [], refs: {}, changed: { created: [], updated: [], moved: [], removed: [] }, warnings: [],
+    delivery: { durable: false, pending: true, serverSequence: null, savedVersion: null },
+  };
+  const close = vi.fn<HandleSession['close']>();
+  const session: HandleSession = {
+    mode: 'live',
+    write: true,
+    durability: 'acknowledged',
+    contractRevision: 'r',
+    read: async () => ({ revision: '1', rootId: null, blocks: [] }),
+    describe: () => { throw new Error('Unused describe dependency'); },
+    execute: async () => pendingWrite,
+    close,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    close.mockResolvedValue({ unsavedBatches: 1, hostRecordLags: true });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('never reports a live page write the room did not acknowledge as applied', async () => {
+    const page = await createOpenPageDocument({ open: async () => session, caller })('child', actor);
+    const result = await page.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'x' } }] });
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'SOURCE_UNAVAILABLE', retryable: true } });
   });
 });

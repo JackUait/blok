@@ -8,6 +8,7 @@ import { McpSurfaceError, NO_DELIVERY, surfaceError } from '../../../src/mcp/err
 import { HandleRegistry } from '../../../src/mcp/handles';
 import type { HandleSession, McpExecuteResult } from '../../../src/mcp/session';
 import { createDocumentAgentSession } from '../../../src/shared/agent';
+import { failure } from '../../../src/shared/agent/errors';
 import { createHeadlessAgentSetup } from '../../../src/view/agent-runtime';
 import type { AgentBatch, AgentSession, ContractSlice, DocumentView } from '../../../types/agent';
 
@@ -238,16 +239,97 @@ describe('createToolDispatcher', () => {
     expect(session.read).toHaveBeenCalledExactlyOnceWith(args);
   });
 
-  it('closes a session that cannot be registered because the principal reached the cap', async () => {
+  it('refuses an open at the cap before opening anything', async () => {
     const { deps, dispatch } = fixture(fakeSession(), 1);
     await invoke(dispatch, 'blok_open', { documentId: 'first' });
-    const extra = fakeSession();
-    vi.mocked(deps.open).mockResolvedValueOnce(extra);
     const outcome = await invoke(dispatch, 'blok_open', { documentId: 'second' });
 
     expectFailure(outcome, 'HANDLE_LIMIT');
-    expect(extra.close).toHaveBeenCalledExactlyOnceWith('closed');
+    expect(deps.open).toHaveBeenCalledTimes(1);
     expect(deps.handles.count('alice')).toBe(1);
+  });
+
+  it('closes the session of a racing open that lost the last slot', async () => {
+    const { deps, dispatch } = fixture(fakeSession(), 1);
+    const held = barrier();
+    const first = fakeSession();
+    const second = fakeSession();
+    vi.mocked(deps.open)
+      .mockImplementationOnce(async () => {
+        await held.wait;
+
+        return first;
+      })
+      .mockResolvedValueOnce(second);
+    const slow = invoke(dispatch, 'blok_open', { documentId: 'first' });
+    const fast = await invoke(dispatch, 'blok_open', { documentId: 'second' });
+
+    held.release();
+    const lost = await slow;
+
+    expect(fast.isError).toBe(false);
+    expectFailure(lost, 'HANDLE_LIMIT');
+    expect(first.close).toHaveBeenCalledExactlyOnceWith('closed');
+    expect(deps.handles.count('alice')).toBe(1);
+  });
+
+  it('closes a session whose open finished after the registry was closed', async () => {
+    const { deps, dispatch } = fixture();
+    const held = barrier();
+    const late = fakeSession();
+    vi.mocked(deps.open).mockImplementationOnce(async () => {
+      await held.wait;
+
+      return late;
+    });
+    const opening = invoke(dispatch, 'blok_open', { documentId: 'doc-1' });
+
+    await deadline(dispatchCheckpoint(), 'open started');
+    await deps.handles.closeAll(async session => {
+      await session.close('closed');
+    });
+    held.release();
+    const outcome = await opening;
+
+    expect(outcome.isError).toBe(true);
+    expect(late.close).toHaveBeenCalledExactlyOnceWith('closed');
+    expect(deps.handles.count('alice')).toBe(0);
+  });
+
+  it('closes the session instead of adding a handle when the request was aborted during open', async () => {
+    const { deps, dispatch } = fixture();
+    const held = barrier();
+    const session = fakeSession();
+    const controller = new AbortController();
+    vi.mocked(deps.open).mockImplementationOnce(async () => {
+      await held.wait;
+
+      return session;
+    });
+    const call = dispatch('blok_open', { documentId: 'doc-1' }, stdio, { signal: controller.signal });
+
+    calls.push(call);
+    controller.abort();
+    held.release();
+    const outcome = await deadline(call, 'aborted open');
+
+    expectFailure(outcome, 'CANCELLED');
+    expect(session.close).toHaveBeenCalledExactlyOnceWith('closed');
+    expect(deps.handles.count('alice')).toBe(0);
+  });
+
+  const badModes: Array<{ args: Record<string, unknown> }> = [
+    { args: { mode: 'LIVE' } }, { args: { mode: 7 } }, { args: { mode: null } },
+    { args: { write: 'true' } }, { args: { write: 1 } }, { args: { write: null } },
+    { args: { view: 'x' } }, { args: { view: ['depth'] } },
+  ];
+
+  it.each(badModes)('refuses invalid open flags $args before opening', async ({ args }) => {
+    const { deps, dispatch } = fixture();
+    const outcome = await invoke(dispatch, 'blok_open', { documentId: 'doc-1', ...args });
+
+    expectFailure(outcome, 'INVALID_ARGS');
+    expect(deps.open).not.toHaveBeenCalled();
   });
 
   it('does not retain a handle or session when its requested first view fails', async () => {
@@ -404,6 +486,26 @@ describe('createToolDispatcher', () => {
 
     expect(outcome.isError).toBe(false);
     expect(deps.open).toHaveBeenCalledExactlyOnceWith({ documentId, mode: 'auto', write: false }, stdio);
+  });
+
+  const malformedEntries: unknown[] = [null, 'doc.read', ['doc.read'], {}, { name: 7 }, { name: null }];
+
+  it.each(malformedEntries)('refuses command entry %j before authorization or execute', async entry => {
+    const { deps, session, dispatch } = fixture();
+    const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
+    const outcome = await invoke(dispatch, 'blok_execute', { handle, commands: [{ name: 'doc.read', args: {} }, entry] });
+
+    expectFailure(outcome, 'INVALID_ARGS', true);
+    expect(deps.stillAllowed).not.toHaveBeenCalled();
+    expect(session.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([5, null, false])('passes non-string expectRevision %j through for core to refuse', async expectRevision => {
+    const { session, dispatch } = fixture();
+    const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
+    await invoke(dispatch, 'blok_execute', { handle, expectRevision, commands: [] });
+
+    expect(session.execute).toHaveBeenCalledExactlyOnceWith({ commands: [], expectRevision });
   });
 
   const malformedCommands: unknown[] = [undefined, null, 'not-an-array', {}, 42];
@@ -626,6 +728,13 @@ describe('createToolDispatcher', () => {
     expect(deps.list).toHaveBeenCalledExactlyOnceWith({ limit: expected }, stdio);
   });
 
+  it.each([{ limit: 'x' }, { query: 5 }, { cursor: 5 }])('refuses listing argument %j instead of dropping it', async (args) => {
+    const { deps, dispatch } = fixture();
+
+    expectFailure(await invoke(dispatch, 'blok_list_documents', args), 'INVALID_ARGS');
+    expect(deps.list).not.toHaveBeenCalled();
+  });
+
   it('preserves listing filters and an unsupported empty listing result', async () => {
     const { deps, dispatch } = fixture();
     vi.mocked(deps.list).mockResolvedValueOnce({ documents: [], nextCursor: null, supported: false });
@@ -694,6 +803,18 @@ describe('createToolDispatcher', () => {
     expect(outcome.structuredContent.error).toEqual({
       code: 'SOURCE_UNAVAILABLE', message: 'Unavailable.', retryable: true, details: { stage },
     });
+  });
+
+  it.each(stages)('converts a core AgentFailure thrown by %s into the right error branch', async stage => {
+    const { deps, session, dispatch } = fixture();
+    const handle = deps.handles.add('alice', 'doc-1', session);
+    const error = failure('INVALID_ARGS', 'detail: must be one of the allowed values', { path: '/detail' });
+    injectFailure(deps, session, stage, error);
+    const request = requestForStage(stage, handle);
+    const outcome = await invoke(dispatch, request.name, request.args);
+
+    expectFailure(outcome, 'INVALID_ARGS', stage === 'execute');
+    expect(outcome.structuredContent.error).toEqual(error.error);
   });
 
   it('preserves a factory-created stored-mode refusal from the opener', async () => {

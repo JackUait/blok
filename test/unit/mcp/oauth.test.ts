@@ -50,13 +50,22 @@ describe('createJwtVerifier', () => {
     expect(info).toMatchObject({ clientId: 'claude', scopes: ['blok.read', 'blok.write'], expiresAt: NOW_S + 600 });
     expect(info.resource?.href).toBe('https://mcp.example.com/');
     expect(principalOf(info)).toBe('user-42');
-    expect(fetchMock).toHaveBeenCalledWith(config.jwksUrl);
+    expect(fetchMock).toHaveBeenCalledWith(config.jwksUrl, { signal: expect.any(AbortSignal) });
   });
 
-  it('falls back to the client id as principal when there is no sub', async () => {
+  it('falls back to a namespaced client id as principal when there is no sub', async () => {
     const info = await verifier().verifyAccessToken(token({ ...good, sub: undefined }));
 
-    expect(principalOf(info)).toBe('claude');
+    expect(principalOf(info)).toBe('client:claude');
+  });
+
+  it('never gives a machine token the principal of a user whose sub equals its client id', async () => {
+    const check = verifier();
+    const user = await check.verifyAccessToken(token({ ...good, sub: 'alice', client_id: 'web' }));
+    const machine = await check.verifyAccessToken(token({ ...good, sub: undefined, client_id: undefined, azp: 'alice' }));
+
+    expect(principalOf(user)).toBe('alice');
+    expect(principalOf(machine)).not.toBe(principalOf(user));
   });
 
   it('accepts ES256 and an scp array', async () => {
@@ -187,6 +196,70 @@ describe('createJwtVerifier', () => {
 
     await Promise.all([check.verifyAccessToken(token(good)), check.verifyAccessToken(token(good))]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps serving cached keys when a refresh after the TTL fails', async () => {
+    const clock = { ms: NOW_S * 1000 };
+    const check = createJwtVerifier(config, fetchMock, () => clock.ms);
+    const longLived = token({ ...good, exp: NOW_S + 3600 });
+
+    await check.verifyAccessToken(longLived);
+    fetchMock.mockImplementation(async () => new Response('down', { status: 503 }));
+    clock.ms += 10 * 60_000 + 1;
+    await expect(check.verifyAccessToken(longLived)).resolves.toMatchObject({ clientId: 'claude' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the cached keys when a refresh answers with no usable key', async () => {
+    const clock = { ms: NOW_S * 1000 };
+    const check = createJwtVerifier(config, fetchMock, () => clock.ms);
+    const longLived = token({ ...good, exp: NOW_S + 3600 });
+
+    await check.verifyAccessToken(longLived);
+    fetchMock.mockImplementation(async () => Response.json({ keys: [] }));
+    clock.ms += 10 * 60_000 + 1;
+    await expect(check.verifyAccessToken(longLived)).resolves.toMatchObject({ clientId: 'claude' });
+  });
+
+  it('waits 30 s after a failed refresh before fetching again', async () => {
+    const clock = { ms: NOW_S * 1000 };
+    const check = createJwtVerifier(config, fetchMock, () => clock.ms);
+    const longLived = token({ ...good, exp: NOW_S + 3600 });
+
+    await check.verifyAccessToken(longLived);
+    fetchMock.mockImplementation(async () => new Response('down', { status: 503 }));
+    clock.ms += 10 * 60_000 + 1;
+    await check.verifyAccessToken(longLived);
+    await check.verifyAccessToken(longLived);
+    await expect(check.verifyAccessToken(token(good, { kid: 'random' }))).rejects.toSatisfy(isInvalidToken);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    clock.ms += 30_000;
+    await check.verifyAccessToken(longLived);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not refetch on every request while the first load keeps failing', async () => {
+    const clock = { ms: NOW_S * 1000 };
+    const check = createJwtVerifier(config, fetchMock, () => clock.ms);
+
+    fetchMock.mockImplementation(async () => new Response('down', { status: 503 }));
+    await expect(check.verifyAccessToken(token(good))).rejects.toSatisfy(isInvalidToken);
+    await expect(check.verifyAccessToken(token(good))).rejects.toSatisfy(isInvalidToken);
+    await expect(check.verifyAccessToken(token(good, { kid: 'random' }))).rejects.toSatisfy(isInvalidToken);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    clock.ms += 30_000;
+    jwks([jwk(rsa.publicKey, 'rsa-1', 'RS256')]);
+    await expect(check.verifyAccessToken(token(good))).resolves.toMatchObject({ clientId: 'claude' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses as invalid_token when the JWKS fetch is aborted by its timeout', async () => {
+    fetchMock.mockImplementation(async () => {
+      throw new DOMException('The operation timed out.', 'TimeoutError');
+    });
+
+    expect(isInvalidToken(await refusal(token(good)))).toBe(true);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('caches the JWKS for 10 minutes', async () => {

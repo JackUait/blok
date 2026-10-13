@@ -82,6 +82,10 @@ export class TrackingOutbox implements CollabOutbox {
     return this.order.filter((id) => this.fates.get(id)?.state === 'pending');
   }
 
+  public isAcked(id: string): boolean {
+    return this.fates.get(id)?.state === 'acked';
+  }
+
   /**
    * Settles once every id is acked, or any one is quarantined.
    * The server acks in order on one socket, so the last id's sequence is the batch's highest.

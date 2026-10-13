@@ -108,6 +108,20 @@ describe('openStoredSession', () => {
     expect(vi.mocked(source.save).mock.calls.at(-1)?.[2]).toEqual({ ifVersion: 'v9' });
   });
 
+  it('drops the refused batch when the save fails with an unexpected error', async () => {
+    const failure = new Error('disk exploded');
+    vi.mocked(source.save).mockRejectedValueOnce(failure);
+    vi.mocked(source.load)
+      .mockResolvedValueOnce({ raw: { blocks: [] }, version: 'v1' })
+      .mockResolvedValueOnce({ raw: { blocks: [], title: 'reloaded' }, version: 'v7' });
+    const session = await open();
+
+    await expect(session.execute({ commands: [{ name: 'block.insert', args: {} }] })).rejects.toBe(failure);
+    expect(documents.at(-1)).toEqual({ blocks: [], title: 'reloaded' });
+    await session.execute({ commands: [{ name: 'block.insert', args: {} }] });
+    expect(vi.mocked(source.save).mock.calls.at(-1)?.[2]).toEqual({ ifVersion: 'v7' });
+  });
+
   it('saves an undo like any batch', async () => {
     const session = await open();
 

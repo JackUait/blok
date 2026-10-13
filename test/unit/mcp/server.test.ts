@@ -183,6 +183,42 @@ describe('assembleMcp', () => {
   });
 });
 
+describe('assembleMcp idle sweep failures', () => {
+  it('logs a failed expiry close to stderr and still closes the other idle session', async () => {
+    const logged = new Promise<void>(resolve => {
+      vi.spyOn(console, 'error').mockImplementation(() => {
+        resolve();
+      });
+    });
+    let markClosed: (() => void) | undefined;
+    const otherClosed = new Promise<void>(resolve => {
+      markClosed = resolve;
+    });
+    const failing = vi.fn<HandleSession['close']>(async reason => {
+      if (reason === 'expired') {
+        throw new Error('room close failed');
+      }
+
+      return { unsavedBatches: 0, hostRecordLags: false };
+    });
+    const other = vi.fn<HandleSession['close']>(async () => {
+      markClosed?.();
+
+      return { unsavedBatches: 0, hostRecordLags: false };
+    });
+    const server = assemble({ handleIdleMs: 20 });
+
+    server.handles.add('alice', 'first', session(failing));
+    server.handles.add('alice', 'second', session(other));
+    await within(Promise.all([logged, otherClosed]));
+
+    expect(failing).toHaveBeenCalledExactlyOnceWith('expired');
+    expect(other).toHaveBeenCalledExactlyOnceWith('expired');
+    expect(console.error).toHaveBeenCalledWith('blok-mcp: closing an idle handle failed', expect.any(Error));
+    expect(server.handles.count('alice')).toBe(0);
+  });
+});
+
 const expiryBarrier = () => {
   let release: (() => void) | undefined;
   const wait = new Promise<void>(resolve => {

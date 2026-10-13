@@ -4,10 +4,15 @@ import type { Tool } from '@modelcontextprotocol/server';
 
 import { safeClientName } from './actor';
 import { UnknownToolError } from './dispatcher';
-import type { Caller, ToolOutcome } from './dispatcher';
+import type { Caller, CallOptions, ToolOutcome } from './dispatcher';
 import type { McpTool } from './tools';
 
-export type Dispatch = (name: string, args: Record<string, unknown>, caller: Caller) => Promise<ToolOutcome>;
+export type Dispatch = (
+  name: string,
+  args: Record<string, unknown>,
+  caller: Caller,
+  options?: CallOptions,
+) => Promise<ToolOutcome>;
 
 export const buildSdkServer = (input: {
   tools: McpTool[];
@@ -46,7 +51,7 @@ export const buildSdkServer = (input: {
     const caller = input.caller(safeClientName(rawName));
     const outcome = await (async (): Promise<ToolOutcome> => {
       try {
-        return await input.dispatch(name, request.params.arguments ?? {}, caller);
+        return await input.dispatch(name, request.params.arguments ?? {}, caller, { signal: ctx.mcpReq.signal });
       } catch (thrown) {
         if (thrown instanceof UnknownToolError) {
           throw new ProtocolError(ProtocolErrorCode.InvalidParams, thrown.message);

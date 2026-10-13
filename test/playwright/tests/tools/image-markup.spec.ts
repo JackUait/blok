@@ -8,8 +8,11 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const IMAGE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="image"]`;
-// 600 × 400: the O box the marks' fractions are measured in.
-const SAMPLE_IMAGE_URL = 'https://placehold.co/600x400.png';
+// Served by the fixture server; a slow third-party image made the spec flaky.
+// 800 × 600: the O box the marks' fractions are measured in.
+const SAMPLE_IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
+const SAMPLE_WIDTH = 800;
+const SAMPLE_HEIGHT = 600;
 
 declare global {
   interface Window {
@@ -116,8 +119,8 @@ test('Shift draws a square rectangle', async ({ page }) => {
   const [rect] = await marksOf(page);
 
   expect(rect.type).toBe('rect');
-  const w = ((rect.x2 ?? 0) - (rect.x1 ?? 0)) * 600;
-  const h = ((rect.y2 ?? 0) - (rect.y1 ?? 0)) * 400;
+  const w = ((rect.x2 ?? 0) - (rect.x1 ?? 0)) * SAMPLE_WIDTH;
+  const h = ((rect.y2 ?? 0) - (rect.y1 ?? 0)) * SAMPLE_HEIGHT;
 
   expect(Math.abs(w - h)).toBeLessThan(2);
 });
@@ -249,8 +252,8 @@ test('Z zooms the view only: a rectangle drawn zoomed lands where the pointer wa
   await page.locator('[data-role="darkroom-stage"]').focus();
   await page.keyboard.press('r');
   await page.keyboard.press('z');
-  // 600 px wide at 100%; a photo already shown at or above that doubles instead.
-  const zoomedWidth = fit.width < 600 ? 600 : fit.width * 2;
+  // SAMPLE_WIDTH px wide at 100%; a photo already shown at or above that doubles instead.
+  const zoomedWidth = fit.width < SAMPLE_WIDTH ? SAMPLE_WIDTH : fit.width * 2;
 
   await expect.poll(async () => Math.round((await plane.boundingBox())?.width ?? 0)).toBe(Math.round(zoomedWidth));
   const zoomed = await plane.boundingBox();

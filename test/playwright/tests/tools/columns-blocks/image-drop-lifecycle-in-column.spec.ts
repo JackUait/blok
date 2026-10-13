@@ -10,6 +10,9 @@ import {
   childrenOf,
 } from './_helpers';
 
+// Served by the fixture server; a slow third-party image made the spec flaky.
+const IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
+
 const BLOK = '[data-blok-interface=blok]';
 const SETTINGS_BUTTON = `${BLOK} [data-blok-testid="settings-toggler"]`;
 
@@ -129,7 +132,7 @@ const dropFixture = (): OutputData => ({
       id: 'image1',
       type: 'image',
       data: {
-        url: 'https://placehold.co/600x400.png',
+        url: IMAGE_URL,
         caption: 'Blok logotype',
         alt: 'Blok logotype',
         width: 40,
@@ -215,7 +218,7 @@ test.describe('Image block: full drag-drop lifecycle inside a column', () => {
 
     // The image's primary data survived the wrap.
     const data = findBlock(saved, 'image1')?.data as ImageData;
-    expect(data.url).toBe('https://placehold.co/600x400.png');
+    expect(data.url).toBe(IMAGE_URL);
     expect(data.caption).toBe('Blok logotype');
     expect(data.alt).toBe('Blok logotype');
     expect(data.width).toBe(40);
@@ -240,7 +243,7 @@ test.describe('Image block: full drag-drop lifecycle inside a column', () => {
 
     // The image data round-trips unchanged.
     const data = findBlock(after, 'image1')?.data as ImageData;
-    expect(data.url).toBe('https://placehold.co/600x400.png');
+    expect(data.url).toBe(IMAGE_URL);
     expect(data.caption).toBe('Blok logotype');
 
     // LIVE DOM: after the rebuild the image holder is still inside the 2nd column.

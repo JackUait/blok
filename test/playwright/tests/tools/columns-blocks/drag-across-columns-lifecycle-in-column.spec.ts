@@ -10,6 +10,9 @@ import {
   childrenOf,
 } from './_helpers';
 
+// Served by the fixture server; a slow third-party image made the spec flaky.
+const IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
+
 const BLOK = '[data-blok-interface=blok]';
 const SETTINGS_BUTTON = `${BLOK} [data-blok-testid="settings-toggler"]`;
 
@@ -166,7 +169,7 @@ const imageAcrossColumnsData = (): OutputData => ({
       id: 'image1',
       type: 'image',
       data: {
-        url: 'https://placehold.co/600x400.png',
+        url: IMAGE_URL,
         caption: 'Blok logotype',
         alt: 'Blok logotype',
         width: 40,
@@ -379,7 +382,7 @@ test.describe('Dragging a block ACROSS columns (column A -> column B)', () => {
 
     // Image data round-trips unchanged.
     const data = findBlock(saved, 'image1')?.data as ImageData;
-    expect(data.url).toBe('https://placehold.co/600x400.png');
+    expect(data.url).toBe(IMAGE_URL);
     expect(data.caption).toBe('Blok logotype');
 
     // LIVE DOM: the image holder now lives in column index 1 — not stranded in

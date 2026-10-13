@@ -12,7 +12,8 @@ declare global {
 }
 
 const HOLDER_ID = 'blok';
-const SAMPLE_IMAGE_URL = 'https://placehold.co/600x400.png';
+// Served by the fixture server; a slow third-party image made the spec flaky.
+const SAMPLE_IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
 const IMAGE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="image"]`;
 const ALIGN_TRIGGER_SELECTOR = `${IMAGE_BLOCK_SELECTOR} [data-action="align-trigger"]`;
 

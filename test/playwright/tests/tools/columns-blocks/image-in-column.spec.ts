@@ -10,6 +10,9 @@ import {
   childrenOf,
 } from './_helpers';
 
+// Served by the fixture server; a slow third-party image made the spec flaky.
+const IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
+
 /**
  * Two-column layout with an Image block in the first column and a paragraph in
  * the second. The image uses a real loadable url (the same host the passing
@@ -25,7 +28,7 @@ const imageInColumnData = (): OutputData => ({
       id: 'image1',
       type: 'image',
       data: {
-        url: 'https://placehold.co/600x400.png',
+        url: IMAGE_URL,
         caption: 'Blok logotype',
         alt: 'Blok logotype',
         width: 40,
@@ -76,7 +79,7 @@ test.describe('Image inside a column', () => {
     // Its visible <img> loaded the same-origin asset with the expected alt text.
     const img = image.getByRole('img');
     await expect(img).toBeVisible();
-    await expect(img).toHaveAttribute('src', /placehold\.co/);
+    await expect(img).toHaveAttribute('src', IMAGE_URL);
     await expect(img).toHaveAttribute('alt', 'Blok logotype');
 
     // The caption content renders too.
@@ -122,7 +125,7 @@ test.describe('Image inside a column', () => {
     // The image's key data round-trips. Allow extra keys (e.g. cached natural
     // dimensions written on img load) by asserting only the meaningful fields.
     const data = image?.data as ImageData;
-    expect(data.url).toBe('https://placehold.co/600x400.png');
+    expect(data.url).toBe(IMAGE_URL);
     expect(data.caption).toBe('Blok logotype');
     expect(data.alt).toBe('Blok logotype');
     expect(data.width).toBe(40);

@@ -183,7 +183,7 @@ test.describe('Insert order inside a column with existing content', () => {
         {
           id: 'img1',
           type: 'image',
-          data: { url: 'https://placehold.co/600x400.png', alt: 'pic' },
+          data: { url: 'http://localhost:4444/test/playwright/fixtures/image/shot.png', alt: 'pic' },
           parent: 'c1',
         },
         { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['h2', 'body2'] },

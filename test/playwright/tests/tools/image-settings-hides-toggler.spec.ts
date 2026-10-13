@@ -8,7 +8,8 @@ const HOLDER_ID = 'blok';
 const IMAGE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="image"]`;
 const SETTINGS_TOGGLER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
-const SAMPLE_IMAGE_URL = 'https://placehold.co/600x400.png';
+// Served by the fixture server; a slow third-party image made the spec flaky.
+const SAMPLE_IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
 
 declare global {
   interface Window {

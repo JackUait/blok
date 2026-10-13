@@ -8,7 +8,10 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const IMAGE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="image"]`;
-const SAMPLE_IMAGE_URL = 'https://placehold.co/600x400.png';
+// Served by the fixture server: a slow third-party image left the darkroom unsettled past the 5s wait.
+const SAMPLE_IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
+const SAMPLE_WIDTH = 800;
+const SAMPLE_HEIGHT = 600;
 
 declare global {
   interface Window {
@@ -210,7 +213,7 @@ test('Circle saves a crop that is square in pixels', async ({ page }) => {
   const { crop } = await cropOf(page);
 
   expect(crop?.shape).toBe('circle');
-  expect(((crop?.w ?? 0) * 600) / ((crop?.h ?? 1) * 400)).toBeCloseTo(1, 1);
+  expect(((crop?.w ?? 0) * SAMPLE_WIDTH) / ((crop?.h ?? 1) * SAMPLE_HEIGHT)).toBeCloseTo(1, 1);
 });
 
 test('Cmd+Z inside the darkroom undoes the crop edit, not the document', async ({ page }) => {
@@ -327,21 +330,25 @@ test('a filter preset saves and the block image carries the filter', async ({ pa
 });
 
 test('Cmd+Z inside the darkroom undoes a rotate', async ({ page }) => {
-  const { dialog } = await openDarkroom(page, { x: 10, y: 20, w: 30, h: 40 });
+  // Not square in pixels, so the turn shows in the size announcement.
+  const crop = { x: 10, y: 20, w: 30, h: 20 };
+  const w = (crop.w / 100) * SAMPLE_WIDTH;
+  const h = (crop.h / 100) * SAMPLE_HEIGHT;
+  const { dialog } = await openDarkroom(page, crop);
   const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 
   await dialog.getByRole('button', { name: 'Rotate left' }).click();
   await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   // The screen-reader size announcement follows the turned crop.
-  await expect(page.locator('[data-role="darkroom-live"]')).toHaveText('160 × 180 px');
+  await expect(page.locator('[data-role="darkroom-live"]')).toHaveText(`${h} × ${w} px`);
   await page.keyboard.press(`${mod}+z`);
-  await expect(page.locator('[data-role="darkroom-live"]')).toHaveText('180 × 160 px');
+  await expect(page.locator('[data-role="darkroom-live"]')).toHaveText(`${w} × ${h} px`);
   await dialog.locator('[data-action="done"]').click();
   await expect(dialog).toHaveCount(0);
   const data = await editsOf(page);
 
   expect(data.rotation).toBeUndefined();
-  expect(data.crop).toStrictEqual({ x: 10, y: 20, w: 30, h: 40 });
+  expect(data.crop).toStrictEqual(crop);
 });
 
 test('Reset crop clears the crop and turn but keeps the filter', async ({ page }) => {

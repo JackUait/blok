@@ -31,6 +31,9 @@ async function buildMcp() {
         external: [/^node:/, /^@modelcontextprotocol\/server(\/.*)?$/, 'ws'],
       },
     },
+    // SSR builds leave npm imports bare; inline all but the externals above,
+    // since the package installs only those.
+    ssr: { noExternal: true },
     define: { VERSION: JSON.stringify(version) },
   });
 

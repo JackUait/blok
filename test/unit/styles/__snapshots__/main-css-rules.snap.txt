@@ -7511,7 +7511,7 @@ span[data-blok-slash-search] {
   height: 14px;
 }
 
-[data-blok-database-table-row]:hover [data-blok-database-table-open] {
+[data-blok-database-table-row]:hover [data-blok-database-table-open], [data-blok-database-table-cell][data-blok-database-table-cell-anchor] [data-blok-database-table-open] {
   display: inline-flex;
 }
 

@@ -18,16 +18,17 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const withoutLoadDefaults = (defaults: Record<string, unknown>) =>
   (data: Record<string, unknown>): Record<string, unknown> =>
     Object.fromEntries(Object.entries(data).filter(([key, value]) =>
-      !Object.prototype.hasOwnProperty.call(defaults, key) || value !== defaults[key]));
+      !Object.prototype.hasOwnProperty.call(defaults, key) || stableStringify(value) !== stableStringify(defaults[key])));
 
 export const TOOL_MINTED: Record<string, {
   reason: string;
   strip(data: Record<string, unknown>): Record<string, unknown>;
 }> = {
   table: {
-    reason: 'Table cell ids and row ids are random until ToolRuntime.normalize ships (06 C17). The editor also saves stretched false (src/tools/table/table-operations.ts:674) and an initialColWidth measured from layout, which jsdom reports as 0 (src/tools/table/index.ts:867-872).',
+    reason: 'Table cell ids and row ids are random until ToolRuntime.normalize ships (06 C17). The editor also saves stretched false (src/tools/table/table-operations.ts:674) and an initialColWidth measured from layout (src/tools/table/index.ts:867-872): 0 in jsdom, real pixels in a browser, never set by headless appliers.',
     strip: (raw) => {
-      const data = withoutLoadDefaults({ stretched: false, initialColWidth: 0 })(raw);
+      const { initialColWidth: _measured, ...rest } = raw;
+      const data = withoutLoadDefaults({ stretched: false })(rest);
       const content = data.content;
 
       if (!isArray(content)) {

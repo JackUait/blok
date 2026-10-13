@@ -129,6 +129,17 @@ describe('normalizeForParity', () => {
     });
   });
 
+  it('drops a table initialColWidth measured from a real browser layout', () => {
+    const doc: OutputData = {
+      blocks: [{ id: 't', type: 'table', data: { withHeadings: true, initialColWidth: 233, content: [[{ blocks: [] }]] } }],
+    };
+
+    expect(normalizeForParity(doc, new Set(['t'])).blocks[0]?.data).toEqual({
+      withHeadings: true,
+      content: [[{ blocks: [] }]],
+    });
+  });
+
   it('preserves roots without ids and counts their structural positions', () => {
     const doc: OutputData = {
       blocks: [

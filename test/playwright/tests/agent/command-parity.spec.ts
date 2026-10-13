@@ -11,6 +11,7 @@ declare global {
   interface Window {
     blokInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;
+    BlokParagraph: unknown;
   }
 }
 
@@ -34,7 +35,9 @@ for (const c of loadParityCases()) {
       holder.setAttribute('data-blok-testid', 'blok');
       document.body.appendChild(holder);
 
-      const blok = new window.Blok({ holder: 'blok', data: seed });
+      // test.html's default paragraph sets preserveBlank, which saves the editor's
+      // starting empty paragraph. The json and jsdom runners use the stock paragraph.
+      const blok = new window.Blok({ holder: 'blok', data: seed, tools: { paragraph: { class: window.BlokParagraph, inlineToolbar: true } } });
 
       window.blokInstance = blok;
       await blok.isReady;

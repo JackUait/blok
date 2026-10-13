@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Funga",
   "tools.database.aiAutofillDiscard": "Tupa mabadiliko",
   "tools.database.aiAutofillDiscardTitle": "Ungependa kutupa mabadiliko?",
-  "tools.database.aiAutofillDiscardCancel": "Ghairi"
+  "tools.database.aiAutofillDiscardCancel": "Ghairi",
+  "tools.database.aiAutofillCell": "Jaza kiotomatiki",
+  "tools.database.aiAutofillThinking": "Inafikiri…",
+  "tools.database.aiAutofillMore": "Zaidi…",
+  "tools.database.aiAutofillDelete": "Futa ujazaji kiotomatiki kwa AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Uundaji wa ukurasa wowote",
+  "tools.database.aiAutofillTriggerAnyProperty": "Sifa zozote",
+  "tools.database.aiAutofillTriggerSpecific": "Sifa mahususi pekee"
 }

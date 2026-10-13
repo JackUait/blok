@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Κλείσιμο",
   "tools.database.aiAutofillDiscard": "Απόρριψη αλλαγών",
   "tools.database.aiAutofillDiscardTitle": "Απόρριψη αλλαγών;",
-  "tools.database.aiAutofillDiscardCancel": "Ακύρωση"
+  "tools.database.aiAutofillDiscardCancel": "Ακύρωση",
+  "tools.database.aiAutofillCell": "Αυτόματη συμπλήρωση",
+  "tools.database.aiAutofillThinking": "Σκέφτεται…",
+  "tools.database.aiAutofillMore": "Περισσότερα…",
+  "tools.database.aiAutofillDelete": "Διαγραφή αυτόματης συμπλήρωσης με ΤΝ",
+  "tools.database.aiAutofillTriggerAnyCreation": "Οποιαδήποτε δημιουργία σελίδας",
+  "tools.database.aiAutofillTriggerAnyProperty": "Οποιεσδήποτε ιδιότητες",
+  "tools.database.aiAutofillTriggerSpecific": "Μόνο συγκεκριμένες ιδιότητες"
 }

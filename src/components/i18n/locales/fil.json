@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Isara",
   "tools.database.aiAutofillDiscard": "Itapon ang mga pagbabago",
   "tools.database.aiAutofillDiscardTitle": "Itapon ang mga pagbabago?",
-  "tools.database.aiAutofillDiscardCancel": "Kanselahin"
+  "tools.database.aiAutofillDiscardCancel": "Kanselahin",
+  "tools.database.aiAutofillCell": "I-autofill",
+  "tools.database.aiAutofillThinking": "Nag-iisip…",
+  "tools.database.aiAutofillMore": "Iba pa…",
+  "tools.database.aiAutofillDelete": "Tanggalin ang awtomatikong pagpuno gamit ang AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Anumang paggawa ng pahina",
+  "tools.database.aiAutofillTriggerAnyProperty": "Anumang property",
+  "tools.database.aiAutofillTriggerSpecific": "Mga partikular na property lang"
 }

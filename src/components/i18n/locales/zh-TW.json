@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "關閉",
   "tools.database.aiAutofillDiscard": "捨棄變更",
   "tools.database.aiAutofillDiscardTitle": "要捨棄變更嗎？",
-  "tools.database.aiAutofillDiscardCancel": "取消"
+  "tools.database.aiAutofillDiscardCancel": "取消",
+  "tools.database.aiAutofillCell": "自動填入",
+  "tools.database.aiAutofillThinking": "思考中…",
+  "tools.database.aiAutofillMore": "更多…",
+  "tools.database.aiAutofillDelete": "刪除 AI 自動填入",
+  "tools.database.aiAutofillTriggerAnyCreation": "每次建立頁面",
+  "tools.database.aiAutofillTriggerAnyProperty": "任何屬性",
+  "tools.database.aiAutofillTriggerSpecific": "僅特定屬性"
 }

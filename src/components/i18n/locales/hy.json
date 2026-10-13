@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Փակել",
   "tools.database.aiAutofillDiscard": "Հրաժարվել փոփոխություններից",
   "tools.database.aiAutofillDiscardTitle": "Հրաժարվե՞լ փոփոխություններից",
-  "tools.database.aiAutofillDiscardCancel": "Չեղարկել"
+  "tools.database.aiAutofillDiscardCancel": "Չեղարկել",
+  "tools.database.aiAutofillCell": "Ինքնալրացնել",
+  "tools.database.aiAutofillThinking": "Մտածում է…",
+  "tools.database.aiAutofillMore": "Այլ…",
+  "tools.database.aiAutofillDelete": "Ջնջել ԱԲ ինքնալրացումը",
+  "tools.database.aiAutofillTriggerAnyCreation": "Ցանկացած էջի ստեղծում",
+  "tools.database.aiAutofillTriggerAnyProperty": "Ցանկացած հատկություն",
+  "tools.database.aiAutofillTriggerSpecific": "Միայն որոշակի հատկություններ"
 }

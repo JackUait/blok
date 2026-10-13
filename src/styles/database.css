@@ -2718,6 +2718,7 @@
 }
 
 [data-blok-database-autofill-close],
+[data-blok-database-autofill-more],
 [data-blok-database-autofill-tab],
 [data-blok-database-autofill-action] {
   border: none;
@@ -2728,13 +2729,15 @@
   cursor: pointer;
 }
 
-[data-blok-database-autofill-close] {
+[data-blok-database-autofill-close],
+[data-blok-database-autofill-more] {
   display: inline-flex;
   padding: var(--blok-space-0-5);
   color: var(--blok-text-secondary);
 }
 
-[data-blok-database-autofill-close] svg {
+[data-blok-database-autofill-close] svg,
+[data-blok-database-autofill-more] svg {
   width: 16px;
   height: 16px;
 }
@@ -2759,11 +2762,13 @@
 
 [data-blok-database-autofill-action]:hover:not(:disabled),
 [data-blok-database-autofill-close]:hover,
+[data-blok-database-autofill-more]:hover:not(:disabled),
 [data-blok-database-autofill-tab]:hover {
   background-color: var(--blok-item-hover-bg);
 }
 
-[data-blok-database-autofill-action]:disabled {
+[data-blok-database-autofill-action]:disabled,
+[data-blok-database-autofill-more]:disabled {
   cursor: default;
   opacity: 0.5;
 }
@@ -3978,6 +3983,65 @@
 
 [data-blok-database-table-open]:hover {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+}
+
+/* ─── AI Autofill: cell button, Thinking… and the header sparkle (research/12 §2) ─── */
+
+/* Notion: 24x20 at the cell's right edge, shown on hover. */
+[data-blok-database-table-autofill] {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 6px;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-open-bg);
+  box-shadow: var(--blok-database-table-open-shadow);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-table-cell]:hover > [data-blok-database-table-autofill],
+[data-blok-database-table-cell][data-blok-database-table-cell-anchor] > [data-blok-database-table-autofill] {
+  display: inline-flex;
+}
+
+[data-blok-database-table-autofill]:hover,
+[data-blok-database-table-autofill-open]:hover {
+  background-image: linear-gradient(var(--blok-item-hover-bg), var(--blok-item-hover-bg));
+}
+
+[data-blok-database-table-autofill] svg,
+[data-blok-database-table-autofill-open] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-table-autofill-thinking] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-table-autofill-open] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  /* Beside the header button, in the header's end padding. */
+  margin-inline-end: var(--blok-space-2);
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
 }
 
 /* ─── Left gutter: "+", ⋮⋮ and the row checkbox ─── */

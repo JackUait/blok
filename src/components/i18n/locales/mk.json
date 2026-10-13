@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Затвори",
   "tools.database.aiAutofillDiscard": "Отфрли промени",
   "tools.database.aiAutofillDiscardTitle": "Да се отфрлат промените?",
-  "tools.database.aiAutofillDiscardCancel": "Откажи"
+  "tools.database.aiAutofillDiscardCancel": "Откажи",
+  "tools.database.aiAutofillCell": "Автоматски пополни",
+  "tools.database.aiAutofillThinking": "Размислува…",
+  "tools.database.aiAutofillMore": "Повеќе…",
+  "tools.database.aiAutofillDelete": "Избриши автоматско пополнување со ВИ",
+  "tools.database.aiAutofillTriggerAnyCreation": "Секое создавање страница",
+  "tools.database.aiAutofillTriggerAnyProperty": "Кои било својства",
+  "tools.database.aiAutofillTriggerSpecific": "Само одредени својства"
 }

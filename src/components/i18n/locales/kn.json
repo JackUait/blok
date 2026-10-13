@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ಮುಚ್ಚಿ",
   "tools.database.aiAutofillDiscard": "ಬದಲಾವಣೆಗಳನ್ನು ತ್ಯಜಿಸಿ",
   "tools.database.aiAutofillDiscardTitle": "ಬದಲಾವಣೆಗಳನ್ನು ತ್ಯಜಿಸುವುದೇ?",
-  "tools.database.aiAutofillDiscardCancel": "ರದ್ದುಮಾಡಿ"
+  "tools.database.aiAutofillDiscardCancel": "ರದ್ದುಮಾಡಿ",
+  "tools.database.aiAutofillCell": "ಸ್ವಯಂ ಭರ್ತಿ ಮಾಡಿ",
+  "tools.database.aiAutofillThinking": "ಯೋಚಿಸುತ್ತಿದೆ…",
+  "tools.database.aiAutofillMore": "ಇನ್ನಷ್ಟು…",
+  "tools.database.aiAutofillDelete": "AI ಸ್ವಯಂ ಭರ್ತಿ ಅಳಿಸಿ",
+  "tools.database.aiAutofillTriggerAnyCreation": "ಯಾವುದೇ ಪುಟ ರಚನೆ",
+  "tools.database.aiAutofillTriggerAnyProperty": "ಯಾವುದೇ ಗುಣಲಕ್ಷಣಗಳು",
+  "tools.database.aiAutofillTriggerSpecific": "ನಿರ್ದಿಷ್ಟ ಗುಣಲಕ್ಷಣಗಳು ಮಾತ್ರ"
 }

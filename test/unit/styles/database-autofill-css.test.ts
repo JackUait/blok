@@ -39,4 +39,33 @@ describe('AI Autofill setup css', () => {
     expect(rulesFor('[data-blok-database-autofill-footer]').join(' ')).toContain('flex-wrap: wrap');
     expect(rulesFor('[data-blok-database-autofill-action]').join(' ')).toContain('white-space: nowrap');
   });
+
+  it('shows the cell Autofill button only while the cell is hovered', () => {
+    expect(rulesFor('[data-blok-database-table-autofill]').join(' ')).toContain('display: none');
+    expect(rulesFor('[data-blok-database-table-cell]:hover > [data-blok-database-table-autofill]').join(' ')).toContain('display: inline-flex');
+  });
+
+  it('shows the cell Autofill button on the keyboard-selected cell too', () => {
+    expect(rulesFor('[data-blok-database-table-cell][data-blok-database-table-cell-anchor] > [data-blok-database-table-autofill]').join(' '))
+      .toContain('display: inline-flex');
+  });
+
+  // A sibling of the header button now: it must keep its place at the header's end.
+  it('keeps the header sparkle at the header\'s inline end, inside its padding', () => {
+    const sparkle = rulesFor('[data-blok-database-table-autofill-open]').join(' ');
+
+    expect(sparkle).toContain('flex: none');
+    expect(sparkle).toContain('margin-inline-end: var(--blok-space-2)');
+  });
+
+  it('paints the Autofill buttons and Thinking… in gray ink, never blue', () => {
+    const buttons = [
+      ...rulesFor('[data-blok-database-table-autofill]'),
+      ...rulesFor('[data-blok-database-table-autofill-open]'),
+    ].join(' ');
+
+    expect(buttons).toContain('color: var(--blok-text-secondary)');
+    expect(rulesFor('[data-blok-database-table-autofill-thinking]').join(' ')).toContain('color: var(--blok-text-secondary)');
+    expect(buttons).not.toMatch(/blue|--blok-link|--blok-focus/);
+  });
 });

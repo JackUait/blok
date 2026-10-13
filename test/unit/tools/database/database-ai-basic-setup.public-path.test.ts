@@ -183,9 +183,9 @@ describe('Basic AI setup through the Text property menu', () => {
   });
 
   it.each([
-    ['On page creation', 'onCreate'],
-    ['On page update', 'onEdit'],
-  ] as const)('picking Autofill in %s shows it on the row, and Save writes it', async (label, key) => {
+    ['On page creation', 'onCreate', 'Any page creation'],
+    ['On page update', 'onEdit', 'Any properties'],
+  ] as const)('picking the trigger in %s shows it on the row, and Save writes it', async (label, key, choice) => {
     await mount();
     const dialog = await chooseParagraph(await openBasic());
 
@@ -193,10 +193,10 @@ describe('Basic AI setup through the Text property menu', () => {
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
 
     await user.click(within(dialog).getByRole('button', { name: `${label} None` }));
-    await user.click(await findByRole(document.body, 'menuitemcheckbox', { name: 'Autofill' }));
+    await user.click(await findByRole(document.body, 'menuitemcheckbox', { name: choice }));
 
-    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: `${label} Autofill` })).toBeInTheDocument());
-    await vi.waitFor(() => expect(queryByRole(document.body, 'menuitemcheckbox', { name: 'Autofill' })).toBeNull());
+    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: `${label} ${choice}` })).toBeInTheDocument());
+    await vi.waitFor(() => expect(queryByRole(document.body, 'menuitemcheckbox', { name: choice })).toBeNull());
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
     const database = (await savedBlocks()).find((block) => block.id === 'db')?.data as DatabaseData | undefined;
@@ -206,8 +206,8 @@ describe('Basic AI setup through the Text property menu', () => {
   });
 
   it.each([
-    ['On page creation None', 'menuitemcheckbox', 'Autofill', 'On page creation Autofill'],
-    ['On page update None', 'menuitemcheckbox', 'Autofill', 'On page update Autofill'],
+    ['On page creation None', 'menuitemcheckbox', 'Any page creation', 'On page creation Any page creation'],
+    ['On page update None', 'menuitemcheckbox', 'Any properties', 'On page update Any properties'],
     ['Summarize', 'menuitem', 'Paragraph', 'Summarize'],
   ] as const)('a mouse pick in the %s menu returns focus to its trigger', async (trigger, role, item, after) => {
     await mount();
@@ -223,7 +223,7 @@ describe('Basic AI setup through the Text property menu', () => {
   });
 
   it.each([
-    ['On page creation None', 'menuitemcheckbox', 'Autofill'],
+    ['On page creation None', 'menuitemcheckbox', 'Any page creation'],
     ['Summarize', 'menuitem', 'Paragraph'],
   ] as const)('one Escape closes only the %s menu, a second closes the setup', async (trigger, role, item) => {
     await mount();

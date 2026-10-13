@@ -23,6 +23,8 @@ export interface HostLeverTarget {
   writeHostValues(rowId: string, changes: Record<string, PropertyValue>): boolean;
   addRow(properties: Record<string, PropertyValue>): boolean;
   matchesView(rowId: string, viewId: string): boolean;
+  /** A fill of this cell started or ended: its "Thinking…" shows or goes. */
+  fillingChanged?(rowId: string, propertyId: string): void;
 }
 
 /** Autofill on edit waits for typing to settle, as the adapter sync does. */
@@ -43,6 +45,11 @@ export class DatabaseHostLevers implements RowWriteObserver {
   /** Per row and property: typing fires one trigger once it settles, with the last value. */
   private readonly triggerTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly savedMatches = new Map<string, Map<string, number>>();
+  /** Fills in flight per row and property. */
+  private readonly filling = new Map<string, number>();
+  /** Per row and property: the latest fill. An older one's answer is dropped. */
+  private readonly latestFill = new Map<string, number>();
+  private fillSeq = 0;
 
   constructor(
     private readonly target: HostLeverTarget,
@@ -72,13 +79,23 @@ export class DatabaseHostLevers implements RowWriteObserver {
       value: params.properties[propertyId],
     }));
     this.target.schema()
-      .filter((property) => property.autofill?.onEdit === true && !changed.includes(property.id))
+      .filter((property) => property.autofill?.onEdit === true && !changed.includes(property.id)
+        && (property.autofill.onEditProperties === undefined || changed.some((id) => property.autofill?.onEditProperties?.includes(id) === true)))
       .forEach((property) => this.autofillSoon(params.rowId, property.id));
   }
 
   /** "Run now": fills each row, with `settings` in place of the saved ones when given. */
   autofillRows(property: PropertyDefinition, rowIds: string[], settings = property.autofill): void {
     rowIds.forEach((rowId) => this.autofill(rowId, property, settings));
+  }
+
+  /** The cell's "Autofill" button: one row, the saved settings. */
+  autofillCell(rowId: string, property: PropertyDefinition): void {
+    this.autofill(rowId, property);
+  }
+
+  isFilling(rowId: string, propertyId: string): boolean {
+    return this.filling.has(`${rowId}\u0000${propertyId}`);
   }
 
   withoutPageAdded<T>(rowId: string, write: () => T): T {
@@ -98,6 +115,8 @@ export class DatabaseHostLevers implements RowWriteObserver {
     this.triggerTimers.forEach((timer) => clearTimeout(timer));
     this.triggerTimers.clear();
     this.savedMatches.clear();
+    this.filling.clear();
+    this.latestFill.clear();
   }
 
   private fireSettled(trigger: Extract<DatabaseAutomationTrigger, { type: 'propertyEdited' }>): void {
@@ -231,16 +250,63 @@ export class DatabaseHostLevers implements RowWriteObserver {
 
     if (ai === undefined || settings === undefined || values === undefined) return;
     const before = JSON.stringify(values[property.id] ?? null);
+    const key = `${rowId}\u0000${property.id}`;
+    const mine = ++this.fillSeq;
+    const saved = (): boolean => this.target.schema().find((p) => p.id === property.id)?.autofill !== undefined;
+    // Generate runs an unsaved draft: only a fill that had saved settings stops when they go.
+    const hadSaved = saved();
 
-    void ai.autofill({ databaseId: this.target.databaseId, rowId, propertyId: property.id, settings, values })
+    const ended = { done: false };
+    const end = (): void => {
+      if (ended.done) return;
+      ended.done = true;
+      const left = (this.filling.get(key) ?? 1) - 1;
+
+      if (left > 0) this.filling.set(key, left);
+      else {
+        this.filling.delete(key);
+        this.latestFill.delete(key);
+      }
+    };
+    const changed = (): void => {
+      if (!this.target.isDestroyed()) this.target.fillingChanged?.(rowId, property.id);
+    };
+
+    this.filling.set(key, (this.filling.get(key) ?? 0) + 1);
+    this.target.fillingChanged?.(rowId, property.id);
+    const request = (() => {
+      try {
+        return ai.autofill({ databaseId: this.target.databaseId, rowId, propertyId: property.id, settings, values });
+      } catch {
+        return undefined;
+      }
+    })();
+
+    if (request === undefined) {
+      end();
+      changed();
+
+      return;
+    }
+    // Only a request the host took supersedes the ones still running.
+    this.latestFill.set(key, mine);
+    void request
       .then((result) => {
+        const latest = this.latestFill.get(key) === mine;
+
+        // Before the write, so its redraw shows the value, not "Thinking…".
+        end();
         const now = this.target.rowValues(rowId);
 
-        // A person who edited the value while the host worked wins over the stale answer.
-        if (result === null || result === undefined || this.target.isDestroyed() || now === undefined
-          || JSON.stringify(now[property.id] ?? null) !== before) return;
+        // A newer fill of this cell, a person who edited the value, or a deleted AI Autofill wins over this answer.
+        if (!latest || result === null || result === undefined || this.target.isDestroyed() || now === undefined
+          || JSON.stringify(now[property.id] ?? null) !== before || (hadSaved && !saved())) return;
         this.quietly(() => this.target.writeHostValues(rowId, { [property.id]: result }));
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        end();
+        changed();
+      });
   }
 }

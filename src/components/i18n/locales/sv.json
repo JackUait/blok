@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Stäng",
   "tools.database.aiAutofillDiscard": "Förkasta ändringar",
   "tools.database.aiAutofillDiscardTitle": "Förkasta ändringarna?",
-  "tools.database.aiAutofillDiscardCancel": "Avbryt"
+  "tools.database.aiAutofillDiscardCancel": "Avbryt",
+  "tools.database.aiAutofillCell": "Autofyll",
+  "tools.database.aiAutofillThinking": "Tänker…",
+  "tools.database.aiAutofillMore": "Mer…",
+  "tools.database.aiAutofillDelete": "Ta bort autofyll med AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Varje gång en sida skapas",
+  "tools.database.aiAutofillTriggerAnyProperty": "Valfri egenskap",
+  "tools.database.aiAutofillTriggerSpecific": "Endast vissa egenskaper"
 }

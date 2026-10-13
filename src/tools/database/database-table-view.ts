@@ -45,6 +45,7 @@ import {
   IconTrash,
   IconDotsHorizontal,
   IconCopy,
+  IconWand,
 } from '../../components/icons';
 
 export { createTableState };
@@ -138,6 +139,15 @@ export interface DatabaseTableViewOptions {
   comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void;
   /** Where the selection bar goes: the view toolbar row, which it replaces (research/08). Else the table's top. */
   selectionBarSlot?: () => HTMLElement | null;
+  /** AI Autofill run actions. The tool leaves it out when read-only, locked or without `config.ai`. */
+  autofill?: TableAutofill;
+}
+
+/** The cell "Autofill" button and the header sparkle of an autofill column (research/12 §2). */
+export interface TableAutofill {
+  filling: (rowId: string, propertyId: string) => boolean;
+  run: (rowId: string, propertyId: string) => void;
+  open: (propertyId: string, anchor: HTMLElement) => void;
 }
 
 interface Column {
@@ -547,6 +557,17 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     button.append(icon, name);
     cell.appendChild(button);
     onHover(cell, property.name);
+    if (this.options.autofill !== undefined && property.autofill !== undefined) {
+      const sparkle = document.createElement('button');
+
+      sparkle.type = 'button';
+      sparkle.tabIndex = -1;
+      sparkle.setAttribute('data-blok-database-table-autofill-open', '');
+      sparkle.setAttribute('aria-label', this.t('tools.database.aiAutofillProperty', { name: property.name }));
+      sparkle.innerHTML = IconWand;
+      // Beside the header button, not in it: a button in a button, and its label would join the header's name.
+      cell.appendChild(sparkle);
+    }
 
     if (this.editable) {
       const handle = document.createElement('div');
@@ -817,7 +838,32 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       open.append(icon, label);
       cell.appendChild(open);
     }
+    this.fillAutofill(cell, column.property, rowId, value);
     if (fillHandle !== null) cell.appendChild(fillHandle);
+  }
+
+  private fillAutofill(cell: HTMLElement, property: PropertyDefinition, rowId: string, value: HTMLElement): void {
+    const autofill = this.options.autofill;
+
+    if (autofill === undefined || property.autofill === undefined) return;
+    if (autofill.filling(rowId, property.id)) {
+      const thinking = document.createElement('span');
+
+      thinking.setAttribute('data-blok-database-table-autofill-thinking', '');
+      thinking.textContent = this.t('tools.database.aiAutofillThinking');
+      value.replaceWith(thinking);
+
+      return;
+    }
+    const run = document.createElement('button');
+
+    run.type = 'button';
+    run.tabIndex = -1;
+    run.setAttribute('data-blok-database-table-autofill', '');
+    run.setAttribute('aria-label', this.t('tools.database.aiAutofillCell'));
+    run.innerHTML = IconWand;
+    onHover(run, this.t('tools.database.aiAutofillCell'));
+    cell.appendChild(run);
   }
 
   private createSubItemToggle(nested: { hasChildren: boolean; expanded: boolean }): HTMLElement {
@@ -858,9 +904,15 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const cell = event.target;
     const rowId = cell instanceof HTMLElement ? cell.closest('[data-row-id]')?.getAttribute('data-row-id') : null;
 
-    if (cell instanceof HTMLElement && typeof rowId === 'string') {
-      this.fillCell(cell, rowId);
+    if (!(cell instanceof HTMLElement) || typeof rowId !== 'string') return;
+    const update = event instanceof CustomEvent ? (event.detail as { propertyId?: unknown; value?: PropertyValue } | null) : null;
+    const row = this.rowMap.get(rowId);
+
+    // Only the one property: the row may hold computed values the store lacks.
+    if (row !== undefined && typeof update?.propertyId === 'string' && update.value !== undefined) {
+      this.rowMap.set(rowId, { ...row, properties: { ...row.properties, [update.propertyId]: update.value } });
     }
+    this.fillCell(cell, rowId);
   };
 
   // ─── Groups ───
@@ -1270,6 +1322,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       return;
     }
+    const sparkle = closest('[data-blok-database-table-autofill-open]');
+
+    if (sparkle !== null) {
+      this.options.autofill?.open(closest('[data-blok-database-table-column-header]')?.getAttribute('data-property-id') ?? '', sparkle);
+
+      return;
+    }
     const header = closest('[data-blok-database-table-column-header]');
 
     if (header !== null) {
@@ -1304,6 +1363,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     if (closest('[data-blok-database-table-open]') !== null) {
       handlers.openRow(rowId);
+
+      return;
+    }
+    const run = closest('[data-blok-database-table-autofill]');
+
+    if (run !== null) {
+      this.options.autofill?.run(rowId, closest('[role="gridcell"]')?.getAttribute('data-property-id') ?? '');
 
       return;
     }
@@ -1494,8 +1560,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       const measured = el.getBoundingClientRect().width;
 
       style.width = width;
+      // The AI Autofill sparkle sits beside the header button, not in it.
+      const sparkle = el.parentElement?.querySelector<HTMLElement>(':scope > [data-blok-database-table-autofill-open]');
 
-      return measured;
+      return sparkle === null || sparkle === undefined
+        ? measured
+        : measured + sparkle.getBoundingClientRect().width + (parseFloat(getComputedStyle(sparkle).marginInlineEnd) || 0);
     };
     // Cell padding is 8px a side.
     const widest = Math.max(0, ...cells.map(contentWidth)) + 16;

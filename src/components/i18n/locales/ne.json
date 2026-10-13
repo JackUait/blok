@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "बन्द गर्नुहोस्",
   "tools.database.aiAutofillDiscard": "परिवर्तनहरू खारेज गर्नुहोस्",
   "tools.database.aiAutofillDiscardTitle": "परिवर्तनहरू खारेज गर्ने हो?",
-  "tools.database.aiAutofillDiscardCancel": "रद्द गर्नुहोस्"
+  "tools.database.aiAutofillDiscardCancel": "रद्द गर्नुहोस्",
+  "tools.database.aiAutofillCell": "स्वतः भर्नुहोस्",
+  "tools.database.aiAutofillThinking": "सोच्दैछ…",
+  "tools.database.aiAutofillMore": "थप…",
+  "tools.database.aiAutofillDelete": "AI स्वतः भराइ मेटाउनुहोस्",
+  "tools.database.aiAutofillTriggerAnyCreation": "कुनै पनि पृष्ठ सिर्जना",
+  "tools.database.aiAutofillTriggerAnyProperty": "कुनै पनि गुणहरू",
+  "tools.database.aiAutofillTriggerSpecific": "केवल निश्चित गुणहरू"
 }

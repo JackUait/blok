@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "تاقاش",
   "tools.database.aiAutofillDiscard": "ئۆزگەرتىشلەرنى تاشلاش",
   "tools.database.aiAutofillDiscardTitle": "ئۆزگەرتىشلەرنى تاشلامسىز؟",
-  "tools.database.aiAutofillDiscardCancel": "بىكار قىلىش"
+  "tools.database.aiAutofillDiscardCancel": "بىكار قىلىش",
+  "tools.database.aiAutofillCell": "ئاپتوماتىك تولدۇرۇش",
+  "tools.database.aiAutofillThinking": "ئويلاۋاتىدۇ…",
+  "tools.database.aiAutofillMore": "تېخىمۇ كۆپ…",
+  "tools.database.aiAutofillDelete": "سۈنئىي ئەقىل ئاپتوماتىك تولدۇرۇشنى ئۆچۈرۈش",
+  "tools.database.aiAutofillTriggerAnyCreation": "خالىغان بەت قۇرۇش",
+  "tools.database.aiAutofillTriggerAnyProperty": "خالىغان خاسلىقلار",
+  "tools.database.aiAutofillTriggerSpecific": "پەقەت بەلگىلىك خاسلىقلار"
 }

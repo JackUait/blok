@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ပိတ်",
   "tools.database.aiAutofillDiscard": "အပြောင်းအလဲများကို စွန့်ပစ်ရန်",
   "tools.database.aiAutofillDiscardTitle": "အပြောင်းအလဲများကို စွန့်ပစ်မလား။",
-  "tools.database.aiAutofillDiscardCancel": "ပယ်ဖျက်"
+  "tools.database.aiAutofillDiscardCancel": "ပယ်ဖျက်",
+  "tools.database.aiAutofillCell": "အလိုအလျောက်ဖြည့်ရန်",
+  "tools.database.aiAutofillThinking": "စဉ်းစားနေသည်…",
+  "tools.database.aiAutofillMore": "နောက်ထပ်…",
+  "tools.database.aiAutofillDelete": "AI ဖြင့် အလိုအလျောက်ဖြည့်ခြင်းကို ဖျက်ရန်",
+  "tools.database.aiAutofillTriggerAnyCreation": "မည်သည့် စာမျက်နှာ ဖန်တီးမှုမဆို",
+  "tools.database.aiAutofillTriggerAnyProperty": "မည်သည့် ဂုဏ်သတ္တိမဆို",
+  "tools.database.aiAutofillTriggerSpecific": "သတ်မှတ်ထားသော ဂုဏ်သတ္တိများသာ"
 }

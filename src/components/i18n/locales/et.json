@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Sulge",
   "tools.database.aiAutofillDiscard": "Loobu muudatustest",
   "tools.database.aiAutofillDiscardTitle": "Kas loobuda muudatustest?",
-  "tools.database.aiAutofillDiscardCancel": "Tühista"
+  "tools.database.aiAutofillDiscardCancel": "Tühista",
+  "tools.database.aiAutofillCell": "Täida automaatselt",
+  "tools.database.aiAutofillThinking": "Mõtleb…",
+  "tools.database.aiAutofillMore": "Rohkem…",
+  "tools.database.aiAutofillDelete": "Kustuta AI automaattäitmine",
+  "tools.database.aiAutofillTriggerAnyCreation": "Iga lehe loomine",
+  "tools.database.aiAutofillTriggerAnyProperty": "Mis tahes omadused",
+  "tools.database.aiAutofillTriggerSpecific": "Ainult kindlad omadused"
 }

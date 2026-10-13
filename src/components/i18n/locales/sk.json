@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Zavrieť",
   "tools.database.aiAutofillDiscard": "Zahodiť zmeny",
   "tools.database.aiAutofillDiscardTitle": "Zahodiť zmeny?",
-  "tools.database.aiAutofillDiscardCancel": "Zrušiť"
+  "tools.database.aiAutofillDiscardCancel": "Zrušiť",
+  "tools.database.aiAutofillCell": "Automaticky vyplniť",
+  "tools.database.aiAutofillThinking": "Premýšľa…",
+  "tools.database.aiAutofillMore": "Ďalšie…",
+  "tools.database.aiAutofillDelete": "Odstrániť automatické vypĺňanie AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Akékoľvek vytvorenie stránky",
+  "tools.database.aiAutofillTriggerAnyProperty": "Akékoľvek vlastnosti",
+  "tools.database.aiAutofillTriggerSpecific": "Iba určité vlastnosti"
 }

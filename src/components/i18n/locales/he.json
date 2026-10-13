@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "סגור",
   "tools.database.aiAutofillDiscard": "השלך שינויים",
   "tools.database.aiAutofillDiscardTitle": "להשליך את השינויים?",
-  "tools.database.aiAutofillDiscardCancel": "ביטול"
+  "tools.database.aiAutofillDiscardCancel": "ביטול",
+  "tools.database.aiAutofillCell": "מלא אוטומטית",
+  "tools.database.aiAutofillThinking": "חושב…",
+  "tools.database.aiAutofillMore": "עוד…",
+  "tools.database.aiAutofillDelete": "מחק מילוי אוטומטי באמצעות AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "כל יצירת דף",
+  "tools.database.aiAutofillTriggerAnyProperty": "מאפיינים כלשהם",
+  "tools.database.aiAutofillTriggerSpecific": "רק מאפיינים מסוימים"
 }

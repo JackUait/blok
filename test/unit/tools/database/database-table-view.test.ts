@@ -835,6 +835,27 @@ describe('DatabaseTableView', () => {
       expect(changes.properties?.find((p) => p.id === 'p-notes')?.width).toBe(280);
     });
 
+    it('a double-click fit leaves room for the AI Autofill sparkle beside the header button', () => {
+      const autofillSchema = schema.map((p) => (p.id === 'p-notes' ? { ...p, autofill: { mode: 'summary' as const } } : p));
+      const { root, handlers } = mount({ schema: autofillSchema, autofill: { filling: () => false, run: vi.fn(), open: vi.fn() } });
+      const notes = header(root, 'p-notes');
+      const button = notes.querySelector<HTMLElement>('[data-blok-database-table-column-button]');
+      const sparkle = notes.querySelector<HTMLElement>('[data-blok-database-table-autofill-open]');
+      const handle = notes.querySelector<HTMLElement>('[data-blok-database-table-resize]');
+
+      if (button === null || sparkle === null || handle === null) {
+        throw new Error('no header parts');
+      }
+      vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 36));
+      vi.spyOn(sparkle, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 20, 20));
+      handle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+
+      const changes = vi.mocked(handlers.updateView).mock.calls[0][0];
+
+      // Button 200 + sparkle 20 + cell padding 16.
+      expect(changes.properties?.find((p) => p.id === 'p-notes')?.width).toBe(236);
+    });
+
     it('the header click opens the property menu, but not after a resize press', () => {
       const { root, handlers } = mount();
 

@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Đóng",
   "tools.database.aiAutofillDiscard": "Bỏ thay đổi",
   "tools.database.aiAutofillDiscardTitle": "Bỏ thay đổi?",
-  "tools.database.aiAutofillDiscardCancel": "Hủy"
+  "tools.database.aiAutofillDiscardCancel": "Hủy",
+  "tools.database.aiAutofillCell": "Tự động điền",
+  "tools.database.aiAutofillThinking": "Đang suy nghĩ…",
+  "tools.database.aiAutofillMore": "Tùy chọn khác…",
+  "tools.database.aiAutofillDelete": "Xóa tự động điền bằng AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Mọi lần tạo trang",
+  "tools.database.aiAutofillTriggerAnyProperty": "Bất kỳ thuộc tính nào",
+  "tools.database.aiAutofillTriggerSpecific": "Chỉ các thuộc tính cụ thể"
 }

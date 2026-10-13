@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Kapat",
   "tools.database.aiAutofillDiscard": "Değişiklikleri at",
   "tools.database.aiAutofillDiscardTitle": "Değişiklikler atılsın mı?",
-  "tools.database.aiAutofillDiscardCancel": "İptal"
+  "tools.database.aiAutofillDiscardCancel": "İptal",
+  "tools.database.aiAutofillCell": "Otomatik doldur",
+  "tools.database.aiAutofillThinking": "Düşünüyor…",
+  "tools.database.aiAutofillMore": "Diğer…",
+  "tools.database.aiAutofillDelete": "Yapay zekâ ile otomatik doldurmayı sil",
+  "tools.database.aiAutofillTriggerAnyCreation": "Herhangi bir sayfa oluşturma",
+  "tools.database.aiAutofillTriggerAnyProperty": "Herhangi bir özellik",
+  "tools.database.aiAutofillTriggerSpecific": "Yalnızca belirli özellikler"
 }

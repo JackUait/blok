@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ปิด",
   "tools.database.aiAutofillDiscard": "ละทิ้งการเปลี่ยนแปลง",
   "tools.database.aiAutofillDiscardTitle": "ละทิ้งการเปลี่ยนแปลงหรือไม่?",
-  "tools.database.aiAutofillDiscardCancel": "ยกเลิก"
+  "tools.database.aiAutofillDiscardCancel": "ยกเลิก",
+  "tools.database.aiAutofillCell": "เติมอัตโนมัติ",
+  "tools.database.aiAutofillThinking": "กำลังคิด…",
+  "tools.database.aiAutofillMore": "เพิ่มเติม…",
+  "tools.database.aiAutofillDelete": "ลบการเติมข้อมูลอัตโนมัติด้วย AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "การสร้างหน้าใดก็ได้",
+  "tools.database.aiAutofillTriggerAnyProperty": "คุณสมบัติใดก็ได้",
+  "tools.database.aiAutofillTriggerSpecific": "เฉพาะคุณสมบัติที่ระบุ"
 }

@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "അടയ്ക്കുക",
   "tools.database.aiAutofillDiscard": "മാറ്റങ്ങൾ ഉപേക്ഷിക്കുക",
   "tools.database.aiAutofillDiscardTitle": "മാറ്റങ്ങൾ ഉപേക്ഷിക്കണോ?",
-  "tools.database.aiAutofillDiscardCancel": "റദ്ദാക്കുക"
+  "tools.database.aiAutofillDiscardCancel": "റദ്ദാക്കുക",
+  "tools.database.aiAutofillCell": "ഓട്ടോഫിൽ ചെയ്യുക",
+  "tools.database.aiAutofillThinking": "ചിന്തിക്കുന്നു…",
+  "tools.database.aiAutofillMore": "കൂടുതൽ…",
+  "tools.database.aiAutofillDelete": "AI ഓട്ടോഫിൽ ഇല്ലാതാക്കുക",
+  "tools.database.aiAutofillTriggerAnyCreation": "ഏത് പേജ് സൃഷ്ടിക്കലും",
+  "tools.database.aiAutofillTriggerAnyProperty": "ഏതെങ്കിലും പ്രോപ്പർട്ടികൾ",
+  "tools.database.aiAutofillTriggerSpecific": "നിർദ്ദിഷ്ട പ്രോപ്പർട്ടികൾ മാത്രം"
 }

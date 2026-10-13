@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "פארמאכן",
   "tools.database.aiAutofillDiscard": "ענדערונגען אַוועקוואַרפֿן",
   "tools.database.aiAutofillDiscardTitle": "ענדערונגען אַוועקוואַרפֿן?",
-  "tools.database.aiAutofillDiscardCancel": "אָפּזאָגן"
+  "tools.database.aiAutofillDiscardCancel": "אָפּזאָגן",
+  "tools.database.aiAutofillCell": "אויטאָמאַטיש אויספֿילן",
+  "tools.database.aiAutofillThinking": "טראַכט…",
+  "tools.database.aiAutofillMore": "מער…",
+  "tools.database.aiAutofillDelete": "אויסמעקן AI אויטאָמאַטיש אויספֿילן",
+  "tools.database.aiAutofillTriggerAnyCreation": "יעדעס שאַפֿן פֿון אַ בלאַט",
+  "tools.database.aiAutofillTriggerAnyProperty": "סײַ וועלכע אייגנשאַפֿטן",
+  "tools.database.aiAutofillTriggerSpecific": "נאָר געוויסע אייגנשאַפֿטן"
 }

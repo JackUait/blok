@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ປິດ",
   "tools.database.aiAutofillDiscard": "ລະທິ້ງການປ່ຽນແປງ",
   "tools.database.aiAutofillDiscardTitle": "ລະທິ້ງການປ່ຽນແປງບໍ່?",
-  "tools.database.aiAutofillDiscardCancel": "ຍົກເລີກ"
+  "tools.database.aiAutofillDiscardCancel": "ຍົກເລີກ",
+  "tools.database.aiAutofillCell": "ຕື່ມອັດຕະໂນມັດ",
+  "tools.database.aiAutofillThinking": "ກຳລັງຄິດ…",
+  "tools.database.aiAutofillMore": "ເພີ່ມເຕີມ…",
+  "tools.database.aiAutofillDelete": "ລຶບການຕື່ມຂໍ້ມູນອັດຕະໂນມັດດ້ວຍ AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "ການສ້າງໜ້າໃດກໍໄດ້",
+  "tools.database.aiAutofillTriggerAnyProperty": "ຄຸນສົມບັດໃດກໍໄດ້",
+  "tools.database.aiAutofillTriggerSpecific": "ສະເພາະຄຸນສົມບັດທີ່ກຳນົດ"
 }

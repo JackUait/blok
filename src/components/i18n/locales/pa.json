@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ਬੰਦ ਕਰੋ",
   "tools.database.aiAutofillDiscard": "ਬਦਲਾਅ ਤਿਆਗੋ",
   "tools.database.aiAutofillDiscardTitle": "ਕੀ ਬਦਲਾਅ ਤਿਆਗਣੇ ਹਨ?",
-  "tools.database.aiAutofillDiscardCancel": "ਰੱਦ ਕਰੋ"
+  "tools.database.aiAutofillDiscardCancel": "ਰੱਦ ਕਰੋ",
+  "tools.database.aiAutofillCell": "ਆਟੋਫਿਲ ਕਰੋ",
+  "tools.database.aiAutofillThinking": "ਸੋਚ ਰਿਹਾ ਹੈ…",
+  "tools.database.aiAutofillMore": "ਹੋਰ…",
+  "tools.database.aiAutofillDelete": "AI ਆਟੋਫਿਲ ਮਿਟਾਓ",
+  "tools.database.aiAutofillTriggerAnyCreation": "ਕੋਈ ਵੀ ਪੰਨਾ ਬਣਾਉਣਾ",
+  "tools.database.aiAutofillTriggerAnyProperty": "ਕੋਈ ਵੀ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ",
+  "tools.database.aiAutofillTriggerSpecific": "ਸਿਰਫ਼ ਖਾਸ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ"
 }

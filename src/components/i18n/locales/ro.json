@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Închide",
   "tools.database.aiAutofillDiscard": "Renunță la modificări",
   "tools.database.aiAutofillDiscardTitle": "Renunțați la modificări?",
-  "tools.database.aiAutofillDiscardCancel": "Anulează"
+  "tools.database.aiAutofillDiscardCancel": "Anulează",
+  "tools.database.aiAutofillCell": "Completează automat",
+  "tools.database.aiAutofillThinking": "Se gândește…",
+  "tools.database.aiAutofillMore": "Mai multe…",
+  "tools.database.aiAutofillDelete": "Șterge completarea automată cu IA",
+  "tools.database.aiAutofillTriggerAnyCreation": "Orice creare de pagină",
+  "tools.database.aiAutofillTriggerAnyProperty": "Orice proprietăți",
+  "tools.database.aiAutofillTriggerSpecific": "Doar anumite proprietăți"
 }

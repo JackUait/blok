@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Uždaryti",
   "tools.database.aiAutofillDiscard": "Atmesti pakeitimus",
   "tools.database.aiAutofillDiscardTitle": "Atmesti pakeitimus?",
-  "tools.database.aiAutofillDiscardCancel": "Atšaukti"
+  "tools.database.aiAutofillDiscardCancel": "Atšaukti",
+  "tools.database.aiAutofillCell": "Automatiškai užpildyti",
+  "tools.database.aiAutofillThinking": "Galvoja…",
+  "tools.database.aiAutofillMore": "Daugiau…",
+  "tools.database.aiAutofillDelete": "Ištrinti DI automatinį pildymą",
+  "tools.database.aiAutofillTriggerAnyCreation": "Bet koks puslapio sukūrimas",
+  "tools.database.aiAutofillTriggerAnyProperty": "Bet kurios savybės",
+  "tools.database.aiAutofillTriggerSpecific": "Tik tam tikros savybės"
 }

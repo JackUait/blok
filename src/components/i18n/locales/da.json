@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Luk",
   "tools.database.aiAutofillDiscard": "Kassér ændringer",
   "tools.database.aiAutofillDiscardTitle": "Vil du kassere ændringerne?",
-  "tools.database.aiAutofillDiscardCancel": "Annuller"
+  "tools.database.aiAutofillDiscardCancel": "Annuller",
+  "tools.database.aiAutofillCell": "Autoudfyld",
+  "tools.database.aiAutofillThinking": "Tænker…",
+  "tools.database.aiAutofillMore": "Mere…",
+  "tools.database.aiAutofillDelete": "Slet AI-autoudfyld",
+  "tools.database.aiAutofillTriggerAnyCreation": "Enhver oprettelse af en side",
+  "tools.database.aiAutofillTriggerAnyProperty": "Enhver egenskab",
+  "tools.database.aiAutofillTriggerSpecific": "Kun bestemte egenskaber"
 }

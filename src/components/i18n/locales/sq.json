@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Mbyll",
   "tools.database.aiAutofillDiscard": "Hidh poshtë ndryshimet",
   "tools.database.aiAutofillDiscardTitle": "Të hidhen poshtë ndryshimet?",
-  "tools.database.aiAutofillDiscardCancel": "Anulo"
+  "tools.database.aiAutofillDiscardCancel": "Anulo",
+  "tools.database.aiAutofillCell": "Plotëso automatikisht",
+  "tools.database.aiAutofillThinking": "Duke menduar…",
+  "tools.database.aiAutofillMore": "Më shumë…",
+  "tools.database.aiAutofillDelete": "Fshi plotësimin automatik me IA",
+  "tools.database.aiAutofillTriggerAnyCreation": "Çdo krijim faqeje",
+  "tools.database.aiAutofillTriggerAnyProperty": "Çdo veti",
+  "tools.database.aiAutofillTriggerSpecific": "Vetëm veti të caktuara"
 }

@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { IconCross } from '../../components/icons';
+import { IconCross, IconDotsHorizontal, IconTrash } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { openDatabaseConfirm } from './database-confirm-dialog';
@@ -18,6 +18,8 @@ export interface AutofillDraft {
   language?: string;
   onCreate: boolean;
   onEdit: boolean;
+  /** With `onEdit`: only these properties fill again. Absent: any property. */
+  onEditProperties?: string[];
 }
 
 export const draftOf = (settings: AutofillSettings | undefined): AutofillDraft => ({
@@ -26,6 +28,7 @@ export const draftOf = (settings: AutofillSettings | undefined): AutofillDraft =
   ...(settings?.language !== undefined ? { language: settings.language } : {}),
   onCreate: settings?.onCreate === true,
   onEdit: settings?.onEdit === true,
+  ...(settings?.onEdit === true && settings.onEditProperties !== undefined ? { onEditProperties: [...settings.onEditProperties] } : {}),
 });
 
 const settingsOf = (draft: AutofillDraft): AutofillSettings => ({
@@ -34,6 +37,7 @@ const settingsOf = (draft: AutofillDraft): AutofillSettings => ({
   ...(draft.language !== undefined ? { language: draft.language } : {}),
   ...(draft.onCreate ? { onCreate: true } : {}),
   ...(draft.onEdit ? { onEdit: true } : {}),
+  ...(draft.onEdit && draft.onEditProperties !== undefined ? { onEditProperties: draft.onEditProperties } : {}),
 });
 
 const sameDraft = (a: AutofillDraft, b: AutofillDraft): boolean =>
@@ -53,7 +57,11 @@ export interface AutofillSetupOptions {
   onDraft: (draft: AutofillDraft | undefined) => void;
   writable: () => boolean;
   hasRows: () => boolean;
+  /** Properties an edit of which can fill again: every other one of the database. */
+  triggerProperties: () => Array<{ id: string; name: string }>;
   onSave: (settings: AutofillSettings) => void;
+  /** "Delete AI Autofill": drops the saved setting. */
+  onDelete: () => void;
   onGenerate: (settings: AutofillSettings) => void;
   onRunNow: () => void;
   onClose: () => void;
@@ -87,6 +95,7 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
   const header = document.createElement('div');
   const title = document.createElement('div');
   const close = document.createElement('button');
+  const more = document.createElement('button');
   const tabs = document.createElement('div');
   const tab = document.createElement('button');
   const field = document.createElement('textarea');
@@ -105,7 +114,11 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
   close.setAttribute('data-blok-database-autofill-close', '');
   close.setAttribute('aria-label', i18n.t('tools.database.aiAutofillClose'));
   close.innerHTML = IconCross;
-  header.append(title, close);
+  more.type = 'button';
+  more.setAttribute('data-blok-database-autofill-more', '');
+  more.setAttribute('aria-label', i18n.t('tools.database.aiAutofillMore'));
+  more.innerHTML = IconDotsHorizontal;
+  header.append(title, more, close);
 
   tabs.setAttribute('role', 'tablist');
   tabs.setAttribute('data-blok-database-autofill-tabs', '');
@@ -167,22 +180,68 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
     }]);
   });
 
+  /** Notion's trigger choices (research/12 §2). "Only specific properties" lists the properties to watch. */
+  const createChoices = (): Parameters<typeof openMenu>[1] => [false, true].map((on) => ({
+    type: PopoverItemType.Default as const,
+    name: `database-autofill-trigger-onCreate-${on ? 'on' : 'off'}`,
+    title: i18n.t(on ? 'tools.database.aiAutofillTriggerAnyCreation' : 'tools.database.aiAutofillTriggerNone'),
+    isActive: state.draft.onCreate === on,
+    closeOnActivate: true,
+    onActivate: () => update({ onCreate: on }),
+  }));
+  const watched = (id: string): boolean => state.draft.onEditProperties?.includes(id) === true;
+  const toggleWatched = (id: string): void => {
+    const next = watched(id) ? (state.draft.onEditProperties ?? []).filter((other) => other !== id) : [...(state.draft.onEditProperties ?? []), id];
+
+    // No property left to watch means no trigger.
+    update(next.length === 0 ? { onEdit: false, onEditProperties: undefined } : { onEdit: true, onEditProperties: next });
+  };
+  const updateChoices = (): Parameters<typeof openMenu>[1] => [
+    {
+      type: PopoverItemType.Default,
+      name: 'database-autofill-trigger-onEdit-off',
+      title: i18n.t('tools.database.aiAutofillTriggerNone'),
+      isActive: !state.draft.onEdit,
+      closeOnActivate: true,
+      onActivate: () => update({ onEdit: false, onEditProperties: undefined }),
+    },
+    {
+      type: PopoverItemType.Default,
+      name: 'database-autofill-trigger-onEdit-any',
+      title: i18n.t('tools.database.aiAutofillTriggerAnyProperty'),
+      isActive: state.draft.onEdit && state.draft.onEditProperties === undefined,
+      closeOnActivate: true,
+      onActivate: () => update({ onEdit: true, onEditProperties: undefined }),
+    },
+    {
+      type: PopoverItemType.Default,
+      name: 'database-autofill-trigger-onEdit-specific',
+      title: i18n.t('tools.database.aiAutofillTriggerSpecific'),
+      isActive: state.draft.onEdit && state.draft.onEditProperties !== undefined,
+      children: {
+        items: options.triggerProperties().map((property) => ({
+          type: PopoverItemType.Default as const,
+          name: `database-autofill-trigger-property-${property.id}`,
+          title: property.name,
+          isActive: () => watched(property.id),
+          onActivate: () => toggleWatched(property.id),
+        })),
+      },
+    },
+  ];
+  const triggerValue = (key: 'onCreate' | 'onEdit'): string => {
+    if (key === 'onCreate') return i18n.t(state.draft.onCreate ? 'tools.database.aiAutofillTriggerAnyCreation' : 'tools.database.aiAutofillTriggerNone');
+    if (!state.draft.onEdit) return i18n.t('tools.database.aiAutofillTriggerNone');
+
+    return i18n.t(state.draft.onEditProperties === undefined ? 'tools.database.aiAutofillTriggerAnyProperty' : 'tools.database.aiAutofillTriggerSpecific');
+  };
   const trigger = (labelKey: string, key: 'onCreate' | 'onEdit'): HTMLButtonElement => {
     const label = i18n.t(labelKey);
     const row = panelRow({
       label,
       value: '',
       testId: `database-autofill-${key}`,
-      onClick: () => {
-        menu(row, [false, true].map((on) => ({
-          type: PopoverItemType.Default as const,
-          name: `database-autofill-trigger-${key}-${on ? 'on' : 'off'}`,
-          title: i18n.t(on ? 'tools.database.aiAutofillTriggerOn' : 'tools.database.aiAutofillTriggerNone'),
-          isActive: state.draft[key] === on,
-          closeOnActivate: true,
-          onActivate: () => update({ [key]: on }),
-        })));
-      },
+      onClick: () => menu(row, key === 'onCreate' ? createChoices() : updateChoices()),
     });
 
     row.setAttribute('data-trigger-label', label);
@@ -191,6 +250,21 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
   };
   const onCreate = trigger('tools.database.aiAutofillOnCreate', 'onCreate');
   const onEdit = trigger('tools.database.aiAutofillOnUpdate', 'onEdit');
+
+  more.addEventListener('click', () => menu(more, [{
+    type: PopoverItemType.Default,
+    name: 'database-autofill-delete',
+    title: i18n.t('tools.database.aiAutofillDelete'),
+    icon: IconTrash,
+    isDestructive: true,
+    closeOnActivate: true,
+    onActivate: () => {
+      if (!options.writable()) return;
+      options.onDelete();
+      options.onDraft(undefined);
+      finish();
+    },
+  }]));
 
   const confirm = { abort: null as AbortController | null };
   const discard = button(footer, i18n.t('tools.database.aiAutofillDiscard'), () => {
@@ -235,14 +309,14 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
     const stored = runnable(saved());
 
     options.onDraft(changed ? state.draft : undefined);
-    [[onCreate, state.draft.onCreate], [onEdit, state.draft.onEdit]].forEach(([row, on]) => {
-      const el = row as HTMLButtonElement;
-      const value = i18n.t(on === true ? 'tools.database.aiAutofillTriggerOn' : 'tools.database.aiAutofillTriggerNone');
+    ([[onCreate, 'onCreate'], [onEdit, 'onEdit']] as const).forEach(([el, key]) => {
+      const value = triggerValue(key);
       const valueEl = el.querySelector('[data-blok-database-panel-value]');
 
       if (valueEl !== null) valueEl.textContent = value;
       el.setAttribute('aria-label', `${el.getAttribute('data-trigger-label') ?? ''} ${value}`);
     });
+    more.disabled = !options.writable() || options.property()?.autofill === undefined;
     discard.disabled = !changed;
     save.disabled = !writable || !filled || !changed;
     generate.disabled = !writable || !filled;

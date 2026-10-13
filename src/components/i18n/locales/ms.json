@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Tutup",
   "tools.database.aiAutofillDiscard": "Buang perubahan",
   "tools.database.aiAutofillDiscardTitle": "Buang perubahan?",
-  "tools.database.aiAutofillDiscardCancel": "Batal"
+  "tools.database.aiAutofillDiscardCancel": "Batal",
+  "tools.database.aiAutofillCell": "Autoisi",
+  "tools.database.aiAutofillThinking": "Sedang berfikir…",
+  "tools.database.aiAutofillMore": "Lagi…",
+  "tools.database.aiAutofillDelete": "Padam Autoisi AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Sebarang penciptaan halaman",
+  "tools.database.aiAutofillTriggerAnyProperty": "Mana-mana sifat",
+  "tools.database.aiAutofillTriggerSpecific": "Sifat tertentu sahaja"
 }

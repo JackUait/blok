@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "დახურვა",
   "tools.database.aiAutofillDiscard": "ცვლილებების უარყოფა",
   "tools.database.aiAutofillDiscardTitle": "უარვყოთ ცვლილებები?",
-  "tools.database.aiAutofillDiscardCancel": "გაუქმება"
+  "tools.database.aiAutofillDiscardCancel": "გაუქმება",
+  "tools.database.aiAutofillCell": "ავტოშევსება",
+  "tools.database.aiAutofillThinking": "ფიქრობს…",
+  "tools.database.aiAutofillMore": "მეტი…",
+  "tools.database.aiAutofillDelete": "ხელოვნური ინტელექტით ავტოშევსების წაშლა",
+  "tools.database.aiAutofillTriggerAnyCreation": "გვერდის ნებისმიერი შექმნა",
+  "tools.database.aiAutofillTriggerAnyProperty": "ნებისმიერი თვისება",
+  "tools.database.aiAutofillTriggerSpecific": "მხოლოდ კონკრეტული თვისებები"
 }

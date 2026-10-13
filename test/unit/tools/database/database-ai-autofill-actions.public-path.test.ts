@@ -1,4 +1,4 @@
-import { findByRole, fireEvent, within } from '@testing-library/dom';
+import { findAllByRole, findByRole, fireEvent, within } from '@testing-library/dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../src/blok';
@@ -117,10 +117,10 @@ const discard = async (dialog: HTMLElement): Promise<HTMLElement> => {
 
 const turnOnUpdate = async (dialog: HTMLElement): Promise<void> => {
   fireEvent.click(within(dialog).getByRole('button', { name: 'On page update None' }));
-  const choice = await findByRole(document.body, 'menuitemcheckbox', { name: 'Autofill' });
+  const choice = await findByRole(document.body, 'menuitemcheckbox', { name: 'Any properties' });
 
   fireEvent.click(choice);
-  await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: 'On page update Autofill' })).toBeInTheDocument());
+  await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: 'On page update Any properties' })).toBeInTheDocument());
 };
 
 const typeInstruction = (dialog: HTMLElement, text: string): void => {
@@ -225,6 +225,52 @@ describe('Basic AI setup actions', () => {
     expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeEnabled();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
     expect(await savedAutofill()).toEqual({ mode: 'translate', language: 'fr', onEdit: true });
+  });
+
+  it('On page creation offers None and Any page creation, as Notion does', async () => {
+    await mount(true, { mode: 'summary', instruction: 'Sum it up' });
+    const dialog = await openSaved();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'On page creation None' }));
+    const items = await findAllByRole(document.body, 'menuitemcheckbox');
+
+    expect(items.map((item) => item.textContent?.trim())).toEqual(['None', 'Any page creation']);
+    fireEvent.click(items[1]);
+    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: 'On page creation Any page creation' })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    expect(await savedAutofill()).toEqual({ mode: 'summary', instruction: 'Sum it up', onCreate: true });
+  });
+
+  it('On page update: Only specific properties saves the chosen properties', async () => {
+    await mount(true, { mode: 'summary', instruction: 'Sum it up' });
+    const dialog = await openSaved();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'On page update None' }));
+    const items = await findAllByRole(document.body, 'menuitemcheckbox');
+
+    expect(items.map((item) => item.textContent?.trim())).toEqual(['None', 'Any properties', 'Only specific properties']);
+    fireEvent.click(items[2]);
+    const status = await findByRole(document.body, 'menuitemcheckbox', { name: 'Status' });
+
+    // The autofill property itself is not a trigger: its own answer would fire it again.
+    expect(within(document.body).queryByRole('menuitemcheckbox', { name: 'Text' })).toBeNull();
+    fireEvent.click(status);
+    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: 'On page update Only specific properties' })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    expect(await savedAutofill()).toEqual({ mode: 'summary', instruction: 'Sum it up', onEdit: true, onEditProperties: ['status'] });
+  });
+
+  it('More… > Delete AI Autofill removes the setting and closes the setup', async () => {
+    await mount(true, { mode: 'summary', instruction: 'Sum it up', onCreate: true });
+    const dialog = await openSaved();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'More…' }));
+    fireEvent.click(await findByRole(document.body, 'menuitem', { name: 'Delete AI Autofill' }));
+
+    await vi.waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(await savedAutofill()).toBeUndefined();
+    await openTextMenu();
+    expect(await findByRole(document.body, 'menuitem', { name: /^AI Autofill(?:\s|$)/ })).toBeInTheDocument();
   });
 
   it('a draft does not survive a type change', async () => {

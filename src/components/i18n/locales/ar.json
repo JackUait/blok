@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "إغلاق",
   "tools.database.aiAutofillDiscard": "تجاهل التغييرات",
   "tools.database.aiAutofillDiscardTitle": "تجاهل التغييرات؟",
-  "tools.database.aiAutofillDiscardCancel": "إلغاء"
+  "tools.database.aiAutofillDiscardCancel": "إلغاء",
+  "tools.database.aiAutofillCell": "تعبئة تلقائية",
+  "tools.database.aiAutofillThinking": "جارٍ التفكير…",
+  "tools.database.aiAutofillMore": "المزيد…",
+  "tools.database.aiAutofillDelete": "حذف التعبئة التلقائية بالذكاء الاصطناعي",
+  "tools.database.aiAutofillTriggerAnyCreation": "إنشاء أي صفحة",
+  "tools.database.aiAutofillTriggerAnyProperty": "أي خصائص",
+  "tools.database.aiAutofillTriggerSpecific": "خصائص محددة فقط"
 }

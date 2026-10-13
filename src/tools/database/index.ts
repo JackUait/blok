@@ -53,7 +53,7 @@ import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayo
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { legacyBodyInserts, pageContentSourceBlocks, rowDescription } from './row-body';
 import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
-import type { TableGroup, TableHandlers, TableNesting, TableState } from './database-table-view';
+import type { TableAutofill, TableGroup, TableHandlers, TableNesting, TableState } from './database-table-view';
 import type { CellChange } from './database-table-grid';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -419,6 +419,7 @@ export class DatabaseTool implements BlockTool {
       rowValues: (rowId) => this.model.getRow(rowId)?.properties,
       writeHostValues: (rowId, changes) => this.writeHostValues(rowId, changes),
       addRow: (properties) => this.addHostRow(properties),
+      fillingChanged: (rowId, propertyId) => this.repaintAutofillCell(rowId, propertyId),
       matchesView: (rowId, viewId) => {
         const view = this.model.getView(viewId);
 
@@ -3608,6 +3609,7 @@ export class DatabaseTool implements BlockTool {
         handlers: this.tableHandlers(context, () => renderer),
       }),
       ...this.commentLever(),
+      ...this.autofillLever(readOnly, context),
     });
 
     return { renderer, root: renderer.createView() };
@@ -6700,7 +6702,23 @@ export class DatabaseTool implements BlockTool {
     this.model.deleteProperty(propertyId);
     this.autofillDrafts.delete(propertyId);
     void this.sync.syncDeleteProperty({ propertyId });
+    this.pruneAutofillWatch(propertyId);
     this.commitSchema();
+  }
+
+  /** "Only specific properties" forgets a deleted one; with none left the trigger is None, as in the setup. */
+  private pruneAutofillWatch(propertyId: string): void {
+    for (const other of this.model.getSchema()) {
+      const watched = other.autofill?.onEditProperties;
+
+      if (other.autofill === undefined || watched?.includes(propertyId) !== true) continue;
+      const rest = watched.filter((id) => id !== propertyId);
+      const { onEdit: _onEdit, onEditProperties: _watched, ...kept } = other.autofill;
+      const autofill = rest.length > 0 ? { ...kept, onEdit: true, onEditProperties: rest } : kept;
+
+      this.model.updateProperty(other.id, { autofill });
+      void this.sync.syncUpdateProperty({ propertyId: other.id, changes: { autofill } });
+    }
   }
 
   /**
@@ -7087,7 +7105,11 @@ export class DatabaseTool implements BlockTool {
       },
       writable,
       hasRows: () => this.model.getOrderedRows().length > 0,
+      triggerProperties: () => localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
+        .filter((other) => other.id !== propertyId)
+        .map((other) => ({ id: other.id, name: other.name })),
       onSave: (settings) => this.updatePropertySettings(propertyId, { autofill: settings }),
+      onDelete: () => this.updatePropertySettings(propertyId, { autofill: undefined }),
       onGenerate: (settings) => this.runAutofill(propertyId, settings),
       onRunNow: () => this.runAutofill(propertyId),
       onClose: () => {
@@ -7097,6 +7119,40 @@ export class DatabaseTool implements BlockTool {
     });
 
     this.autofillSetup = setup;
+  }
+
+  /** The table's AI Autofill run actions: none when read-only, locked or without `config.ai`. */
+  private autofillLever(readOnly: boolean, context?: NativeWidgetContext): { autofill?: TableAutofill } {
+    if (this.config.ai === undefined || readOnly || this.structureLocked()) return {};
+    const writable = (): boolean => !this.destroyed && !this.readOnly && !this.structureLocked()
+      && (context === undefined || context.writable());
+
+    return {
+      autofill: {
+        filling: (rowId, propertyId) => this.hostLevers.isFilling(rowId, propertyId),
+        run: (rowId, propertyId) => {
+          const property = this.model.getProperty(propertyId);
+
+          if (writable() && property !== undefined) this.hostLevers.autofillCell(rowId, property);
+        },
+        open: (propertyId, anchor) => {
+          const property = this.model.getProperty(propertyId);
+
+          if (property !== undefined) this.openAutofillSetup(propertyId, localizeDatabaseSchema([property], this.api.i18n)[0]?.name ?? property.name, anchor, context);
+        },
+      },
+    };
+  }
+
+  /**
+   * Shows or drops a cell's "Thinking…" without a redraw, which would close an open editor.
+   * Carries the stored value: the view's rows are its own copy, which a host write does not touch.
+   */
+  private repaintAutofillCell(rowId: string, propertyId: string): void {
+    const detail = { propertyId, value: this.model.getRow(rowId)?.properties[propertyId] };
+
+    document.querySelectorAll(`[data-blok-database-table-row][data-row-id="${CSS.escape(rowId)}"] [data-blok-database-table-cell][data-property-id="${CSS.escape(propertyId)}"]`)
+      .forEach((cell) => cell.dispatchEvent(new CustomEvent('blok-database-table-repaint', { bubbles: true, detail })));
   }
 
   private runAutofill(propertyId: string, settings?: AutofillSettings): void {

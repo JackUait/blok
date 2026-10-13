@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "داخستن",
   "tools.database.aiAutofillDiscard": "وازهێنان لە گۆڕانکارییەکان",
   "tools.database.aiAutofillDiscardTitle": "واز لە گۆڕانکارییەکان دەهێنیت؟",
-  "tools.database.aiAutofillDiscardCancel": "پاشگەزبوونەوە"
+  "tools.database.aiAutofillDiscardCancel": "پاشگەزبوونەوە",
+  "tools.database.aiAutofillCell": "پڕکردنەوەی خۆکار",
+  "tools.database.aiAutofillThinking": "بیردەکاتەوە…",
+  "tools.database.aiAutofillMore": "زیاتر…",
+  "tools.database.aiAutofillDelete": "سڕینەوەی پڕکردنەوەی خۆکار بە زیرەکی دەستکرد",
+  "tools.database.aiAutofillTriggerAnyCreation": "دروستکردنی هەر پەڕەیەک",
+  "tools.database.aiAutofillTriggerAnyProperty": "هەر تایبەتمەندییەک",
+  "tools.database.aiAutofillTriggerSpecific": "تەنها تایبەتمەندییە دیاریکراوەکان"
 }

@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Zapri",
   "tools.database.aiAutofillDiscard": "Zavrzi spremembe",
   "tools.database.aiAutofillDiscardTitle": "Želite zavreči spremembe?",
-  "tools.database.aiAutofillDiscardCancel": "Prekliči"
+  "tools.database.aiAutofillDiscardCancel": "Prekliči",
+  "tools.database.aiAutofillCell": "Samodejno izpolni",
+  "tools.database.aiAutofillThinking": "Razmišlja…",
+  "tools.database.aiAutofillMore": "Več…",
+  "tools.database.aiAutofillDelete": "Izbriši samodejno izpolnjevanje z UI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Vsako ustvarjanje strani",
+  "tools.database.aiAutofillTriggerAnyProperty": "Katere koli lastnosti",
+  "tools.database.aiAutofillTriggerSpecific": "Samo določene lastnosti"
 }

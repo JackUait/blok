@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "وتړئ",
   "tools.database.aiAutofillDiscard": "بدلونونه پرېږدئ",
   "tools.database.aiAutofillDiscardTitle": "بدلونونه دې پرېښودل شي؟",
-  "tools.database.aiAutofillDiscardCancel": "لغوه کړئ"
+  "tools.database.aiAutofillDiscardCancel": "لغوه کړئ",
+  "tools.database.aiAutofillCell": "په اتومات ډول ډک کړئ",
+  "tools.database.aiAutofillThinking": "فکر کوي…",
+  "tools.database.aiAutofillMore": "نور…",
+  "tools.database.aiAutofillDelete": "د AI په مرسته اتومات ډکول ړنګ کړئ",
+  "tools.database.aiAutofillTriggerAnyCreation": "د هرې پاڼې جوړېدل",
+  "tools.database.aiAutofillTriggerAnyProperty": "هره ځانګړتیا",
+  "tools.database.aiAutofillTriggerSpecific": "یوازې ټاکلې ځانګړتیاوې"
 }

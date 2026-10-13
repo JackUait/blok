@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Aizvērt",
   "tools.database.aiAutofillDiscard": "Atmest izmaiņas",
   "tools.database.aiAutofillDiscardTitle": "Vai atmest izmaiņas?",
-  "tools.database.aiAutofillDiscardCancel": "Atcelt"
+  "tools.database.aiAutofillDiscardCancel": "Atcelt",
+  "tools.database.aiAutofillCell": "Automātiski aizpildīt",
+  "tools.database.aiAutofillThinking": "Domā…",
+  "tools.database.aiAutofillMore": "Vairāk…",
+  "tools.database.aiAutofillDelete": "Dzēst MI automātisko aizpildi",
+  "tools.database.aiAutofillTriggerAnyCreation": "Jebkura lapas izveide",
+  "tools.database.aiAutofillTriggerAnyProperty": "Jebkuri rekvizīti",
+  "tools.database.aiAutofillTriggerSpecific": "Tikai noteikti rekvizīti"
 }

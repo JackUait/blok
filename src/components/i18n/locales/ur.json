@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "بند کریں",
   "tools.database.aiAutofillDiscard": "تبدیلیاں رد کریں",
   "tools.database.aiAutofillDiscardTitle": "تبدیلیاں رد کریں؟",
-  "tools.database.aiAutofillDiscardCancel": "منسوخ کریں"
+  "tools.database.aiAutofillDiscardCancel": "منسوخ کریں",
+  "tools.database.aiAutofillCell": "آٹو فل کریں",
+  "tools.database.aiAutofillThinking": "سوچ رہا ہے…",
+  "tools.database.aiAutofillMore": "مزید…",
+  "tools.database.aiAutofillDelete": "AI آٹو فل حذف کریں",
+  "tools.database.aiAutofillTriggerAnyCreation": "کسی بھی صفحے کا بننا",
+  "tools.database.aiAutofillTriggerAnyProperty": "کوئی بھی پراپرٹیز",
+  "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٹیز"
 }

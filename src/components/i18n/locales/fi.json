@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Sulje",
   "tools.database.aiAutofillDiscard": "Hylkää muutokset",
   "tools.database.aiAutofillDiscardTitle": "Hylätäänkö muutokset?",
-  "tools.database.aiAutofillDiscardCancel": "Peruuta"
+  "tools.database.aiAutofillDiscardCancel": "Peruuta",
+  "tools.database.aiAutofillCell": "Täytä automaattisesti",
+  "tools.database.aiAutofillThinking": "Mietitään…",
+  "tools.database.aiAutofillMore": "Lisää…",
+  "tools.database.aiAutofillDelete": "Poista tekoälyn automaattinen täyttö",
+  "tools.database.aiAutofillTriggerAnyCreation": "Mikä tahansa sivun luonti",
+  "tools.database.aiAutofillTriggerAnyProperty": "Mitkä tahansa ominaisuudet",
+  "tools.database.aiAutofillTriggerSpecific": "Vain tietyt ominaisuudet"
 }

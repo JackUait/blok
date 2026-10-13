@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Schließen",
   "tools.database.aiAutofillDiscard": "Änderungen verwerfen",
   "tools.database.aiAutofillDiscardTitle": "Änderungen verwerfen?",
-  "tools.database.aiAutofillDiscardCancel": "Abbrechen"
+  "tools.database.aiAutofillDiscardCancel": "Abbrechen",
+  "tools.database.aiAutofillCell": "Automatisch ausfüllen",
+  "tools.database.aiAutofillThinking": "Denkt nach…",
+  "tools.database.aiAutofillMore": "Mehr…",
+  "tools.database.aiAutofillDelete": "Automatisches Ausfüllen mit KI löschen",
+  "tools.database.aiAutofillTriggerAnyCreation": "Jede Seitenerstellung",
+  "tools.database.aiAutofillTriggerAnyProperty": "Beliebige Eigenschaften",
+  "tools.database.aiAutofillTriggerSpecific": "Nur bestimmte Eigenschaften"
 }

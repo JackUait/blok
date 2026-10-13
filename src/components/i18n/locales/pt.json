@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Fechar",
   "tools.database.aiAutofillDiscard": "Descartar alterações",
   "tools.database.aiAutofillDiscardTitle": "Descartar alterações?",
-  "tools.database.aiAutofillDiscardCancel": "Cancelar"
+  "tools.database.aiAutofillDiscardCancel": "Cancelar",
+  "tools.database.aiAutofillCell": "Preencher automaticamente",
+  "tools.database.aiAutofillThinking": "Pensando…",
+  "tools.database.aiAutofillMore": "Mais…",
+  "tools.database.aiAutofillDelete": "Excluir preenchimento automático com IA",
+  "tools.database.aiAutofillTriggerAnyCreation": "Qualquer criação de página",
+  "tools.database.aiAutofillTriggerAnyProperty": "Quaisquer propriedades",
+  "tools.database.aiAutofillTriggerSpecific": "Somente propriedades específicas"
 }

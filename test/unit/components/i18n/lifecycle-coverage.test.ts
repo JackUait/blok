@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1027 + 118 + 412 + 4 closure for all 1561 keys', () => {
+  it('rebuilds a disjoint 1033 + 118 + 413 + 4 closure for all 1568 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1561);
+    expect(lifecycle.size).toBe(1568);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -348,7 +348,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +7: the form question menu calls its tools.database.formShowOptions* and formSelection* keys by literal.
       // +1 / -1: the full-window layout builder calls tools.database.layoutMoreSaveOptions by literal;
       // tools.database.layoutCustomizing lost its caller with the old builder bar (see below).
-      'executable-literal': 1027,
+      // +7 / -1: the AI Autofill cell button, header ••• menu and Notion trigger choices call their
+      // tools.database.aiAutofill* keys by literal; tools.database.aiAutofillTriggerOn lost its caller (see below).
+      'executable-literal': 1033,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -372,7 +374,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +43: the chart settings rows build their tools.database.chart* keys from a short name.
       // +1: the view settings panel builds tools.database.settingsMoreSettings from a short name.
       // +1: tools.database.layoutCustomizing, the old builder bar's title. Still shipped in every locale.
-      'registered-namespace-compatible': 412,
+      // +1: tools.database.aiAutofillTriggerOn, the old trigger value. Still shipped in every locale.
+      'registered-namespace-compatible': 413,
       'catalog-only': 4,
     });
     expect(

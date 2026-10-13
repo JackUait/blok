@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ዝጋ",
   "tools.database.aiAutofillDiscard": "ለውጦችን አስወግድ",
   "tools.database.aiAutofillDiscardTitle": "ለውጦቹ ይወገዱ?",
-  "tools.database.aiAutofillDiscardCancel": "ይቅር"
+  "tools.database.aiAutofillDiscardCancel": "ይቅር",
+  "tools.database.aiAutofillCell": "ራስ-ሙላ",
+  "tools.database.aiAutofillThinking": "በማሰብ ላይ…",
+  "tools.database.aiAutofillMore": "ተጨማሪ…",
+  "tools.database.aiAutofillDelete": "AI ራስ-ሙላን ሰርዝ",
+  "tools.database.aiAutofillTriggerAnyCreation": "ማንኛውም ገጽ ሲፈጠር",
+  "tools.database.aiAutofillTriggerAnyProperty": "ማንኛውም ንብረቶች",
+  "tools.database.aiAutofillTriggerSpecific": "የተወሰኑ ንብረቶች ብቻ"
 }

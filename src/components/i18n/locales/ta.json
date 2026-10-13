@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "மூடு",
   "tools.database.aiAutofillDiscard": "மாற்றங்களை நிராகரி",
   "tools.database.aiAutofillDiscardTitle": "மாற்றங்களை நிராகரிக்கவா?",
-  "tools.database.aiAutofillDiscardCancel": "ரத்துசெய்"
+  "tools.database.aiAutofillDiscardCancel": "ரத்துசெய்",
+  "tools.database.aiAutofillCell": "தானாக நிரப்பு",
+  "tools.database.aiAutofillThinking": "சிந்திக்கிறது…",
+  "tools.database.aiAutofillMore": "மேலும்…",
+  "tools.database.aiAutofillDelete": "AI தானியங்கு நிரப்பலை நீக்கு",
+  "tools.database.aiAutofillTriggerAnyCreation": "எந்தப் பக்க உருவாக்கமும்",
+  "tools.database.aiAutofillTriggerAnyProperty": "ஏதேனும் பண்புகள்",
+  "tools.database.aiAutofillTriggerSpecific": "குறிப்பிட்ட பண்புகள் மட்டும்"
 }

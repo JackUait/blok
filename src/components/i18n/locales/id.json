@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Tutup",
   "tools.database.aiAutofillDiscard": "Buang perubahan",
   "tools.database.aiAutofillDiscardTitle": "Buang perubahan?",
-  "tools.database.aiAutofillDiscardCancel": "Batal"
+  "tools.database.aiAutofillDiscardCancel": "Batal",
+  "tools.database.aiAutofillCell": "Isi otomatis",
+  "tools.database.aiAutofillThinking": "Berpikir…",
+  "tools.database.aiAutofillMore": "Lainnya…",
+  "tools.database.aiAutofillDelete": "Hapus Isi Otomatis AI",
+  "tools.database.aiAutofillTriggerAnyCreation": "Setiap pembuatan halaman",
+  "tools.database.aiAutofillTriggerAnyProperty": "Properti apa pun",
+  "tools.database.aiAutofillTriggerSpecific": "Hanya properti tertentu"
 }

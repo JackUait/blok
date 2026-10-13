@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "بند ڪريو",
   "tools.database.aiAutofillDiscard": "تبديليون ڇڏي ڏيو",
   "tools.database.aiAutofillDiscardTitle": "تبديليون ڇڏي ڏجن؟",
-  "tools.database.aiAutofillDiscardCancel": "رد ڪريو"
+  "tools.database.aiAutofillDiscardCancel": "رد ڪريو",
+  "tools.database.aiAutofillCell": "آٽو فل ڪريو",
+  "tools.database.aiAutofillThinking": "سوچي رهيو آهي…",
+  "tools.database.aiAutofillMore": "وڌيڪ…",
+  "tools.database.aiAutofillDelete": "AI آٽو فل ختم ڪريو",
+  "tools.database.aiAutofillTriggerAnyCreation": "ڪنهن به صفحي جو ٺهڻ",
+  "tools.database.aiAutofillTriggerAnyProperty": "ڪي به پراپرٽيون",
+  "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٽيون"
 }

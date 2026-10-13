@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Закрыть",
   "tools.database.aiAutofillDiscard": "Сбросить изменения",
   "tools.database.aiAutofillDiscardTitle": "Сбросить изменения?",
-  "tools.database.aiAutofillDiscardCancel": "Отмена"
+  "tools.database.aiAutofillDiscardCancel": "Отмена",
+  "tools.database.aiAutofillCell": "Автозаполнить",
+  "tools.database.aiAutofillThinking": "Думает…",
+  "tools.database.aiAutofillMore": "Ещё…",
+  "tools.database.aiAutofillDelete": "Удалить автозаполнение с ИИ",
+  "tools.database.aiAutofillTriggerAnyCreation": "Любое создание страницы",
+  "tools.database.aiAutofillTriggerAnyProperty": "Любые свойства",
+  "tools.database.aiAutofillTriggerSpecific": "Только определённые свойства"
 }

@@ -796,8 +796,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Measured database.css additions, not the total budget overage.
     const DATABASE_TITLE_ICON_MENU_BYTES = 696;
     const DATABASE_FORM_PROVIDER_BUILDER_BYTES = 749;
-    // database.css: the AI Autofill setup dialog.
-    const DATABASE_AI_AUTOFILL_BYTES = 2_772;
+    // database.css: the AI Autofill setup dialog and its ••• button, plus the cell button, Thinking… and header sparkle,
+    // plus 185 for the button on the keyboard-selected cell and the sparkle beside the header button.
+    const DATABASE_AI_AUTOFILL_BYTES = 2_772 + 1_486 + 201 + 185;
     // database.css: drag ghosts repeat the fitted-image and vertical-line rules of the view they leave.
     // 174 for card and table row ghosts, 152 for board and table column ghosts.
     const DATABASE_GHOST_CONTEXT_BYTES = 174 + 152;

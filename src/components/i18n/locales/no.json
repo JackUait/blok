@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Lukk",
   "tools.database.aiAutofillDiscard": "Forkast endringer",
   "tools.database.aiAutofillDiscardTitle": "Vil du forkaste endringene?",
-  "tools.database.aiAutofillDiscardCancel": "Avbryt"
+  "tools.database.aiAutofillDiscardCancel": "Avbryt",
+  "tools.database.aiAutofillCell": "Autoutfyll",
+  "tools.database.aiAutofillThinking": "Tenker…",
+  "tools.database.aiAutofillMore": "Mer…",
+  "tools.database.aiAutofillDelete": "Slett AI-autoutfylling",
+  "tools.database.aiAutofillTriggerAnyCreation": "Enhver opprettelse av en side",
+  "tools.database.aiAutofillTriggerAnyProperty": "Enhver egenskap",
+  "tools.database.aiAutofillTriggerSpecific": "Bare bestemte egenskaper"
 }

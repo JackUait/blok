@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "닫기",
   "tools.database.aiAutofillDiscard": "변경 사항 버리기",
   "tools.database.aiAutofillDiscardTitle": "변경 사항을 버릴까요?",
-  "tools.database.aiAutofillDiscardCancel": "취소"
+  "tools.database.aiAutofillDiscardCancel": "취소",
+  "tools.database.aiAutofillCell": "자동 채우기",
+  "tools.database.aiAutofillThinking": "생각 중…",
+  "tools.database.aiAutofillMore": "더 보기…",
+  "tools.database.aiAutofillDelete": "AI 자동 채우기 삭제",
+  "tools.database.aiAutofillTriggerAnyCreation": "모든 페이지 생성",
+  "tools.database.aiAutofillTriggerAnyProperty": "모든 속성",
+  "tools.database.aiAutofillTriggerSpecific": "특정 속성만"
 }

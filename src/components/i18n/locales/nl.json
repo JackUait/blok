@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Sluiten",
   "tools.database.aiAutofillDiscard": "Wijzigingen negeren",
   "tools.database.aiAutofillDiscardTitle": "Wijzigingen negeren?",
-  "tools.database.aiAutofillDiscardCancel": "Annuleren"
+  "tools.database.aiAutofillDiscardCancel": "Annuleren",
+  "tools.database.aiAutofillCell": "Automatisch invullen",
+  "tools.database.aiAutofillThinking": "Aan het nadenken…",
+  "tools.database.aiAutofillMore": "Meer…",
+  "tools.database.aiAutofillDelete": "Automatisch invullen met AI verwijderen",
+  "tools.database.aiAutofillTriggerAnyCreation": "Elke paginacreatie",
+  "tools.database.aiAutofillTriggerAnyProperty": "Willekeurige eigenschappen",
+  "tools.database.aiAutofillTriggerSpecific": "Alleen specifieke eigenschappen"
 }

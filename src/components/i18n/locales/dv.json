@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "ބަންދު",
   "tools.database.aiAutofillDiscard": "ބަދަލުތައް ދޫކޮށްލާ",
   "tools.database.aiAutofillDiscardTitle": "ބަދަލުތައް ދޫކޮށްލަންތޯ؟",
-  "tools.database.aiAutofillDiscardCancel": "ކެންސަލް"
+  "tools.database.aiAutofillDiscardCancel": "ކެންސަލް",
+  "tools.database.aiAutofillCell": "އޮޓޯފިލްކުރޭ",
+  "tools.database.aiAutofillThinking": "ވިސްނަނީ…",
+  "tools.database.aiAutofillMore": "އިތުރު…",
+  "tools.database.aiAutofillDelete": "AI އޮޓޯފިލް ފޮހެލާ",
+  "tools.database.aiAutofillTriggerAnyCreation": "ކޮންމެ ޞަފްޙާއެއް ހެދުމެއް",
+  "tools.database.aiAutofillTriggerAnyProperty": "ކޮންމެ ޕްރޮޕަރޓީއެއް",
+  "tools.database.aiAutofillTriggerSpecific": "ހަމައެކަނި ކަނޑައެޅިފައިވާ ޕްރޮޕަރޓީތައް"
 }

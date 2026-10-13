@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "閉じる",
   "tools.database.aiAutofillDiscard": "変更を破棄",
   "tools.database.aiAutofillDiscardTitle": "変更を破棄しますか？",
-  "tools.database.aiAutofillDiscardCancel": "キャンセル"
+  "tools.database.aiAutofillDiscardCancel": "キャンセル",
+  "tools.database.aiAutofillCell": "自動入力",
+  "tools.database.aiAutofillThinking": "考え中…",
+  "tools.database.aiAutofillMore": "その他…",
+  "tools.database.aiAutofillDelete": "AI自動入力を削除",
+  "tools.database.aiAutofillTriggerAnyCreation": "任意のページ作成",
+  "tools.database.aiAutofillTriggerAnyProperty": "任意のプロパティ",
+  "tools.database.aiAutofillTriggerSpecific": "特定のプロパティのみ"
 }

@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Закрити",
   "tools.database.aiAutofillDiscard": "Відхилити зміни",
   "tools.database.aiAutofillDiscardTitle": "Відхилити зміни?",
-  "tools.database.aiAutofillDiscardCancel": "Скасувати"
+  "tools.database.aiAutofillDiscardCancel": "Скасувати",
+  "tools.database.aiAutofillCell": "Автозаповнити",
+  "tools.database.aiAutofillThinking": "Думає…",
+  "tools.database.aiAutofillMore": "Ще…",
+  "tools.database.aiAutofillDelete": "Видалити автозаповнення з ШІ",
+  "tools.database.aiAutofillTriggerAnyCreation": "Будь-яке створення сторінки",
+  "tools.database.aiAutofillTriggerAnyProperty": "Будь-які властивості",
+  "tools.database.aiAutofillTriggerSpecific": "Лише певні властивості"
 }

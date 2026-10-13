@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "বন্ধ",
   "tools.database.aiAutofillDiscard": "পরিবর্তনগুলো বাদ দিন",
   "tools.database.aiAutofillDiscardTitle": "পরিবর্তনগুলো বাদ দেবেন?",
-  "tools.database.aiAutofillDiscardCancel": "বাতিল"
+  "tools.database.aiAutofillDiscardCancel": "বাতিল",
+  "tools.database.aiAutofillCell": "অটোফিল করুন",
+  "tools.database.aiAutofillThinking": "ভাবছে…",
+  "tools.database.aiAutofillMore": "আরও…",
+  "tools.database.aiAutofillDelete": "AI অটোফিল মুছুন",
+  "tools.database.aiAutofillTriggerAnyCreation": "যেকোনো পৃষ্ঠা তৈরি",
+  "tools.database.aiAutofillTriggerAnyProperty": "যেকোনো বৈশিষ্ট্য",
+  "tools.database.aiAutofillTriggerSpecific": "শুধু নির্দিষ্ট বৈশিষ্ট্য"
 }

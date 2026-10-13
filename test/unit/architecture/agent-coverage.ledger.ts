@@ -324,7 +324,12 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-tab-display-*': exempt('chrome', 'Display as (text, icon or both) is a per-person tab bar preference; the document does not change.'),
   'menu:database/database-card-delete': c01('block.delete'),
   'menu:database/database-autofill-summary-paragraph': prop(),
-  'menu:database/database-autofill-trigger-*': prop(),
+  'menu:database/database-autofill-trigger-onCreate-*': prop(),
+  'menu:database/database-autofill-trigger-onEdit-off': prop(),
+  'menu:database/database-autofill-trigger-onEdit-any': prop(),
+  'menu:database/database-autofill-trigger-property-*': prop(),
+  // settings.autofill = null removes the setting.
+  'menu:database/database-autofill-delete': prop(),
   'menu:database/database-calc-*': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/database-calc-cap-counts': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/database-calc-none': exempt('cut-v1', VIEW_SETTING_CUT),

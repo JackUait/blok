@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Chiudi",
   "tools.database.aiAutofillDiscard": "Scarta modifiche",
   "tools.database.aiAutofillDiscardTitle": "Scartare le modifiche?",
-  "tools.database.aiAutofillDiscardCancel": "Annulla"
+  "tools.database.aiAutofillDiscardCancel": "Annulla",
+  "tools.database.aiAutofillCell": "Compila automaticamente",
+  "tools.database.aiAutofillThinking": "Sta pensando…",
+  "tools.database.aiAutofillMore": "Altro…",
+  "tools.database.aiAutofillDelete": "Elimina compilazione automatica con IA",
+  "tools.database.aiAutofillTriggerAnyCreation": "Qualsiasi creazione di pagina",
+  "tools.database.aiAutofillTriggerAnyProperty": "Qualsiasi proprietà",
+  "tools.database.aiAutofillTriggerSpecific": "Solo proprietà specifiche"
 }

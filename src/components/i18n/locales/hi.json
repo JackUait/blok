@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "बंद करें",
   "tools.database.aiAutofillDiscard": "बदलाव छोड़ें",
   "tools.database.aiAutofillDiscardTitle": "बदलाव छोड़ें?",
-  "tools.database.aiAutofillDiscardCancel": "रद्द करें"
+  "tools.database.aiAutofillDiscardCancel": "रद्द करें",
+  "tools.database.aiAutofillCell": "ऑटोफ़िल करें",
+  "tools.database.aiAutofillThinking": "सोच रहा है…",
+  "tools.database.aiAutofillMore": "और…",
+  "tools.database.aiAutofillDelete": "AI ऑटोफ़िल हटाएं",
+  "tools.database.aiAutofillTriggerAnyCreation": "कोई भी पृष्ठ बनने पर",
+  "tools.database.aiAutofillTriggerAnyProperty": "कोई भी प्रॉपर्टी",
+  "tools.database.aiAutofillTriggerSpecific": "केवल चुनिंदा प्रॉपर्टी"
 }

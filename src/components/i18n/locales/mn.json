@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Хаах",
   "tools.database.aiAutofillDiscard": "Өөрчлөлтийг хаях",
   "tools.database.aiAutofillDiscardTitle": "Өөрчлөлтийг хаях уу?",
-  "tools.database.aiAutofillDiscardCancel": "Цуцлах"
+  "tools.database.aiAutofillDiscardCancel": "Цуцлах",
+  "tools.database.aiAutofillCell": "Автоматаар бөглөх",
+  "tools.database.aiAutofillThinking": "Бодож байна…",
+  "tools.database.aiAutofillMore": "Бусад…",
+  "tools.database.aiAutofillDelete": "AI-аар автоматаар бөглөхийг устгах",
+  "tools.database.aiAutofillTriggerAnyCreation": "Аливаа хуудас үүсгэх",
+  "tools.database.aiAutofillTriggerAnyProperty": "Аливаа шинж",
+  "tools.database.aiAutofillTriggerSpecific": "Зөвхөн тодорхой шинжүүд"
 }

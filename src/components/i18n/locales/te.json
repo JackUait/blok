@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "మూసివేయి",
   "tools.database.aiAutofillDiscard": "మార్పులను విస్మరించు",
   "tools.database.aiAutofillDiscardTitle": "మార్పులను విస్మరించాలా?",
-  "tools.database.aiAutofillDiscardCancel": "రద్దు"
+  "tools.database.aiAutofillDiscardCancel": "రద్దు",
+  "tools.database.aiAutofillCell": "ఆటోఫిల్ చేయి",
+  "tools.database.aiAutofillThinking": "ఆలోచిస్తోంది…",
+  "tools.database.aiAutofillMore": "మరిన్ని…",
+  "tools.database.aiAutofillDelete": "AI ఆటోఫిల్‌ను తొలగించు",
+  "tools.database.aiAutofillTriggerAnyCreation": "ఏదైనా పేజీ సృష్టి",
+  "tools.database.aiAutofillTriggerAnyProperty": "ఏవైనా ప్రాపర్టీలు",
+  "tools.database.aiAutofillTriggerSpecific": "నిర్దిష్ట ప్రాపర్టీలు మాత్రమే"
 }

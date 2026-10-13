@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Bezárás",
   "tools.database.aiAutofillDiscard": "Módosítások elvetése",
   "tools.database.aiAutofillDiscardTitle": "Elveti a módosításokat?",
-  "tools.database.aiAutofillDiscardCancel": "Mégse"
+  "tools.database.aiAutofillDiscardCancel": "Mégse",
+  "tools.database.aiAutofillCell": "Automatikus kitöltés",
+  "tools.database.aiAutofillThinking": "Gondolkodik…",
+  "tools.database.aiAutofillMore": "Továbbiak…",
+  "tools.database.aiAutofillDelete": "MI-alapú automatikus kitöltés törlése",
+  "tools.database.aiAutofillTriggerAnyCreation": "Bármely oldal létrehozása",
+  "tools.database.aiAutofillTriggerAnyProperty": "Bármely tulajdonság",
+  "tools.database.aiAutofillTriggerSpecific": "Csak bizonyos tulajdonságok"
 }

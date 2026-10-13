@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "වසන්න",
   "tools.database.aiAutofillDiscard": "වෙනස්කම් ඉවත දමන්න",
   "tools.database.aiAutofillDiscardTitle": "වෙනස්කම් ඉවත දමන්නද?",
-  "tools.database.aiAutofillDiscardCancel": "අවලංගු කරන්න"
+  "tools.database.aiAutofillDiscardCancel": "අවලංගු කරන්න",
+  "tools.database.aiAutofillCell": "ස්වයංව පුරවන්න",
+  "tools.database.aiAutofillThinking": "සිතමින්…",
+  "tools.database.aiAutofillMore": "තවත්…",
+  "tools.database.aiAutofillDelete": "AI ස්වයං පිරවීම මකන්න",
+  "tools.database.aiAutofillTriggerAnyCreation": "ඕනෑම පිටුවක් සෑදීම",
+  "tools.database.aiAutofillTriggerAnyProperty": "ඕනෑම ගුණාංග",
+  "tools.database.aiAutofillTriggerSpecific": "නිශ්චිත ගුණාංග පමණි"
 }

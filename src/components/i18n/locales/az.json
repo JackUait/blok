@@ -1559,5 +1559,12 @@
   "tools.database.aiAutofillClose": "Bağla",
   "tools.database.aiAutofillDiscard": "Dəyişiklikləri at",
   "tools.database.aiAutofillDiscardTitle": "Dəyişikliklər atılsın?",
-  "tools.database.aiAutofillDiscardCancel": "Ləğv et"
+  "tools.database.aiAutofillDiscardCancel": "Ləğv et",
+  "tools.database.aiAutofillCell": "Avtomatik doldur",
+  "tools.database.aiAutofillThinking": "Düşünür…",
+  "tools.database.aiAutofillMore": "Daha çox…",
+  "tools.database.aiAutofillDelete": "Sİ ilə avtodoldurmanı sil",
+  "tools.database.aiAutofillTriggerAnyCreation": "İstənilən səhifə yaradılması",
+  "tools.database.aiAutofillTriggerAnyProperty": "İstənilən xüsusiyyətlər",
+  "tools.database.aiAutofillTriggerSpecific": "Yalnız müəyyən xüsusiyyətlər"
 }

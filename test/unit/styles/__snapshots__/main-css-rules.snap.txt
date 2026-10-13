@@ -7482,7 +7482,7 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
-[data-blok-database-table-cell]:hover > [data-blok-database-table-autofill] {
+[data-blok-database-table-cell]:hover > [data-blok-database-table-autofill], [data-blok-database-table-cell][data-blok-database-table-cell-anchor] > [data-blok-database-table-autofill] {
   display: inline-flex;
 }
 
@@ -7506,7 +7506,7 @@ span[data-blok-slash-search] {
   justify-content: center;
   width: 20px;
   height: 20px;
-  margin-inline-start: auto;
+  margin-inline-end: var(--blok-space-2);
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);

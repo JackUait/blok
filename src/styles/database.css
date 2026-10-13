@@ -2106,8 +2106,8 @@
   align-items: center;
   gap: var(--blok-space-0-5);
   max-inline-size: 100%;
-  padding-block: 3px;
-  padding-inline: 6px;
+  padding-block: var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;

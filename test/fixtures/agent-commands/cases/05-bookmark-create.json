@@ -1,0 +1,36 @@
+{
+  "name": "05-bookmark-create",
+  "seed": {
+    "blocks": []
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "bookmark.create",
+          "args": {
+            "url": "https://example.com",
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ],
+  "services": {
+    "linkMetadata": {
+      "title": "Example Domain",
+      "description": "This domain is for use in documentation examples.",
+      "image": "https://example.com/preview.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com"
+    }
+  },
+  "expectByRunner": {
+    "jint": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    },
+    "room": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "reviewed": "JackUait",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0",
+        "type": "bookmark",
+        "data": {
+          "title": "Example Domain",
+          "description": "This domain is for use in documentation examples.",
+          "image": "https://example.com/preview.png",
+          "favicon": "https://example.com/favicon.ico",
+          "domain": "example.com",
+          "url": "https://example.com"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "reviewed": "JackUait",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "dbid1",
+              "name": "Title",
+              "type": "title",
+              "position": "pos:0",
+              "defaultTemplateId": "tpl1"
+            },
+            {
+              "type": "select",
+              "config": {
+                "options": [
+                  {
+                    "id": "dbid3",
+                    "label": "Not started",
+                    "color": "orange",
+                    "position": "pos:0"
+                  },
+                  {
+                    "id": "dbid4",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "pos:1"
+                  },
+                  {
+                    "id": "dbid5",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "pos:2"
+                  }
+                ]
+              },
+              "description": "Where the task is",
+              "id": "dbid2",
+              "name": "State (copy)",
+              "position": "pos:1"
+            }
+          ],
+          "views": [
+            {
+              "id": "dbid6",
+              "name": "Table",
+              "type": "table",
+              "position": "pos:0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "db3"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid6-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "id": "dbid7",
+              "name": "Board",
+              "type": "board",
+              "position": "pos:1",
+              "groupBy": "db3",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid7-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": false
+                }
+              ]
+            }
+          ],
+          "activeViewId": "dbid7"
+        },
+        "content": [
+          "r2",
+          "r3",
+          "tpl1",
+          "b0.3"
+        ]
+      },
+      {
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Write spec"
+          },
+          "position": "pos:0",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Ship"
+          },
+          "position": "pos:1",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "tpl1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": ""
+          },
+          "position": "pos:0",
+          "title": "",
+          "template": true,
+          "repeat": {
+            "frequency": "weekly",
+            "interval": 1,
+            "start": "2026-10-12T00:00:00.000Z"
+          }
+        },
+        "parent": "db1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": ""
+          },
+          "position": "pos:1",
+          "title": "",
+          "template": true
+        },
+        "parent": "db1"
+      }
+    ]
+  }
+}

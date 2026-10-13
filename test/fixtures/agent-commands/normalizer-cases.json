@@ -322,6 +322,476 @@
           }
         ]
       }
+    },
+    {
+      "name": "labels database-minted ids by first appearance and positions by sibling order",
+      "keepIds": [
+        "d",
+        "r1",
+        "r2"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "Xq1aaaaaaa",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "a0"
+                },
+                {
+                  "id": "Kk9bbbbbbb",
+                  "name": "Status",
+                  "type": "select",
+                  "position": "a1x7",
+                  "config": {
+                    "options": [
+                      {
+                        "id": "opt-z",
+                        "label": "Done",
+                        "color": "green",
+                        "position": "a5"
+                      },
+                      {
+                        "id": "opt-y",
+                        "label": "Todo",
+                        "color": "gray",
+                        "position": "a0"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "views": [
+                {
+                  "id": "V1",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "a0",
+                  "filterTree": {
+                    "id": "V1-filters",
+                    "conjunction": "and",
+                    "filterRules": []
+                  },
+                  "visibleProperties": [
+                    "Kk9bbbbbbb"
+                  ],
+                  "properties": [
+                    {
+                      "id": "Xq1aaaaaaa",
+                      "visible": true
+                    }
+                  ]
+                },
+                {
+                  "id": "V2",
+                  "name": "Board",
+                  "type": "board",
+                  "position": "Zz",
+                  "groupBy": "Kk9bbbbbbb"
+                }
+              ],
+              "activeViewId": "V2"
+            },
+            "content": [
+              "r1",
+              "r2"
+            ]
+          },
+          {
+            "id": "r1",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "Xq1aaaaaaa": "A",
+                "Kk9bbbbbbb": "opt-y"
+              },
+              "position": "a9"
+            }
+          },
+          {
+            "id": "r2",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "Xq1aaaaaaa": "B"
+              },
+              "position": "a10"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "dbid1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "pos:0"
+                },
+                {
+                  "id": "dbid2",
+                  "name": "Status",
+                  "type": "select",
+                  "position": "pos:1",
+                  "config": {
+                    "options": [
+                      {
+                        "id": "dbid3",
+                        "label": "Done",
+                        "color": "green",
+                        "position": "pos:1"
+                      },
+                      {
+                        "id": "dbid4",
+                        "label": "Todo",
+                        "color": "gray",
+                        "position": "pos:0"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "views": [
+                {
+                  "id": "dbid5",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "pos:1",
+                  "filterTree": {
+                    "id": "dbid5-filters",
+                    "conjunction": "and",
+                    "filterRules": []
+                  },
+                  "visibleProperties": [
+                    "dbid2"
+                  ],
+                  "properties": [
+                    {
+                      "id": "dbid1",
+                      "visible": true
+                    }
+                  ]
+                },
+                {
+                  "id": "dbid6",
+                  "name": "Board",
+                  "type": "board",
+                  "position": "pos:0",
+                  "groupBy": "dbid2"
+                }
+              ],
+              "activeViewId": "dbid6"
+            },
+            "content": [
+              "r1",
+              "r2"
+            ]
+          },
+          {
+            "id": "r1",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "dbid1": "A",
+                "dbid2": "dbid4"
+              },
+              "position": "pos:1"
+            }
+          },
+          {
+            "id": "r2",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "dbid1": "B"
+              },
+              "position": "pos:0"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ranks template rows apart from ordinary rows",
+      "keepIds": [
+        "d",
+        "r1",
+        "tp",
+        "r2"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "t1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "a0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "v1",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "a0"
+                }
+              ],
+              "activeViewId": "v1"
+            },
+            "content": [
+              "r1",
+              "tp",
+              "r2"
+            ]
+          },
+          {
+            "id": "r1",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "t1": "A"
+              },
+              "position": "a0"
+            }
+          },
+          {
+            "id": "tp",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "t1": ""
+              },
+              "position": "a5",
+              "template": true
+            }
+          },
+          {
+            "id": "r2",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "t1": "B"
+              },
+              "position": "a9"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "dbid1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "pos:0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "dbid2",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "pos:0"
+                }
+              ],
+              "activeViewId": "dbid2"
+            },
+            "content": [
+              "r1",
+              "tp",
+              "r2"
+            ]
+          },
+          {
+            "id": "r1",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "dbid1": "A"
+              },
+              "position": "pos:0"
+            }
+          },
+          {
+            "id": "tp",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "dbid1": ""
+              },
+              "position": "pos:0",
+              "template": true
+            }
+          },
+          {
+            "id": "r2",
+            "type": "database-row",
+            "parent": "d",
+            "data": {
+              "properties": {
+                "dbid1": "B"
+              },
+              "position": "pos:1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "drops the empty automations slot the editor saves, keeps real automations",
+      "keepIds": [
+        "d",
+        "e"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "t1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "a0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "v1",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "a0"
+                }
+              ],
+              "activeViewId": "v1",
+              "automations": {
+                "version": 1,
+                "definitions": []
+              }
+            }
+          },
+          {
+            "id": "e",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "t1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "a0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "v1",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "a0"
+                }
+              ],
+              "activeViewId": "v1",
+              "automations": {
+                "version": 1,
+                "definitions": [
+                  {
+                    "id": "auto1"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "dbid1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "pos:0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "dbid2",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "pos:0"
+                }
+              ],
+              "activeViewId": "dbid2"
+            }
+          },
+          {
+            "id": "e",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "dbid1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "pos:0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "dbid2",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "pos:0"
+                }
+              ],
+              "activeViewId": "dbid2",
+              "automations": {
+                "version": 1,
+                "definitions": [
+                  {
+                    "id": "auto1"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
     }
   ]
 }

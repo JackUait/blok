@@ -1,0 +1,74 @@
+{
+  "name": "05-tabs-actions",
+  "seed": {
+    "blocks": [
+      {
+        "id": "tb1",
+        "type": "tabs",
+        "data": {},
+        "content": [
+          "tb2",
+          "tb3"
+        ]
+      },
+      {
+        "id": "tb2",
+        "type": "tab",
+        "data": {
+          "title": "One"
+        },
+        "parent": "tb1"
+      },
+      {
+        "id": "tb3",
+        "type": "tab",
+        "data": {
+          "title": "Two"
+        },
+        "parent": "tb1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "tabs.addTab",
+          "args": {
+            "id": "tb1",
+            "title": "Three"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "tabs.deleteTab",
+          "args": {
+            "id": "tb1",
+            "tabId": "tb2"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "tabs.create",
+          "args": {
+            "tabs": [
+              {
+                "title": "A"
+              },
+              {
+                "title": "B"
+              }
+            ],
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ]
+}

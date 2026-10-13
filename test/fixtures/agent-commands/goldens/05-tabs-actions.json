@@ -1,0 +1,61 @@
+{
+  "reviewed": "JackUait",
+  "document": {
+    "blocks": [
+      {
+        "id": "tb1",
+        "type": "tabs",
+        "data": {},
+        "content": [
+          "tb3",
+          "b0.1"
+        ]
+      },
+      {
+        "id": "tb3",
+        "type": "tab",
+        "data": {
+          "title": "Two"
+        },
+        "parent": "tb1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.1",
+        "type": "tab",
+        "data": {
+          "title": "Three"
+        },
+        "parent": "tb1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b1",
+        "type": "tabs",
+        "data": {},
+        "content": [
+          "b1.0",
+          "b1.1"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b1.0",
+        "type": "tab",
+        "data": {
+          "title": "A"
+        },
+        "parent": "b1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b1.1",
+        "type": "tab",
+        "data": {
+          "title": "B"
+        },
+        "parent": "b1"
+      }
+    ]
+  }
+}

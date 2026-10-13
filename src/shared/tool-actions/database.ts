@@ -1,5 +1,6 @@
 import { DATABASE_DEFAULT_TEXT } from '../database/default-text';
 import { comparePositions } from '../database/positions';
+import { typeConversion } from '../database/property-conversion';
 import {
   createDefaultSchema,
   createDefaultStatusOptions,
@@ -12,7 +13,8 @@ import {
 
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
-import type { DatabaseViewConfig, PropertyDefinition, PropertyType, SelectOption, TemplateRepeat, ViewType } from '../database/types';
+import type { ConvertibleRow } from '../database/property-conversion';
+import type { ConvertedValue, DatabaseViewConfig, PropertyDefinition, PropertyType, SelectOption, TemplateRepeat, ViewType } from '../database/types';
 
 type TargetBlock = NonNullable<ToolActionContext['block']>;
 
@@ -676,10 +678,77 @@ const setTemplateRepeat: ToolActionImpl<{ templateId: string; repeat: TemplateRe
   },
 };
 
+// ─── Property type change (the property menu's "Type") ───
+
+/** Their values come from block metadata or render-time numbering, which only the editor has (readPropertyValue). */
+const EDITOR_ONLY_SOURCES = new Set<PropertyType>(['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId']);
+
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** A row's kept originals (`convertedValues`), keyed by property id. */
+const convertedOf = (ctx: ToolActionContext, rowId: string): Record<string, ConvertedValue> => {
+  const data = ctx.read(rowId)?.data;
+  const kept = isRecordValue(data) ? data.convertedValues : undefined;
+
+  return isRecordValue(kept) ? { ...kept } as Record<string, ConvertedValue> : {};
+};
+
+/** As DatabaseTool.changePropertyType: the property's new definition and every row value it converts, in one step. */
+const changePropertyType: ToolActionImpl<{ propertyId: string; type: PropertyType }> = {
+  run: (ctx, args) => {
+    const { block, state } = openDatabase(ctx);
+    const index = propertyAt(ctx, state, args.propertyId);
+    const property = state.schema[index] ?? ctx.fail('PRECONDITION_FAILED', `This database has no property ${args.propertyId}.`);
+
+    if (property.type === 'title' || args.type === 'title') {
+      ctx.fail('PRECONDITION_FAILED', 'The title property never changes type, and no property becomes a title.');
+    }
+    if (property.type === args.type) {
+      ctx.fail('PRECONDITION_FAILED', `Property ${property.id} is already ${args.type}.`);
+    }
+    if (EDITOR_ONLY_SOURCES.has(property.type)) {
+      ctx.fail('PRECONDITION_FAILED', `A ${property.type} property's values exist only in the editor, so its type can only change there.`);
+    }
+    const rows = rowsOf(ctx, block.id).map((row): ConvertibleRow => ({
+      id: row.id,
+      position: row.position,
+      properties: row.properties as ConvertibleRow['properties'],
+      convertedValues: convertedOf(ctx, row.id),
+    }));
+    // No DOM here: a legacy HTML rich text value cannot be read as text the way the editor reads it.
+    const conversion = typeConversion(() => ctx.fail('PRECONDITION_FAILED', 'This property still holds rich text stored as HTML by an older version of Blok. Change its type in the editor.'));
+    const plan = conversion.planTypeChange(property, args.type, rows, () => ctx.newId())
+      ?? ctx.fail('PRECONDITION_FAILED', `Property ${property.id} cannot change to ${args.type}.`);
+    const next = args.type === 'relation' && plan.property.relation === undefined
+      ? { ...plan.property, relation: { targetDatabaseId: block.id } }
+      : plan.property;
+
+    ctx.update(block.id, { schema: state.schema.map((candidate, i) => (i === index ? next : candidate)) });
+    for (const write of plan.writes) {
+      const row = rows.find(candidate => candidate.id === write.rowId);
+
+      if (row === undefined) {
+        continue;
+      }
+      // As DatabaseRow.updateConvertedValues: null drops the property's entry, and an empty map goes away.
+      const others = Object.entries(row.convertedValues ?? {}).filter(([key]) => key !== property.id);
+      const kept = Object.fromEntries(write.stash === null || write.stash === undefined ? others : [...others, [property.id, write.stash]]);
+
+      ctx.update(row.id, {
+        properties: { ...row.properties, [property.id]: write.value },
+        ...(write.stash === undefined ? {} : { convertedValues: Object.keys(kept).length === 0 ? undefined : kept }),
+      });
+    }
+
+    return undefined;
+  },
+};
+
 export const DATABASE_ACTION_HANDLERS: Readonly<Record<string, ToolActionImpl>> = {
   create, addView, renameView, duplicateView, deleteView, moveView,
   addProperty, addOption, renameOption, moveOption, deleteOption,
   addRow, moveRow, setRowValues,
   updateProperty, duplicateProperty, deleteProperty, recolorOption,
-  addTemplate, setDefaultTemplate, setTemplateRepeat,
+  addTemplate, setDefaultTemplate, setTemplateRepeat, changePropertyType,
 };

@@ -1,0 +1,46 @@
+{
+  "name": "05-read-and-export",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      },
+      {
+        "id": "h1",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Title"
+            }
+          ],
+          "level": 2
+        }
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "doc.read",
+          "args": {
+            "detail": "full"
+          }
+        },
+        {
+          "name": "markdown.export",
+          "args": {}
+        }
+      ]
+    }
+  ]
+}

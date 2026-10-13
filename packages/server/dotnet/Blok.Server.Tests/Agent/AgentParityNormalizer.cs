@@ -18,9 +18,11 @@ internal static class AgentParityNormalizer
     ["callout"] = new(StringComparer.Ordinal) { ["textColor"] = null, ["backgroundColor"] = null },
   };
 
+  private static readonly JsonNode EmptyAutomations = JsonNode.Parse("""{"version":1,"definitions":[]}""")!;
+
   internal static JsonObject Normalize(JsonObject document, ISet<string> keepIds)
   {
-    var blocks = document["blocks"]!.AsArray().Select(b => b!.AsObject()).ToList();
+    var blocks = CanonicalDatabases(document["blocks"]!.AsArray().Select(b => b!.DeepClone().AsObject()).ToList());
     var byId = new Dictionary<string, int>(StringComparer.Ordinal);
 
     for (var i = 0; i < blocks.Count; i++)
@@ -119,6 +121,119 @@ internal static class AgentParityNormalizer
       null => "null",
       _ => node.ToJsonString(),
     };
+  }
+
+  /// <summary>
+  /// Twin of normalize.ts canonicalDatabases (05 §3.2.1, 06 C17): database ids
+  /// become <c>dbid&lt;n&gt;</c> in first-appearance order (each property, then its
+  /// options, then views); positions become their code-unit rank among siblings.
+  /// </summary>
+  private static List<JsonObject> CanonicalDatabases(List<JsonObject> blocks)
+  {
+    var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+    var ranks = new Dictionary<JsonObject, string>(ReferenceEqualityComparer.Instance);
+
+    void Label(JsonNode? id)
+    {
+      if (id is JsonValue v && v.TryGetValue<string>(out var text) && !labels.ContainsKey(text))
+      {
+        labels[text] = $"dbid{labels.Count + 1}";
+      }
+    }
+
+    static List<JsonObject> Records(JsonNode? node) => (node as JsonArray)?.OfType<JsonObject>().ToList() ?? [];
+
+    void Rank(List<JsonObject> siblings)
+    {
+      var keys = siblings
+          .Select(s => s["position"] is JsonValue v && v.TryGetValue<string>(out var p) ? p : null)
+          .OfType<string>().Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
+      foreach (var sibling in siblings)
+      {
+        if (sibling["position"] is JsonValue v && v.TryGetValue<string>(out var p))
+        {
+          ranks[sibling] = $"pos:{keys.IndexOf(p)}";
+        }
+      }
+    }
+
+    foreach (var data in blocks.Where(b => TypeOf(b) == "database").Select(b => b["data"] as JsonObject).OfType<JsonObject>())
+    {
+      var schema = Records(data["schema"]);
+
+      foreach (var property in schema)
+      {
+        Label(property["id"]);
+        Records(property["config"]?["options"]).ForEach(option => Label(option["id"]));
+      }
+
+      Records(data["views"]).ForEach(view => Label(view["id"]));
+      Rank(schema);
+      Rank(Records(data["views"]));
+      schema.ForEach(property => Rank(Records(property["config"]?["options"])));
+    }
+
+    var rows = blocks.Where(b => TypeOf(b) == "database-row").ToList();
+
+    // Templates are their own ordered list beside the rows.
+    foreach (var group in rows.GroupBy(r => (ParentOf(r) ?? string.Empty, r["data"]?["template"] is JsonValue t && t.TryGetValue<bool>(out var isTemplate) && isTemplate)))
+    {
+      Rank(group.Select(r => r["data"] as JsonObject).OfType<JsonObject>().ToList());
+    }
+
+    return blocks.Select(block =>
+    {
+      if ((TypeOf(block) is "database" or "database-row") && block["data"] is JsonObject data)
+      {
+        var relabelled = Relabel(data, labels, ranks)!.AsObject();
+
+        // The editor saves an empty automations slot on every database (src/tools/database/index.ts:888).
+        if (TypeOf(block) == "database" && JsonNode.DeepEquals(relabelled["automations"], EmptyAutomations))
+        {
+          relabelled.Remove("automations");
+        }
+
+        block["data"] = relabelled;
+      }
+
+      return block;
+    }).ToList();
+  }
+
+  private static string? TypeOf(JsonObject block) =>
+      block["type"] is JsonValue v && v.TryGetValue<string>(out var type) ? type : null;
+
+  private static JsonNode? Relabel(JsonNode? node, Dictionary<string, string> labels, Dictionary<JsonObject, string> ranks)
+  {
+    switch (node)
+    {
+      case JsonValue value when value.TryGetValue<string>(out var text):
+        if (labels.TryGetValue(text, out var label))
+        {
+          return JsonValue.Create(label);
+        }
+
+        return text.EndsWith("-filters", StringComparison.Ordinal) && labels.TryGetValue(text[..^"-filters".Length], out var view)
+            ? JsonValue.Create($"{view}-filters")
+            : value.DeepClone();
+      case JsonArray array:
+        return new JsonArray(array.Select(item => Relabel(item, labels, ranks)).ToArray());
+      case JsonObject obj:
+        var copy = new JsonObject();
+        var rank = ranks.GetValueOrDefault(obj);
+
+        foreach (var (key, value) in obj)
+        {
+          copy[labels.GetValueOrDefault(key, key)] = key == "position" && rank is not null
+              ? JsonValue.Create(rank)
+              : Relabel(value, labels, ranks);
+        }
+
+        return copy;
+      default:
+        return node?.DeepClone();
+    }
   }
 
   private static string? IdOf(JsonObject block) =>

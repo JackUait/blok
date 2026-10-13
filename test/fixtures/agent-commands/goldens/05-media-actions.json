@@ -1,0 +1,64 @@
+{
+  "reviewed": "JackUait",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "img",
+        "type": "image",
+        "data": {
+          "url": "https://example.com/b.png",
+          "naturalWidth": 800,
+          "naturalHeight": 600,
+          "crop": {
+            "x": 10,
+            "y": 10,
+            "w": 50,
+            "h": 50
+          },
+          "rotation": 270,
+          "flipX": true,
+          "straighten": 5
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "aud",
+        "type": "audio",
+        "data": {
+          "url": "https://example.com/b.mp3",
+          "coverUrl": "https://example.com/cover.png"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "vid",
+        "type": "video",
+        "data": {
+          "url": "https://example.com/b.mp4"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "fil",
+        "type": "file",
+        "data": {
+          "url": "https://example.com/b.pdf"
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "emb",
+        "type": "embed",
+        "data": {
+          "service": "vimeo",
+          "source": "https://vimeo.com/76979871",
+          "embed": "https://player.vimeo.com/video/76979871",
+          "kind": "iframe",
+          "width": 580,
+          "height": 320
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "reviewed": "JackUait",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "dbid1",
+              "name": "Title",
+              "type": "title",
+              "position": "pos:0"
+            },
+            {
+              "id": "dbid2",
+              "name": "Status",
+              "type": "select",
+              "position": "pos:1",
+              "config": {
+                "options": [
+                  {
+                    "id": "dbid3",
+                    "label": "To do",
+                    "color": "gray",
+                    "position": "pos:1"
+                  },
+                  {
+                    "id": "dbid4",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "pos:0"
+                  }
+                ]
+              }
+            }
+          ],
+          "views": [
+            {
+              "id": "dbid5",
+              "name": "Grid",
+              "type": "table",
+              "position": "pos:0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "dbid2"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid5-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "dbid2",
+                  "visible": true
+                }
+              ]
+            }
+          ],
+          "activeViewId": "dbid5"
+        },
+        "content": [
+          "r2",
+          "r3"
+        ]
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Write spec",
+            "dbid2": "dbid4"
+          },
+          "position": "pos:1",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Ship"
+          },
+          "position": "pos:0",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      }
+    ]
+  }
+}

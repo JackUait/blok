@@ -13,14 +13,17 @@ import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
 import type { AgentContract, OutputData, ToolRegistrySnapshot } from '../../../types';
 import type { BlokCustomToolsFile } from '../../../types/tool-manifest';
 import type { AgentActor, AgentSession } from '../../../types/agent';
+import type { HostServices } from './parity/corpus';
 
 export const TEST_ACTOR: AgentActor = { id: 'agent-test', name: 'Parity', kind: 'agent' };
 
 export const nodeContract = (runtime: 'node' | 'node-live' = 'node'): AgentContract =>
   createHeadlessAgentSetup({ runtime }).contract;
 
-export const openJsonSession = (seed: OutputData, actor: AgentActor = TEST_ACTOR) => {
-  const setup = createHeadlessAgentSetup({ runtime: 'node' });
+const NO_SERVICES: HostServices = { names: [], impl: {} };
+
+export const openJsonSession = (seed: OutputData, actor: AgentActor = TEST_ACTOR, services: HostServices = NO_SERVICES) => {
+  const setup = createHeadlessAgentSetup({ runtime: 'node', services: services.names });
 
   return createDocumentAgentSession({
     document: loadStoredDocument(structuredClone(seed), setup.richTextFieldsFor),
@@ -28,6 +31,7 @@ export const openJsonSession = (seed: OutputData, actor: AgentActor = TEST_ACTOR
     contract: setup.contract,
     actor,
     ports: setup.ports,
+    services: services.impl,
   });
 };
 
@@ -43,9 +47,10 @@ const storeToOutput = (store: DocumentStore): OutputData => ({
 
 export const openStoreSession = (
   seed: OutputData,
-  actor: AgentActor = TEST_ACTOR
+  actor: AgentActor = TEST_ACTOR,
+  services: HostServices = NO_SERVICES
 ): AgentSession & { output(): OutputData } => {
-  const setup = createHeadlessAgentSetup({ runtime: 'node-live' });
+  const setup = createHeadlessAgentSetup({ runtime: 'node-live', services: services.names });
   // Node has no DOM: the serializer's default HTML parser needs one.
   const store = new DocumentStore(new YBlockSerializer({
     htmlToSegments: htmlToSegmentsNode,
@@ -63,6 +68,7 @@ export const openStoreSession = (
     actor,
     ports: setup.ports,
     richTextFieldsFor: setup.richTextFieldsFor,
+    services: services.impl,
   });
 
   return {

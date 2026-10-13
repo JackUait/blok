@@ -66,7 +66,105 @@ export const TOOL_MINTED: Record<string, {
 const richFields = (type: string): string[] =>
   Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
 
-export const normalizeForParity = (doc: OutputData, keepIds: ReadonlySet<string>): ParityDocument => {
+
+/**
+ * Database data mints ids (properties, options, views) and fractional
+ * `position` keys with random tails, and no pure database `normalize` exists
+ * yet (05 §3.2.1 listed fields, 06 C17). So ids are labelled `dbid<n>` in
+ * first-appearance order (each property, then its options, then views), and
+ * positions become their rank among siblings. Ranks use plain code-unit order,
+ * as comparePositions does (src/shared/database/positions.ts).
+ */
+const DATABASE = 'database';
+const DATABASE_ROW = 'database-row';
+// The editor saves an empty automations slot on every database (src/tools/database/index.ts:888); headless appliers do not.
+const DATABASE_LOAD_DEFAULTS = { automations: { version: 1, definitions: [] } };
+
+const records = (value: unknown): Array<Record<string, unknown>> => (isArray(value) ? value.filter(isRecord) : []);
+
+const rankPositions = (siblings: Array<Record<string, unknown>>): Map<Record<string, unknown>, string> => {
+  const keys = [...new Set(siblings.map((s) => s.position).filter((p): p is string => typeof p === 'string'))]
+    .sort((a, b) => Number(a > b) - Number(a < b));
+
+  return new Map(siblings.flatMap((s) => (typeof s.position === 'string' ? [[s, `pos:${keys.indexOf(s.position)}`]] : [])));
+};
+
+const databaseIds = (blocks: OutputBlockData[]): Map<string, string> => {
+  const labels = new Map<string, string>();
+  const label = (id: unknown): void => {
+    if (typeof id === 'string' && !labels.has(id)) {
+      labels.set(id, `dbid${labels.size + 1}`);
+    }
+  };
+
+  for (const block of blocks.filter((b) => b.type === DATABASE)) {
+    for (const property of records(block.data.schema)) {
+      label(property.id);
+      records(isRecord(property.config) ? property.config.options : undefined).forEach((option) => label(option.id));
+    }
+    records(block.data.views).forEach((view) => label(view.id));
+  }
+
+  return labels;
+};
+
+const relabel = (value: unknown, labels: ReadonlyMap<string, string>, ranks: ReadonlyMap<Record<string, unknown>, string>): unknown => {
+  if (typeof value === 'string') {
+    const filters = /^(.*)-filters$/.exec(value);
+
+    return labels.get(value) ?? (filters !== null && labels.has(filters[1]) ? `${labels.get(filters[1])}-filters` : value);
+  }
+
+  if (isArray(value)) {
+    return value.map((item) => relabel(item, labels, ranks));
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const rank = ranks.get(value);
+
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    labels.get(key) ?? key,
+    key === 'position' && rank !== undefined ? rank : relabel(item, labels, ranks),
+  ]));
+};
+
+const canonicalDatabases = (blocks: OutputBlockData[]): OutputBlockData[] => {
+  const labels = databaseIds(blocks);
+  const ranks = new Map<Record<string, unknown>, string>();
+
+  for (const block of blocks.filter((b) => b.type === DATABASE)) {
+    const schema = records(block.data.schema);
+
+    [schema, records(block.data.views), ...schema.map((p) => records(isRecord(p.config) ? p.config.options : undefined))]
+      .forEach((siblings) => rankPositions(siblings).forEach((r, s) => ranks.set(s, r)));
+  }
+
+  const rows = blocks.filter((b) => b.type === DATABASE_ROW);
+
+  // Templates are their own ordered list beside the rows (tools/database/index.ts templates).
+  const listOf = (row: OutputBlockData): string => `${row.parent ?? ''}\u0000${row.data.template === true ? 'template' : 'row'}`;
+
+  for (const list of new Set(rows.map(listOf))) {
+    rankPositions(rows.filter((r) => listOf(r) === list).map((r) => r.data)).forEach((r, s) => ranks.set(s, r));
+  }
+
+  return blocks.map((block) => {
+    if (block.type !== DATABASE && block.type !== DATABASE_ROW) {
+      return block;
+    }
+
+    const relabelled = relabel(block.data, labels, ranks);
+    const data = isRecord(relabelled) && block.type === DATABASE ? withoutLoadDefaults(DATABASE_LOAD_DEFAULTS)(relabelled) : relabelled;
+
+    return isRecord(data) ? { ...block, data } : block;
+  });
+};
+
+export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<string>): ParityDocument => {
+  const doc = { ...input, blocks: canonicalDatabases(input.blocks) };
   const byId = new Map<string, number>();
 
   doc.blocks.forEach((block, index) => {

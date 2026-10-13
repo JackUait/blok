@@ -22,6 +22,15 @@ export interface ParityCase {
   batches: CorpusBatch[];
   expect?: Expectation;
   expectByRunner?: Partial<Record<RunnerName, Expectation>>;
+  /** Fixed host services. Runners that cannot provide one declare it in expectByRunner. */
+  services?: CaseServices;
+}
+
+/** What a fake linkMetadata host returns for every URL. */
+export type LinkPreview = Partial<Record<'title' | 'description' | 'image' | 'favicon' | 'domain', string>>;
+
+export interface CaseServices {
+  linkMetadata?: LinkPreview;
 }
 
 interface EvalFixture {
@@ -73,11 +82,21 @@ const isRunnerExpectations = (value: unknown): value is Partial<Record<RunnerNam
   isRecord(value) && ['editor', 'json', 'store', 'jint', 'room'].every((runner) =>
     value[runner] === undefined || isExpectation(value[runner]));
 
+const PREVIEW_KEYS = new Set(['title', 'description', 'image', 'favicon', 'domain']);
+
+const isLinkPreview = (value: unknown): value is LinkPreview =>
+  isRecord(value) && Object.entries(value).every(([key, item]) => PREVIEW_KEYS.has(key) && typeof item === 'string');
+
+const isCaseServices = (value: unknown): value is CaseServices =>
+  isRecord(value) && Object.keys(value).every((key) => key === 'linkMetadata')
+  && (value.linkMetadata === undefined || isLinkPreview(value.linkMetadata));
+
 const isParityCase = (value: unknown): value is ParityCase =>
   isRecord(value) && typeof value.name === 'string' && isSeed(value.seed)
   && isBatches(value.batches)
   && (value.expect === undefined || isExpectation(value.expect))
-  && (value.expectByRunner === undefined || isRunnerExpectations(value.expectByRunner));
+  && (value.expectByRunner === undefined || isRunnerExpectations(value.expectByRunner))
+  && (value.services === undefined || isCaseServices(value.services));
 
 const isEvalFixture = (value: unknown): value is EvalFixture =>
   isRecord(value) && typeof value.id === 'string' && isSeed(value.seed)
@@ -151,4 +170,19 @@ export const callerChosenIds = (c: ParityCase): Set<string> => {
   }));
 
   return ids;
+};
+
+export interface HostServices {
+  /** For the contract: which services exist. */
+  names: Array<'linkMetadata'>;
+  /** For the session: the service objects. */
+  impl: { linkMetadata?: { fetch(url: string): Promise<LinkPreview & { url: string }> } };
+}
+
+export const hostServicesFor = (c: ParityCase): HostServices => {
+  const preview = c.services?.linkMetadata;
+
+  return preview === undefined
+    ? { names: [], impl: {} }
+    : { names: ['linkMetadata'], impl: { linkMetadata: { fetch: async (url) => ({ url, ...preview }) } } };
 };

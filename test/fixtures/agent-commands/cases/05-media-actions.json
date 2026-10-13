@@ -1,0 +1,180 @@
+{
+  "name": "05-media-actions",
+  "seed": {
+    "blocks": [
+      {
+        "id": "img",
+        "type": "image",
+        "data": {
+          "url": "https://example.com/a.png",
+          "markup": [
+            {
+              "id": "m1",
+              "type": "rect",
+              "color": "#ff0000",
+              "x1": 0.1,
+              "y1": 0.1,
+              "x2": 0.4,
+              "y2": 0.4,
+              "size": 0.01
+            }
+          ],
+          "naturalWidth": 800,
+          "naturalHeight": 600
+        }
+      },
+      {
+        "id": "aud",
+        "type": "audio",
+        "data": {
+          "url": "https://example.com/a.mp3"
+        }
+      },
+      {
+        "id": "vid",
+        "type": "video",
+        "data": {
+          "url": "https://example.com/a.mp4"
+        }
+      },
+      {
+        "id": "fil",
+        "type": "file",
+        "data": {
+          "url": "https://example.com/a.pdf"
+        }
+      },
+      {
+        "id": "emb",
+        "type": "embed",
+        "data": {
+          "service": "youtube",
+          "source": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "embed": "https://www.youtube.com/embed/dQw4w9WgXcQ"
+        }
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "image.setSource",
+          "args": {
+            "id": "img",
+            "url": "https://example.com/b.png"
+          }
+        },
+        {
+          "name": "image.crop",
+          "args": {
+            "id": "img",
+            "rect": {
+              "x": 10,
+              "y": 10,
+              "w": 50,
+              "h": 50
+            }
+          }
+        },
+        {
+          "name": "image.rotate",
+          "args": {
+            "id": "img",
+            "turns": 1
+          }
+        },
+        {
+          "name": "image.flip",
+          "args": {
+            "id": "img"
+          }
+        },
+        {
+          "name": "image.straighten",
+          "args": {
+            "id": "img",
+            "degrees": 5
+          }
+        },
+        {
+          "name": "image.updateMarkup",
+          "args": {
+            "id": "img",
+            "markupId": "m1",
+            "patch": {
+              "color": "#00ff00"
+            }
+          }
+        },
+        {
+          "name": "image.addMarkup",
+          "args": {
+            "id": "img",
+            "items": [
+              {
+                "type": "ellipse",
+                "color": "#0000ff",
+                "x1": 0.5,
+                "y1": 0.5,
+                "x2": 0.7,
+                "y2": 0.7,
+                "size": 0.01
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "image.removeMarkup",
+          "args": {
+            "id": "img",
+            "all": true
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "audio.setSource",
+          "args": {
+            "id": "aud",
+            "url": "https://example.com/b.mp3"
+          }
+        },
+        {
+          "name": "audio.setCover",
+          "args": {
+            "id": "aud",
+            "url": "https://example.com/cover.png"
+          }
+        },
+        {
+          "name": "video.setSource",
+          "args": {
+            "id": "vid",
+            "url": "https://example.com/b.mp4"
+          }
+        },
+        {
+          "name": "file.setSource",
+          "args": {
+            "id": "fil",
+            "url": "https://example.com/b.pdf"
+          }
+        },
+        {
+          "name": "embed.setUrl",
+          "args": {
+            "id": "emb",
+            "url": "https://vimeo.com/76979871"
+          }
+        }
+      ]
+    }
+  ]
+}

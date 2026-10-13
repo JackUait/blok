@@ -1,0 +1,316 @@
+{
+  "reviewed": "JackUait",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "dbid1",
+              "name": "Title",
+              "type": "title",
+              "position": "pos:0"
+            },
+            {
+              "id": "dbid2",
+              "name": "Status",
+              "type": "select",
+              "position": "pos:1",
+              "config": {
+                "options": [
+                  {
+                    "id": "dbid3",
+                    "label": "Not started",
+                    "color": "gray",
+                    "position": "pos:0"
+                  },
+                  {
+                    "id": "dbid4",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "pos:1"
+                  },
+                  {
+                    "id": "dbid5",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "pos:2"
+                  },
+                  {
+                    "id": "dbid6",
+                    "label": "Blocked",
+                    "color": "red",
+                    "position": "pos:3"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "dbid7",
+              "name": "Owner",
+              "type": "text",
+              "position": "pos:2"
+            }
+          ],
+          "views": [
+            {
+              "id": "dbid8",
+              "name": "Table",
+              "type": "table",
+              "position": "pos:0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "dbid2"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid8-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "dbid2",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "id": "dbid9",
+              "name": "Board",
+              "type": "board",
+              "position": "pos:1",
+              "groupBy": "dbid2",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid9-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "dbid2",
+                  "visible": false
+                }
+              ]
+            },
+            {
+              "id": "dbid10",
+              "name": "List",
+              "type": "list",
+              "position": "pos:2",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid10-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "dbid2",
+                  "visible": false
+                },
+                {
+                  "id": "dbid7",
+                  "visible": false
+                }
+              ]
+            },
+            {
+              "name": "Table",
+              "type": "table",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "dbid2",
+                "dbid7"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid8-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid1",
+                  "visible": true
+                },
+                {
+                  "id": "dbid2",
+                  "visible": true
+                }
+              ],
+              "id": "dbid11",
+              "position": "pos:3"
+            }
+          ],
+          "activeViewId": "dbid11"
+        },
+        "content": [
+          "r2",
+          "r3",
+          "b0.2"
+        ]
+      },
+      {
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Write spec"
+          },
+          "position": "pos:0",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Ship"
+          },
+          "position": "pos:1",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0.2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "dbid1": "Review"
+          },
+          "position": "pos:2",
+          "title": "Review"
+        },
+        "parent": "db1"
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b1",
+        "type": "database",
+        "data": {
+          "title": "Second",
+          "schema": [
+            {
+              "id": "dbid12",
+              "name": "Title",
+              "type": "title",
+              "position": "pos:0"
+            },
+            {
+              "id": "dbid13",
+              "name": "Status",
+              "type": "select",
+              "position": "pos:1",
+              "config": {
+                "options": [
+                  {
+                    "id": "dbid14",
+                    "label": "Not started",
+                    "color": "gray",
+                    "position": "pos:0"
+                  },
+                  {
+                    "id": "dbid15",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "pos:1"
+                  },
+                  {
+                    "id": "dbid16",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "pos:2"
+                  }
+                ]
+              }
+            }
+          ],
+          "views": [
+            {
+              "id": "dbid17",
+              "name": "Board",
+              "type": "board",
+              "position": "pos:0",
+              "groupBy": "dbid13",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "dbid17-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "dbid12",
+                  "visible": true
+                },
+                {
+                  "id": "dbid13",
+                  "visible": false
+                }
+              ]
+            }
+          ],
+          "activeViewId": "dbid17"
+        }
+      }
+    ]
+  }
+}

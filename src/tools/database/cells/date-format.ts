@@ -1,5 +1,5 @@
 import type { DateDisplay } from '../types';
-import { parseDateValue } from './date-value';
+import { parseDateValue, toIsoDay, toIsoTime } from './date-value';
 
 /** Local wall-clock time of one stored date part. A part with a zone keeps its instant. */
 export const toLocalDate = (part: string): Date => {
@@ -16,12 +16,7 @@ export const toLocalDate = (part: string): Date => {
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 
-/** `YYYY-MM-DD` of a local date. */
-export const toIsoDay = (date: Date): string =>
-  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-
-/** `HH:mm` of a local date. */
-export const toIsoTime = (date: Date): string => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+export { toIsoDay, toIsoTime };
 
 export const resolveLocale = (locale: string | undefined): string =>
   locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');

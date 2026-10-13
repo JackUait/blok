@@ -999,6 +999,64 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.changePropertyType"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "propertyId",
+                      "type"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "type": {
+                        "enum": [
+                          "text",
+                          "number",
+                          "select",
+                          "multiSelect",
+                          "status",
+                          "date",
+                          "checkbox",
+                          "url",
+                          "email",
+                          "phone",
+                          "person",
+                          "files",
+                          "richText",
+                          "uniqueId",
+                          "createdTime",
+                          "lastEditedTime",
+                          "createdBy",
+                          "lastEditedBy"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.create"
                   },
                   "args": {

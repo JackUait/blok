@@ -1,0 +1,190 @@
+{
+  "name": "05-database-type-change",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "db2",
+              "name": "Title",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "db3",
+              "name": "Status",
+              "type": "select",
+              "position": "a1",
+              "config": {
+                "options": [
+                  {
+                    "id": "db4",
+                    "label": "Not started",
+                    "color": "gray",
+                    "position": "a0"
+                  },
+                  {
+                    "id": "db5",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "a1"
+                  },
+                  {
+                    "id": "db6",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "a2"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "db8",
+              "name": "Notes",
+              "type": "text",
+              "position": "a2"
+            }
+          ],
+          "views": [
+            {
+              "id": "db7",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "db3"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "db7-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "id": "r1",
+              "name": "Board",
+              "type": "board",
+              "position": "a15029",
+              "groupBy": "db3",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "r1-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": false
+                }
+              ]
+            }
+          ],
+          "activeViewId": "r1"
+        },
+        "content": [
+          "r2",
+          "r3"
+        ]
+      },
+      {
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Write spec",
+            "db8": "High"
+          },
+          "position": "a0",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Ship",
+            "db8": "Low"
+          },
+          "position": "a12993",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "database.changePropertyType",
+          "args": {
+            "id": "db1",
+            "propertyId": "db8",
+            "type": "select"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.changePropertyType",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "type": "text"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.changePropertyType",
+          "args": {
+            "id": "db1",
+            "propertyId": "db8",
+            "type": "number"
+          }
+        }
+      ]
+    }
+  ]
+}

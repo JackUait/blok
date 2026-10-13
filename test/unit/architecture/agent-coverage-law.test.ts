@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { AgentContract } from '../../../types/tool-manifest';
+import { nodeContract } from '../agent/harness';
+import { loadParityCases } from '../agent/parity/corpus';
 import { LEDGER, isExempt } from './agent-coverage.ledger';
+import type { Coverage } from './agent-coverage.ledger';
 import { ENUMERATORS, SCAN_FLOORS, enumerateTunes, scanToolMenus } from './agent-coverage/enumerators';
 import type { Capability } from './agent-coverage/scan';
 import type { CapabilitySource } from './agent-coverage/enumerators';
@@ -16,6 +20,12 @@ import { isInstrumented } from '../helpers/instrumented';
  * has no stable capability id, so no tool action can mirror it.
  */
 const UNNAMED_MENU_ITEMS: Record<string, string> = {};
+
+/** Commands that are not a single-document parity case, each with the spec line that says so. */
+const UNCORPUSED_COMMANDS: Record<string, string> = {
+  'page.rename': 'Headless form writes another document; one document per case cannot hold it (05 §3.2.1). 01 and 04 test it.',
+  'page.setIcon': 'Headless form writes another document; one document per case cannot hold it (05 §3.2.1). 01 and 04 test it.',
+};
 
 const ID_TOKEN = /\b[a-z-]+:[^\s,;)]+/g;
 const FIELD_TOKEN = /\b[a-z_-]+\.[a-zA-Z]+\b/;
@@ -48,6 +58,46 @@ const allCapabilities = once(() => {
 
   return all;
 });
+
+const contract = nodeContract('node');
+
+/** Capability id → the action command whose `mirrors` lists it (06 05-Q7). */
+const mirroredIds = (c: AgentContract): Map<string, string> =>
+  new Map(c.manifest.blocks.flatMap((b) => b.actions.flatMap((a) => (a.mirrors ?? []).map((id): [string, string] => [id, a.command]))));
+
+const mirrored = mirroredIds(contract);
+
+const routeNames = (coverage: Coverage): string[] => {
+  if ('command' in coverage) {
+    return [coverage.command];
+  }
+
+  return 'commands' in coverage ? coverage.commands : [];
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const fieldProblem = (field: string): string | null => {
+  const [key, name] = field.split('.');
+  const entry = contract.manifest.blocks.find((b) => b.name === key);
+
+  if (entry === undefined) {
+    return `no manifest entry "${key}"`;
+  }
+
+  const properties = isRecord(entry.data.properties) ? entry.data.properties : {};
+
+  if (!(name in properties)) {
+    return `"${name}" is not a property of ${key}'s data schema`;
+  }
+
+  if (entry.viewState.includes(name)) {
+    return `"${name}" is view-state on ${key}`;
+  }
+
+  return name in entry.guardedFields ? `"${name}" is guarded on ${key}; use ${entry.guardedFields[name]}` : null;
+};
 
 const namesCoveredId = (reason: string): boolean =>
   (reason.match(ID_TOKEN) ?? []).some((token) => LEDGER[token] !== undefined && !isExempt(LEDGER[token]));
@@ -116,7 +166,7 @@ describe('agent coverage law', () => {
 
   it.skipIf(isInstrumented())('every capability has a ledger row (assertion 1)', () => {
     const missing = [...allCapabilities().values()]
-      .filter((c) => LEDGER[c.id] === undefined)
+      .filter((c) => LEDGER[c.id] === undefined && !mirrored.has(c.id))
       .map((c) => `${c.id}  (${c.file}:${c.line})`);
 
     expect(
@@ -129,9 +179,9 @@ describe('agent coverage law', () => {
 
   it.skipIf(isInstrumented())('no ledger row is stale (assertion 4)', () => {
     const found = allCapabilities();
-    const stale = Object.keys(LEDGER).filter((id) => !found.has(id));
+    const stale = Object.keys(LEDGER).filter((id) => !found.has(id) || mirrored.has(id));
 
-    expect(stale, 'These ledger rows name ids the scan no longer finds. Delete them.').toEqual([]);
+    expect(stale, 'These ledger rows name ids the scan no longer finds, or an action already mirrors. Delete them.').toEqual([]);
   });
 
   it('every exemption has a real reason (assertion 5)', () => {
@@ -177,10 +227,66 @@ describe('agent coverage law', () => {
     expect(problems).toEqual([]);
   });
 
-  it('reports how many rows still wait on 01 and 02', () => {
-    const pending = Object.values(LEDGER).filter((c) => !isExempt(c) && c.pending !== undefined).length;
+  it('no ledger row waits on 01 or 02 any more', () => {
+    const pending = Object.entries(LEDGER).flatMap(([id, c]) =>
+      !isExempt(c) && c.pending !== undefined ? [`${id} (${c.pending})`] : []);
 
-    // Informational until Task 16, which requires zero.
-    expect(pending).toBeGreaterThanOrEqual(0);
+    expect(pending).toEqual([]);
+  });
+
+  it('every contract command is reached by at least one parity case', () => {
+    const used = new Set(loadParityCases().flatMap((c) => c.batches.flatMap((b) => b.commands.map((x) => x.name))));
+    const unreached = contract.commands
+      .map((c) => c.name)
+      .filter((name) => !used.has(name) && UNCORPUSED_COMMANDS[name] === undefined);
+
+    expect(
+      unreached,
+      'Add a case under test/fixtures/agent-commands/cases/ for each command, and its golden.'
+    ).toEqual([]);
+  });
+
+  it.skipIf(isInstrumented())('every named command exists, and pending markers are dropped once it does (assertion 2)', () => {
+    const known = new Set<string>(contract.commands.map((c) => c.name));
+    const problems = Object.entries(LEDGER).flatMap(([id, coverage]) => {
+      if (isExempt(coverage)) {
+        return [];
+      }
+
+      const missing = routeNames(coverage).filter((name) => !known.has(name));
+
+      if (coverage.pending === undefined && missing.length > 0) {
+        return [`${id}: unknown command(s) ${missing.join(', ')}`];
+      }
+
+      return coverage.pending !== undefined && missing.length === 0 && !('field' in coverage)
+        ? [`${id}: every command now exists; drop pending: '${coverage.pending}'`]
+        : [];
+    });
+    const staleMirrors = [...mirrored]
+      .filter(([id]) => !allCapabilities().has(id))
+      .map(([id, command]) => `${command} mirrors "${id}", which the scan no longer finds`);
+
+    expect([...problems, ...staleMirrors]).toEqual([]);
+  });
+
+  it('field rows are real field writes (assertion 3)', () => {
+    const problems = Object.entries(LEDGER).flatMap(([id, coverage]) => {
+      if (!('field' in coverage)) {
+        return [];
+      }
+
+      const problem = fieldProblem(coverage.field);
+
+      if (coverage.pending === undefined && problem !== null) {
+        return [`${id}: ${coverage.field}: ${problem}`];
+      }
+
+      return coverage.pending !== undefined && problem === null
+        ? [`${id}: ${coverage.field} is now a valid field write; drop pending`]
+        : [];
+    });
+
+    expect(problems).toEqual([]);
   });
 });

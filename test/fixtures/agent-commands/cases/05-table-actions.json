@@ -1,0 +1,370 @@
+{
+  "name": "05-table-actions",
+  "seed": {
+    "blocks": [
+      {
+        "id": "ta1",
+        "type": "table",
+        "data": {
+          "withHeadings": false,
+          "withHeadingColumn": false,
+          "content": [
+            [
+              {
+                "blocks": [
+                  "ta2"
+                ],
+                "id": "ta3",
+                "rowId": "ta4"
+              },
+              {
+                "blocks": [
+                  "ta5"
+                ],
+                "id": "ta6",
+                "rowId": "ta4"
+              },
+              {
+                "blocks": [
+                  "ta7"
+                ],
+                "id": "ta8",
+                "rowId": "ta4"
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "ta9"
+                ],
+                "id": "ta3",
+                "rowId": "ta10"
+              },
+              {
+                "blocks": [
+                  "ta11"
+                ],
+                "id": "ta6",
+                "rowId": "ta10"
+              },
+              {
+                "blocks": [
+                  "ta12"
+                ],
+                "id": "ta8",
+                "rowId": "ta10"
+              }
+            ],
+            [
+              {
+                "blocks": [
+                  "ta13"
+                ],
+                "id": "ta3",
+                "rowId": "ta14"
+              },
+              {
+                "blocks": [
+                  "ta15"
+                ],
+                "id": "ta6",
+                "rowId": "ta14"
+              },
+              {
+                "blocks": [
+                  "ta16"
+                ],
+                "id": "ta8",
+                "rowId": "ta14"
+              }
+            ]
+          ]
+        },
+        "content": [
+          "ta2",
+          "ta5",
+          "ta7",
+          "ta9",
+          "ta11",
+          "ta12",
+          "ta13",
+          "ta15",
+          "ta16"
+        ]
+      },
+      {
+        "id": "ta2",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "a1"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta5",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "a2"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta7",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "a3"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta9",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "b1"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta11",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "b2"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta12",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "b3"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta13",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "c1"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta15",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "c2"
+            }
+          ]
+        },
+        "parent": "ta1"
+      },
+      {
+        "id": "ta16",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "c3"
+            }
+          ]
+        },
+        "parent": "ta1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "table.insertRows",
+          "args": {
+            "id": "ta1",
+            "at": 1,
+            "count": 1
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.insertColumns",
+          "args": {
+            "id": "ta1",
+            "at": 1,
+            "count": 1
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.duplicateRows",
+          "args": {
+            "id": "ta1",
+            "at": 0,
+            "count": 1
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.duplicateColumns",
+          "args": {
+            "id": "ta1",
+            "at": 0,
+            "count": 1
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.moveRow",
+          "args": {
+            "id": "ta1",
+            "from": 0,
+            "to": 2
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.moveColumn",
+          "args": {
+            "id": "ta1",
+            "from": 0,
+            "to": 2
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.deleteRows",
+          "args": {
+            "id": "ta1",
+            "at": 1,
+            "count": 1
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.styleCells",
+          "args": {
+            "id": "ta1",
+            "range": {
+              "fromRow": 0,
+              "fromCol": 0,
+              "toRow": 0,
+              "toCol": 1
+            },
+            "color": "blue",
+            "placement": "middle-center"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.fillCells",
+          "args": {
+            "id": "ta1",
+            "range": {
+              "fromRow": 0,
+              "fromCol": 0,
+              "toRow": 0,
+              "toCol": 2
+            },
+            "direction": "right"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.clearCells",
+          "args": {
+            "id": "ta1",
+            "range": {
+              "fromRow": 1,
+              "fromCol": 0,
+              "toRow": 1,
+              "toCol": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.mergeCells",
+          "args": {
+            "id": "ta1",
+            "range": {
+              "fromRow": 2,
+              "fromCol": 0,
+              "toRow": 2,
+              "toCol": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "table.splitCell",
+          "args": {
+            "id": "ta1",
+            "row": 2,
+            "col": 0
+          }
+        }
+      ]
+    }
+  ]
+}

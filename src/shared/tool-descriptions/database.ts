@@ -1,3 +1,4 @@
+import { CONVERTIBLE_TYPES } from '../database/property-conversion';
 import { DATABASE_ROW_DATA } from './database-row';
 
 import type { BlockToolDescription, BlokSchema, ToolActionDeclaration } from '../../../types/tools/tool-description';
@@ -866,6 +867,19 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
       repeat: { anyOf: [DATABASE_ROW_DATA.properties.repeat, { type: 'null' }] },
     }, ['templateId', 'repeat']),
     mirrors: [],
+  },
+  {
+    name: 'changePropertyType',
+    summary: 'Change a property\'s type and convert every row\'s value, as the property menu does.',
+    guidance: 'A value the new type cannot hold is kept on the row in convertedValues; changing back restores it. Text becomes options for select types.',
+    target: 'block',
+    preconditions: [
+      'Not the title, and not the type it already has.',
+      'Not from createdTime, lastEditedTime, createdBy, lastEditedBy or uniqueId: their values exist only in the editor.',
+      'Not a rich text property that still holds HTML from an older document.',
+    ],
+    args: closed({ propertyId: PROPERTY_ID, type: { enum: [...CONVERTIBLE_TYPES] } }, ['propertyId', 'type']),
+    mirrors: ['menu:database/type-*'],
   },
 ];
 

@@ -33,7 +33,7 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 import {
-  CORPUS_ROOT, callerChosenIds, expectationFor, goldenPath, loadParityCases,
+  CORPUS_ROOT, callerChosenIds, expectationFor, goldenPath, hostServicesFor, loadParityCases,
 } from './corpus';
 import type { ParityCase, RunnerName } from './corpus';
 
@@ -200,4 +200,28 @@ it('keeps only seed block ids and explicit insert ids through children without a
   expect([...callerChosenIds(fixture)].sort()).toEqual([
     'child-id', 'grandchild-id', 'root-id', 'seed-id', 'through-idless-parent', 'typed-child-id',
   ]);
+});
+
+describe('case host services', () => {
+  const preview = { title: 'Example', description: 'An example page', image: 'https://example.com/i.png', favicon: 'https://example.com/f.ico', domain: 'example.com' };
+
+  it('loads a linkMetadata service whose fetch answers the fixed preview', async () => {
+    addFile('cases', 'bookmark.json', { name: 'bookmark', seed: { blocks: [] }, batches: [], services: { linkMetadata: preview } });
+
+    const [loaded] = loadParityCases();
+    const services = hostServicesFor(loaded);
+
+    expect(services.names).toEqual(['linkMetadata']);
+    await expect(services.impl.linkMetadata?.fetch('https://example.com')).resolves.toEqual({ url: 'https://example.com', ...preview });
+  });
+
+  it('gives a case without services none', () => {
+    expect(hostServicesFor(emptyCase)).toEqual({ names: [], impl: {} });
+  });
+
+  it('rejects a preview with a non-string field', () => {
+    addFile('cases', 'bad.json', { name: 'bad', seed: { blocks: [] }, batches: [], services: { linkMetadata: { title: 1 } } });
+
+    expect(() => loadParityCases()).toThrow(/bad\.json/);
+  });
 });

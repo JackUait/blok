@@ -181,6 +181,13 @@ describe('database templates', () => {
 });
 
 describe('gap command declarations', () => {
+  it.each([
+    'database.updateProperty', 'database.duplicateProperty', 'database.deleteProperty', 'database.recolorOption',
+    'database.addTemplate', 'database.setDefaultTemplate', 'database.setTemplateRepeat', 'database.changePropertyType',
+  ])('%s is a database action', command => {
+    expect(describeDatabase().actions?.map(action => `database.${action.name}`)).toContain(command);
+  });
+
   const argsOf = (name: string): Record<string, unknown> => describeDatabase().actions?.find(action => action.name === name)?.args ?? {};
 
   it('validates the arguments and wires every handler', () => {

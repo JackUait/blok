@@ -8,7 +8,7 @@ import { destroy as destroyTooltip } from '../../../src/components/utils/tooltip
 import { Audio, Bold, Bookmark, Callout, Code, Column, ColumnList, Database, DatabaseRow, Embed, File, Header, Image, Italic, List, Paragraph, Quote, Table, TabsTool, TabTool, Toggle, Video } from '../../../src/tools';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import type { AgentActor, AgentSession } from '../../../types/agent';
-import { callerChosenIds, expectationFor, loadParityCases } from './parity/corpus';
+import { callerChosenIds, expectationFor, hostServicesFor, loadParityCases } from './parity/corpus';
 import { normalizeForParity } from './parity/normalize';
 import { compareToGolden, runCorpusCase } from './parity/run-case';
 
@@ -233,7 +233,7 @@ describe.each(cases)('editor runner: $name', (c) => {
       throw new Error('Editor parity boot completed after teardown began.');
     }
     const editor = instance.moduleInstances;
-    const activeSession = createEditorAgentSession(editor, actor);
+    const activeSession = createEditorAgentSession(editor, actor, { services: hostServicesFor(c).impl });
 
     session = activeSession;
     await settle(editor, activeSession);

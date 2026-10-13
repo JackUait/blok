@@ -1,0 +1,100 @@
+{
+  "name": "05-column-list-actions",
+  "seed": {
+    "blocks": [
+      {
+        "id": "co1",
+        "type": "column_list",
+        "data": {},
+        "content": [
+          "co2",
+          "co3"
+        ]
+      },
+      {
+        "id": "co2",
+        "type": "column",
+        "data": {},
+        "parent": "co1",
+        "content": [
+          "co4"
+        ]
+      },
+      {
+        "id": "co4",
+        "type": "paragraph",
+        "data": {
+          "text": []
+        },
+        "parent": "co2"
+      },
+      {
+        "id": "co3",
+        "type": "column",
+        "data": {},
+        "parent": "co1",
+        "content": [
+          "co5"
+        ]
+      },
+      {
+        "id": "co5",
+        "type": "paragraph",
+        "data": {
+          "text": []
+        },
+        "parent": "co3"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "column_list.addColumn",
+          "args": {
+            "id": "co1",
+            "at": 2
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "column_list.setWidths",
+          "args": {
+            "id": "co1",
+            "ratios": [
+              2,
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "column_list.removeColumn",
+          "args": {
+            "id": "co1",
+            "index": 0
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "column_list.create",
+          "args": {
+            "count": 3,
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ]
+}

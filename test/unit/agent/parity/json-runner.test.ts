@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openJsonSession, validateSaved } from '../harness';
-import { callerChosenIds, expectationFor, loadParityCases } from './corpus';
+import { callerChosenIds, expectationFor, hostServicesFor, loadParityCases } from './corpus';
 import { normalizeForParity } from './normalize';
 import { compareToGolden, runCorpusCase } from './run-case';
 
@@ -22,7 +22,7 @@ it('has cases to exercise', () => {
 
 describe.each(cases)('json runner: $name', (c) => {
   it('matches its expectation, the saved schema and the golden', async () => {
-    const session = openJsonSession(c.seed);
+    const session = openJsonSession(c.seed, undefined, hostServicesFor(c));
 
     try {
       const outcome = await runCorpusCase(session, c);

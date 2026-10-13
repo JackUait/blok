@@ -1,0 +1,219 @@
+{
+  "name": "05-database-minting",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "db2",
+              "name": "Title",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "db3",
+              "name": "Status",
+              "type": "select",
+              "position": "a1",
+              "config": {
+                "options": [
+                  {
+                    "id": "db4",
+                    "label": "Not started",
+                    "color": "gray",
+                    "position": "a0"
+                  },
+                  {
+                    "id": "db5",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "a1"
+                  },
+                  {
+                    "id": "db6",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "a2"
+                  }
+                ]
+              }
+            }
+          ],
+          "views": [
+            {
+              "id": "db7",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "db3"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "db7-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "id": "r1",
+              "name": "Board",
+              "type": "board",
+              "position": "a15029",
+              "groupBy": "db3",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "r1-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": false
+                }
+              ]
+            }
+          ],
+          "activeViewId": "r1"
+        },
+        "content": [
+          "r2",
+          "r3"
+        ]
+      },
+      {
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Write spec"
+          },
+          "position": "a0",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Ship"
+          },
+          "position": "a12993",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "database.addProperty",
+          "args": {
+            "id": "db1",
+            "name": "Owner",
+            "type": "text"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.addOption",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "label": "Blocked",
+            "color": "red"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.addRow",
+          "args": {
+            "id": "db1",
+            "values": {
+              "db2": "Review"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.addView",
+          "args": {
+            "id": "db1",
+            "type": "list",
+            "name": "List"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.duplicateView",
+          "args": {
+            "id": "db1",
+            "viewId": "db7"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.create",
+          "args": {
+            "title": "Second",
+            "view": "board",
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openStoreSession } from '../harness';
-import { callerChosenIds, expectationFor, loadParityCases } from './corpus';
+import { callerChosenIds, expectationFor, hostServicesFor, loadParityCases } from './corpus';
 import { normalizeForParity } from './normalize';
 import { compareToGolden, runCorpusCase } from './run-case';
 
@@ -16,7 +16,7 @@ describe.each(loadParityCases())('store runner: $name', (c) => {
   });
 
   it('matches the json golden', async () => {
-    const session = openStoreSession(c.seed);
+    const session = openStoreSession(c.seed, undefined, hostServicesFor(c));
 
     try {
       const outcome = await runCorpusCase(session, c);

@@ -1,0 +1,247 @@
+{
+  "name": "05-database-property-template",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "db2",
+              "name": "Title",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "db3",
+              "name": "Status",
+              "type": "select",
+              "position": "a1",
+              "config": {
+                "options": [
+                  {
+                    "id": "db4",
+                    "label": "Not started",
+                    "color": "gray",
+                    "position": "a0"
+                  },
+                  {
+                    "id": "db5",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "a1"
+                  },
+                  {
+                    "id": "db6",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "a2"
+                  }
+                ]
+              }
+            }
+          ],
+          "views": [
+            {
+              "id": "db7",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "db3"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "db7-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "id": "r1",
+              "name": "Board",
+              "type": "board",
+              "position": "a15029",
+              "groupBy": "db3",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "r1-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": false
+                }
+              ]
+            }
+          ],
+          "activeViewId": "r1"
+        },
+        "content": [
+          "r2",
+          "r3",
+          "tpl1"
+        ]
+      },
+      {
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Write spec"
+          },
+          "position": "a0",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Ship"
+          },
+          "position": "a12993",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "tpl1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": ""
+          },
+          "position": "a0",
+          "title": "",
+          "template": true
+        },
+        "parent": "db1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "database.updateProperty",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "name": "State",
+            "settings": {
+              "description": "Where the task is"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.recolorOption",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "optionId": "db4",
+            "color": "orange"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.duplicateProperty",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.deleteProperty",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.setDefaultTemplate",
+          "args": {
+            "id": "db1",
+            "templateId": "tpl1"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.setTemplateRepeat",
+          "args": {
+            "id": "db1",
+            "templateId": "tpl1",
+            "repeat": {
+              "frequency": "weekly",
+              "interval": 1,
+              "start": "2026-10-12T00:00:00.000Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.addTemplate",
+          "args": {
+            "id": "db1"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,25 @@ for (const c of loadParityCases()) {
     await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
 
+    const preview = c.services?.linkMetadata;
+
+    // The browser's linkMetadata service is the bookmark tool's endpoint (test.html: /__unfurl).
+    // Answer it with the case's fixed preview, as hostServicesFor does for the jsdom runner.
+    if (preview !== undefined) {
+      await page.route((url) => url.pathname === '/__unfurl', (route) => route.fulfill({
+        json: {
+          success: 1,
+          meta: {
+            title: preview.title,
+            description: preview.description,
+            image: preview.image === undefined ? undefined : { url: preview.image },
+            favicon: preview.favicon,
+            domain: preview.domain,
+          },
+        },
+      }));
+    }
+
     const run = await page.evaluate(async ({ seed, batches }: { seed: OutputData; batches: CorpusBatch[] }) => {
       document.getElementById('blok')?.remove();
       const holder = document.createElement('div');

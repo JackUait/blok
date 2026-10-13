@@ -1,0 +1,246 @@
+{
+  "name": "05-database-actions",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "db2",
+              "name": "Title",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "db3",
+              "name": "Status",
+              "type": "select",
+              "position": "a1",
+              "config": {
+                "options": [
+                  {
+                    "id": "db4",
+                    "label": "Not started",
+                    "color": "gray",
+                    "position": "a0"
+                  },
+                  {
+                    "id": "db5",
+                    "label": "In progress",
+                    "color": "blue",
+                    "position": "a1"
+                  },
+                  {
+                    "id": "db6",
+                    "label": "Done",
+                    "color": "green",
+                    "position": "a2"
+                  }
+                ]
+              }
+            }
+          ],
+          "views": [
+            {
+              "id": "db7",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [
+                "db3"
+              ],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "db7-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "id": "r1",
+              "name": "Board",
+              "type": "board",
+              "position": "a15029",
+              "groupBy": "db3",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": [],
+              "calculations": [],
+              "hiddenGroups": [],
+              "collapsedGroups": [],
+              "filterTree": {
+                "id": "r1-filters",
+                "conjunction": "and",
+                "filterRules": []
+              },
+              "colorRules": [],
+              "groupSettings": {},
+              "subGroupSettings": {},
+              "properties": [
+                {
+                  "id": "db2",
+                  "visible": true
+                },
+                {
+                  "id": "db3",
+                  "visible": false
+                }
+              ]
+            }
+          ],
+          "activeViewId": "r1"
+        },
+        "content": [
+          "r2",
+          "r3"
+        ]
+      },
+      {
+        "id": "r2",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Write spec"
+          },
+          "position": "a0",
+          "title": "Write spec"
+        },
+        "parent": "db1"
+      },
+      {
+        "id": "r3",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "db2": "Ship"
+          },
+          "position": "a12993",
+          "title": "Ship"
+        },
+        "parent": "db1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "database.renameOption",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "optionId": "db4",
+            "label": "To do"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.moveOption",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "optionId": "db6",
+            "before": "db4"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.deleteOption",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3",
+            "optionId": "db5",
+            "rows": "keep"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.setRowValues",
+          "args": {
+            "id": "db1",
+            "rowId": "r2",
+            "values": {
+              "db3": "db6"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.moveRow",
+          "args": {
+            "id": "db1",
+            "rowId": "r3",
+            "before": "r2"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.renameView",
+          "args": {
+            "id": "db1",
+            "viewId": "db7",
+            "name": "Grid"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.moveView",
+          "args": {
+            "id": "db1",
+            "viewId": "r1",
+            "before": "db7"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "database.deleteView",
+          "args": {
+            "id": "db1",
+            "viewId": "r1"
+          }
+        }
+      ]
+    }
+  ]
+}

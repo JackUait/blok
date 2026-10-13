@@ -121,7 +121,7 @@ describe('files source', () => {
     const { version } = await source.save(id, { blocks: [], title: 't' }, { ifVersion: null });
 
     expect(await source.load(id)).toEqual({ raw: { blocks: [], title: 't' }, version });
-    expect((await source.list({ limit: 10 })).documents.map((doc) => doc.id)).toEqual([id]);
+    expect((await source.list?.({ limit: 10 }))?.documents.map((doc) => doc.id)).toEqual([id]);
   });
 
   it.each(['../escape', 'a/b', '', '.', '..', '%2e%2e', 'x'.repeat(201), '.hidden'])(
@@ -262,26 +262,39 @@ describe('files source', () => {
     expect(await codeOf(() => source.save('doc', { blocks: [] }, { ifVersion: version }))).toBeUndefined();
   });
 
-  it('refuses an id that differs from a stored document only by case, on load and save', async () => {
+  const caseInsensitiveDisk = (): boolean => {
+    writeFileSync(join(dir, 'probe.json'), '{}');
+    const insensitive = statSync(join(dir, 'PROBE.json'), { throwIfNoEntry: false }) !== undefined;
+
+    rmSync(join(dir, 'probe.json'));
+
+    return insensitive;
+  };
+
+  it('never serves or overwrites a stored document through an id that differs only by case', async () => {
+    const insensitive = caseInsensitiveDisk();
     const text = '{"blocks":[],"title":"secret"}';
 
     writeFileSync(join(dir, 'secret.json'), text);
     const source = createFilesSource(dir);
 
-    expect(await codeOf(() => source.load('SECRET'))).toBe('INVALID_ARGS');
-    expect(await codeOf(() => source.save('SECRET', { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
-    expect(await messageOf(() => source.load('SECRET'))).not.toContain('secret');
-    expect(readdirSync(dir)).toEqual(['secret.json']);
+    if (insensitive) {
+      expect(await codeOf(() => source.load('SECRET'))).toBe('INVALID_ARGS');
+      expect(await codeOf(() => source.save('SECRET', { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
+      expect(await messageOf(() => source.load('SECRET'))).not.toContain('secret');
+      expect(readdirSync(dir)).toEqual(['secret.json']);
+    } else {
+      // A case-sensitive disk holds two documents; SECRET is a new, empty one.
+      expect(await source.load('SECRET')).toEqual({ raw: { blocks: [] }, version: null });
+      await source.save('SECRET', { blocks: [] }, { ifVersion: null });
+      expect(readdirSync(dir).sort()).toEqual(['SECRET.json', 'secret.json']);
+    }
     expect(readFileSync(join(dir, 'secret.json'), 'utf-8')).toBe(text);
     expect((await source.load('secret')).raw).toEqual({ blocks: [], title: 'secret' });
   });
 
   it('lets only one of two first saves that differ by case win on a case-insensitive disk', async () => {
-    writeFileSync(join(dir, 'probe.json'), '{}');
-    const caseInsensitive = readdirSync(dir).includes('probe.json') && statSync(join(dir, 'PROBE.json'), { throwIfNoEntry: false }) !== undefined;
-
-    rmSync(join(dir, 'probe.json'));
-    if (!caseInsensitive) {
+    if (!caseInsensitiveDisk()) {
       return;
     }
     const source = createFilesSource(dir);

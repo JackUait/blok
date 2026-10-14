@@ -265,7 +265,7 @@ describe('createLiveSession', () => {
     await outbox.quarantineLineage('L1', 'lineage-reset', new Uint8Array(0));
 
     expect(await pending).toMatchObject({ ok: false, error: { code: 'ROOM_RESET', details: { notSavedBatches: [1] } } });
-    expect(await live.close()).toMatchObject({ unsavedBatches: 1 });
+    expect(await live.close('closed')).toMatchObject({ unsavedBatches: 1 });
   });
 
   it('maps a reset to ROOM_RESET listing batches that were never acked, then stays dead', async () => {

@@ -336,6 +336,9 @@
         },
         "pageTitle": {
           "description": "Turns on the page title and its icon above the first block. `true` uses the defaults. An object is a `TitleConfig`, described in the Title API section.\n\nIt is read once, when the editor is created. Later changes go through `editor.title`.\n\nWhen it is off, nothing is drawn. A saved `title` and `icon` still load and save unchanged."
+        },
+        "agent": {
+          "description": "Settings for `editor.agent`. The Agent API section describes it.\n\n- `assistant`: turns on the built-in assistant. It adds `editor.agent.ask()`, the Cmd/Ctrl+J prompt bar and Ask AI in the inline toolbar. It is off when absent.\n  - `model`: your function that calls the LLM. It gets `{ system, messages, tools, signal }` in Anthropic Messages form and returns `{ content, stop_reason }`. An Anthropic `Message` fits as it is.\n  - `name`: shown on the agent's caret and in announcements. Default `\"AI\"`.\n  - `maxSteps`: model calls allowed per prompt. Default `30`.\n- `overrides`: hides tools or tool actions from agents, or adds guidance to one tool. Keys are tool names from `tools`. A hidden action is missing from `editor.agent.tools()`."
         }
       }
     },
@@ -1099,7 +1102,7 @@
     "agentApi": {
       "title": "Agent API",
       "badge": "Agent",
-      "description": "An assistant built into your app edits the open document through `editor.agent`. Blok gives you tool definitions for your model and runs each tool call. Your app owns the model, the API keys and the chat UI.\n\nThe user sees where the agent works. The agent never moves the user's caret, selection or scroll. One Cmd+Z undoes one uninterrupted run of agent work.",
+      "description": "An assistant edits the open document through `editor.agent`. You can run it in two ways.\n\n- The built-in assistant: pass `agent.assistant.model` in the config. Blok runs the model loop and gives users an Ask AI prompt bar. Your `model` function usually calls your own backend, so the API key never reaches the browser.\n- Your own loop: pass `agent.tools()` to your model, open a turn with `agent.begin()` and run each tool call. Your app owns the model, the API keys and the chat UI.\n\nWith the built-in assistant, Cmd/Ctrl+J or Ask AI in the inline toolbar opens the prompt bar. The model reads and edits the document live with the same tools @bloklabs/mcp serves.\n\n- The bar shows progress and a Stop button.\n- Keep closes the bar. Discard undoes only the assistant's own steps, never text the user typed after them.\n- A second prompt continues the same conversation.\n- The selected text, or the caret's block, goes to the model as context.\n- The bar does not open in read-only mode.\n\nThe user sees where the agent works. The agent never moves the user's caret, selection or scroll. One Cmd+Z undoes one uninterrupted run of agent work.",
       "methods": {
         "agent": {
           "tools": {
@@ -1116,6 +1119,12 @@
           },
           "subscribe": {
             "description": "Calls `listener` every time `state` changes. Returns a function that unsubscribes."
+          },
+          "ask": {
+            "description": "Sends `prompt` to the built-in assistant and returns a run. The model reads and edits the document live, as it does from the Ask AI bar.\n\n- `options.context`: sends the selected text, or the caret's block, to the model. Default `true`.\n\nIt throws when `agent.assistant` is not set or a turn is already open. Wait for `run.result`, then call `run.end()` to keep the edits or `run.discard()` to undo them."
+          },
+          "openAssistant": {
+            "description": "Opens the Ask AI prompt bar, as Cmd/Ctrl+J does. Use it for an Ask AI button in your own UI. It does nothing when `agent.assistant` is not set or the editor is read-only."
           }
         },
         "turn": {
@@ -1127,6 +1136,23 @@
           },
           "stop": {
             "description": "Closes the turn and cancels calls that have not started. Wire it to your Stop button. Work already applied stays, and the user can undo it."
+          }
+        },
+        "run": {
+          "result": {
+            "description": "The newest answer. Each `followUp()` replaces it.\n\nIt resolves to `{ status, reply, error, changed }`. `reply` is the model's last text, and `changed` lists the ids of the blocks the run touched. `status` is one of these values:\n\n- `done`: the model answered.\n- `stopped`: `stop()` was called.\n- `refused`: the model declined.\n- `truncated`: the model's output was cut off.\n- `step-limit`: the run used up its `maxSteps` model calls.\n- `failed`: the model call threw. `error` says why."
+          },
+          "followUp": {
+            "description": "Asks again in the same conversation, so the model sees the earlier prompts and answers. It resolves to the new answer and replaces `run.result`. It throws while an answer is still running."
+          },
+          "stop": {
+            "description": "Stops the running answer. Edits already applied stay, and the run stays open for `followUp()`. Wire it to your Stop button."
+          },
+          "discard": {
+            "description": "Stops the run, undoes its edits and ends it. It resolves to `true` when something was undone.\n\nIt undoes the run's steps from the newest one down. It stops at the first step that is not the run's, so text the user typed afterwards is never undone."
+          },
+          "end": {
+            "description": "Keeps the edits and closes the run. The editor can then start a new turn."
           }
         }
       }

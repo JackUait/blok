@@ -314,7 +314,7 @@ const MODULE_COPY: Record<string, Copy> = {
   'agent-api': {
     title: 'Blok Agent API — An In-App Assistant That Edits the Document',
     description:
-      'Give your model tool definitions through editor.agent and let it edit the open document, visibly, stoppably and with undo.',
+      'Turn on the built-in Ask AI assistant with your own model, or run your own loop through editor.agent. The agent edits the open document visibly, stoppably and with undo.',
     h1: 'Agent API: an assistant that edits the open document',
   },
   'dev-override-seam': {

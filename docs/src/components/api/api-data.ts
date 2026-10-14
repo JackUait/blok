@@ -729,6 +729,13 @@ const editor = new Blok(config);`,
           "Replaces the built-in toast entirely. Blok calls your handler with the same options object instead of rendering its own DOM notification.",
       },
       {
+        option: "agent",
+        type: "{ assistant?: AgentAssistantConfig; overrides?: ManifestOverrides }",
+        default: "undefined",
+        description:
+          "Settings for `editor.agent`. The Agent API section describes it.\n\n- `assistant`: turns on the built-in assistant. It adds `editor.agent.ask()`, the Cmd/Ctrl+J prompt bar and Ask AI in the inline toolbar. It is off when absent.\n  - `model`: your function that calls the LLM. It gets `{ system, messages, tools, signal }` in Anthropic Messages form and returns `{ content, stop_reason }`. An Anthropic `Message` fits as it is.\n  - `name`: shown on the agent's caret and in announcements. Default `\"AI\"`.\n  - `maxSteps`: model calls allowed per prompt. Default `30`.\n- `overrides`: hides tools or tool actions from agents, or adds guidance to one tool. Keys are tool names from `tools`. A hidden action is missing from `editor.agent.tools()`.",
+      },
+      {
         option: "logLevel",
         type: "LogLevels",
         default: "LogLevels.VERBOSE",
@@ -3383,7 +3390,47 @@ rendered() {
     badge: "Agent",
     title: "Agent API",
     description:
-      "An assistant built into your app edits the open document through `editor.agent`. Blok gives you tool definitions for your model and runs each tool call. Your app owns the model, the API keys and the chat UI.\n\nThe user sees where the agent works. The agent never moves the user's caret, selection or scroll. One Cmd+Z undoes one uninterrupted run of agent work.",
+      "An assistant edits the open document through `editor.agent`. You can run it in two ways.\n\n- The built-in assistant: pass `agent.assistant.model` in the config. Blok runs the model loop and gives users an Ask AI prompt bar. Your `model` function usually calls your own backend, so the API key never reaches the browser.\n- Your own loop: pass `agent.tools()` to your model, open a turn with `agent.begin()` and run each tool call. Your app owns the model, the API keys and the chat UI.\n\nWith the built-in assistant, Cmd/Ctrl+J or Ask AI in the inline toolbar opens the prompt bar. The model reads and edits the document live with the same tools @bloklabs/mcp serves.\n\n- The bar shows progress and a Stop button.\n- Keep closes the bar. Discard undoes only the assistant's own steps, never text the user typed after them.\n- A second prompt continues the same conversation.\n- The selected text, or the caret's block, goes to the model as context.\n- The bar does not open in read-only mode.\n\nThe user sees where the agent works. The agent never moves the user's caret, selection or scroll. One Cmd+Z undoes one uninterrupted run of agent work.",
+    example: `// Browser: the model function in your editor config.
+const config = {
+  agent: {
+    assistant: {
+      name: 'Assistant',
+      model: async ({ system, messages, tools, signal }) => {
+        const response = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system, messages, tools }),
+          signal, // Stop aborts the request.
+        });
+        if (!response.ok) throw new Error(\`AI request failed: \${response.status}\`);
+        return response.json(); // { content, stop_reason }
+      },
+    },
+  },
+};
+
+// Server (Node, Express): the API key stays here.
+import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic(); // Reads ANTHROPIC_API_KEY.
+
+app.post('/api/ai', async (req, res) => {
+  const { system, messages, tools } = req.body;
+  // Stop in the editor aborts the fetch; stop paying for the answer too.
+  const controller = new AbortController();
+  res.on('close', () => controller.abort());
+
+  try {
+    const message = await client.messages
+      .stream({ model: 'claude-opus-5-5', max_tokens: 64000, system, messages, tools }, { signal: controller.signal })
+      .finalMessage();
+    res.json({ content: message.content, stop_reason: message.stop_reason });
+  } catch (error) {
+    if (!res.headersSent && !controller.signal.aborted) res.status(502).json({ error: String(error) });
+  }
+});`,
+
     methods: [
       {
         name: "agent.tools(options)",
@@ -3453,6 +3500,62 @@ try {
         description:
           "Calls `listener` every time `state` changes. Returns a function that unsubscribes.",
         example: `const unsubscribe = editor.agent.subscribe(() => render(editor.agent.state));`,
+      },
+      {
+        name: "agent.ask(prompt, options)",
+        returnType: "AgentRun",
+        description:
+          "Sends `prompt` to the built-in assistant and returns a run. The model reads and edits the document live, as it does from the Ask AI bar.\n\n- `options.context`: sends the selected text, or the caret's block, to the model. Default `true`.\n\nIt throws when `agent.assistant` is not set or a turn is already open. Wait for `run.result`, then call `run.end()` to keep the edits or `run.discard()` to undo them.",
+        example: `const run = editor.agent.ask('Turn this list into a table');
+const result = await run.result;
+
+if (result.status === 'done') {
+  run.end();
+} else {
+  await run.discard();
+}`,
+      },
+      {
+        name: "agent.openAssistant()",
+        returnType: "void",
+        description:
+          "Opens the Ask AI prompt bar, as Cmd/Ctrl+J does. Use it for an Ask AI button in your own UI. It does nothing when `agent.assistant` is not set or the editor is read-only.",
+        example: `askAiButton.onclick = () => editor.agent.openAssistant();`,
+      },
+      {
+        name: "run.result",
+        returnType: "Promise<AgentRunResult>",
+        description:
+          "The newest answer. Each `followUp()` replaces it.\n\nIt resolves to `{ status, reply, error, changed }`. `reply` is the model's last text, and `changed` lists the ids of the blocks the run touched. `status` is one of these values:\n\n- `done`: the model answered.\n- `stopped`: `stop()` was called.\n- `refused`: the model declined.\n- `truncated`: the model's output was cut off.\n- `step-limit`: the run used up its `maxSteps` model calls.\n- `failed`: the model call threw. `error` says why.",
+        example: `const { status, reply, changed } = await run.result;`,
+      },
+      {
+        name: "run.followUp(prompt)",
+        returnType: "Promise<AgentRunResult>",
+        description:
+          "Asks again in the same conversation, so the model sees the earlier prompts and answers. It resolves to the new answer and replaces `run.result`. It throws while an answer is still running.",
+        example: `const next = await run.followUp('Make it shorter');`,
+      },
+      {
+        name: "run.stop()",
+        returnType: "void",
+        description:
+          "Stops the running answer. Edits already applied stay, and the run stays open for `followUp()`. Wire it to your Stop button.",
+        example: `stopButton.onclick = () => run.stop();`,
+      },
+      {
+        name: "run.discard()",
+        returnType: "Promise<boolean>",
+        description:
+          "Stops the run, undoes its edits and ends it. It resolves to `true` when something was undone.\n\nIt undoes the run's steps from the newest one down. It stops at the first step that is not the run's, so text the user typed afterwards is never undone.",
+        example: `const undone = await run.discard();`,
+      },
+      {
+        name: "run.end()",
+        returnType: "void",
+        description:
+          "Keeps the edits and closes the run. The editor can then start a new turn.",
+        example: `run.end();`,
       },
     ],
   },

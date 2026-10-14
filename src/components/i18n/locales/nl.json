@@ -127,6 +127,7 @@
   "assistant.truncated": "Het antwoord is afgebroken. Vraag opnieuw om verder te gaan.",
   "assistant.stepLimit": "AI is gestopt na te veel stappen. Vraag opnieuw om verder te gaan.",
   "assistant.failed": "AI kon niet antwoorden: {error}",
+  "assistant.discardBlocked": "Er is niets ongedaan gemaakt: je hebt na AI bewerkt. Gebruik Ongedaan maken om terug te gaan.",
   "a11y.dropPosition": "Wordt geplaatst op positie {position} van {total}",
   "a11y.dropCancelled": "Verslepen geannuleerd",
   "a11y.blockMoved": "Blok verplaatst naar positie {position} van {total}",

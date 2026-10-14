@@ -155,6 +155,7 @@
   "assistant.truncated": "Përgjigjja u ndërpre. Pyet përsëri për të vazhduar.",
   "assistant.stepLimit": "AI u ndal pas shumë hapave. Pyet përsëri për të vazhduar.",
   "assistant.failed": "AI nuk mundi të përgjigjet: {error}",
+  "assistant.discardBlocked": "Asgjë nuk u zhbë: ju redaktuat pas AI-së. Përdorni zhbërjen për t’u kthyer pas.",
   "a11y.dropPosition": "Pozicioni i vendosjes: {position} nga {total}",
   "a11y.dropCancelled": "Tërheqja u anulua",
   "a11y.blockMoved": "Blloku u lëviz në pozicionin {position} nga {total}",

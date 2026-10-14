@@ -155,6 +155,7 @@
   "assistant.truncated": "A resposta foi cortada. Pergunte novamente para continuar.",
   "assistant.stepLimit": "A IA parou após etapas demais. Pergunte novamente para continuar.",
   "assistant.failed": "A IA não conseguiu responder: {error}",
+  "assistant.discardBlocked": "Nada foi desfeito: você editou depois da IA. Use desfazer para voltar.",
   "a11y.dropPosition": "Posição de destino: {position} de {total}",
   "a11y.dropCancelled": "Arrasto cancelado",
   "a11y.blockMoved": "Bloco movido para a posição {position} de {total}",

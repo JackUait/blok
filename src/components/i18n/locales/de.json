@@ -155,6 +155,7 @@
   "assistant.truncated": "Die Antwort wurde abgeschnitten. Frag erneut, um fortzufahren.",
   "assistant.stepLimit": "Die KI hat nach zu vielen Schritten angehalten. Frag erneut, um fortzufahren.",
   "assistant.failed": "Die KI konnte nicht antworten: {error}",
+  "assistant.discardBlocked": "Nichts wurde rückgängig gemacht: Du hast nach der KI bearbeitet. Nutze „Rückgängig“, um einen Schritt zurückzugehen.",
   "a11y.dropPosition": "Wird an Position {position} von {total} eingefügt",
   "a11y.dropCancelled": "Verschieben abgebrochen",
   "a11y.blockMoved": "Block an Position {position} von {total} verschoben",

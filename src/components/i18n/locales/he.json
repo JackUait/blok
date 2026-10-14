@@ -155,6 +155,7 @@
   "assistant.truncated": "התשובה נקטעה. שאל שוב כדי להמשיך.",
   "assistant.stepLimit": "ה-AI נעצר אחרי יותר מדי שלבים. שאל שוב כדי להמשיך.",
   "assistant.failed": "ה-AI לא הצליח לענות: {error}",
+  "assistant.discardBlocked": "שום דבר לא בוטל: ערכת אחרי ה-AI. השתמש בביטול פעולה כדי לחזור צעד אחורה.",
   "a11y.dropPosition": "ישוחרר במיקום {position} מתוך {total}",
   "a11y.dropCancelled": "הגרירה בוטלה",
   "a11y.blockMoved": "הבלוק הועבר למיקום {position} מתוך {total}",

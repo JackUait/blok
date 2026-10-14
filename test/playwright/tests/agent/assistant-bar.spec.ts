@@ -19,6 +19,8 @@ declare global {
     assistantScript?: ScriptedResponse[];
     /** First user message of each model request. */
     assistantPrompts?: unknown[];
+    /** Set by setup({ hold: true }): lets the held model call answer. */
+    assistantRelease?: () => void;
   }
 }
 
@@ -34,8 +36,8 @@ const insertCall = (text: string): ScriptedResponse => ({
 
 const reply = (text: string): ScriptedResponse => ({ stop_reason: 'end_turn', content: [{ type: 'text', text }] });
 
-const setup = async (page: Page, script: ScriptedResponse[]): Promise<void> => {
-  await page.evaluate(async ({ holder, responses }) => {
+const setup = async (page: Page, script: ScriptedResponse[], options: { hold?: boolean } = {}): Promise<void> => {
+  await page.evaluate(async ({ holder, responses, hold }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -60,8 +62,13 @@ const setup = async (page: Page, script: ScriptedResponse[]): Promise<void> => {
           name: 'Claude',
           model: async (request: AgentModelRequest) => {
             window.assistantPrompts?.push(request.messages[0]?.content);
-            // A real model takes a moment; the bar must show it is working.
-            await new Promise((resolve) => setTimeout(resolve, 150));
+            if (hold) {
+              // Answers only when the test says so, or when Stop aborts it.
+              await new Promise<void>((resolve) => {
+                window.assistantRelease = resolve;
+                request.signal.addEventListener('abort', () => resolve());
+              });
+            }
             const next = window.assistantScript?.shift();
 
             if (next === undefined) {
@@ -76,7 +83,7 @@ const setup = async (page: Page, script: ScriptedResponse[]): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, responses: script });
+  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true });
 };
 
 const savedTexts = (page: Page): Promise<string[]> => page.evaluate(async () => {
@@ -101,7 +108,7 @@ test.describe('in-editor assistant', () => {
   });
 
   test('Mod+J opens the bar, the model writes into the document, and Keep keeps it', async ({ page }) => {
-    await setup(page, [insertCall('Written by Claude'), reply('Added a paragraph at the end.')]);
+    await setup(page, [insertCall('Written by Claude'), reply('Added a paragraph at the end.')], { hold: true });
 
     await page.getByText('Second').click();
     await page.keyboard.press(`${MOD}+j`);
@@ -114,6 +121,12 @@ test.describe('in-editor assistant', () => {
     await page.keyboard.press('Enter');
 
     await expect(bar.getByRole('status')).toHaveText('Claude is writing…');
+    await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(1);
+    await page.evaluate(() => window.assistantRelease?.());
+    await expect(page.locator(`#${HOLDER_ID}`).getByText('Written by Claude')).toBeVisible();
+    // The second model call has started and holds a fresh release.
+    await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(2);
+    await page.evaluate(() => window.assistantRelease?.());
     await expect(bar.getByText('Added a paragraph at the end.')).toBeVisible();
     await expect(page.locator(`#${HOLDER_ID}`).getByText('Written by Claude')).toBeVisible();
 
@@ -182,7 +195,8 @@ test.describe('in-editor assistant', () => {
     await page.keyboard.type(' typed by me');
     await bar.getByRole('button', { name: 'Discard' }).click();
 
-    await expect(bar).toHaveCount(0);
+    // Nothing was undone, so the bar says why instead of closing as if it worked.
+    await expect(bar.getByRole('alert')).toContainText('Nothing was undone');
     const texts = await savedTexts(page);
 
     expect(texts).toContain('Second typed by me');
@@ -190,7 +204,7 @@ test.describe('in-editor assistant', () => {
   });
 
   test('Escape stops a running answer, then closes the bar', async ({ page }) => {
-    await setup(page, [reply('late')]);
+    await setup(page, [reply('late')], { hold: true });
 
     await page.getByText('Second').click();
     await page.keyboard.press(`${MOD}+j`);
@@ -200,6 +214,7 @@ test.describe('in-editor assistant', () => {
     await bar.getByRole('textbox').fill('Write something');
     await page.keyboard.press('Enter');
     await expect(bar.getByRole('button', { name: 'Stop' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(1);
 
     await page.keyboard.press('Escape');
     await expect(bar.getByRole('button', { name: 'Stop' })).toHaveCount(0);
@@ -207,5 +222,24 @@ test.describe('in-editor assistant', () => {
 
     await page.keyboard.press('Escape');
     await expect(bar).toHaveCount(0);
+  });
+
+  test('Mod+Z in the prompt field undoes the typing there, not the document', async ({ page }) => {
+    await setup(page, [insertCall('From Claude'), reply('Done.')]);
+
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+    const field = bar.getByRole('textbox');
+
+    await field.fill('Add a line');
+    await page.keyboard.press('Enter');
+    await expect(bar.getByText('Done.')).toBeVisible();
+
+    await field.pressSequentially('next');
+    await page.keyboard.press(`${MOD}+z`);
+
+    expect(await savedTexts(page)).toEqual(['The quick brown fox', 'Second', 'From Claude']);
   });
 });

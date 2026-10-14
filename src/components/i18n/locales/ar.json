@@ -155,6 +155,7 @@
   "assistant.truncated": "انقطعت الإجابة. اسأل مرة أخرى للمتابعة.",
   "assistant.stepLimit": "توقف الذكاء الاصطناعي بعد خطوات كثيرة جدًا. اسأل مرة أخرى للمتابعة.",
   "assistant.failed": "تعذّر على الذكاء الاصطناعي الإجابة: {error}",
+  "assistant.discardBlocked": "لم يتم التراجع عن أي شيء: لقد عدّلت بعد الذكاء الاصطناعي. استخدم التراجع للرجوع خطوة.",
   "a11y.dropPosition": "سيتم الإفلات في الموضع {position} من {total}",
   "a11y.dropCancelled": "تم إلغاء السحب",
   "a11y.blockMoved": "تم نقل الكتلة إلى الموضع {position} من {total}",

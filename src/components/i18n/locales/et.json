@@ -155,6 +155,7 @@
   "assistant.truncated": "Vastus katkes. Jätkamiseks küsi uuesti.",
   "assistant.stepLimit": "Tehisintellekt peatus liiga paljude sammude järel. Jätkamiseks küsi uuesti.",
   "assistant.failed": "Tehisintellekt ei saanud vastata: {error}",
+  "assistant.discardBlocked": "Midagi ei võetud tagasi: muutsid pärast tehisintellekti. Sammu tagasi minemiseks kasuta tagasivõtmist.",
   "a11y.dropPosition": "Asetatakse positsioonile {position}, kokku {total}",
   "a11y.dropCancelled": "Lohistamine tühistatud",
   "a11y.blockMoved": "Plokk teisaldatud positsioonile {position}, kokku {total}",

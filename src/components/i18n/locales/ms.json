@@ -155,6 +155,7 @@
   "assistant.truncated": "Jawapan terputus. Tanya sekali lagi untuk meneruskan.",
   "assistant.stepLimit": "AI berhenti selepas terlalu banyak langkah. Tanya sekali lagi untuk meneruskan.",
   "assistant.failed": "AI tidak dapat menjawab: {error}",
+  "assistant.discardBlocked": "Tiada apa-apa dibuat asal: anda menyunting selepas AI. Gunakan buat asal untuk berundur.",
   "a11y.dropPosition": "Akan dilepaskan pada kedudukan {position} daripada {total}",
   "a11y.dropCancelled": "Seretan dibatalkan",
   "a11y.blockMoved": "Blok dialihkan ke kedudukan {position} daripada {total}",

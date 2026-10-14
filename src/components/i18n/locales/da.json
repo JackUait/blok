@@ -155,6 +155,7 @@
   "assistant.truncated": "Svaret blev afbrudt. Spørg igen for at fortsætte.",
   "assistant.stepLimit": "AI stoppede efter for mange trin. Spørg igen for at fortsætte.",
   "assistant.failed": "AI kunne ikke svare: {error}",
+  "assistant.discardBlocked": "Intet blev fortrudt: du redigerede efter AI. Brug Fortryd for at gå et trin tilbage.",
   "a11y.dropPosition": "Placeres på position {position} af {total}",
   "a11y.dropCancelled": "Træk annulleret",
   "a11y.blockMoved": "Blok flyttet til position {position} af {total}",

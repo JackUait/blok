@@ -155,6 +155,7 @@
   "assistant.truncated": "Svaret avbröts. Fråga igen för att fortsätta.",
   "assistant.stepLimit": "AI stannade efter för många steg. Fråga igen för att fortsätta.",
   "assistant.failed": "AI kunde inte svara: {error}",
+  "assistant.discardBlocked": "Inget ångrades: du redigerade efter AI. Använd Ångra för att gå tillbaka.",
   "a11y.dropPosition": "Släpps på position {position} av {total}",
   "a11y.dropCancelled": "Dragning avbruten",
   "a11y.blockMoved": "Block flyttat till position {position} av {total}",

@@ -122,6 +122,7 @@
   "assistant.truncated": "Yanıt yarıda kesildi. Devam etmek için tekrar sorun.",
   "assistant.stepLimit": "Yapay zekâ çok fazla adımdan sonra durdu. Devam etmek için tekrar sorun.",
   "assistant.failed": "Yapay zekâ yanıt veremedi: {error}",
+  "assistant.discardBlocked": "Hiçbir şey geri alınmadı: yapay zekâdan sonra düzenleme yaptınız. Geri gitmek için geri almayı kullanın.",
   "a11y.dropPosition": "{total} içinden {position}. konuma bırakılacak",
   "a11y.dropCancelled": "Sürükleme iptal edildi",
   "a11y.blockMoved": "Blok {total} içinden {position}. konuma taşındı",

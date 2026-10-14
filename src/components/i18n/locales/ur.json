@@ -122,6 +122,7 @@
   "assistant.truncated": "جواب ادھورا رہ گیا۔ جاری رکھنے کے لیے دوبارہ پوچھیں۔",
   "assistant.stepLimit": "بہت زیادہ مراحل کے بعد AI رک گیا۔ جاری رکھنے کے لیے دوبارہ پوچھیں۔",
   "assistant.failed": "AI جواب نہیں دے سکا: {error}",
+  "assistant.discardBlocked": "کچھ بھی کالعدم نہیں ہوا: آپ نے AI کے بعد ترمیم کی۔ پیچھے جانے کے لیے کالعدم کریں استعمال کریں۔",
   "a11y.dropPosition": "کل {total} میں سے پوزیشن {position} پر رکھا جائے گا",
   "a11y.dropCancelled": "گھسیٹنا منسوخ",
   "a11y.blockMoved": "بلاک کو کل {total} میں سے پوزیشن {position} پر منتقل کر دیا گیا",

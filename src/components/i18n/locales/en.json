@@ -166,6 +166,7 @@
   "assistant.truncated": "The answer was cut off. Ask again to continue.",
   "assistant.stepLimit": "AI stopped after too many steps. Ask again to continue.",
   "assistant.failed": "AI could not answer: {error}",
+  "assistant.discardBlocked": "Nothing was undone: you edited after AI did. Use undo to step back.",
   "a11y.dropPosition": "Will drop at position {position} of {total}",
   "a11y.dropCancelled": "Drag canceled",
   "a11y.blockMoved": "Block moved to position {position} of {total}",

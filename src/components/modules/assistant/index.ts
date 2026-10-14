@@ -185,10 +185,18 @@ export class Assistant extends Module {
 
     this.answerId += 1;
     this.run = null;
-    if (run !== null) {
-      await run.discard();
+
+    const undone = run === null ? true : await run.discard();
+
+    if (undone) {
+      this.close();
+
+      return;
     }
-    this.close();
+    // The user edited after the assistant, so its steps are no longer on top.
+    this.changed = false;
+    this.bar?.render({ kind: 'error', message: this.Blok.I18n.t('assistant.discardBlocked'), changed: false });
+    this.bar?.focusField();
   }
 
   private escape(): void {

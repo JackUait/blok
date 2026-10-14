@@ -122,6 +122,7 @@
   "assistant.truncated": "პასუხი შეწყდა. გასაგრძელებლად კვლავ ჰკითხეთ.",
   "assistant.stepLimit": "AI შეჩერდა ზედმეტად ბევრი ნაბიჯის შემდეგ. გასაგრძელებლად კვლავ ჰკითხეთ.",
   "assistant.failed": "AI-მ ვერ უპასუხა: {error}",
+  "assistant.discardBlocked": "არაფერი გაუქმებულა: AI-ის შემდეგ თქვენ შეასწორეთ. უკან დასაბრუნებლად გამოიყენეთ დაბრუნება.",
   "a11y.dropPosition": "ჩაიდება პოზიციაზე: {total}-დან {position}",
   "a11y.dropCancelled": "გადატანა გაუქმდა",
   "a11y.blockMoved": "ბლოკი გადატანილია პოზიციაზე: {total}-დან {position}",

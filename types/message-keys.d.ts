@@ -55,6 +55,7 @@ export type BlokMessageKey =
   | 'agent.changedBlocks'
   | 'agent.changedOneBlock'
   | 'assistant.discard'
+  | 'assistant.discardBlocked'
   | 'assistant.failed'
   | 'assistant.followUp'
   | 'assistant.keep'

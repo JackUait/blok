@@ -1,6 +1,8 @@
 import type {
   Agent,
   AgentAnthropicTool,
+  AgentAskOptions,
+  AgentRun,
   AgentIdentity,
   AgentOpenAITool,
   AgentState,
@@ -18,6 +20,7 @@ import { inputIndexForField } from '../collaboration/agent-placement';
 import { createAgentPresence, type AgentPresence } from './agent-presence';
 
 import { createEditorServices } from './agent-services';
+import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
 
 export class AgentTurnOpenError extends Error {
@@ -28,6 +31,8 @@ export class AgentTurnOpenError extends Error {
 }
 
 const IDLE: AgentState = { status: 'idle' };
+
+const DEFAULT_MAX_STEPS = 30;
 
 const readIdentity = (agent: AgentIdentity | undefined): AgentIdentity => {
   if (typeof agent?.id !== 'string' || agent.id === '' || typeof agent.name !== 'string' || agent.name.trim() === '') {
@@ -77,7 +82,65 @@ export class AgentAPI extends Module {
         return readState();
       },
       subscribe: (listener: () => void) => this.subscribe(listener),
+      ask: (prompt: string, options?: AgentAskOptions) => this.ask(prompt, options),
     };
+  }
+
+  /** Whether `agent.assistant` is configured. */
+  public get hasAssistant(): boolean {
+    return typeof this.config.agent?.assistant?.model === 'function';
+  }
+
+  private ask(prompt: string, options: AgentAskOptions = {}): AgentRun {
+    const assistant = this.config.agent?.assistant;
+
+    if (typeof assistant?.model !== 'function') {
+      throw new TypeError('editor.agent.ask() needs agent.assistant.model in the editor config.');
+    }
+    if (typeof prompt !== 'string' || prompt.trim() === '') {
+      throw new TypeError('editor.agent.ask() needs a non-empty prompt.');
+    }
+
+    const context = options.context === false ? '' : this.editorContext();
+    const name = assistant.name?.trim() || 'AI';
+    const turn = this.begin({ agent: { id: 'blok-assistant', name } });
+
+    return createAgentRun(context === '' ? prompt : `${prompt}\n\n${context}`, {
+      turn,
+      model: assistant.model,
+      maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,
+      prepare: async () => {
+        const [tools, system] = await Promise.all([this.tools({ format: 'anthropic' }), this.guidance()]);
+
+        return { tools, system };
+      },
+      changed: () => [...this.turnLog.changed],
+    });
+  }
+
+  /**
+   * Where the user is, for the first message. The document view never carries
+   * the selection, so it travels as text.
+   */
+  private editorContext(): string {
+    const selection = document.getSelection();
+    const anchor = selection?.anchorNode ?? null;
+
+    if (selection === null || anchor === null || !this.Blok.UI.nodes.wrapper.contains(anchor)) {
+      return '';
+    }
+
+    const block = this.Blok.BlockManager.getBlockByChildNode(anchor);
+
+    if (block === undefined) {
+      return '';
+    }
+
+    const selected = selection.isCollapsed ? '' : selection.toString();
+
+    return selected === ''
+      ? `(Editor context: the user's caret is in block ${block.id}.)`
+      : `(Editor context: the user selected this text in block ${block.id}: ${JSON.stringify(selected)}. "This" in the request means that text.)`;
   }
 
   public destroy(): void {

@@ -9,6 +9,7 @@ import type { BlockMigrations } from '../migrate';
 import type { UserInfo } from './user-info';
 import type { BlokUploader } from './uploader';
 import type { ManifestOverrides } from '../tool-manifest';
+import type { AgentAssistantConfig } from '../api/agent';
 import type { MediaConfig } from './media';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
@@ -1342,6 +1343,11 @@ export interface BlokMountOptions {
      * `editor.agent.tools()`, and calling it returns `UNKNOWN_COMMAND`.
      */
     overrides?: ManifestOverrides;
+    /**
+     * Turns on the in-editor AI assistant: `editor.agent.ask()`, the Mod+J
+     * prompt bar and "Ask AI" in the inline toolbar. Off when absent.
+     */
+    assistant?: AgentAssistantConfig;
   };
 
   /**

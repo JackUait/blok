@@ -69,4 +69,87 @@ export interface Agent {
   readonly state: AgentState;
   /** Called on every state change. */
   subscribe(listener: () => void): () => void;
+  /**
+   * Ask the configured assistant (`agent.assistant`) to write or edit.
+   * Throws when no assistant is configured or a turn is already open.
+   */
+  ask(prompt: string, options?: AgentAskOptions): AgentRun;
+}
+
+/**
+ * One content block of a model message, in Anthropic Messages form.
+ * Blocks the assistant does not know (thinking, server tools) are sent back unchanged.
+ */
+export type AgentModelContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: unknown }
+  | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
+  | { type: string; [key: string]: unknown };
+
+export interface AgentModelMessage {
+  role: 'user' | 'assistant';
+  content: string | AgentModelContentBlock[];
+}
+
+/** What the assistant sends to the host's model function. */
+export interface AgentModelRequest {
+  system: string;
+  messages: AgentModelMessage[];
+  tools: AgentAnthropicTool[];
+  /** Aborted when the user stops the run. Pass it to the HTTP request. */
+  signal: AbortSignal;
+}
+
+/** The model's reply. An Anthropic `Message` fits this shape as is. */
+export interface AgentModelResponse {
+  content: AgentModelContentBlock[];
+  stop_reason: string | null;
+}
+
+/** Calls the LLM once. The host owns the key, the endpoint and the model choice. */
+export type AgentModel = (request: AgentModelRequest) => Promise<AgentModelResponse>;
+
+export interface AgentAssistantConfig {
+  /** Calls the LLM. See `AgentModel`. */
+  model: AgentModel;
+  /** Shown on the agent caret and in announcements. Default "AI". */
+  name?: string;
+  /** Model calls allowed per prompt. Default 30. */
+  maxSteps?: number;
+}
+
+export interface AgentAskOptions {
+  /** Tell the model where the caret is and what text is selected. Default true. */
+  context?: boolean;
+}
+
+export interface AgentRunResult {
+  /**
+   * - `done`: the model answered.
+   * - `stopped`: `stop()` was called.
+   * - `refused`: the model declined.
+   * - `truncated`: the model's output was cut off.
+   * - `step-limit`: `maxSteps` model calls ran out.
+   * - `failed`: the model call threw; see `error`.
+   */
+  status: 'done' | 'stopped' | 'refused' | 'truncated' | 'step-limit' | 'failed';
+  /** The model's last text. */
+  reply: string;
+  error?: string;
+  /** Ids of blocks this run created, updated, moved or removed so far. */
+  changed: string[];
+}
+
+/** One conversation with the assistant. It holds the editor's agent turn until `end()` or `discard()`. */
+export interface AgentRun {
+  /** The newest answer. Replaced by each `followUp()`. */
+  readonly result: Promise<AgentRunResult>;
+  /** Ask again in the same conversation. Throws while an answer is still running. */
+  followUp(prompt: string): Promise<AgentRunResult>;
+  /** Stop the running answer. Edits already applied stay. The run stays open. */
+  stop(): void;
+  /** Undo the run's edits that are still the newest undo steps, then end. True when something was undone. */
+  discard(): Promise<boolean>;
+  /** Keep the edits and close the run. */
+  end(): void;
 }

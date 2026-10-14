@@ -3,6 +3,8 @@ import type { DialogRole } from '../../components/utils/modal-dialog';
 
 export interface DatabaseConfirmOptions {
   title: string;
+  /** A line under the title, read as the dialog's description. */
+  description?: string;
   confirmLabel: string;
   cancelLabel: string;
   /** Paints the confirm button red, as Notion does for Remove, Delete and Move to Trash. */
@@ -37,6 +39,14 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
   title.id = `blok-database-confirm-title-${counter.next}`;
   title.textContent = options.title;
   panel.appendChild(title);
+  const description = options.description === undefined ? null : document.createElement('div');
+
+  if (description !== null) {
+    description.setAttribute('data-blok-database-confirm-description', '');
+    description.id = `blok-database-confirm-description-${counter.next}`;
+    description.textContent = options.description ?? '';
+    panel.appendChild(description);
+  }
 
   const button = (name: 'confirm' | 'cancel', label: string): HTMLButtonElement => {
     const el = document.createElement('button');
@@ -62,6 +72,7 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
     surface: panel,
     role: options.role ?? 'alertdialog',
     labelledBy: title.id,
+    ...(description === null ? {} : { describedBy: description.id }),
     initialFocus: () => cancelButton,
     directionSource: options.directionSource ?? null,
     ...(options.container === undefined ? {} : { container: options.container, topLayer: false }),

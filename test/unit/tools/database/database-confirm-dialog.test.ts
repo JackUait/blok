@@ -50,6 +50,23 @@ describe('openDatabaseConfirm', () => {
     expect(dialog()?.getAttribute('aria-labelledby')).toBe(title?.id);
   });
 
+  it('shows a description under the title, as the dialog\'s description', () => {
+    void openDatabaseConfirm({ title: 'Reset?', description: 'No properties will be deleted.', confirmLabel: 'Reset', cancelLabel: 'Cancel' });
+    const description = document.querySelector('[data-blok-database-confirm-description]');
+
+    expect(description?.textContent).toBe('No properties will be deleted.');
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.nextElementSibling).toBe(description);
+    expect(description?.id).not.toBe('');
+    expect(dialog()?.getAttribute('aria-describedby')).toBe(description?.id);
+  });
+
+  it('draws no description when none is given', () => {
+    void open();
+
+    expect(document.querySelector('[data-blok-database-confirm-description]')).toBeNull();
+    expect(dialog()?.hasAttribute('aria-describedby')).toBe(false);
+  });
+
   it('resolves true and closes when the user confirms', async () => {
     const answer = open();
 

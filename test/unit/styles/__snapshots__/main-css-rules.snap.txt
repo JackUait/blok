@@ -6722,6 +6722,15 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   color: var(--blok-text-primary);
 }
 
+[data-blok-database-confirm-description] {
+  margin-top: var(--blok-space-1);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  text-align: center;
+  color: var(--blok-text-secondary);
+}
+
 [data-blok-database-confirm-action] {
   width: 100%;
   height: 32px;

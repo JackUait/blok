@@ -55,6 +55,16 @@ describe('database confirm dialog css', () => {
     expect(body).toContain('text-align: center');
   });
 
+  // research/10 §5: "No properties will be deleted." 14px/400 in the secondary grey under the title.
+  it('centres a 14px secondary description under the title', () => {
+    const body = ruleBody(database, '[data-blok-database-confirm-description]');
+
+    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('font-weight: 400');
+    expect(body).toContain('text-align: center');
+    expect(body).toContain('color: var(--blok-text-secondary)');
+  });
+
   it('stacks full-width 32px buttons with the control radius', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-action]');
 

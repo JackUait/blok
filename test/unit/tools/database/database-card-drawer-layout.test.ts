@@ -686,7 +686,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       ]);
     });
 
-    it('sets the structure from Page settings and resets to the original layout at once from More save options', () => {
+    it('sets the structure from Page settings, and resets to the original layout once confirmed from More save options', async () => {
       const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }) });
 
       new DatabaseCardDrawer(options).open(ROW);
@@ -697,9 +697,14 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-layout-more-save]')?.click();
       clickItem('reset');
 
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      q('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+
       expect(written(options, { pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutStructure: 'tabbed' }))
-        .toEqual({ structure: 'simple', groupIn: 'page', propertyIcons: true, propertyLabels: true, templates: true, fullWidth: false, placements: [], sections: [] });
+        .toEqual({ structure: 'simple', groupIn: 'page', propertyIcons: true, propertyLabels: true, templates: true, fullWidth: false, placements: [{ id: 'p-due', place: 'group' }], sections: [] });
       expect(q('[data-blok-interface="database-layout-builder"]')).toBeNull();
+      expect(q('[data-blok-database-drawer-tabs]')).toBeNull();
     });
 
     it('turns property icons off from Page settings as a draft edit', () => {

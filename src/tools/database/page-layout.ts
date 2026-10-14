@@ -316,5 +316,19 @@ export const setTemplates = (templates: boolean): PageLayoutOp => (layout) => ({
 
 export const setFullWidth = (fullWidth: boolean): PageLayoutOp => (layout) => ({ ...layout, fullWidth });
 
-/** "Reset to original page layout". The lists stay, empty, so the next edit does not race their birth. */
-export const resetPageLayout = (): PageLayoutOp => () => pageLayoutOf(undefined);
+/**
+ * "Reset to original page layout". The group keeps the old pins, then the old
+ * sections' properties, in that order (research/10 §5 L166), as `group`
+ * placements: a property `position` would also move table columns. The lists
+ * stay, so the next edit does not race their birth.
+ */
+export const resetPageLayout = (): PageLayoutOp => (layout) => {
+  const pins = layout.placements.filter((p) => p.place === 'heading');
+  const inSections = layout.sections.flatMap((section) => layout.placements.filter((p) => p.place === 'section' && p.sectionId === section.id));
+  const order = [...pins, ...inSections].map((p) => p.id);
+
+  return {
+    ...pageLayoutOf(undefined),
+    placements: order.filter((id, i) => order.indexOf(id) === i).map((id): PageLayoutPlacement => ({ id, place: 'group' })),
+  };
+};

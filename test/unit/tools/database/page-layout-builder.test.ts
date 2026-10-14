@@ -483,7 +483,7 @@ describe('PageLayoutBuilder', () => {
 
   // research/10 §5: the chevron half of Apply holds Reset.
   it('holds Reset to original page layout in More save options', () => {
-    const { drawer, options } = customize();
+    const { drawer } = customize();
     const more = builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]');
 
     expect(more?.getAttribute('aria-label')).toBe('More save options');
@@ -492,11 +492,111 @@ describe('PageLayoutBuilder', () => {
 
     expect(reset?.textContent).toContain('Reset to original page layout');
     expect(reset?.textContent).toContain('No properties will be deleted');
-    clickItem('reset');
-
-    expect(written(options)).toMatchObject({ structure: 'simple', placements: [], sections: [] });
-    expect(q(BUILDER)).toBeNull();
     drawer.destroy();
+  });
+
+  // research/10 §5: a confirm, then Reset applies at once and closes the builder.
+  describe('Reset to original page layout', () => {
+    const settle = (): Promise<void> => new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    const askReset = (): void => {
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click();
+      clickItem('reset');
+    };
+    const answer = async (name: 'confirm' | 'cancel'): Promise<void> => {
+      q(`[data-blok-database-confirm-action="${name}"]`)?.click();
+      await settle();
+    };
+    /** The written edit, replayed on the layout the schema saved. */
+    const savedAfter = (options: CardDrawerOptions): PageLayoutData | undefined =>
+      vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0]?.(pageLayoutOf(options.schema[0]));
+    const SHAPED = (): PropertyDefinition[] => [
+      ...schemaWith({
+        pageLayoutStructure: 'tabbed',
+        pageLayoutPropertyLabels: false,
+        pageLayoutTemplates: false,
+        pageLayoutSections: [{ id: 's1', name: 'More' }],
+        pageLayoutPlacements: [{ id: 'p-notes', place: 'section', sectionId: 's1' }, { id: 'p-due', place: 'heading' }, { id: 'p-status', place: 'section', sectionId: 's1' }],
+      }),
+      { id: 'p-notes', name: 'Notes', type: 'text', position: 'a3' },
+    ];
+
+    it('asks before resetting and resets nothing on Cancel', async () => {
+      const { drawer, options } = customize({ schema: SHAPED() });
+
+      askReset();
+      const dialog = builder().querySelector('[data-blok-database-confirm-dialog]');
+
+      expect(dialog?.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Reset to original page layout?');
+      expect(dialog?.querySelector('[data-blok-database-confirm-description]')?.textContent).toBe('No properties will be deleted.');
+      expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.textContent).toBe('Reset');
+      expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-destructive')).toBe(true);
+      expect(dialog?.querySelector('[data-blok-database-confirm-action="cancel"]')?.textContent).toBe('Cancel');
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      await answer('cancel');
+
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      expect(q(BUILDER)).not.toBeNull();
+      drawer.destroy();
+    });
+
+    it('resets to Simple with no pins, sections or labels, templates back on, and closes the builder', async () => {
+      const { drawer, options } = customize({ schema: SHAPED() });
+
+      askReset();
+      await answer('confirm');
+
+      expect(options.onPageLayoutChange).toHaveBeenCalledTimes(1);
+      expect(savedAfter(options)).toMatchObject({ structure: 'simple', groupIn: 'page', propertyLabels: true, templates: true, sections: [] });
+      expect(savedAfter(options)?.placements.every((p) => p.place === 'group')).toBe(true);
+      expect(q(BUILDER)).toBeNull();
+      drawer.destroy();
+    });
+
+    it('keeps properties made in this session on Reset', async () => {
+      const added: PropertyDefinition[] = [];
+      const options = createOptions({ onDeleteProperty: vi.fn() });
+      const drawer = new DatabaseCardDrawer({
+        ...options,
+        onAddProperty: () => {
+          added.push({ id: `p-new-${added.length}`, name: 'Budget', type: 'number', position: `a9${added.length}` });
+          drawer.refreshSchema([...schemaWith(), ...added]);
+        },
+      });
+
+      drawer.open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      headingMenuButton().click();
+      q('[data-blok-testid="database-layout-heading-menu"] [data-blok-database-layout-add-pin]')?.click();
+      q('[data-blok-database-property-type-option="number"]')?.click();
+
+      expect(added).toHaveLength(1);
+      askReset();
+      await answer('confirm');
+
+      expect(options.onDeleteProperty).not.toHaveBeenCalled();
+      // The pin made this session counts as an old pin: the canvas showed it.
+      expect(savedAfter(options)?.placements).toEqual([{ id: 'p-new-0', place: 'group' }]);
+      expect(q(BUILDER)).toBeNull();
+      drawer.destroy();
+    });
+
+    // research/10 §5 L166: not schema order, not table column order.
+    it('orders the group by the old pins, then the old sections, after Reset', async () => {
+      const { drawer, options } = customize({ schema: SHAPED() });
+
+      askReset();
+      await answer('confirm');
+
+      expect(savedAfter(options)?.placements).toEqual([
+        { id: 'p-due', place: 'group' },
+        { id: 'p-notes', place: 'group' },
+        { id: 'p-status', place: 'group' },
+      ]);
+      drawer.destroy();
+    });
   });
 
   describe('Page settings column', () => {

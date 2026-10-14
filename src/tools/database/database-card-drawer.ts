@@ -1959,10 +1959,16 @@ export class DatabaseCardDrawer {
     return button;
   }
 
-  /** "Reset to original page layout" writes at once. No property is deleted. */
+  /**
+   * "Reset to original page layout" writes at once. No property is deleted.
+   * The old pins and sections are the ones the canvas showed, so the draft is
+   * replayed on the newest layout first.
+   */
   private resetLayout(): void {
+    const draft = this.draft;
+
     this.draft = null;
-    this.onPageLayoutChange?.(resetPageLayout());
+    this.onPageLayoutChange?.((layout) => resetPageLayout()(draft === null ? layout : applyDraft(draft, layout)));
     this.rerender();
   }
 

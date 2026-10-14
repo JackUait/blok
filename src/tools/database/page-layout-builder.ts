@@ -1185,6 +1185,30 @@ export class PageLayoutBuilder {
     });
   }
 
+  /** research/10 §5: Reset asks first, then applies at once. */
+  private askReset(): void {
+    const confirm = new AbortController();
+
+    this.closeMenu();
+    this.closeModuleMenu();
+    this.confirm = confirm;
+    void openDatabaseConfirm({
+      title: this.label('tools.database.layoutResetConfirmTitle'),
+      description: this.label('tools.database.layoutResetConfirmBody'),
+      confirmLabel: this.label('tools.database.layoutResetConfirm'),
+      cancelLabel: this.label('tools.database.layoutCancel'),
+      destructive: true,
+      directionSource: this.root,
+      // Over this modal: two focus traps on body would pull focus back and forth.
+      container: this.root,
+      signal: confirm.signal,
+    }).then((reset) => {
+      if (this.confirm !== confirm) return;
+      this.confirm = null;
+      if (reset) this.options.onReset();
+    });
+  }
+
   /**
    * research/09 §2: a focused "Search pages…" field over every page. The
    * previewed one has a trailing check and no fill. Pages come in view order (Q4).
@@ -1236,7 +1260,7 @@ export class PageLayoutBuilder {
         title: this.label('tools.database.layoutReset'),
         secondaryLabel: this.label('tools.database.layoutResetDescription'),
         closeOnActivate: true,
-        onActivate: () => this.options.onReset(),
+        onActivate: () => this.askReset(),
       }] as PopoverItemParams[],
     }));
   }

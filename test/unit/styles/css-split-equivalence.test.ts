@@ -810,7 +810,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +3_833: the Add page module "+", the side panel column, module cards with drag handles and their menus (Phase 5c).
     // +3_165: sections in the Property group menu, their rename field, row-page adds and the Empty line (Phase 6).
     // +1_034: pins with Property labels off, and the 1.2x property icon boxes (Phase 7).
-    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774 + 3_990 + 3_833 + 3_165 + 1_034;
+    // +200: the Reset confirm's description line (Phase 8).
+    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774 + 3_990 + 3_833 + 3_165 + 1_034 + 200;
     // database.css: the title cell Open button shows on the keyboard-selected cell (Cmd/Ctrl+Enter presses it).
     const DATABASE_CELL_BUTTON_KEYBOARD_BYTES = 92;
     // database.css: the comment count badge after a row title (research/12 §3).

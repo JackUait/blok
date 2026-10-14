@@ -249,7 +249,34 @@ describe('page layout — edits', () => {
 
     expect(changed.structure).toBe('tabbed');
     expect(changed.groupIn).toBe('panel');
-    expect(resetPageLayout()(changed)).toEqual(empty);
+    expect(resetPageLayout()(changed)).toEqual({ ...empty, placements: [{ id: 'a', place: 'group' }] });
+    expect(resetPageLayout()(setStructure('tabbed')(empty))).toEqual(empty);
+  });
+
+  // research/10 §5 L166: the group reads the old pins, then the old sections, not schema order.
+  it('keeps the old pins, then the old sections\' properties, as group placements on reset', () => {
+    const layout = {
+      ...empty,
+      sections: [{ id: 's2', name: 'More' }, { id: 's1', name: 'Details' }],
+      placements: [
+        { id: 'c', place: 'section' as const, sectionId: 's1' },
+        { id: 'b', place: 'heading' as const },
+        { id: 'rel', place: 'section' as const, sectionId: 's2' },
+        { id: 'a', place: 'section' as const, sectionId: 's1' },
+        { id: 'x', place: 'page' as const },
+        { id: 'y', place: 'section' as const, sectionId: 'gone' },
+      ],
+    };
+    const reset = resetPageLayout()(layout);
+
+    expect(reset.placements).toEqual([
+      { id: 'b', place: 'group' },
+      { id: 'rel', place: 'group' },
+      { id: 'c', place: 'group' },
+      { id: 'a', place: 'group' },
+    ]);
+    expect(reset.sections).toEqual([]);
+    expect(ids(resolvePageLayout(reset, PROPS).group)).toEqual(['b', 'rel', 'c', 'a']);
   });
 
   it('writes the lists even when empty, and drops default scalars', () => {

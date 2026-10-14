@@ -415,9 +415,59 @@ describe('row page layout through the database tool', () => {
     await click(q('[data-blok-database-drawer-customize]'));
     await click(b('[data-blok-database-layout-more-save]'));
     await click(item('reset'));
+    await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
 
     expect(await savedTitle()).not.toHaveProperty('pageLayoutPropertyIcons');
     expect(q('[data-blok-database-drawer-prop-icon]')).not.toBeNull();
+  });
+
+  describe('Reset to original page layout', () => {
+    const SHAPED = {
+      pageLayoutSections: [{ id: 's1', name: 'More' }],
+      pageLayoutPlacements: [{ id: 'notes', place: 'section', sectionId: 's1' }, { id: 'due', place: 'heading' }, { id: 'owner', place: 'section', sectionId: 's1' }],
+    };
+    const shapedDoc = (): OutputBlockData[] => {
+      const blocks = doc({}, SHAPED);
+      const data = blocks[0].data as { schema: Array<Record<string, unknown>> };
+
+      data.schema.push({ id: 'owner', name: 'Owner', type: 'text', position: 'a2' }, { id: 'notes', name: 'Notes', type: 'text', position: 'a3' });
+
+      return blocks;
+    };
+    const reset = async (): Promise<void> => {
+      await click(q('[data-blok-database-drawer-customize]'));
+      await click(b('[data-blok-database-layout-more-save]'));
+      await click(item('reset'));
+      await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+    };
+    const headers = (): string[] => [...(holder?.querySelectorAll('[role="columnheader"]') ?? [])].map((el) => el.textContent?.trim() ?? '');
+
+    it('is one undo step', async () => {
+      await make(shapedDoc());
+      await openRow('r1');
+      await reset();
+
+      expect(await savedTitle()).toMatchObject({ pageLayoutSections: [], pageLayoutPlacements: [{ id: 'due', place: 'group' }, { id: 'notes', place: 'group' }, { id: 'owner', place: 'group' }] });
+      expect(document.querySelector(BUILDER)).toBeNull();
+      editor?.history.undo();
+      await quiet();
+
+      expect(await savedTitle()).toMatchObject(SHAPED);
+      expect(editor?.history.canUndo()).toBe(false);
+    });
+
+    it('leaves the table column order alone', async () => {
+      await make(shapedDoc());
+      const before = { headers: headers(), positions: (await editorSchema()).map((p) => [p.id, p.position]) };
+
+      await openRow('r1');
+      await reset();
+
+      expect(headers()).toEqual(before.headers);
+      expect((await editorSchema()).map((p) => [p.id, p.position])).toEqual(before.positions);
+      expect([...(q('[data-blok-database-drawer-props]')?.querySelectorAll('[data-blok-database-drawer-prop-value]') ?? [])].map((el) => el.getAttribute('data-property-id')))
+        .toEqual(['due', 'notes', 'owner']);
+    });
   });
 
   it('offers no Customize layout on a locked database', async () => {

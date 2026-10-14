@@ -730,15 +730,21 @@ test.describe('row page layout', () => {
     await expect(builder(page).getByRole('tablist')).toBeVisible();
     await expect(builder(page).getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
 
-    // research/10 §5: Reset sits in Apply's "More save options" and closes the builder.
+    // research/10 §5: Reset sits in Apply's "More save options", asks first, then closes the builder.
     await builder(page).getByRole('button', { name: 'More save options' }).click();
     await page.getByRole('menuitem', { name: /Reset to original page layout/ }).click();
+    const confirm = page.getByRole('alertdialog', { name: 'Reset to original page layout?' });
+
+    await expect(confirm).toHaveAccessibleDescription('No properties will be deleted.');
+    await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await confirm.getByRole('button', { name: 'Reset' }).click();
 
     await expect(builder(page)).toBeHidden();
 
     await expect(pins(page)).toHaveCount(0);
     await expect(peek(page).getByRole('tablist')).toHaveCount(0);
-    expect(await savedTitle(page)).toMatchObject({ pageLayoutPlacements: [], pageLayoutSections: [] });
+    // research/10 §5 L166: the old pin leads the group.
+    expect(await savedTitle(page)).toMatchObject({ pageLayoutPlacements: [{ id: 'p-due', place: 'group' }], pageLayoutSections: [] });
   });
 
   // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.

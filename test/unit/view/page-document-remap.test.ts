@@ -410,6 +410,53 @@ describe('remapPageDocument', () => {
       expect(sourceOf(remapPageDocument(original, { blockIds, pageIds: new Map() }), 0)).toEqual({ databaseId: 'gone' });
     });
   });
+
+  describe('a database naming its own blocks', () => {
+    /** `db` names its tabs block, a view's data source and a widget's database: `db` itself and `ext`, which this document does not hold. */
+    const refsDoc = (): OutputData => doc([
+      {
+        id: 'db',
+        type: 'database',
+        content: ['lt'],
+        data: {
+          schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', pageLayoutStructure: 'tabbed', pageLayoutTabsId: 'lt' }],
+          views: [
+            { id: 'vself', dataSourceId: 'db' },
+            { id: 'vext', dataSourceId: 'ext' },
+            { id: 'dash', type: 'dashboard', dashboard: { rows: [{ id: 'row', widgets: [
+              { id: 'wself', viewId: 'vself', databaseId: 'db', width: 6 },
+              { id: 'wext', viewId: 'ev', databaseId: 'ext', width: 6 },
+            ] }] } },
+          ],
+          activeViewId: 'vself',
+        },
+      },
+      { id: 'lt', type: 'tabs', parent: 'db', data: {} },
+    ]);
+    const blockIds = new Map([['db', 'db2'], ['lt', 'lt2']]);
+    const dataOf = (data: OutputData): {
+      schema: Array<Record<string, unknown>>;
+      views: Array<{ dataSourceId?: unknown; dashboard?: { rows: Array<{ widgets: Array<{ databaseId?: unknown }> }> } }>;
+    } => data.blocks[0]?.data as never;
+
+    it('names the copied tabs block in its Tabbed layout', () => {
+      expect(dataOf(remapPageDocument(refsDoc(), { blockIds, pageIds: new Map() })).schema[0]?.pageLayoutTabsId).toBe('lt2');
+    });
+
+    it('re-points a view data source it copies and keeps one it does not', () => {
+      expect(dataOf(remapPageDocument(refsDoc(), { blockIds, pageIds: new Map() })).views.map((view) => view.dataSourceId))
+        .toEqual(['db2', 'ext', undefined]);
+    });
+
+    it('re-points a widget database it copies and keeps one it does not', () => {
+      expect(dataOf(remapPageDocument(refsDoc(), { blockIds, pageIds: new Map() })).views[2]?.dashboard?.rows[0]?.widgets.map((widget) => widget.databaseId))
+        .toEqual(['db2', 'ext']);
+    });
+
+    it('does not refuse the copy over a reference it cannot map', () => {
+      expect(findRemapProblems(refsDoc(), { blockIds, pageIds: new Map() }).missingBlockIds).toEqual([]);
+    });
+  });
 });
 
 type Ids = { blockIds: Map<string, string>; pageIds: Map<string, string> };

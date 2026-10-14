@@ -3,7 +3,7 @@
  */
 
 import type { BlockOrigin } from '../../../../../types';
-import { mintLinkedSourceIds, remapLinkedSource } from '../../../../shared/database/linked-source';
+import { mintDatabaseRefIds, remapDatabaseRefs } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
@@ -293,14 +293,14 @@ export class DragOperations {
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
-    const copiedSourceIds = mintLinkedSourceIds(prep.validResults.flatMap(({ saved, toolName, link }, index) =>
+    const copiedRefIds = mintDatabaseRefIds(prep.validResults.flatMap(({ saved, toolName, link }, index) =>
       link === undefined ? [{ id: prep.sortedBlocks[index].id, type: toolName, data: saved.data }] : []
     ), generateBlockId);
     // A block the resolver maps is inserted as what it returned. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
-      const data = link?.data ?? remapLinkedSource(toolName, structuredClone(saved.data), copiedSourceIds);
-      const id = copiedSourceIds.get(prep.sortedBlocks[index].id);
+      const data = link?.data ?? remapDatabaseRefs(toolName, structuredClone(saved.data), copiedRefIds);
+      const id = copiedRefIds.get(prep.sortedBlocks[index].id);
       const text = data.text;
 
       if (link === undefined && typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)) {

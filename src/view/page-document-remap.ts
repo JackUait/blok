@@ -3,7 +3,7 @@ import type { DefaultTreeAdapterMap } from 'parse5';
 import type { OutputBlockData, OutputData } from '../../types';
 import { parseInlineFragment } from './html-text';
 import { cloneJson } from './json-clone';
-import { localLinkedSource } from '../shared/database/linked-source';
+import { databaseBlockRefs } from '../shared/database/linked-source';
 
 type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 type P5Element = DefaultTreeAdapterMap['element'];
@@ -71,7 +71,7 @@ const rewriteInlineLinks = (html: string, ids: PageDocumentIds): string => {
   return visit(fragment.childNodes) ? serialize(fragment) : html;
 };
 
-/** `sourceRef` is a linked database's source: remapped when mapped, else kept, never refused. */
+/** `sourceRef` is a block id a database names in its data: remapped when mapped, else kept, never refused. */
 type SlotKind = 'blockId' | 'blockRef' | 'sourceRef' | 'pageId' | 'html';
 
 /** One place in a document that holds an id or inline HTML. */
@@ -183,11 +183,7 @@ const blockSlots = (block: unknown, nested: boolean): Slot[] => {
     slots.push(...tableSlots(data.content));
   }
 
-  const source = localLinkedSource(type, data);
-
-  if (source !== undefined) {
-    slots.push(fieldSlot('sourceRef', source, 'databaseId'));
-  }
+  slots.push(...databaseBlockRefs(type, data).map(({ holder, key }) => fieldSlot('sourceRef', holder, key)));
   slots.push(...stringFieldSlots(data, [...fieldsOf(INLINE_HTML_FIELDS, type), ...fieldsOf(LEGACY_HTML_FIELDS, type)]));
 
   const body = data.body;

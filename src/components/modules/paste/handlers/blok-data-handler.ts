@@ -9,7 +9,7 @@ import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
 import { isPagePointer } from '../../../../shared/page-pointer';
-import { mintLinkedSourceIds, remapLinkedSource } from '../../../../shared/database/linked-source';
+import { mintDatabaseRefIds, remapDatabaseRefs } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
@@ -410,7 +410,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
      */
     const oldIdToEntry = new Map<string, { newBlock: Block; original: BlokClipboardBlock }>();
     // Kept apart from oldIdToNewId: remapIds rewrites every matching string in the data.
-    const copiedSourceIds = mintLinkedSourceIds(
+    const copiedRefIds = mintDatabaseRefIds(
       [...tableCells, ...documentFlow].map(({ sanitized, original }) => ({ id: original.id, type: sanitized.tool, data: sanitized.data })),
       generateBlockId
     );
@@ -446,11 +446,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         const remappedData = oldIdToNewId.size > 0
           ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
           : sanitized.data;
-        const id = copiedSourceIds.get(original.id);
+        const id = copiedRefIds.get(original.id);
 
         const block = BlockManager.insert({
           tool: sanitized.tool,
-          data: remapLinkedSource(sanitized.tool, remappedData, copiedSourceIds),
+          data: remapDatabaseRefs(sanitized.tool, remappedData, copiedRefIds),
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
           origin: 'paste',
           ...(id !== undefined && { id }),

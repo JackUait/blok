@@ -7,6 +7,8 @@
  * Pure: the server runtime imports it through `src/view/page-document-remap.ts`.
  */
 
+import { cloneRecord } from '../agent/snapshot';
+
 const DATABASE = 'database';
 
 type LocalSource = Record<string, unknown> & { databaseId: string };
@@ -103,8 +105,7 @@ export const mintDatabaseRefIds = (
  */
 export const remapDatabaseRefs = <T>(type: string, data: T, ids: ReadonlyMap<string, string>): T => {
   if (!databaseBlockRefs(type, data).some(({ holder, key }) => ids.has(holder[key] as string))) return data;
-  // Editor-only: the server runtime has no structuredClone and never calls this.
-  const next = structuredClone(data);
+  const next = cloneRecord(data as Record<string, unknown>) as T;
 
   for (const { holder, key } of databaseBlockRefs(type, next)) {
     const mapped = ids.get(holder[key] as string);

@@ -2175,6 +2175,10 @@
                                       "type": "string"
                                     },
                                     "description": "With onEdit: only a change to one of these property ids fills again. Absent means any property."
+                                  },
+                                  "onEditContent": {
+                                    "type": "boolean",
+                                    "description": "Fill again when the row's page body is edited here (never a peer, undo or redo). Default false."
                                   }
                                 }
                               },

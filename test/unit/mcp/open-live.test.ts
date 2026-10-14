@@ -180,6 +180,27 @@ describe('createOpenLive', () => {
       .rejects.toMatchObject({ agentError: { code: 'FORBIDDEN' } });
   });
 
+  it('answers FORBIDDEN at once, without waiting out the sync timeout, when the first ticket is refused', async () => {
+    const refusing = createOpenLive({
+      sync: { url: 'wss://sync.test/sync/' },
+      contracts,
+      socketFactory: factory,
+      syncTimeoutMs: 10_000,
+      ticketsFor: async () => async () => {
+        throw surfaceError('FORBIDDEN', 'The host did not grant this document to this agent.');
+      },
+      portsFor: () => createHeadlessPorts({
+        sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
+        richTextFieldsFor: contracts.richTextFieldsFor,
+      }),
+    });
+    const started = Date.now();
+    const failure = await refusing({ documentId: 'doc', mode: 'auto', write: true }, caller, actor).then(() => null, (thrown: unknown) => thrown);
+
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(failure).toMatchObject({ agentError: { code: 'FORBIDDEN' } });
+  }, 15_000);
+
   it('ends the handle with FORBIDDEN once the ticket endpoint refuses a reconnect', async () => {
     const mints = { count: 0 };
     const revoking = createOpenLive({

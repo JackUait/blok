@@ -1,4 +1,5 @@
 import type { CollabSocketFactory } from '../components/modules/collaboration/types';
+import type { AgentActor } from '../../types/agent';
 import type { AgentPorts } from '../shared/agent/types';
 import { createHeadlessPorts } from '../view/agent-runtime';
 
@@ -44,7 +45,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
   // portsFor needs the opener and the opener needs portsFor: bind the open late.
   const late: { open: DispatcherDeps['open'] | null } = { open: null };
   const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
-  const portsFor = (caller: Caller): AgentPorts => createHeadlessPorts({
+  const portsFor = (caller: Caller, _actor?: AgentActor, documentId?: string): AgentPorts => createHeadlessPorts({
     sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
     richTextFieldsFor: contracts.richTextFieldsFor,
     ...(pageMap && {
@@ -57,6 +58,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
           return late.open(request, who);
         },
         caller,
+        documentId,
       }),
     }),
   });
@@ -115,10 +117,22 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     handleIdleMs,
   });
   const state: { stopping?: Promise<void> } = {};
+  // An open that lands after stop closes its session in the dispatcher, so stop must wait for it.
+  const opens = new Set<Promise<unknown>>();
+  const tracked: Dispatch = (name, args, caller, dispatchOptions) => {
+    const outcome = dispatch(name, args, caller, dispatchOptions);
+
+    if (name === 'blok_open') {
+      opens.add(outcome);
+      void outcome.catch(() => undefined).finally(() => opens.delete(outcome));
+    }
+
+    return outcome;
+  };
 
   return {
     tools,
-    dispatch,
+    dispatch: tracked,
     handles,
     stop: () => {
       clearInterval(sweeper);
@@ -127,6 +141,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
           await session.close('closed');
         }),
         Promise.allSettled([...sweeps]),
+        Promise.allSettled([...opens]),
       ]).then(() => undefined);
 
       return state.stopping;

@@ -140,6 +140,48 @@ describe('openHeadlessRoom', () => {
     expect(failure).toMatchObject({ error: 'forbidden' });
   });
 
+  it('stops waiting and closes when its signal aborts before the first sync', async () => {
+    const { factory, sockets } = scripted('blok-sync.v2', 'silent');
+    const controller = new AbortController();
+    const reason = new Error('refused');
+    const started = Date.now();
+    const opening = openHeadlessRoom({
+      url: 'wss://sync.test/sync/doc-1',
+      docId: 'doc-1',
+      serializer: serializer(),
+      socketFactory: factory,
+      writeDenied: false,
+      syncTimeoutMs: 10_000,
+      signal: controller.signal,
+    });
+
+    await vi.waitFor(() => expect(sockets[0]?.readyState).toBe(1));
+    controller.abort(reason);
+    const failure = await opening.then(() => null, (thrown: unknown) => thrown);
+
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(failure).toBe(reason);
+    expect(sockets[0].readyState).toBe(3);
+  }, 15_000);
+
+  it('fails at once when its signal is already aborted', async () => {
+    const { factory } = scripted('blok-sync.v2', 'silent');
+    const reason = new Error('refused');
+    const started = Date.now();
+    const failure = await openHeadlessRoom({
+      url: 'wss://sync.test/sync/doc-1',
+      docId: 'doc-1',
+      serializer: serializer(),
+      socketFactory: factory,
+      writeDenied: false,
+      syncTimeoutMs: 10_000,
+      signal: AbortSignal.abort(reason),
+    }).then(() => null, (thrown: unknown) => thrown);
+
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(failure).toBe(reason);
+  }, 15_000);
+
   it('journals its own local writes into the outbox under v2', async () => {
     const { room } = await open('blok-sync.v2');
     const mark = room.outbox.appendedCount();

@@ -158,6 +158,12 @@ export const createJwtVerifier = (
       if ('crit' in header) {
         throw invalid('Unsupported critical header');
       }
+      // RFC 9068 §4: an ID token for the same audience must not pass as an access token.
+      const typ = typeof header.typ === 'string' ? header.typ.toLowerCase() : undefined;
+
+      if (typ !== 'at+jwt' && typ !== 'application/at+jwt') {
+        throw invalid('Not an access token');
+      }
       const { key, alg: keyAlg } = await keyFor(header.kid);
 
       if ((keyAlg !== undefined && keyAlg !== alg) || !fitsAlg(key, alg)) {
@@ -192,7 +198,15 @@ export const createJwtVerifier = (
       const scopes = typeof claims.scope === 'string'
         ? claims.scope.split(' ').filter((scope) => scope !== '')
         : scp.filter((scope): scope is string => typeof scope === 'string');
-      const clientId = [claims.client_id, claims.azp, claims.sub].find((value): value is string => typeof value === 'string') ?? 'unknown';
+      // principalOf maps a missing sub to `client:<id>`, so a sub in that namespace, or no id at all, would share handles.
+      if (typeof claims.sub === 'string' && claims.sub.startsWith('client:')) {
+        throw invalid('Reserved subject');
+      }
+      const clientId = [claims.client_id, claims.azp, claims.sub].find((value): value is string => typeof value === 'string' && value !== '');
+
+      if (clientId === undefined) {
+        throw invalid('Token names no subject or client');
+      }
 
       return {
         token,

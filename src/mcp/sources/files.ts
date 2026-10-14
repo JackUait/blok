@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { realpath } from 'node:fs';
-import { chmod, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { chmod, lstat, open, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { surfaceError } from '../errors';
@@ -19,6 +19,32 @@ const nativeRealpath = promisify(realpath.native);
 const hash = (bytes: Buffer | string): string => createHash('sha256').update(bytes).digest('hex');
 
 const isMissing = (thrown: unknown): boolean => isRecord(thrown) && thrown.code === 'ENOENT';
+const isTaken = (thrown: unknown): boolean => isRecord(thrown) && thrown.code === 'EEXIST';
+
+// A save holds the lock for one read, one small write and one rename, so a lock this old was left by a dead process.
+const LOCK_STALE_MS = 30_000;
+// Kept short: an agent waiting longer than this is better told to retry.
+const LOCK_WAIT_MS = 2_000;
+const LOCK_RETRY_MS = 25;
+
+// Makes the rename durable. Best effort: some platforms refuse to open or sync a directory.
+const syncDir = async (path: string): Promise<void> => {
+  try {
+    const handle = await open(path, 'r');
+
+    try {
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    // Ignored on purpose, see above.
+  }
+};
+
+const pause = (ms: number): Promise<void> => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
 
 // Agent-facing messages name only `<id>.json`; the full path goes to stderr (stdout is the MCP protocol).
 const unavailable = (message: string, path: string, thrown: unknown): Error => {
@@ -28,8 +54,8 @@ const unavailable = (message: string, path: string, thrown: unknown): Error => {
 };
 
 /**
- * Saves of one document run one at a time inside this process, so the hash
- * check and the rename cannot interleave. Other processes are not locked out.
+ * Saves of one document run one at a time: a promise chain inside this process,
+ * then a lock file across processes, so the hash check and the rename cannot interleave.
  */
 export const createFilesSource = (dir: string): DocumentSource => {
   const tails = new Map<string, Promise<unknown>>();
@@ -49,6 +75,41 @@ export const createFilesSource = (dir: string): DocumentSource => {
     return result;
   };
 
+  // Takes the lock or throws; the caller must release it.
+  const lock = async (documentId: string): Promise<string> => {
+    const path = join(dir, `.${documentId.toLowerCase()}.lock`);
+    const deadline = Date.now() + LOCK_WAIT_MS;
+
+    const tryCreate = async (): Promise<boolean> => {
+      try {
+        await (await open(path, 'wx')).close();
+
+        return true;
+      } catch (thrown) {
+        if (isTaken(thrown)) {
+          return false;
+        }
+        throw unavailable(`Cannot write ${documentId}.json.`, path, thrown);
+      }
+    };
+
+    while (!await tryCreate()) {
+      const held = await stat(path).catch(() => null);
+
+      // Not atomic: two waiters may both judge one lock stale. Rare, as it needs a crashed holder.
+      if (held !== null && Date.now() - held.mtimeMs > LOCK_STALE_MS) {
+        await rm(path, { force: true });
+        continue;
+      }
+      if (Date.now() >= deadline) {
+        throw unavailable(`${documentId}.json is being saved by another process. Retry shortly.`, path, 'lock held');
+      }
+      await pause(LOCK_RETRY_MS);
+    }
+
+    return path;
+  };
+
   const pathOf = (documentId: string): string => {
     if (!SAFE_ID.test(documentId)) {
       throw surfaceError('INVALID_ARGS', 'With the files source, a document id uses letters, digits, ".", "_" and "-" only (max 200).');
@@ -62,6 +123,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
    * an authorize hook that names `secret`. Run after the read, so a file that
    * appears in between is still checked. realpath gives the on-disk name; a
    * mismatch is either a case alias or a symlink, and only a listing tells them apart.
+   * Known limit: on such a disk, two ids that differ only by case cannot both exist.
    */
   const assertExactName = async (documentId: string, path: string): Promise<void> => {
     const name = `${documentId}.json`;
@@ -74,9 +136,15 @@ export const createFilesSource = (dir: string): DocumentSource => {
       throw unavailable('Cannot list the documents directory.', dir, thrown);
     });
 
-    if (!names.includes(name)) {
-      throw surfaceError('INVALID_ARGS', 'Document ids are case-sensitive. Use the id exactly as listed.');
+    if (names.includes(name)) {
+      return;
     }
+    // Named from the listing, not realpath: that would name a symlink's target.
+    const taken = names.find((entry) => entry.toLowerCase() === name.toLowerCase());
+
+    throw surfaceError('INVALID_ARGS', taken === undefined
+      ? 'Document ids are case-sensitive. Use the id exactly as listed.'
+      : `${taken} already uses this name with different letter case. This disk ignores case, so the two ids cannot both exist.`);
   };
 
   const readBytes = async (documentId: string, path: string): Promise<Buffer | null> => {
@@ -108,6 +176,70 @@ export const createFilesSource = (dir: string): DocumentSource => {
     }
   };
 
+  /**
+   * The file a save replaces. A symlinked document is written through to its
+   * target, so the link survives; a link to a missing file is refused, not replaced.
+   */
+  const writeTargetOf = async (documentId: string, path: string): Promise<string> => {
+    const entry = await lstat(path).catch((thrown: unknown) => {
+      if (isMissing(thrown)) {
+        return null;
+      }
+      throw unavailable(`Cannot read ${documentId}.json.`, path, thrown);
+    });
+
+    if (entry === null || !entry.isSymbolicLink()) {
+      return path;
+    }
+
+    return nativeRealpath(path).catch((thrown: unknown) => {
+      throw unavailable(`${documentId}.json is a link to a missing file.`, path, thrown);
+    });
+  };
+
+  const saveLocked = async (
+    documentId: string,
+    path: string,
+    document: unknown,
+    ifVersion: string | null,
+  ): Promise<{ version: string }> => {
+    const target = await writeTargetOf(documentId, path);
+    const current = await readBytes(documentId, path);
+
+    if (current !== null) {
+      await assertExactName(documentId, path);
+    }
+    if ((current === null ? null : hash(current)) !== ifVersion) {
+      throw surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.');
+    }
+    const text = `${JSON.stringify(document, null, 2)}\n`;
+    // Same directory as the target, so the rename stays on one filesystem and is atomic.
+    const temp = join(dirname(target), `.${documentId}.${randomBytes(6).toString('hex')}.tmp`);
+    const mode = await modeOf(target);
+
+    try {
+      const handle = await open(temp, 'wx');
+
+      try {
+        await handle.writeFile(text);
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      // The umask filters a create mode, so set the original mode explicitly.
+      if (mode !== null) {
+        await chmod(temp, mode);
+      }
+      await rename(temp, target);
+    } catch (thrown) {
+      await rm(temp, { force: true });
+      throw unavailable(`Cannot write ${documentId}.json.`, path, thrown);
+    }
+    await syncDir(dirname(target));
+
+    return { version: hash(text) };
+  };
+
   return {
     kind: 'files',
     load: async (documentId) => {
@@ -135,33 +267,13 @@ export const createFilesSource = (dir: string): DocumentSource => {
     // Keyed in lower case: on a case-insensitive disk `doc` and `DOC` are one file.
     save: (documentId, document, { ifVersion }) => serialized(documentId.toLowerCase(), async () => {
       const path = pathOf(documentId);
-      const current = await readBytes(documentId, path);
-
-      if (current !== null) {
-        await assertExactName(documentId, path);
-      }
-      if ((current === null ? null : hash(current)) !== ifVersion) {
-        throw surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.');
-      }
-      const text = `${JSON.stringify(document, null, 2)}\n`;
-      // Same directory as the target, so the rename stays on one filesystem and is atomic.
-      // A symlinked document becomes a regular file here; its target is never written.
-      const temp = join(dir, `.${documentId}.${randomBytes(6).toString('hex')}.tmp`);
-      const mode = await modeOf(path);
+      const held = await lock(documentId);
 
       try {
-        await writeFile(temp, text);
-        // The umask filters a create mode, so set the original mode explicitly.
-        if (mode !== null) {
-          await chmod(temp, mode);
-        }
-        await rename(temp, path);
-      } catch (thrown) {
-        await rm(temp, { force: true });
-        throw unavailable(`Cannot write ${documentId}.json.`, path, thrown);
+        return await saveLocked(documentId, path, document, ifVersion);
+      } finally {
+        await rm(held, { force: true });
       }
-
-      return { version: hash(text) };
     }),
     list: async ({ query, cursor, limit }) => {
       const names = await readdir(dir).catch((thrown: unknown) => {

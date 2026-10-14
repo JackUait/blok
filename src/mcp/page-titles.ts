@@ -1,5 +1,5 @@
 import type { AgentSession } from '../../types/agent';
-import { AgentFailure } from '../shared/agent/errors';
+import { AgentFailure, failure } from '../shared/agent/errors';
 import type { AgentPorts } from '../shared/agent/types';
 
 import type { Caller, DispatcherDeps } from './dispatcher';
@@ -10,8 +10,12 @@ import { failedResult, isMcpSurfaceError, surfaceError } from './errors';
  * with the same opener (mode, authorize, tickets) as blok_open.
  */
 export const createOpenPageDocument = (
-  deps: { open: DispatcherDeps['open']; caller: Caller },
+  deps: { open: DispatcherDeps['open']; caller: Caller; documentId?: string },
 ): NonNullable<AgentPorts['openPageDocument']> => async (pageId, actor) => {
+  // A second save of the open document would make this handle's version stale.
+  if (pageId === deps.documentId) {
+    throw failure('INVALID_ARGS', 'This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.', { details: { pageId } });
+  }
   // 01's executor keeps only an AgentFailure's code; anything else becomes TOOL_ACTION_FAILED.
   const session = await deps.open({ documentId: pageId, mode: 'auto', write: true }, deps.caller).catch((thrown: unknown) => {
     throw isMcpSurfaceError(thrown)

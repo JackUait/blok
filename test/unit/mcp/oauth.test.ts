@@ -14,7 +14,7 @@ const jwk = (key: KeyObject, kid: string, alg: string): Record<string, unknown> 
 
 const token = (claims: Record<string, unknown>, options: { alg?: string; kid?: string; key?: KeyObject; header?: Record<string, unknown> } = {}): string => {
   const alg = options.alg ?? 'RS256';
-  const head = `${b64({ alg, kid: options.kid ?? 'rsa-1', typ: 'JWT', ...options.header })}.${b64(claims)}`;
+  const head = `${b64({ alg, kid: options.kid ?? 'rsa-1', typ: 'at+jwt', ...options.header })}.${b64(claims)}`;
   const signature = alg === 'ES256'
     ? sign('sha256', Buffer.from(head), { key: options.key ?? ec.privateKey, dsaEncoding: 'ieee-p1363' })
     : sign('sha256', Buffer.from(head), options.key ?? rsa.privateKey);
@@ -106,6 +106,26 @@ describe('createJwtVerifier', () => {
   it('refuses a token whose header lists critical extensions', async () => {
     expect(isInvalidToken(await refusal(token(good, { header: { crit: ['exp'], exp: NOW_S + 600 } })))).toBe(true);
     expect(isInvalidToken(await refusal(token(good, { header: { crit: [] } })))).toBe(true);
+  });
+
+  // RFC 9068 §4: without this an ID token for the same audience would pass as an access token.
+  it('refuses a token whose header typ is not at+jwt', async () => {
+    expect(isInvalidToken(await refusal(token(good, { header: { typ: undefined } })))).toBe(true);
+    expect(isInvalidToken(await refusal(token(good, { header: { typ: 'JWT' } })))).toBe(true);
+  });
+
+  it('accepts typ at+jwt and application/at+jwt in any case', async () => {
+    await expect(verifier().verifyAccessToken(token(good, { header: { typ: 'at+jwt' } }))).resolves.toBeDefined();
+    await expect(verifier().verifyAccessToken(token(good, { header: { typ: 'application/AT+JWT' } }))).resolves.toBeDefined();
+  });
+
+  it('refuses a user sub in the client: namespace', async () => {
+    expect(isInvalidToken(await refusal(token({ ...good, sub: 'client:claude' })))).toBe(true);
+  });
+
+  it('refuses a token that names no sub, client_id or azp', async () => {
+    expect(isInvalidToken(await refusal(token({ ...good, sub: undefined, client_id: undefined })))).toBe(true);
+    expect(isInvalidToken(await refusal(token({ ...good, sub: '', client_id: undefined })))).toBe(true);
   });
 
   // RFC 7517 §4.2: a key published for encryption must not verify signatures.

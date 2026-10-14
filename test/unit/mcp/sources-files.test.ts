@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -262,6 +264,73 @@ describe('files source', () => {
     expect(await codeOf(() => source.save('doc', { blocks: [] }, { ifVersion: version }))).toBeUndefined();
   });
 
+  // Each instance has its own in-process chain, as two blok-mcp processes would.
+  it('keeps every edit when two sources on one directory race', async () => {
+    let { version } = await createFilesSource(dir).save('doc', { blocks: [] }, { ifVersion: null });
+
+    for (let round = 0; round < 10; round += 1) {
+      const first = { blocks: [], title: `first ${round}` };
+      const second = { blocks: [], title: `second ${round}` };
+      const outcomes = await Promise.allSettled([
+        createFilesSource(dir).save('doc', first, { ifVersion: version }),
+        createFilesSource(dir).save('doc', second, { ifVersion: version }),
+      ]);
+      const winners = outcomes.flatMap((outcome, index) => (outcome.status === 'fulfilled'
+        ? [{ document: index === 0 ? first : second, version: outcome.value.version }]
+        : []));
+      const loserCodes = outcomes.flatMap((outcome): string[] => {
+        if (outcome.status === 'fulfilled') {
+          return [];
+        }
+        const reason: unknown = outcome.reason;
+
+        return [isMcpSurfaceError(reason) ? reason.agentError.code : String(reason)];
+      });
+      const winner = winners[0];
+
+      expect(winners).toHaveLength(1);
+      expect(loserCodes).toEqual(['DOCUMENT_CHANGED']);
+      if (winner === undefined) {
+        throw new Error('No save won the race');
+      }
+      const written: unknown = JSON.parse(readFileSync(join(dir, 'doc.json'), 'utf-8'));
+
+      expect(written).toEqual(winner.document);
+      version = winner.version;
+    }
+    expect(readdirSync(dir)).toEqual(['doc.json']);
+  });
+
+  it('breaks a stale lock left by a crashed process', async () => {
+    const lock = join(dir, '.doc.lock');
+
+    writeFileSync(lock, '');
+    const old = new Date(Date.now() - 10 * 60 * 1000);
+
+    utimesSync(lock, old, old);
+    expect(await codeOf(() => createFilesSource(dir).save('doc', { blocks: [] }, { ifVersion: null }))).toBeUndefined();
+    expect(readdirSync(dir)).toEqual(['doc.json']);
+  });
+
+  it('gives up with SOURCE_UNAVAILABLE while another process holds a fresh lock', async () => {
+    const lock = join(dir, '.doc.lock');
+
+    writeFileSync(lock, '');
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const thrown: unknown = await createFilesSource(dir).save('doc', { blocks: [] }, { ifVersion: null })
+      .then(() => undefined, (reason: unknown) => reason);
+
+    if (!isMcpSurfaceError(thrown)) {
+      throw new Error(`Expected a surface error, got ${String(thrown)}`);
+    }
+    const { code, message } = thrown.agentError;
+
+    expect(code).toBe('SOURCE_UNAVAILABLE');
+    expect(message).toContain('doc.json');
+    expect(message).not.toContain(root);
+    expect(readdirSync(dir)).toEqual(['.doc.lock']);
+  }, 10_000);
+
   const caseInsensitiveDisk = (): boolean => {
     writeFileSync(join(dir, 'probe.json'), '{}');
     const insensitive = statSync(join(dir, 'PROBE.json'), { throwIfNoEntry: false }) !== undefined;
@@ -281,7 +350,9 @@ describe('files source', () => {
     if (insensitive) {
       expect(await codeOf(() => source.load('SECRET'))).toBe('INVALID_ARGS');
       expect(await codeOf(() => source.save('SECRET', { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
-      expect(await messageOf(() => source.load('SECRET'))).not.toContain('secret');
+      expect(await messageOf(() => source.load('SECRET'))).toBe(
+        'secret.json already uses this name with different letter case. This disk ignores case, so the two ids cannot both exist.',
+      );
       expect(readdirSync(dir)).toEqual(['secret.json']);
     } else {
       // A case-sensitive disk holds two documents; SECRET is a new, empty one.
@@ -341,18 +412,36 @@ describe('files source', () => {
     expect((await createFilesSource(dir).load('doc')).raw).toEqual({ blocks: [], title: 'linked' });
   });
 
-  it('replaces a symlinked document with a regular file and leaves the link target untouched', async () => {
+  it('saves a symlinked document through the link and keeps the link and the target mode', async () => {
     const outside = join(root, 'outside.json');
-    const text = '{"blocks":[]}';
 
-    writeFileSync(outside, text);
+    writeFileSync(outside, '{"blocks":[]}');
+    chmodSync(outside, 0o600);
     symlinkSync(outside, join(dir, 'doc.json'));
     const source = createFilesSource(dir);
     const { version } = await source.load('doc');
+    const saved = await source.save('doc', { blocks: [], title: 'x' }, { ifVersion: version });
 
-    await source.save('doc', { blocks: [], title: 'x' }, { ifVersion: version });
-    expect(readFileSync(outside, 'utf-8')).toBe(text);
-    expect(lstatSync(join(dir, 'doc.json')).isSymbolicLink()).toBe(false);
+    expect(lstatSync(join(dir, 'doc.json')).isSymbolicLink()).toBe(true);
+    const written: unknown = JSON.parse(readFileSync(outside, 'utf-8'));
+
+    expect(written).toEqual({ blocks: [], title: 'x' });
+    expect(saved.version).toBe(sha(readFileSync(outside)));
+    expect(statSync(outside).mode & 0o777).toBe(0o600);
+    expect(readdirSync(dir)).toEqual(['doc.json']);
+    expect(readdirSync(root).sort()).toEqual(['documents', 'outside.json']);
+  });
+
+  it('refuses to save over a dangling symlink with SOURCE_UNAVAILABLE', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const outside = join(root, 'gone.json');
+
+    symlinkSync(outside, join(dir, 'doc.json'));
+    expect(await codeOf(() => createFilesSource(dir).save('doc', { blocks: [] }, { ifVersion: null })))
+      .toBe('SOURCE_UNAVAILABLE');
+    expect(lstatSync(join(dir, 'doc.json')).isSymbolicLink()).toBe(true);
+    expect(statSync(outside, { throwIfNoEntry: false })).toBeUndefined();
+    expect(readdirSync(dir)).toEqual(['doc.json']);
   });
 
   it('does not show server paths in read, write or list errors', async () => {

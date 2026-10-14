@@ -173,6 +173,27 @@ describe('stored mode through the MCP dispatcher', () => {
     expect((file('parent') as { blocks: Array<{ id: string }> }).blocks.map((block) => block.id)).toEqual(['pb', 'theirs']);
   });
 
+  it('refuses a page.rename of a page block that points at this same document', async () => {
+    await mcp.stop();
+    mcp = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir }, pageTitles: 'page-map' });
+    const before = JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'self' } }], title: 'Old' });
+
+    writeFileSync(join(dir, 'self.json'), before);
+    const handle = await openWrite('self');
+    const renamed = await mcp.dispatch('blok_execute', {
+      handle, commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New name' } }],
+    }, caller);
+
+    expect(renamed.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' } });
+    expect(JSON.stringify(renamed.structuredContent)).toContain('doc.setTitle');
+    expect(readFileSync(join(dir, 'self.json'), 'utf-8')).toBe(before);
+    const next = await mcp.dispatch('blok_execute', {
+      handle, commands: [{ name: 'block.insert', args: { type: 'paragraph', id: 'p1', data: { text: 'x' } } }],
+    }, caller);
+
+    expect(next.structuredContent).toMatchObject({ ok: true });
+  });
+
   it('lists the directory', async () => {
     writeFileSync(join(dir, 'a.json'), JSON.stringify({ blocks: [], title: 'Alpha' }));
     const listed = await mcp.dispatch('blok_list_documents', {}, caller);

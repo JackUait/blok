@@ -29,7 +29,7 @@ export interface OpenerDeps {
   contracts: McpContracts;
   source: DocumentSource | null;
   openLive?: (request: OpenRequest, caller: Caller, actor: AgentActor) => Promise<HandleSession>;
-  portsFor(caller: Caller, actor: AgentActor): AgentPorts;
+  portsFor(caller: Caller, actor: AgentActor, documentId?: string): AgentPorts;
 }
 
 export const createOpener = (
@@ -73,7 +73,7 @@ export const createOpener = (
         tools: deps.contracts.runtimes,
         contract: deps.contracts.stored,
         actor,
-        ports: deps.portsFor(caller, actor),
+        ports: deps.portsFor(caller, actor, request.documentId),
         // 01 builds the Node pageBackend only with this flag and the openPageDocument port (Task 26).
         ...(deps.options.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
       }),

@@ -84,9 +84,13 @@ Pick a source with `--source`.
 
 - An id uses letters, digits, `.`, `_` and `-`, does not start with `.`, and is at most 200 characters.
 - Ids are case-sensitive. An id that matches a stored file only when case is ignored is refused.
-- Saves are atomic: a temp file, then a rename. The file keeps its permissions.
+  - On a disk that ignores case (the macOS and Windows default), two ids that differ only by case cannot both exist. Whichever is saved first owns the name.
+- Saves are atomic: a temp file, then a rename. The file keeps its permissions, and the data is flushed to disk before the rename.
 - A save checks a SHA-256 hash of the file first. If the file changed since it was opened, the save is refused.
-- Saves of one document run one at a time in this process. Another process writing the same file can still race in the window between the check and the rename.
+- Saves of one document run one at a time, across processes too: each save holds a `.<id>.lock` file in the directory.
+  - Only blok-mcp honors the lock. Another program writing the file is still caught by the hash check, except in the moment between the check and the rename.
+  - A lock older than 30 seconds is treated as left by a crashed process and removed.
+- A document that is a symlink is saved through to its target, so the link stays. A link to a missing file is refused.
 
 Stored mode is refused when `--sync-url` is set. A sync service owns those documents, and a stored write would fight the room.
 
@@ -99,9 +103,11 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - serve live rooms only: `--ticket-url` with no `--source`, so your host decides each ticket.
 - `--auth oauth` makes the server an OAuth resource server. It needs `--oauth-issuer`, `--oauth-audience` and `--oauth-jwks`.
   - Tokens are checked against the issuer's JWKS. The audience must name this server.
+  - Tokens must be JWT access tokens (RFC 9068): the header `typ` must be `at+jwt` or `application/at+jwt`. Tokens with any other `typ`, or none, are refused, so an ID token cannot pass as an access token.
   - Scopes: `blok.read` (list, open read-only, read, describe) and `blok.write` (open for writing, execute).
   - Protected Resource Metadata is served at `/.well-known/oauth-protected-resource`.
   - The principal is the token's `sub`. A token with no `sub` gets `client:<client_id>` (or its `azp`), so a machine client never shares a user's handles or `--authorize` answers.
+  - A `sub` starting with `client:` is refused, and so is a token that names no `sub`, `client_id` or `azp`.
 - A request with a non-loopback `Origin` header is refused.
 - Live handles hold sockets, so run it as a long-lived process.
 - To scale out, route on the `Mcp-Param-Blok-Handle` header, so every call for a handle reaches the process that holds it.

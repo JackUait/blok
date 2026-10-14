@@ -22,6 +22,8 @@ export interface HeadlessRoomInput {
   ticketSource?: CollabTicketSource;
   writeDenied: boolean;
   syncTimeoutMs?: number;
+  /** Aborting before the first sync stops the wait and rejects with the signal's reason. */
+  signal?: AbortSignal;
 }
 
 export type HeadlessRoomEnd = { reason: 'reset' } | { reason: 'terminal'; error: CollabTerminalError | undefined };
@@ -118,8 +120,21 @@ export const openHeadlessRoom = async (input: HeadlessRoomInput): Promise<Headle
     flushPendingWrites: () => {},
   };
 
+  const signal = input.signal;
+  const wait: { abort: () => void } = { abort: () => {} };
   const synced = new Promise<void>((resolve, reject) => {
+    if (signal?.aborted === true) {
+      reject(signal.reason);
+
+      return;
+    }
     const timer = setTimeout(() => reject(new HeadlessRoomTimeoutError()), input.syncTimeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS);
+
+    wait.abort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    signal?.addEventListener('abort', wait.abort, { once: true });
     const provider = createCollabProvider({
       url: input.url,
       docId: input.docId,
@@ -191,6 +206,8 @@ export const openHeadlessRoom = async (input: HeadlessRoomInput): Promise<Headle
   } catch (thrown) {
     await close();
     throw thrown;
+  } finally {
+    signal?.removeEventListener('abort', wait.abort);
   }
 
   const provider = state.provider;

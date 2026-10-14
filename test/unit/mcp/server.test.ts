@@ -311,3 +311,52 @@ describe('assembleMcp shutdown during expiry', () => {
     }
   });
 });
+
+describe('assembleMcp shutdown during an open', () => {
+  it('waits for an open that lands after stop to close its session', async () => {
+    const openCalled = expiryBarrier();
+    const openRelease = expiryBarrier();
+    const closeRelease = expiryBarrier();
+    let closeDone = false;
+    let stopped = false;
+    const close = vi.fn<HandleSession['close']>(async () => {
+      await closeRelease.wait;
+      closeDone = true;
+
+      return { unsavedBatches: 0, hostRecordLags: false };
+    });
+    const opened = session(close);
+    const server = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' } }, {
+      open: async () => {
+        openCalled.release();
+        await openRelease.wait;
+
+        return opened;
+      },
+    });
+
+    owned.push(server);
+    try {
+      const outcome = server.dispatch('blok_open', { documentId: 'notes', mode: 'stored' }, caller);
+
+      void outcome.catch(() => undefined);
+      await within(openCalled.wait);
+      const stopping = server.stop().then(() => { stopped = true; });
+
+      openRelease.release();
+      await within(dispatchCheckpoint());
+      expect(stopped).toBe(false);
+      closeRelease.release();
+      await within(stopping);
+      expect(closeDone).toBe(true);
+      expect(close).toHaveBeenCalledExactlyOnceWith('closed');
+      expect(await within(outcome)).toMatchObject({
+        isError: true,
+        structuredContent: { error: { code: 'SOURCE_UNAVAILABLE' } },
+      });
+    } finally {
+      openRelease.release();
+      closeRelease.release();
+    }
+  });
+});

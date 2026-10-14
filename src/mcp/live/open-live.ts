@@ -121,6 +121,9 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
   const url = syncUrlFor(deps.sync.url, request.documentId);
   const guard = deps.ticketsFor === undefined ? undefined : revocable(await deps.ticketsFor(request, caller, actor));
   const ticketSource = guard?.source;
+  // A refused mint ends the wait at once; the provider would retry until the sync timer.
+  const refusal = new AbortController();
+  const stopWatching = guard?.onEnd(() => refusal.abort());
   const opened = await openHeadlessRoom({
     url,
     docId: request.documentId,
@@ -129,10 +132,11 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
     ticketSource,
     writeDenied: !request.write,
     syncTimeoutMs: deps.syncTimeoutMs,
+    signal: refusal.signal,
   }).catch((thrown: unknown) => {
-    // A refused ticket shows up as a sync timeout; name the real, final cause.
+    // A refused ticket aborts the wait; name the real, final cause.
     throw guard !== undefined && guard.ended() !== null ? guard.refused() : toSurfaceError(thrown);
-  });
+  }).finally(() => stopWatching?.());
   const room = guard === undefined ? opened : withRevocation(opened, guard);
 
   try {

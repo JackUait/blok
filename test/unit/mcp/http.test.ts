@@ -122,7 +122,7 @@ describe('startHttpServer', () => {
     const config = { kind: 'oauth' as const, issuer: 'https://id.test', audience: 'https://mcp.test', jwksUrl: 'https://id.test/jwks' };
     const jwks = vi.fn<typeof fetch>();
     const bearer = (scope: string): string => {
-      const head = `${Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'k1' })).toString('base64url')}.${Buffer.from(JSON.stringify({
+      const head = `${Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'k1', typ: 'at+jwt' })).toString('base64url')}.${Buffer.from(JSON.stringify({
         iss: config.issuer, aud: config.audience, sub: 'user-42', scope, exp: Math.floor(Date.now() / 1000) + 600,
       })).toString('base64url')}`;
 

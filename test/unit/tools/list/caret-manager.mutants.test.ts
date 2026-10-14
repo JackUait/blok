@@ -66,6 +66,10 @@ const createMockAPI = (): API => ({
     },
     state: { status: 'idle' },
     subscribe: () => () => undefined,
+    ask: () => {
+      throw new Error('The assistant is not used by this fixture.');
+    },
+    openAssistant: () => undefined,
   },
   rectangleSelection: {} as API['rectangleSelection'],
   config: {},

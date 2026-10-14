@@ -45,6 +45,10 @@ export const BUILT_IN_INLINE_DESCRIPTIONS: Readonly<Record<string, () => InlineT
     summary: 'Turns the block into another type; use block.convert.',
     effect: { marks: [], value: flag },
   }),
+  askAi: () => ({
+    summary: 'Opens the in-editor AI prompt bar. Changes nothing in the document.',
+    effect: { marks: [], value: flag },
+  }),
 };
 
 export const BUILT_IN_TUNE_DESCRIPTIONS: Readonly<Record<string, () => BlockTuneDescription>> = {

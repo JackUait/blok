@@ -48,7 +48,7 @@ describe('runAssistantLoop', () => {
       ], 'tool_use'),
       reply([{ type: 'text', text: 'Added a heading.' }], 'end_turn')
     );
-    const call = vi.fn(async (name: string) => ok(`{"tool":"${name}"}`));
+    const call = vi.fn(async (name: string, _input: unknown) => ok(`{"tool":"${name}"}`));
     const messages: AgentModelMessage[] = [{ role: 'user', content: 'Add a heading' }];
 
     const result = await runAssistantLoop({

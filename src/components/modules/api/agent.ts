@@ -83,6 +83,7 @@ export class AgentAPI extends Module {
       },
       subscribe: (listener: () => void) => this.subscribe(listener),
       ask: (prompt: string, options?: AgentAskOptions) => this.ask(prompt, options),
+      openAssistant: () => this.Blok.Assistant.open(),
     };
   }
 
@@ -91,7 +92,23 @@ export class AgentAPI extends Module {
     return typeof this.config.agent?.assistant?.model === 'function';
   }
 
-  private ask(prompt: string, options: AgentAskOptions = {}): AgentRun {
+  /**
+   * Where the user is, as text for the model. Read before focus leaves the document.
+   */
+  public describeUserPlace(): string {
+    return this.editorContext();
+  }
+
+  /**
+   * Start an assistant run with editor context captured earlier.
+   * @param prompt - the user's request
+   * @param context - from describeUserPlace()
+   */
+  public startRun(prompt: string, context: string): AgentRun {
+    return this.ask(prompt, { context: false }, context);
+  }
+
+  private ask(prompt: string, options: AgentAskOptions = {}, captured = ''): AgentRun {
     const assistant = this.config.agent?.assistant;
 
     if (typeof assistant?.model !== 'function') {
@@ -101,7 +118,7 @@ export class AgentAPI extends Module {
       throw new TypeError('editor.agent.ask() needs a non-empty prompt.');
     }
 
-    const context = options.context === false ? '' : this.editorContext();
+    const context = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
     const turn = this.begin({ agent: { id: 'blok-assistant', name } });
 

@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1061 + 118 + 415 + 4 closure for all 1598 keys', () => {
+  it('rebuilds a disjoint 1075 + 119 + 415 + 4 closure for all 1613 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1598);
+    expect(lifecycle.size).toBe(1613);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -362,14 +362,16 @@ describe('current English catalog lifecycle coverage', () => {
       // +3 / -1: the section menu's Rename, Done and delete hint call their keys by literal;
       // tools.database.layoutItemOptions left with the per-property ⋯ menu.
       // +3: the builder's Reset confirm calls its title, body and button keys by literal.
-      'executable-literal': 1061,
+      // +14: the assistant bar calls its assistant.* keys by literal.
+      'executable-literal': 1075,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.
       // +3: toolNames.tabs (titleKey), searchTerms.tabs, toolNames.tab (block name).
       // +1: the "Linked view of database" toolbox entry's toolNames.linkedDatabase.
-      'finite-dynamic': 118,
+      // +1: toolNames.askAi, the Ask AI inline tool's titleKey.
+      'finite-dynamic': 119,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

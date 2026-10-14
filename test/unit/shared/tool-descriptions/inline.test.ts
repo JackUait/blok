@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CopyLinkTune } from '../../../../src/components/block-tunes/block-tune-copy-link';
 import { DeleteTune } from '../../../../src/components/block-tunes/block-tune-delete';
+import { AskAiInlineTool } from '../../../../src/components/inline-tools/inline-tool-ask-ai';
 import { ConvertInlineTool } from '../../../../src/components/inline-tools/inline-tool-convert';
 import { validateAgainst } from '../../../../src/shared/schema/validate';
 import { BUILT_IN_INLINE_DESCRIPTIONS, BUILT_IN_TUNE_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions/inline';
@@ -11,7 +12,7 @@ import type { ToolConfig } from '../../../../types/tools/tool-config';
 import type { InlineToolDescription } from '../../../../types/tools/tool-description';
 import { INLINE_CLASSES } from './built-in-tools';
 
-const INLINE_TOOL_CLASSES = { ...INLINE_CLASSES, convertTo: ConvertInlineTool };
+const INLINE_TOOL_CLASSES = { ...INLINE_CLASSES, convertTo: ConvertInlineTool, askAi: AskAiInlineTool };
 const TUNE_CLASSES = { delete: DeleteTune, copyLink: CopyLinkTune };
 
 type InlineName = keyof typeof INLINE_TOOL_CLASSES;
@@ -39,7 +40,7 @@ afterEach(() => {
 });
 
 describe('built-in inline and tune descriptions', () => {
-  it('covers the exported inline tools, internal conversion tool and built-in tunes', () => {
+  it('covers the exported inline tools, internal conversion and Ask AI tools, and built-in tunes', () => {
     expect(Object.keys(BUILT_IN_INLINE_DESCRIPTIONS).sort()).toEqual(Object.keys(INLINE_TOOL_CLASSES).sort());
     expect(Object.keys(BUILT_IN_TUNE_DESCRIPTIONS).sort()).toEqual(Object.keys(TUNE_CLASSES).sort());
   });

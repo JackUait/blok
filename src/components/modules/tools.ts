@@ -5,6 +5,7 @@ import { CopyLinkTune } from '../block-tunes/block-tune-copy-link';
 import { DeleteTune } from '../block-tunes/block-tune-delete';
 import { INLINE_TOOL_ORDER } from '../constants/inline-tool-order';
 import { CriticalError } from '../errors/critical';
+import { AskAiInlineTool } from '../inline-tools/inline-tool-ask-ai';
 import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
 import { BlockToolAdapter } from '../tools/block';
 import { ToolsCollection } from '../tools/collection';
@@ -311,6 +312,13 @@ export class Tools extends Module {
   }
 
   /**
+   * "Ask AI" joins every inline toolbar when the assistant is on, even an explicit list.
+   */
+  private get assistantInlineTool(): string[] {
+    return this.inlineTools.has('askAi') ? ['askAi'] : [];
+  }
+
+  /**
    * Returns essential internal tools that are always bundled.
    * Includes:
    * - stub: for graceful handling of unknown block types
@@ -338,6 +346,9 @@ export class Tools extends Module {
         class: toToolConstructable(ConvertInlineTool),
         isInternal: true,
       },
+      ...(typeof this.config.agent?.assistant?.model === 'function'
+        ? { askAi: { class: toToolConstructable(AskAiInlineTool), isInternal: true } }
+        : {}),
     };
   }
 
@@ -548,7 +559,7 @@ export class Tools extends Module {
      */
     if (blockTool.enabledInlineTools === true) {
       const inlineTools = Array.isArray(this.config.inlineToolbar)
-        ? this.createInlineToolsCollection(this.config.inlineToolbar)
+        ? this.createInlineToolsCollection([...this.assistantInlineTool, ...this.config.inlineToolbar])
         /**
          * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order.
          * Prepend convertTo so it appears first (same as when explicit array is passed).
@@ -565,7 +576,7 @@ export class Tools extends Module {
      */
     if (Array.isArray(blockTool.enabledInlineTools)) {
       /** Prepend ConvertTo Inline Tool */
-      const inlineTools = this.createInlineToolsCollection(['convertTo', ...blockTool.enabledInlineTools]);
+      const inlineTools = this.createInlineToolsCollection(['convertTo', ...this.assistantInlineTool, ...blockTool.enabledInlineTools]);
 
       blockTool.inlineTools = inlineTools;
     }

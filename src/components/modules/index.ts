@@ -24,6 +24,7 @@ import { UiAPI } from './api/ui';
 
 import { ThemeAPI } from './api/theme';
 import { ViewStateAPI } from './api/viewState';
+import { Assistant } from './assistant';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
@@ -98,6 +99,7 @@ export const Modules = {
   CrossBlockSelection,
   DragManager,
   Find,
+  Assistant,
   ModificationsObserver,
   Paste,
   PageReferences,

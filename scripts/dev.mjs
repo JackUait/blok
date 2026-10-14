@@ -35,6 +35,7 @@ const SYNC_PORT = 4000;
 const DOCUMENT_PORT = 4500;
 const DEFAULT_VITE_PORT = 3303;
 const PAGE_HOST_PORT = 4600;
+const AI_PORT = 4800;
 const TICKET_PORT = 4700;
 
 /**
@@ -350,6 +351,20 @@ async function main() {
     console.log(`[blok] page host at ${pageHost.url} — open the playground with ?host=remote to use it.`);
   }
 
+  // The in-editor assistant's LLM route. Optional: without it the playground has no "Ask AI".
+  const aiOrigins = [`http://localhost:${vitePort(viteArgs)}`, `http://127.0.0.1:${vitePort(viteArgs)}`];
+  const ai = await import('./dev-ai.mjs')
+    .then(({ startAiEndpoint }) => startAiEndpoint({ port: AI_PORT, origins: aiOrigins }))
+    .catch((error) => {
+      console.error(`[blok] the AI endpoint did not start (${error.message}) — "Ask AI" is off.`);
+
+      return null;
+    });
+
+  if (ai !== null) {
+    console.log(`[blok] "Ask AI" (Cmd/Ctrl+J) calls Claude through ${ai.url}. It needs ANTHROPIC_API_KEY or \`ant auth login\`.`);
+  }
+
   supervise('vite', spawn(VITE, [
     // Collaboration is pinned to the origin above; letting Vite drift to the
     // next free port would break the socket with no visible cause.
@@ -363,6 +378,7 @@ async function main() {
       BLOK_DEV_BACKEND: backendRunning ? '1' : '0',
       ...(ticketUrl !== null && { VITE_BLOK_TICKET_URL: ticketUrl }),
       ...(pageHost !== null && { VITE_BLOK_PAGE_HOST_URL: pageHost.url }),
+      ...(ai !== null && { VITE_BLOK_AI_URL: ai.url }),
     },
   }));
 }

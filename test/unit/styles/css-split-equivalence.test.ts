@@ -587,6 +587,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // replace preview, lens, reduced motion) plus its palette tokens in colors.css
     // add 17,626 bytes; retain 200 bytes of headroom.
     const FIND_IN_PAGE_BYTES = 17_826;
+    // assistant.css: the docked "Ask AI" prompt bar (reply, status, field, send, Keep/Discard) and its import line.
+    const ASSISTANT_BAR_BYTES = 4_801;
     // Emoji sections past the first skip rendering, sized from their row count
     // and the measured cell: 592 bytes in emoji-picker.css.
     const EMOJI_DEFERRED_SECTIONS_BYTES = 592;
@@ -822,6 +824,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + CONVERT_MENU_RAMP_BYTES
       + SLOT_INDENT_BYTES
       + FIND_IN_PAGE_BYTES
+      + ASSISTANT_BAR_BYTES
       + EMOJI_DEFERRED_SECTIONS_BYTES
       + PRESENCE_TONAL_GLYPHS_BYTES
       + TRASH_LID_HOVER_BYTES

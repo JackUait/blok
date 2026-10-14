@@ -67,6 +67,10 @@ const apiMethodsStub: ToolApiMethods = {
     },
     state: { status: 'idle' },
     subscribe: () => () => undefined,
+    ask: () => {
+      throw new Error('The assistant is not used by this fixture.');
+    },
+    openAssistant: () => undefined,
   },
   rectangleSelection: {} as ToolApiMethods['rectangleSelection'],
   config: {},

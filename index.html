@@ -1881,6 +1881,29 @@
     // The pass mint `yarn serve` starts; absent with --no-server.
     const DEV_TICKET_URL = import.meta.env.VITE_BLOK_TICKET_URL ?? null;
 
+    // The LLM route `yarn serve` starts (scripts/dev-ai.mjs). The key stays there.
+    const DEV_AI_URL = import.meta.env.VITE_BLOK_AI_URL ?? null;
+
+    /**
+     * agent.assistant.model for the playground: one model call, made by the dev endpoint.
+     * @param {import('./types').AgentModelRequest} request
+     */
+    async function playgroundModel({ system, messages, tools, signal }) {
+      const response = await fetch(DEV_AI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system, messages, tools }),
+        signal,
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body.error ?? `The AI endpoint answered ${response.status}.`);
+      }
+
+      return body;
+    }
+
     /**
      * `yarn serve` starts a sync service beside Vite and sets this flag;
      * `yarn serve --no-server` (or a machine without .NET) leaves it off and the
@@ -2065,6 +2088,7 @@
         toolbarPosition: state.toolbarPosition,
         hideToolbar: state.hideToolbar,
         user: userConfig(),
+        ...(DEV_AI_URL !== null && { agent: { assistant: { model: playgroundModel, name: 'Claude' } } }),
         // Destroying an editor clears the theme attribute on <html>, so every
         // rebuild must say which theme the page is in (setDarkMode's rule).
         theme: state.darkMode ? 'dark' : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'auto'),

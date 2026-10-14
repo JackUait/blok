@@ -446,6 +446,7 @@ export class Core {
       'ReadOnly',
       'ThemeManager',
       'Find',
+      'Assistant',
       'PageReferences',
       'PageTitle',
     ];

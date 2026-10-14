@@ -1,0 +1,194 @@
+/* ─── In-editor AI assistant (Mod+J, "Ask AI") ─────────────────────────── */
+
+/*
+  Docked to the bottom of the window, lined up with the editor: assistant-bar.ts
+  writes `left` and `width` from the editor's box. It sits in the top layer, so
+  every rule repeats the [data-blok-top-layer][popover] compound to outrank the
+  shared top-layer reset (main.css sets `inset: auto`).
+*/
+[data-blok-assistant],
+[data-blok-assistant][data-blok-top-layer][popover] {
+  position: fixed;
+  inset: auto;
+  bottom: var(--blok-space-6);
+  left: 50%;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1-5);
+  width: min(720px, calc(100vw - 2 * var(--blok-space-4)));
+  max-width: calc(100vw - 2 * var(--blok-space-4));
+  margin: 0;
+  padding: var(--blok-space-2);
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-2)));
+  background: var(--blok-popover-bg);
+  box-shadow: var(--blok-popover-box-shadow);
+  color: var(--blok-text-primary);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: var(--blok-font-size-ui-label);
+  line-height: var(--blok-line-height-body);
+  overflow: visible;
+}
+
+/* Until assistant-bar.ts writes `left`, center on the window. */
+[data-blok-assistant]:not([style*='left']) {
+  translate: -50% 0;
+}
+
+[data-blok-assistant-reply],
+[data-blok-assistant-alert],
+[data-blok-assistant-status] {
+  margin: 0;
+  padding-inline: var(--blok-space-1);
+}
+
+[data-blok-assistant-reply] {
+  max-height: 40vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+[data-blok-assistant-alert] {
+  color: var(--blok-color-danger);
+}
+
+[data-blok-assistant-status] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-assistant-status]:empty {
+  display: none;
+}
+
+[data-blok-assistant-row] {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-assistant-icon] {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-assistant-icon] svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The sparkle breathes while the model works. */
+[data-blok-assistant-working] [data-blok-assistant-icon] svg {
+  animation: blok-assistant-breathe 1.4s var(--blok-ease-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-assistant-working] [data-blok-assistant-icon] svg {
+    animation: none;
+  }
+}
+
+@keyframes blok-assistant-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* The shared field look (field.css) paints the box; this only sizes it. */
+[data-blok-assistant-row] textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 160px;
+  padding-block: var(--blok-space-0-75);
+  field-sizing: content;
+  resize: none;
+  font-size: var(--blok-font-size-ui-label);
+}
+
+[data-blok-assistant-send],
+[data-blok-assistant-button] {
+  flex: none;
+  height: 28px;
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  cursor: pointer;
+  transition:
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    opacity var(--blok-duration-base) var(--blok-ease-standard),
+    transform var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+/* Primary ink, never blue: blue is for links and focus rings only. */
+[data-blok-assistant-send] {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  padding: 0;
+  background: var(--blok-text-primary);
+  color: var(--blok-popover-bg);
+}
+
+[data-blok-assistant-send] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-assistant-send]:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+[data-blok-assistant-button] {
+  padding-inline: var(--blok-space-2-5);
+  background: var(--blok-icon-bg);
+  color: var(--blok-text-primary);
+  font-size: var(--blok-font-size-ui-compact);
+  font-weight: var(--blok-font-weight-medium);
+  white-space: nowrap;
+}
+
+[data-blok-assistant-button]:hover {
+  background: var(--blok-item-hover-bg);
+}
+
+[data-blok-assistant-send]:active:not(:disabled),
+[data-blok-assistant-button]:active {
+  transform: scale(0.97);
+}
+
+[data-blok-assistant] button:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-assistant-actions] {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-assistant] [hidden] {
+  display: none;
+}
+
+[data-blok-assistant][hidden] {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  [data-blok-assistant],
+  [data-blok-assistant][data-blok-top-layer][popover] {
+    bottom: var(--blok-space-3);
+  }
+}

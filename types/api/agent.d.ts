@@ -74,6 +74,8 @@ export interface Agent {
    * Throws when no assistant is configured or a turn is already open.
    */
   ask(prompt: string, options?: AgentAskOptions): AgentRun;
+  /** Open the "Ask AI" prompt bar, as Mod+J does. Does nothing without `agent.assistant` or in read-only mode. */
+  openAssistant(): void;
 }
 
 /**

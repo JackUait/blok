@@ -15,6 +15,7 @@
  */
 export const INLINE_TOOL_ORDER: readonly string[] = [
   'convertTo',
+  'askAi',
   'marker',
   'bold',
   'italic',

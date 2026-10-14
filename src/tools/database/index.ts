@@ -1,9 +1,9 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
-import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget } from './types';
+import type { AutofillSettings, DatabaseData, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData } from './tier3-values';
@@ -62,6 +62,7 @@ import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import type { ViewChanges } from './database-model';
 import type { ViewPropertyPatch } from './view-settings';
 import type { PageLayoutOp } from './page-layout';
+import { setTabsId } from './page-layout';
 import {
   TIMELINE_ZOOMS,
   resolveArrowsBy,
@@ -94,6 +95,7 @@ import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseListRowDrag } from './database-list-row-drag';
 import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
+import type { LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
 import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconPageLayout, IconUpload } from '../../components/icons';
@@ -328,6 +330,8 @@ export class DatabaseTool implements BlockTool {
   private initialProjectionPending = true;
   /** Hidden home of the row holders, so their page bodies never show at the editor root. */
   private rowPool: HTMLDivElement | null = null;
+  /** Holds the row page's layout tabs block (plan 11 §2.1). Chrome: find and own-text skip it, it is no database content. */
+  private layoutPool: HTMLDivElement | null = null;
   private tabBar: DatabaseTabBar | null = null;
 
   private cardDrag: DatabaseCardDrag | null = null;
@@ -496,14 +500,7 @@ export class DatabaseTool implements BlockTool {
   private linkTo(databaseId: string): void {
     if (this.readOnly) return;
     const target = this.readDatabaseSource(databaseId);
-    const live: DatabaseViewConfig[][] = [];
-
-    this.api.blocks.getById(databaseId)?.call('readViews', { receive: (views: DatabaseViewConfig[]) => live.push(views) });
-    const sourceViews = live[0] ?? (this.api.blocks.getById(databaseId)?.preservedData)?.views ?? [];
-    const first = sourceViews.find((view) => view.type === 'table') ?? sourceViews[0];
-    const view: DatabaseViewConfig = first === undefined
-      ? { id: nanoid(), name: this.api.i18n.t('tools.database.viewTypeTable'), type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }
-      : { ...structuredClone(first), id: nanoid(), position: 'a0' };
+    const view = this.linkedFirstView(databaseId);
     const title = this.model.getSchema().find((p) => p.type === 'title');
 
     this.stubSchema = title === undefined ? [] : [structuredClone(title)];
@@ -514,6 +511,18 @@ export class DatabaseTool implements BlockTool {
     this.block.dispatchChange();
     this.rebuildTabBar();
     this.rerenderView();
+  }
+
+  private linkedFirstView(databaseId: string): DatabaseViewConfig {
+    const live: DatabaseViewConfig[][] = [];
+
+    this.api.blocks.getById(databaseId)?.call('readViews', { receive: (views: DatabaseViewConfig[]) => live.push(views) });
+    const sourceViews = live[0] ?? (this.api.blocks.getById(databaseId)?.preservedData)?.views ?? [];
+    const first = sourceViews.find((view) => view.type === 'table') ?? sourceViews[0];
+
+    return first === undefined
+      ? { id: nanoid(), name: this.api.i18n.t('tools.database.viewTypeTable'), type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }
+      : { ...structuredClone(first), id: nanoid(), position: 'a0' };
   }
 
   /** Read by a linked view being made: this database's views, to copy the first table view. */
@@ -753,6 +762,15 @@ export class DatabaseTool implements BlockTool {
     rowPool.hidden = true;
     this.rowPool = rowPool;
     wrapper.appendChild(rowPool);
+
+    const layoutPool = document.createElement('div');
+
+    layoutPool.setAttribute('data-blok-database-layout-pool', '');
+    layoutPool.setAttribute(DATA_ATTR.chrome, '');
+    layoutPool.setAttribute(DATA_ATTR.mutationFree, 'true');
+    layoutPool.hidden = true;
+    this.layoutPool = layoutPool;
+    wrapper.appendChild(layoutPool);
 
     const titleEl = this.createTitleElement();
     this.titleElement = titleEl;
@@ -997,6 +1015,7 @@ export class DatabaseTool implements BlockTool {
     this.element = null;
     this.boardContainer = null;
     this.rowPool = null;
+    this.layoutPool = null;
     this.tabBar = null;
   }
 
@@ -1182,6 +1201,8 @@ export class DatabaseTool implements BlockTool {
       this.storeUniqueIds(rows, numbered, children);
     }
     this.refreshRowPrompts();
+    // A peer's layout write can settle which of two tabs blocks wins.
+    if (this.madeTabsBlocks.size > 0) this.queueLayoutTabsSync();
   }
 
   /**
@@ -1315,6 +1336,8 @@ export class DatabaseTool implements BlockTool {
    */
   private readonly handleBlockChanged = (payload: unknown): void => {
     const target = changedBlock(payload);
+
+    if (this.isLayoutTabsChange(target)) this.queueLayoutTabsSync();
     const own = this.isOwnRowChange(target);
 
     if (this.reprojectQueued || !(own || this.isRelatedChange(target))) {
@@ -1348,10 +1371,374 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     const openRowId = this.cardDrawer?.bodyRowId ?? null;
-    const rows = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'database-row');
+    const children = this.api.blocks.getChildren(this.dataId);
+    const rows = children.filter((child) => child.name === 'database-row');
 
     mountChildBlocks(this.rowPool, rows.filter((row) => row.id !== openRowId));
     rows.forEach((row) => row.holder.classList.toggle('hidden', row.id !== openRowId));
+    this.mountLayoutTabs(children);
+  }
+
+  /**
+   * Core mounts any new child into the first slot, the row pool: a layout tabs
+   * block moves out of it. Not mountChildBlocks: it leaves a holder that sits
+   * in another slot where it is. In document order, which core checks.
+   */
+  private mountLayoutTabs(children: BlockAPI[]): void {
+    const pool = this.layoutPool;
+    const lent = this.layoutTabsLent ? this.layoutTabsBlock()?.id : undefined;
+    const pooled = children.filter((child) => child.name === 'tabs' && child.id !== lent);
+
+    if (pool === null || pooled.every((tabs, i) => pool.children[i] === tabs.holder)) return;
+    pooled.forEach((tabs) => moveElementToEnd(pool, tabs.holder));
+  }
+
+  // ─── Row page view tabs (plan 11 §2.1) ───
+
+  /** The `tabs` child named by `pageLayoutTabsId`, else the first one: a duplicate's id still names the original's. */
+  private layoutTabsBlock(): BlockAPI | undefined {
+    const blocks = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'tabs');
+    const named = this.model.getPageLayout().tabsId;
+
+    return blocks.find((block) => block.id === named) ?? blocks[0];
+  }
+
+  private layoutTabsList(): LayoutTab[] {
+    const block = this.layoutTabsBlock();
+
+    if (block === undefined) return [];
+
+    return this.api.blocks.getChildren(block.id).filter((child) => child.name === 'tab').map((child) => {
+      const live: Array<{ title?: unknown }> = [];
+
+      child.call('readData', { receive: (data: { title?: unknown }) => live.push(data) });
+      const title = (live[0] ?? child.preservedData)?.title;
+
+      return { id: child.id, title: typeof title === 'string' ? title : '', view: this.isViewTab(child.id) };
+    });
+  }
+
+  /** A view tab holds a database; Content holds none. Read from the blocks, not the order, which a peer's undo can change. */
+  private isViewTab(tabId: string): boolean {
+    return this.api.blocks.getChildren(tabId).some((child) => child.name === 'database');
+  }
+
+  private hasContentTab(tabsId: string): boolean {
+    return this.api.blocks.getChildren(tabsId).some((child) => child.name === 'tab' && !this.isViewTab(child.id));
+  }
+
+  /** A change to the layout tabs block or a tab in it: remount and redraw the open row page once. */
+  private isLayoutTabsChange(target: ChangedBlock | undefined): boolean {
+    if (target?.name !== 'tabs' && target?.name !== 'tab') return false;
+    const parentId = typeof target.parentId === 'string' ? target.parentId : null;
+
+    return parentId === this.dataId || (parentId !== null && this.api.blocks.getById(parentId)?.parentId === this.dataId);
+  }
+
+  private layoutTabsQueued = false;
+  /** Tabs blocks this editor made. Only their maker merges them, so two peers never move the same tab. */
+  private readonly madeTabsBlocks = new Set<string>();
+
+  /**
+   * Two peers each made the first view tab: two tabs blocks. Every peer reads
+   * the same winner (`pageLayoutTabsId`, one key). The maker of a loser moves
+   * its view tabs into the winner and deletes it, with no undo step.
+   */
+  private mergeQueued = false;
+
+  /** A merge waits out the sync window it was noticed in: a write inside it would read as its echo. */
+  private queueMergeLayoutTabs(): void {
+    if (this.mergeQueued || this.madeTabsBlocks.size === 0) return;
+    this.mergeQueued = true;
+    const run = (): void => {
+      if (this.destroyed) return;
+      if (this.api.blocks.isSyncingFromYjs) {
+        requestAnimationFrame(run);
+
+        return;
+      }
+      this.mergeQueued = false;
+      this.mergeLayoutTabs();
+    };
+
+    run();
+  }
+
+  private mergeLayoutTabs(): void {
+    const winner = this.layoutTabsBlock();
+    const losers = this.api.blocks.getChildren(this.dataId)
+      .filter((child) => child.name === 'tabs' && child.id !== winner?.id && this.madeTabsBlocks.has(child.id)
+        // An open draft still owns it: Discard must find its tabs where it made them.
+        && !(this.cardDrawer?.draftTabBlocks.includes(child.id) ?? false));
+
+    if (winner === undefined || losers.length === 0 || this.readOnly || this.model.getPageLayout().tabsId !== winner.id) return;
+    // Copies, not moves: the tabs sit in this editor's Apply step, and undoing
+    // a step whose blocks moved under another parent leaves their ids behind
+    // in that parent on this peer only.
+    // Only view tabs come: the winner has its own Content.
+    const copies = losers.flatMap((loser) => this.api.blocks.getChildren(loser.id).filter((tab) => this.isViewTab(tab.id)).map((tab) => this.subtreeOf(tab.id)));
+
+    this.api.blocks.transactWithoutCapture?.(() => {
+      for (const loser of losers) {
+        this.madeTabsBlocks.delete(loser.id);
+        this.removeBlock(loser.id);
+      }
+      for (const subtree of copies) {
+        const ids = new Map(subtree.map((block) => [block.id, nanoid()]));
+
+        for (const block of subtree) {
+          const parentId = block.parentId === null ? null : ids.get(block.parentId) ?? winner.id;
+
+          this.api.blocks.insertAt(block.name, block.data, { parentId, position: 'end', id: ids.get(block.id) });
+        }
+      }
+    });
+  }
+  /** The tab list the open row page last drew. Moving a view's holder fires block changes too, which must not redraw again. */
+  private layoutTabsSeen = '';
+
+  private queueLayoutTabsSync(): void {
+    if (this.layoutTabsQueued) return;
+    this.layoutTabsQueued = true;
+    queueMicrotask(() => {
+      this.layoutTabsQueued = false;
+      if (this.destroyed) return;
+      this.queueMergeLayoutTabs();
+      this.mountRows();
+      const seen = JSON.stringify([this.layoutTabsBlock()?.id, this.layoutTabsList()]);
+
+      if (seen === this.layoutTabsSeen) return;
+      this.layoutTabsSeen = seen;
+      this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    });
+  }
+
+  private canEditLayoutTabs(): boolean {
+    const names = new Set(this.api.tools.getBlockTools().map((tool) => tool.name));
+
+    return !this.readOnly && !this.linked && !this.structureLocked() && names.has('tabs') && names.has('tab') && this.api.blocks.transactWithoutCapture !== undefined;
+  }
+
+  /** A linked view's data: its one view copies the source's first table view (Notion, R:2021-12-23). */
+  private linkedViewData(databaseId: string, name: string): DatabaseData {
+    const view = this.linkedFirstView(databaseId);
+    const title = this.model.getSchema().find((p) => p.type === 'title');
+
+    return {
+      title: '',
+      schema: title === undefined ? [] : [structuredClone(title)],
+      views: [{ ...view, name }],
+      activeViewId: view.id,
+      source: { databaseId },
+    };
+  }
+
+  private removeBlock(id: string): void {
+    const index = this.api.blocks.getBlockIndex(id);
+
+    if (index !== undefined) void this.api.blocks.delete(index, false);
+  }
+
+  /** A block and its descendants as saved, parents first. */
+  private subtreeOf(id: string): Array<{ id: string; name: string; parentId: string | null; data: BlockToolData }> {
+    const block = this.api.blocks.getById(id);
+
+    if (block === null) return [];
+
+    return [
+      { id, name: block.name, parentId: block.parentId, data: structuredClone(block.preservedData) },
+      ...this.api.blocks.getChildren(id).flatMap((child) => this.subtreeOf(child.id)),
+    ];
+  }
+
+  private readonly layoutTabsHost: LayoutTabsHost = {
+    canEdit: () => this.canEditLayoutTabs(),
+    list: () => this.layoutTabsList(),
+    sources: () => this.documentDatabases().filter((database) => database.id === this.dataId || !this.isLinkedBlock(database.id)),
+    add: (sourceId, title) => {
+      if (!this.canEditLayoutTabs()) return null;
+      const made: { tabId: string; made: string; contentId: string | null } = { tabId: '', made: '', contentId: null };
+
+      this.api.blocks.transactWithoutCapture?.(() => {
+        const existing = this.layoutTabsBlock();
+        const tabs = existing ?? this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end' });
+
+        // An undone Apply, or a peer's, can leave the block without Content: it comes first again.
+        if (existing === undefined || !this.hasContentTab(tabs.id)) {
+          made.contentId = this.api.blocks.insertAt('tab', { title: '' }, { parentId: tabs.id, position: 'start' }).id;
+        }
+        const tab = this.api.blocks.insertAt('tab', { title }, { parentId: tabs.id, position: 'end' });
+
+        this.api.blocks.insertAt('database', this.linkedViewData(sourceId, title), { parentId: tab.id, position: 'end' });
+        made.tabId = tab.id;
+        made.made = existing === undefined ? tabs.id : tab.id;
+        if (existing === undefined) this.madeTabsBlocks.add(tabs.id);
+      });
+      this.mountRows();
+
+      return made.tabId === '' ? null : made;
+    },
+    ensure: () => {
+      if (!this.canEditLayoutTabs()) return null;
+      const existing = this.layoutTabsBlock();
+
+      if (existing !== undefined && this.hasContentTab(existing.id)) return null;
+      const made = { contentId: '', made: '' };
+
+      this.api.blocks.transactWithoutCapture?.(() => {
+        const tabs = existing ?? this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end' });
+
+        made.contentId = this.api.blocks.insertAt('tab', { title: '' }, { parentId: tabs.id, position: 'start' }).id;
+        made.made = existing === undefined ? tabs.id : made.contentId;
+        if (existing === undefined) this.madeTabsBlocks.add(tabs.id);
+      });
+      this.mountRows();
+
+      return made.made === '' ? null : made;
+    },
+    renameMade: (tabId, title) => {
+      const tab = this.api.blocks.getById(tabId);
+
+      if (tab === null || !this.canEditLayoutTabs()) return;
+      this.api.blocks.transactWithoutCapture?.(() => {
+        tab.call('setData', { title });
+        tab.dispatchChange({ derived: true });
+      });
+    },
+    discard: (made) => {
+      const live = made.filter((id) => this.api.blocks.getById(id) !== null);
+
+      if (live.length === 0 || this.readOnly) return;
+      this.api.blocks.transactWithoutCapture?.(() => live.forEach((id) => this.removeBlock(id)));
+    },
+    attach: (tabId, host) => this.attachLayoutTab(tabId, host),
+    detach: () => this.detachLayoutTab(),
+    notify: (message) => this.api.notifier.show({ message }),
+  };
+
+  /** Whether the layout tabs holder is lent to a row page's tab panel. */
+  private layoutTabsLent = false;
+
+  /**
+   * Lends the layout tabs block to a row page's view tab panel, opened on
+   * `tabId`. The whole tabs holder moves, not the tab's database: a database
+   * child is placed by the database, so the saver's home-slot check passes,
+   * while a tab's child outside its tab would fail it. Refused when `host`
+   * sits inside the tabs block: a row page opened from the view itself.
+   */
+  private attachLayoutTab(tabId: string, host: HTMLElement): boolean {
+    const tabs = this.layoutTabsBlock();
+    const tab = this.api.blocks.getById(tabId);
+
+    if (tabs === undefined || tab === null || tab.parentId !== tabs.id || tabs.holder.contains(host)) return false;
+    moveElementToEnd(host, tabs.holder);
+    this.layoutTabsLent = true;
+    // The tab's own lever, as find-in-page uses it: open this tab in its tabs block.
+    tab.call('expand');
+
+    return true;
+  }
+
+  private detachLayoutTab(): void {
+    if (!this.layoutTabsLent) return;
+    this.layoutTabsLent = false;
+    this.mountRows();
+  }
+
+  /**
+   * Apply: tabs made while customizing were saved without an undo step. They
+   * are taken out (still without one) and put back with the same ids inside
+   * the Apply step, so one undo removes them with the rest of the layout.
+   */
+  private takeMadeTabs(made: string[]): Array<Array<{ id: string; name: string; parentId: string | null; data: BlockToolData }>> {
+    const live = made.filter((id) => this.api.blocks.getById(id) !== null);
+    // A tabs block made now stays: deleting a database child schedules the
+    // database's own sync outside any step, and that sync would write the new
+    // layout there too. Its tabs go and come back instead.
+    const roots = live.flatMap((id) => {
+      const block = this.api.blocks.getById(id);
+
+      return block?.name === 'tabs' ? this.api.blocks.getChildren(id).map((child) => child.id) : [id];
+    }).filter((id, i, all) => all.indexOf(id) === i && !all.includes(this.api.blocks.getById(id)?.parentId ?? ''));
+    const subtrees = roots.map((id) => this.subtreeOf(id));
+
+    if (subtrees.length > 0) this.api.blocks.transactWithoutCapture?.(() => roots.forEach((id) => this.removeBlock(id)));
+
+    return subtrees;
+  }
+
+  private putBackTabs(subtrees: Array<Array<{ id: string; name: string; parentId: string | null; data: BlockToolData }>>): void {
+    // Parents come first in each subtree, so every parent exists by its children's turn.
+    for (const block of subtrees.flat()) {
+      if (block.parentId === null || this.api.blocks.getById(block.parentId) !== null) {
+        // A tabs block must not seed tabs of its own: its tabs follow.
+        const data = block.name === 'tabs' ? { ...block.data, noSeed: true } : block.data;
+
+        this.api.blocks.insertAt(block.name, data, { parentId: block.parentId, position: 'end', id: block.id });
+      }
+    }
+  }
+
+  private applyPageLayout(edit: PageLayoutOp | null, visibility: ReadonlyMap<string, PageVisibility> | undefined, tabs: LayoutTabsDraft | undefined): void {
+    const taken = tabs === undefined ? [] : this.takeMadeTabs(tabs.made);
+    // Reset discards the tabs made now (research/11 §1), outside its step, so Undo cannot bring them back.
+    const subtrees = tabs?.reset === true ? [] : taken;
+
+    if (taken.length === 0) {
+      this.writePageLayout(edit, visibility, tabs, subtrees);
+
+      return;
+    }
+    // The removal above replays through the document first. A write made
+    // while it does reads as its echo and is saved outside every undo step.
+    const run = (): void => {
+      if (this.destroyed) return;
+      if (this.api.blocks.isSyncingFromYjs) {
+        requestAnimationFrame(run);
+
+        return;
+      }
+      this.writePageLayout(edit, visibility, tabs, subtrees);
+    };
+
+    run();
+  }
+
+  private writePageLayout(
+    edit: PageLayoutOp | null,
+    visibility: ReadonlyMap<string, PageVisibility> | undefined,
+    tabs: LayoutTabsDraft | undefined,
+    subtrees: Array<Array<{ id: string; name: string; parentId: string | null; data: BlockToolData }>>
+  ): void {
+    const block = this.layoutTabsBlock();
+    const tabsId = tabs?.reset === true ? undefined : block?.id;
+    const named = tabsId !== undefined && tabsId !== this.model.getPageLayout().tabsId;
+
+    // One undo step. The schema is written first: an insert below opens a sync
+    // window, and a database change made inside it reads as an echo and is
+    // saved outside the step.
+    this.inOneStep(() => {
+      for (const [propertyId, pageVisibility] of visibility ?? []) this.updatePropertySettings(propertyId, { pageVisibility });
+      if (edit !== null || named) {
+        this.setPageLayout((layout) => {
+          const next = edit === null ? layout : edit(layout);
+
+          return named ? setTabsId(tabsId)(next) : next;
+        });
+      }
+      this.putBackTabs(subtrees);
+      for (const id of tabs?.removed ?? []) this.removeBlock(id);
+      for (const [id, title] of tabs?.titles ?? []) {
+        const tab = this.api.blocks.getById(id);
+
+        tab?.call('setData', { title });
+        tab?.dispatchChange();
+      }
+      if (tabs?.reset === true && block !== undefined) this.removeBlock(block.id);
+    });
+    this.mountRows();
+    // A peer's tabs block may have won while this draft was open.
+    this.queueMergeLayoutTabs();
   }
 
   /**
@@ -5383,14 +5770,11 @@ export class DatabaseTool implements BlockTool {
           return true;
         },
         peekHost: () => this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null,
-        onPageLayoutChange: (edit, visibility) => {
+        onPageLayoutChange: (edit, visibility, tabs) => {
           if (this.readOnly || this.structureLocked()) return;
-          // One undo step. The layout goes last, so its drawer refresh sees the new visibility.
-          this.inOneStep(() => {
-            for (const [propertyId, pageVisibility] of visibility ?? []) this.updatePropertySettings(propertyId, { pageVisibility });
-            if (edit !== null) this.setPageLayout(edit);
-          });
+          this.applyPageLayout(edit, visibility, tabs);
         },
+        layoutTabs: this.layoutTabsHost,
         onPageLayoutBirth: () => {
           // Derived: undoing the birth would also drop entries a peer pushed into the lists.
           if (!this.readOnly && this.model.bearPageLayout()) this.block.dispatchChange({ derived: true });

@@ -83,6 +83,8 @@ export interface PageLayoutFields {
   pageLayoutTemplates?: false;
   /** `true` lays every row page out full width. Default off. */
   pageLayoutFullWidth?: true;
+  /** The `tabs` child of this database that holds the row page's view tabs. Kept while `simple`. */
+  pageLayoutTabsId?: string;
   /** A property with no entry sits in the property group. */
   pageLayoutPlacements?: PageLayoutPlacement[];
   pageLayoutSections?: PageLayoutSection[];

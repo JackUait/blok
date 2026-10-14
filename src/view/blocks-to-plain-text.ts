@@ -416,7 +416,8 @@ const readPlainText = (
       }
     });
 
-    return [...rows, ...children.filter((child) => child.type !== 'database-row')];
+    // A `tabs` child is the row page's layout (its view tabs), not database content.
+    return [...rows, ...children.filter((child) => child.type !== 'database-row' && child.type !== 'tabs')];
   };
   const visit = (block: ViewBlock, segments: Segment[]): void => {
     if (block.id !== undefined && active.has(block.id)) {

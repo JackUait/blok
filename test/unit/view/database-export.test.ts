@@ -63,6 +63,24 @@ describe('database export', () => {
     expect(blocksToPlainText(withTemplate)).toBe(blocksToPlainText(doc));
   });
 
+  // plan 11 §2.1 risk 1: the row page's view tabs are layout, not database content.
+  it('never exports the page layout tabs block as database content', () => {
+    const withTabs: OutputData = {
+      blocks: [
+        { ...doc.blocks[0], content: ['r2', 'r1', 'lt'] },
+        ...doc.blocks.slice(1),
+        { id: 'lt', type: 'tabs', parent: 'db', data: {}, content: ['tc', 'tv'] },
+        { id: 'tc', type: 'tab', parent: 'lt', data: { title: '' } },
+        { id: 'tv', type: 'tab', parent: 'lt', data: { title: 'Roadmap' }, content: ['lv'] },
+        { id: 'lv', type: 'database', parent: 'tv', data: { title: 'Linked', schema: [], views: [], activeViewId: '', source: { databaseId: 'db' } } },
+      ],
+    };
+
+    expect(blocksToHtml(withTabs)).toBe(blocksToHtml(doc));
+    expect(blocksToMarkdown(withTabs)).toBe(blocksToMarkdown(doc));
+    expect(blocksToPlainText(withTabs)).toBe(blocksToPlainText(doc));
+  });
+
   it('reads the database and row titles as plain text', () => {
     expect(blocksToPlainText(doc).split('\n').filter((line) => line !== '')).toEqual(['Tasks', 'First', 'first body', 'Second']);
   });

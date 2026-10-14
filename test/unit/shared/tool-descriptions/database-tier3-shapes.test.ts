@@ -165,3 +165,15 @@ describe('database schema: Tier 3 (D6) data slots', () => {
     }).length).toBeGreaterThan(0);
   });
 });
+
+describe('database schema: row page layout tabs', () => {
+  it('accepts the tabs block id on the title property', () => {
+    const data = {
+      activeViewId: 'v',
+      schema: [{ id: 'title', name: 'Name', type: 'title', position: 'a0', pageLayoutStructure: 'tabbed', pageLayoutTabsId: 'tabs-1' }],
+      views: [view({ id: 'v', type: 'table' })],
+    };
+
+    expect(validate(data)).toEqual([]);
+  });
+});

@@ -28,6 +28,7 @@ import {
   setPropertyIcons,
   setPropertyLabels,
   setStructure,
+  setTabsId,
   setTemplates,
 } from '../../../../src/tools/database/page-layout';
 import type { PageLayoutDraft } from '../../../../src/tools/database/page-layout';
@@ -361,6 +362,20 @@ describe('page layout — edits', () => {
     expect(back.pageLayoutPropertyLabels).toBeUndefined();
     expect(back.pageLayoutTemplates).toBeUndefined();
     expect(back.pageLayoutFullWidth).toBeUndefined();
+  });
+
+  // research/11 §3: Simple keeps the view tabs; Reset drops them.
+  it('keeps the layout tabs block id through Simple and drops it on reset', () => {
+    expect(empty.tabsId).toBeUndefined();
+    expect(pageLayoutFields(empty).pageLayoutTabsId).toBeUndefined();
+    const tabbed = setTabsId('tabs-1')(setStructure('tabbed')(empty));
+
+    expect(pageLayoutFields(tabbed).pageLayoutTabsId).toBe('tabs-1');
+    expect(pageLayoutOf({ ...TITLE, pageLayoutTabsId: 'tabs-1' }).tabsId).toBe('tabs-1');
+    expect(pageLayoutOf({ ...TITLE, pageLayoutTabsId: 7 } as unknown as PropertyDefinition).tabsId).toBeUndefined();
+    expect(setStructure('simple')(tabbed).tabsId).toBe('tabs-1');
+    expect(resetPageLayout()(tabbed).tabsId).toBeUndefined();
+    expect(pageLayoutFields(resetPageLayout()(tabbed)).pageLayoutTabsId).toBeUndefined();
   });
 
   it('resets property labels, templates and full width to their defaults', () => {

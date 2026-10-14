@@ -110,6 +110,11 @@ export class TabTool implements BlockTool, TabHandle {
     return { ...this._data };
   }
 
+  /** The live data, before the next save: a database's row page draws its view tabs from it. */
+  public readData(param: { receive: (data: TabData) => void }): void {
+    param.receive({ ...this._data });
+  }
+
   public validate(_data: TabData): boolean {
     return true;
   }

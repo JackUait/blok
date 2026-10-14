@@ -431,6 +431,52 @@ describe('database row page layout css', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-peek-page-info] svg')).toContain('transform: scaleX(var(--_blok-inline-sign, 1))');
   });
 
+  // research/10 §2: builder tabs are 32px round pills. The selected one has a ring, neutral by the no-blue law.
+  it('draws builder tabs as round pills and marks the selected one with a primary ring, never blue', () => {
+    const pill = ruleBody('[data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] [role="tab"]');
+    const selected = ruleBody('[data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"]');
+
+    expect(pill).toContain('min-height: 32px');
+    expect(pill).toContain('border-radius: var(--blok-radius-pill)');
+    expect(selected).toContain('color: var(--blok-text-primary)');
+    expect(selected).toContain('box-shadow: inset 0 0 0 1.25px var(--blok-text-primary)');
+    expect(selected).not.toMatch(/blue|#2383e2|rgb\(35, 131, 226\)|background/i);
+  });
+
+  // research/10 §2: a 28px circle; neutral, as the coordinator's Q6 default turned the builder's decorative blue neutral.
+  it('draws Add tab as a neutral 28px circle', () => {
+    const add = ruleBody('[data-blok-database-layout-add-tab]');
+
+    expect(add).toContain('inline-size: 28px');
+    expect(add).toContain('block-size: 28px');
+    expect(add).toContain('border-radius: var(--blok-radius-pill)');
+    expect(add).not.toMatch(/blue|#2383e2/i);
+  });
+
+  // research/10 §2: Add tab shows on hover. Keyboard focus shows it too, and touch has no hover, so it shows there.
+  it('reveals Add tab on hover or keyboard focus in the bar, and always without hover', () => {
+    expect(ruleBody('[data-blok-database-layout-add-tab]')).toContain('opacity: 0');
+    expect(database).toMatch(/\[data-blok-database-drawer-tabs\]:hover \[data-blok-database-layout-add-tab\],\s*\[data-blok-database-drawer-tabs\]:has\(:focus-visible\) \[data-blok-database-layout-add-tab\][^{]*\{ opacity: 1; \}/);
+    expect(database).toMatch(/@media \(hover: none\) \{ \[data-blok-database-layout-add-tab\] \{ opacity: 1; \} \}/);
+    expect(ruleBody('[data-blok-database-drawer-tabs] > [role="tablist"]')).toContain('display: flex');
+  });
+
+  // The row page draws its own strip; the lent tabs block shows only the open tab's panel.
+  it('hides the tabs block\'s own strip inside a row page tab panel', () => {
+    expect(ruleBody('[data-blok-database-drawer-tab-panel] [data-blok-tabs-strip]')).toContain('display: none');
+  });
+
+  // research/10 §2b: a view tab holds the whole linked database with no card and no title of its own.
+  it('draws a view tab\'s database with no tabs card frame and no title', () => {
+    const frame = ruleBody('[data-blok-database-drawer-tab-panel] [data-blok-tabs]');
+    const sheet = ruleBody('[data-blok-database-drawer-tab-panel] [data-blok-tabs-panels]');
+
+    expect(frame).toContain('border: none');
+    expect(sheet).toContain('padding: 0');
+    expect(sheet).toContain('background: none');
+    expect(ruleBody('[data-blok-database-drawer-tab-panel] [data-blok-database-title]')).toContain('display: none');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

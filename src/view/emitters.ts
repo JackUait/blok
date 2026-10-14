@@ -786,7 +786,8 @@ export const builtinEmitters: Record<string, Emitter> = {
       .map((row) => emitDatabaseRow(row, env, databaseRowTitle(row, titleId)))
       .join('');
 
-    return `<section data-blok-database>${heading}${rows}${env.renderList(children.filter((child) => child.type !== 'database-row'))}</section>`;
+    // A `tabs` child is the row page's layout (its view tabs), not database content.
+    return `<section data-blok-database>${heading}${rows}${env.renderList(children.filter((child) => child.type !== 'database-row' && child.type !== 'tabs'))}</section>`;
   },
   'database-row': (block, env) => emitDatabaseRow(block, env, databaseRowTitle(block, undefined)),
 

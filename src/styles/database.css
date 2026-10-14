@@ -3202,6 +3202,80 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   box-shadow: inset 0 -2px 0 currentColor;
 }
 
+/* research/10 §2: builder tabs are round 32px pills with a hairline ring. */
+[data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] {
+  align-items: center;
+  padding-block: var(--blok-space-1);
+  border-bottom: none;
+}
+
+[data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] [role="tab"] {
+  min-height: 32px;
+  padding-inline: var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  box-shadow: inset 0 0 0 0.5px var(--blok-database-drawer-border);
+  font-weight: 500;
+}
+
+/* Notion's ring is blue; a selected state is never blue here. */
+[data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"] {
+  color: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1.25px var(--blok-text-primary);
+}
+
+[data-blok-database-layout-add-tab] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-item-hover-bg);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+}
+
+/* Hover shows it (research/10 §2); keyboard focus too, never a click. Touch has no hover, so it always shows. */
+[data-blok-database-drawer-tabs]:hover [data-blok-database-layout-add-tab],
+[data-blok-database-drawer-tabs]:has(:focus-visible) [data-blok-database-layout-add-tab] { opacity: 1; }
+
+@media (hover: none) { [data-blok-database-layout-add-tab] { opacity: 1; } }
+
+[data-blok-database-drawer-tabs] > [role="tablist"] {
+  display: flex;
+  gap: var(--blok-space-1);
+  align-items: center;
+}
+
+[data-blok-database-layout-add-tab] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+/* The row page draws its own strip: the lent tabs block shows only the open tab. */
+[data-blok-database-drawer-tab-panel] [data-blok-tabs-strip] {
+  display: none;
+}
+
+/* research/10 §2b: the view shows as the page's own content, not as a tabs card. */
+[data-blok-database-drawer-tab-panel] [data-blok-tabs] {
+  border: none;
+}
+
+[data-blok-database-drawer-tab-panel] [data-blok-tabs-panels] {
+  padding: 0;
+  background: none;
+}
+
+/* The tab names the view; the linked database's empty title would read "New database". */
+[data-blok-database-drawer-tab-panel] [data-blok-database-title] {
+  display: none;
+}
+
 @media (hover: hover) {
   [data-blok-database-drawer-customize]:hover,
   [data-blok-database-layout-cancel]:hover,

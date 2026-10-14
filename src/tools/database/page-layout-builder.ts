@@ -47,6 +47,14 @@ export interface PreviewPage {
   title: string;
 }
 
+/** The builder's view tab edits; the drawer keeps them in the draft. */
+export interface BuilderTabs {
+  sources(): Array<{ id: string; title: string }>;
+  add(sourceId: string, name: string): void;
+  rename(tabId: string, title: string): void;
+  remove(tabId: string, name: string): void;
+}
+
 export interface PageLayoutBuilderOptions {
   i18n?: I18n;
   /** The database's name for the top bar. Empty shows the new-database placeholder. */
@@ -261,10 +269,16 @@ export class PageLayoutBuilder {
     const layout = this.options.layout();
 
     for (const { control, state, on } of this.settings) control.setAttribute(state, String(on(layout)));
-    this.moduleMenu?.panel.refresh();
+    // A tab's menu holds the field being typed in: a rebuild would replace it
+    // mid-word, and the modal's focus trap would then close the menu.
+    if (this.moduleMenu?.key.startsWith('tab:') !== true && this.moduleMenu?.key !== 'add-tab') this.moduleMenu?.panel.refresh();
   }
 
   /** Is `target` inside the builder or one of its menus? */
+  get element(): HTMLElement {
+    return this.root;
+  }
+
   contains(target: Node): boolean {
     return this.root.contains(target);
   }
@@ -1155,6 +1169,132 @@ export class PageLayoutBuilder {
     row.append(description);
 
     return row;
+  }
+
+  /**
+   * The tab bar's "Add tab". Notion adds it on hover only; here it stays in
+   * the DOM so keyboard and touch reach it, and CSS shows it on hover or focus.
+   */
+  addTabButton(tabs: BuilderTabs): HTMLButtonElement {
+    const add = this.button('data-blok-database-layout-add-tab', IconPlus, null, (el) => this.openAddTab(el, tabs));
+
+    add.setAttribute('aria-label', this.label('tools.database.layoutAddTab'));
+    add.setAttribute('aria-haspopup', 'menu');
+
+    return add;
+  }
+
+  /** research/10 §2: Add tab > Link existing data source > a database > View name > Add view. */
+  private openAddTab(anchor: HTMLElement, tabs: BuilderTabs): void {
+    const form = (source: { id: string; title: string }): PanelPage => ({
+      title: this.label('tools.database.layoutLinkDataSource'),
+      build: (panel) => {
+        const name = { value: source.title };
+        const field = panelInput({
+          value: source.title,
+          placeholder: this.label('tools.database.layoutViewName'),
+          testId: 'database-layout-view-name',
+          label: this.label('tools.database.layoutViewName'),
+          onInput: (value) => {
+            name.value = value;
+          },
+        });
+        const submit = (): void => {
+          panel.close();
+          tabs.add(source.id, name.value.trim() !== '' ? name.value.trim() : source.title);
+        };
+
+        field.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' && !event.isComposing) {
+            event.preventDefault();
+            submit();
+          }
+        });
+        queueMicrotask(() => field.select());
+
+        return [panelLabel(this.label('tools.database.layoutViewName')), field, panelRow({ label: this.label('tools.database.layoutAddView'), testId: 'database-layout-add-view', icon: IconPlus, onClick: submit })];
+      },
+    });
+    const picker: PanelPage = {
+      title: this.label('tools.database.layoutLinkDataSource'),
+      build: (panel) => {
+        const rows = tabs.sources().map((source) => {
+          const title = source.title !== '' ? source.title : this.label('tools.database.relationUntitledDatabase');
+          const row = panelRow({ label: title, testId: `database-layout-source-${source.id}`, icon: IconDatabase, onClick: () => panel.push(form({ id: source.id, title })) });
+
+          row.setAttribute('data-name', title.toLowerCase());
+
+          return row;
+        });
+        const search = this.menuSearch('database-layout-source-search', rows);
+
+        search.placeholder = this.label('tools.database.layoutLinkDataSourceSearch');
+        search.setAttribute('aria-label', this.label('tools.database.layoutLinkDataSourceSearch'));
+
+        return [search, panelLabel(this.label('tools.database.layoutExistingDataSources')), ...rows];
+      },
+    };
+
+    this.openPanel('add-tab', anchor, 'database-layout-add-tab-menu', {
+      build: (panel) => [panelRow({ label: this.label('tools.database.layoutLinkDataSource'), testId: 'database-layout-link-data-source', icon: IconDatabase, onClick: () => panel.push(picker) })],
+    });
+  }
+
+  /**
+   * Clicking the selected tab (research/10 §2): its name, and for a view tab
+   * "Delete view" behind "Delete this view?". Content has no delete.
+   */
+  openTabMenu(anchor: HTMLElement, tab: { id: string; title: string; content: boolean }, tabs: BuilderTabs): void {
+    const current = { title: tab.title };
+
+    this.openPanel(`tab:${tab.id}`, anchor, 'database-layout-tab-menu', {
+      title: this.label('tools.database.settingsTitle'),
+      build: (panel) => {
+        const field = panelInput({
+          value: tab.title,
+          placeholder: this.label('tools.database.layoutViewName'),
+          testId: 'database-layout-tab-name',
+          label: this.label('tools.database.layoutViewName'),
+          onInput: (value) => {
+            current.title = value;
+            tabs.rename(tab.id, value);
+          },
+        });
+
+        if (tab.content) return [field];
+
+        return [field, panelSeparator(), panelRow({
+          label: this.label('tools.database.layoutDeleteView'),
+          testId: 'database-layout-delete-view',
+          icon: IconTrash,
+          danger: true,
+          onClick: () => {
+            panel.close();
+            this.askDeleteView(tab.id, current.title, tabs);
+          },
+        })];
+      },
+    });
+  }
+
+  private askDeleteView(tabId: string, name: string, tabs: BuilderTabs): void {
+    const confirm = new AbortController();
+
+    this.confirm = confirm;
+    void openDatabaseConfirm({
+      title: this.label('tools.database.layoutDeleteViewTitle'),
+      confirmLabel: this.label('tools.database.layoutDeleteView'),
+      cancelLabel: this.label('tools.database.layoutCancel'),
+      destructive: true,
+      directionSource: this.root,
+      // Over this modal: two focus traps on body would pull focus back and forth.
+      container: this.root,
+      signal: confirm.signal,
+    }).then((ok) => {
+      if (this.confirm !== confirm) return;
+      this.confirm = null;
+      if (ok) tabs.remove(tabId, name);
+    });
   }
 
   /** Cancel: with edits, asks first (research/09 §3b). */

@@ -41,7 +41,7 @@ import {
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
-import type { PageLayoutModuleEntry } from './page-layout-builder';
+import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
 type AddedPlace = 'pin' | 'group' | 'page' | 'panel' | { sectionId: string };
@@ -96,6 +96,67 @@ interface BlokInstance {
   destroy(): void;
   isReady: Promise<void>;
   i18n: { update(options: { direction: 'ltr' | 'rtl' }): Promise<void> };
+}
+
+/** A tab of the layout tabs block. Content holds no database; its '' title reads as the "Content" label. */
+export interface LayoutTab {
+  id: string;
+  title: string;
+  /** Holds a linked database. Content is the tab that does not. */
+  view: boolean;
+}
+
+/** View tab edits of an open Customize layout, applied with the layout. */
+export interface LayoutTabsDraft {
+  /** Blocks made while customizing: tabs, or a whole tabs block. */
+  made: string[];
+  /** Saved tabs deleted while customizing. */
+  removed: string[];
+  /** Saved tabs renamed while customizing. */
+  titles: ReadonlyMap<string, string>;
+  /** Reset: the view tabs go with the rest of the layout. */
+  reset?: boolean;
+}
+
+/**
+ * The row page's view tabs: a `tabs` block under the database, each `tab`
+ * holding a linked database (plan 11 §2.1). The drawer draws its own strip
+ * from them and borrows the shown tab's database holder.
+ */
+export interface LayoutTabsHost {
+  /** The tabs tools are registered and the database can be written. */
+  canEdit(): boolean;
+  list(): LayoutTab[];
+  /** Databases a view tab can show. */
+  sources(): Array<{ id: string; title: string }>;
+  /** Makes a view tab at once, with no undo step. `made` is what Discard deletes. */
+  add(sourceId: string, title: string): { tabId: string; made: string; contentId: string | null } | null;
+  /** Makes the tabs block with only Content, with no undo step. Null when it exists. */
+  ensure(): { contentId: string; made: string } | null;
+  /** Renames a tab made while customizing, with no undo step. */
+  renameMade(tabId: string, title: string): void;
+  /** Deletes blocks made while customizing, with no undo step. */
+  discard(made: string[]): void;
+  /** Moves the tab's database holder into `host`. False when it cannot. */
+  attach(tabId: string, host: HTMLElement): boolean;
+  detach(): void;
+  notify(message: string): void;
+}
+
+/** View tab edits of the open draft. `made` are the blocks Discard deletes; `fresh` every tab made now. */
+class PageLayoutTabEdits {
+  made: string[] = [];
+  readonly fresh = new Set<string>();
+  readonly removed = new Set<string>();
+  readonly titles = new Map<string, string>();
+
+  static empty(): PageLayoutTabEdits {
+    return new PageLayoutTabEdits();
+  }
+
+  get isEmpty(): boolean {
+    return this.made.length === 0 && this.removed.size === 0 && this.titles.size === 0;
+  }
 }
 
 export interface CardDrawerOptions {
@@ -183,7 +244,9 @@ export interface CardDrawerOptions {
    * Apply also hands the eye edits, which write each property; both are one
    * undo step. `edit` is null when only the eye changed.
    */
-  onPageLayoutChange?: (edit: PageLayoutOp | null, visibility?: ReadonlyMap<string, PageVisibility>) => void;
+  onPageLayoutChange?: (edit: PageLayoutOp | null, visibility?: ReadonlyMap<string, PageVisibility>, tabs?: LayoutTabsDraft) => void;
+  /** The row page's view tabs. Without it a Tabbed page shows Content only. */
+  layoutTabs?: LayoutTabsHost;
   /** Customize layout opened: write the empty layout lists before any edit. */
   onPageLayoutBirth?: () => void;
   /** A locked database keeps its layout. */
@@ -293,6 +356,9 @@ export class DatabaseCardDrawer {
   private readonly uploadCover: CardDrawerOptions['uploadCover'];
   private readonly onPageLayoutChange: CardDrawerOptions['onPageLayoutChange'];
   private readonly onPageLayoutBirth: CardDrawerOptions['onPageLayoutBirth'];
+  private readonly layoutTabs: CardDrawerOptions['layoutTabs'];
+  /** View tab edits of the open draft. */
+  private tabDraft = PageLayoutTabEdits.empty();
   private readonly databaseLocked: () => boolean;
   private readonly databaseTitle: () => string;
   /** The edits of an open Customize layout, or null when not customizing. */
@@ -310,8 +376,10 @@ export class DatabaseCardDrawer {
   /** Folds of this session. Local storage holds them across reloads when it can (plan Q3). */
   private readonly collapsedSections = new Set<string>();
   private readonly databaseId: string | undefined;
-  /** The open tab of a Tabbed page: 'content' or a relation property id. */
+  /** The open tab of a Tabbed page: 'content' or a tab block id. Kept across rows (research/11 §4). */
   private activeTab = 'content';
+  /** The tab drawn: `activeTab` while it exists, else Content. */
+  private shownTab = 'content';
   private coverPicker: CoverPickerHandle | null = null;
   private emojiPicker: EmojiPicker | null = null;
   /** The properties section is folded away. Session only. */
@@ -382,6 +450,7 @@ export class DatabaseCardDrawer {
     this.uploadCover = options.uploadCover;
     this.onPageLayoutChange = options.onPageLayoutChange;
     this.onPageLayoutBirth = options.onPageLayoutBirth;
+    this.layoutTabs = options.layoutTabs;
     this.databaseLocked = options.databaseLocked ?? ((): boolean => false);
     this.databaseTitle = options.databaseTitle ?? ((): string => '');
     this.databaseId = options.databaseId;
@@ -519,8 +588,6 @@ export class DatabaseCardDrawer {
     });
     content.appendChild(titleInput);
 
-    this.activeTab = 'content';
-
     // --- Divider ---
     const divider = document.createElement('hr');
 
@@ -657,7 +724,6 @@ export class DatabaseCardDrawer {
     }
 
     this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
-    this.activeTab = 'content';
 
     // Reinitialize editor
     const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
@@ -687,6 +753,9 @@ export class DatabaseCardDrawer {
     this.cleanupEditor();
     this.closeModeMenu();
     this.stopWatchingPins();
+    // Closing mid-draft is a discard: tabs made in it go (research/11 §1).
+    if (this.draft !== null) this.layoutTabs?.discard(this.takeTabDraft().made);
+    this.layoutTabs?.detach();
     this.draft = null;
     this.placeholder = null;
     this.closeBuilder();
@@ -734,6 +803,9 @@ export class DatabaseCardDrawer {
     this.stopWatchingPins();
     this.releasePeekHost();
     this.closeModeMenu();
+    // Destroyed mid-draft is a discard too (research/11 §1).
+    if (this.draft !== null) this.layoutTabs?.discard(this.takeTabDraft().made);
+    this.layoutTabs?.detach();
     this.draft = null;
     this.placeholder = null;
     this.closeBuilder();
@@ -1533,6 +1605,8 @@ export class DatabaseCardDrawer {
     if (builder === null && (content === null || divider === null)) {
       return;
     }
+    // Before its panel goes: the shown view's database holder goes back to its tab.
+    this.layoutTabs?.detach();
     content?.querySelectorAll(':scope > [data-blok-database-drawer-region]').forEach((el) => el.remove());
     this.drawer?.removeAttribute('data-details-open');
     this.stopWatchingPins();
@@ -1541,20 +1615,19 @@ export class DatabaseCardDrawer {
     this.propertyIcons = layout.propertyIcons;
     this.propertyLabels = this.draftLayout().propertyLabels;
     const regions: HTMLElement[] = [];
-    const tabs = layout.structure === 'tabbed' ? this.tabProperties(layout) : [];
+    const tabs = layout.structure === 'tabbed' ? this.viewTabs() : null;
 
-    if (!tabs.some((def) => def.id === this.activeTab)) {
-      this.activeTab = 'content';
-    }
+    // A tab that is gone for now (undo, a peer) shows Content; the choice is kept for when it is back.
+    this.shownTab = tabs !== null && tabs.views.some((tab) => tab.id === this.activeTab) ? this.activeTab : 'content';
     const pins = layout.heading.length > 0 || this.draft !== null ? this.buildPinsRow(layout.heading, row) : null;
 
     if (pins !== null) {
       regions.push(pins);
     }
-    if (layout.structure === 'tabbed') {
+    if (tabs !== null) {
       regions.push(this.buildTabs(tabs));
     }
-    const onContent = this.activeTab === 'content';
+    const onContent = this.shownTab === 'content';
 
     if (divider !== null) {
       divider.hidden = !onContent;
@@ -1564,8 +1637,10 @@ export class DatabaseCardDrawer {
     if (editor !== null && editor !== undefined) {
       editor.hidden = !onContent;
     }
-    if (!onContent) {
-      regions.push(this.tabPanel(tabs.find((def) => def.id === this.activeTab), row));
+    const panel = onContent ? null : this.tabPanel();
+
+    if (panel !== null) {
+      regions.push(panel);
     }
     // The builder draws the group and the modules into their own cards (fillBuilder).
     if (onContent && builder === null) {
@@ -1590,6 +1665,10 @@ export class DatabaseCardDrawer {
       this.fillBuilder(builder, layout, row, regions);
     } else if (content !== null && divider !== null) {
       for (const region of regions) content.insertBefore(region, divider);
+    }
+    // Once the panel is in the page: the tab's database renders where it is shown.
+    if (panel !== null) {
+      this.layoutTabs?.attach(this.shownTab, panel);
     }
     this.syncPageInfo();
     this.syncDetailsDock();
@@ -1648,7 +1727,7 @@ export class DatabaseCardDrawer {
     const title = document.createElement('h1');
     const name = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
     const body: HTMLElement[] = [];
-    const onContent = this.activeTab === 'content';
+    const onContent = this.shownTab === 'content';
     const heading = [title, ...regions.filter((region) => region.matches('[data-blok-database-drawer-pins-row], [data-blok-database-drawer-tabs], [data-blok-database-drawer-tab-panel]'))];
     const entry = (def: PropertyDefinition): PageLayoutModuleEntry => ({ def, element: this.createPropertyRow(def, readPropertyValue(row, def) ?? null) });
 
@@ -1705,33 +1784,52 @@ export class DatabaseCardDrawer {
   }
 
   /**
-   * Notion's tabs hold views of other databases. A relation is how a row
-   * reaches another database here, so each one gets a tab.
+   * Content, then the view tabs of the layout tabs block, with the draft's
+   * deletes and renames. With no block yet Content stands alone.
    */
-  private tabProperties(layout: ResolvedPageLayout): PropertyDefinition[] {
-    const placed = [...layout.heading, ...layout.pageModules, ...layout.panelModules, ...layout.group, ...layout.sections.flatMap((s) => s.properties)];
+  private viewTabs(): { contentId: string | null; content: string; views: LayoutTab[] } {
+    const all = this.layoutTabs?.list() ?? [];
+    const first = all.find((tab) => !tab.view);
+    const title = (tab: LayoutTab): string => this.tabDraft.titles.get(tab.id) ?? tab.title;
+    const content = first === undefined ? '' : title(first);
 
-    return this.getRenderableSchema().filter((def) => def.type === 'relation' && placed.includes(def));
+    return {
+      contentId: first?.id ?? null,
+      content: content !== '' ? content : this.label('tools.database.layoutContentTab'),
+      views: all.filter((tab) => tab.view && !this.tabDraft.removed.has(tab.id)).map((tab) => ({ ...tab, title: title(tab) })),
+    };
   }
 
-  private buildTabs(tabs: PropertyDefinition[]): HTMLElement {
+  private buildTabs(tabs: { contentId: string | null; content: string; views: LayoutTab[] }): HTMLElement {
     const bar = document.createElement('div');
+    const builder = this.builder;
+    const editable = builder !== null && this.layoutTabs?.canEdit() === true;
+
+    const list = document.createElement('div');
 
     bar.setAttribute('data-blok-database-drawer-tabs', '');
-    bar.setAttribute('role', 'tablist');
+    // The tablist owns only tabs: Add tab sits beside it, in the bar.
+    list.setAttribute('role', 'tablist');
+    bar.appendChild(list);
     const tab = (id: string, text: string): HTMLButtonElement => {
       const el = document.createElement('button');
 
       el.type = 'button';
       el.setAttribute('role', 'tab');
       el.setAttribute('data-tab-id', id);
-      el.setAttribute('aria-selected', String(this.activeTab === id));
-      el.tabIndex = this.activeTab === id ? 0 : -1;
+      el.setAttribute('aria-selected', String(this.shownTab === id));
+      el.tabIndex = this.shownTab === id ? 0 : -1;
       el.textContent = text;
       el.addEventListener('click', () => {
+        // research/10 §2: clicking the selected tab in the builder opens its menu.
+        if (editable && this.shownTab === id) {
+          builder.openTabMenu(el, { id, title: text, content: id === 'content' }, this.builderTabs());
+
+          return;
+        }
         this.activeTab = id;
         this.rerender();
-        this.drawer?.querySelector<HTMLElement>(`[data-blok-database-drawer-tabs] [data-tab-id="${CSS.escape(id)}"]`)?.focus();
+        (this.builder?.element ?? this.drawer)?.querySelector<HTMLElement>(`[data-blok-database-drawer-tabs] [data-tab-id="${CSS.escape(id)}"]`)?.focus();
       });
       el.addEventListener('keydown', (event) => {
         const step = ({ ArrowRight: 1, ArrowLeft: -1 } as Record<string, number>)[event.key];
@@ -1747,19 +1845,77 @@ export class DatabaseCardDrawer {
       return el;
     };
 
-    bar.append(tab('content', this.label('tools.database.layoutContentTab')), ...tabs.map((def) => tab(def.id, def.name)));
+    list.append(tab('content', tabs.content), ...tabs.views.map((view) => tab(view.id, view.title)));
+    if (editable) {
+      bar.appendChild(builder.addTabButton(this.builderTabs()));
+    }
 
     return bar;
   }
 
-  private tabPanel(def: PropertyDefinition | undefined, row: DatabaseRow): HTMLElement {
+  /** The builder's view tab edits. Made tabs write at once; saved ones wait for Apply. */
+  private builderTabs(): BuilderTabs {
+    return {
+      sources: () => this.layoutTabs?.sources() ?? [],
+      add: (sourceId, name) => {
+        const added = this.layoutTabs?.add(sourceId, name) ?? null;
+
+        if (added === null) return;
+        this.tabDraft.made.push(added.made);
+        this.tabDraft.fresh.add(added.tabId);
+        if (added.contentId !== null) this.tabDraft.fresh.add(added.contentId);
+        // research/10 §2: the new tab is selected.
+        this.activeTab = added.tabId;
+        this.rerender();
+      },
+      rename: (tabId, title) => {
+        const id = tabId === 'content' ? this.contentTabId() : tabId;
+
+        if (id === null) return;
+        if (this.tabDraft.fresh.has(id)) {
+          this.layoutTabs?.renameMade(id, title);
+        } else {
+          this.tabDraft.titles.set(id, title);
+        }
+        this.rerender();
+      },
+      remove: (tabId, name) => {
+        if (this.tabDraft.fresh.has(tabId)) {
+          this.layoutTabs?.discard([tabId]);
+          this.tabDraft.made = this.tabDraft.made.filter((id) => id !== tabId);
+          this.tabDraft.fresh.delete(tabId);
+        } else {
+          this.tabDraft.removed.add(tabId);
+        }
+        this.activeTab = 'content';
+        this.rerender();
+        this.layoutTabs?.notify(this.label('tools.database.layoutViewDeleted').replace('{name}', name));
+      },
+    };
+  }
+
+  /** The Content tab's block, made now when there is none (a rename needs one). */
+  private contentTabId(): string | null {
+    const first = this.layoutTabs?.list().find((tab) => !tab.view);
+
+    if (first !== undefined) return first.id;
+    const made = this.layoutTabs?.ensure() ?? null;
+
+    if (made === null) return null;
+    this.tabDraft.made.push(made.made);
+    this.tabDraft.fresh.add(made.contentId);
+
+    return made.contentId;
+  }
+
+  /** The open view tab's panel. The tool moves the tab's database holder into it. */
+  private tabPanel(): HTMLElement {
     const panel = document.createElement('div');
 
     panel.setAttribute('data-blok-database-drawer-tab-panel', '');
     panel.setAttribute('role', 'tabpanel');
-    if (def !== undefined) {
-      panel.appendChild(this.createPropertyRow(def, readPropertyValue(row, def) ?? null));
-    }
+    // The builder only previews the view: it mounts on body, outside the editor.
+    panel.toggleAttribute('inert', this.draft !== null);
 
     return panel;
   }
@@ -1898,12 +2054,18 @@ export class DatabaseCardDrawer {
     return header;
   }
 
+  /** Blocks the open Customize layout made: no one may move them before its Apply or Discard. */
+  get draftTabBlocks(): readonly string[] {
+    return this.draft === null ? [] : this.tabDraft.made;
+  }
+
   startCustomizing(): void {
     if (!this.customizable || this.draft !== null || this.currentRow === null) {
       return;
     }
     this.onPageLayoutBirth?.();
     this.draft = { ops: [], visibility: new Map(), madeProperties: [] };
+    this.tabDraft = PageLayoutTabEdits.empty();
     this.renderRegions(this.currentRow);
   }
 
@@ -1915,6 +2077,7 @@ export class DatabaseCardDrawer {
     this.onPageLayoutBirth?.();
     this.placeholder = { id: '', position: '', properties: {} };
     this.draft = { ops: [], visibility: new Map(), madeProperties: [] };
+    this.tabDraft = PageLayoutTabEdits.empty();
     this.rerender();
   }
 
@@ -1936,12 +2099,28 @@ export class DatabaseCardDrawer {
   /** Leaves Customize layout. With `apply`, replays the edits on the newest saved layout. */
   private finishCustomizing(apply: boolean): void {
     const draft = this.draft;
+    const tabs = this.takeTabDraft();
 
     this.draft = null;
-    if (apply && draft !== null && (draft.ops.length > 0 || draft.visibility.size > 0)) {
-      this.onPageLayoutChange?.(draft.ops.length > 0 ? (layout) => applyDraft(draft, layout) : null, draft.visibility);
+    if (apply && draft !== null && (draft.ops.length > 0 || draft.visibility.size > 0 || !tabs.isEmpty)) {
+      this.onPageLayoutChange?.(draft.ops.length > 0 ? (layout) => applyDraft(draft, layout) : null, draft.visibility, tabs.isEmpty ? undefined : this.tabsDraftOf(tabs));
+    } else if (!apply) {
+      // research/11 §1: Discard removes the view tabs made in the session.
+      this.layoutTabs?.discard(tabs.made);
     }
     this.rerender();
+  }
+
+  private takeTabDraft(): PageLayoutTabEdits {
+    const tabs = this.tabDraft;
+
+    this.tabDraft = PageLayoutTabEdits.empty();
+
+    return tabs;
+  }
+
+  private tabsDraftOf(tabs: PageLayoutTabEdits, reset = false): LayoutTabsDraft {
+    return { made: [...tabs.made], removed: [...tabs.removed], titles: new Map(tabs.titles), ...(reset ? { reset } : {}) };
   }
 
   /** Discard drops the draft and deletes the properties made meanwhile (research/09 §3b). */
@@ -1975,7 +2154,7 @@ export class DatabaseCardDrawer {
       i18n: this.i18n,
       title: this.databaseTitle(),
       directionSource: this.drawer ?? this.wrapper,
-      hasEdits: () => this.draft !== null && !isDraftEmpty(this.draft),
+      hasEdits: () => this.draft !== null && (!isDraftEmpty(this.draft) || !this.tabDraft.isEmpty),
       onApply: () => this.finishCustomizing(true),
       onDiscard: () => this.discardCustomizing(),
       onReset: () => this.resetLayout(),
@@ -2043,9 +2222,11 @@ export class DatabaseCardDrawer {
    */
   private resetLayout(): void {
     const draft = this.draft;
+    const tabs = this.takeTabDraft();
 
     this.draft = null;
-    this.onPageLayoutChange?.((layout) => resetPageLayout()(draft === null ? layout : applyDraft(draft, layout)));
+    // research/11 §2b: Reset takes the view tabs away too.
+    this.onPageLayoutChange?.((layout) => resetPageLayout()(draft === null ? layout : applyDraft(draft, layout)), undefined, this.tabsDraftOf(tabs, true));
     this.rerender();
   }
 

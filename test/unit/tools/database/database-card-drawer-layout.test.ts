@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
-import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
+import type { CardDrawerOptions, LayoutTabsHost } from '../../../../src/tools/database/database-card-drawer';
 import { IconSidebarRight } from '../../../../src/components/icons';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import { PAGE_LAYOUT_PIN_LIMIT, pageLayoutOf } from '../../../../src/tools/database/page-layout';
@@ -512,20 +512,81 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(q('[data-blok-database-drawer-details] [data-blok-database-drawer-props]')).not.toBeNull();
   });
 
-  it('draws a Tabbed page: a Content tab, and a relation tab that hides the body', () => {
-    const options = createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }) });
+  // plan 11 §2.1: the tabs are blocks; a relation no longer makes a tab.
+  it('draws a Tabbed page from the layout tabs: Content, then each view tab showing the whole linked database', () => {
+    const view = document.createElement('div');
+    const layoutTabs: LayoutTabsHost = {
+      canEdit: () => false,
+      list: () => [{ id: 'tc', title: '', view: false }, { id: 'tv', title: 'Roadmap', view: true }],
+      sources: () => [],
+      add: () => null,
+      ensure: () => null,
+      renameMade: vi.fn(),
+      discard: vi.fn(),
+      attach: vi.fn((tabId: string, host: HTMLElement) => {
+        view.textContent = `all rows of ${tabId}`;
+        host.appendChild(view);
+
+        return true;
+      }),
+      detach: vi.fn(() => view.remove()),
+      notify: vi.fn(),
+    };
+    const options = createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }), layoutTabs });
 
     new DatabaseCardDrawer(options).open(ROW);
     const tabs = all('[data-blok-database-drawer-tabs] [role="tab"]');
 
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Content', 'Tasks']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Content', 'Roadmap']);
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
     tabs[1].click();
 
-    expect(q('[data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"]')?.textContent).toBe('Tasks');
-    expect(idsIn('[data-blok-database-drawer-tab-panel]')).toEqual(['p-rel']);
+    expect(q('[data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"]')?.textContent).toBe('Roadmap');
+    expect(layoutTabs.attach).toHaveBeenLastCalledWith('tv', q('[data-blok-database-drawer-tab-panel]'));
+    expect(q('[data-blok-database-drawer-tab-panel]')?.textContent).toBe('all rows of tv');
     expect(q('[data-blok-database-drawer-editor]')?.hidden).toBe(true);
     expect(q('[data-blok-database-drawer-props]')).toBeNull();
+    q('[data-blok-database-drawer-tabs] [data-tab-id="content"]')?.click();
+
+    expect(layoutTabs.detach).toHaveBeenCalled();
+    expect(view.isConnected).toBe(false);
+  });
+
+  it('discards tabs made in an open Customize layout and puts a shown view back when destroyed', () => {
+    const layoutTabs: LayoutTabsHost = {
+      canEdit: () => true,
+      list: () => [{ id: 'tc', title: '', view: false }, { id: 'tv', title: 'Roadmap', view: true }],
+      sources: () => [{ id: 'db', title: 'Tasks' }],
+      add: vi.fn(() => ({ tabId: 't9', made: 't9', contentId: null })),
+      ensure: () => null,
+      renameMade: vi.fn(),
+      discard: vi.fn(),
+      attach: vi.fn(() => true),
+      detach: vi.fn(),
+      notify: vi.fn(),
+    };
+    const drawer = new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }), layoutTabs }));
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-tabs] [data-tab-id="tv"]')?.click();
+    drawer.startCustomizing();
+    q('[data-blok-database-layout-add-tab]')?.click();
+    q('[data-blok-testid="database-layout-link-data-source"]')?.click();
+    q('[data-blok-testid="database-layout-source-db"]')?.click();
+    q('[data-blok-testid="database-layout-add-view"]')?.click();
+
+    expect(layoutTabs.add).toHaveBeenCalledWith('db', 'Tasks');
+    vi.mocked(layoutTabs.detach).mockClear();
+    drawer.destroy();
+
+    expect(layoutTabs.discard).toHaveBeenCalledWith(['t9']);
+    expect(layoutTabs.detach).toHaveBeenCalled();
+  });
+
+  it('draws only Content for a Tabbed page with no layout tabs, whatever relations the database has', () => {
+    new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }) })).open(ROW);
+
+    expect(all('[data-blok-database-drawer-tabs] [role="tab"]').map((tab) => tab.textContent)).toEqual(['Content']);
   });
 
   describe('customizing', () => {

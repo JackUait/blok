@@ -408,6 +408,7 @@ export const DATABASE_DATA = {
           pageLayoutPropertyLabels: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the property labels in the row page heading. Absent means shown.' },
           pageLayoutTemplates: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the database templates on an empty row page. Absent means shown.' },
           pageLayoutFullWidth: { type: 'boolean', enum: [true], description: 'Read on the title property only: true lays every row page out full width. Absent means off.' },
+          pageLayoutTabsId: { type: 'string', description: 'Read on the title property only: id of the tabs child of this database that holds the row page view tabs (first tab is Content; each other tab holds one linked database). Kept while Simple. Absent means none yet.' },
           pageLayoutPlacements: {
             type: 'array',
             description: 'Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.',

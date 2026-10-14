@@ -12,6 +12,8 @@ export interface PageLayoutData {
   fullWidth: boolean;
   placements: PageLayoutPlacement[];
   sections: PageLayoutSection[];
+  /** The layout tabs block. Kept while Simple, so Tabbed brings the view tabs back (research/11 §3). */
+  tabsId?: string;
 }
 
 /** One edit. A draft keeps edits, not a snapshot, so applying it replays them on the newest layout. */
@@ -79,6 +81,7 @@ export const pageLayoutOf = (title: PropertyDefinition | undefined): PageLayoutD
   fullWidth: title?.pageLayoutFullWidth === true,
   placements: Array.isArray(title?.pageLayoutPlacements) ? dedupePlacements(title.pageLayoutPlacements) : [],
   sections: Array.isArray(title?.pageLayoutSections) ? title.pageLayoutSections.map((s) => ({ ...s })) : [],
+  ...(typeof title?.pageLayoutTabsId === 'string' && title.pageLayoutTabsId !== '' ? { tabsId: title.pageLayoutTabsId } : {}),
 });
 
 /** Fields to write on the title property. `undefined` removes a key. */
@@ -89,6 +92,7 @@ export const pageLayoutFields = (layout: PageLayoutData): Required<Pick<PageLayo
   pageLayoutPropertyLabels: layout.propertyLabels ? undefined : false,
   pageLayoutTemplates: layout.templates ? undefined : false,
   pageLayoutFullWidth: layout.fullWidth ? true : undefined,
+  pageLayoutTabsId: layout.tabsId,
   pageLayoutPlacements: layout.placements,
   pageLayoutSections: layout.sections,
 });
@@ -305,6 +309,12 @@ export const arrangeSection = (id: string, sectionId: string | null, order: read
 };
 
 export const setStructure = (structure: PageLayoutData['structure']): PageLayoutOp => (layout) => ({ ...layout, structure });
+
+export const setTabsId = (tabsId: string | undefined): PageLayoutOp => (layout) => {
+  const { tabsId: _old, ...rest } = layout;
+
+  return tabsId === undefined ? rest : { ...rest, tabsId };
+};
 
 export const setGroupIn = (groupIn: PageLayoutData['groupIn']): PageLayoutOp => (layout) => ({ ...layout, groupIn });
 

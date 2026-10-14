@@ -771,6 +771,41 @@ test.describe('row page layout', () => {
     expect(await savedTitle(page)).toMatchObject({ pageLayoutPlacements: [{ id: 'p-due', place: 'group' }], pageLayoutSections: [] });
   });
 
+  // research/10 §2 and research/11 §2a: a view tab links a data source; after Apply every row page shows it.
+  test('adds a view tab from the hover-only Add tab and shows the whole linked database on every row page', async ({ page }) => {
+    await mount(page, blocks({ pageLayoutPlacements: [], pageLayoutSections: [] }));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    await builder(page).getByRole('button', { name: 'Tabbed' }).click();
+    const strip = builder(page).getByRole('tablist');
+    const addTab = builder(page).getByRole('button', { name: 'Add tab' });
+
+    // Shown on hover only, but kept in the DOM so keyboard and touch reach it.
+    await expect(addTab).toHaveCSS('opacity', '0');
+    await strip.hover();
+    await expect(addTab).toHaveCSS('opacity', '1');
+    await addTab.click();
+    await page.getByRole('button', { name: 'Link existing data source' }).click();
+    await page.locator('[data-blok-testid="database-layout-source-db-1"]').click();
+    await page.getByRole('textbox', { name: 'View name' }).fill('Roadmap');
+    await page.getByTestId('database-layout-add-view').click();
+    await expect(strip.getByRole('tab', { name: 'Roadmap' })).toHaveAttribute('aria-selected', 'true');
+    await builder(page).getByRole('button', { name: 'Apply to all pages' }).click();
+    await expect(builder(page)).toBeHidden();
+
+    await expect(peek(page).getByRole('tab', { name: 'Roadmap' })).toHaveAttribute('aria-selected', 'true');
+    const panel = peek(page).locator('[data-blok-database-drawer-tab-panel]');
+
+    // The whole linked database: both rows, not only the open one.
+    await expect(panel.getByRole('grid')).toBeVisible();
+    await expect(panel.getByRole('grid')).toContainText('Alpha');
+    await expect(panel.getByRole('grid')).toContainText('Bravo');
+    await peek(page).getByRole('tab', { name: 'Content' }).click();
+    await expect(panel).toHaveCount(0);
+    expect(await savedTitle(page)).toMatchObject({ pageLayoutStructure: 'tabbed', pageLayoutTabsId: expect.any(String) });
+  });
+
   // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.
   test('previews another page from the Preview switch and keeps the draft', async ({ page }) => {
     await mount(page, blocks());

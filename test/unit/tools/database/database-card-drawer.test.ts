@@ -2049,17 +2049,17 @@ describe('DatabaseCardDrawer', () => {
     const rowA = makeRow({ id: 'row-a' });
     const rowB = makeRow({ id: 'row-b' });
 
+    drawer.open(rowA);
+    drawer.open(rowB);
+    drawer.open(rowA);
+
+    const holder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+    if (holder === null) {
+      throw new Error('Editor holder was not mounted');
+    }
+
     try {
-      drawer.open(rowA);
-      drawer.open(rowB);
-      drawer.open(rowA);
-
-      const holder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
-
-      if (holder === null) {
-        throw new Error('Editor holder was not mounted');
-      }
-
       expect(holder.querySelector('[data-blok-editor]')).toBeNull();
       await vi.dynamicImportSettled();
       await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).not.toBeNull(); });
@@ -2069,6 +2069,9 @@ describe('DatabaseCardDrawer', () => {
       await vi.dynamicImportSettled();
       drawer.destroy();
       options.wrapper.remove();
+      // The drawer destroys the editor only after its last save settles. A live
+      // editor's debounced selectionchange timer fires after jsdom is gone.
+      await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).toBeNull(); }, { timeout: 10000 });
     }
   }, 20000);
 });

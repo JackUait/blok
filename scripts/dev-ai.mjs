@@ -4,26 +4,52 @@
  * `POST /ai` takes `{ system, messages, tools }` (what `agent.assistant.model`
  * receives) and answers with the model's message.
  *
- * The key never reaches the page: the Anthropic SDK reads ANTHROPIC_API_KEY (or
- * an `ant auth login` profile) here. Loopback only, and the Host and Origin
- * checks keep other sites and rebound DNS names from spending it.
+ * The key never reaches the page. It comes from the shell, or from
+ * ~/.config/blok/ai.env, which lives outside the repo so it cannot be committed.
+ * ANTHROPIC_BASE_URL and BLOK_AI_MODEL there point the route at any
+ * Anthropic-compatible API (e.g. DeepSeek). Loopback only, and the Host and
+ * Origin checks keep other sites and rebound DNS names from spending the key.
  */
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { parseEnv } from 'node:util';
 
-export const AI_MODEL = process.env.BLOK_AI_MODEL ?? 'claude-opus-5-5';
+export const AI_MODEL = 'claude-opus-5-5';
+
+const ENV_FILE = join(homedir(), '.config', 'blok', 'ai.env');
 
 /** Large enough that a long document edit is not cut off; needs streaming. */
 const MAX_TOKENS = 64_000;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
-const NO_KEY_MESSAGE = 'No Anthropic key. Set ANTHROPIC_API_KEY (or run `ant auth login`) and restart yarn serve.';
+const NO_KEY_MESSAGE = 'No AI key. Put ANTHROPIC_API_KEY in ~/.config/blok/ai.env (or run `ant auth login`) and restart yarn serve.';
 
 /**
+ * The shell wins over the file, so a one-off `BLOK_AI_MODEL=… yarn serve` still works.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @param {string | null} fileText Contents of the private env file, or null when there is none.
+ * @returns {{ apiKey: string | undefined, baseURL: string | undefined, model: string }}
+ */
+export function aiSettings(env, fileText) {
+  const merged = { ...(fileText === null ? {} : parseEnv(fileText)), ...env };
+
+  return {
+    apiKey: merged.ANTHROPIC_API_KEY,
+    baseURL: merged.ANTHROPIC_BASE_URL,
+    model: merged.BLOK_AI_MODEL ?? AI_MODEL,
+  };
+}
+
+/**
+ * @param {string} model
  * @param {{ system: string, messages: unknown[], tools: unknown[] }} request
  * @returns {Record<string, unknown>} Beta Messages params.
  */
-export function messageParams({ system, messages, tools }) {
+export function messageParams(model, { system, messages, tools }) {
   return {
-    model: AI_MODEL,
+    model,
     max_tokens: MAX_TOKENS,
     system,
     messages,
@@ -55,9 +81,10 @@ const json = (status, headers, value) => ({
  * @param {string} options.body
  * @param {AbortSignal} options.signal Aborted when the page drops the request.
  * @param {(params: Record<string, unknown>, signal: AbortSignal) => Promise<{ content: unknown[], stop_reason: string | null }>} options.createMessage
+ * @param {string} [options.model]
  * @returns {Promise<{ status: number, headers: Record<string, string>, body?: string }>}
  */
-export async function handleAiRequest({ origins, hosts, host, origin, method, url, body, signal, createMessage }) {
+export async function handleAiRequest({ origins, hosts, host, origin, method, url, body, signal, createMessage, model = AI_MODEL }) {
   const allowed = origin !== undefined && origins.includes(origin);
   const headers = allowed ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : { Vary: 'Origin' };
 
@@ -90,7 +117,7 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
   }
 
   try {
-    const message = await createMessage(messageParams(parsed), signal);
+    const message = await createMessage(messageParams(model, parsed), signal);
 
     return json(200, headers, { content: message.content, stop_reason: message.stop_reason });
   } catch (error) {
@@ -105,15 +132,17 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
 /**
  * The real model call. Imported late, so a checkout without the SDK still serves the playground.
  *
+ * @param {{ apiKey: string | undefined, baseURL: string | undefined }} settings
  * @returns {Promise<(params: Record<string, unknown>, signal: AbortSignal) => Promise<{ content: unknown[], stop_reason: string | null }>>}
  */
-async function anthropicCreateMessage() {
+async function anthropicCreateMessage({ apiKey, baseURL }) {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const state = { client: null };
 
   return async (params, signal) => {
     // Built on first use: a missing key then shows in the bar, not at startup.
-    state.client ??= new Anthropic();
+    // Undefined fields fall back to the SDK's own lookup (env, then `ant auth login`).
+    state.client ??= new Anthropic({ apiKey, baseURL });
 
     // Streaming: a 64k max_tokens request would time out as one HTTP call.
     return state.client.beta.messages.stream(params, { signal }).finalMessage();
@@ -144,10 +173,18 @@ const readBody = (request) => new Promise((resolve, reject) => {
  * @param {object} options
  * @param {number} options.port
  * @param {string[]} options.origins
- * @returns {Promise<{ server: import('node:http').Server, url: string }>}
+ * @returns {Promise<{ server: import('node:http').Server, url: string, model: string }>}
  */
 export async function startAiEndpoint({ port, origins }) {
-  const createMessage = await anthropicCreateMessage();
+  const fileText = (() => {
+    try {
+      return readFileSync(ENV_FILE, 'utf8');
+    } catch {
+      return null;
+    }
+  })();
+  const settings = aiSettings(process.env, fileText);
+  const createMessage = await anthropicCreateMessage(settings);
   const hosts = [];
   const server = createServer((request, response) => {
     const controller = new AbortController();
@@ -170,6 +207,7 @@ export async function startAiEndpoint({ port, origins }) {
         body,
         signal: controller.signal,
         createMessage,
+        model: settings.model,
       }))
       .then(({ status, headers, body }) => {
         response.writeHead(status, headers);
@@ -195,5 +233,5 @@ export async function startAiEndpoint({ port, origins }) {
 
   hosts.push(`127.0.0.1:${bound}`, `localhost:${bound}`);
 
-  return { server, url: `http://127.0.0.1:${bound}/ai` };
+  return { server, url: `http://127.0.0.1:${bound}/ai`, model: settings.model };
 }

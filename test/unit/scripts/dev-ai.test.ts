@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 
-import { AI_MODEL, handleAiRequest, messageParams } from '../../../scripts/dev-ai.mjs';
+import { AI_MODEL, aiSettings, handleAiRequest, messageParams } from '../../../scripts/dev-ai.mjs';
 
 const ORIGINS = ['http://localhost:3303', 'http://127.0.0.1:3303'];
 const HOSTS = ['127.0.0.1:4800', 'localhost:4800'];
@@ -76,7 +76,7 @@ describe('handleAiRequest', () => {
 
     expect(response.status).toBe(502);
     expect(JSON.parse(response.body ?? '')).toEqual({
-      error: 'No Anthropic key. Set ANTHROPIC_API_KEY (or run `ant auth login`) and restart yarn serve.',
+      error: 'No AI key. Put ANTHROPIC_API_KEY in ~/.config/blok/ai.env (or run `ant auth login`) and restart yarn serve.',
     });
   });
 
@@ -92,7 +92,7 @@ describe('handleAiRequest', () => {
 
 describe('messageParams', () => {
   it('asks the current Opus with streaming-size output and the refusal fallback', () => {
-    const params = messageParams({ system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [] });
+    const params = messageParams(AI_MODEL, { system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [] });
 
     expect(AI_MODEL).toBe('claude-opus-5-5');
     expect(params).toMatchObject({
@@ -102,5 +102,31 @@ describe('messageParams', () => {
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
     });
+  });
+});
+
+describe('aiSettings', () => {
+  it('reads the key, endpoint and model from the private env file', () => {
+    const file = 'ANTHROPIC_API_KEY=sk-file\nANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic\nBLOK_AI_MODEL=deepseek-v4-pro\n';
+
+    expect(aiSettings({}, file)).toEqual({
+      apiKey: 'sk-file',
+      baseURL: 'https://api.deepseek.com/anthropic',
+      model: 'deepseek-v4-pro',
+    });
+  });
+
+  it('lets the shell override the file', () => {
+    const file = 'ANTHROPIC_API_KEY=sk-file\nBLOK_AI_MODEL=deepseek-v4-pro\n';
+
+    expect(aiSettings({ ANTHROPIC_API_KEY: 'sk-shell', BLOK_AI_MODEL: 'claude-sonnet-5-5' }, file)).toEqual({
+      apiKey: 'sk-shell',
+      baseURL: undefined,
+      model: 'claude-sonnet-5-5',
+    });
+  });
+
+  it('falls back to Opus with no key when there is no file', () => {
+    expect(aiSettings({}, null)).toEqual({ apiKey: undefined, baseURL: undefined, model: AI_MODEL });
   });
 });

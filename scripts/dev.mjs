@@ -362,7 +362,7 @@ async function main() {
     });
 
   if (ai !== null) {
-    console.log(`[blok] "Ask AI" (Cmd/Ctrl+J) calls Claude through ${ai.url}. It needs ANTHROPIC_API_KEY or \`ant auth login\`.`);
+    console.log(`[blok] "Ask AI" (Cmd/Ctrl+J) calls ${ai.model} through ${ai.url}. Key: ANTHROPIC_API_KEY in ~/.config/blok/ai.env.`);
   }
 
   supervise('vite', spawn(VITE, [

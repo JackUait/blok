@@ -3,9 +3,11 @@
  */
 
 import type { BlockOrigin } from '../../../../../types';
+import { mintLinkedSourceIds, remapLinkedSource } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
+import { generateBlockId } from '../../../utils/id-generator';
 import { parseUntrustedHtml } from '../../../utils/inert-html';
 import type { TreePlacement } from '../../../utils/tree-order';
 import { isSelfPlacedParent } from '../../blockManager/new-block-placement';
@@ -53,6 +55,7 @@ export interface BlockManagerAdapter {
     tunes: Record<string, unknown>;
     needToFocus: boolean;
     origin?: BlockOrigin;
+    id?: string;
   } & ({ index: number } | { placement: TreePlacement })): Block;
   setBlockParent?(block: Block, parentId: string | null): void;
   getBlockById?(id: string): Block | undefined;
@@ -290,10 +293,14 @@ export class DragOperations {
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
+    const copiedSourceIds = mintLinkedSourceIds(prep.validResults.flatMap(({ saved, toolName, link }, index) =>
+      link === undefined ? [{ id: prep.sortedBlocks[index].id, type: toolName, data: saved.data }] : []
+    ), generateBlockId);
     // A block the resolver maps is inserted as what it returned. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
-      const data = link?.data ?? structuredClone(saved.data);
+      const data = link?.data ?? remapLinkedSource(toolName, structuredClone(saved.data), copiedSourceIds);
+      const id = copiedSourceIds.get(prep.sortedBlocks[index].id);
       const text = data.text;
 
       if (link === undefined && typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)) {
@@ -327,6 +334,7 @@ export class DragOperations {
         ...this.duplicatePosition(prep, index, rootParentOf),
         needToFocus: false,
         origin: copiedParentIds.has(prep.sortedBlocks[index].id) ? 'paste' : undefined,
+        ...(id !== undefined && { id }),
       });
     });
 

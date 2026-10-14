@@ -376,6 +376,40 @@ describe('remapPageDocument', () => {
     })).toThrow(/duplicate/i);
     expect(original.blocks.map((block) => block.id)).toEqual(['a', 'b']);
   });
+
+  describe('a linked database', () => {
+    const linkedTo = (id: string, source: Record<string, unknown>): OutputBlockData =>
+      ({ id, type: 'database', data: { schema: [], views: [], activeViewId: '', source } });
+    const sourceOf = (data: OutputData, index: number): unknown => (data.blocks[index]?.data as { source?: unknown }).source;
+
+    it('follows its source database to the copy', () => {
+      const copied = remapPageDocument(doc([
+        { id: 'db', type: 'database', data: { schema: [], views: [], activeViewId: '' } },
+        linkedTo('view', { databaseId: 'db' }),
+      ]), { blockIds: new Map([['db', 'db2'], ['view', 'view2']]), pageIds: new Map() });
+
+      expect(sourceOf(copied, 1)).toEqual({ databaseId: 'db2' });
+    });
+
+    it('keeps a source in another document, even when its id is mapped here', () => {
+      const original = doc([
+        { id: 'db', type: 'database', data: { schema: [], views: [], activeViewId: '' } },
+        linkedTo('view', { databaseId: 'db', documentId: 'doc-1' }),
+      ]);
+
+      const copied = remapPageDocument(original, { blockIds: new Map([['db', 'db2'], ['view', 'view2']]), pageIds: new Map() });
+
+      expect(sourceOf(copied, 1)).toEqual({ databaseId: 'db', documentId: 'doc-1' });
+    });
+
+    it('keeps a source with no mapping and does not refuse the copy', () => {
+      const original = doc([linkedTo('view', { databaseId: 'gone' })]);
+      const blockIds = new Map([['view', 'view2']]);
+
+      expect(findRemapProblems(original, { blockIds, pageIds: new Map() }).missingBlockIds).toEqual([]);
+      expect(sourceOf(remapPageDocument(original, { blockIds, pageIds: new Map() }), 0)).toEqual({ databaseId: 'gone' });
+    });
+  });
 });
 
 type Ids = { blockIds: Map<string, string>; pageIds: Map<string, string> };

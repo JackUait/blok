@@ -4,10 +4,12 @@ import type { BlockToolData } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
 import { convertBlockDataToString, convertStringToBlockData } from '../../../utils/blocks';
+import { generateBlockId } from '../../../utils/id-generator';
 import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
 import { isPagePointer } from '../../../../shared/page-pointer';
+import { mintLinkedSourceIds, remapLinkedSource } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
@@ -407,6 +409,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
      * Used to remap data and restore hierarchy after both passes.
      */
     const oldIdToEntry = new Map<string, { newBlock: Block; original: BlokClipboardBlock }>();
+    // Kept apart from oldIdToNewId: remapIds rewrites every matching string in the data.
+    const copiedSourceIds = mintLinkedSourceIds(
+      [...tableCells, ...documentFlow].map(({ sanitized, original }) => ({ id: original.id, type: sanitized.tool, data: sanitized.data })),
+      generateBlockId
+    );
 
     // Group every insert + setBlockParent call into a single Yjs undo entry
     // so that one Cmd+Z removes the whole pasted set. Without this wrapper
@@ -439,12 +446,14 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         const remappedData = oldIdToNewId.size > 0
           ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
           : sanitized.data;
+        const id = copiedSourceIds.get(original.id);
 
         const block = BlockManager.insert({
           tool: sanitized.tool,
-          data: remappedData,
+          data: remapLinkedSource(sanitized.tool, remappedData, copiedSourceIds),
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
           origin: 'paste',
+          ...(id !== undefined && { id }),
         });
 
         /**

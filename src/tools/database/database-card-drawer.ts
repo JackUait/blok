@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconArrowUp, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconPreview, IconSplitView, IconTrash } from '../../components/icons';
+import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -27,20 +27,16 @@ import { outputBlocksToHtml, outputBlocksToSegments } from '../../shared/rich-te
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
-import type { PopoverItemParams } from '../../components/utils/popover/components/popover-item';
 import {
   addModule,
   applyDraft,
-  deleteSection,
   groupFirst,
   isDraftEmpty,
-  moveInPlace,
-  moveToSection,
   pageLayoutOf,
   pinFirst,
-  renameSection,
   resetPageLayout,
   resolvePageLayout,
+  sectionFirst,
 } from './page-layout';
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
@@ -48,7 +44,7 @@ import { PageLayoutBuilder } from './page-layout-builder';
 import type { PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
-type AddedPlace = 'pin' | 'group' | 'page' | 'panel';
+type AddedPlace = 'pin' | 'group' | 'page' | 'panel' | { sectionId: string };
 
 /** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
@@ -192,7 +188,18 @@ export interface CardDrawerOptions {
   databaseLocked?: () => boolean;
   /** The database's name, for the layout builder's top bar. */
   databaseTitle?: () => string;
+  /** The database block's id. Section folds are kept per database in this browser; without it they last the session. */
+  databaseId?: string;
 }
+
+/** Null when there is no key, nothing stored, or storage is blocked. */
+const readStorage = (key: string | null): string | null => {
+  try {
+    return key === null ? null : window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
 
 const isEmptyValue = (value: PropertyValue): boolean =>
   value === null || value === '' || (Array.isArray(value) && value.length === 0);
@@ -290,14 +297,15 @@ export class DatabaseCardDrawer {
   private draft: PageLayoutDraft | null = null;
   /** Open exactly while `draft` is. It makes the rest of the page inert, so every exit must close it. */
   private builder: PageLayoutBuilder | null = null;
-  private layoutMenu: PopoverDesktop | null = null;
   /** Watches the pins scroller for overflow. Replaced on every redraw. */
   private pinsObserver: ResizeObserver | null = null;
   /** The resolved layout's "Property icons", read while drawing property rows. */
   private propertyIcons = true;
   /** "View details". Closed on every open, as in Notion (research/09 §9). */
   private detailsOpen = false;
+  /** Folds of this session. Local storage holds them across reloads when it can (plan Q3). */
   private readonly collapsedSections = new Set<string>();
+  private readonly databaseId: string | undefined;
   /** The open tab of a Tabbed page: 'content' or a relation property id. */
   private activeTab = 'content';
   private coverPicker: CoverPickerHandle | null = null;
@@ -372,6 +380,7 @@ export class DatabaseCardDrawer {
     this.onPageLayoutBirth = options.onPageLayoutBirth;
     this.databaseLocked = options.databaseLocked ?? ((): boolean => false);
     this.databaseTitle = options.databaseTitle ?? ((): string => '');
+    this.databaseId = options.databaseId;
     this.events = options.events;
     this.events?.on('i18n:changed', this.followOuterDirection);
   }
@@ -668,7 +677,6 @@ export class DatabaseCardDrawer {
     this.cleanupListeners();
     this.cleanupEditor();
     this.closeModeMenu();
-    this.closeLayoutMenu();
     this.stopWatchingPins();
     this.draft = null;
     this.placeholder = null;
@@ -717,7 +725,6 @@ export class DatabaseCardDrawer {
     this.stopWatchingPins();
     this.releasePeekHost();
     this.closeModeMenu();
-    this.closeLayoutMenu();
     this.draft = null;
     this.placeholder = null;
     this.closeBuilder();
@@ -1348,6 +1355,17 @@ export class DatabaseCardDrawer {
   }
 
   private addedWhileCustomizing(id: string, place: AddedPlace | null): void {
+    if (typeof place === 'object' && place !== null) {
+      // A section's own add on the row page writes at once, like the property itself.
+      if (this.draft === null) {
+        this.onPageLayoutChange?.(sectionFirst(id, place.sectionId));
+      } else {
+        this.draft.madeProperties.push(id);
+        this.editLayout(sectionFirst(id, place.sectionId));
+      }
+
+      return;
+    }
     this.draft?.madeProperties.push(id);
     // research/10 §7 and research/09 §3 L57.
     if (place === 'pin') this.editLayout(pinFirst(id));
@@ -1372,12 +1390,17 @@ export class DatabaseCardDrawer {
     this.rerender();
   }
 
-  /** A named section of the property group. Folding it is this viewer's own. */
+  /**
+   * A named section of the property group. On the row page its header folds it
+   * (this viewer's own) and it ends with its own "+ Add a property" (research/10
+   * §2b). In the builder the header is only its name: a click opens the group's
+   * menu, and an empty section reads "Empty" (research/10 §3).
+   */
   private buildSection(id: string, name: string, properties: PropertyDefinition[], row: DatabaseRow): HTMLElement {
     const section = document.createElement('div');
     const header = document.createElement('div');
     const body = document.createElement('div');
-    const collapsed = this.collapsedSections.has(id) && this.draft === null;
+    const collapsed = this.draft === null && this.isSectionFolded(id);
 
     section.setAttribute('data-blok-database-drawer-section', '');
     section.setAttribute('data-section-id', id);
@@ -1386,18 +1409,12 @@ export class DatabaseCardDrawer {
     body.hidden = collapsed;
 
     if (this.draft !== null) {
-      const input = document.createElement('input');
+      const label = document.createElement('span');
 
-      input.type = 'text';
-      input.value = name;
-      input.setAttribute('data-blok-database-layout-section-name', '');
-      input.setAttribute('aria-label', this.label('tools.database.layoutSectionName'));
-      input.addEventListener('change', () => this.editLayout(renameSection(id, input.value)));
-      const remove = this.iconButton('data-blok-database-layout-section-delete', 'tools.database.layoutDeleteSection', IconTrash, () => {
-        this.editLayout(deleteSection(id));
-      });
-
-      header.append(input, remove);
+      label.setAttribute('data-blok-database-drawer-section-name', '');
+      label.textContent = name;
+      header.innerHTML = IconChevronDown;
+      header.appendChild(label);
     } else {
       const toggle = document.createElement('button');
 
@@ -1412,20 +1429,62 @@ export class DatabaseCardDrawer {
 
         body.hidden = !open;
         toggle.setAttribute('aria-expanded', String(open));
-        if (open) {
-          this.collapsedSections.delete(id);
-        } else {
-          this.collapsedSections.add(id);
-        }
+        this.setSectionFolded(id, !open);
       });
       header.appendChild(toggle);
     }
     for (const def of properties) {
       body.appendChild(this.createPropertyRow(def, readPropertyValue(row, def) ?? null));
     }
+    if (this.draft !== null && properties.length === 0) {
+      const empty = document.createElement('div');
+
+      empty.setAttribute('data-blok-database-layout-section-empty', '');
+      empty.textContent = this.label('tools.database.cellEmpty');
+      body.appendChild(empty);
+    }
+    if (this.draft === null && !this.readOnly) {
+      const add = document.createElement('button');
+
+      add.type = 'button';
+      add.setAttribute('data-blok-database-drawer-section-add', '');
+      add.textContent = this.label('tools.database.addProperty');
+      add.addEventListener('click', () => this.openAddProperty(add, { sectionId: id }));
+      body.appendChild(add);
+    }
     section.append(header, body);
 
     return section;
+  }
+
+  private sectionFoldKey(id: string): string | null {
+    return this.databaseId === undefined ? null : `blok:database-section-fold:${this.databaseId}:${id}`;
+  }
+
+  private isSectionFolded(id: string): boolean {
+    const stored = readStorage(this.sectionFoldKey(id));
+
+    return stored === null ? this.collapsedSections.has(id) : stored === '1';
+  }
+
+  private setSectionFolded(id: string, folded: boolean): void {
+    const key = this.sectionFoldKey(id);
+
+    if (folded) {
+      this.collapsedSections.add(id);
+    } else {
+      this.collapsedSections.delete(id);
+    }
+    if (key === null) return;
+    try {
+      if (folded) {
+        window.localStorage.setItem(key, '1');
+      } else {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Blocked storage: the session set still holds it.
+    }
   }
 
   // ─── Page layout ───
@@ -1796,7 +1855,6 @@ export class DatabaseCardDrawer {
   private finishCustomizing(apply: boolean): void {
     const draft = this.draft;
 
-    this.closeLayoutMenu();
     this.draft = null;
     if (apply && draft !== null && (draft.ops.length > 0 || draft.visibility.size > 0)) {
       this.onPageLayoutChange?.(draft.ops.length > 0 ? (layout) => applyDraft(draft, layout) : null, draft.visibility);
@@ -1846,6 +1904,7 @@ export class DatabaseCardDrawer {
       properties: () => this.getRenderableSchema(),
       onAddPin: (anchor) => this.openAddProperty(anchor, 'pin'),
       onAddToGroup: (anchor) => this.openAddProperty(anchor, 'group'),
+      onAddToSection: (anchor, sectionId) => this.openAddProperty(anchor, { sectionId }),
       onAddModule: (anchor, place) => this.openAddProperty(anchor, place),
       visibility: (id) => this.pageVisibility(id),
       setVisibility: (id, visibility) => this.setPageVisibility(id, visibility),
@@ -1900,79 +1959,6 @@ export class DatabaseCardDrawer {
     this.draft = null;
     this.onPageLayoutChange?.(resetPageLayout());
     this.rerender();
-  }
-
-  /** A pin has its moves; a group property has section moves once there is a section. */
-  private hasItemMenu(def: PropertyDefinition): boolean {
-    const layout = this.resolvedLayout();
-
-    return layout.heading.some((p) => p.id === def.id)
-      || (layout.sections.length > 0 && [...layout.group, ...layout.sections.flatMap((s) => s.properties)].some((p) => p.id === def.id));
-  }
-
-  /** The ⋯ menu on a property while customizing; its items depend on where it sits. */
-  private openItemMenu(def: PropertyDefinition, anchor: HTMLElement): void {
-    const layout = this.resolvedLayout();
-    const pinned = layout.heading.some((p) => p.id === def.id);
-    const sectionOf = layout.sections.find((s) => s.properties.some((p) => p.id === def.id))?.section;
-    const item = (name: string, key: string, op: PageLayoutOp, extra: Partial<PopoverItemParams> = {}): PopoverItemParams => ({
-      type: PopoverItemType.Default,
-      name,
-      title: this.label(key),
-      closeOnActivate: true,
-      onActivate: () => this.editLayout(op),
-      ...extra,
-    } as PopoverItemParams);
-    const moves = [item('move-up', 'tools.database.layoutMoveUp', moveInPlace(def.id, -1), { icon: IconArrowUp }), item('move-down', 'tools.database.layoutMoveDown', moveInPlace(def.id, 1))];
-    const items: PopoverItemParams[] = [];
-
-    // Pins: the Heading menu's pin buttons (plan Phase 5a). Modules: their ••• menu, "+" and "Add to panel" (5c).
-    if (pinned) {
-      items.push(...moves);
-    } else {
-      const targets = layout.sections.filter((s) => s.section.id !== sectionOf?.id);
-
-      for (const { section } of targets) {
-        items.push({
-          type: PopoverItemType.Default,
-          name: `move-to-section-${section.id}`,
-          title: this.i18n?.t('tools.database.layoutMoveToSection', { name: section.name }) ?? section.name,
-          closeOnActivate: true,
-          onActivate: () => this.editLayout(moveToSection(def.id, section.id)),
-        });
-      }
-      if (sectionOf !== undefined) items.push(item('leave-section', 'tools.database.layoutLeaveSection', moveToSection(def.id, null)));
-    }
-    this.openLayoutMenu(anchor, items);
-  }
-
-  private openLayoutMenu(anchor: HTMLElement, items: PopoverItemParams[]): void {
-    this.closeLayoutMenu();
-    this.builder?.closeModuleMenu();
-    const menu = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
-      trigger: anchor,
-      width: 'auto',
-      minWidth: '220px',
-      autoFocusFirstItem: false,
-      items,
-    });
-
-    menu.on(PopoverEvent.Closed, () => {
-      if (this.layoutMenu === menu) {
-        this.layoutMenu = null;
-        menu.destroy();
-      }
-    });
-    this.layoutMenu = menu;
-    menu.show();
-  }
-
-  private closeLayoutMenu(): void {
-    const menu = this.layoutMenu;
-
-    this.layoutMenu = null;
-    menu?.destroy();
   }
 
   /**
@@ -2175,12 +2161,6 @@ export class DatabaseCardDrawer {
     }
 
     row.appendChild(valueEl);
-    if (this.draft !== null && this.hasItemMenu(def)) {
-      const more = this.iconButton('data-blok-database-layout-item-menu', 'tools.database.layoutItemOptions', IconDotsHorizontal, (el) => this.openItemMenu(def, el));
-
-      more.setAttribute('data-property-id', def.id);
-      row.appendChild(more);
-    }
 
     return row;
   }

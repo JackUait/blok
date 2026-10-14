@@ -179,6 +179,8 @@ export interface PanelRowOptions {
   label: string;
   testId: string;
   icon?: string;
+  /** A gray line under the label. */
+  description?: string;
   /** Gray text on the right (research/08: rgb(161,158,153)). */
   value?: string;
   /** Shows a chevron: the row opens a page. */
@@ -213,7 +215,18 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
 
   label.setAttribute('data-blok-database-panel-label', '');
   label.textContent = options.label;
-  row.appendChild(label);
+  if (options.description === undefined) {
+    row.appendChild(label);
+  } else {
+    const text = document.createElement('span');
+    const description = document.createElement('span');
+
+    text.setAttribute('data-blok-database-panel-text', '');
+    description.setAttribute('data-blok-database-panel-description', '');
+    description.textContent = options.description;
+    text.append(label, description);
+    row.appendChild(text);
+  }
   if (options.value !== undefined) {
     const value = document.createElement('span');
 

@@ -319,6 +319,27 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-layout-module][data-dragging], [data-blok-database-drawer-pin][data-dragging]')).toContain('opacity: 0.5');
   });
 
+  // research/10 §3: the menu's section rows, the rename field's Done, the canvas "Empty" line.
+  it('draws sections in the group menu and on the canvas', () => {
+    const row = ruleBody('[data-blok-database-layout-section-row]');
+
+    expect(row).toContain('min-block-size: 24px');
+    expect(row).toContain('color: var(--blok-text-secondary)');
+    expect(row).toContain('font-weight: 500');
+    // Done is the field's primary action, like Apply: a button, not a selected state.
+    expect(ruleBody('[data-blok-database-layout-section-done]')).toContain('background-color: var(--blok-accent)');
+    expect(ruleBody('[data-blok-database-layout-section-empty]')).toContain('color: var(--blok-text-tertiary)');
+    expect(ruleBody('[data-blok-database-layout-section-empty]')).toContain('padding-inline-start: var(--blok-space-5)');
+    expect(ruleBody('[data-blok-database-drawer-section-name]')).toContain('font-size: 13px');
+    expect(ruleBody('[data-blok-database-panel-description]')).toContain('color: var(--blok-text-secondary)');
+    expect(ruleBody('[data-blok-database-layout-group-handle]')).toContain('cursor: grab');
+    // Sections move from their menu only, so their ⠿ is no drag handle.
+    expect(ruleBody('[data-blok-database-layout-group-handle], [data-blok-database-layout-section-handle]')).not.toContain('cursor: grab');
+    // Rings show after keyboard use only.
+    expect(database).toContain('[data-blok-database-layout-section-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)');
+    expect(ruleBody('[data-blok-database-layout-group-row][data-dragging]')).toContain('opacity: 0.5');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

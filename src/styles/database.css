@@ -2531,8 +2531,112 @@
 }
 
 [data-blok-database-layout-pin-list] [data-blok-database-layout-add-pin],
-[data-blok-database-layout-add-group-property] {
+[data-blok-database-layout-add-group-property],
+[data-blok-database-layout-add-section-property] {
   inline-size: 100%;
+}
+
+[data-blok-database-layout-group-handle],
+[data-blok-database-layout-section-handle] {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--blok-text-tertiary);
+}
+
+/* research/10 §3: a property row drags by its ⠿, with the pointer only. */
+[data-blok-database-layout-group-handle] {
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-database-layout-group-handle] svg,
+[data-blok-database-layout-section-handle] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-layout-group-row][data-dragging] {
+  opacity: 0.5;
+}
+
+/* A name that opens the row's moves reads as plain text. */
+button[data-blok-database-layout-group-name],
+button[data-blok-database-layout-pin-name] {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* research/10 §3: ⠿ + name, 24px, 14px/500 grey. */
+[data-blok-database-layout-section-row]:focus-visible,
+[data-blok-database-layout-section-done]:focus-visible,
+button[data-blok-database-layout-group-name]:focus-visible,
+button[data-blok-database-layout-pin-name]:focus-visible {
+  outline: none;
+}
+
+[data-blok-database-layout-section-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  inline-size: 100%;
+  min-block-size: 24px;
+  margin-block-start: var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: var(--blok-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* research/10 §3: the name field, no fill, and a 28px "Done". */
+[data-blok-database-layout-section-rename] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  margin-block-start: var(--blok-space-1);
+  padding-inline: var(--blok-space-2) var(--blok-space-1);
+}
+
+[data-blok-database-layout-section-rename] input {
+  flex: 1;
+  min-inline-size: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+[data-blok-database-layout-section-done] {
+  flex-shrink: 0;
+  block-size: 28px;
+  padding-inline: var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-accent);
+  color: var(--blok-text-on-dark);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-layout-section-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-layout-section-done]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+button[data-blok-database-layout-group-name]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: -2px;
 }
 
 @media (hover: hover) {
@@ -2542,6 +2646,7 @@
 
   [data-blok-database-layout-pin-row]:hover,
   [data-blok-database-layout-group-row]:hover,
+  [data-blok-database-layout-section-row]:hover,
   [data-blok-database-layout-module-menu]:hover,
   [data-blok-database-layout-pin-toggle]:not(:disabled):hover,
   [data-blok-database-layout-eye]:hover {
@@ -2571,6 +2676,14 @@
 [data-blok-database-layout-canvas-content],
 [data-blok-database-layout-group-empty] {
   padding-block: var(--blok-space-1);
+  color: var(--blok-text-tertiary);
+  font-size: 14px;
+}
+
+/* research/10 §3: an empty section's grey "Empty", 20px in. */
+[data-blok-database-layout-section-empty] {
+  padding-block: var(--blok-space-1);
+  padding-inline-start: var(--blok-space-5);
   color: var(--blok-text-tertiary);
   font-size: 14px;
 }
@@ -2673,6 +2786,8 @@
 [data-blok-database-layout-add-section],
 [data-blok-database-layout-add-pin],
 [data-blok-database-layout-add-group-property],
+[data-blok-database-layout-add-section-property],
+[data-blok-database-drawer-section-add],
 [data-blok-database-drawer-details-toggle],
 [data-blok-database-drawer-section-toggle],
 [data-blok-database-drawer-tabs] [role="tab"] {
@@ -2689,24 +2804,6 @@
   cursor: pointer;
 }
 
-[data-blok-database-layout-item-menu],
-[data-blok-database-layout-section-delete] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  inline-size: 24px;
-  block-size: 24px;
-  padding: 0;
-  border: none;
-  border-radius: var(--blok-radius-control-sm);
-  background: none;
-  color: var(--blok-database-add-text);
-  cursor: pointer;
-}
-
-[data-blok-database-layout-item-menu] svg,
-[data-blok-database-layout-section-delete] svg,
 [data-blok-database-drawer-details-toggle] svg,
 [data-blok-database-drawer-section-toggle] svg {
   inline-size: 16px;
@@ -2921,16 +3018,16 @@
   transform: rotate(90deg);
 }
 
-[data-blok-database-layout-section-name] {
-  flex: 1;
-  min-width: 0;
-  padding: var(--blok-space-1) var(--blok-space-1-5);
-  border: 1px solid var(--blok-database-drawer-border);
-  border-radius: var(--blok-radius-control-sm);
-  background: none;
-  color: var(--blok-text-primary);
-  font: inherit;
-  font-size: 14px;
+/* research/10 §3: in the builder the header is the name, 13px/500 grey, and a 14px chevron. It never folds. */
+[data-blok-database-drawer-section-header] > svg {
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--blok-text-tertiary);
+}
+
+[data-blok-database-drawer-section-name] {
+  color: var(--blok-text-secondary);
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -2953,8 +3050,8 @@
   [data-blok-database-layout-add-section]:hover,
   [data-blok-database-layout-add-pin]:not(:disabled):hover,
   [data-blok-database-layout-add-group-property]:hover,
-  [data-blok-database-layout-item-menu]:hover,
-  [data-blok-database-layout-section-delete]:hover,
+  [data-blok-database-layout-add-section-property]:hover,
+  [data-blok-database-drawer-section-add]:hover,
   [data-blok-database-drawer-details-toggle]:hover,
   [data-blok-database-drawer-section-toggle]:hover {
     background-color: var(--blok-database-drawer-border);
@@ -5244,6 +5341,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+[data-blok-database-panel-text] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  padding-block: var(--blok-space-1);
+}
+
+[data-blok-database-panel-description] {
+  color: var(--blok-text-secondary);
+  font-size: 12px;
 }
 
 [data-blok-database-panel-value] {

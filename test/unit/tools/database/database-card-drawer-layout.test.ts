@@ -112,13 +112,6 @@ const addSectionFromMenu = (): void => {
   add.click();
 };
 
-const openItemMenu = (propertyId: string): void => {
-  const button = q(`[data-blok-database-layout-item-menu][data-property-id="${propertyId}"]`);
-
-  if (button === null) throw new Error(`no layout menu for ${propertyId}`);
-  button.click();
-};
-
 describe('DatabaseCardDrawer — page layout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -181,6 +174,106 @@ describe('DatabaseCardDrawer — page layout', () => {
 
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     expect(q('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-section-body]')?.hidden).toBe(true);
+  });
+
+  describe('sections on the row page', () => {
+    const SECTIONS = (): PropertyDefinition[] => schemaWith({
+      pageLayoutSections: [{ id: 's1', name: 'Planning' }, { id: 's2', name: 'Later' }],
+      pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }],
+    });
+    const OTHER: DatabaseRow = { id: 'row-2', position: 'a1', properties: { 'p-title': 'Other' } };
+    const folded = (id: string): HTMLElement['hidden'] | undefined =>
+      q(`[data-blok-database-drawer-section][data-section-id="${id}"] [data-blok-database-drawer-section-body]`)?.hidden;
+    const fold = (id: string): void => q(`[data-blok-database-drawer-section-toggle][data-section-id="${id}"]`)?.click();
+
+    afterEach(() => {
+      try {
+        window.localStorage.clear();
+      } catch {
+        // A test made storage throw.
+      }
+    });
+
+    // research/10 §2b: each section ends with its own "+ Add a property"; folding hides it too.
+    it('ends each section with its own Add a property', () => {
+      const added: PropertyDefinition = { id: 'p-new', name: 'New', type: 'text', position: 'a9' };
+      const options = createOptions({
+        schema: SECTIONS(),
+        onOpenAddProperty: vi.fn((_anchor: HTMLElement, onAdded?: (id: string) => void) => onAdded?.(added.id)),
+      });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      const adds = all('[data-blok-database-drawer-section] [data-blok-database-drawer-section-add]');
+
+      expect(adds.map((add) => [add.closest('[data-section-id]')?.getAttribute('data-section-id'), add.textContent])).toEqual([['s1', '+ Add a property'], ['s2', '+ Add a property']]);
+      expect(adds.every((add) => add.closest('[data-blok-database-drawer-section-body]') !== null)).toBe(true);
+      adds[1]?.click();
+
+      const edit = vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0];
+
+      expect(edit?.(pageLayoutOf(SECTIONS()[0])).placements).toEqual([
+        { id: 'p-due', place: 'section', sectionId: 's1' },
+        { id: 'p-new', place: 'section', sectionId: 's2' },
+      ]);
+    });
+
+    // research/10 §2b: the fold carries to other rows and survives a reload. Per viewer, in local storage (Q3).
+    it('keeps a folded section folded on other rows and after the drawer is rebuilt', () => {
+      const first = new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-1' }));
+
+      first.open(ROW);
+      fold('s1');
+      first.open(OTHER);
+
+      expect(folded('s1')).toBe(true);
+      first.destroy();
+      document.body.innerHTML = '';
+      new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-1' })).open(ROW);
+
+      expect(folded('s1')).toBe(true);
+      expect(folded('s2')).toBe(false);
+      expect(q('[data-blok-database-drawer-section-toggle][data-section-id="s1"]')?.getAttribute('aria-expanded')).toBe('false');
+      fold('s1');
+      document.body.innerHTML = '';
+      new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-1' })).open(ROW);
+
+      expect(folded('s1')).toBe(false);
+    });
+
+    it('keeps folds apart per database', () => {
+      new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-1' })).open(ROW);
+      fold('s1');
+      document.body.innerHTML = '';
+      new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-2' })).open(ROW);
+
+      expect(folded('s1')).toBe(false);
+    });
+
+    it('still folds for the session when storage throws', () => {
+      vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      const drawer = new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-1' }));
+
+      drawer.open(ROW);
+
+      expect(idsIn('[data-blok-database-drawer-section][data-section-id="s1"]')).toEqual(['p-due']);
+      expect(folded('s1')).toBe(false);
+      fold('s1');
+
+      expect(folded('s1')).toBe(true);
+      drawer.open(OTHER);
+
+      expect(folded('s1')).toBe(true);
+    });
+
+    it('opens every section when storage is empty or holds junk', () => {
+      window.localStorage.setItem('blok:database-section-fold:db-1:s2', 'nonsense');
+      new DatabaseCardDrawer(createOptions({ schema: SECTIONS(), databaseId: 'db-1' })).open(ROW);
+
+      expect(folded('s1')).toBe(false);
+      expect(folded('s2')).toBe(false);
+    });
   });
 
   // research/09 §9: the panel starts closed; View details opens it.
@@ -563,25 +656,23 @@ describe('DatabaseCardDrawer — page layout', () => {
 
     it('adds the first section with every group property in it, then a second, empty one at the top', () => {
       const options = createOptions();
+      const rename = (name: string): void => {
+        const field = q<HTMLInputElement>('[data-blok-database-layout-section-rename] input');
+
+        if (field === null) throw new Error('no section name field');
+        field.value = name;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        q('[data-blok-database-layout-section-done]')?.click();
+      };
 
       new DatabaseCardDrawer(options).open(ROW);
       q('[data-blok-database-drawer-customize]')?.click();
       addSectionFromMenu();
-      const name = q<HTMLInputElement>('[data-blok-database-layout-section-name]');
-
-      if (name === null) throw new Error('no section name field');
-      name.value = 'Planning';
-      name.dispatchEvent(new Event('change'));
+      rename('Planning');
       addSectionFromMenu();
-      const second = q<HTMLInputElement>('[data-blok-database-layout-section-name]');
-
-      if (second === null) throw new Error('no second section name field');
-      second.value = 'Later';
-      second.dispatchEvent(new Event('change'));
-      openItemMenu('p-due');
-      const move = all('[data-blok-popover-item]').find((item) => item.textContent?.includes('Later'));
-
-      move?.click();
+      rename('Later');
+      q('[data-blok-database-layout-group-row][data-property-id="p-due"] [data-blok-database-layout-group-name]')?.click();
+      all('[data-blok-database-panel-row]').find((item) => item.textContent?.includes('Later'))?.click();
       q('[data-blok-database-layout-apply]')?.click();
       const layout = written(options);
       const [later, planning] = layout?.sections ?? [];

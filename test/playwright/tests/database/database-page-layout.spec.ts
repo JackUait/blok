@@ -479,6 +479,68 @@ test.describe('row page layout', () => {
     await expect(details).toBeHidden();
   });
 
+  // research/10 §3: properties move between sections by dragging their row in the Property group menu.
+  test('drags a property from one section to another in the Property group menu', async ({ page }) => {
+    await mount(page, blocks({
+      pageLayoutSections: [{ id: 's1', name: 'Planning' }, { id: 's2', name: 'Later' }],
+      pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }, { id: 'p-owner', place: 'section', sectionId: 's1' }],
+    }));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const dialog = builder(page);
+
+    await dialog.locator('[data-blok-database-layout-module="group"]').getByRole('button', { name: 'Action menu for module' }).click();
+    const menu = page.getByTestId('database-layout-group-menu');
+    const from = await menu.locator('[data-blok-database-layout-group-row][data-property-id="p-due"] [data-blok-database-layout-group-handle]').boundingBox();
+    const to = await menu.getByTestId('database-layout-section-s2').boundingBox();
+
+    if (from === null || to === null) throw new Error('missing drag geometry');
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await expect(menu.getByTestId('database-drop-line')).toBeVisible();
+    const line = await menu.getByTestId('database-drop-line').boundingBox();
+    const header = await menu.getByTestId('database-layout-section-s2').boundingBox();
+
+    // Later is empty, so the line sits under its header, in the menu's own coordinates.
+    expect(Math.abs((line?.y ?? 0) + (line?.height ?? 0) / 2 - ((header?.y ?? 0) + (header?.height ?? 0)))).toBeLessThan(4);
+    await page.mouse.up();
+
+    await expect(menu.locator('[data-blok-database-layout-menu-section][data-section-id="s2"] [data-blok-database-layout-group-row][data-property-id="p-due"]')).toHaveCount(1);
+    await expect(dialog.locator('[data-blok-database-drawer-section][data-section-id="s2"] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await dialog.getByRole('button', { name: 'Apply to all pages' }).click();
+
+    expect((await savedTitle(page))?.pageLayoutPlacements).toEqual([
+      { id: 'p-owner', place: 'section', sectionId: 's1' },
+      { id: 'p-due', place: 'section', sectionId: 's2' },
+    ]);
+  });
+
+  // research/10 §2b: a fold carries to other rows and survives a reload. Per viewer, in local storage (plan Q3).
+  test('keeps a folded section folded on another row and after a reload', async ({ page }) => {
+    const data = (): OutputBlockData[] => blocks({
+      pageLayoutSections: [{ id: 's1', name: 'Planning' }],
+      pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }],
+    });
+    const due = (): Locator => peek(page).locator('[data-blok-database-drawer-section] [data-blok-database-drawer-prop-value][data-property-id="p-due"]');
+
+    await mount(page, data());
+    await openRow(page, 'r1');
+    await peek(page).getByRole('button', { name: 'Planning' }).click();
+    await expect(due()).toBeHidden();
+    await openRow(page, 'r2');
+    await expect(peek(page).getByRole('button', { name: 'Planning' })).toHaveAttribute('aria-expanded', 'false');
+    await page.reload();
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await mount(page, data());
+    await openRow(page, 'r1');
+
+    await expect(peek(page).getByRole('button', { name: 'Planning' })).toHaveAttribute('aria-expanded', 'false');
+    await expect(due()).toBeHidden();
+  });
+
   // research/09 §9: closed on every navigation; it does not persist.
   test('starts the details panel closed on every open', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }));

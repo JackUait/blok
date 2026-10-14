@@ -270,8 +270,6 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/buttonAdd-openPage': cmd('database.updateProperty'),
   'menu:database/buttonAdd-callback': cmd('database.updateProperty'),
   'menu:database/reset': exempt('cut-v1', VIEW_LAYOUT_CUT),
-  'menu:database/*@src/tools/database/database-card-drawer.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
-  'menu:database/move-to-section-*': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/group-*': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/toggle-aggregation': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/hide-group': exempt('cut-v1', VIEW_SETTING_CUT),

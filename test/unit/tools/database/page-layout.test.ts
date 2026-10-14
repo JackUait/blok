@@ -5,6 +5,7 @@ import {
   addModule,
   addSection,
   applyDraft,
+  arrangeSection,
   canPlaceInPanel,
   groupFirst,
   deleteSection,
@@ -21,6 +22,7 @@ import {
   renameSection,
   resetPageLayout,
   resolvePageLayout,
+  sectionFirst,
   setFullWidth,
   setGroupIn,
   setPropertyIcons,
@@ -383,6 +385,55 @@ describe('page layout — edits', () => {
     model.setPageLayout({ ...layout, placements: [...layout.placements, { id: 'rel', place: 'group' }] });
 
     expect(model.getSchema().map((p) => [p.id, p.position])).toEqual(before);
+  });
+
+  // research/10 §3: properties drag between sections, so a section keeps the order they were put in.
+  it('orders a section by its placements, not by schema order', () => {
+    const layout = pageLayoutOf({
+      ...TITLE,
+      pageLayoutSections: [{ id: 's1', name: 'One' }],
+      pageLayoutPlacements: [{ id: 'c', place: 'section', sectionId: 's1' }, { id: 'a', place: 'section', sectionId: 's1' }],
+    });
+
+    expect(ids(resolvePageLayout(layout, PROPS).sections[0].properties)).toEqual(['c', 'a']);
+  });
+
+  it('arranges a dragged property into a section in the order it was dropped', () => {
+    const start = [addSection('s1', 'One', ids(PROPS)), addSection('s2', 'Two', ids(PROPS))].reduce((acc, op) => op(acc), empty);
+    const layout = arrangeSection('c', 's2', ['c'])(start);
+    const twice = arrangeSection('a', 's2', ['c', 'a'])(layout);
+    const before = arrangeSection('b', 's2', ['b', 'c', 'a'])(twice);
+    const resolved = resolvePageLayout(before, PROPS);
+
+    expect(resolved.sections.map((s) => [s.section.id, ids(s.properties)])).toEqual([['s2', ['b', 'c', 'a']], ['s1', ['rel']]]);
+  });
+
+  it('arranges a property out of a section into the group, in the dropped order', () => {
+    const start = [addSection('s1', 'One', ids(PROPS)), moveToSection('b', null), moveToSection('c', null)].reduce((acc, op) => op(acc), empty);
+    const layout = arrangeSection('rel', null, ['b', 'rel', 'c'])(start);
+    const resolved = resolvePageLayout(layout, PROPS);
+
+    expect(ids(resolved.group)).toEqual(['b', 'rel', 'c']);
+    expect(ids(resolved.sections[0].properties)).toEqual(['a']);
+  });
+
+  it('leaves a property a peer moved elsewhere since the drop', () => {
+    const start = [addSection('s1', 'One', ids(PROPS)), addSection('s2', 'Two', [])].reduce((acc, op) => op(acc), empty);
+    const peer = pin('b')(arrangeSection('a', 's2', ['a'])(start));
+    const layout = arrangeSection('c', 's2', ['b', 'c', 'a'])(peer);
+    const resolved = resolvePageLayout(layout, PROPS);
+
+    expect(ids(resolved.heading)).toEqual(['b']);
+    expect(resolved.sections.map((s) => [s.section.id, ids(s.properties)])).toEqual([['s2', ['c', 'a']], ['s1', ['rel']]]);
+  });
+
+  it('puts a property first in a section', () => {
+    const start = [addSection('s1', 'One', ['a', 'b']), addSection('s2', 'Two', [])].reduce((acc, op) => op(acc), empty);
+    const layout = sectionFirst('c', 's1')(start);
+    const resolved = resolvePageLayout(sectionFirst('rel', 's2')(layout), PROPS);
+
+    expect(resolved.sections.map((s) => [s.section.id, ids(s.properties)])).toEqual([['s2', ['rel']], ['s1', ['c', 'a', 'b']]]);
+    expect(sectionFirst('a', 'gone')(start)).toEqual(start);
   });
 
   it('a draft with only visibility edits is not empty, and applying it replays the ops on the newest layout', () => {

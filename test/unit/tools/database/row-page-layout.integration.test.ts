@@ -343,6 +343,25 @@ describe('row page layout through the database tool', () => {
     expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: added?.id, place: 'heading' }] });
   });
 
+  // research/10 §2b: a section's own "+ Add a property" on the row page puts the new property in that section, as one undo step.
+  it('adds a property into a section from the row page, and one undo takes both back', async () => {
+    await make(doc({}, { pageLayoutSections: [{ id: 's1', name: 'Planning' }], pageLayoutPlacements: [{ id: 'due', place: 'section', sectionId: 's1' }] }));
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-section-add]'));
+    await click(document.querySelector('[data-blok-database-property-type-option="number"]'));
+    const added = (await editorSchema()).find((property) => property.type === 'number');
+
+    expect(added).toBeDefined();
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: added?.id, place: 'section', sectionId: 's1' }, { id: 'due', place: 'section', sectionId: 's1' }] });
+    expect(q(`[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-prop-value][data-property-id="${String(added?.id)}"]`)).not.toBeNull();
+    editor?.history.undo();
+    await quiet();
+
+    expect((await editorSchema()).some((property) => property.type === 'number')).toBe(false);
+    expect(await savedTitle()).toMatchObject({ pageLayoutPlacements: [{ id: 'due', place: 'section', sectionId: 's1' }] });
+    expect(editor?.history.canUndo()).toBe(false);
+  });
+
   // research/09 §3b: after Discard, the property made in the builder is gone.
   it('deletes a property added from the Heading menu when Cancel is confirmed with Discard', async () => {
     await make(doc());

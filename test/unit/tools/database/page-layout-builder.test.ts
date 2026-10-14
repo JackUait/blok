@@ -448,10 +448,6 @@ describe('PageLayoutBuilder', () => {
 
     it.each([
       ['More save options', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click(), 'reset'],
-      ['an item menu', () => {
-        pinDue();
-        q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
-      }, 'move-up'],
       ['the Preview switch', () => builder().querySelector<HTMLElement>('[data-blok-database-layout-preview]')?.click(), 'preview-row-1'],
     ])('closes %s and leaves the toast and the builder', (_name, openMenu, item) => {
       const toast = showToast();
@@ -822,23 +818,13 @@ describe('PageLayoutBuilder', () => {
       expect(moduleCard('group').hasAttribute('data-selected')).toBe(true);
       expect(moduleCard('heading').hasAttribute('data-selected')).toBe(false);
       // A control inside a module keeps its own click.
-      q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
+      builder().querySelector<HTMLElement>('[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')?.click();
 
       expect(headingMenu()).toBeNull();
-      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
+      expect(moduleCard('heading').hasAttribute('data-selected')).toBe(false);
       drawer.destroy();
     });
 
-    it('keeps no Pin or Unpin in the per-property menu', () => {
-      const { drawer } = customize({ schema: PINNED });
-
-      q('[data-blok-database-layout-item-menu][data-property-id="p-status"]')?.click();
-      expect(q('[data-blok-popover-item][data-blok-item-name="pin"]')).toBeNull();
-      q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
-      expect(q('[data-blok-popover-item][data-blok-item-name="unpin"]')).toBeNull();
-      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
-      drawer.destroy();
-    });
   });
 
   // research/09 §3 L56, §5: header + Add section, search, a row per property with an eye, Add a property, Move to panel.
@@ -960,21 +946,6 @@ describe('PageLayoutBuilder', () => {
       q('[data-blok-testid="database-panel-back"]')?.click();
 
       expect(eye('p-due')).toHaveFocus();
-      drawer.destroy();
-    });
-
-    it('keeps one menu open: the canvas ⋯ menu closes the group menu', () => {
-      const { drawer } = customize({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) });
-
-      openGroupMenu();
-      q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')?.click();
-
-      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
-      expect(groupMenu()).toBeNull();
-      groupMenuButton().click();
-
-      expect(groupMenu()).not.toBeNull();
-      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).toBeNull();
       drawer.destroy();
     });
 
@@ -1285,17 +1256,281 @@ describe('PageLayoutBuilder', () => {
 
       expect(query.removeEventListener).toHaveBeenCalled();
     });
+  });
 
-    it('keeps no module jobs in the per-property menu, and no ⋯ where nothing is left', () => {
-      const { drawer } = customize({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }] }) });
+  // research/10 §3: sections live in the Property group menu.
+  describe('Sections', () => {
+    const NOTES: PropertyDefinition = { id: 'p-notes', name: 'Notes', type: 'text', position: 'a3' };
+    const groupMenu = (): HTMLElement | null => q('[data-blok-testid="database-layout-group-menu"]');
+    const openGroupMenu = (): HTMLElement => {
+      if (groupMenu() === null) moduleCard('group').querySelector<HTMLElement>('[data-blok-database-layout-module-menu]')?.click();
+      const menu = groupMenu();
 
-      expect(q('[data-blok-database-layout-item-menu][data-property-id="p-due"]')).toBeNull();
-      q('[data-blok-database-layout-item-menu][data-property-id="p-status"]')?.click();
+      if (menu === null) throw new Error('no Property group menu');
 
-      for (const name of ['add-to-page', 'add-to-panel', 'move-to-panel', 'move-to-page', 'remove']) {
-        expect(q(`[data-blok-popover-item][data-blok-item-name="${name}"]`)).toBeNull();
+      return menu;
+    };
+    /** The menu read as its sections and their rows: '' is the group outside every section. */
+    const menuSections = (): Array<[string, string[]]> => {
+      const menu = openGroupMenu();
+      const loose = [...menu.querySelectorAll<HTMLElement>('[data-blok-database-layout-menu-group] [data-blok-database-layout-group-row]')].map((row) => row.getAttribute('data-property-id') ?? '');
+      const sections = [...menu.querySelectorAll<HTMLElement>('[data-blok-database-layout-menu-section]')].map((section): [string, string[]] => [
+        section.querySelector('[data-blok-database-layout-section-row]')?.textContent?.trim() ?? '',
+        [...section.querySelectorAll<HTMLElement>('[data-blok-database-layout-group-row]')].map((row) => row.getAttribute('data-property-id') ?? ''),
+      ]);
+
+      return [['', loose], ...sections];
+    };
+    const canvasSections = (): Array<[string, string[]]> =>
+      [...builder().querySelectorAll<HTMLElement>('[data-blok-database-drawer-section]')].map((section) => [
+        section.querySelector('[data-blok-database-drawer-section-header]')?.textContent?.trim() ?? '',
+        [...section.querySelectorAll<HTMLElement>('[data-blok-database-drawer-prop-value]')].map((el) => el.getAttribute('data-property-id') ?? ''),
+      ]);
+    const sectionRow = (id: string): HTMLElement => {
+      const el = openGroupMenu().querySelector<HTMLElement>(`[data-blok-database-layout-menu-section][data-section-id="${id}"] [data-blok-database-layout-section-row]`);
+
+      if (el === null) throw new Error(`no section row ${id}`);
+
+      return el;
+    };
+    const rowsOf = (): string[] => [...openGroupMenu().querySelectorAll<HTMLElement>('[data-blok-database-panel-row]')].map((row) => row.getAttribute('data-blok-testid') ?? '');
+    const apply = (): void => {
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+    };
+    /** The applied edit, replayed on the layout the schema saved. */
+    const savedAfter = (options: CardDrawerOptions): PageLayoutData | undefined =>
+      vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0]?.(pageLayoutOf(options.schema[0]));
+    const TWO = (): PropertyDefinition[] => [...schemaWith({
+      pageLayoutSections: [{ id: 's1', name: 'Planning' }, { id: 's2', name: 'Later' }],
+      pageLayoutPlacements: [{ id: 'p-status', place: 'section', sectionId: 's1' }, { id: 'p-due', place: 'section', sectionId: 's1' }],
+    }), NOTES];
+
+    it('adds the first section at the top holding every property, and opens its rename with the name selected', () => {
+      const { drawer, options } = customize();
+
+      openGroupMenu().querySelector<HTMLElement>('[data-blok-database-panel-header] [data-blok-database-layout-add-section]')?.click();
+      const input = openGroupMenu().querySelector<HTMLInputElement>('[data-blok-database-layout-section-rename] input');
+
+      if (input === null) throw new Error('no rename field');
+      expect(input.value).toBe('New section');
+      expect(input).toHaveFocus();
+      expect([input.selectionStart, input.selectionEnd]).toEqual([0, 'New section'.length]);
+      const done = openGroupMenu().querySelector<HTMLElement>('[data-blok-database-layout-section-done]');
+
+      expect(done?.textContent).toBe('Done');
+      expect(menuSections()).toEqual([['', []], ['', ['p-status', 'p-due']]]);
+      input.value = 'Details';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      done?.click();
+
+      expect(openGroupMenu().querySelector('[data-blok-database-layout-section-rename]')).toBeNull();
+      expect(menuSections()).toEqual([['', []], ['Details', ['p-status', 'p-due']]]);
+      expect(canvasSections()).toEqual([['Details', ['p-status', 'p-due']]]);
+      apply();
+
+      expect(savedAfter(options)?.sections.map((section) => section.name)).toEqual(['Details']);
+      drawer.destroy();
+    });
+
+    it('commits a rename on Enter', () => {
+      const { drawer } = customize();
+
+      openGroupMenu().querySelector<HTMLElement>('[data-blok-database-panel-header] [data-blok-database-layout-add-section]')?.click();
+      const input = openGroupMenu().querySelector<HTMLInputElement>('[data-blok-database-layout-section-rename] input');
+
+      if (input === null) throw new Error('no rename field');
+      input.value = 'More';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(canvasSections().map(([name]) => name)).toEqual(['More']);
+      expect(sectionRow(canvasSectionId(0))).toHaveFocus();
+      drawer.destroy();
+    });
+
+    const canvasSectionId = (index: number): string =>
+      builder().querySelectorAll<HTMLElement>('[data-blok-database-drawer-section]')[index]?.getAttribute('data-section-id') ?? '';
+
+    it('shows Empty in an empty section, and gives each section in the menu its own Add a property', () => {
+      const { drawer } = customize({ schema: TWO() });
+
+      expect(canvasSections()).toEqual([['Planning', ['p-status', 'p-due']], ['Later', []]]);
+      expect(builder().querySelector('[data-blok-database-drawer-section][data-section-id="s2"] [data-blok-database-layout-section-empty]')?.textContent).toBe('Empty');
+      expect(builder().querySelector('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-layout-section-empty]')).toBeNull();
+      expect(menuSections()).toEqual([['', ['p-notes']], ['Planning', ['p-status', 'p-due']], ['Later', []]]);
+      const adds = [...openGroupMenu().querySelectorAll<HTMLElement>('[data-blok-database-layout-menu-section] [data-blok-database-layout-add-section-property]')];
+
+      expect(adds.map((add) => [add.closest('[data-section-id]')?.getAttribute('data-section-id'), add.textContent])).toEqual([['s1', '+ Add a property'], ['s2', '+ Add a property']]);
+      drawer.destroy();
+    });
+
+    it('adds a property first in a section from that section\'s Add a property', () => {
+      const added: PropertyDefinition = { id: 'p-new', name: 'New', type: 'text', position: 'a9' };
+      let drawerRef: DatabaseCardDrawer | null = null;
+      const { drawer, options } = customize({
+        schema: TWO(),
+        onOpenAddProperty: vi.fn((_anchor: HTMLElement, onAdded?: (id: string) => void) => {
+          drawerRef?.refreshSchema([...TWO(), added]);
+          onAdded?.('p-new');
+        }),
+      });
+
+      drawerRef = drawer;
+      openGroupMenu().querySelector<HTMLElement>('[data-section-id="s1"] [data-blok-database-layout-add-section-property]')?.click();
+
+      expect(canvasSections()).toEqual([['Planning', ['p-new', 'p-status', 'p-due']], ['Later', []]]);
+      apply();
+
+      expect(savedAfter(options)?.placements[0]).toEqual({ id: 'p-new', place: 'section', sectionId: 's1' });
+      drawer.destroy();
+    });
+
+    it('moves a section down from its menu and offers only valid directions', () => {
+      const { drawer, options } = customize({ schema: TWO() });
+
+      sectionRow('s1').click();
+      expect(openGroupMenu().querySelector('[data-blok-database-panel-header]')?.textContent).toContain('Planning');
+      expect(rowsOf()).toEqual(['database-layout-section-rename', 'database-layout-section-move-down', 'database-layout-section-delete']);
+      q('[data-blok-testid="database-layout-section-move-down"]')?.click();
+
+      expect(canvasSections().map(([name]) => name)).toEqual(['Later', 'Planning']);
+      sectionRow('s1').click();
+      expect(rowsOf()).toEqual(['database-layout-section-rename', 'database-layout-section-move-up', 'database-layout-section-delete']);
+      apply();
+
+      expect(savedAfter(options)?.sections.map((section) => section.id)).toEqual(['s2', 's1']);
+      drawer.destroy();
+    });
+
+    it('renames a section from its menu', () => {
+      const { drawer } = customize({ schema: TWO() });
+
+      sectionRow('s2').click();
+      q('[data-blok-testid="database-layout-section-rename"]')?.click();
+      const input = openGroupMenu().querySelector<HTMLInputElement>('[data-section-id="s2"] [data-blok-database-layout-section-rename] input');
+
+      expect(input).toHaveFocus();
+      expect([input?.selectionStart, input?.selectionEnd]).toEqual([0, 'Later'.length]);
+      if (input === null) throw new Error('no rename field');
+      input.value = 'Someday';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      openGroupMenu().querySelector<HTMLElement>('[data-blok-database-layout-section-done]')?.click();
+
+      expect(canvasSections().map(([name]) => name)).toEqual(['Planning', 'Someday']);
+      drawer.destroy();
+    });
+
+    it('deletes a section without deleting its properties', () => {
+      const onDeleteProperty = vi.fn();
+      const { drawer, options } = customize({ schema: TWO(), onDeleteProperty });
+
+      sectionRow('s1').click();
+      const remove = q('[data-blok-testid="database-layout-section-delete"]');
+
+      expect(remove?.querySelector('[data-blok-database-panel-label]')?.textContent).toBe('Delete');
+      expect(remove?.querySelector('[data-blok-database-panel-description]')?.textContent).toBe('No properties will be deleted');
+      remove?.click();
+
+      expect(canvasSections()).toEqual([['Later', []]]);
+      expect(menuSections()).toEqual([['', ['p-status', 'p-due', 'p-notes']], ['Later', []]]);
+      apply();
+
+      expect(onDeleteProperty).not.toHaveBeenCalled();
+      expect(savedAfter(options)?.sections).toEqual([{ id: 's2', name: 'Later' }]);
+      expect(savedAfter(options)?.placements).toEqual([]);
+      drawer.destroy();
+    });
+
+    it('drags a property from one section to another in the group menu', () => {
+      const { drawer, options } = customize({ schema: TWO() });
+      const menu = openGroupMenu();
+      // Lay the menu out: every row, header and add button 28px tall, in DOM order.
+      const parts = [...menu.querySelectorAll<HTMLElement>('[data-blok-database-layout-group-row], [data-blok-database-layout-section-row], [data-blok-database-layout-add-section-property]')];
+      const boxes = new Map<Element, { top: number; bottom: number; left: number; right: number; width: number; height: number }>(parts.map((el, i) => [el, { top: i * 28, bottom: i * 28 + 28, left: 0, right: 290, width: 290, height: 28 }]));
+      const blocks = [...menu.querySelectorAll<HTMLElement>('[data-blok-database-layout-menu-group], [data-blok-database-layout-menu-section]')];
+
+      for (const block of blocks) {
+        const inside = parts.filter((el) => block.contains(el)).map((el) => boxes.get(el));
+        const top = inside[0]?.top ?? 0;
+
+        boxes.set(block, { top, bottom: inside.at(-1)?.bottom ?? top, left: 0, right: 290, width: 290, height: (inside.at(-1)?.bottom ?? top) - top });
       }
-      expect(q('[data-blok-popover-item][data-blok-item-name="move-up"]')).not.toBeNull();
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect(this: Element) {
+        const box = boxes.get(this) ?? { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 };
+
+        return { ...box, x: box.left, y: box.top, toJSON: () => box };
+      });
+      const handle = menu.querySelector<HTMLElement>('[data-blok-database-layout-group-row][data-property-id="p-status"] [data-blok-database-layout-group-handle]');
+
+      expect(handle?.getAttribute('aria-hidden')).toBe('true');
+      // Order: Notes (0), Planning header (1), Status (2), Due (3), add (4), Later header (5), add (6).
+      handle?.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 10, clientY: 70, bubbles: true, cancelable: true }));
+      document.dispatchEvent(new MouseEvent('pointermove', { clientX: 10, clientY: 160, bubbles: true }));
+
+      expect(menu.querySelector('[data-blok-database-drop-line]')).not.toBeNull();
+      document.dispatchEvent(new MouseEvent('pointerup', { clientX: 10, clientY: 160, bubbles: true }));
+
+      expect(canvasSections()).toEqual([['Planning', ['p-due']], ['Later', ['p-status']]]);
+      expect(menuSections()).toEqual([['', ['p-notes']], ['Planning', ['p-due']], ['Later', ['p-status']]]);
+      apply();
+
+      expect(savedAfter(options)?.placements).toEqual([{ id: 'p-due', place: 'section', sectionId: 's1' }, { id: 'p-status', place: 'section', sectionId: 's2' }]);
+      drawer.destroy();
+    });
+
+    it('moves a property to another section, and out of one, from its row\'s menu', () => {
+      const { drawer } = customize({ schema: TWO() });
+
+      openGroupMenu().querySelector<HTMLElement>('[data-blok-database-layout-group-row][data-property-id="p-due"] [data-blok-database-layout-group-name]')?.click();
+      expect(rowsOf()).toEqual(['database-layout-move-to-section-s2', 'database-layout-leave-section']);
+      expect(q('[data-blok-testid="database-layout-move-to-section-s2"]')?.textContent?.trim()).toBe('Move to Later');
+      q('[data-blok-testid="database-layout-move-to-section-s2"]')?.click();
+
+      expect(canvasSections()).toEqual([['Planning', ['p-status']], ['Later', ['p-due']]]);
+      openGroupMenu().querySelector<HTMLElement>('[data-blok-database-layout-group-row][data-property-id="p-due"] [data-blok-database-layout-group-name]')?.click();
+      q('[data-blok-testid="database-layout-leave-section"]')?.click();
+
+      expect(menuSections()).toEqual([['', ['p-due', 'p-notes']], ['Planning', ['p-status']], ['Later', []]]);
+      drawer.destroy();
+    });
+
+    // research/10 §3: no folding inside the builder; a click on the header opens the group's menu.
+    it('draws a section header on the canvas as its name, which opens the group menu and never folds', () => {
+      const { drawer } = customize({ schema: TWO() });
+      const header = builder().querySelector<HTMLElement>('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-section-header]');
+
+      expect(header?.querySelector('input, button')).toBeNull();
+      expect(header?.querySelector('svg')).not.toBeNull();
+      header?.click();
+
+      expect(groupMenu()).not.toBeNull();
+      expect(builder().querySelector<HTMLElement>('[data-blok-database-drawer-section][data-section-id="s1"] [data-blok-database-drawer-section-body]')?.hidden).toBe(false);
+      drawer.destroy();
+    });
+
+    it('deletes the per-property layout menu once every job has a home', () => {
+      const { drawer } = customize({
+        schema: [...schemaWith({
+          pageLayoutSections: [{ id: 's1', name: 'Planning' }],
+          pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }, { id: 'p-due', place: 'section', sectionId: 's1' }],
+        }), NOTES],
+      });
+
+      expect(q('[data-blok-database-layout-item-menu]')).toBeNull();
+      drawer.destroy();
+    });
+
+    // The pins' keyboard path, which the per-property menu used to hold.
+    it('moves a pin from its row in the Heading menu, offering only valid directions', () => {
+      const { drawer, options } = customize({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }, { id: 'p-due', place: 'heading' }] }) });
+
+      headingMenuButton().click();
+      headingMenu()?.querySelector<HTMLElement>('[data-blok-database-layout-pin-row][data-property-id="p-status"] [data-blok-database-layout-pin-name]')?.click();
+      expect([...(headingMenu()?.querySelectorAll<HTMLElement>('[data-blok-database-panel-row]') ?? [])].map((row) => row.getAttribute('data-blok-testid'))).toEqual(['database-layout-pin-move-down']);
+      q('[data-blok-testid="database-layout-pin-move-down"]')?.click();
+      apply();
+
+      expect(savedAfter(options)?.placements).toEqual([{ id: 'p-due', place: 'heading' }, { id: 'p-status', place: 'heading' }]);
       drawer.destroy();
     });
   });

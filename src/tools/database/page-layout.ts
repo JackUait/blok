@@ -101,7 +101,6 @@ export const pageLayoutFields = (layout: PageLayoutData): Required<Pick<PageLayo
 export const resolvePageLayout = (layout: PageLayoutData, properties: PropertyDefinition[]): ResolvedPageLayout => {
   const byId = new Map(properties.map((p) => [p.id, p]));
   const sections = layout.sections.filter((s, i, all) => all.findIndex((o) => o.id === s.id) === i);
-  const sectionIds = new Set(sections.map((s) => s.id));
   const placed = new Map<string, PageLayoutPlacement>();
 
   for (const placement of layout.placements) {
@@ -123,8 +122,11 @@ export const resolvePageLayout = (layout: PageLayoutData, properties: PropertyDe
 
   for (const [id, placement] of placed) {
     const property = byId.get(id) as PropertyDefinition;
+    const section = placement.place === 'section' ? resolved.sections.find((s) => s.section.id === placement.sectionId) : undefined;
 
-    if (placement.place === 'group') {
+    if (section !== undefined) {
+      section.properties.push(property);
+    } else if (placement.place === 'group') {
       resolved.group.push(property);
     } else if (placement.place === 'heading' && resolved.heading.length < PAGE_LAYOUT_PIN_LIMIT) {
       resolved.heading.push(property);
@@ -139,14 +141,9 @@ export const resolvePageLayout = (layout: PageLayoutData, properties: PropertyDe
   for (const property of properties) {
     const placement = placed.get(property.id);
 
-    if (placement !== undefined && !inGroup.has(property.id)) {
-      continue;
+    if (placement === undefined || inGroup.has(property.id)) {
+      resolved.group.push(property);
     }
-    const section = placement?.place === 'section' && placement.sectionId !== undefined && sectionIds.has(placement.sectionId)
-      ? resolved.sections.find((s) => s.section.id === placement.sectionId)
-      : undefined;
-
-    (section?.properties ?? resolved.group).push(property);
   }
 
   return resolved;
@@ -219,6 +216,10 @@ export const placeBefore = (id: string, place: 'heading' | 'page' | 'panel', bef
   return { ...layout, placements: [...rest.slice(0, at), { id, place }, ...rest.slice(at)] };
 };
 
+/** In the group outside every section: unplaced, placed there, or in a section that is gone. */
+const inLooseGroup = (p: PageLayoutPlacement | undefined, sectionIds: ReadonlySet<string>): boolean =>
+  p === undefined || p.place === 'group' || (p.place === 'section' && (p.sectionId === undefined || !sectionIds.has(p.sectionId)));
+
 /**
  * A new section goes at the top. The first one takes every property still in the
  * group (research/10 §3). `propertyIds` are all the database's properties; which of
@@ -229,9 +230,7 @@ export const addSection = (id: string, name: string, propertyIds: readonly strin
   const sectionIds = new Set(layout.sections.map((s) => s.id));
 
   if (sectionIds.size > 0) return { ...layout, sections };
-  const inGroup = (p: PageLayoutPlacement | undefined): boolean =>
-    p === undefined || p.place === 'group' || (p.place === 'section' && (p.sectionId === undefined || !sectionIds.has(p.sectionId)));
-  const moved = propertyIds.filter((pid) => inGroup(layout.placements.find((p) => p.id === pid)));
+  const moved = propertyIds.filter((pid) => inLooseGroup(layout.placements.find((p) => p.id === pid), sectionIds));
   const movedIds = new Set(moved);
 
   return {
@@ -269,6 +268,41 @@ export const deleteSection = (id: string): PageLayoutOp => (layout) => ({
 
 export const moveToSection = (id: string, sectionId: string | null): PageLayoutOp => (layout) =>
   withPlacement(layout, sectionId === null ? null : { id, place: 'section', sectionId }, id);
+
+/** A property made from a section's own "+ Add a property" goes first in it. */
+export const sectionFirst = (id: string, sectionId: string): PageLayoutOp => (layout) => {
+  if (!layout.sections.some((s) => s.id === sectionId)) return layout;
+  const rest = layout.placements.filter((p) => p.id !== id);
+  const at = rest.findIndex((p) => p.place === 'section' && p.sectionId === sectionId);
+  const placement: PageLayoutPlacement = { id, place: 'section', sectionId };
+
+  return { ...layout, placements: at === -1 ? [...rest, placement] : [...rest.slice(0, at), placement, ...rest.slice(at)] };
+};
+
+/**
+ * A property dropped into a section, or into the group with `sectionId` null.
+ * `order` is that list as the drop left it. Members a peer moved out since are
+ * left where the peer put them.
+ */
+export const arrangeSection = (id: string, sectionId: string | null, order: readonly string[]): PageLayoutOp => (layout) => {
+  if (sectionId !== null && !layout.sections.some((s) => s.id === sectionId)) return layout;
+  const sectionIds = new Set(layout.sections.map((s) => s.id));
+  const stillHere = (pid: string): boolean => {
+    const p = layout.placements.find((candidate) => candidate.id === pid);
+
+    return sectionId === null ? inLooseGroup(p, sectionIds) : p?.place === 'section' && p.sectionId === sectionId;
+  };
+  const members = order.filter((pid, i) => order.indexOf(pid) === i && (pid === id || stillHere(pid)));
+  const moved = new Set(members);
+
+  return {
+    ...layout,
+    placements: [
+      ...layout.placements.filter((p) => !moved.has(p.id)),
+      ...members.map((pid): PageLayoutPlacement => (sectionId === null ? { id: pid, place: 'group' } : { id: pid, place: 'section', sectionId })),
+    ],
+  };
+};
 
 export const setStructure = (structure: PageLayoutData['structure']): PageLayoutOp => (layout) => ({ ...layout, structure });
 

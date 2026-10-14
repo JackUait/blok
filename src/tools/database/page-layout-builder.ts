@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowUp, IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs } from '../../components/icons';
+import { IconArrowUp, IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { onHover } from '../../components/utils/tooltip';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
@@ -20,11 +20,16 @@ import {
   PAGE_LAYOUT_PIN_LIMIT,
   addModule,
   addSection,
+  arrangeSection,
   canPlaceInPanel,
+  deleteSection,
   moveInPlace,
+  moveSection,
+  moveToSection,
   pin,
   placeBefore,
   removeFromLayout,
+  renameSection,
   resolvePageLayout,
   setFullWidth,
   setGroupIn,
@@ -33,7 +38,7 @@ import {
   setStructure,
   setTemplates,
 } from './page-layout';
-import type { PageLayoutData, PageLayoutOp } from './page-layout';
+import type { PageLayoutData, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import type { PageVisibility, PropertyDefinition } from './types';
 
 /** A page the Preview switch offers. */
@@ -69,6 +74,8 @@ export interface PageLayoutBuilderOptions {
   onAddPin: (anchor: HTMLElement) => void;
   /** "+ Add a property" in the Property group menu. The new property goes to the top of the group. */
   onAddToGroup: (anchor: HTMLElement) => void;
+  /** A section's own "+ Add a property". The new property goes first in that section. */
+  onAddToSection: (anchor: HTMLElement, sectionId: string) => void;
   /** A property's page visibility, with the draft's eye edit if any. */
   visibility: (id: string) => PageVisibility;
   /** An eye edit. It is a draft: Apply writes it on the property. */
@@ -145,6 +152,8 @@ export class PageLayoutBuilder {
   private readonly addToPanelButton: HTMLButtonElement;
   private unwatchNarrow: () => void = () => undefined;
   private menuQuery = '';
+  /** The section whose name is being edited in the group menu, and the text typed so far. */
+  private renaming: { id: string; value: string } | null = null;
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
   private readonly preview: HTMLElement;
@@ -398,11 +407,17 @@ export class PageLayoutBuilder {
     if (anchor === null) return;
     const id = key.startsWith('property:') ? key.slice('property:'.length) : null;
     const pages: Record<string, () => PanelPage> = {
-      heading: () => ({ title: this.label('tools.database.layoutModuleHeading'), build: () => this.headingMenuPage() }),
+      heading: () => ({ title: this.label('tools.database.layoutModuleHeading'), build: (panel) => this.headingMenuPage(panel) }),
       group: () => ({
         title: this.label('tools.database.layoutModuleGroup'),
         headerAction: () => this.button('data-blok-database-layout-add-section', IconPlus, 'tools.database.layoutAddSection', () => {
-          this.options.edit(addSection(nanoid(), this.label('tools.database.layoutNewSection'), this.options.properties().map((def) => def.id)));
+          const sectionId = nanoid();
+          const name = this.label('tools.database.layoutNewSection');
+
+          // research/10 §3: the new section's name opens for editing, all of it selected.
+          this.renaming = { id: sectionId, value: name };
+          this.options.edit(addSection(sectionId, name, this.options.properties().map((def) => def.id)));
+          this.focusRename();
         }),
         build: (panel) => this.groupMenuPage(panel),
       }),
@@ -434,6 +449,7 @@ export class PageLayoutBuilder {
     });
 
     this.menuQuery = '';
+    this.renaming = null;
     this.moduleMenu = { key, anchor, panel };
     anchor.setAttribute('aria-expanded', 'true');
     panel.open();
@@ -678,14 +694,16 @@ export class PageLayoutBuilder {
   }
 
   /**
-   * research/09 §3 L56: search, the group's properties (sections included,
-   * pins not) with an eye each, "+ Add a property", then Move to panel or page.
+   * research/09 §3 L56, research/10 §3: search, the group's properties (pins
+   * not) with an eye each, then each section with its own rows and "+ Add a
+   * property", then the group's "+ Add a property" and Move to panel or page.
    */
   private groupMenuPage(panel: DatabasePanel): HTMLElement[] {
     const layout = this.options.layout();
     const resolved = resolvePageLayout(layout, this.options.properties());
     const list = document.createElement('div');
-    const rows = [...resolved.group, ...resolved.sections.flatMap((entry) => entry.properties)].map((def) => this.groupRow(def, panel));
+    const loose = document.createElement('div');
+    const rows = resolved.group.map((def) => this.groupRow(def, panel, resolved));
     const add = this.button('data-blok-database-layout-add-group-property', null, 'tools.database.addProperty', (el) => {
       this.closeModuleMenu();
       this.options.onAddToGroup(this.modules.get('group')?.menu ?? el);
@@ -693,7 +711,24 @@ export class PageLayoutBuilder {
     const toPanel = layout.groupIn === 'page';
 
     list.setAttribute('data-blok-database-layout-group-list', '');
-    list.append(...rows);
+    loose.setAttribute('data-blok-database-layout-menu-group', '');
+    loose.append(...rows);
+    list.append(loose);
+    resolved.sections.forEach(({ section, properties }, index) => {
+      const block = document.createElement('div');
+      const sectionRows = properties.map((def) => this.groupRow(def, panel, resolved));
+      const addHere = this.button('data-blok-database-layout-add-section-property', null, 'tools.database.addProperty', (el) => {
+        this.closeModuleMenu();
+        this.options.onAddToSection(this.modules.get('group')?.menu ?? el, section.id);
+      });
+
+      block.setAttribute('data-blok-database-layout-menu-section', '');
+      block.setAttribute('data-section-id', section.id);
+      addHere.setAttribute('data-section-id', section.id);
+      block.append(this.renaming?.id === section.id ? this.renameField(section.id, panel) : this.sectionRow(section.id, section.name, index, resolved.sections.length, panel), ...sectionRows, addHere);
+      rows.push(...sectionRows);
+      list.append(block);
+    });
 
     return [
       this.menuSearch('database-layout-group-search', rows),
@@ -709,10 +744,108 @@ export class PageLayoutBuilder {
     ];
   }
 
-  /** research/09 §5: type glyph, name, and an always-visible eye whose glyph shows the state. */
-  private groupRow(def: PropertyDefinition, panel: DatabasePanel): HTMLElement {
+  /** research/10 §3: ⠿ + name. A click opens Rename · Move up / Move down (valid ones only) · Delete. */
+  private sectionRow(id: string, name: string, index: number, count: number, panel: DatabasePanel): HTMLElement {
+    const testId = `database-layout-section-${id}`;
+    const row = this.button('data-blok-database-layout-section-row', null, null, () => panel.push({
+      title: name,
+      returnFocus: testId,
+      build: () => {
+        const rows = [panelRow({ label: this.label('tools.database.layoutRenameSection'), testId: 'database-layout-section-rename', icon: IconPencil, onClick: () => {
+          panel.back();
+          this.renaming = { id, value: name };
+          panel.refresh();
+          this.focusRename();
+        } })];
+        const move = (step: 1 | -1): void => {
+          panel.back();
+          this.options.edit(moveSection(id, step));
+        };
+
+        if (index > 0) rows.push(panelRow({ label: this.label('tools.database.layoutMoveUp'), testId: 'database-layout-section-move-up', icon: IconArrowUp, onClick: () => move(-1) }));
+        if (index < count - 1) rows.push(panelRow({ label: this.label('tools.database.layoutMoveDown'), testId: 'database-layout-section-move-down', icon: IconMoveDown, onClick: () => move(1) }));
+        rows.push(panelRow({
+          label: this.label('tools.database.layoutDeleteSection'),
+          description: this.label('tools.database.layoutDeleteSectionHint'),
+          testId: 'database-layout-section-delete',
+          icon: IconTrash,
+          onClick: () => {
+            panel.back();
+            this.options.edit(deleteSection(id));
+          },
+        }));
+
+        return rows;
+      },
+    }));
+    const handle = document.createElement('span');
+    const label = document.createElement('span');
+
+    row.setAttribute('data-blok-testid', testId);
+    handle.setAttribute('data-blok-database-layout-section-handle', '');
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = IconMenu;
+    label.textContent = name;
+    row.append(handle, label);
+
+    return row;
+  }
+
+  /** The section name field with "Done" (research/10 §3). Done or Enter commits; Escape closes the menu. */
+  private renameField(id: string, panel: DatabasePanel): HTMLElement {
+    const wrap = document.createElement('div');
+    const input = document.createElement('input');
+    const commit = (): void => {
+      const value = this.renaming?.value.trim() ?? '';
+      const current = this.options.layout().sections.find((section) => section.id === id)?.name;
+
+      this.renaming = null;
+      if (value !== '' && value !== current) {
+        this.options.edit(renameSection(id, value));
+      } else {
+        panel.refresh();
+      }
+      panel.root.querySelector<HTMLElement>(`[data-blok-testid="database-layout-section-${CSS.escape(id)}"]`)?.focus();
+    };
+
+    wrap.setAttribute('data-blok-database-layout-section-rename', '');
+    input.type = 'text';
+    input.value = this.renaming?.value ?? '';
+    input.setAttribute('aria-label', this.label('tools.database.layoutSectionName'));
+    input.setAttribute('data-blok-testid', `database-layout-section-name-${id}`);
+    input.addEventListener('input', () => {
+      if (this.renaming !== null) this.renaming.value = input.value;
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      commit();
+    });
+    wrap.append(input, this.button('data-blok-database-layout-section-done', null, 'tools.database.layoutSectionDone', commit));
+
+    return wrap;
+  }
+
+  private focusRename(): void {
+    const input = this.moduleMenu?.panel.root.querySelector<HTMLInputElement>('[data-blok-database-layout-section-rename] input');
+
+    input?.focus();
+    input?.select();
+  }
+
+  /**
+   * research/09 §5: ⠿, type glyph, name, and an always-visible eye whose glyph
+   * shows the state. With sections, the name opens Move to {section} / Remove
+   * from section: the keyboard path of the drag (research/10 §3).
+   */
+  private groupRow(def: PropertyDefinition, panel: DatabasePanel, resolved: ResolvedPageLayout): HTMLElement {
     const row = document.createElement('div');
-    const name = document.createElement('span');
+    const handle = document.createElement('span');
+    const name = resolved.sections.length > 0 ? this.button('data-blok-database-layout-group-name', null, null, () => panel.push({
+      title: def.name,
+      returnFocus: `database-layout-group-name-${def.id}`,
+      build: () => this.sectionMovesPage(def.id, panel),
+    })) : document.createElement('span');
     const visibility = this.options.visibility(def.id);
     const eyeId = `database-layout-eye-${def.id}`;
     const eye = this.button('data-blok-database-layout-eye', EYE[visibility], null, () => panel.push({
@@ -733,14 +866,106 @@ export class PageLayoutBuilder {
     row.setAttribute('data-blok-database-layout-group-row', '');
     row.setAttribute('data-property-id', def.id);
     row.setAttribute('data-name', def.name.toLowerCase());
+    handle.setAttribute('data-blok-database-layout-group-handle', '');
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = IconMenu;
+    handle.addEventListener('pointerdown', (event) => this.startRowDrag(event, def.id, row));
     name.setAttribute('data-blok-database-layout-group-name', '');
+    name.setAttribute('data-blok-testid', `database-layout-group-name-${def.id}`);
     name.textContent = def.name;
     eye.setAttribute('data-blok-testid', eyeId);
     eye.setAttribute('data-visibility', visibility);
     eye.setAttribute('aria-label', this.label('tools.database.layoutVisibilityAria', { name: def.name }));
-    row.append(this.typeIcon(def, 'data-blok-database-layout-group-icon'), name, eye);
+    row.append(handle, this.typeIcon(def, 'data-blok-database-layout-group-icon'), name, eye);
 
     return row;
+  }
+
+  private sectionMovesPage(id: string, panel: DatabasePanel): HTMLElement[] {
+    const resolved = resolvePageLayout(this.options.layout(), this.options.properties());
+    const current = resolved.sections.find((entry) => entry.properties.some((def) => def.id === id))?.section;
+    const move = (sectionId: string | null): void => {
+      panel.back();
+      this.options.edit(moveToSection(id, sectionId));
+    };
+    const rows = resolved.sections
+      .filter(({ section }) => section.id !== current?.id)
+      .map(({ section }) => panelRow({
+        label: this.label('tools.database.layoutMoveToSection', { name: section.name }),
+        testId: `database-layout-move-to-section-${section.id}`,
+        onClick: () => move(section.id),
+      }));
+
+    if (current !== undefined) {
+      rows.push(panelRow({ label: this.label('tools.database.layoutLeaveSection'), testId: 'database-layout-leave-section', onClick: () => move(null) }));
+    }
+
+    return rows;
+  }
+
+  /**
+   * Drags a property row in the group menu into a section, or into the group
+   * outside them (research/10 §3). The line mounts in the menu: it is in the
+   * top layer, above the builder.
+   */
+  private startRowDrag(event: PointerEvent, id: string, source: HTMLElement): void {
+    const menu = this.moduleMenu?.panel.root;
+
+    if (event.button !== 0 || menu === undefined) return;
+    event.preventDefault();
+    const line = new DatabaseDropLine(this.root, menu);
+    const state: { dragging: boolean; target: { sectionId: string | null; order: string[] } | null } = { dragging: false, target: null };
+    const move = (moveEvent: PointerEvent): void => {
+      if (!state.dragging && Math.hypot(moveEvent.clientX - event.clientX, moveEvent.clientY - event.clientY) < DRAG_THRESHOLD) return;
+      state.dragging = true;
+      source.setAttribute('data-dragging', '');
+      state.target = this.rowTarget(moveEvent, id, menu, line);
+    };
+    const end = (drop: boolean): void => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      line.destroy();
+      source.removeAttribute('data-dragging');
+      if (drop && state.dragging && state.target !== null) this.options.edit(arrangeSection(id, state.target.sectionId, state.target.order));
+    };
+    const up = (): void => end(true);
+    const cancel = (): void => end(false);
+
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  }
+
+  /** The list under the pointer (the group or a section) and its order with the dragged row dropped in. */
+  private rowTarget(event: PointerEvent, id: string, menu: HTMLElement, line: DatabaseDropLine): { sectionId: string | null; order: string[] } | null {
+    const blocks = [...menu.querySelectorAll<HTMLElement>('[data-blok-database-layout-menu-group], [data-blok-database-layout-menu-section]')]
+      .map((el) => ({ el, box: el.getBoundingClientRect() }))
+      .filter(({ box }) => box.height > 0);
+    const distance = (box: DOMRect): number => Math.max(box.top - event.clientY, event.clientY - box.bottom, 0);
+    const block = blocks.reduce<(typeof blocks)[number] | undefined>((best, next) => (best === undefined || distance(next.box) < distance(best.box) ? next : best), undefined);
+
+    if (block === undefined) {
+      line.hide();
+
+      return null;
+    }
+    const rows = [...block.el.querySelectorAll<HTMLElement>('[data-blok-database-layout-group-row]')]
+      .filter((row) => !row.hidden && row.getAttribute('data-property-id') !== id);
+    const before = rows.find((row) => {
+      const box = row.getBoundingClientRect();
+
+      return event.clientY < box.top + box.height / 2;
+    });
+    const header = block.el.querySelector<HTMLElement>('[data-blok-database-layout-section-row], [data-blok-database-layout-section-rename]');
+    const edge = before?.getBoundingClientRect().top ?? rows.at(-1)?.getBoundingClientRect().bottom ?? header?.getBoundingClientRect().bottom ?? block.box.top;
+    const order = rows.map((row) => row.getAttribute('data-property-id') ?? '');
+    const at = before === undefined ? order.length : rows.indexOf(before);
+
+    line.showHorizontal({ left: block.box.left, width: block.box.width, centerY: edge });
+    order.splice(at, 0, id);
+
+    return { sectionId: block.el.getAttribute('data-section-id'), order };
   }
 
   /** The property's own icon, else its type glyph. Builder menus keep it whatever Property icons says (research/09 §8). */
@@ -758,7 +983,7 @@ export class PageLayoutBuilder {
     return icon;
   }
 
-  private headingMenuPage(): HTMLElement[] {
+  private headingMenuPage(panel: DatabasePanel): HTMLElement[] {
     const layout = this.options.layout();
     const properties = this.options.properties();
     // Counts every pin, so a search that hides some never lifts the limit.
@@ -771,7 +996,7 @@ export class PageLayoutBuilder {
 
       el.setAttribute('data-blok-database-layout-pin-list', kind);
       for (const def of defs) {
-        const row = this.pinRow(def, kind === 'pinned', kind === 'unpinned' && full);
+        const row = this.pinRow(def, kind === 'pinned' ? panel : null, kind === 'unpinned' && full);
 
         rows.push(row);
         el.appendChild(row);
@@ -805,10 +1030,18 @@ export class PageLayoutBuilder {
     ];
   }
 
-  /** research/09 §3: type glyph, name, and an always-visible pin button. */
-  private pinRow(def: PropertyDefinition, pinned: boolean, disabled: boolean): HTMLElement {
+  /**
+   * research/09 §3: type glyph, name, and an always-visible pin button. A pin's
+   * name opens Move up / Move down, the keyboard path of the pin drag.
+   */
+  private pinRow(def: PropertyDefinition, panel: DatabasePanel | null, disabled: boolean): HTMLElement {
+    const pinned = panel !== null;
     const row = document.createElement('div');
-    const name = document.createElement('span');
+    const name = panel === null ? document.createElement('span') : this.button('data-blok-database-layout-pin-name', null, null, () => panel.push({
+      title: def.name,
+      returnFocus: `database-layout-pin-name-${def.id}`,
+      build: () => this.pinMovesPage(def.id, panel),
+    }));
     const toggle = this.button('data-blok-database-layout-pin-toggle', pinned ? IconPinFilled : IconPin, null, () => {
       this.options.edit(pinned ? removeFromLayout(def.id) : pin(def.id));
     });
@@ -817,6 +1050,7 @@ export class PageLayoutBuilder {
     row.setAttribute('data-property-id', def.id);
     row.setAttribute('data-name', def.name.toLowerCase());
     name.setAttribute('data-blok-database-layout-pin-name', '');
+    if (pinned) name.setAttribute('data-blok-testid', `database-layout-pin-name-${def.id}`);
     name.textContent = def.name;
     toggle.setAttribute('data-blok-testid', `database-layout-pin-${def.id}`);
     toggle.setAttribute('aria-label', this.label(pinned ? 'tools.database.layoutUnpinAria' : 'tools.database.layoutPinAria', { name: def.name }));
@@ -825,6 +1059,21 @@ export class PageLayoutBuilder {
     row.append(this.typeIcon(def, 'data-blok-database-layout-pin-icon'), name, toggle);
 
     return row;
+  }
+
+  private pinMovesPage(id: string, panel: DatabasePanel): HTMLElement[] {
+    const pins = resolvePageLayout(this.options.layout(), this.options.properties()).heading;
+    const at = pins.findIndex((def) => def.id === id);
+    const move = (step: 1 | -1): void => {
+      panel.back();
+      this.options.edit(moveInPlace(id, step));
+    };
+    const rows: HTMLElement[] = [];
+
+    if (at > 0) rows.push(panelRow({ label: this.label('tools.database.layoutMoveUp'), testId: 'database-layout-pin-move-up', icon: IconArrowUp, onClick: () => move(-1) }));
+    if (at !== -1 && at < pins.length - 1) rows.push(panelRow({ label: this.label('tools.database.layoutMoveDown'), testId: 'database-layout-pin-move-down', icon: IconMoveDown, onClick: () => move(1) }));
+
+    return rows;
   }
 
   /**

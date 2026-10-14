@@ -5150,6 +5150,7 @@ export class DatabaseTool implements BlockTool {
       this.cardDrawer = new DatabaseCardDrawer({
         wrapper: this.element,
         readOnly: session.readOnly,
+        databaseId: this.block.id,
         i18n: this.api.i18n,
         events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),

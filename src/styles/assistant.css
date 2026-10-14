@@ -106,8 +106,9 @@
   }
 }
 
-/* The shared field look (field.css) paints the box; this only sizes it. */
-[data-blok-assistant-row] textarea {
+/* The shared field look (field.css) paints the box; this only sizes it.
+   The attribute outranks field.css's textarea[data-blok-field] rule. */
+[data-blok-assistant-row] textarea[data-blok-field] {
   flex: 1 1 auto;
   min-width: 0;
   max-height: 160px;

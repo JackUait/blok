@@ -69,6 +69,17 @@ describe('handleAiRequest', () => {
     expect(JSON.parse(response.body ?? '')).toEqual({ error: '401 invalid x-api-key' });
   });
 
+  it('says how to add a key when the SDK finds no credentials', async () => {
+    const response = await call({ createMessage: async () => {
+      throw new Error('Could not resolve authentication method. Expected one of apiKey, authToken, credentials, config, or profile to be set.');
+    } });
+
+    expect(response.status).toBe(502);
+    expect(JSON.parse(response.body ?? '')).toEqual({
+      error: 'No Anthropic key. Set ANTHROPIC_API_KEY (or run `ant auth login`) and restart yarn serve.',
+    });
+  });
+
   it('passes the abort signal to the model call', async () => {
     const controller = new AbortController();
     const createMessage = vi.fn(async (_params: Record<string, unknown>, _signal: AbortSignal) => ({ content: [], stop_reason: 'end_turn' }));

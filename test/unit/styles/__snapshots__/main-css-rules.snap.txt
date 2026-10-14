@@ -21529,7 +21529,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   animation: none;
 }
 
-[data-blok-assistant-row] textarea {
+[data-blok-assistant-row] textarea[data-blok-field] {
   flex: 1 1 auto;
   min-width: 0;
   max-height: 160px;

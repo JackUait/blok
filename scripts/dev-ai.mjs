@@ -15,6 +15,7 @@ export const AI_MODEL = process.env.BLOK_AI_MODEL ?? 'claude-opus-5-5';
 /** Large enough that a long document edit is not cut off; needs streaming. */
 const MAX_TOKENS = 64_000;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
+const NO_KEY_MESSAGE = 'No Anthropic key. Set ANTHROPIC_API_KEY (or run `ant auth login`) and restart yarn serve.';
 
 /**
  * @param {{ system: string, messages: unknown[], tools: unknown[] }} request
@@ -93,7 +94,11 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
 
     return json(200, headers, { content: message.content, stop_reason: message.stop_reason });
   } catch (error) {
-    return json(502, headers, { error: error instanceof Error ? error.message : String(error) });
+    const message = error instanceof Error ? error.message : String(error);
+    // The SDK's wording when no key or profile is found.
+    const noKey = message.startsWith('Could not resolve authentication method');
+
+    return json(502, headers, { error: noKey ? NO_KEY_MESSAGE : message });
   }
 }
 

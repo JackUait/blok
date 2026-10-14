@@ -490,6 +490,16 @@ describe('endpoint source', () => {
     expect(seen.map((request) => request.path)).toEqual(['/docs/d']);
   });
 
+  it('names the redirect status instead of calling the endpoint unreachable', async () => {
+    answer = (_request, response) => {
+      response.writeHead(302, { Location: '/elsewhere/d' });
+      response.end();
+    };
+
+    await expect(createEndpointSource({ url: base, endpointAuth: AUTH }).load('d'))
+      .rejects.toMatchObject({ agentError: { code: 'SOURCE_UNAVAILABLE', message: expect.stringContaining('302') } });
+  });
+
   it.each(['load', 'save'] as const)('maps a body cut off mid-read during %s to SOURCE_UNAVAILABLE', async (operation) => {
     answer = (_request, response) => {
       response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '100' });

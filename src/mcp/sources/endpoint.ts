@@ -44,7 +44,8 @@ export const createEndpointSource = (
       return await fetchImpl(url, {
         ...init,
         // A followed redirect would carry the PUT body and Authorization to another route or origin.
-        redirect: 'error',
+        // 'manual' hands back the 3xx, so the status checks below name it.
+        redirect: 'manual',
         signal: AbortSignal.timeout(config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
     } catch {

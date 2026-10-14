@@ -132,7 +132,7 @@ describe('stored mode through the MCP dispatcher', () => {
     expect(mcp.handles.count('alice')).toBe(1);
   });
 
-  it.each([null, 'block.insert', ['block.insert'], {}, { name: 7 }])('refuses command entry %j as INVALID_ARGS without saving', async (entry) => {
+  it.each([null, 'block.insert', ['block.insert'], {}, { name: 7 }, { name: 'block.insert' }, { name: 'block.insert', args: null }, { name: 'block.insert', args: 'x' }])('refuses command entry %j as INVALID_ARGS without saving', async (entry) => {
     const handle = await openWrite('doc');
     const outcome = await mcp.dispatch('blok_execute', { handle, commands: [entry] }, caller);
 

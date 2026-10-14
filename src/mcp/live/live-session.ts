@@ -137,14 +137,15 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
     if (fate.state === 'timeout') {
       return { ...result, delivery: { durable: false, pending: true, serverSequence: null, savedVersion: null } };
     }
+    // A reset lost this batch too, so it stays in unacked for ROOM_RESET and close().
+    if (fate.reason === 'lineage-reset') {
+      return failedResult(endError({ reason: 'reset' }), result.warnings);
+    }
     unacked.delete(number);
     if (fate.reason === 'read-only') {
       state.readOnly = true;
 
       return failedResult(surfaceError('READ_ONLY', 'The room refused the write: this agent may only read. The batch was not saved.').agentError, result.warnings);
-    }
-    if (fate.reason === 'lineage-reset') {
-      return failedResult(endError({ reason: 'reset' }), result.warnings);
     }
 
     return failedResult(surfaceError('REJECTED', 'The room refused this batch. It was not saved.', { rejectionCode: fate.reason }).agentError, result.warnings);

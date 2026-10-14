@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Ջնջել ԱԲ ինքնալրացումը",
   "tools.database.aiAutofillTriggerAnyCreation": "Ցանկացած էջի ստեղծում",
   "tools.database.aiAutofillTriggerAnyProperty": "Ցանկացած հատկություն",
-  "tools.database.aiAutofillTriggerSpecific": "Միայն որոշակի հատկություններ"
+  "tools.database.aiAutofillTriggerSpecific": "Միայն որոշակի հատկություններ",
+  "tools.database.aiAutofillTriggerContent": "Էջի բովանդակությունը խմբագրելիս",
+  "tools.database.aiAutofillTriggerContentValue": "Էջի բովանդակություն",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Հատկությունը թարմացնելիս"
 }

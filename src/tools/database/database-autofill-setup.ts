@@ -3,7 +3,7 @@ import { IconCross, IconDotsHorizontal, IconTrash } from '../../components/icons
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { openDatabaseConfirm } from './database-confirm-dialog';
-import { panelLabel, panelRow } from './database-panel';
+import { panelLabel, panelRow, panelSwitch } from './database-panel';
 import { openMenu } from './database-table-menus';
 import type { AutofillMode, AutofillSettings, PropertyDefinition } from './types';
 
@@ -20,6 +20,7 @@ export interface AutofillDraft {
   onEdit: boolean;
   /** With `onEdit`: only these properties fill again. Absent: any property. */
   onEditProperties?: string[];
+  onEditContent: boolean;
 }
 
 export const draftOf = (settings: AutofillSettings | undefined): AutofillDraft => ({
@@ -29,6 +30,7 @@ export const draftOf = (settings: AutofillSettings | undefined): AutofillDraft =
   onCreate: settings?.onCreate === true,
   onEdit: settings?.onEdit === true,
   ...(settings?.onEdit === true && settings.onEditProperties !== undefined ? { onEditProperties: [...settings.onEditProperties] } : {}),
+  onEditContent: settings?.onEditContent === true,
 });
 
 const settingsOf = (draft: AutofillDraft): AutofillSettings => ({
@@ -38,6 +40,7 @@ const settingsOf = (draft: AutofillDraft): AutofillSettings => ({
   ...(draft.onCreate ? { onCreate: true } : {}),
   ...(draft.onEdit ? { onEdit: true } : {}),
   ...(draft.onEdit && draft.onEditProperties !== undefined ? { onEditProperties: draft.onEditProperties } : {}),
+  ...(draft.onEditContent ? { onEditContent: true } : {}),
 });
 
 const sameDraft = (a: AutofillDraft, b: AutofillDraft): boolean =>
@@ -72,6 +75,15 @@ export interface AutofillSetupOptions {
 const LANGUAGE_TAGS: Readonly<Record<string, string>> = { ku: 'ckb' };
 
 const languageTag = (locale: string): string => LANGUAGE_TAGS[locale] ?? locale;
+
+/** "A, B" in the UI's language. */
+const listOf = (parts: string[], uiLocale: string): string => {
+  try {
+    return new Intl.ListFormat([languageTag(uiLocale)], { type: 'unit', style: 'short' }).format(parts);
+  } catch {
+    return parts.join(', ');
+  }
+};
 
 /** The language `tag`, named in the UI's language so the prompt reads as one language. */
 export const languageName = (tag: string, uiLocale: string): string => {
@@ -196,7 +208,24 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
     // No property left to watch means no trigger.
     update(next.length === 0 ? { onEdit: false, onEditProperties: undefined } : { onEdit: true, onEditProperties: next });
   };
+  const contentSwitch = (): HTMLElement => panelSwitch({
+    label: i18n.t('tools.database.aiAutofillTriggerContent'),
+    testId: 'database-autofill-trigger-content',
+    checked: state.draft.onEditContent,
+    onToggle: (next) => update({ onEditContent: next }),
+  });
+  const propertyHeading = (): HTMLElement => {
+    const heading = panelLabel(i18n.t('tools.database.aiAutofillTriggerPropertyHeading'));
+
+    heading.setAttribute('role', 'presentation');
+
+    return heading;
+  };
+  /** Notion: the page content switch, then "When a property is updated" and its choices. */
   const updateChoices = (): Parameters<typeof openMenu>[1] => [
+    { type: PopoverItemType.Html, element: contentSwitch(), name: 'database-autofill-trigger-content' },
+    { type: PopoverItemType.Separator },
+    { type: PopoverItemType.Html, element: propertyHeading(), name: 'database-autofill-trigger-heading' },
     {
       type: PopoverItemType.Default,
       name: 'database-autofill-trigger-onEdit-off',
@@ -231,9 +260,12 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
   ];
   const triggerValue = (key: 'onCreate' | 'onEdit'): string => {
     if (key === 'onCreate') return i18n.t(state.draft.onCreate ? 'tools.database.aiAutofillTriggerAnyCreation' : 'tools.database.aiAutofillTriggerNone');
-    if (!state.draft.onEdit) return i18n.t('tools.database.aiAutofillTriggerNone');
+    const parts = [
+      ...(state.draft.onEditContent ? [i18n.t('tools.database.aiAutofillTriggerContentValue')] : []),
+      ...(state.draft.onEdit ? [i18n.t(state.draft.onEditProperties === undefined ? 'tools.database.aiAutofillTriggerAnyProperty' : 'tools.database.aiAutofillTriggerSpecific')] : []),
+    ];
 
-    return i18n.t(state.draft.onEditProperties === undefined ? 'tools.database.aiAutofillTriggerAnyProperty' : 'tools.database.aiAutofillTriggerSpecific');
+    return parts.length === 0 ? i18n.t('tools.database.aiAutofillTriggerNone') : listOf(parts, i18n.getLocale());
   };
   const trigger = (labelKey: string, key: 'onCreate' | 'onEdit'): HTMLButtonElement => {
     const label = i18n.t(labelKey);

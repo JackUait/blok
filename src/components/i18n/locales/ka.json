@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "ხელოვნური ინტელექტით ავტოშევსების წაშლა",
   "tools.database.aiAutofillTriggerAnyCreation": "გვერდის ნებისმიერი შექმნა",
   "tools.database.aiAutofillTriggerAnyProperty": "ნებისმიერი თვისება",
-  "tools.database.aiAutofillTriggerSpecific": "მხოლოდ კონკრეტული თვისებები"
+  "tools.database.aiAutofillTriggerSpecific": "მხოლოდ კონკრეტული თვისებები",
+  "tools.database.aiAutofillTriggerContent": "გვერდის შიგთავსის რედაქტირებისას",
+  "tools.database.aiAutofillTriggerContentValue": "გვერდის შიგთავსი",
+  "tools.database.aiAutofillTriggerPropertyHeading": "თვისების განახლებისას"
 }

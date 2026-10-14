@@ -440,6 +440,37 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on('block replayed', this.handleBlockReplayed);
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
+    this.api.events.on('block changed', this.handleBodyEdit);
+  }
+
+  /**
+   * "When page content is edited": a local edit of a block under one of this
+   * database's rows. Undo and redo carry a `replaySource`; a peer or another
+   * tab carries another origin. Only content changes count: an added or
+   * removed block may be the tool's own write (template, duplicate, migration).
+   * The row block itself is skipped, so a property write never counts.
+   */
+  private readonly handleBodyEdit = (payload: unknown): void => {
+    const event = (payload as { event?: { type?: unknown; detail?: { origin?: unknown; replaySource?: unknown; target?: ChangedBlock } } } | undefined)?.event;
+
+    if (this.linked || this.destroyed || this.config.ai === undefined || event?.type !== 'block-changed'
+      || event.detail?.origin !== 'local' || event.detail.replaySource !== undefined
+      || !this.model.getSchema().some((property) => property.autofill?.onEditContent === true)) return;
+    const row = this.nearestRow(event.detail.target?.parentId, new Set());
+
+    // Another database's row or a template reads no values, so it fills nothing.
+    if (row !== undefined) this.hostLevers.bodyEdited(row);
+  };
+
+  /** The nearest database-row at or above `id`: a nested database's row body belongs to that database. */
+  private nearestRow(id: unknown, seen: Set<string>): string | undefined {
+    if (typeof id !== 'string' || seen.has(id)) return undefined;
+    seen.add(id);
+    const block = this.api.blocks.getById(id);
+
+    if (block === null || block === undefined) return undefined;
+
+    return block.name === 'database-row' ? block.id : this.nearestRow(block.parentId, seen);
   }
 
   /** The linked source's tool went away: deleted, or the editor closing. Redraw once its block is gone. */
@@ -983,6 +1014,7 @@ export class DatabaseTool implements BlockTool {
     this.bulkEditor?.close();
     this.api.events.off('block changed', this.handleBlockChanged);
     this.api.events.off('block replayed', this.handleBlockReplayed);
+    this.api.events.off('block changed', this.handleBodyEdit);
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.viewControls?.destroy();
     this.dashboardStates.clear();

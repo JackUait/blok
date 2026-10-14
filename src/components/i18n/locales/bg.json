@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Изтрий автоматичното попълване с ИИ",
   "tools.database.aiAutofillTriggerAnyCreation": "Всяко създаване на страница",
   "tools.database.aiAutofillTriggerAnyProperty": "Всякакви свойства",
-  "tools.database.aiAutofillTriggerSpecific": "Само определени свойства"
+  "tools.database.aiAutofillTriggerSpecific": "Само определени свойства",
+  "tools.database.aiAutofillTriggerContent": "При редактиране на съдържанието на страницата",
+  "tools.database.aiAutofillTriggerContentValue": "Съдържание на страницата",
+  "tools.database.aiAutofillTriggerPropertyHeading": "При обновяване на свойство"
 }

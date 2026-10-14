@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Hapus Isi Otomatis AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Setiap pembuatan halaman",
   "tools.database.aiAutofillTriggerAnyProperty": "Properti apa pun",
-  "tools.database.aiAutofillTriggerSpecific": "Hanya properti tertentu"
+  "tools.database.aiAutofillTriggerSpecific": "Hanya properti tertentu",
+  "tools.database.aiAutofillTriggerContent": "Saat konten halaman diedit",
+  "tools.database.aiAutofillTriggerContentValue": "Konten halaman",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Saat properti diperbarui"
 }

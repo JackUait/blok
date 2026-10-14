@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI自動入力を削除",
   "tools.database.aiAutofillTriggerAnyCreation": "任意のページ作成",
   "tools.database.aiAutofillTriggerAnyProperty": "任意のプロパティ",
-  "tools.database.aiAutofillTriggerSpecific": "特定のプロパティのみ"
+  "tools.database.aiAutofillTriggerSpecific": "特定のプロパティのみ",
+  "tools.database.aiAutofillTriggerContent": "ページコンテンツの編集時",
+  "tools.database.aiAutofillTriggerContentValue": "ページコンテンツ",
+  "tools.database.aiAutofillTriggerPropertyHeading": "プロパティ更新時"
 }

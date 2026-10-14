@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Διαγραφή αυτόματης συμπλήρωσης με ΤΝ",
   "tools.database.aiAutofillTriggerAnyCreation": "Οποιαδήποτε δημιουργία σελίδας",
   "tools.database.aiAutofillTriggerAnyProperty": "Οποιεσδήποτε ιδιότητες",
-  "tools.database.aiAutofillTriggerSpecific": "Μόνο συγκεκριμένες ιδιότητες"
+  "tools.database.aiAutofillTriggerSpecific": "Μόνο συγκεκριμένες ιδιότητες",
+  "tools.database.aiAutofillTriggerContent": "Κατά την επεξεργασία του περιεχομένου σελίδας",
+  "tools.database.aiAutofillTriggerContentValue": "Περιεχόμενο σελίδας",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Κατά την ενημέρωση ιδιότητας"
 }

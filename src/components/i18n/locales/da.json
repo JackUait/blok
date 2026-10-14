@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Slet AI-autoudfyld",
   "tools.database.aiAutofillTriggerAnyCreation": "Enhver oprettelse af en side",
   "tools.database.aiAutofillTriggerAnyProperty": "Enhver egenskab",
-  "tools.database.aiAutofillTriggerSpecific": "Kun bestemte egenskaber"
+  "tools.database.aiAutofillTriggerSpecific": "Kun bestemte egenskaber",
+  "tools.database.aiAutofillTriggerContent": "Når sidens indhold redigeres",
+  "tools.database.aiAutofillTriggerContentValue": "Sidens indhold",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Når en egenskab opdateres"
 }

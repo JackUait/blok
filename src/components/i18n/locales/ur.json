@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI آٹو فل حذف کریں",
   "tools.database.aiAutofillTriggerAnyCreation": "کسی بھی صفحے کا بننا",
   "tools.database.aiAutofillTriggerAnyProperty": "کوئی بھی پراپرٹیز",
-  "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٹیز"
+  "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٹیز",
+  "tools.database.aiAutofillTriggerContent": "صفحے کے مواد میں ترمیم ہونے پر",
+  "tools.database.aiAutofillTriggerContentValue": "صفحے کا مواد",
+  "tools.database.aiAutofillTriggerPropertyHeading": "پراپرٹی اپ ڈیٹ ہونے پر"
 }

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ਆਟੋਫਿਲ ਮਿਟਾਓ",
   "tools.database.aiAutofillTriggerAnyCreation": "ਕੋਈ ਵੀ ਪੰਨਾ ਬਣਾਉਣਾ",
   "tools.database.aiAutofillTriggerAnyProperty": "ਕੋਈ ਵੀ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ",
-  "tools.database.aiAutofillTriggerSpecific": "ਸਿਰਫ਼ ਖਾਸ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ"
+  "tools.database.aiAutofillTriggerSpecific": "ਸਿਰਫ਼ ਖਾਸ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ",
+  "tools.database.aiAutofillTriggerContent": "ਪੰਨੇ ਦੀ ਸਮੱਗਰੀ ਸੰਪਾਦਿਤ ਕਰਨ 'ਤੇ",
+  "tools.database.aiAutofillTriggerContentValue": "ਪੰਨੇ ਦੀ ਸਮੱਗਰੀ",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ਵਿਸ਼ੇਸ਼ਤਾ ਅੱਪਡੇਟ ਕਰਨ 'ਤੇ"
 }

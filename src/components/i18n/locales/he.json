@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "מחק מילוי אוטומטי באמצעות AI",
   "tools.database.aiAutofillTriggerAnyCreation": "כל יצירת דף",
   "tools.database.aiAutofillTriggerAnyProperty": "מאפיינים כלשהם",
-  "tools.database.aiAutofillTriggerSpecific": "רק מאפיינים מסוימים"
+  "tools.database.aiAutofillTriggerSpecific": "רק מאפיינים מסוימים",
+  "tools.database.aiAutofillTriggerContent": "בעריכת תוכן הדף",
+  "tools.database.aiAutofillTriggerContentValue": "תוכן הדף",
+  "tools.database.aiAutofillTriggerPropertyHeading": "בעדכון מאפיין"
 }

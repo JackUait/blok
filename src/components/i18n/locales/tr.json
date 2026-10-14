@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Yapay zekâ ile otomatik doldurmayı sil",
   "tools.database.aiAutofillTriggerAnyCreation": "Herhangi bir sayfa oluşturma",
   "tools.database.aiAutofillTriggerAnyProperty": "Herhangi bir özellik",
-  "tools.database.aiAutofillTriggerSpecific": "Yalnızca belirli özellikler"
+  "tools.database.aiAutofillTriggerSpecific": "Yalnızca belirli özellikler",
+  "tools.database.aiAutofillTriggerContent": "Sayfa içeriği düzenlendiğinde",
+  "tools.database.aiAutofillTriggerContentValue": "Sayfa içeriği",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Bir özellik güncellendiğinde"
 }

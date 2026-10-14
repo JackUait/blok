@@ -84,6 +84,14 @@ export class DatabaseHostLevers implements RowWriteObserver {
       .forEach((property) => this.autofillSoon(params.rowId, property.id));
   }
 
+  /** A local edit of the row's page body (never a peer, undo or redo: the tool checks). */
+  bodyEdited(rowId: string): void {
+    if (this.quiet > 0) return;
+    this.target.schema()
+      .filter((property) => property.autofill?.onEditContent === true)
+      .forEach((property) => this.autofillSoon(rowId, property.id));
+  }
+
   /** "Run now": fills each row, with `settings` in place of the saved ones when given. */
   autofillRows(property: PropertyDefinition, rowIds: string[], settings = property.autofill): void {
     rowIds.forEach((rowId) => this.autofill(rowId, property, settings));

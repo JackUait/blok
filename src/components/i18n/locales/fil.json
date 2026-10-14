@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Tanggalin ang awtomatikong pagpuno gamit ang AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Anumang paggawa ng pahina",
   "tools.database.aiAutofillTriggerAnyProperty": "Anumang property",
-  "tools.database.aiAutofillTriggerSpecific": "Mga partikular na property lang"
+  "tools.database.aiAutofillTriggerSpecific": "Mga partikular na property lang",
+  "tools.database.aiAutofillTriggerContent": "Sa pag-edit ng nilalaman ng pahina",
+  "tools.database.aiAutofillTriggerContentValue": "Nilalaman ng pahina",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Sa pag-update ng property"
 }

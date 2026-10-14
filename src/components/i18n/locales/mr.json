@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ऑटोफिल हटवा",
   "tools.database.aiAutofillTriggerAnyCreation": "कोणतेही पृष्ठ तयार करणे",
   "tools.database.aiAutofillTriggerAnyProperty": "कोणतेही गुणधर्म",
-  "tools.database.aiAutofillTriggerSpecific": "फक्त विशिष्ट गुणधर्म"
+  "tools.database.aiAutofillTriggerSpecific": "फक्त विशिष्ट गुणधर्म",
+  "tools.database.aiAutofillTriggerContent": "पृष्ठाचा मजकूर संपादित केल्यावर",
+  "tools.database.aiAutofillTriggerContentValue": "पृष्ठाचा मजकूर",
+  "tools.database.aiAutofillTriggerPropertyHeading": "गुणधर्म अपडेट केल्यावर"
 }

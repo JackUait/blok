@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Dzēst MI automātisko aizpildi",
   "tools.database.aiAutofillTriggerAnyCreation": "Jebkura lapas izveide",
   "tools.database.aiAutofillTriggerAnyProperty": "Jebkuri rekvizīti",
-  "tools.database.aiAutofillTriggerSpecific": "Tikai noteikti rekvizīti"
+  "tools.database.aiAutofillTriggerSpecific": "Tikai noteikti rekvizīti",
+  "tools.database.aiAutofillTriggerContent": "Rediģējot lapas saturu",
+  "tools.database.aiAutofillTriggerContentValue": "Lapas saturs",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Atjauninot rekvizītu"
 }

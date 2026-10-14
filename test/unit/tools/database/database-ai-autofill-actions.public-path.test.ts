@@ -260,6 +260,35 @@ describe('Basic AI setup actions', () => {
     expect(await savedAutofill()).toEqual({ mode: 'summary', instruction: 'Sum it up', onEdit: true, onEditProperties: ['status'] });
   });
 
+  it('On page update: the page content switch is off, reads Page content when on, and Save runs nothing', async () => {
+    await mount(true, { mode: 'summary', instruction: 'Sum it up' });
+    const dialog = await openSaved();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'On page update None' }));
+    const toggle = await findByRole(document.body, 'switch', { name: 'When page content is edited' });
+
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+    // The menu stays open: the property choices sit under the switch.
+    expect(await findByRole(document.body, 'menuitemcheckbox', { name: 'Any properties' })).toBeInTheDocument();
+    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: 'On page update Page content' })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    expect(await savedAutofill()).toEqual({ mode: 'summary', instruction: 'Sum it up', onEditContent: true });
+    expect(autofill).not.toHaveBeenCalled();
+  });
+
+  it('On page update: the page content switch keeps the property trigger, and both read in the row', async () => {
+    await mount(true, { mode: 'summary', instruction: 'Sum it up', onEdit: true, onEditProperties: ['status'] });
+    const dialog = await openSaved();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'On page update Only specific properties' }));
+    fireEvent.click(await findByRole(document.body, 'switch', { name: 'When page content is edited' }));
+    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: 'On page update Page content, Only specific properties' })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    expect(await savedAutofill()).toEqual({ mode: 'summary', instruction: 'Sum it up', onEdit: true, onEditProperties: ['status'], onEditContent: true });
+  });
+
   it('More… > Delete AI Autofill removes the setting and closes the setup', async () => {
     await mount(true, { mode: 'summary', instruction: 'Sum it up', onCreate: true });
     const dialog = await openSaved();

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Ta bort autofyll med AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Varje gång en sida skapas",
   "tools.database.aiAutofillTriggerAnyProperty": "Valfri egenskap",
-  "tools.database.aiAutofillTriggerSpecific": "Endast vissa egenskaper"
+  "tools.database.aiAutofillTriggerSpecific": "Endast vissa egenskaper",
+  "tools.database.aiAutofillTriggerContent": "När sidans innehåll redigeras",
+  "tools.database.aiAutofillTriggerContentValue": "Sidans innehåll",
+  "tools.database.aiAutofillTriggerPropertyHeading": "När en egenskap uppdateras"
 }

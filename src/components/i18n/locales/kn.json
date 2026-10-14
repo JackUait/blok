@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ಸ್ವಯಂ ಭರ್ತಿ ಅಳಿಸಿ",
   "tools.database.aiAutofillTriggerAnyCreation": "ಯಾವುದೇ ಪುಟ ರಚನೆ",
   "tools.database.aiAutofillTriggerAnyProperty": "ಯಾವುದೇ ಗುಣಲಕ್ಷಣಗಳು",
-  "tools.database.aiAutofillTriggerSpecific": "ನಿರ್ದಿಷ್ಟ ಗುಣಲಕ್ಷಣಗಳು ಮಾತ್ರ"
+  "tools.database.aiAutofillTriggerSpecific": "ನಿರ್ದಿಷ್ಟ ಗುಣಲಕ್ಷಣಗಳು ಮಾತ್ರ",
+  "tools.database.aiAutofillTriggerContent": "ಪುಟದ ವಿಷಯ ಸಂಪಾದಿಸಿದಾಗ",
+  "tools.database.aiAutofillTriggerContentValue": "ಪುಟದ ವಿಷಯ",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ಗುಣಲಕ್ಷಣ ನವೀಕರಿಸಿದಾಗ"
 }

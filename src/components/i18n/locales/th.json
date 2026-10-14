@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "ลบการเติมข้อมูลอัตโนมัติด้วย AI",
   "tools.database.aiAutofillTriggerAnyCreation": "การสร้างหน้าใดก็ได้",
   "tools.database.aiAutofillTriggerAnyProperty": "คุณสมบัติใดก็ได้",
-  "tools.database.aiAutofillTriggerSpecific": "เฉพาะคุณสมบัติที่ระบุ"
+  "tools.database.aiAutofillTriggerSpecific": "เฉพาะคุณสมบัติที่ระบุ",
+  "tools.database.aiAutofillTriggerContent": "เมื่อแก้ไขเนื้อหาหน้า",
+  "tools.database.aiAutofillTriggerContentValue": "เนื้อหาหน้า",
+  "tools.database.aiAutofillTriggerPropertyHeading": "เมื่ออัปเดตคุณสมบัติ"
 }

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Automatisches Ausfüllen mit KI löschen",
   "tools.database.aiAutofillTriggerAnyCreation": "Jede Seitenerstellung",
   "tools.database.aiAutofillTriggerAnyProperty": "Beliebige Eigenschaften",
-  "tools.database.aiAutofillTriggerSpecific": "Nur bestimmte Eigenschaften"
+  "tools.database.aiAutofillTriggerSpecific": "Nur bestimmte Eigenschaften",
+  "tools.database.aiAutofillTriggerContent": "Beim Bearbeiten des Seiteninhalts",
+  "tools.database.aiAutofillTriggerContentValue": "Seiteninhalt",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Beim Aktualisieren einer Eigenschaft"
 }

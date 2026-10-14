@@ -111,6 +111,7 @@ const PROPERTY_SETTINGS = {
       onCreate: { type: 'boolean', description: 'Fill when a row is added. Default false.' },
       onEdit: { type: 'boolean', description: 'Fill again when another value of the row changes. Default false.' },
       onEditProperties: { type: 'array', items: { type: 'string' }, description: 'With onEdit: only a change to one of these property ids fills again. Absent means any property.' },
+      onEditContent: { type: 'boolean', description: "Fill again when the row's page body is edited here (never a peer, undo or redo). Default false." },
     },
   },
   rollup: {

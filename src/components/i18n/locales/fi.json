@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Poista tekoälyn automaattinen täyttö",
   "tools.database.aiAutofillTriggerAnyCreation": "Mikä tahansa sivun luonti",
   "tools.database.aiAutofillTriggerAnyProperty": "Mitkä tahansa ominaisuudet",
-  "tools.database.aiAutofillTriggerSpecific": "Vain tietyt ominaisuudet"
+  "tools.database.aiAutofillTriggerSpecific": "Vain tietyt ominaisuudet",
+  "tools.database.aiAutofillTriggerContent": "Kun sivun sisältöä muokataan",
+  "tools.database.aiAutofillTriggerContentValue": "Sivun sisältö",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Kun ominaisuutta päivitetään"
 }

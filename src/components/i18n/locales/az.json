@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Sİ ilə avtodoldurmanı sil",
   "tools.database.aiAutofillTriggerAnyCreation": "İstənilən səhifə yaradılması",
   "tools.database.aiAutofillTriggerAnyProperty": "İstənilən xüsusiyyətlər",
-  "tools.database.aiAutofillTriggerSpecific": "Yalnız müəyyən xüsusiyyətlər"
+  "tools.database.aiAutofillTriggerSpecific": "Yalnız müəyyən xüsusiyyətlər",
+  "tools.database.aiAutofillTriggerContent": "Səhifənin məzmunu redaktə ediləndə",
+  "tools.database.aiAutofillTriggerContentValue": "Səhifənin məzmunu",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Xüsusiyyət yenilənəndə"
 }

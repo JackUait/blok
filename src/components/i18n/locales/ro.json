@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Șterge completarea automată cu IA",
   "tools.database.aiAutofillTriggerAnyCreation": "Orice creare de pagină",
   "tools.database.aiAutofillTriggerAnyProperty": "Orice proprietăți",
-  "tools.database.aiAutofillTriggerSpecific": "Doar anumite proprietăți"
+  "tools.database.aiAutofillTriggerSpecific": "Doar anumite proprietăți",
+  "tools.database.aiAutofillTriggerContent": "La editarea conținutului paginii",
+  "tools.database.aiAutofillTriggerContentValue": "Conținutul paginii",
+  "tools.database.aiAutofillTriggerPropertyHeading": "La actualizarea unei proprietăți"
 }

@@ -177,3 +177,18 @@ describe('database schema: row page layout tabs', () => {
     expect(validate(data)).toEqual([]);
   });
 });
+
+describe('database schema: AI Autofill page content trigger', () => {
+  it('accepts onEditContent on a property autofill setting', () => {
+    const data = {
+      activeViewId: 'v',
+      schema: [
+        { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'summary', name: 'Summary', type: 'text', position: 'a1', autofill: { mode: 'summary', onEditContent: true } },
+      ],
+      views: [view({ id: 'v', type: 'table' })],
+    };
+
+    expect(validate(data)).toEqual([]);
+  });
+});

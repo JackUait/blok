@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "حذف التعبئة التلقائية بالذكاء الاصطناعي",
   "tools.database.aiAutofillTriggerAnyCreation": "إنشاء أي صفحة",
   "tools.database.aiAutofillTriggerAnyProperty": "أي خصائص",
-  "tools.database.aiAutofillTriggerSpecific": "خصائص محددة فقط"
+  "tools.database.aiAutofillTriggerSpecific": "خصائص محددة فقط",
+  "tools.database.aiAutofillTriggerContent": "عند تعديل محتوى الصفحة",
+  "tools.database.aiAutofillTriggerContentValue": "محتوى الصفحة",
+  "tools.database.aiAutofillTriggerPropertyHeading": "عند تحديث خاصية"
 }

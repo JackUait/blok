@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "ລຶບການຕື່ມຂໍ້ມູນອັດຕະໂນມັດດ້ວຍ AI",
   "tools.database.aiAutofillTriggerAnyCreation": "ການສ້າງໜ້າໃດກໍໄດ້",
   "tools.database.aiAutofillTriggerAnyProperty": "ຄຸນສົມບັດໃດກໍໄດ້",
-  "tools.database.aiAutofillTriggerSpecific": "ສະເພາະຄຸນສົມບັດທີ່ກຳນົດ"
+  "tools.database.aiAutofillTriggerSpecific": "ສະເພາະຄຸນສົມບັດທີ່ກຳນົດ",
+  "tools.database.aiAutofillTriggerContent": "ເມື່ອແກ້ໄຂເນື້ອຫາໜ້າ",
+  "tools.database.aiAutofillTriggerContentValue": "ເນື້ອຫາໜ້າ",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ເມື່ອອັບເດດຄຸນສົມບັດ"
 }

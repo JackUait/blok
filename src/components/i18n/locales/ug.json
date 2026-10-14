@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "سۈنئىي ئەقىل ئاپتوماتىك تولدۇرۇشنى ئۆچۈرۈش",
   "tools.database.aiAutofillTriggerAnyCreation": "خالىغان بەت قۇرۇش",
   "tools.database.aiAutofillTriggerAnyProperty": "خالىغان خاسلىقلار",
-  "tools.database.aiAutofillTriggerSpecific": "پەقەت بەلگىلىك خاسلىقلار"
+  "tools.database.aiAutofillTriggerSpecific": "پەقەت بەلگىلىك خاسلىقلار",
+  "tools.database.aiAutofillTriggerContent": "بەت مەزمۇنى تەھرىرلەنگەندە",
+  "tools.database.aiAutofillTriggerContentValue": "بەت مەزمۇنى",
+  "tools.database.aiAutofillTriggerPropertyHeading": "خاسلىق يېڭىلانغاندا"
 }

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ဖြင့် အလိုအလျောက်ဖြည့်ခြင်းကို ဖျက်ရန်",
   "tools.database.aiAutofillTriggerAnyCreation": "မည်သည့် စာမျက်နှာ ဖန်တီးမှုမဆို",
   "tools.database.aiAutofillTriggerAnyProperty": "မည်သည့် ဂုဏ်သတ္တိမဆို",
-  "tools.database.aiAutofillTriggerSpecific": "သတ်မှတ်ထားသော ဂုဏ်သတ္တိများသာ"
+  "tools.database.aiAutofillTriggerSpecific": "သတ်မှတ်ထားသော ဂုဏ်သတ္တိများသာ",
+  "tools.database.aiAutofillTriggerContent": "စာမျက်နှာ အကြောင်းအရာ တည်းဖြတ်သည့်အခါ",
+  "tools.database.aiAutofillTriggerContentValue": "စာမျက်နှာ အကြောင်းအရာ",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ဂုဏ်သတ္တိ အပ်ဒိတ်လုပ်သည့်အခါ"
 }

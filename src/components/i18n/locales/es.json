@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Eliminar Autocompletar con IA",
   "tools.database.aiAutofillTriggerAnyCreation": "Cualquier creación de página",
   "tools.database.aiAutofillTriggerAnyProperty": "Cualquier propiedad",
-  "tools.database.aiAutofillTriggerSpecific": "Solo propiedades específicas"
+  "tools.database.aiAutofillTriggerSpecific": "Solo propiedades específicas",
+  "tools.database.aiAutofillTriggerContent": "Al editar el contenido de la página",
+  "tools.database.aiAutofillTriggerContentValue": "Contenido de la página",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Al actualizar una propiedad"
 }

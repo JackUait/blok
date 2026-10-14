@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Fshi plotësimin automatik me IA",
   "tools.database.aiAutofillTriggerAnyCreation": "Çdo krijim faqeje",
   "tools.database.aiAutofillTriggerAnyProperty": "Çdo veti",
-  "tools.database.aiAutofillTriggerSpecific": "Vetëm veti të caktuara"
+  "tools.database.aiAutofillTriggerSpecific": "Vetëm veti të caktuara",
+  "tools.database.aiAutofillTriggerContent": "Kur ndryshohet përmbajtja e faqes",
+  "tools.database.aiAutofillTriggerContentValue": "Përmbajtja e faqes",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Kur përditësohet një veti"
 }

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Видалити автозаповнення з ШІ",
   "tools.database.aiAutofillTriggerAnyCreation": "Будь-яке створення сторінки",
   "tools.database.aiAutofillTriggerAnyProperty": "Будь-які властивості",
-  "tools.database.aiAutofillTriggerSpecific": "Лише певні властивості"
+  "tools.database.aiAutofillTriggerSpecific": "Лише певні властивості",
+  "tools.database.aiAutofillTriggerContent": "Під час редагування вмісту сторінки",
+  "tools.database.aiAutofillTriggerContentValue": "Вміст сторінки",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Під час оновлення властивості"
 }

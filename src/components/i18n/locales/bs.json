@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Obriši AI automatsko popunjavanje",
   "tools.database.aiAutofillTriggerAnyCreation": "Bilo koje kreiranje stranice",
   "tools.database.aiAutofillTriggerAnyProperty": "Bilo koja svojstva",
-  "tools.database.aiAutofillTriggerSpecific": "Samo određena svojstva"
+  "tools.database.aiAutofillTriggerSpecific": "Samo određena svojstva",
+  "tools.database.aiAutofillTriggerContent": "Pri uređivanju sadržaja stranice",
+  "tools.database.aiAutofillTriggerContentValue": "Sadržaj stranice",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Pri ažuriranju svojstva"
 }

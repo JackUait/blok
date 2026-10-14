@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "سڕینەوەی پڕکردنەوەی خۆکار بە زیرەکی دەستکرد",
   "tools.database.aiAutofillTriggerAnyCreation": "دروستکردنی هەر پەڕەیەک",
   "tools.database.aiAutofillTriggerAnyProperty": "هەر تایبەتمەندییەک",
-  "tools.database.aiAutofillTriggerSpecific": "تەنها تایبەتمەندییە دیاریکراوەکان"
+  "tools.database.aiAutofillTriggerSpecific": "تەنها تایبەتمەندییە دیاریکراوەکان",
+  "tools.database.aiAutofillTriggerContent": "لە کاتی دەستکاریکردنی ناوەڕۆکی پەڕە",
+  "tools.database.aiAutofillTriggerContentValue": "ناوەڕۆکی پەڕە",
+  "tools.database.aiAutofillTriggerPropertyHeading": "لە کاتی نوێکردنەوەی تایبەتمەندییەک"
 }

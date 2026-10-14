@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Удалить автозаполнение с ИИ",
   "tools.database.aiAutofillTriggerAnyCreation": "Любое создание страницы",
   "tools.database.aiAutofillTriggerAnyProperty": "Любые свойства",
-  "tools.database.aiAutofillTriggerSpecific": "Только определённые свойства"
+  "tools.database.aiAutofillTriggerSpecific": "Только определённые свойства",
+  "tools.database.aiAutofillTriggerContent": "При изменении содержимого страницы",
+  "tools.database.aiAutofillTriggerContentValue": "Содержимое страницы",
+  "tools.database.aiAutofillTriggerPropertyHeading": "При обновлении свойства"
 }

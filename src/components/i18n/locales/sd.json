@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI آٽو فل ختم ڪريو",
   "tools.database.aiAutofillTriggerAnyCreation": "ڪنهن به صفحي جو ٺهڻ",
   "tools.database.aiAutofillTriggerAnyProperty": "ڪي به پراپرٽيون",
-  "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٽيون"
+  "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٽيون",
+  "tools.database.aiAutofillTriggerContent": "صفحي جو مواد تبديل ٿيڻ تي",
+  "tools.database.aiAutofillTriggerContentValue": "صفحي جو مواد",
+  "tools.database.aiAutofillTriggerPropertyHeading": "پراپرٽي اپڊيٽ ٿيڻ تي"
 }

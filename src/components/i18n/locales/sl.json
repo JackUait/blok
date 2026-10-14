@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Izbriši samodejno izpolnjevanje z UI",
   "tools.database.aiAutofillTriggerAnyCreation": "Vsako ustvarjanje strani",
   "tools.database.aiAutofillTriggerAnyProperty": "Katere koli lastnosti",
-  "tools.database.aiAutofillTriggerSpecific": "Samo določene lastnosti"
+  "tools.database.aiAutofillTriggerSpecific": "Samo določene lastnosti",
+  "tools.database.aiAutofillTriggerContent": "Ob urejanju vsebine strani",
+  "tools.database.aiAutofillTriggerContentValue": "Vsebina strani",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Ob posodobitvi lastnosti"
 }

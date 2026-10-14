@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Automatisch invullen met AI verwijderen",
   "tools.database.aiAutofillTriggerAnyCreation": "Elke paginacreatie",
   "tools.database.aiAutofillTriggerAnyProperty": "Willekeurige eigenschappen",
-  "tools.database.aiAutofillTriggerSpecific": "Alleen specifieke eigenschappen"
+  "tools.database.aiAutofillTriggerSpecific": "Alleen specifieke eigenschappen",
+  "tools.database.aiAutofillTriggerContent": "Bij het bewerken van de pagina-inhoud",
+  "tools.database.aiAutofillTriggerContentValue": "Pagina-inhoud",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Bij het bijwerken van een eigenschap"
 }

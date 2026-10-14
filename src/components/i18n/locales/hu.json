@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "MI-alapú automatikus kitöltés törlése",
   "tools.database.aiAutofillTriggerAnyCreation": "Bármely oldal létrehozása",
   "tools.database.aiAutofillTriggerAnyProperty": "Bármely tulajdonság",
-  "tools.database.aiAutofillTriggerSpecific": "Csak bizonyos tulajdonságok"
+  "tools.database.aiAutofillTriggerSpecific": "Csak bizonyos tulajdonságok",
+  "tools.database.aiAutofillTriggerContent": "Oldal tartalmának szerkesztésekor",
+  "tools.database.aiAutofillTriggerContentValue": "Oldal tartalma",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Tulajdonság frissítésekor"
 }

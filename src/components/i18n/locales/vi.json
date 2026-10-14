@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Xóa tự động điền bằng AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Mọi lần tạo trang",
   "tools.database.aiAutofillTriggerAnyProperty": "Bất kỳ thuộc tính nào",
-  "tools.database.aiAutofillTriggerSpecific": "Chỉ các thuộc tính cụ thể"
+  "tools.database.aiAutofillTriggerSpecific": "Chỉ các thuộc tính cụ thể",
+  "tools.database.aiAutofillTriggerContent": "Khi chỉnh sửa nội dung trang",
+  "tools.database.aiAutofillTriggerContentValue": "Nội dung trang",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Khi cập nhật thuộc tính"
 }

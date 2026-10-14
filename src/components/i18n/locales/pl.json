@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Usuń autouzupełnianie AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Każde utworzenie strony",
   "tools.database.aiAutofillTriggerAnyProperty": "Dowolne właściwości",
-  "tools.database.aiAutofillTriggerSpecific": "Tylko określone właściwości"
+  "tools.database.aiAutofillTriggerSpecific": "Tylko określone właściwości",
+  "tools.database.aiAutofillTriggerContent": "Przy edycji zawartości strony",
+  "tools.database.aiAutofillTriggerContentValue": "Zawartość strony",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Przy aktualizacji właściwości"
 }

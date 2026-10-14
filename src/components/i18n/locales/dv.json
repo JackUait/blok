@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI އޮޓޯފިލް ފޮހެލާ",
   "tools.database.aiAutofillTriggerAnyCreation": "ކޮންމެ ޞަފްޙާއެއް ހެދުމެއް",
   "tools.database.aiAutofillTriggerAnyProperty": "ކޮންމެ ޕްރޮޕަރޓީއެއް",
-  "tools.database.aiAutofillTriggerSpecific": "ހަމައެކަނި ކަނޑައެޅިފައިވާ ޕްރޮޕަރޓީތައް"
+  "tools.database.aiAutofillTriggerSpecific": "ހަމައެކަނި ކަނޑައެޅިފައިވާ ޕްރޮޕަރޓީތައް",
+  "tools.database.aiAutofillTriggerContent": "ޞަފްޙާގެ މަޒުމޫނު އެޑިޓްކުރުމުން",
+  "tools.database.aiAutofillTriggerContentValue": "ޞަފްޙާގެ މަޒުމޫނު",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ޕްރޮޕަރޓީއެއް އަޕްޑޭޓްކުރުމުން"
 }

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ራስ-ሙላን ሰርዝ",
   "tools.database.aiAutofillTriggerAnyCreation": "ማንኛውም ገጽ ሲፈጠር",
   "tools.database.aiAutofillTriggerAnyProperty": "ማንኛውም ንብረቶች",
-  "tools.database.aiAutofillTriggerSpecific": "የተወሰኑ ንብረቶች ብቻ"
+  "tools.database.aiAutofillTriggerSpecific": "የተወሰኑ ንብረቶች ብቻ",
+  "tools.database.aiAutofillTriggerContent": "የገጽ ይዘት ሲስተካከል",
+  "tools.database.aiAutofillTriggerContentValue": "የገጽ ይዘት",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ንብረት ሲዘመን"
 }

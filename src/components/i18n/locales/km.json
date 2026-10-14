@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "លុបការបំពេញស្វ័យប្រវត្តិដោយ AI",
   "tools.database.aiAutofillTriggerAnyCreation": "ការបង្កើតទំព័រណាមួយ",
   "tools.database.aiAutofillTriggerAnyProperty": "លក្ខណៈណាមួយ",
-  "tools.database.aiAutofillTriggerSpecific": "តែលក្ខណៈជាក់លាក់"
+  "tools.database.aiAutofillTriggerSpecific": "តែលក្ខណៈជាក់លាក់",
+  "tools.database.aiAutofillTriggerContent": "នៅពេលកែសម្រួលខ្លឹមសារទំព័រ",
+  "tools.database.aiAutofillTriggerContentValue": "ខ្លឹមសារទំព័រ",
+  "tools.database.aiAutofillTriggerPropertyHeading": "នៅពេលធ្វើបច្ចុប្បន្នភាពលក្ខណៈ"
 }

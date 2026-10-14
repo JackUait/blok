@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "刪除 AI 自動填入",
   "tools.database.aiAutofillTriggerAnyCreation": "每次建立頁面",
   "tools.database.aiAutofillTriggerAnyProperty": "任何屬性",
-  "tools.database.aiAutofillTriggerSpecific": "僅特定屬性"
+  "tools.database.aiAutofillTriggerSpecific": "僅特定屬性",
+  "tools.database.aiAutofillTriggerContent": "編輯頁面內容時",
+  "tools.database.aiAutofillTriggerContentValue": "頁面內容",
+  "tools.database.aiAutofillTriggerPropertyHeading": "更新屬性時"
 }

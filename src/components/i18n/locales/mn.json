@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI-аар автоматаар бөглөхийг устгах",
   "tools.database.aiAutofillTriggerAnyCreation": "Аливаа хуудас үүсгэх",
   "tools.database.aiAutofillTriggerAnyProperty": "Аливаа шинж",
-  "tools.database.aiAutofillTriggerSpecific": "Зөвхөн тодорхой шинжүүд"
+  "tools.database.aiAutofillTriggerSpecific": "Зөвхөн тодорхой шинжүүд",
+  "tools.database.aiAutofillTriggerContent": "Хуудасны агуулгыг засах үед",
+  "tools.database.aiAutofillTriggerContentValue": "Хуудасны агуулга",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Шинж шинэчлэх үед"
 }

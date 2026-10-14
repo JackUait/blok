@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Padam Autoisi AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Sebarang penciptaan halaman",
   "tools.database.aiAutofillTriggerAnyProperty": "Mana-mana sifat",
-  "tools.database.aiAutofillTriggerSpecific": "Sifat tertentu sahaja"
+  "tools.database.aiAutofillTriggerSpecific": "Sifat tertentu sahaja",
+  "tools.database.aiAutofillTriggerContent": "Semasa kandungan halaman disunting",
+  "tools.database.aiAutofillTriggerContentValue": "Kandungan halaman",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Semasa sifat dikemas kini"
 }

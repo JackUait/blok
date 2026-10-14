@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Delete AI Autofill",
   "tools.database.aiAutofillTriggerAnyCreation": "Any page creation",
   "tools.database.aiAutofillTriggerAnyProperty": "Any properties",
-  "tools.database.aiAutofillTriggerSpecific": "Only specific properties"
+  "tools.database.aiAutofillTriggerSpecific": "Only specific properties",
+  "tools.database.aiAutofillTriggerContent": "When page content is edited",
+  "tools.database.aiAutofillTriggerContentValue": "Page content",
+  "tools.database.aiAutofillTriggerPropertyHeading": "When a property is updated"
 }

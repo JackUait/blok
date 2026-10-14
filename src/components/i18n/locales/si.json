@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ස්වයං පිරවීම මකන්න",
   "tools.database.aiAutofillTriggerAnyCreation": "ඕනෑම පිටුවක් සෑදීම",
   "tools.database.aiAutofillTriggerAnyProperty": "ඕනෑම ගුණාංග",
-  "tools.database.aiAutofillTriggerSpecific": "නිශ්චිත ගුණාංග පමණි"
+  "tools.database.aiAutofillTriggerSpecific": "නිශ්චිත ගුණාංග පමණි",
+  "tools.database.aiAutofillTriggerContent": "පිටු අන්තර්ගතය සංස්කරණය කරන විට",
+  "tools.database.aiAutofillTriggerContentValue": "පිටු අන්තර්ගතය",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ගුණාංගයක් යාවත්කාලීන කරන විට"
 }

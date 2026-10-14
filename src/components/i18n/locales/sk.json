@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Odstrániť automatické vypĺňanie AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Akékoľvek vytvorenie stránky",
   "tools.database.aiAutofillTriggerAnyProperty": "Akékoľvek vlastnosti",
-  "tools.database.aiAutofillTriggerSpecific": "Iba určité vlastnosti"
+  "tools.database.aiAutofillTriggerSpecific": "Iba určité vlastnosti",
+  "tools.database.aiAutofillTriggerContent": "Pri úprave obsahu stránky",
+  "tools.database.aiAutofillTriggerContentValue": "Obsah stránky",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Pri aktualizácii vlastnosti"
 }

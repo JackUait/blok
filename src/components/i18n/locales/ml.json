@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI ഓട്ടോഫിൽ ഇല്ലാതാക്കുക",
   "tools.database.aiAutofillTriggerAnyCreation": "ഏത് പേജ് സൃഷ്ടിക്കലും",
   "tools.database.aiAutofillTriggerAnyProperty": "ഏതെങ്കിലും പ്രോപ്പർട്ടികൾ",
-  "tools.database.aiAutofillTriggerSpecific": "നിർദ്ദിഷ്ട പ്രോപ്പർട്ടികൾ മാത്രം"
+  "tools.database.aiAutofillTriggerSpecific": "നിർദ്ദിഷ്ട പ്രോപ്പർട്ടികൾ മാത്രം",
+  "tools.database.aiAutofillTriggerContent": "പേജ് ഉള്ളടക്കം എഡിറ്റ് ചെയ്യുമ്പോൾ",
+  "tools.database.aiAutofillTriggerContentValue": "പേജ് ഉള്ളടക്കം",
+  "tools.database.aiAutofillTriggerPropertyHeading": "ഒരു പ്രോപ്പർട്ടി അപ്ഡേറ്റ് ചെയ്യുമ്പോൾ"
 }

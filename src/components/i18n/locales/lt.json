@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Ištrinti DI automatinį pildymą",
   "tools.database.aiAutofillTriggerAnyCreation": "Bet koks puslapio sukūrimas",
   "tools.database.aiAutofillTriggerAnyProperty": "Bet kurios savybės",
-  "tools.database.aiAutofillTriggerSpecific": "Tik tam tikros savybės"
+  "tools.database.aiAutofillTriggerSpecific": "Tik tam tikros savybės",
+  "tools.database.aiAutofillTriggerContent": "Redagavus puslapio turinį",
+  "tools.database.aiAutofillTriggerContentValue": "Puslapio turinys",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Atnaujinus savybę"
 }

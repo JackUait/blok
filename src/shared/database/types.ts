@@ -800,6 +800,8 @@ export interface AutofillSettings {
   onEdit?: boolean;
   /** With `onEdit`: only a change to one of these property ids fills again. Absent means any property. */
   onEditProperties?: string[];
+  /** Fill again when the row's page body is edited here. Default false. */
+  onEditContent?: boolean;
 }
 
 export interface PropertySettingsV2 {

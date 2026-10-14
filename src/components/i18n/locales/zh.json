@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "删除 AI 自动填充",
   "tools.database.aiAutofillTriggerAnyCreation": "每次创建页面",
   "tools.database.aiAutofillTriggerAnyProperty": "任何属性",
-  "tools.database.aiAutofillTriggerSpecific": "仅特定属性"
+  "tools.database.aiAutofillTriggerSpecific": "仅特定属性",
+  "tools.database.aiAutofillTriggerContent": "编辑页面内容时",
+  "tools.database.aiAutofillTriggerContentValue": "页面内容",
+  "tools.database.aiAutofillTriggerPropertyHeading": "更新属性时"
 }

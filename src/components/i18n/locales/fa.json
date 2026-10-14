@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "حذف تکمیل خودکار با هوش مصنوعی",
   "tools.database.aiAutofillTriggerAnyCreation": "ایجاد هر صفحه",
   "tools.database.aiAutofillTriggerAnyProperty": "هر ویژگی",
-  "tools.database.aiAutofillTriggerSpecific": "فقط ویژگی‌های مشخص"
+  "tools.database.aiAutofillTriggerSpecific": "فقط ویژگی‌های مشخص",
+  "tools.database.aiAutofillTriggerContent": "هنگام ویرایش محتوای صفحه",
+  "tools.database.aiAutofillTriggerContentValue": "محتوای صفحه",
+  "tools.database.aiAutofillTriggerPropertyHeading": "هنگام به‌روزرسانی یک ویژگی"
 }

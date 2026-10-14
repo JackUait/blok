@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Futa ujazaji kiotomatiki kwa AI",
   "tools.database.aiAutofillTriggerAnyCreation": "Uundaji wa ukurasa wowote",
   "tools.database.aiAutofillTriggerAnyProperty": "Sifa zozote",
-  "tools.database.aiAutofillTriggerSpecific": "Sifa mahususi pekee"
+  "tools.database.aiAutofillTriggerSpecific": "Sifa mahususi pekee",
+  "tools.database.aiAutofillTriggerContent": "Maudhui ya ukurasa yanapohaririwa",
+  "tools.database.aiAutofillTriggerContentValue": "Maudhui ya ukurasa",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Sifa inaposasishwa"
 }

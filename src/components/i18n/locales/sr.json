@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Обриши аутоматско попуњавање уз ВИ",
   "tools.database.aiAutofillTriggerAnyCreation": "Било које креирање странице",
   "tools.database.aiAutofillTriggerAnyProperty": "Било која својства",
-  "tools.database.aiAutofillTriggerSpecific": "Само одређена својства"
+  "tools.database.aiAutofillTriggerSpecific": "Само одређена својства",
+  "tools.database.aiAutofillTriggerContent": "При измени садржаја странице",
+  "tools.database.aiAutofillTriggerContentValue": "Садржај странице",
+  "tools.database.aiAutofillTriggerPropertyHeading": "При ажурирању својства"
 }

@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "د AI په مرسته اتومات ډکول ړنګ کړئ",
   "tools.database.aiAutofillTriggerAnyCreation": "د هرې پاڼې جوړېدل",
   "tools.database.aiAutofillTriggerAnyProperty": "هره ځانګړتیا",
-  "tools.database.aiAutofillTriggerSpecific": "یوازې ټاکلې ځانګړتیاوې"
+  "tools.database.aiAutofillTriggerSpecific": "یوازې ټاکلې ځانګړتیاوې",
+  "tools.database.aiAutofillTriggerContent": "د پاڼې د منځپانګې د سمون پر مهال",
+  "tools.database.aiAutofillTriggerContentValue": "د پاڼې منځپانګه",
+  "tools.database.aiAutofillTriggerPropertyHeading": "د ځانګړتیا د تازه کېدو پر مهال"
 }

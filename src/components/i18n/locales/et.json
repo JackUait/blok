@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "Kustuta AI automaattäitmine",
   "tools.database.aiAutofillTriggerAnyCreation": "Iga lehe loomine",
   "tools.database.aiAutofillTriggerAnyProperty": "Mis tahes omadused",
-  "tools.database.aiAutofillTriggerSpecific": "Ainult kindlad omadused"
+  "tools.database.aiAutofillTriggerSpecific": "Ainult kindlad omadused",
+  "tools.database.aiAutofillTriggerContent": "Lehe sisu muutmisel",
+  "tools.database.aiAutofillTriggerContentValue": "Lehe sisu",
+  "tools.database.aiAutofillTriggerPropertyHeading": "Omaduse uuendamisel"
 }

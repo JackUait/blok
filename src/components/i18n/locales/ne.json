@@ -1627,5 +1627,8 @@
   "tools.database.aiAutofillDelete": "AI स्वतः भराइ मेटाउनुहोस्",
   "tools.database.aiAutofillTriggerAnyCreation": "कुनै पनि पृष्ठ सिर्जना",
   "tools.database.aiAutofillTriggerAnyProperty": "कुनै पनि गुणहरू",
-  "tools.database.aiAutofillTriggerSpecific": "केवल निश्चित गुणहरू"
+  "tools.database.aiAutofillTriggerSpecific": "केवल निश्चित गुणहरू",
+  "tools.database.aiAutofillTriggerContent": "पृष्ठको सामग्री सम्पादन हुँदा",
+  "tools.database.aiAutofillTriggerContentValue": "पृष्ठको सामग्री",
+  "tools.database.aiAutofillTriggerPropertyHeading": "गुण अद्यावधिक हुँदा"
 }

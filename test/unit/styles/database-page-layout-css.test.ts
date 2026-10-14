@@ -401,6 +401,31 @@ describe('database row page layout css', () => {
     expect(database).not.toMatch(/data-peek-mode="(?:side|center)"\][^{]*data-full-width/);
   });
 
+  // research/10 §10: "Properties" 13px/500 grey; "Close panel" a 24px circle with no fill.
+  it('draws the panel header and a round Close panel button', () => {
+    const title = ruleBody('[data-blok-database-drawer-details-title]');
+    const close = ruleBody('[data-blok-database-drawer-details-close]');
+
+    expect(title).toContain('font-size: 13px');
+    expect(title).toContain('font-weight: 500');
+    expect(title).toContain('color: var(--blok-text-secondary)');
+    expect(close).toContain('inline-size: 24px');
+    expect(close).toContain('block-size: 24px');
+    expect(close).toContain('border-radius: var(--blok-radius-pill)');
+    expect(close).toContain('background: none');
+    expect(ruleBody('[dir="rtl"] [data-blok-database-drawer-details-close] svg')).toContain('transform: scaleX(var(--_blok-inline-sign, 1))');
+  });
+
+  // research/10 §10: Page info gets a fill while the panel is open. The fill is a selected state, so it is gray.
+  it('fills Page info with the neutral active token while the panel is open', () => {
+    const open = ruleBody('[data-blok-database-peek-page-info][aria-expanded="true"]');
+
+    expect(open).toContain('background-color: var(--blok-icon-active-bg)');
+    expect(open).toContain('color: var(--blok-icon-active-text)');
+    expect(open).not.toMatch(/blue|#2383e2|rgb\(35, 131, 226\)/i);
+    expect(ruleBody('[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden]')).toContain('display: none');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

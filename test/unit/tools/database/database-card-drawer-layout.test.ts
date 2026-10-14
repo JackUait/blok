@@ -346,6 +346,129 @@ describe('DatabaseCardDrawer — page layout', () => {
     drawer.destroy();
   });
 
+  // research/09 §9, 10 §10: the line under the title reads "Hide details" while the panel is open.
+  it('says Hide details while the panel is open', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
+    const drawer = new DatabaseCardDrawer(options);
+    const toggle = (): HTMLElement | null => q('[data-blok-database-drawer-details-toggle]');
+
+    drawer.open(ROW);
+
+    expect(toggle()?.textContent?.trim()).toBe('View details');
+    toggle()?.click();
+
+    expect(toggle()?.textContent?.trim()).toBe('Hide details');
+    toggle()?.click();
+
+    expect(toggle()?.textContent?.trim()).toBe('View details');
+    toggle()?.click();
+    q('[data-blok-database-drawer-customize]')?.click();
+
+    // The builder's Heading keeps "View details" (research/10 §10).
+    expect(toggle()?.textContent?.trim()).toBe('View details');
+    drawer.destroy();
+  });
+
+  // research/10 §10: a "Properties" header and a round "Close panel" button at the panel's top.
+  it('closes the panel from its Close panel button', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutGroupIn: 'panel' }) });
+    const drawer = new DatabaseCardDrawer(options);
+    const panel = (): HTMLElement | null => q('[data-blok-database-drawer-details]');
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+    const header = panel()?.querySelector('[data-blok-database-drawer-details-header]');
+    const close = header?.querySelector<HTMLButtonElement>('[data-blok-database-drawer-details-close]');
+
+    expect(header?.textContent?.trim()).toBe('Properties');
+    expect(close?.getAttribute('aria-label')).toBe('Close panel');
+    // The header names the group, so the group's own "Properties" fold is not drawn twice.
+    expect(panel()?.querySelector('[data-blok-database-drawer-props-toggle]')).toBeNull();
+    close?.click();
+
+    expect(panel()?.hidden).toBe(true);
+    expect(q('[data-blok-database-drawer]')?.hasAttribute('data-details-open')).toBe(false);
+    expect(q('[data-blok-database-drawer-details-toggle]')?.getAttribute('aria-expanded')).toBe('false');
+    expect(q('[data-blok-database-drawer-details-toggle]')?.textContent?.trim()).toBe('View details');
+    expect(q('[data-blok-database-drawer-details-toggle]')).toHaveFocus();
+    drawer.destroy();
+  });
+
+  it('keeps the group shown in the panel after it was folded on the page', () => {
+    const options = createOptions();
+    const drawer = new DatabaseCardDrawer(options);
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-props-toggle]')?.click();
+
+    expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(true);
+    drawer.refreshSchema(schemaWith({ pageLayoutGroupIn: 'panel' }));
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+
+    expect(q('[data-blok-database-drawer-details] [data-blok-database-drawer-props]')?.hidden).toBe(false);
+    drawer.destroy();
+  });
+
+  // research/10 §10: "Page info" is in the top bar only once the layout uses the panel, and toggles it both ways.
+  it('shows Page info only when the layout uses the panel, and toggles the panel', () => {
+    const options = createOptions();
+    const drawer = new DatabaseCardDrawer(options);
+    const info = (): HTMLButtonElement | null => q<HTMLButtonElement>('[data-blok-database-drawer-toolbar] [data-blok-database-peek-page-info]');
+    const panel = (): HTMLElement | null => q('[data-blok-database-drawer-details]');
+
+    drawer.open(ROW);
+
+    expect(info()?.hidden).toBe(true);
+    drawer.refreshSchema(schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }));
+
+    expect(info()?.hidden).toBe(false);
+    expect(info()?.getAttribute('aria-label')).toBe('Page info');
+    expect(info()?.getAttribute('aria-expanded')).toBe('false');
+    expect(info()?.getAttribute('aria-controls')).toBe(panel()?.id);
+    info()?.click();
+
+    expect(panel()?.hidden).toBe(false);
+    expect(info()?.getAttribute('aria-expanded')).toBe('true');
+    expect(q('[data-blok-database-drawer-details-toggle]')?.textContent?.trim()).toBe('Hide details');
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+
+    expect(info()?.getAttribute('aria-expanded')).toBe('false');
+    info()?.click();
+    info()?.click();
+
+    expect(panel()?.hidden).toBe(true);
+    q('[data-blok-database-drawer-customize]')?.click();
+
+    expect(info()?.hidden).toBe(true);
+    drawer.destroy();
+  });
+
+  // research/09 "Other checks": the expanded state carries across rows in a session; a reload resets it.
+  it('keeps N more properties expanded on the next row', () => {
+    const hiding = (): PropertyDefinition[] => schemaWith().map((def) => (def.id === 'p-owner' ? { ...def, pageVisibility: 'hidden' as const } : def));
+    const options = createOptions({ schema: hiding() });
+    const drawer = new DatabaseCardDrawer(options);
+    const reveal = (): HTMLElement | null => q('[data-blok-database-drawer-hidden-props]');
+
+    drawer.open(ROW);
+    reveal()?.click();
+
+    expect(reveal()?.getAttribute('aria-expanded')).toBe('true');
+    drawer.open({ ...ROW, id: 'row-2' });
+
+    expect(reveal()?.getAttribute('aria-expanded')).toBe('true');
+    expect(idsIn('[data-blok-database-drawer-props]')).toContain('p-owner');
+    drawer.close();
+    drawer.open(ROW);
+
+    expect(reveal()?.getAttribute('aria-expanded')).toBe('true');
+    drawer.destroy();
+    document.body.innerHTML = '';
+    new DatabaseCardDrawer(createOptions({ schema: hiding() })).open(ROW);
+
+    expect(reveal()?.getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('puts the details panel beside the page column, after it in focus order, with View details first', () => {
     const options = createOptions({
       schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-owner', place: 'page' }, { id: 'p-due', place: 'panel' }] }),

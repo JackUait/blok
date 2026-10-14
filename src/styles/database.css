@@ -894,7 +894,8 @@
 [data-blok-database-peek-expand],
 [data-blok-database-peek-mode],
 [data-blok-database-peek-prev],
-[data-blok-database-peek-next] {
+[data-blok-database-peek-next],
+[data-blok-database-peek-page-info] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -908,14 +909,27 @@
   cursor: pointer;
 }
 
-[data-blok-database-peek-expand][hidden] {
+[data-blok-database-peek-expand][hidden],
+[data-blok-database-peek-page-info][hidden] {
   display: none;
+}
+
+/* research/10 §10: Page info sits at the bar's inline end. */
+[data-blok-database-peek-page-info] {
+  margin-inline-start: auto;
+}
+
+/* The open fill is a selected state: gray, never blue. */
+[data-blok-database-peek-page-info][aria-expanded="true"] {
+  background-color: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
 }
 
 [data-blok-database-peek-expand] svg,
 [data-blok-database-peek-mode] svg,
 [data-blok-database-peek-prev] svg,
-[data-blok-database-peek-next] svg {
+[data-blok-database-peek-next] svg,
+[data-blok-database-peek-page-info] svg {
   width: 16px;
   height: 16px;
 }
@@ -934,7 +948,8 @@
   [data-blok-database-peek-expand]:hover,
   [data-blok-database-peek-mode]:hover,
   [data-blok-database-peek-prev]:not(:disabled):hover,
-  [data-blok-database-peek-next]:not(:disabled):hover {
+  [data-blok-database-peek-next]:not(:disabled):hover,
+  [data-blok-database-peek-page-info]:hover {
     background-color: var(--blok-database-drawer-border);
   }
 }
@@ -3084,6 +3099,50 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   padding-inline-end: calc(280px + 60px);
 }
 
+/* research/10 §10: Close panel at the top, then "Properties" 13px/500 grey. */
+[data-blok-database-drawer-details-header] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+  margin-block-end: var(--blok-space-2);
+}
+
+[data-blok-database-drawer-details-title] {
+  color: var(--blok-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+[data-blok-database-drawer-details-close] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background: none;
+  color: var(--blok-database-add-text);
+  cursor: pointer;
+}
+
+[data-blok-database-drawer-details-close] svg {
+  inline-size: 14px;
+  block-size: 14px;
+  margin-inline-start: calc(-1 * var(--blok-space-1-5));
+}
+
+[data-blok-database-drawer-details-close] svg:first-child {
+  margin-inline-start: 0;
+}
+
+/* The » points toward the inline end, where the panel closes to. */
+[dir="rtl"] [data-blok-database-drawer-details-close] svg {
+  transform: scaleX(var(--_blok-inline-sign, 1));
+}
+
 [data-blok-database-drawer-details][hidden],
 [data-blok-database-drawer-section-body][hidden],
 [data-blok-database-drawer-editor][hidden] { display: none; }
@@ -3147,6 +3206,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   [data-blok-database-layout-add-section-property]:hover,
   [data-blok-database-drawer-section-add]:hover,
   [data-blok-database-drawer-details-toggle]:hover,
+  [data-blok-database-drawer-details-close]:hover,
   [data-blok-database-drawer-section-toggle]:hover {
     background-color: var(--blok-database-drawer-border);
   }

@@ -470,12 +470,11 @@ test.describe('row page layout', () => {
     await expect(peek(page).locator('[data-blok-database-drawer-section] [data-blok-database-drawer-prop-value][data-property-id="p-due"]')).toBeHidden();
 
     const details = peek(page).getByRole('region', { name: 'Details' });
-    const toggle = peek(page).getByRole('button', { name: 'View details' });
 
     await expect(details).toBeHidden();
-    await toggle.click();
+    await peek(page).getByRole('button', { name: 'View details' }).click();
     await expect(details).toContainText('Ada');
-    await toggle.click();
+    await peek(page).getByRole('button', { name: 'Hide details' }).click();
     await expect(details).toBeHidden();
   });
 
@@ -580,6 +579,31 @@ test.describe('row page layout', () => {
     expect((title?.x ?? 0) + (title?.width ?? 0)).toBeLessThanOrEqual(box.left);
   });
 
+  // research/10 §10: Page info in the top bar toggles the panel both ways; Close panel shuts it from inside.
+  test('opens the full-page details panel from Page info and closes it from Close panel', async ({ page }) => {
+    await mount(page, withView(blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), { openPagesIn: 'full' }));
+    await openRow(page, 'r1');
+    const details = peek(page).getByRole('region', { name: 'Details' });
+    const info = peek(page).getByRole('button', { name: 'Page info' });
+
+    await info.click();
+    await expect(details).toBeVisible();
+    await expect(info).toHaveAttribute('aria-expanded', 'true');
+    await expect(peek(page).getByRole('button', { name: 'Hide details' })).toBeVisible();
+    const [infoBox, panelBox] = await Promise.all([info.boundingBox(), details.boundingBox()]);
+
+    // The open panel docks at the window edge; Page info must stay clickable beside it.
+    expect((infoBox?.x ?? 0) + (infoBox?.width ?? 0)).toBeLessThanOrEqual(panelBox?.x ?? 0);
+    await info.click();
+    await expect(details).toBeHidden();
+    await info.click();
+    await expect(details).toBeVisible();
+    await details.getByRole('button', { name: 'Close panel' }).click();
+    await expect(details).toBeHidden();
+    await expect(peek(page).getByRole('button', { name: 'View details' })).toBeFocused();
+    await expect(info).toHaveAttribute('aria-expanded', 'false');
+  });
+
   // research/09 §9: center peek, a 280px column inside the modal.
   test('docks the details panel inside the center peek', async ({ page }) => {
     await mount(page, withView(blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), { openPagesIn: 'center' }));
@@ -617,7 +641,7 @@ test.describe('row page layout', () => {
 
     expect(bounds.panelLeft).toBeGreaterThanOrEqual(bounds.groupRight - 1);
     expect(bounds.panelTop).toBeLessThan(bounds.groupBottom);
-    await peek(page).getByRole('button', { name: 'View details' }).click();
+    await peek(page).getByRole('button', { name: 'Hide details' }).click();
     await expect(details).toBeHidden();
   });
 

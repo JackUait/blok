@@ -649,6 +649,25 @@ describe('row page layout through the database tool', () => {
     expect(drawer()?.hasAttribute('data-full-width')).toBe(false);
   });
 
+  // research/09 "Other checks": N more properties stays open from row to row in a session.
+  it('keeps N more properties expanded when another row page opens', async () => {
+    const blocks = doc();
+    const data = blocks[0].data as { schema: Array<Record<string, unknown>> };
+
+    data.schema[1] = { ...data.schema[1], pageVisibility: 'hidden' };
+    await make(blocks);
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-hidden-props]'));
+
+    expect(q('[data-blok-database-drawer-hidden-props]')?.getAttribute('aria-expanded')).toBe('true');
+    await click(q('[data-blok-database-drawer-close]'));
+    await openRow('r2');
+
+    expect(shownTitle()).toBe('Two');
+    expect(q('[data-blok-database-drawer-hidden-props]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(q('[data-blok-database-drawer-props] [data-property-id="due"]')).not.toBeNull();
+  });
+
   it('offers no Customize layout on a locked database', async () => {
     await make(doc({}, { databaseLocked: true }));
     await openRow('r1');

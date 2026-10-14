@@ -316,7 +316,7 @@ export class DatabaseCardDrawer {
   private emojiPicker: EmojiPicker | null = null;
   /** The properties section is folded away. Session only. */
   private propsCollapsed = false;
-  /** Properties the page hides are shown for now. Reset per opened row. */
+  /** Properties the page hides are shown for now. Kept across rows; a reload resets it (research/09 "Other checks"). */
   private showHiddenProps = false;
   private mode: OpenPagesIn = 'side';
   private backdrop: HTMLElement | null = null;
@@ -519,7 +519,6 @@ export class DatabaseCardDrawer {
     });
     content.appendChild(titleInput);
 
-    this.showHiddenProps = false;
     this.activeTab = 'content';
 
     // --- Divider ---
@@ -658,7 +657,6 @@ export class DatabaseCardDrawer {
     }
 
     this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
-    this.showHiddenProps = false;
     this.activeTab = 'content';
 
     // Reinitialize editor
@@ -970,6 +968,8 @@ export class DatabaseCardDrawer {
       button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconSplitView, (el) => this.openModeMenu(el)),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
+      // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
+      button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSplitView, () => this.setDetailsOpen(!this.detailsOpen)),
     ];
   }
 
@@ -1271,12 +1271,12 @@ export class DatabaseCardDrawer {
    * Builds a `[data-blok-database-drawer-props]` section: the property group,
    * its loose properties first, then each named section.
    */
-  private buildPropsSection(layout: ResolvedPageLayout, row: DatabaseRow): HTMLDivElement {
+  private buildPropsSection(layout: ResolvedPageLayout, row: DatabaseRow, foldable = true): HTMLDivElement {
     const propsSection = document.createElement('div');
 
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
-    propsSection.hidden = this.draft === null && this.propsCollapsed;
+    propsSection.hidden = foldable && this.draft === null && this.propsCollapsed;
     // While customizing, the eye's draft value hides at once (research/09 §5).
     const hidden = (def: PropertyDefinition): boolean =>
       !isShownOnPage({ ...def, pageVisibility: this.pageVisibility(def.id) }, readPropertyValue(row, def) ?? null);
@@ -1569,14 +1569,14 @@ export class DatabaseCardDrawer {
     }
     // The builder draws the group and the modules into their own cards (fillBuilder).
     if (onContent && builder === null) {
-      const group = [this.buildPropsToggle(), this.buildPropsSection(layout, row)];
-      const page: HTMLElement[] = layout.groupIn === 'page' ? [...group] : [];
+      const page: HTMLElement[] = layout.groupIn === 'page' ? [this.buildPropsToggle(), this.buildPropsSection(layout, row)] : [];
 
       if (layout.pageModules.length > 0) {
         page.push(this.moduleList('data-blok-database-drawer-modules', 'page', layout.pageModules, row));
       }
       if (layout.groupIn === 'panel' || layout.panelModules.length > 0) {
-        const [toggle, panel] = this.buildDetails(layout, layout.groupIn === 'panel' ? group : [], row);
+        // The panel's "Properties" header names the group, so it has no fold of its own there.
+        const [toggle, panel] = this.buildDetails(layout, layout.groupIn === 'panel' ? [this.buildPropsSection(layout, row, false)] : [], row);
 
         regions.push(toggle, page.length > 0 ? this.buildColumns(page, panel) : panel);
       } else {
@@ -1591,7 +1591,52 @@ export class DatabaseCardDrawer {
     } else if (content !== null && divider !== null) {
       for (const region of regions) content.insertBefore(region, divider);
     }
+    this.syncPageInfo();
     this.syncDetailsDock();
+  }
+
+  /** "Page info" shows only when the page has a details panel, outside Customize layout. Its target is redrawn each render. */
+  private syncPageInfo(): void {
+    const info = this.drawer?.querySelector<HTMLButtonElement>('[data-blok-database-peek-page-info]');
+    const panel = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-content] [data-blok-database-drawer-details]');
+
+    if (info === null || info === undefined) {
+      return;
+    }
+    info.hidden = this.draft !== null || panel === null || panel === undefined;
+    info.setAttribute('aria-expanded', String(!info.hidden && this.detailsOpen));
+    if (panel !== null && panel !== undefined) {
+      info.setAttribute('aria-controls', panel.id);
+    } else {
+      info.removeAttribute('aria-controls');
+    }
+  }
+
+  /** The one way the details panel opens or closes: View details, Page info and Close panel all land here. */
+  private setDetailsOpen(open: boolean): void {
+    const drawer = this.drawer;
+    const panel = drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-content] [data-blok-database-drawer-details]');
+    const toggle = drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-content] [data-blok-database-drawer-details-toggle]');
+
+    if (drawer === null || drawer === undefined || this.draft !== null || panel === null || panel === undefined) {
+      return;
+    }
+    this.detailsOpen = open;
+    panel.hidden = !open;
+    drawer.toggleAttribute('data-details-open', open);
+    toggle?.setAttribute('aria-expanded', String(open));
+    const text = toggle?.querySelector('[data-blok-database-drawer-details-label]');
+
+    if (text !== null && text !== undefined) {
+      text.textContent = this.detailsLabel(open);
+    }
+    this.syncPageInfo();
+    this.syncDetailsDock();
+  }
+
+  /** "View details" / "Hide details" (research/10 §10). It follows the viewer's state: the builder always reads "View details". */
+  private detailsLabel(open: boolean): string {
+    return this.label(open ? 'tools.database.layoutHideDetails' : 'tools.database.layoutViewDetails');
   }
 
   /**
@@ -1807,8 +1852,12 @@ export class DatabaseCardDrawer {
     toggle.setAttribute('data-blok-database-drawer-details-toggle', '');
     toggle.disabled = this.draft !== null;
     toggle.setAttribute('aria-expanded', String(this.draft !== null || this.detailsOpen));
+    const text = document.createElement('span');
+
+    text.setAttribute('data-blok-database-drawer-details-label', '');
+    text.textContent = this.detailsLabel(this.draft === null && this.detailsOpen);
     toggle.innerHTML = IconSplitView;
-    toggle.append(this.label('tools.database.layoutViewDetails'));
+    toggle.append(text);
     panel.setAttribute('data-blok-database-drawer-details', '');
     panel.id = `blok-database-details-${nanoid()}`;
     toggle.setAttribute('aria-controls', panel.id);
@@ -1817,19 +1866,36 @@ export class DatabaseCardDrawer {
     panel.hidden = this.draft === null && !this.detailsOpen;
     // While customizing the panel is in the builder's canvas, so the page must not dock it.
     this.drawer?.toggleAttribute('data-details-open', this.draft === null && !panel.hidden);
-    panel.append(...group);
+    panel.append(this.buildDetailsHeader(toggle), ...group);
     if (layout.panelModules.length > 0) {
       panel.appendChild(this.moduleList('data-blok-database-drawer-panel-modules', 'panel', layout.panelModules, row));
     }
-    toggle.addEventListener('click', () => {
-      this.detailsOpen = !this.detailsOpen;
-      toggle.setAttribute('aria-expanded', String(this.detailsOpen));
-      panel.hidden = !this.detailsOpen;
-      this.drawer?.toggleAttribute('data-details-open', this.detailsOpen);
-      this.syncDetailsDock();
-    });
+    toggle.addEventListener('click', () => this.setDetailsOpen(!this.detailsOpen));
 
     return [toggle, panel];
+  }
+
+  /** research/10 §10: a round "Close panel" at the panel's top, then "Properties". */
+  private buildDetailsHeader(toggle: HTMLElement): HTMLElement {
+    const header = document.createElement('div');
+    const close = document.createElement('button');
+    const title = document.createElement('span');
+
+    header.setAttribute('data-blok-database-drawer-details-header', '');
+    close.type = 'button';
+    close.setAttribute('data-blok-database-drawer-details-close', '');
+    close.setAttribute('aria-label', this.label('tools.database.layoutClosePanel'));
+    close.innerHTML = IconChevronRight + IconChevronRight;
+    // Focus would fall to the body with the panel hidden.
+    close.addEventListener('click', () => {
+      this.setDetailsOpen(false);
+      toggle.focus();
+    });
+    title.setAttribute('data-blok-database-drawer-details-title', '');
+    title.textContent = this.label('tools.database.propertiesSection');
+    header.append(close, title);
+
+    return header;
   }
 
   startCustomizing(): void {

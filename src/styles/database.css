@@ -938,6 +938,11 @@
   transform: rotate(180deg);
 }
 
+/* The glyph's panel sits at the inline end, where the details panel opens. */
+[dir="rtl"] [data-blok-database-peek-page-info] svg {
+  transform: scaleX(var(--_blok-inline-sign, 1));
+}
+
 [data-blok-database-peek-prev]:disabled,
 [data-blok-database-peek-next]:disabled {
   opacity: 0.4;

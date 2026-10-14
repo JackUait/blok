@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSplitView } from '../../components/icons';
+import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -969,7 +969,7 @@ export class DatabaseCardDrawer {
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
-      button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSplitView, () => this.setDetailsOpen(!this.detailsOpen)),
+      button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSidebarRight, () => this.setDetailsOpen(!this.detailsOpen)),
     ];
   }
 

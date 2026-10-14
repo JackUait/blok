@@ -4736,6 +4736,10 @@ span[data-blok-slash-search] {
   transform: rotate(180deg);
 }
 
+[dir="rtl"] [data-blok-database-peek-page-info] svg {
+  transform: scaleX(var(--_blok-inline-sign, 1));
+}
+
 [data-blok-database-peek-prev]:disabled, [data-blok-database-peek-next]:disabled {
   opacity: 0.4;
   cursor: default;

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
+import { IconSidebarRight } from '../../../../src/components/icons';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import { PAGE_LAYOUT_PIN_LIMIT, pageLayoutOf } from '../../../../src/tools/database/page-layout';
 import type { PageLayoutData } from '../../../../src/tools/database/page-layout';
@@ -440,6 +441,20 @@ describe('DatabaseCardDrawer — page layout', () => {
     q('[data-blok-database-drawer-customize]')?.click();
 
     expect(info()?.hidden).toBe(true);
+    drawer.destroy();
+  });
+
+  // research/10 §10: Notion draws Page info with `sidebarRight`; "Open pages in" next to it keeps the split view.
+  it('draws Page info as a side panel, not the Open pages in glyph', () => {
+    const drawer = new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) }));
+    const glyph = (selector: string): string | undefined => q(`[data-blok-database-drawer-toolbar] ${selector} svg`)?.outerHTML;
+    const expected = document.createElement('div');
+
+    expected.innerHTML = IconSidebarRight;
+    drawer.open(ROW);
+
+    expect(glyph('[data-blok-database-peek-page-info]')).toBe(expected.querySelector('svg')?.outerHTML);
+    expect(glyph('[data-blok-database-peek-page-info]')).not.toBe(glyph('[data-blok-database-peek-mode]'));
     drawer.destroy();
   });
 

@@ -426,6 +426,11 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden]')).toContain('display: none');
   });
 
+  // The glyph's panel sits where the details panel opens: the inline end.
+  it('mirrors the Page info glyph in RTL', () => {
+    expect(ruleBody('[dir="rtl"] [data-blok-database-peek-page-info] svg')).toContain('transform: scaleX(var(--_blok-inline-sign, 1))');
+  });
+
   it('uses logical properties and radius role tokens only', () => {
     const rules = layoutRules();
 

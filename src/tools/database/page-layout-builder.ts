@@ -286,10 +286,12 @@ export class PageLayoutBuilder {
   fill(regions: PageLayoutRegions): void {
     for (const kind of ['heading', 'group', 'content'] as const) this.modules.get(kind)?.body.replaceChildren(...regions[kind]);
     for (const pinEl of this.modules.get('heading')?.body.querySelectorAll<HTMLElement>('[data-blok-database-drawer-pin]') ?? []) {
-      const id = pinEl.querySelector('[data-blok-database-drawer-prop-label]')?.getAttribute('data-property-id');
+      const id = pinEl.getAttribute('data-property-id');
+      // A pin drags by its label; with Property labels off it has none, so by itself.
+      const handle = pinEl.querySelector('[data-blok-database-drawer-prop-head]') ?? pinEl;
 
-      pinEl.querySelector('[data-blok-database-drawer-prop-head]')?.addEventListener('pointerdown', (event) => {
-        if (id !== null && id !== undefined) this.startDrag(event as PointerEvent, id, 'heading', pinEl);
+      handle.addEventListener('pointerdown', (event) => {
+        if (id !== null) this.startDrag(event as PointerEvent, id, 'heading', pinEl);
       });
     }
     const live = new Set<string>();
@@ -640,7 +642,7 @@ export class PageLayoutBuilder {
   private pinTarget(event: PointerEvent, id: string, line: DatabaseDropLine): { place: 'heading'; beforeId: string | null } {
     const rtl = getComputedStyle(this.canvas).direction === 'rtl';
     const pins = [...this.cardOf('heading').querySelectorAll<HTMLElement>('[data-blok-database-drawer-pin]')]
-      .filter((pinEl) => pinEl.querySelector('[data-blok-database-drawer-prop-label]')?.getAttribute('data-property-id') !== id);
+      .filter((pinEl) => pinEl.getAttribute('data-property-id') !== id);
     const before = pins.find((pinEl) => {
       const box = pinEl.getBoundingClientRect();
       const middle = box.left + box.width / 2;
@@ -657,7 +659,7 @@ export class PageLayoutBuilder {
       line.showVertical({ centerX: before !== undefined ? startEdge : endEdge, top: box.top, height: box.height });
     }
 
-    return { place: 'heading', beforeId: before?.querySelector('[data-blok-database-drawer-prop-label]')?.getAttribute('data-property-id') ?? null };
+    return { place: 'heading', beforeId: before?.getAttribute('data-property-id') ?? null };
   }
 
   /** The click that ends a drag is not a module pick. */

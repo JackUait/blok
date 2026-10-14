@@ -301,6 +301,8 @@ export class DatabaseCardDrawer {
   private pinsObserver: ResizeObserver | null = null;
   /** The resolved layout's "Property icons", read while drawing property rows. */
   private propertyIcons = true;
+  /** The layout's "Property labels". Off drops the pins' labels (research/10 §4). */
+  private propertyLabels = true;
   /** "View details". Closed on every open, as in Notion (research/09 §9). */
   private detailsOpen = false;
   /** Folds of this session. Local storage holds them across reloads when it can (plan Q3). */
@@ -1526,6 +1528,7 @@ export class DatabaseCardDrawer {
     const layout = this.resolvedLayout();
 
     this.propertyIcons = layout.propertyIcons;
+    this.propertyLabels = this.draftLayout().propertyLabels;
     const regions: HTMLElement[] = [];
     const tabs = layout.structure === 'tabbed' ? this.tabProperties(layout) : [];
 
@@ -1760,9 +1763,11 @@ export class DatabaseCardDrawer {
 
     list.setAttribute(attr, '');
     for (const def of properties) {
-      const item = this.createPropertyRow(def, readPropertyValue(row, def) ?? null);
+      const item = this.createPropertyRow(def, readPropertyValue(row, def) ?? null, place === 'heading' && !this.propertyLabels);
 
       item.setAttribute(place === 'heading' ? 'data-blok-database-drawer-pin' : 'data-blok-database-drawer-module', '');
+      // The builder reads a pin's id here: a pin may have no label.
+      if (place === 'heading') item.setAttribute('data-property-id', def.id);
       list.appendChild(item);
     }
 
@@ -1998,7 +2003,30 @@ export class DatabaseCardDrawer {
     if (cell.hasAttribute('data-empty')) {
       cell.textContent = this.t('tools.database.cellEmpty');
     }
+    // A pin with no label names itself while empty (research/10 §4).
+    if (cell.hasAttribute('data-empty') && slot.hasAttribute('data-labelless')) {
+      const placeholder = document.createElement('span');
+
+      placeholder.setAttribute('data-blok-database-drawer-prop-placeholder', '');
+      if (this.propertyIcons) placeholder.appendChild(this.propertyIcon(def));
+      placeholder.append(def.name);
+      cell.replaceChildren(placeholder);
+    }
     slot.replaceChildren(cell);
+  }
+
+  private propertyIcon(def: PropertyDefinition): HTMLElement {
+    const icon = document.createElement('span');
+
+    icon.setAttribute('data-blok-database-drawer-prop-icon', '');
+    icon.setAttribute('aria-hidden', 'true');
+    if (def.icon !== undefined && def.icon !== '') {
+      icon.textContent = def.icon;
+    } else {
+      icon.innerHTML = propertyTypeMeta(def.type).icon;
+    }
+
+    return icon;
   }
 
   /** Puts the saved label back on each option whose shown (localized) label the user kept. */
@@ -2087,10 +2115,17 @@ export class DatabaseCardDrawer {
    * One label + value row. The value is a button that opens the cell editor
    * for its type; read-only values are plain text.
    */
-  private createPropertyRow(def: PropertyDefinition, value: PropertyValue): HTMLDivElement {
+  /** `labelless`: a pin with Property labels off. It shows its value alone, and names itself only while empty. */
+  private createPropertyRow(def: PropertyDefinition, value: PropertyValue, labelless = false): HTMLDivElement {
     const row = document.createElement('div');
 
     row.setAttribute('data-blok-database-drawer-prop-row', '');
+    if (labelless) {
+      row.setAttribute('data-labelless', '');
+      // No visible name, so the name is for assistive tech only. No title: Notion shows no tooltip.
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', def.name);
+    }
 
     const label = document.createElement('span');
 
@@ -2102,16 +2137,7 @@ export class DatabaseCardDrawer {
     head.setAttribute('data-blok-database-drawer-prop-head', '');
     // Outside the label: callers read the label's text as the property name.
     if (this.propertyIcons) {
-      const icon = document.createElement('span');
-
-      icon.setAttribute('data-blok-database-drawer-prop-icon', '');
-      icon.setAttribute('aria-hidden', 'true');
-      if (def.icon !== undefined && def.icon !== '') {
-        icon.textContent = def.icon;
-      } else {
-        icon.innerHTML = propertyTypeMeta(def.type).icon;
-      }
-      head.appendChild(icon);
+      head.appendChild(this.propertyIcon(def));
     }
     head.appendChild(label);
     // The live property menu writes at once, so it would skip the draft.
@@ -2131,12 +2157,13 @@ export class DatabaseCardDrawer {
         }
       });
     }
-    row.appendChild(head);
+    if (!labelless) row.appendChild(head);
 
     const valueEl = document.createElement('div');
 
     valueEl.setAttribute('data-blok-database-drawer-prop-value', '');
     valueEl.setAttribute('data-property-id', def.id);
+    valueEl.toggleAttribute('data-labelless', labelless);
     this.paintValue(valueEl, def, value);
 
     // The placeholder page is no row, so it has no value to edit.

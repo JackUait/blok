@@ -88,13 +88,42 @@ describe('database row page layout css', () => {
       .toContain('padding-inline-end: calc(280px + 60px)');
   });
 
-  it('puts a 16px icon in the label column, which keeps the label width', () => {
+  it('puts the icon in the label column, which keeps the label width', () => {
     const head = ruleBody('[data-blok-database-drawer-prop-head]');
 
     expect(head).toContain('display: flex');
     expect(head).toContain('min-width: 100px');
-    expect(ruleBody('[data-blok-database-drawer-prop-icon]')).toContain('inline-size: 16px');
     expect(ruleBody('[data-blok-database-drawer-prop-label]')).not.toContain('min-width');
+  });
+
+  // research/09 §8 L83-84: a 14px box at scale 1.2 in the pins, a 16px one at scale 1.2 in the group.
+  it('sizes a pin icon 16.8px and a group row icon 19.2px', () => {
+    for (const selector of ['[data-blok-database-drawer-prop-icon]', '[data-blok-database-drawer-prop-icon] svg']) {
+      expect(ruleBody(selector)).toContain('inline-size: 19.2px');
+      expect(ruleBody(selector)).toContain('block-size: 19.2px');
+    }
+    for (const selector of ['[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-icon]', '[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-icon] svg']) {
+      expect(ruleBody(selector)).toContain('inline-size: 16.8px');
+      expect(ruleBody(selector)).toContain('block-size: 16.8px');
+    }
+  });
+
+  // research/10 §4: an 80x30 cell, padding 0 6px; the empty one reads icon + name, 14px/400 in the empty grey.
+  it('draws a label-less pin cell 30px high with a grey placeholder', () => {
+    const value = ruleBody('[data-blok-database-drawer-prop-value]');
+    const placeholder = ruleBody('[data-blok-database-drawer-prop-placeholder]');
+
+    expect(value).toContain('min-height: 30px');
+    expect(value).toContain('padding: 0 var(--blok-space-1-5)');
+    // The 34px property row height would stretch the cell past 30px.
+    expect(ruleBody('[data-blok-database-drawer-pins] [data-blok-database-drawer-pin][data-labelless]')).toContain('min-height: 0');
+    expect(placeholder).toContain('display: inline-flex');
+    expect(placeholder).toContain('align-items: center');
+    expect(placeholder).toContain('color: var(--blok-text-tertiary)');
+    expect(placeholder).toContain('font-size: 14px');
+    expect(placeholder).toContain('font-weight: 400');
+    // With no label to grab, the builder drags the pin itself, on touch too.
+    expect(ruleBody('[data-blok-database-layout-canvas] [data-blok-database-drawer-pin][data-labelless]')).toContain('touch-action: none');
   });
 
   it('lets the pins scroller shrink in its row, and flips the arrows in RTL', () => {

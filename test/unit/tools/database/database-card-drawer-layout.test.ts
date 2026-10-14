@@ -829,6 +829,88 @@ describe('DatabaseCardDrawer — page layout', () => {
     });
   });
 
+  // research/10 §4: Property labels OFF.
+  describe('property labels off', () => {
+    const LABELS_OFF = (): PropertyDefinition[] => [
+      ...schemaWith({
+        pageLayoutPropertyLabels: false,
+        pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }, { id: 'p-owner', place: 'heading' }, { id: 'p-done', place: 'heading' }],
+      }),
+      { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a5' },
+    ];
+    const EMPTY_OWNER: DatabaseRow = { ...ROW, properties: { ...ROW.properties, 'p-owner': '' } };
+    const pin = (id: string): HTMLElement | null => q(`[data-blok-database-drawer-pins] [data-blok-database-drawer-pin][data-property-id="${id}"]`);
+    const placeholder = (id: string): HTMLElement | null =>
+      q(`[data-blok-database-drawer-prop-value][data-property-id="${id}"] [data-blok-database-drawer-prop-placeholder]`);
+
+    it('drops pin labels when Property labels is off', () => {
+      new DatabaseCardDrawer(createOptions({ schema: LABELS_OFF() })).open(ROW);
+
+      expect(all('[data-blok-database-drawer-pin]')).toHaveLength(3);
+      expect(q('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-head]')).toBeNull();
+      expect(q('[data-blok-database-drawer-pins] [data-blok-database-drawer-prop-label]')).toBeNull();
+      expect(q('[data-blok-database-drawer-props] [data-blok-database-drawer-prop-label][data-property-id="p-status"]')?.textContent).toBe('Status');
+    });
+
+    it('shows an empty pin as its icon and name in grey when labels are off', () => {
+      new DatabaseCardDrawer(createOptions({ schema: LABELS_OFF() })).open(EMPTY_OWNER);
+
+      expect(placeholder('p-owner')?.textContent?.trim()).toBe('Owner');
+      expect(placeholder('p-owner')?.querySelector('[data-blok-database-drawer-prop-icon] svg')).not.toBeNull();
+      expect(q('[data-blok-database-drawer-prop-value][data-property-id="p-owner"]')?.textContent).not.toContain('Empty');
+    });
+
+    it('shows a filled pin as its value only when labels are off', () => {
+      new DatabaseCardDrawer(createOptions({ schema: LABELS_OFF() })).open(ROW);
+
+      expect(placeholder('p-due')).toBeNull();
+      expect(pin('p-due')?.textContent).toBe('Friday');
+      expect(pin('p-due')?.querySelector('[data-blok-database-drawer-prop-icon]')).toBeNull();
+      expect(pin('p-due')?.hasAttribute('title')).toBe(false);
+    });
+
+    it('shows an empty checkbox pin as its box only, named for assistive tech', () => {
+      new DatabaseCardDrawer(createOptions({ schema: LABELS_OFF(), readOnly: true })).open(ROW);
+
+      expect(pin('p-done')?.querySelector('[data-blok-database-checkbox]')?.getAttribute('data-state')).toBe('unchecked');
+      expect(placeholder('p-done')).toBeNull();
+      expect(pin('p-done')?.getAttribute('role')).toBe('group');
+      expect(pin('p-done')?.getAttribute('aria-label')).toBe('Done');
+      expect(pin('p-done')?.hasAttribute('title')).toBe(false);
+    });
+
+    it('shows the placeholder again when a filled label-less pin is cleared in place', () => {
+      const options = createOptions({ schema: LABELS_OFF() });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-prop-value][data-property-id="p-owner"]')?.click();
+      const input = q<HTMLInputElement>('[data-blok-database-cell-editor] input, [data-blok-database-cell-editor] textarea');
+
+      if (input === null) throw new Error('no editor input');
+      input.value = '';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(options.onPropertyValueChange).toHaveBeenCalledWith('row-1', 'p-owner', '');
+      expect(placeholder('p-owner')?.textContent?.trim()).toBe('Owner');
+    });
+
+    it('turns pin labels off from the Heading menu as a draft edit', () => {
+      const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) });
+
+      new DatabaseCardDrawer(options).open(ROW);
+      q('[data-blok-database-drawer-customize]')?.click();
+      openHeadingMenu();
+      q('[data-blok-testid="database-layout-option-layoutPropertyLabels"]')?.click();
+
+      expect(q('[data-blok-database-drawer-pin]')).not.toBeNull();
+      expect(q('[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-label]')).toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      q('[data-blok-database-layout-apply]')?.click();
+
+      expect(written(options)?.propertyLabels).toBe(false);
+    });
+  });
+
   describe('pin scroll arrows', () => {
     const PINNED = schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }, { id: 'p-owner', place: 'heading' }] });
     const observers: Array<{ observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn>; fire: () => void }> = [];

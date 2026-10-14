@@ -825,6 +825,36 @@ describe('PageLayoutBuilder', () => {
       drawer.destroy();
     });
 
+    // research/10 §4: with labels off there is no label to grab, so the pin itself drags.
+    it('drags a label-less pin before another', () => {
+      const { drawer, options } = customize({
+        schema: schemaWith({ pageLayoutPropertyLabels: false, pageLayoutPlacements: [{ id: 'p-status', place: 'heading' }, { id: 'p-due', place: 'heading' }] }),
+      });
+      const pins = [...builder().querySelectorAll<HTMLElement>('[data-blok-database-drawer-pin]')];
+      const boxes = new Map<Element, { left: number; right: number }>(pins.map((el, i) => [el, { left: i * 100, right: i * 100 + 100 }]));
+
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect(this: Element) {
+        const { left, right } = boxes.get(this) ?? { left: 0, right: 0 };
+        const box = { top: 0, bottom: 30, left, right, width: right - left, height: 30 };
+
+        return { ...box, x: left, y: 0, toJSON: () => box };
+      });
+      expect(canvasPins()).toEqual(['p-status', 'p-due']);
+      pins[1]?.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 150, clientY: 10, bubbles: true, cancelable: true }));
+      document.dispatchEvent(new MouseEvent('pointermove', { clientX: 10, clientY: 10, bubbles: true }));
+      document.dispatchEvent(new MouseEvent('pointerup', { clientX: 10, clientY: 10, bubbles: true }));
+      // The click a browser sends after the drag; the builder swallows it.
+      moduleCard('heading').click();
+
+      expect(canvasPins()).toEqual(['p-due', 'p-status']);
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      const edit = vi.mocked(options.onPageLayoutChange)?.mock.calls.at(-1)?.[0];
+
+      expect(edit?.(pageLayoutOf(options.schema[0]))?.placements).toEqual([{ id: 'p-due', place: 'heading' }, { id: 'p-status', place: 'heading' }]);
+      drawer.destroy();
+    });
+
   });
 
   // research/09 §3 L56, §5: header + Add section, search, a row per property with an eye, Add a property, Move to panel.

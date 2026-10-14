@@ -1243,15 +1243,26 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: 19.2px;
+  block-size: 19.2px;
   font-size: 14px;
   line-height: 1;
 }
 
+/* research/09 §8 L83-84: Notion scales a 16px box (group rows) and a 14px box (pins) by 1.2. */
 [data-blok-database-drawer-prop-icon] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: 19.2px;
+  block-size: 19.2px;
+}
+
+[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-icon] {
+  inline-size: 16.8px;
+  block-size: 16.8px;
+}
+
+[data-blok-database-drawer-pin] [data-blok-database-drawer-prop-icon] svg {
+  inline-size: 16.8px;
+  block-size: 16.8px;
 }
 
 /**
@@ -2345,6 +2356,12 @@
   touch-action: none;
 }
 
+/* With no label to grab, the pin itself drags. */
+[data-blok-database-layout-canvas] [data-blok-database-drawer-pin][data-labelless] {
+  cursor: grab;
+  touch-action: none;
+}
+
 [data-blok-database-layout-module][data-dragging],
 [data-blok-database-drawer-pin][data-dragging] {
   opacity: 0.5;
@@ -2911,6 +2928,21 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 [data-blok-database-drawer-pin] [data-blok-database-drawer-prop-label] {
   font-size: 12px;
+}
+
+/* research/10 §4: with Property labels off the strip is one 30px row, the value cell's own height. */
+[data-blok-database-drawer-pins] [data-blok-database-drawer-pin][data-labelless] {
+  min-height: 0;
+}
+
+/* research/10 §4: Property labels off, an empty pin reads its icon and name in the empty grey. */
+[data-blok-database-drawer-prop-placeholder] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  color: var(--blok-text-tertiary);
+  font-size: 14px;
+  font-weight: 400;
 }
 
 [data-blok-database-drawer-modules],

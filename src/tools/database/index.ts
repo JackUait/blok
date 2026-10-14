@@ -304,6 +304,8 @@ export class DatabaseTool implements BlockTool {
   private readonly expandedSubItems = new Set<string>();
   /** Template rows, by position. Kept out of the model's rows. */
   private templates: DatabaseRow[] = [];
+  /** What every row's empty-page prompt last drew from. */
+  private rowPromptKey = '';
   /** Formula, rollup and relation values, worked out on every row sync. */
   private readonly computedValues: ComputedProperties;
   private view!: DatabaseViewRenderer;
@@ -1086,6 +1088,7 @@ export class DatabaseTool implements BlockTool {
 
     this.rebuildTabBar();
     this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    this.refreshRowPrompts();
     if (formState !== undefined && (
       formState.id !== this.activeViewId ||
       this.model.getView(this.activeViewId)?.type !== 'form' ||
@@ -1178,6 +1181,7 @@ export class DatabaseTool implements BlockTool {
     if (!this.readOnly && !this.linked) {
       this.storeUniqueIds(rows, numbered, children);
     }
+    this.refreshRowPrompts();
   }
 
   /**
@@ -3201,12 +3205,16 @@ export class DatabaseTool implements BlockTool {
     };
   }
 
-  private openTemplateMenu(anchor: HTMLElement): void {
+  private templateTitles(): Array<{ id: string; title: string }> {
     const titleId = this.titlePropertyId();
 
+    return this.templates.map((t) => ({ id: t.id, title: typeof t.properties[titleId] === 'string' ? String(t.properties[titleId]) : '' }));
+  }
+
+  private openTemplateMenu(anchor: HTMLElement): void {
     this.showGroupPopover(anchor, templateMenuItems({
       i18n: this.api.i18n,
-      templates: () => this.templates.map((t) => ({ id: t.id, title: typeof t.properties[titleId] === 'string' ? String(t.properties[titleId]) : '' })),
+      templates: () => this.templateTitles(),
       defaultTemplateId: () => this.model.getDefaultTemplateId(),
       repeatOf: (id) => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === id)),
       newEmpty: () => this.newEmptyRow(),
@@ -3274,6 +3282,7 @@ export class DatabaseTool implements BlockTool {
     this.model.setPageLayout(edit(this.model.getPageLayout()));
     this.block.dispatchChange();
     this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    this.refreshRowPrompts();
   }
 
   /** Views have no addressable URL yet: the page URL with the view id as its fragment. */
@@ -4253,6 +4262,57 @@ export class DatabaseTool implements BlockTool {
     this.handleRowClick(rowData.id);
 
     return rowData.id;
+  }
+
+  /** An empty row page asks what to offer: the "Database templates" switch and the templates (research/10 §6). */
+  rowPagePrompt(param: { receive: (prompt: { templates: boolean; list: Array<{ id: string; title: string }> }) => void }): void {
+    param.receive({ templates: this.model.getPageLayout().templates, list: this.templateTitles() });
+  }
+
+  /**
+   * Redraws every row's empty-page prompt when what it shows changed. The key
+   * keeps a title keystroke or a cell edit from redrawing every row.
+   */
+  private refreshRowPrompts(): void {
+    const key = JSON.stringify([this.model.getPageLayout().templates, this.templateTitles()]);
+
+    if (key === this.rowPromptKey) return;
+    this.rowPromptKey = key;
+    for (const child of this.api.blocks.getChildren(this.dataId)) {
+      if (child.name === 'database-row') child.call('refreshPlaceholder');
+    }
+  }
+
+  /**
+   * A template picked on an empty row page: its values fill the row's empty
+   * ones, its icon and cover fill missing ones, and its body is copied. One undo step.
+   */
+  applyTemplate(param: { rowId: string; templateId: string }): void {
+    const template = this.templates.find((t) => t.id === param.templateId);
+    const row = this.model.getRow(param.rowId);
+    const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === param.rowId);
+
+    if (this.readOnly || this.destroyed || template === undefined || row === undefined || block === undefined
+      || this.api.blocks.getChildren(param.rowId).length > 0) return;
+    const titlePropId = this.titlePropertyId();
+    const blank = (value: PropertyValue | undefined): boolean => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+    const filled = resolveDynamicProperties(structuredClone(template.properties), { me: this.config.people?.me?.() ?? null, now: new Date() });
+    const changes = Object.fromEntries(Object.entries(filled).filter(([id, value]) => !blank(value) && blank(row.properties[id])));
+    const { [titlePropId]: title, ...values } = changes;
+
+    this.inOneStep(() => {
+      if (typeof title === 'string') this.updateRowTitleBlock(param.rowId, titlePropId, title);
+      this.updateRowBlock(param.rowId, values);
+      if (row.icon === undefined && template.icon !== undefined) block.call('updateIcon', { icon: template.icon });
+      if (row.cover === undefined && template.cover !== undefined) block.call('updateCover', { cover: template.cover });
+      block.dispatchChange();
+      this.copyChildBlocks(template.id, param.rowId);
+    });
+    block.call('mountBody');
+    if (Object.keys(changes).length > 0) this.sync.syncUpdateRow({ rowId: param.rowId, properties: changes });
+    this.syncRowsFromBlocks();
+    this.cardDrawer?.syncOpenRow(this.rowOrTemplate(param.rowId));
+    this.rerenderView({ keepDrawer: true });
   }
 
   /** "+ New template": an empty template, opened for editing. */
@@ -5280,7 +5340,14 @@ export class DatabaseTool implements BlockTool {
             return this.attachRowBody(rowId, host, writable);
           },
           detach: () => this.mountRows(),
-          start: (rowId) => this.api.blocks.getById(rowId)?.call('startBody'),
+          start: (rowId) => this.api.blocks.getById(rowId)?.call('enter'),
+          move: (rowId, step) => {
+            const handled: boolean[] = [];
+
+            this.api.blocks.getById(rowId)?.call('movePick', { step, receive: (h: boolean) => handled.push(h) });
+
+            return handled.includes(true);
+          },
         },
         adjacentRow: (rowId, direction) => this.adjacentRow(rowId, direction),
         viewRows: () => this.viewRowOrder(),

@@ -20,7 +20,7 @@ const ruleBody = (selector: string): string => {
 };
 
 const layoutRules = (): string =>
-  [...database.matchAll(/([^{}]*\[data-blok-database-(?:drawer-(?:pins[a-z-]*|pin|prop-head|prop-icon|modules|panel-modules|module|section[a-z-]*|details[a-z-]*|columns|main|tabs|tab-panel|customize|layout-bar)|layout-[a-z-]+)\][^{}]*)\{([^{}]*)\}/g)]
+  [...database.matchAll(/([^{}]*\[data-blok-database-(?:drawer-(?:pins[a-z-]*|pin|prop-head|prop-icon|modules|panel-modules|module|section[a-z-]*|details[a-z-]*|columns|main|tabs|tab-panel|customize|layout-bar)|layout-[a-z-]+|drawer-content|row-(?:empty[a-z-]*|pick[a-z-]*|create-template))\][^{}]*)\{([^{}]*)\}/g)]
     .map((m) => `${m[1]}{${m[2]}}`)
     .join('\n');
 
@@ -367,6 +367,38 @@ describe('database row page layout css', () => {
     // Rings show after keyboard use only.
     expect(database).toContain('[data-blok-database-layout-section-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)');
     expect(ruleBody('[data-blok-database-layout-group-row][data-dragging]')).toContain('opacity: 0.5');
+  });
+
+  // research/10 §6: a tertiary-grey prompt, an underlined "create a template", 32px picker rows with no fill at rest.
+  it('draws the empty-page prompt grey, with an underlined create a template', () => {
+    const prompt = ruleBody('[data-blok-database-row-empty]');
+    const create = ruleBody('[data-blok-database-row-create-template]');
+
+    expect(prompt).toContain('color: var(--blok-text-tertiary)');
+    expect(create).toContain('text-decoration: underline');
+    expect(create).toContain('cursor: pointer');
+  });
+
+  it('draws template picker rows 32px with no fill at rest, and a neutral fill with the same ink when highlighted', () => {
+    const pick = ruleBody('[data-blok-database-row-pick]');
+    const active = ruleBody('[data-blok-database-row-pick]:hover, [data-blok-database-row-pick][data-active]');
+    const ink = (body: string): string | undefined => body.match(/(?:^|;)\s*color: ([^;]+);/)?.[1];
+
+    expect(pick).toContain('block-size: 32px');
+    expect(pick).toContain('background: none');
+    expect(ink(pick)).toBe('var(--blok-text-secondary)');
+    expect(active).toContain('background: var(--blok-item-focus-bg)');
+    expect(ink(active) ?? ink(pick)).toBe(ink(pick));
+    expect(active).not.toMatch(/accent|blue|focus-ring|#2383e2|toggle-on/i);
+  });
+
+  // research/09 §9: Full width widens only the full page (720 -> wider); both peeks keep their width.
+  it('widens only the full page when the layout is full width', () => {
+    const narrow = ruleBody('[data-blok-database-drawer][data-peek-mode="full"]:not([data-full-width]) [data-blok-database-drawer-content]');
+
+    expect(narrow).toContain('max-inline-size: var(--blok-content-max-width, var(--max-width-content))');
+    expect(narrow).toContain('margin-inline: auto');
+    expect(database).not.toMatch(/data-peek-mode="(?:side|center)"\][^{]*data-full-width/);
   });
 
   it('uses logical properties and radius role tokens only', () => {

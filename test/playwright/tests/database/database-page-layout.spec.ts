@@ -790,6 +790,69 @@ test.describe('row page layout', () => {
   });
 
   // One Escape = one layer: the peek's "Open pages in" menu closes first, the peek on the next press.
+  // research/10 §6: with a template, an empty page lists it, Empty and New template in 32px rows.
+  test('picks a template from the empty page picker', async ({ page }) => {
+    const data = blocks();
+
+    (data[0] as { content: string[] }).content.push('tA');
+    data.push(
+      { id: 'tA', type: 'database-row', parent: 'db-1', data: { position: 'b0', template: true, title: 'Tmpl A', properties: { 'p-title': 'Tmpl A', 'p-due': 'Soon' } }, content: ['tp'] },
+      { id: 'tp', type: 'paragraph', parent: 'tA', data: { text: 'From template' } },
+    );
+    await mount(page, data);
+    await openRow(page, 'r1');
+    const picker = peek(page).locator('[data-blok-database-row-picker]');
+
+    await expect(peek(page).getByText('Press Enter to continue with an empty page, or pick a template (use ↑ and ↓ to select)')).toBeVisible();
+    await expect(picker.getByRole('button')).toHaveText(['Tmpl A', 'Empty', 'New template']);
+    const first = picker.getByRole('button', { name: 'Tmpl A' });
+
+    expect((await first.boundingBox())?.height).toBeCloseTo(32, 0);
+    const rest = await first.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+    await peek(page).locator('[data-blok-database-drawer-title]').focus();
+    await page.keyboard.press('ArrowDown');
+    const lit = await first.evaluate((el) => ({ bg: getComputedStyle(el).backgroundColor, ink: getComputedStyle(el).color }));
+    const channels = lit.bg.match(/\d+(\.\d+)?/g)?.slice(0, 3).map(Number) ?? [];
+
+    expect(lit.bg).not.toBe(rest);
+    expect(Math.max(...channels) - Math.min(...channels)).toBeLessThanOrEqual(10);
+    await page.keyboard.press('Enter');
+
+    await expect(peek(page).locator('[data-blok-database-row-body]')).toContainText('From template');
+    await expect(picker).toBeHidden();
+  });
+
+  // research/09 §9: Full width widens only the full page; both peeks keep their width.
+  test('widens the full page and leaves both peeks alone when Full width is on', async ({ page }) => {
+    const titleWidth = async (mode: 'full' | 'center' | 'side', fullWidth: boolean): Promise<number> => {
+      await mount(page, withView(blocks(fullWidth ? { pageLayoutFullWidth: true } : {}), { openPagesIn: mode }));
+      await openRow(page, 'r1');
+      const title = peek(page).locator('[data-blok-database-drawer-title]');
+
+      await expect(title).toBeVisible();
+      await expect(peek(page)).toHaveAttribute('data-peek-mode', mode);
+
+      return (await title.boundingBox())?.width ?? 0;
+    };
+    const full = [await titleWidth('full', false), await titleWidth('full', true)];
+
+    expect(full[0]).toBeCloseTo(720, 0);
+    expect(full[1]).toBeGreaterThan(full[0]);
+    expect(await titleWidth('center', true)).toBeCloseTo(await titleWidth('center', false), 0);
+    expect(await titleWidth('side', true)).toBeCloseTo(await titleWidth('side', false), 0);
+  });
+
+  test('keeps a Full width page clear of the docked details panel', async ({ page }) => {
+    await mount(page, withView(blocks({ pageLayoutFullWidth: true, pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), { openPagesIn: 'full' }));
+    await openRow(page, 'r1');
+    await peek(page).getByRole('button', { name: 'View details' }).click();
+    const panel = await peek(page).getByRole('region', { name: 'Details' }).boundingBox();
+    const title = await peek(page).locator('[data-blok-database-drawer-title]').boundingBox();
+
+    expect((title?.x ?? 0) + (title?.width ?? 0)).toBeLessThanOrEqual(panel?.x ?? 0);
+  });
+
   test('closes the Open pages in menu on the first Escape and the peek on the second', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');

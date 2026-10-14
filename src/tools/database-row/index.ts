@@ -3,8 +3,16 @@ import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blo
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { IconPage, IconPlus } from '../../components/icons';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, PropertyValue, TemplateRepeat } from '../database/types';
+
+/** What the parent database answers when an empty page asks what to offer. */
+interface RowPagePrompt {
+  /** The layout's "Database templates" switch. */
+  templates: boolean;
+  list: Array<{ id: string; title: string }>;
+}
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'template', 'repeat']);
 
@@ -71,6 +79,10 @@ export class DatabaseRowTool implements BlockTool {
   private readOnly: boolean;
   private bodySlot: HTMLElement | null = null;
   private placeholder: HTMLElement | null = null;
+  /** The picker rows, in key order; empty when no picker is drawn. */
+  private picks: HTMLButtonElement[] = [];
+  private pickActions: Array<() => void> = [];
+  private activePick = -1;
 
   constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<DatabaseRowData>) {
     this._data = toRowData(data);
@@ -100,16 +112,168 @@ export class DatabaseRowTool implements BlockTool {
     placeholder.setAttribute(DATA_ATTR.chrome, '');
     placeholder.setAttribute(DATA_ATTR.mutationFree, 'true');
     placeholder.setAttribute('contenteditable', 'false');
-    placeholder.textContent = this.api?.i18n.t('tools.database.rowBodyEmpty') ?? '';
     // database.css hides it once the body slot has a block.
     placeholder.addEventListener('click', () => this.startBody());
 
     el.append(bodySlot, placeholder);
     this.bodySlot = bodySlot;
     this.placeholder = placeholder;
+    this.drawPrompt();
     this.updatePlaceholder();
 
     return el;
+  }
+
+  /** The database calls this when its templates or its "Database templates" switch change. */
+  public refreshPlaceholder(): void {
+    this.drawPrompt();
+  }
+
+  /**
+   * The empty-page prompt (research/10 §6). The parent database says whether
+   * templates are on and which exist; until it is built, the plain line shows.
+   */
+  private drawPrompt(): void {
+    const placeholder = this.placeholder;
+
+    if (placeholder === null) return;
+    const t = (key: string): string => this.api?.i18n.t(key) ?? '';
+    const prompt = this.readPrompt();
+
+    this.picks = [];
+    this.pickActions = [];
+    this.activePick = -1;
+    placeholder.replaceChildren();
+    if (prompt !== undefined && !prompt.templates) return;
+    // No picker on a template's own page (plan Q8).
+    if (prompt === undefined || this._data.template === true) {
+      placeholder.textContent = t('tools.database.rowBodyEmpty');
+
+      return;
+    }
+    if (prompt.list.length === 0) {
+      const create = document.createElement('button');
+
+      create.type = 'button';
+      create.setAttribute('data-blok-database-row-create-template', '');
+      create.textContent = t('tools.database.rowBodyCreateTemplate');
+      create.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.callParent('addTemplate');
+      });
+      placeholder.append(t('tools.database.rowBodyEmptyOr'), ' ', create);
+
+      return;
+    }
+    const text = document.createElement('div');
+
+    text.setAttribute('data-blok-database-row-empty-text', '');
+    text.textContent = t('tools.database.rowBodyPickTemplate');
+    const picker = document.createElement('div');
+
+    picker.setAttribute('data-blok-database-row-picker', '');
+    picker.setAttribute(DATA_ATTR.keyboardOwner, '');
+    picker.addEventListener('keydown', (event) => this.onPickerKey(event));
+    const rowId = this.block?.id ?? '';
+    const entries: Array<[string, string, string, () => void]> = [
+      ...prompt.list.map(({ id, title }): [string, string, string, () => void] =>
+        [id, IconPage, title === '' ? t('tools.database.templateUntitled') : title, () => this.callParent('applyTemplate', { rowId, templateId: id })]),
+      ['empty', IconPage, t('tools.database.cellEmpty'), () => this.startBody()],
+      ['new', IconPlus, t('tools.database.templateNew'), () => this.callParent('addTemplate')],
+    ];
+
+    for (const [id, icon, label, action] of entries) {
+      const pick = document.createElement('button');
+      const glyph = document.createElement('span');
+      const name = document.createElement('span');
+
+      pick.type = 'button';
+      pick.setAttribute('data-blok-database-row-pick', id);
+      glyph.setAttribute('data-blok-database-row-pick-icon', '');
+      glyph.innerHTML = icon;
+      name.setAttribute('data-blok-database-row-pick-label', '');
+      name.textContent = label;
+      pick.append(glyph, name);
+      pick.addEventListener('click', (event) => {
+        event.stopPropagation();
+        action();
+      });
+      picker.appendChild(pick);
+      this.picks.push(pick);
+      this.pickActions.push(action);
+    }
+    placeholder.append(text, picker);
+  }
+
+  private readPrompt(): RowPagePrompt | undefined {
+    const received: RowPagePrompt[] = [];
+
+    this.callParent('rowPagePrompt', { receive: (prompt: RowPagePrompt) => received.push(prompt) });
+
+    return received[0];
+  }
+
+  private callParent(method: string, param?: unknown): void {
+    const parentId = this.block?.parentId;
+
+    if (parentId === null || parentId === undefined) return;
+    this.api?.blocks.getById(parentId)?.call(method, param as never);
+  }
+
+  /**
+   * ↑/↓ from the page title, as Blok's menus do: from no highlight ↓ goes to
+   * the first row and ↑ to the last, and both wrap. `receive(false)` when no
+   * picker is drawn, so the title keeps its own arrows.
+   */
+  public movePick(param: { step: 1 | -1; receive: (handled: boolean) => void }): void {
+    const count = this.picks.length;
+
+    // CSS hides the picker once the body has a block.
+    if (count === 0 || this.readOnly || this.hasBody()) {
+      param.receive(false);
+
+      return;
+    }
+    const wrapsBack = this.activePick === -1 && param.step === -1;
+
+    this.highlight(wrapsBack ? count - 1 : (this.activePick + param.step + count) % count);
+    param.receive(true);
+  }
+
+  /** Enter on the page title: the highlighted pick, otherwise an empty page. */
+  public enter(): void {
+    const action = this.pickActions[this.activePick];
+
+    if (action !== undefined && !this.readOnly && !this.hasBody()) {
+      this.highlight(-1);
+      action();
+
+      return;
+    }
+    this.startBody();
+  }
+
+  private hasBody(): boolean {
+    const id = this.block?.id;
+
+    return id !== undefined && (this.api?.blocks.getChildren(id).length ?? 0) > 0;
+  }
+
+  private highlight(index: number): void {
+    this.picks.forEach((pick, i) => pick.toggleAttribute('data-active', i === index));
+    this.activePick = index;
+  }
+
+  /** A pick that holds focus (after Tab) moves through the picker with the same keys. */
+  private onPickerKey(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const at = this.picks.findIndex((pick) => pick === event.target);
+
+    if (at === -1) return;
+    event.preventDefault();
+    this.activePick = at;
+    this.movePick({ step: event.key === 'ArrowDown' ? 1 : -1, receive: () => undefined });
+    this.picks[this.activePick]?.focus();
   }
 
   /**
@@ -152,6 +316,12 @@ export class DatabaseRowTool implements BlockTool {
   }
 
   public rendered(): void {
+    this.drawPrompt();
+    this.mountBody();
+  }
+
+  /** Puts the row's child blocks in the body slot. Core does not place a new child there. */
+  public mountBody(): void {
     const api = this.api;
     const id = this.block?.id;
 

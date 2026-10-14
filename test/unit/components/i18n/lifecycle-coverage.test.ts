@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1076 + 119 + 415 + 4 closure for all 1614 keys', () => {
+  it('rebuilds a disjoint 1081 + 119 + 413 + 4 closure for all 1617 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1614);
+    expect(lifecycle.size).toBe(1617);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -363,7 +363,9 @@ describe('current English catalog lifecycle coverage', () => {
       // tools.database.layoutItemOptions left with the per-property ⋯ menu.
       // +3: the builder's Reset confirm calls its title, body and button keys by literal.
       // +15: the assistant bar calls its assistant.* keys by literal.
-      'executable-literal': 1076,
+      // +3: the empty row page's template prompt calls rowBodyEmptyOr, rowBodyCreateTemplate and rowBodyPickTemplate by literal.
+      // +2: its picker also calls tools.database.templateNew and templateUntitled by literal (see below).
+      'executable-literal': 1081,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -390,7 +392,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.layoutCustomizing, the old builder bar's title. Still shipped in every locale.
       // +1: tools.database.aiAutofillTriggerOn, the old trigger value. Still shipped in every locale.
       // +2: tools.database.searchLabel and searchPlaceholder lost their last literal caller with the builder bar search.
-      'registered-namespace-compatible': 415,
+      // -2: tools.database.templateNew and templateUntitled gained literal callers in the row page template picker.
+      'registered-namespace-compatible': 413,
       'catalog-only': 4,
     });
     expect(

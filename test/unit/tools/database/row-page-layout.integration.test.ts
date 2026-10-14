@@ -470,6 +470,185 @@ describe('row page layout through the database tool', () => {
     });
   });
 
+  describe('Database templates on the empty row page', () => {
+    const withTemplate = (titleOverrides: Record<string, unknown> = {}): OutputBlockData[] => {
+      const blocks = doc({}, titleOverrides);
+
+      (blocks[0] as { content: string[] }).content.push('tA');
+      blocks.push(
+        { id: 'tA', type: 'database-row', parent: 'db', data: { properties: { t: 'Tmpl A', due: 'soon' }, position: 'b0', title: 'Tmpl A', template: true }, content: ['tp'] },
+        { id: 'tp', type: 'paragraph', parent: 'tA', data: { text: 'From template' } },
+      );
+
+      return blocks;
+    };
+    const prompt = (): HTMLElement | null => drawer()?.querySelector<HTMLElement>('[data-blok-database-row-empty]') ?? null;
+    const picks = (): string[] => [...(drawer()?.querySelectorAll('[data-blok-database-row-pick]') ?? [])].map((el) => el.getAttribute('data-blok-database-row-pick') ?? '');
+    const applyTemplatesOff = async (): Promise<void> => {
+      await click(q('[data-blok-database-drawer-customize]'));
+      await click(b('[data-blok-testid="database-layout-option-layoutTemplates"]'));
+      await click(b('[data-blok-database-layout-apply]'));
+    };
+    const bodyTexts = (): string[] => [...(drawer()?.querySelectorAll('[data-blok-database-row-body] > [data-blok-element]') ?? [])].map((el) => el.textContent ?? '');
+    const titleKey = async (key: string): Promise<void> => {
+      q('[data-blok-database-drawer-title]')?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await quiet();
+    };
+
+    it('shows create a template on an empty page, which makes and opens a template', async () => {
+      await make(doc());
+      await openRow('r1');
+
+      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page, or create a template');
+      await click(prompt()?.querySelector('[data-blok-database-row-create-template]') ?? null);
+
+      const saved = await editor?.save();
+      const templates = saved?.blocks.filter((block) => (block.data as { template?: boolean }).template === true) ?? [];
+
+      expect(templates).toHaveLength(1);
+      expect(q('[data-blok-database-template-banner]')).not.toBeNull();
+      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page');
+    });
+
+    it('lists templates, Empty and New template on an empty page when templates are on', async () => {
+      await make(withTemplate());
+      await openRow('r1');
+
+      expect(prompt()?.querySelector('[data-blok-database-row-empty-text]')?.textContent)
+        .toBe('Press Enter to continue with an empty page, or pick a template (use ↑ and ↓ to select)');
+      expect(picks()).toEqual(['tA', 'empty', 'new']);
+      expect([...(drawer()?.querySelectorAll('[data-blok-database-row-pick-label]') ?? [])].map((el) => el.textContent)).toEqual(['Tmpl A', 'Empty', 'New template']);
+    });
+
+    it('adds no undo step for drawing the prompt', async () => {
+      await make(withTemplate());
+      await openRow('r1');
+
+      expect(editor?.history.canUndo()).toBe(false);
+    });
+
+    it('shows no prompt and no picker when Database templates is off', async () => {
+      await make(withTemplate({ pageLayoutTemplates: false }));
+      await openRow('r1');
+
+      expect(prompt()?.textContent).toBe('');
+      expect(picks()).toEqual([]);
+    });
+
+    it('redraws the empty-page prompt on every row when Database templates is applied off, and undo brings it back', async () => {
+      await make(withTemplate());
+      await openRow('r1');
+      await applyTemplatesOff();
+
+      expect(await savedTitle()).toMatchObject({ pageLayoutTemplates: false });
+      expect(picks()).toEqual([]);
+      await openRow('r2');
+
+      expect(prompt()?.textContent).toBe('');
+      editor?.history.undo();
+      await quiet();
+
+      expect(picks()).toEqual(['tA', 'empty', 'new']);
+    });
+
+    it('Reset turns Database templates back on', async () => {
+      await make(doc({}, { pageLayoutTemplates: false }));
+      await openRow('r1');
+      await click(q('[data-blok-database-drawer-customize]'));
+      await click(b('[data-blok-database-layout-more-save]'));
+      await click(item('reset'));
+      await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+      expect(await savedTitle()).not.toHaveProperty('pageLayoutTemplates');
+      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page, or create a template');
+    });
+
+    it('shows the picker on an empty row once the first template is added', async () => {
+      await make(doc());
+      await openRow('r1');
+      await click(prompt()?.querySelector('[data-blok-database-row-create-template]') ?? null);
+      await openRow('r2');
+
+      expect(picks()).toHaveLength(3);
+    });
+
+    it('shows no picker on an empty template row', async () => {
+      const blocks = withTemplate();
+
+      blocks.push({ id: 'tB', type: 'database-row', parent: 'db', data: { properties: { t: 'Blank' }, position: 'b1', template: true } });
+      (blocks[0] as { content: string[] }).content.push('tB');
+      await make(blocks);
+      await click(q('[data-blok-element][data-blok-id="db"] [data-blok-testid="database-toolbar-new-menu"]'));
+      await click(item('template-tB'));
+      await click(item('template-tB-edit'));
+
+      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page');
+      expect(picks()).toEqual([]);
+    });
+
+    it('picks a template: fills the empty values, copies its body, and one undo takes both back', async () => {
+      await make(withTemplate());
+      await openRow('r1');
+      await click(drawer()?.querySelector('[data-blok-database-row-pick="tA"]') ?? null);
+
+      expect(bodyTexts()).toEqual(['From template']);
+      expect(prompt()?.matches('[data-blok-database-row-body]:empty ~ [data-blok-database-row-empty]')).toBe(false);
+      const row = (await editor?.save())?.blocks.find((block) => block.id === 'r1');
+
+      expect(row?.data).toMatchObject({ properties: { t: 'One', due: 'soon' } });
+      editor?.history.undo();
+      await quiet();
+      const undone = await editor?.save();
+
+      expect(undone?.blocks.find((block) => block.id === 'r1')?.data).toMatchObject({ properties: { t: 'One' } });
+      expect((undone?.blocks.find((block) => block.id === 'r1')?.data as { properties: Record<string, unknown> }).properties.due ?? null).toBeNull();
+      expect(undone?.blocks.filter((block) => block.parent === 'r1')).toEqual([]);
+    });
+
+    it('picks with the arrows and Enter from the page title', async () => {
+      await make(withTemplate());
+      await openRow('r1');
+      await titleKey('ArrowDown');
+
+      expect(drawer()?.querySelector('[data-blok-database-row-pick][data-active]')?.getAttribute('data-blok-database-row-pick')).toBe('tA');
+      await titleKey('Enter');
+
+      expect(bodyTexts()).toEqual(['From template']);
+      await titleKey('ArrowUp');
+      await titleKey('Enter');
+      const saved = await editor?.save();
+
+      expect(saved?.blocks.filter((block) => (block.data as { template?: boolean }).template === true)).toHaveLength(1);
+      expect(bodyTexts()).toEqual(['From template']);
+    });
+
+    it('refuses the picker when read-only', async () => {
+      await make(withTemplate(), {}, true);
+      await openRow('r1');
+      await click(drawer()?.querySelector('[data-blok-database-row-pick="tA"]') ?? null);
+
+      expect(bodyTexts()).toEqual([]);
+    });
+  });
+
+  it('saves Full width on Apply, marks the page with it, and Reset drops it', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(b('[data-blok-testid="database-layout-option-layoutFullWidth"]'));
+    await click(b('[data-blok-database-layout-apply]'));
+
+    expect(await savedTitle()).toMatchObject({ pageLayoutFullWidth: true });
+    expect(drawer()?.hasAttribute('data-full-width')).toBe(true);
+    await click(q('[data-blok-database-drawer-customize]'));
+    await click(b('[data-blok-database-layout-more-save]'));
+    await click(item('reset'));
+    await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+    expect(await savedTitle()).not.toHaveProperty('pageLayoutFullWidth');
+    expect(drawer()?.hasAttribute('data-full-width')).toBe(false);
+  });
+
   it('offers no Customize layout on a locked database', async () => {
     await make(doc({}, { databaseLocked: true }));
     await openRow('r1');

@@ -428,6 +428,190 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('empty page prompt', () => {
+    interface Prompt { templates: boolean; list: Array<{ id: string; title: string }> }
+
+    /** A row whose parent database answers the prompt read with `prompt`; undefined = not built yet. */
+    const promptRow = (prompt: Prompt | undefined, data: Partial<DatabaseRowData> = {}): { tool: DatabaseRowTool; el: HTMLElement; calls: Array<[string, unknown]> } => {
+      const calls: Array<[string, unknown]> = [];
+      const parent = {
+        call: (name: string, param: unknown): void => {
+          if (name !== 'rowPagePrompt') calls.push([name, param]);
+          if (name === 'rowPagePrompt' && prompt !== undefined) {
+            (param as { receive: (p: Prompt) => void }).receive(prompt);
+          }
+        },
+      };
+      const options = createRowOptions(data);
+      const api = options.api as unknown as { blocks: Record<string, unknown> };
+
+      api.blocks.getById = vi.fn().mockReturnValue(parent);
+      api.blocks.insertAt = vi.fn().mockReturnValue({ id: 'p1', holder: document.createElement('div') });
+      (options as { block: unknown }).block = { id: 'row', parentId: 'db' };
+      (options.api as unknown as { caret: unknown }).caret = { setToBlock: vi.fn() };
+      const tool = new DatabaseRowTool(options);
+      const el = tool.render();
+
+      tool.rendered();
+
+      return { tool, el, calls };
+    };
+    const empty = (el: HTMLElement): HTMLElement | null => el.querySelector<HTMLElement>('[data-blok-database-row-empty]');
+    const picks = (el: HTMLElement): string[] => [...el.querySelectorAll('[data-blok-database-row-pick]')].map((item) => item.getAttribute('data-blok-database-row-pick') ?? '');
+    const active = (el: HTMLElement): string | null => el.querySelector('[data-blok-database-row-pick][data-active]')?.getAttribute('data-blok-database-row-pick') ?? null;
+
+    it('shows create a template on an empty page when templates are on and none exist', () => {
+      const { el, calls } = promptRow({ templates: true, list: [] });
+      const create = empty(el)?.querySelector<HTMLElement>('[data-blok-database-row-create-template]');
+
+      expect(empty(el)?.textContent).toBe('tools.database.rowBodyEmptyOr tools.database.rowBodyCreateTemplate');
+      expect(create?.tagName).toBe('BUTTON');
+      create?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(calls).toEqual([['addTemplate', undefined]]);
+    });
+
+    it('lists the templates, Empty and New template when templates exist', () => {
+      const { el } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }, { id: 'tB', title: '' }] });
+
+      expect(empty(el)?.querySelector('[data-blok-database-row-empty-text]')?.textContent).toBe('tools.database.rowBodyPickTemplate');
+      expect(picks(el)).toEqual(['tA', 'tB', 'empty', 'new']);
+      expect([...el.querySelectorAll('[data-blok-database-row-pick-label]')].map((item) => item.textContent)).toEqual(['Tmpl A', 'tools.database.templateUntitled', 'tools.database.cellEmpty', 'tools.database.templateNew']);
+    });
+
+    it('applies a template, starts an empty page or makes a new template from the picker', () => {
+      const { el, calls } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+      const pick = (id: string): void => {
+        el.querySelector(`[data-blok-database-row-pick="${id}"]`)?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      };
+
+      pick('tA');
+      pick('new');
+
+      expect(calls).toEqual([['applyTemplate', { rowId: 'row', templateId: 'tA' }], ['addTemplate', undefined]]);
+      pick('empty');
+
+      expect(calls).toHaveLength(2);
+      expect(el.querySelector('[data-blok-database-row-body]')?.children).toHaveLength(1);
+    });
+
+    it('shows no prompt and no picker when templates are off', () => {
+      const { el } = promptRow({ templates: false, list: [{ id: 'tA', title: 'Tmpl A' }] });
+
+      expect(empty(el)?.textContent).toBe('');
+      expect(picks(el)).toEqual([]);
+    });
+
+    it('shows the plain prompt and no picker on a template row', () => {
+      const { el } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] }, { template: true });
+
+      expect(empty(el)?.textContent).toBe('tools.database.rowBodyEmpty');
+      expect(picks(el)).toEqual([]);
+    });
+
+    it('shows the plain prompt while the database is not built yet', () => {
+      const { el } = promptRow(undefined);
+
+      expect(empty(el)?.textContent).toBe('tools.database.rowBodyEmpty');
+    });
+
+    it('redraws from the database on refreshPlaceholder', () => {
+      const prompt: Prompt = { templates: true, list: [] };
+      const { tool, el } = promptRow(prompt);
+
+      prompt.list = [{ id: 'tA', title: 'Tmpl A' }];
+      tool.refreshPlaceholder();
+
+      expect(picks(el)).toEqual(['tA', 'empty', 'new']);
+    });
+
+    it('moves the highlight with the menu keys, wrapping, and Enter picks it', () => {
+      const { tool, el, calls } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+      const move = (step: 1 | -1): boolean[] => {
+        const handled: boolean[] = [];
+
+        tool.movePick({ step, receive: (h) => handled.push(h) });
+
+        return handled;
+      };
+
+      expect(active(el)).toBeNull();
+      expect(move(-1)).toEqual([true]);
+      expect(active(el)).toBe('new');
+      move(1);
+      expect(active(el)).toBe('tA');
+      move(1);
+      expect(active(el)).toBe('empty');
+      move(-1);
+      tool.enter();
+
+      expect(calls).toEqual([['applyTemplate', { rowId: 'row', templateId: 'tA' }]]);
+    });
+
+    it('starts an empty page on Enter with nothing highlighted, and leaves arrows alone without a picker', () => {
+      const { tool, el } = promptRow({ templates: true, list: [] });
+      const handled: boolean[] = [];
+
+      tool.movePick({ step: 1, receive: (h) => handled.push(h) });
+      tool.enter();
+
+      expect(handled).toEqual([false]);
+      expect(el.querySelector('[data-blok-database-row-body]')?.children).toHaveLength(1);
+    });
+
+    it('drops the highlight on redraw', () => {
+      const { tool, el } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+
+      tool.movePick({ step: 1, receive: () => undefined });
+      tool.refreshPlaceholder();
+
+      expect(active(el)).toBeNull();
+    });
+
+    it('leaves the title keys alone once the page has a body, so Enter goes to the body', () => {
+      const { tool, el, calls } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+      const api = (tool as unknown as { api: { blocks: { getChildren: ReturnType<typeof vi.fn> }; caret: { setToBlock: ReturnType<typeof vi.fn> } } }).api;
+      const handled: boolean[] = [];
+
+      api.blocks.getChildren.mockReturnValue([{ id: 'b1' }]);
+      tool.movePick({ step: -1, receive: (h) => handled.push(h) });
+      tool.enter();
+
+      expect(handled).toEqual([false]);
+      expect(active(el)).toBeNull();
+      expect(calls).toEqual([]);
+      expect(api.caret.setToBlock).toHaveBeenCalledWith('b1', 'start');
+    });
+
+    it('clears the highlight after a pick', () => {
+      const { tool, el } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+
+      tool.movePick({ step: 1, receive: () => undefined });
+      tool.enter();
+
+      expect(active(el)).toBeNull();
+    });
+
+    it('owns the picker keyboard, so Blok leaves its arrows and Enter alone', () => {
+      const { el } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+
+      expect(el.querySelector('[data-blok-database-row-picker]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('moves focus through the picker with the arrows when a pick holds focus', () => {
+      const { el } = promptRow({ templates: true, list: [{ id: 'tA', title: 'Tmpl A' }] });
+      const first = el.querySelector<HTMLElement>('[data-blok-database-row-pick="tA"]');
+
+      document.body.appendChild(el);
+      first?.focus();
+      first?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+      expect(document.activeElement?.getAttribute('data-blok-database-row-pick')).toBe('empty');
+      expect(active(el)).toBe('empty');
+      el.remove();
+    });
+  });
+
   describe('public type export', () => {
     it('DatabaseRowData is importable from public types', () => {
       const rowData: PublicDatabaseRowData = { properties: { title: 'Test' }, position: 'a0' };

@@ -148,8 +148,10 @@ export interface CardDrawerOptions {
   rowBody?: {
     attach(rowId: string, host: HTMLElement): boolean;
     detach(rowId: string): void;
-    /** Puts the caret in the body, adding its first paragraph when it is empty. */
+    /** Enter on the title: the highlighted template pick, otherwise the caret in the body (adding its first paragraph when empty). */
     start(rowId: string): void;
+    /** ↑/↓ on the title move through the empty page's template picker. False when there is none. */
+    move?(rowId: string, step: 1 | -1): boolean;
   };
   /** A page cover set (an image URL) or removed (null). */
   onCoverChange?: (rowId: string, cover: string | null) => void;
@@ -499,6 +501,13 @@ export class DatabaseCardDrawer {
       this.autoResizeTitle(titleInput);
     });
     titleInput.addEventListener('keydown', (e) => {
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !e.isComposing && !this.readOnly && this.attachedBodyRowId !== null
+        && this.rowBody?.move?.(this.attachedBodyRowId, e.key === 'ArrowDown' ? 1 : -1) === true) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        return;
+      }
       if (e.key !== 'Enter' || e.isComposing) {
         return;
       }
@@ -1515,6 +1524,8 @@ export class DatabaseCardDrawer {
     const content = this.drawer?.querySelector('[data-blok-database-drawer-content]') ?? null;
     const divider = content?.querySelector<HTMLElement>(':scope > hr') ?? null;
 
+    // The saved layout, not the draft: Full width never changes the builder (research/09 §9).
+    this.drawer?.toggleAttribute('data-full-width', pageLayoutOf(this.schema.find((p) => p.type === 'title')).fullWidth);
     this.syncBuilder();
     const builder = this.builder;
 

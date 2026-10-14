@@ -303,6 +303,28 @@ describe('DatabaseCardDrawer — page layout', () => {
   });
 
   // research/09 §9: closed on every navigation measured; it does not persist.
+  // research/09 §9: the saved Full width widens the full page; a draft does not (the builder canvas never changes).
+  it('marks the page full width from the saved layout only, and follows Apply', () => {
+    const options = createOptions({ schema: schemaWith({ pageLayoutFullWidth: true }) });
+    const drawer = new DatabaseCardDrawer(options);
+    const fullWidth = (): boolean | undefined => q('[data-blok-database-drawer]')?.hasAttribute('data-full-width');
+
+    drawer.open(ROW);
+
+    expect(fullWidth()).toBe(true);
+    drawer.refreshSchema(schemaWith({}));
+
+    expect(fullWidth()).toBe(false);
+    q('[data-blok-database-drawer-customize]')?.click();
+    const toggle = q('[data-blok-testid="database-layout-option-layoutFullWidth"]');
+
+    toggle?.click();
+
+    expect(toggle?.getAttribute('aria-checked')).toBe('true');
+    expect(fullWidth()).toBe(false);
+    drawer.destroy();
+  });
+
   it('starts the details panel closed on every open and on the next row', () => {
     const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
     const drawer = new DatabaseCardDrawer(options);

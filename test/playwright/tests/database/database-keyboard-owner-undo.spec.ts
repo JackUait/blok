@@ -153,6 +153,25 @@ test.describe('undo and redo inside a keyboard-owner subtree', () => {
     });
   }
 
+  test('typed text undoes one step from a board card, not twice through the native undo', async ({ page }) => {
+    await mount(page, doc({ type: 'board', groupBy: 'p-stage' }));
+    const paragraph = page.locator('[data-blok-id="p1"] [contenteditable="true"]');
+
+    await paragraph.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' one');
+    // A fresh pointer gesture closes the step, so ' two' is a second step.
+    await paragraph.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' two');
+    await expect(paragraph).toHaveText('Start one two');
+    await focusOwned(page.locator('[data-blok-database-card][data-row-id="r1"]'));
+
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect(paragraph).toHaveText('Start one');
+  });
+
   test('a checkbox toggled in a list row undoes from that row', async ({ page }) => {
     await mount(page, doc({ type: 'list', visibleProperties: ['p-done'] }));
     const done = page.locator('[data-blok-database-list-row][data-row-id="r1"] [data-blok-database-list-row-property][data-property-id="p-done"]');

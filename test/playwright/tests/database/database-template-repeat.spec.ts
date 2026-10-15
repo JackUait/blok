@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-const blocks: OutputBlockData[] = [
+const blocks = (repeat?: Record<string, unknown>): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
@@ -28,10 +28,10 @@ const blocks: OutputBlockData[] = [
     },
     content: ['tpl'],
   },
-  { id: 'tpl', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Standup' }, template: true } },
+  { id: 'tpl', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Standup' }, template: true, ...(repeat === undefined ? {} : { repeat }) } },
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const mount = async (page: Page, repeat?: Record<string, unknown>): Promise<void> => {
   await page.evaluate(async (input) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -48,7 +48,7 @@ const mount = async (page: Page): Promise<void> => {
       tools: { database: { class: (window as unknown as Record<string, unknown>).BlokDatabase } },
     });
     await window.blokInstance.isReady;
-  }, blocks);
+  }, blocks(repeat));
 };
 
 const repeatOf = async (page: Page): Promise<Record<string, unknown> | undefined> => page.evaluate(async () => {
@@ -63,8 +63,6 @@ const openRepeat = async (page: Page): Promise<void> => {
   await page.getByRole('menuitem', { name: 'Repeat' }).click();
 };
 
-test.use({ timezoneId: 'Europe/Berlin' });
-
 test.beforeAll(ensureBlokBundleBuilt);
 
 test.beforeEach(async ({ page }) => {
@@ -73,20 +71,28 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
 });
 
-test('sets a weekly repeat, its interval, and its start date and time', async ({ page }) => {
+test('a new weekly repeat keeps the viewer\'s zone and closes the whole menu', async ({ page }) => {
   await mount(page);
   await openRepeat(page);
   await expect(page.getByRole('spinbutton')).toHaveCount(0);
   await page.getByRole('menuitemcheckbox', { name: 'Weekly' }).click();
 
-  await expect.poll(() => repeatOf(page)).toMatchObject({ frequency: 'weekly', timeZone: 'Europe/Berlin' });
-  await expect(page.getByRole('menuitem', { name: 'Standup' })).toBeHidden();
+  const zone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
+  await expect.poll(() => repeatOf(page)).toMatchObject({ frequency: 'weekly', timeZone: zone });
+  await expect(page.getByRole('menuitem', { name: 'Standup' })).toBeHidden();
+});
+
+// The page is shared between tests, so its time zone is not ours to set: the
+// schedule carries its own zone, and the fields read and write in that zone.
+test('sets the interval and the start date and time of a schedule', async ({ page }) => {
+  await mount(page, { frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
   await openRepeat(page);
   const every = page.getByRole('spinbutton');
 
   await expect(every).toHaveValue('1');
   await expect(every).toHaveAccessibleName(/^Every.*weeks$/);
+  await expect(page.getByLabel('Time')).toHaveValue('09:30');
   await every.fill('2');
   await expect.poll(() => repeatOf(page)).toMatchObject({ frequency: 'weekly', interval: 2 });
 

@@ -485,6 +485,41 @@ describe('files source', () => {
     expect(readdirSync(dir).sort()).toEqual(['a.json', 'b.json']);
   });
 
+  it('refuses a save whose link was pointed at another file while it waited for the lock', async () => {
+    const x = join(root, 'x.json');
+    const y = join(root, 'y.json');
+
+    writeFileSync(x, '{"blocks":[],"title":"X"}');
+    writeFileSync(y, '{"blocks":[],"title":"Y"}');
+    symlinkSync(x, join(dir, 'a.json'));
+    writeFileSync(join(root, '.x.json.lock'), '');
+    const saving = codeOf(() => createFilesSource(dir).save('a', { blocks: [], title: 'from a' }, { ifVersion: sha(readFileSync(y)) }));
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    rmSync(join(dir, 'a.json'));
+    symlinkSync(y, join(dir, 'a.json'));
+    rmSync(join(root, '.x.json.lock'));
+
+    expect(await saving).toBe('DOCUMENT_CHANGED');
+    expect(readFileSync(x, 'utf-8')).toBe('{"blocks":[],"title":"X"}');
+    expect(readFileSync(y, 'utf-8')).toBe('{"blocks":[],"title":"Y"}');
+  });
+
+  it('refuses a case alias of a link whose target has the alias spelling', async () => {
+    if (!caseInsensitiveDisk()) {
+      return;
+    }
+    const target = join(root, 'Q.json');
+
+    writeFileSync(target, '{"blocks":[],"title":"q"}');
+    symlinkSync(target, join(dir, 'q.json'));
+    const source = createFilesSource(dir);
+
+    expect(await codeOf(() => source.load('Q'))).toBe('INVALID_ARGS');
+    expect(await codeOf(() => source.save('Q', { blocks: [] }, { ifVersion: sha(readFileSync(target)) }))).toBe('INVALID_ARGS');
+    expect(readFileSync(target, 'utf-8')).toBe('{"blocks":[],"title":"q"}');
+  });
+
   it('does not show server paths in read, write or list errors', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

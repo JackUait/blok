@@ -129,7 +129,8 @@ export const createFilesSource = (dir: string): DocumentSource => {
     const name = `${documentId}.json`;
     const real = await nativeRealpath(path).catch(() => null);
 
-    if (real === null || basename(real) === name) {
+    // For a link, realpath names the target, so a matching name proves nothing.
+    if (real === null || (basename(real) === name && (await lstat(path).catch(() => null))?.isSymbolicLink() !== true)) {
       return;
     }
     const names = await readdir(dir).catch((thrown: unknown) => {
@@ -211,6 +212,10 @@ export const createFilesSource = (dir: string): DocumentSource => {
     document: unknown,
     ifVersion: string | null,
   ): Promise<{ version: string }> => {
+    // The target was resolved before the wait; a link pointed elsewhere since then would be checked against one file and written to another.
+    if (sameFileKey(await writeTargetOf(documentId, path)) !== sameFileKey(target)) {
+      throw surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.');
+    }
     const current = await readBytes(documentId, path);
 
     if (current !== null) {

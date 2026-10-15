@@ -1053,7 +1053,10 @@ export class DatabaseCardDrawer {
     } else if (current !== null) {
       current.remove();
     } else if (next !== null) {
-      head.insertBefore(next, head.querySelector('[data-blok-database-drawer-cover]')?.nextSibling ?? head.firstChild);
+      const cover = head.querySelector('[data-blok-database-drawer-cover]');
+
+      // A null sibling appends: the cover may be the head's last child.
+      head.insertBefore(next, cover === null ? head.firstChild : cover.nextSibling);
     }
   }
 

@@ -151,4 +151,20 @@ describe('row page backlinks', () => {
     expect(q('[data-blok-database-backlinks-heading]')).not.toBeNull();
     drawer.destroy();
   });
+
+  it('puts a new count after the cover for a reader whose head holds only the cover', () => {
+    const items: DrawerBacklink[] = [];
+    const drawer = new DatabaseCardDrawer(createOptions({ readOnly: true, backlinks: () => items }));
+
+    drawer.open({ ...ROW, cover: 'https://example.com/cover.png' });
+    items.push(link('r2', 'Bravo'));
+    drawer.refreshBacklinks();
+
+    const head = q('[data-blok-database-drawer-page-head]');
+
+    expect(head?.firstElementChild?.hasAttribute('data-blok-database-drawer-cover')).toBe(true);
+    expect(head?.lastElementChild?.hasAttribute('data-blok-database-drawer-backlinks')).toBe(true);
+    expect(head?.childElementCount).toBe(2);
+    drawer.destroy();
+  });
 });

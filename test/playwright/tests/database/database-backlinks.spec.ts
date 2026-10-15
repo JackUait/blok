@@ -15,6 +15,7 @@ declare global {
     Blok: new (...args: unknown[]) => Blok;
     blokInstance?: Blok;
     hostOpened?: unknown[];
+    hostAsked?: number;
     BlokDatabase: unknown;
     BlokDatabaseRow: unknown;
   }
@@ -55,8 +56,13 @@ const mount = async (page: Page, data: OutputBlockData[], host = false): Promise
     holder.style.cssText = 'max-width:900px;margin:40px auto 0';
     document.body.appendChild(holder);
     window.hostOpened = [];
+    window.hostAsked = 0;
     const backlinks = {
-      list: async () => [{ pageId: 'far', title: 'Roadmap', path: ['Team'], blockId: 'x9' }],
+      list: async () => {
+        window.hostAsked = (window.hostAsked ?? 0) + 1;
+
+        return [{ pageId: 'far', title: 'Roadmap', path: ['Team'], blockId: 'x9' }];
+      },
       open: (link: unknown) => window.hostOpened?.push(link),
     };
 
@@ -185,4 +191,17 @@ test('adds the host\'s pages from other documents and opens them through the hos
   await far.click();
 
   expect(await page.evaluate(() => window.hostOpened)).toEqual([{ pageId: 'far', title: 'Roadmap', path: ['Team'], blockId: 'x9' }]);
+});
+
+test('asks the host again each time the row page opens', async ({ page }) => {
+  await mount(page, blocks({ top: false, bravo: false }), true);
+  await openRow(page, 'r1');
+  await expect(backlinks(page)).toHaveText('1 backlink');
+
+  await page.locator('[data-blok-database-drawer-close]').click();
+  await expect(page.locator('[data-blok-database-drawer]')).toBeHidden();
+  await openRow(page, 'r1');
+
+  await expect.poll(() => page.evaluate(() => window.hostAsked)).toBe(2);
+  await expect(backlinks(page)).toHaveText('1 backlink');
 });

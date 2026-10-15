@@ -206,6 +206,8 @@ export {
   DatabaseTemplates,
   DatabaseSourceRef,
   DatabaseLinkedSources,
+  DatabaseBacklink,
+  DatabaseBacklinks,
   SubItemsDisplay,
   SubItemsFilter,
 } from './tools/database';

@@ -6317,6 +6317,8 @@ export class DatabaseTool implements BlockTool {
         onClose: () => {
           rowLink.closed = this.openedRowLink ?? rowLink.closed;
           this.openedRowLink = null;
+          // The next open asks the host again.
+          this.hostBacklinks = null;
         },
         onCopyViewLink: (rowId, tabId) => this.copyRowLink(rowId, tabId),
         onAddProperty: (type, name) => {

@@ -68,7 +68,48 @@ const blocks = (): OutputBlockData[] => [
   },
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const bulkBlocks = (): OutputBlockData[] => [
+  {
+    id: 'db-1',
+    type: 'database',
+    data: {
+      title: 'Tasks',
+      schema: [
+        TITLE,
+        {
+          id: 'p-bulk', name: 'Bulk', type: 'button', position: 'a1',
+          button: {
+            label: 'Mark seen',
+            buttonActions: [{ id: 'b', type: 'editPages', target: { type: 'database', databaseId: 'db-2' }, edits: [{ id: 'e1', propertyId: 'q-seen', value: true }] }],
+          },
+        },
+      ],
+      views: [view('v1')],
+      activeViewId: 'v1',
+    },
+    content: ['r1'],
+  },
+  row('r1', 'db-1', 0, { 'p-title': 'Alpha' }),
+  {
+    id: 'db-2',
+    type: 'database',
+    data: {
+      title: 'Follow-ups',
+      schema: [
+        { id: 'q-title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'q-open', name: 'Open', type: 'checkbox', position: 'a1' },
+        { id: 'q-seen', name: 'Seen', type: 'checkbox', position: 'a2' },
+      ],
+      views: [view('v2')],
+      activeViewId: 'v2',
+    },
+    content: ['f1', 'f2'],
+  },
+  row('f1', 'db-2', 0, { 'q-title': 'Open one', 'q-open': true, 'q-seen': false }),
+  row('f2', 'db-2', 1, { 'q-title': 'Closed one', 'q-open': false, 'q-seen': false }),
+];
+
+const mount = async (page: Page, input: OutputBlockData[] = blocks()): Promise<void> => {
   await page.evaluate(async (input) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -92,7 +133,7 @@ const mount = async (page: Page): Promise<void> => {
       },
     });
     await window.blokInstance.isReady;
-  }, blocks());
+  }, input);
 };
 
 const saved = async (page: Page): Promise<OutputBlockData[]> => page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
@@ -116,10 +157,13 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
-  await mount(page);
 });
 
 test.describe('button property: Notion actions', () => {
+  test.beforeEach(async ({ page }) => {
+    await mount(page);
+  });
+
   test('lists the actions in Notion\'s order', async ({ page }) => {
     await page.locator('[role="columnheader"][data-property-id="p-act"]').click();
     await page.getByRole('menuitem', { name: 'Edit automation' }).click();
@@ -168,5 +212,33 @@ test.describe('button property: Notion actions', () => {
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     expect((await propertiesOf(page, 'r1'))['p-done']).toBe(false);
     expect(await rowsOf(page, 'db-2')).toEqual([]);
+  });
+});
+
+test.describe('button property: Edit pages in a data source', () => {
+  test('a filter set in the view filter editor is saved and limits the pages the button edits', async ({ page }) => {
+    await mount(page, bulkBlocks());
+    await page.locator('[role="columnheader"][data-property-id="p-bulk"]').click();
+    await page.getByRole('menuitem', { name: 'Edit automation' }).click();
+    await page.getByRole('menuitem', { name: 'Edit pages in…' }).click();
+    await page.getByRole('menuitem', { name: 'All pages' }).click();
+
+    const panel = page.getByTestId('database-button-filter');
+
+    await panel.getByRole('button', { name: 'Add filter' }).click();
+    await panel.getByTestId('database-pick-property-q-open').click();
+
+    await expect.poll(async () => {
+      const schema = ((await saved(page)).find((block) => block.id === 'db-1')?.data as { schema: Array<{ id: string; button?: { buttonActions: Array<{ target?: { filters?: unknown[] } }> } }> }).schema;
+
+      return schema.find((property) => property.id === 'p-bulk')?.button?.buttonActions[0].target?.filters;
+    }).toEqual([expect.objectContaining({ propertyId: 'q-open', operator: 'equals', value: true })]);
+
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.locator('[data-blok-database-table-row][data-row-id="r1"]').getByRole('button', { name: 'Mark seen' }).click();
+
+    await expect.poll(async () => (await propertiesOf(page, 'f1'))['q-seen']).toBe(true);
+    expect((await propertiesOf(page, 'f2'))['q-seen']).toBe(false);
   });
 });

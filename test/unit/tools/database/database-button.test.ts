@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolveDynamicValue, resolveDynamicProperties } from '../../../../src/tools/database/dynamic-values';
 import { askConfirmations, runButtonActions } from '../../../../src/tools/database/database-button';
+import { defaultFilterFor } from '../../../../src/tools/database/database-filter-labels';
 import type { ButtonHost } from '../../../../src/tools/database/database-button';
 import type { ButtonAction, DatabaseRow, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -198,6 +199,24 @@ describe('runButtonActions — Notion actions', () => {
     runButtonActions([
       { id: '1', type: 'editPages', target: { type: 'database', databaseId: 'other' }, edits: [{ id: 'e', propertyId: 'done', value: true }] },
     ], 'r1', h);
+
+    expect(vi.mocked(h.writeValues).mock.calls.map((call) => call[0])).toEqual(['o1', 'o2', 'o3']);
+  });
+
+  it('edits every page while each filter rule still has no value, as the "All pages" label says (research/17 §3c)', () => {
+    const h = host();
+    const schema: PropertyDefinition[] = [
+      ...OTHER_SCHEMA,
+      { id: 'stage', name: 'Stage', type: 'select', position: 'a2', config: { options: [{ id: 's1', label: 'One', position: 'a0' }] } },
+      { id: 'hours', name: 'Hours', type: 'number', position: 'a3' },
+    ];
+
+    vi.mocked(h.source).mockReturnValue({ schema, rows: OTHER_ROWS });
+    runButtonActions([{
+      id: '1', type: 'editPages',
+      target: { type: 'database', databaseId: 'other', filters: [defaultFilterFor(schema[0]), defaultFilterFor(schema[2]), defaultFilterFor(schema[3])] },
+      edits: [{ id: 'e', propertyId: 'done', value: true }],
+    }], 'r1', h);
 
     expect(vi.mocked(h.writeValues).mock.calls.map((call) => call[0])).toEqual(['o1', 'o2', 'o3']);
   });

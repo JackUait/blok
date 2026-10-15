@@ -155,9 +155,76 @@ const PROPERTY_SETTINGS = {
           additionalProperties: false,
           properties: {
             id: { type: 'string' },
-            type: { type: 'string', enum: ['editProperty', 'insertBlocks', 'openPage', 'callback'] },
+            type: {
+              type: 'string',
+              enum: ['editProperty', 'insertBlocks', 'openPage', 'callback', 'addPage', 'editPages', 'showConfirmation', 'defineVariables', 'sendNotification'],
+            },
             propertyId: { type: 'string', description: 'editProperty: the property to set.' },
             value: { description: 'editProperty: the new value. [{ "id": "@me" }] and "@today" are filled in on click.' },
+            databaseId: { type: 'string', description: 'addPage: the database block the page goes into. Absent: this database.' },
+            edits: {
+              type: 'array',
+              description: 'addPage and editPages: the values the page gets, filled in on click like an editProperty value.',
+              items: {
+                type: 'object',
+                required: ['id', 'propertyId', 'value'],
+                additionalProperties: false,
+                properties: { id: { type: 'string' }, propertyId: { type: 'string' }, value: {} },
+              },
+            },
+            target: {
+              type: 'object',
+              description: 'editPages: thisPage, the page an earlier addPage step added, or the pages of a database that match both filter lists (none: every page). Absent: edits nothing.',
+              required: ['type'],
+              additionalProperties: false,
+              properties: {
+                type: { type: 'string', enum: ['thisPage', 'addedPage', 'database'] },
+                stepId: { type: 'string', description: 'addedPage: the addPage action id.' },
+                databaseId: { type: 'string', description: 'database: the database block.' },
+                filters: {
+                  type: 'array',
+                  description: 'Same shape as a view filter.',
+                  items: {
+                    type: 'object',
+                    required: ['propertyId', 'operator', 'value'],
+                    additionalProperties: false,
+                    properties: { id: { type: 'string' }, propertyId: { type: 'string' }, operator: { type: 'string' }, value: {} },
+                  },
+                },
+                // Spelled out, the advanced filter takes the agent tool schema past the OpenAI depth limit (src/agent/render-tools.ts).
+                filterTree: { type: 'object', description: 'Same shape as a view filterTree.' },
+              },
+            },
+            stepId: { type: 'string', description: 'openPage: open the page an earlier addPage action added. Wins over url.' },
+            message: { type: 'string', description: 'showConfirmation: the question. sendNotification: the message.' },
+            confirmLabel: { type: 'string', description: 'showConfirmation: the Continue button text.' },
+            cancelLabel: { type: 'string', description: 'showConfirmation: the Cancel button text. Cancel stops this action and every one after it.' },
+            variables: {
+              type: 'array',
+              description: 'defineVariables: stored only; no action field reads them yet.',
+              items: {
+                type: 'object',
+                required: ['id', 'name'],
+                additionalProperties: false,
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  kind: { type: 'string', enum: ['text', 'formula'] },
+                  value: { type: 'string' },
+                },
+              },
+            },
+            recipients: {
+              type: 'object',
+              description: 'sendNotification: up to 20 people, or the people in a person property of the row. The host sends it (config.buttons.onNotify).',
+              required: ['type'],
+              additionalProperties: false,
+              properties: {
+                type: { type: 'string', enum: ['people', 'property'] },
+                people: { type: 'array', maxItems: 20, items: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' } } } },
+                propertyId: { type: 'string' },
+              },
+            },
             blocks: {
               type: 'array',
               description: 'insertBlocks: added at the end of the row page body.',
@@ -169,7 +236,7 @@ const PROPERTY_SETTINGS = {
               },
             },
             url: { type: 'string', description: 'openPage: a URL. Absent opens the row page.' },
-            name: { type: 'string', description: 'callback: what the host should do.' },
+            name: { type: 'string', description: 'callback: what the host should do. addPage: the new page name; empty shows "Untitled".' },
           },
         },
       },

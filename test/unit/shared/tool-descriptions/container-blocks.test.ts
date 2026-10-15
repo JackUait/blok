@@ -301,6 +301,38 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
   },
   {
     name: 'database',
+    scenario: "a button with Notion's actions: add page, edit pages, confirmation, variables, notification",
+    data: {
+      activeViewId: 'v',
+      schema: [
+        { id: 'name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'owner', name: 'Owner', type: 'person', position: 'a1' },
+        {
+          id: 'btn', name: 'Go', type: 'button', position: 'a2',
+          button: {
+            buttonActions: [
+              { id: 'c', type: 'showConfirmation', message: 'Sure?', confirmLabel: 'Continue', cancelLabel: 'Cancel' },
+              { id: 'p', type: 'addPage', databaseId: 'db2', name: 'Follow-up', edits: [{ id: 'e1', propertyId: 'due', value: '@today' }] },
+              { id: 'e', type: 'editPages', target: { type: 'addedPage', stepId: 'p' }, edits: [{ id: 'e2', propertyId: 'done', value: true }] },
+              {
+                id: 'f', type: 'editPages',
+                target: { type: 'database', databaseId: 'db2', filters: [{ propertyId: 'done', operator: 'is', value: false }], filterTree: { id: 'g', conjunction: 'and', filterRules: [] } },
+                edits: [],
+              },
+              { id: 't', type: 'editPages', target: { type: 'thisPage' } },
+              { id: 'v', type: 'defineVariables', variables: [{ id: 'v1', name: 'Variable 1', kind: 'formula', value: '1 + 1' }] },
+              { id: 'n', type: 'sendNotification', recipients: { type: 'property', propertyId: 'owner' }, message: 'Ready' },
+              { id: 'm', type: 'sendNotification', recipients: { type: 'people', people: [{ id: 'u1' }] } },
+              { id: 'o', type: 'openPage', stepId: 'p' },
+            ],
+          },
+        },
+      ],
+      views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+    },
+  },
+  {
+    name: 'database',
     scenario: 'a linked database pointing at a source block',
     data: {
       activeViewId: 'v',
@@ -681,7 +713,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('92eb60aa719194f6a5133ad9714ea419d01ea00d696db20492cc7e4ccf87881c');
+      .toBe('0ed690e6be85eb5a172ffe229abdad4a0e9b885a4a80e7f313292d2a7ed3effe');
 
     const published: unknown = JSON.parse(snapshot);
 

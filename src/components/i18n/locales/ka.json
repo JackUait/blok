@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "ჩვენების არე: {value}",
   "tools.video.statsUnavailable": "მიუწვდომელია",
   "tools.database.moreViews": "კიდევ {count}…",
+  "tools.database.searchViews": "ხედის ძიება…",
+  "tools.database.newView": "ახალი ხედი",
   "tools.database.cellEmpty": "ცარიელი",
   "tools.database.selectSearchPlaceholder": "ვარიანტის ძიება…",
   "tools.database.selectHint": "აირჩიეთ ვარიანტი ან შექმენით ახალი",

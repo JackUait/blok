@@ -67,6 +67,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
     getElement(): HTMLElement | null {
       return this.container;
     }
+
+    hasNode(node: Node): boolean {
+      return this.container?.contains(node) ?? false;
+    }
   }
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };
@@ -721,6 +725,256 @@ describe('DatabaseTabBar', () => {
 
       const newViewBtn = document.querySelector('[data-blok-database-tab-overflow-new]');
       expect(newViewBtn).not.toBeNull();
+
+      bar.destroy();
+      el.remove();
+    });
+  });
+
+  /** research/13-notion-tabs-extras.md:81-82 — the "N more…" list. */
+  describe('overflow list (Notion parity)', () => {
+    const threeViews = (): DatabaseViewConfig[] => [
+      makeView({ id: 'v1', name: 'Alpha', position: 'a0' }),
+      makeView({ id: 'v2', name: 'Beta', position: 'a1' }),
+      makeView({ id: 'v3', name: 'Gamma', position: 'a2' }),
+    ];
+
+    const open = (
+      options: { api?: API; onEditView?: (viewId: string, anchor: HTMLElement) => void } = {}
+    ): { bar: DatabaseTabBar; el: HTMLElement; list: HTMLElement } => {
+      const bar = new DatabaseTabBar({
+        views: threeViews(),
+        activeViewId: 'v1',
+        onTabClick,
+        onAddView,
+        onRename,
+        onDuplicate,
+        onDelete,
+        onReorder,
+        onEditView: options.onEditView,
+        api: options.api,
+      });
+      const el = bar.render();
+
+      document.body.appendChild(el);
+      bar.handleOverflow(1);
+      (el.querySelector('[data-blok-database-tab-more]') as HTMLElement).click();
+
+      return { bar, el, list: document.querySelector('[data-blok-database-tab-overflow-dropdown]') as HTMLElement };
+    };
+
+    const row = (list: HTMLElement, viewId: string): HTMLElement =>
+      list.querySelector(`[data-blok-database-tab-overflow-item][data-view-id="${viewId}"]`) as HTMLElement;
+
+    const shownRows = (list: HTMLElement): string[] =>
+      Array.from(list.querySelectorAll<HTMLElement>('[data-blok-database-tab-overflow-item]'))
+        .filter((item) => !item.hidden)
+        .map((item) => item.getAttribute('data-view-id') ?? '');
+
+    const openRowMenu = (list: HTMLElement, viewId: string): void => {
+      (row(list, viewId).querySelector('[data-blok-database-tab-overflow-menu]') as HTMLButtonElement).click();
+    };
+
+    it('opens with a focused "Search for a view..." field in the shared field look', () => {
+      const { bar, el, list } = open();
+      const field = list.querySelector('[data-blok-field="search"]');
+      const input = field?.querySelector('input');
+
+      expect(input?.placeholder).toBe('Search for a view...');
+      expect(input).toHaveFocus();
+      expect(list.firstElementChild).toBe(field);
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('localizes the search placeholder and the new-view action', () => {
+      const t = vi.fn((key: string) => `«${key}»`);
+      const { bar, el, list } = open({ api: { i18n: { t, has: () => true } } as unknown as API });
+
+      expect(list.querySelector<HTMLInputElement>('[data-blok-field="search"] input')?.placeholder).toBe('«tools.database.searchViews»');
+      expect(list.querySelector('[data-blok-database-tab-overflow-new]')?.textContent?.trim()).toBe('«tools.database.newView»');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('labels the new-view action "New view" with a plus icon, not a typed "+"', () => {
+      const { bar, el, list } = open();
+      const action = list.querySelector('[data-blok-database-tab-overflow-new]') as HTMLElement;
+
+      expect(action.textContent?.trim()).toBe('New view');
+      expect(action.querySelector('svg')).not.toBeNull();
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('narrows the rows by name as the user types, in tab order, keeping New view', () => {
+      const { bar, el, list } = open();
+      const input = list.querySelector('[data-blok-field="search"] input') as HTMLInputElement;
+
+      input.value = 'gam';
+      input.dispatchEvent(new Event('input'));
+
+      expect(shownRows(list)).toStrictEqual(['v3']);
+      expect((list.querySelector('[data-blok-database-tab-overflow-new]') as HTMLElement).hidden).toBe(false);
+
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+
+      expect(shownRows(list)).toStrictEqual(['v1', 'v2', 'v3']);
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('gives every row a drag handle and a "•••" button, both labelled', () => {
+      const { bar, el, list } = open();
+
+      for (const id of ['v1', 'v2', 'v3']) {
+        const handle = row(list, id).querySelector('button[data-blok-database-tab-overflow-handle]');
+        const menu = row(list, id).querySelector('button[data-blok-database-tab-overflow-menu]');
+
+        expect(handle?.getAttribute('aria-label')).toBe('Drag to reorder');
+        expect(menu?.getAttribute('aria-label')).toBe('More actions');
+      }
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('opens the tab view menu from "•••" without switching view or closing the list', () => {
+      const { bar, el, list } = open({ onEditView: vi.fn() });
+
+      openRowMenu(list, 'v3');
+
+      const menu = document.querySelector('[data-blok-database-tab-context]') as HTMLElement;
+
+      expect(Array.from(menu.children).map((item) => item.textContent)).toStrictEqual(['Edit view', 'Rename', 'Duplicate', 'Delete']);
+      expect(onTabClick).not.toHaveBeenCalled();
+      expect(list.isConnected).toBe(true);
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('keeps the list open while the user clicks inside the row menu', () => {
+      const { bar, el, list } = open();
+
+      openRowMenu(list, 'v2');
+      const item = document.querySelector('[data-blok-database-tab-action="duplicate"]') as HTMLElement;
+
+      item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(list.isConnected).toBe(true);
+      item.click();
+
+      expect(onDuplicate).toHaveBeenCalledWith('v2');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('deletes the row\'s view from its menu', () => {
+      const { bar, el, list } = open();
+
+      openRowMenu(list, 'v2');
+      (document.querySelector('[data-blok-database-tab-action="delete"]') as HTMLElement).click();
+
+      expect(onDelete).toHaveBeenCalledWith('v2');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('renames in the row itself, since the tab is hidden in the overflow', () => {
+      const { bar, el, list } = open();
+
+      openRowMenu(list, 'v3');
+      (document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement).click();
+
+      const input = row(list, 'v3').querySelector('input') as HTMLInputElement;
+
+      expect(input).not.toBeNull();
+      expect(input).toHaveFocus();
+      input.click();
+      expect(onTabClick).not.toHaveBeenCalled();
+
+      input.value = 'Gamma 2';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onRename).toHaveBeenCalledWith('v3', 'Gamma 2');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('anchors Edit view at the "N more…" button when the tab is hidden', () => {
+      const onEditView = vi.fn<(viewId: string, anchor: HTMLElement) => void>();
+      const { bar, el, list } = open({ onEditView });
+
+      openRowMenu(list, 'v3');
+      (document.querySelector('[data-blok-database-tab-action="edit view"]') as HTMLElement).click();
+
+      expect(onEditView).toHaveBeenCalledWith('v3', el.querySelector('[data-blok-database-tab-more]'));
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('peels one layer per Escape: the row menu first, then the list', () => {
+      const { bar, el, list } = open();
+
+      openRowMenu(list, 'v2');
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(document.querySelector('[data-blok-database-tab-context]')).toBeNull();
+      expect(list.isConnected).toBe(true);
+
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(list.isConnected).toBe(false);
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('reorders through the bar\'s onReorder when a row is dragged by its handle', () => {
+      const { bar, el, list } = open();
+
+      ['v1', 'v2', 'v3'].forEach((id, index) => {
+        Object.defineProperty(row(list, id), 'getBoundingClientRect', {
+          value: () => rect({ top: index * 28, bottom: index * 28 + 28, height: 28, width: 290 }),
+          configurable: true,
+        });
+      });
+      const handle = row(list, 'v3').querySelector('[data-blok-database-tab-overflow-handle]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 10, clientY: 70, button: 0, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 5 }));
+
+      expect(onTabClick).not.toHaveBeenCalled();
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      const [viewId, position] = onReorder.mock.calls[0];
+
+      expect(viewId).toBe('v3');
+      expect(position < 'a0').toBe(true);
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('does not reorder when the handle is pressed and released in place', () => {
+      const { bar, el, list } = open();
+      const handle = row(list, 'v2').querySelector('[data-blok-database-tab-overflow-handle]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 10, clientY: 40, button: 0, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 40 }));
+      handle.click();
+
+      expect(onReorder).not.toHaveBeenCalled();
+      expect(onTabClick).not.toHaveBeenCalled();
 
       bar.destroy();
       el.remove();

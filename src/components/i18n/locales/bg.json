@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Област на изгледа: {value}",
   "tools.video.statsUnavailable": "Не е налично",
   "tools.database.moreViews": "Още {count}…",
+  "tools.database.searchViews": "Търсене на изглед…",
+  "tools.database.newView": "Нов изглед",
   "tools.database.cellEmpty": "Празно",
   "tools.database.selectSearchPlaceholder": "Търсене на опция…",
   "tools.database.selectHint": "Изберете опция или създайте нова",

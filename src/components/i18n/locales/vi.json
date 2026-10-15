@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Vùng hiển thị: {value}",
   "tools.video.statsUnavailable": "Không khả dụng",
   "tools.database.moreViews": "Còn lại: {count}…",
+  "tools.database.searchViews": "Tìm một chế độ xem…",
+  "tools.database.newView": "Chế độ xem mới",
   "tools.database.cellEmpty": "Trống",
   "tools.database.selectSearchPlaceholder": "Tìm một tùy chọn…",
   "tools.database.selectHint": "Chọn hoặc tạo một tùy chọn",

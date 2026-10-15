@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
   "tools.video.statsUnavailable": "उपलब्ध नाही",
   "tools.database.moreViews": "आणखी: {count}…",
+  "tools.database.searchViews": "दृश्य शोधा…",
+  "tools.database.newView": "नवीन दृश्य",
   "tools.database.cellEmpty": "रिक्त",
   "tools.database.selectSearchPlaceholder": "पर्याय शोधा…",
   "tools.database.selectHint": "पर्याय निवडा किंवा नवीन तयार करा",

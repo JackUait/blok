@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "كۆرۈنۈش رايونى: {value}",
   "tools.video.statsUnavailable": "ئىشلەتكىلى بولمايدۇ",
   "tools.database.moreViews": "يەنە: {count}…",
+  "tools.database.searchViews": "كۆرۈنۈش ئىزدەش…",
+  "tools.database.newView": "يېڭى كۆرۈنۈش",
   "tools.database.cellEmpty": "بوش",
   "tools.database.selectSearchPlaceholder": "تاللانما ئىزدەش…",
   "tools.database.selectHint": "بىر تاللانما تاللاڭ ياكى يېڭىسىنى قۇرۇڭ",

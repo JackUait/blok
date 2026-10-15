@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "የማሳያ ክልል፦ {value}",
   "tools.video.statsUnavailable": "አይገኝም",
   "tools.database.moreViews": "ተጨማሪ {count}…",
+  "tools.database.searchViews": "ዕይታ ፈልግ…",
+  "tools.database.newView": "አዲስ ዕይታ",
   "tools.database.cellEmpty": "ባዶ",
   "tools.database.selectSearchPlaceholder": "አማራጭ ፈልግ…",
   "tools.database.selectHint": "አማራጭ ይምረጡ ወይም አዲስ ይፍጠሩ",

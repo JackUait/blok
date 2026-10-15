@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "ವೀಕ್ಷಣಾ ಪ್ರದೇಶ: {value}",
   "tools.video.statsUnavailable": "ಲಭ್ಯವಿಲ್ಲ",
   "tools.database.moreViews": "ಇನ್ನಷ್ಟು: {count}…",
+  "tools.database.searchViews": "ವೀಕ್ಷಣೆಯನ್ನು ಹುಡುಕಿ…",
+  "tools.database.newView": "ಹೊಸ ವೀಕ್ಷಣೆ",
   "tools.database.cellEmpty": "ಖಾಲಿ",
   "tools.database.selectSearchPlaceholder": "ಆಯ್ಕೆಯನ್ನು ಹುಡುಕಿ…",
   "tools.database.selectHint": "ಆಯ್ಕೆಯನ್ನು ಆರಿಸಿ ಅಥವಾ ಹೊಸದನ್ನು ರಚಿಸಿ",

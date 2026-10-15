@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Visningsområde: {value}",
   "tools.video.statsUnavailable": "Ikke tilgængelig",
   "tools.database.moreViews": "{count} mere…",
+  "tools.database.searchViews": "Søg efter en visning…",
+  "tools.database.newView": "Ny visning",
   "tools.database.cellEmpty": "Tom",
   "tools.database.selectSearchPlaceholder": "Søg efter en mulighed…",
   "tools.database.selectHint": "Vælg en mulighed, eller opret en",

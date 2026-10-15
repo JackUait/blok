@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Näyttöalue: {value}",
   "tools.video.statsUnavailable": "Ei saatavilla",
   "tools.database.moreViews": "{count} lisää…",
+  "tools.database.searchViews": "Etsi näkymää…",
+  "tools.database.newView": "Uusi näkymä",
   "tools.database.cellEmpty": "Tyhjä",
   "tools.database.selectSearchPlaceholder": "Etsi vaihtoehtoa…",
   "tools.database.selectHint": "Valitse vaihtoehto tai luo uusi",

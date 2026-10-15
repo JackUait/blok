@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "ناوچەی پیشاندان: {value}",
   "tools.video.statsUnavailable": "بەردەست نییە",
   "tools.database.moreViews": "{count}ی تر…",
+  "tools.database.searchViews": "بینینێک بدۆزەرەوە…",
+  "tools.database.newView": "بینینی نوێ",
   "tools.database.cellEmpty": "بەتاڵ",
   "tools.database.selectSearchPlaceholder": "هەڵبژاردنێک بدۆزەرەوە…",
   "tools.database.selectHint": "هەڵبژاردنێک دیاری بکە یان دانەیەکی نوێ دروست بکە",

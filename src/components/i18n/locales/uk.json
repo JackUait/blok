@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Область перегляду: {value}",
   "tools.video.statsUnavailable": "Недоступно",
   "tools.database.moreViews": "Ще: {count}…",
+  "tools.database.searchViews": "Знайти подання…",
+  "tools.database.newView": "Нове подання",
   "tools.database.cellEmpty": "Порожньо",
   "tools.database.selectSearchPlaceholder": "Знайти варіант…",
   "tools.database.selectHint": "Виберіть варіант або створіть новий",

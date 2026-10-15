@@ -5311,6 +5311,8 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-tab-overflow-dropdown] {
+  width: 290px;
+  box-sizing: border-box;
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);
@@ -5379,16 +5381,67 @@ span[data-blok-slash-search] {
   line-height: 1.3;
 }
 
+[data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"] {
+  margin-bottom: var(--blok-space-1);
+}
+
 [data-blok-database-tab-overflow-item] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-2-5);
-  padding: var(--blok-space-1-75) var(--blok-space-2-5);
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1) var(--blok-space-1-5);
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
+  color: var(--blok-text-primary);
   transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-overflow-item][data-dragging] {
+  opacity: 0.5;
+}
+
+[data-blok-database-tab-overflow-item] > span:not([data-blok-database-tab-overflow-name]), [data-blok-database-tab-overflow-new] > span:first-child {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+[data-blok-database-tab-overflow-name] {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-tab-overflow-handle], [data-blok-database-tab-overflow-menu] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  border-radius: var(--blok-radius-control-sm);
+}
+
+[data-blok-database-tab-overflow-handle] {
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-database-tab-overflow-handle] svg, [data-blok-database-tab-overflow-menu] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-tab-overflow-menu]:hover {
+  background-color: var(--blok-database-popover-hover);
 }
 
 [data-blok-database-tab-overflow-item]:hover {
@@ -5400,7 +5453,10 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-tab-overflow-new] {
-  padding: var(--blok-space-1-75) var(--blok-space-2-5);
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1) var(--blok-space-1-5);
   font-size: 14px;
   color: var(--blok-database-tab-text);
   cursor: pointer;

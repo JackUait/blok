@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Eneo la kutazama: {value}",
   "tools.video.statsUnavailable": "Haipatikani",
   "tools.database.moreViews": "Zaidi: {count}…",
+  "tools.database.searchViews": "Tafuta mwonekano…",
+  "tools.database.newView": "Mwonekano mpya",
   "tools.database.cellEmpty": "Tupu",
   "tools.database.selectSearchPlaceholder": "Tafuta chaguo…",
   "tools.database.selectHint": "Teua chaguo au unda jipya",

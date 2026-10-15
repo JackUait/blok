@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Zone d’affichage : {value}",
   "tools.video.statsUnavailable": "Indisponible",
   "tools.database.moreViews": "{count} de plus…",
+  "tools.database.searchViews": "Rechercher une vue…",
+  "tools.database.newView": "Nouvelle vue",
   "tools.database.cellEmpty": "Vide",
   "tools.database.selectSearchPlaceholder": "Rechercher une option…",
   "tools.database.selectHint": "Sélectionnez une option ou créez-en une",

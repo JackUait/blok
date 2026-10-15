@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Skata apgabals: {value}",
   "tools.video.statsUnavailable": "Nav pieejams",
   "tools.database.moreViews": "Vēl {count}…",
+  "tools.database.searchViews": "Meklēt skatu…",
+  "tools.database.newView": "Jauns skats",
   "tools.database.cellEmpty": "Tukšs",
   "tools.database.selectSearchPlaceholder": "Meklēt opciju…",
   "tools.database.selectHint": "Izvēlieties opciju vai izveidojiet jaunu",

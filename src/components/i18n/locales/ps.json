@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "د ښودلو ساحه: {value}",
   "tools.video.statsUnavailable": "شتون نه لري",
   "tools.database.moreViews": "{count} نور…",
+  "tools.database.searchViews": "یو لید ولټوئ…",
+  "tools.database.newView": "نوی لید",
   "tools.database.cellEmpty": "تش",
   "tools.database.selectSearchPlaceholder": "یو اختیار ولټوئ…",
   "tools.database.selectHint": "یو اختیار وټاکئ یا نوی جوړ کړئ",

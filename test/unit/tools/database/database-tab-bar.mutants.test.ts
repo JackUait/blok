@@ -1030,7 +1030,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const items = Array.from(dropdown.querySelectorAll('[data-blok-database-tab-overflow-item]'));
 
       expect(items.map((item) => item.getAttribute('data-view-id'))).toStrictEqual(['v1', 'v2', 'v3']);
-      expect(items.map((item) => item.lastElementChild?.textContent)).toStrictEqual(['One', 'Two', 'Three']);
+      expect(items.map((item) => item.querySelector('[data-blok-database-tab-overflow-name]')?.textContent)).toStrictEqual(['One', 'Two', 'Three']);
     });
 
     it('keeps two views that share a position in the order they arrived', () => {
@@ -1083,10 +1083,11 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { dropdown } = openDropdown(views, 'v1');
       const items = Array.from(dropdown.querySelectorAll('[data-blok-database-tab-overflow-item]'));
 
-      expect(items[0].children.length).toBe(2);
-      expect(items[0].querySelector('svg')).not.toBeNull();
-      expect(items[1].children.length).toBe(2);
-      expect(items[1].children[0].innerHTML).toBe('');
+      // handle, icon slot, name, "•••"
+      expect(items[0].children.length).toBe(4);
+      expect(items[0].children[1].querySelector('svg')).not.toBeNull();
+      expect(items[1].children.length).toBe(4);
+      expect(items[1].children[1].innerHTML).toBe('');
     });
 
     it('switches to a view and closes when its row is clicked', () => {
@@ -1124,7 +1125,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(newBtn.getAttribute('data-blok-database-tab-overflow-new')).toBe('');
       expect(newBtn.getAttribute('role')).toBe('button');
       expect(newBtn.getAttribute('tabindex')).toBe('0');
-      expect(newBtn.textContent).toBe('+ New view');
+      expect(newBtn.textContent?.trim()).toBe('New view');
     });
 
     it('closes the dropdown and opens the add-view popover on the add button', () => {

@@ -162,3 +162,33 @@ describe('dark option pills (research/08:294-296)', () => {
     expect(tokenValues(`--blok-database-option-${color}-text`).slice(1)).toEqual([text, text]);
   });
 });
+
+describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)', () => {
+  const neutral = (value: string): boolean => {
+    const channels = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+
+    if (channels === null) return false;
+    const [r, g, b] = channels.slice(1).map(Number);
+
+    return Math.max(r, g, b) - Math.min(r, g, b) <= 10;
+  };
+
+  it('marks the current view gray with the same primary ink as every other row', () => {
+    const active = ruleBody('[data-blok-database-tab-overflow-item][data-active]');
+    const fill = active.match(/background-color: var\((--[\w-]+)\)/)?.[1];
+
+    expect(fill).toBeDefined();
+    expect(tokenValues(fill ?? '').length).toBeGreaterThan(0);
+    expect(tokenValues(fill ?? '').every(neutral)).toBe(true);
+    expect(active).not.toMatch(/(^|;)\s*color:/);
+    expect(ruleBody('[data-blok-database-tab-overflow-item]')).toContain('color: var(--blok-text-primary)');
+  });
+
+  it('is 290px wide and shows every row\'s handle and "•••" without hover', () => {
+    expect(ruleBody('[data-blok-database-tab-overflow-dropdown]')).toContain('width: 290px');
+    const buttons = ruleBody('[data-blok-database-tab-overflow-handle]');
+
+    expect(buttons).not.toBe('');
+    expect(buttons).not.toContain('opacity: 0');
+  });
+});

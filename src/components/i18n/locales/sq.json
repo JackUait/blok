@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Zona e shfaqjes: {value}",
   "tools.video.statsUnavailable": "Nuk disponohet",
   "tools.database.moreViews": "Të tjera: {count}…",
+  "tools.database.searchViews": "Kërko një pamje…",
+  "tools.database.newView": "Pamje e re",
   "tools.database.cellEmpty": "Bosh",
   "tools.database.selectSearchPlaceholder": "Kërko një opsion…",
   "tools.database.selectHint": "Zgjidh një opsion ose krijo një të ri",

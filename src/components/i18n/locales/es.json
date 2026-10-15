@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Área de visualización: {value}",
   "tools.video.statsUnavailable": "No disponible",
   "tools.database.moreViews": "{count} más…",
+  "tools.database.searchViews": "Busca una vista…",
+  "tools.database.newView": "Nueva vista",
   "tools.database.cellEmpty": "Vacío",
   "tools.database.selectSearchPlaceholder": "Busca una opción…",
   "tools.database.selectHint": "Selecciona una opción o crea una",

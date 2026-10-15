@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Харагдах талбар: {value}",
   "tools.video.statsUnavailable": "Ашиглах боломжгүй",
   "tools.database.moreViews": "Бусад: {count}…",
+  "tools.database.searchViews": "Харагдац хайх…",
+  "tools.database.newView": "Шинэ харагдац",
   "tools.database.cellEmpty": "Хоосон",
   "tools.database.selectSearchPlaceholder": "Сонголт хайх…",
   "tools.database.selectHint": "Сонголт сонгох эсвэл шинээр үүсгэх",

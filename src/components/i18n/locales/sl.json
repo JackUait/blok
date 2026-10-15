@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Območje prikaza: {value}",
   "tools.video.statsUnavailable": "Ni na voljo",
   "tools.database.moreViews": "Še: {count}…",
+  "tools.database.searchViews": "Poiščite pogled…",
+  "tools.database.newView": "Nov pogled",
   "tools.database.cellEmpty": "Prazno",
   "tools.database.selectSearchPlaceholder": "Poiščite možnost…",
   "tools.database.selectHint": "Izberite možnost ali ustvarite novo",

@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Zobrazovací oblast: {value}",
   "tools.video.statsUnavailable": "Není k dispozici",
   "tools.database.moreViews": "Ještě {count}…",
+  "tools.database.searchViews": "Hledat zobrazení…",
+  "tools.database.newView": "Nové zobrazení",
   "tools.database.cellEmpty": "Prázdné",
   "tools.database.selectSearchPlaceholder": "Hledat možnost…",
   "tools.database.selectHint": "Vyberte možnost nebo vytvořte novou",

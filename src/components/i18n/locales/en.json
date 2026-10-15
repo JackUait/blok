@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Viewport: {value}",
   "tools.video.statsUnavailable": "Not available",
   "tools.database.moreViews": "{count} more…",
+  "tools.database.searchViews": "Search for a view...",
+  "tools.database.newView": "New view",
   "tools.database.cellEmpty": "Empty",
   "tools.database.selectSearchPlaceholder": "Search for an option…",
   "tools.database.selectHint": "Select an option or create one",

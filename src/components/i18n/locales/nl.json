@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Weergavegebied: {value}",
   "tools.video.statsUnavailable": "Niet beschikbaar",
   "tools.database.moreViews": "Nog {count}…",
+  "tools.database.searchViews": "Zoek een weergave…",
+  "tools.database.newView": "Nieuwe weergave",
   "tools.database.cellEmpty": "Leeg",
   "tools.database.selectSearchPlaceholder": "Zoek een optie…",
   "tools.database.selectHint": "Selecteer een optie of maak er een",

@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Zobrazená oblasť: {value}",
   "tools.video.statsUnavailable": "Nie je k dispozícii",
   "tools.database.moreViews": "Ďalšie: {count}…",
+  "tools.database.searchViews": "Hľadať zobrazenie…",
+  "tools.database.newView": "Nové zobrazenie",
   "tools.database.cellEmpty": "Prázdne",
   "tools.database.selectSearchPlaceholder": "Hľadať možnosť…",
   "tools.database.selectHint": "Vyberte možnosť alebo vytvorte novú",

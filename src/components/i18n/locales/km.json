@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "ផ្ទៃបង្ហាញ៖ {value}",
   "tools.video.statsUnavailable": "មិនអាចប្រើបាន",
   "tools.database.moreViews": "{count} ទៀត…",
+  "tools.database.searchViews": "ស្វែងរកទិដ្ឋភាព…",
+  "tools.database.newView": "ទិដ្ឋភាពថ្មី",
   "tools.database.cellEmpty": "ទទេ",
   "tools.database.selectSearchPlaceholder": "ស្វែងរកជម្រើស…",
   "tools.database.selectHint": "ជ្រើសរើស ឬបង្កើតជម្រើសមួយ",

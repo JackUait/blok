@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "દૃશ્ય ક્ષેત્ર: {value}",
   "tools.video.statsUnavailable": "ઉપલબ્ધ નથી",
   "tools.database.moreViews": "{count} વધુ…",
+  "tools.database.searchViews": "દૃશ્ય શોધો…",
+  "tools.database.newView": "નવું દૃશ્ય",
   "tools.database.cellEmpty": "ખાલી",
   "tools.database.selectSearchPlaceholder": "વિકલ્પ શોધો…",
   "tools.database.selectHint": "વિકલ્પ પસંદ કરો અથવા નવો બનાવો",

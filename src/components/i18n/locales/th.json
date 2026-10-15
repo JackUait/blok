@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "พื้นที่แสดงผล: {value}",
   "tools.video.statsUnavailable": "ไม่พร้อมใช้งาน",
   "tools.database.moreViews": "เพิ่มเติม: {count}…",
+  "tools.database.searchViews": "ค้นหามุมมอง…",
+  "tools.database.newView": "มุมมองใหม่",
   "tools.database.cellEmpty": "ว่าง",
   "tools.database.selectSearchPlaceholder": "ค้นหาตัวเลือก…",
   "tools.database.selectHint": "เลือกหรือสร้างตัวเลือก",

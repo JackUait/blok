@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Ցուցադրման տիրույթ՝ {value}",
   "tools.video.statsUnavailable": "Հասանելի չէ",
   "tools.database.moreViews": "Եվս {count}…",
+  "tools.database.searchViews": "Որոնել տեսք…",
+  "tools.database.newView": "Նոր տեսք",
   "tools.database.cellEmpty": "Դատարկ",
   "tools.database.selectSearchPlaceholder": "Որոնել տարբերակ…",
   "tools.database.selectHint": "Ընտրեք տարբերակ կամ ստեղծեք նորը",

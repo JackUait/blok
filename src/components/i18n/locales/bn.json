@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "প্রদর্শন ক্ষেত্র: {value}",
   "tools.video.statsUnavailable": "উপলভ্য নয়",
   "tools.database.moreViews": "আরও {count}টি…",
+  "tools.database.searchViews": "একটি ভিউ খুঁজুন…",
+  "tools.database.newView": "নতুন ভিউ",
   "tools.database.cellEmpty": "খালি",
   "tools.database.selectSearchPlaceholder": "একটি বিকল্প খুঁজুন…",
   "tools.database.selectHint": "একটি বিকল্প বেছে নিন বা নতুন তৈরি করুন",

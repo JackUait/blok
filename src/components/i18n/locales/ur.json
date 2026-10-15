@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "منظر کا رقبہ: {value}",
   "tools.video.statsUnavailable": "دستیاب نہیں",
   "tools.database.moreViews": "مزید: {count}…",
+  "tools.database.searchViews": "کوئی ویو تلاش کریں…",
+  "tools.database.newView": "نیا ویو",
   "tools.database.cellEmpty": "خالی",
   "tools.database.selectSearchPlaceholder": "کوئی اختیار تلاش کریں…",
   "tools.database.selectHint": "کوئی اختیار منتخب کریں یا نیا بنائیں",

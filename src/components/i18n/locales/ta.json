@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "காட்சிப் பகுதி: {value}",
   "tools.video.statsUnavailable": "கிடைக்கவில்லை",
   "tools.database.moreViews": "மேலும்: {count}…",
+  "tools.database.searchViews": "ஒரு காட்சியைத் தேடு…",
+  "tools.database.newView": "புதிய காட்சி",
   "tools.database.cellEmpty": "காலி",
   "tools.database.selectSearchPlaceholder": "ஒரு விருப்பத்தைத் தேடு…",
   "tools.database.selectHint": "ஒரு விருப்பத்தைத் தேர்ந்தெடு அல்லது புதியதை உருவாக்கு",

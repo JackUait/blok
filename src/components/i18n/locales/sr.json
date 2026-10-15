@@ -884,6 +884,8 @@
   "tools.video.statsViewport": "Област приказа: {value}",
   "tools.video.statsUnavailable": "Није доступно",
   "tools.database.moreViews": "Још: {count}…",
+  "tools.database.searchViews": "Претражите приказе…",
+  "tools.database.newView": "Нови приказ",
   "tools.database.cellEmpty": "Празно",
   "tools.database.selectSearchPlaceholder": "Претражите опције…",
   "tools.database.selectHint": "Изаберите опцију или направите нову",

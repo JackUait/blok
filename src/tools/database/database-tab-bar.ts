@@ -1,10 +1,11 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs, IconMenu, IconDotsHorizontal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { SearchInput, SearchInputEvent } from '../../components/utils/popover/components/search-input';
 import {
   createPositionTracker,
   positionFixedAnchored,
@@ -88,6 +89,8 @@ export class DatabaseTabBar {
   private overflowDropdownEl: HTMLElement | null = null;
   private overflowPositionTracker: PositionTracker | null = null;
   private boundOverflowClose: ((e: MouseEvent) => void) | null = null;
+  private overflowSearch: SearchInput | null = null;
+  private overflowRowDrag: { viewId: string; row: HTMLElement; moved: boolean } | null = null;
   private moreBtnEl: HTMLElement | null = null;
 
   private isDragging = false;
@@ -316,6 +319,22 @@ export class DatabaseTabBar {
   }
 
   private openContextPopover(tab: HTMLElement, viewId: string): void {
+    this.showViewMenu(tab, viewId, {
+      editAnchor: tab,
+      rename: () => this.startTabRename(tab, viewId),
+      withDisplay: true,
+    });
+  }
+
+  /**
+   * The view menu, shared by a tab and its overflow row. "Display as" is the
+   * bar's setting, not the view's, so the overflow row leaves it out.
+   */
+  private showViewMenu(
+    trigger: HTMLElement,
+    viewId: string,
+    menu: { editAnchor: HTMLElement; rename: () => void; withDisplay: boolean }
+  ): void {
     this.closeContextPopover();
 
     const canDelete = this.options.views.length > 1;
@@ -328,7 +347,7 @@ export class DatabaseTabBar {
       title: t('tools.database.editView', 'Edit view'),
       closeOnActivate: true,
       onActivate: () => {
-        onEditView(viewId, tab);
+        onEditView(viewId, menu.editAnchor);
       },
     }];
     const baseItems = [
@@ -338,9 +357,7 @@ export class DatabaseTabBar {
         name: 'database-view-rename',
         title: t('tools.database.renameView', 'Rename'),
         closeOnActivate: true,
-        onActivate: () => {
-          this.startTabRename(tab, viewId);
-        },
+        onActivate: menu.rename,
       },
       {
         icon: IconCopy,
@@ -351,7 +368,7 @@ export class DatabaseTabBar {
           this.options.onDuplicate(viewId);
         },
       },
-      ...this.displayItems(),
+      ...(menu.withDisplay ? this.displayItems() : []),
     ];
 
     const deleteItems = canDelete
@@ -373,7 +390,7 @@ export class DatabaseTabBar {
     this.contextPopover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
       animateClose: true,
-      trigger: tab,
+      trigger,
       width: 'auto',
       minWidth: '160px',
       autoFocusFirstItem: false,
@@ -431,12 +448,15 @@ export class DatabaseTabBar {
     if (!(nameSpan instanceof HTMLElement)) {
       return;
     }
+    this.startRename(nameSpan, viewId, 'data-blok-database-tab-name');
+  }
 
+  private startRename(nameSpan: HTMLElement, viewId: string, nameAttr: string): void {
     const originalName = nameSpan.textContent ?? '';
 
     const buildNameSpan = (name: string): HTMLElement => {
       const span = document.createElement('span');
-      span.setAttribute('data-blok-database-tab-name', '');
+      span.setAttribute(nameAttr, '');
       span.textContent = name;
       return span;
     };
@@ -518,6 +538,10 @@ export class DatabaseTabBar {
     this.moreBtnEl = moreBtn;
   }
 
+  /**
+   * research/13 §3a: a "Search for a view..." field, every view in tab order
+   * with a drag handle and "•••", then "New view".
+   */
   private openOverflowDropdown(anchor: HTMLElement): void {
     this.closeOverflowDropdown();
 
@@ -528,33 +552,21 @@ export class DatabaseTabBar {
     dropdown.style.zIndex = '1000';
 
     const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const searchItems = orderedViews.map((view) => ({ title: view.name }));
+    const search = new SearchInput({
+      items: searchItems,
+      placeholder: this.t('tools.database.searchViews', 'Search for a view...'),
+    });
+    const rows = orderedViews.map((view) => this.createOverflowRow(view, anchor));
 
-    for (const view of orderedViews) {
-      const item = document.createElement('div');
-      item.setAttribute('data-blok-database-tab-overflow-item', '');
-      item.setAttribute('data-view-id', view.id);
-
-      if (view.id === this.options.activeViewId) {
-        item.setAttribute('data-active', '');
-      }
-
-      const iconSpan = document.createElement('span');
-      iconSpan.innerHTML = VIEW_ICONS[view.type] ?? '';
-      item.appendChild(iconSpan);
-
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = view.name;
-      item.appendChild(nameSpan);
-
-      item.addEventListener('click', () => {
-        if (view.id !== this.options.activeViewId) {
-          this.options.onTabClick(view.id);
-        }
-        this.closeOverflowDropdown();
+    // Matches stay in tab order; the shared search only decides which match.
+    search.on(SearchInputEvent.Search, ({ query, items }) => {
+      rows.forEach((row, index) => {
+        row.toggleAttribute('hidden', query !== '' && !items.includes(searchItems[index]));
       });
-
-      dropdown.appendChild(item);
-    }
+    });
+    dropdown.append(search.getElement(), ...rows);
+    this.overflowSearch = search;
 
     const separator = document.createElement('div');
     separator.setAttribute('data-blok-database-tab-overflow-separator', '');
@@ -568,11 +580,16 @@ export class DatabaseTabBar {
         this.openViewPopover(addBtn);
       }
     };
+    const newViewIcon = document.createElement('span');
+    const newViewLabel = document.createElement('span');
 
     newViewBtn.setAttribute('data-blok-database-tab-overflow-new', '');
     newViewBtn.setAttribute('role', 'button');
     newViewBtn.setAttribute('tabindex', '0');
-    newViewBtn.textContent = '+ New view';
+    newViewIcon.setAttribute('aria-hidden', 'true');
+    newViewIcon.innerHTML = IconPlus;
+    newViewLabel.textContent = this.t('tools.database.newView', 'New view');
+    newViewBtn.append(newViewIcon, newViewLabel);
     newViewBtn.addEventListener('click', openNewViewPopover);
     activateOnEnterOrSpace(newViewBtn, openNewViewPopover);
     dropdown.appendChild(newViewBtn);
@@ -590,19 +607,215 @@ export class DatabaseTabBar {
     this.overflowPositionTracker = createPositionTracker(dropdown, reposition);
     this.overflowPositionTracker.attach();
 
+    // The row menu mounts in <body>, outside the list, but belongs to it.
     this.boundOverflowClose = (e: MouseEvent): void => {
       const target = e.target as HTMLElement;
-      if (!dropdown.contains(target) && !anchor.contains(target)) {
+      if (!dropdown.contains(target) && !anchor.contains(target) && this.contextPopover?.hasNode(target) !== true) {
         this.closeOverflowDropdown();
       }
     };
 
     document.addEventListener('mousedown', this.boundOverflowClose);
+    // Window capture runs before the popover registry's document-capture
+    // Escape, so one press peels only the top layer.
+    window.addEventListener('keydown', this.handleOverflowKeyDown, true);
+    search.focus();
+  }
+
+  private readonly handleOverflowKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || event.isComposing) {
+      return;
+    }
+    const target = event.target;
+
+    // A row rename owns its Escape (it restores the old name).
+    if (target instanceof HTMLInputElement && target.hasAttribute('data-blok-database-tab-rename-input')) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.overflowRowDrag !== null) {
+      this.endOverflowRowDrag();
+      this.overflowDropdownEl?.replaceChildren(...this.overflowRowsInViewOrder());
+      return;
+    }
+    if (this.contextPopover !== null) {
+      this.closeContextPopover();
+      return;
+    }
+    this.closeOverflowDropdown();
+  };
+
+  private createOverflowRow(view: DatabaseViewConfig, anchor: HTMLElement): HTMLElement {
+    const item = document.createElement('div');
+    item.setAttribute('data-blok-database-tab-overflow-item', '');
+    item.setAttribute('data-view-id', view.id);
+
+    if (view.id === this.options.activeViewId) {
+      item.setAttribute('data-active', '');
+    }
+
+    const iconSpan = document.createElement('span');
+    iconSpan.innerHTML = VIEW_ICONS[view.type] ?? '';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.setAttribute('data-blok-database-tab-overflow-name', '');
+    nameSpan.textContent = view.name;
+
+    if (this.readOnly) {
+      item.append(iconSpan, nameSpan);
+    } else {
+      const handle = this.overflowRowButton('data-blok-database-tab-overflow-handle', IconMenu, this.t('tools.database.settingsDragToReorder', 'Drag to reorder'));
+      const menu = this.overflowRowButton('data-blok-database-tab-overflow-menu', IconDotsHorizontal, this.t('tools.database.tableMoreActions', 'More actions'));
+
+      handle.addEventListener('pointerdown', (event) => this.startOverflowRowDrag(event, view.id, item));
+      menu.addEventListener('click', () => {
+        const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(view.id)}"]`);
+
+        this.showViewMenu(menu, view.id, {
+          editAnchor: tab !== null && tab !== undefined && tab.style.display !== 'none' ? tab : anchor,
+          rename: () => {
+            const current = item.querySelector<HTMLElement>('[data-blok-database-tab-overflow-name]');
+
+            if (current !== null) {
+              this.startRename(current, view.id, 'data-blok-database-tab-overflow-name');
+            }
+          },
+          withDisplay: false,
+        });
+      });
+      item.append(handle, iconSpan, nameSpan, menu);
+    }
+
+    item.addEventListener('click', (event) => {
+      // Its buttons and a rename field act on the row; they do not open it.
+      if (event.target instanceof Element && event.target.closest('button, input') !== null) {
+        return;
+      }
+      if (view.id !== this.options.activeViewId) {
+        this.options.onTabClick(view.id);
+      }
+      this.closeOverflowDropdown();
+    });
+
+    return item;
+  }
+
+  private overflowRowButton(attribute: string, icon: string, label: string): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute(attribute, '');
+    button.setAttribute('aria-label', label);
+    button.innerHTML = icon;
+
+    return button;
+  }
+
+  private overflowRowsInViewOrder(): Node[] {
+    const dropdown = this.overflowDropdownEl;
+
+    if (dropdown === null) {
+      return [];
+    }
+    const children = Array.from(dropdown.children);
+    const rows = children.filter((child) => child.hasAttribute('data-blok-database-tab-overflow-item'));
+    const order = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1)).map((view) => view.id);
+
+    rows.sort((a, b) => order.indexOf(a.getAttribute('data-view-id') ?? '') - order.indexOf(b.getAttribute('data-view-id') ?? ''));
+
+    return [children[0], ...rows, ...children.filter((child) => child !== children[0] && !rows.includes(child))];
+  }
+
+  /** The row follows the pointer through the list; the drop commits the order the list shows. */
+  private startOverflowRowDrag(event: PointerEvent, viewId: string, row: HTMLElement): void {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.overflowRowDrag = { viewId, row, moved: false };
+    row.setAttribute('data-dragging', '');
+    document.addEventListener('pointermove', this.handleOverflowRowMove);
+    document.addEventListener('pointerup', this.handleOverflowRowUp);
+    document.addEventListener('pointercancel', this.handleOverflowRowCancel);
+  }
+
+  private readonly handleOverflowRowMove = (event: PointerEvent): void => {
+    const drag = this.overflowRowDrag;
+    const dropdown = this.overflowDropdownEl;
+
+    if (drag === null || dropdown === null) {
+      return;
+    }
+    const others = Array.from(dropdown.querySelectorAll<HTMLElement>('[data-blok-database-tab-overflow-item]'))
+      .filter((row) => row !== drag.row && !row.hidden);
+    const before = others.find((row) => {
+      const rect = row.getBoundingClientRect();
+
+      return event.clientY < (rect.top + rect.bottom) / 2;
+    });
+    const last = others.at(-1);
+
+    if (before !== undefined) {
+      if (drag.row.nextElementSibling !== before) {
+        before.before(drag.row);
+        drag.moved = true;
+      }
+    } else if (last !== undefined && last.nextElementSibling !== drag.row) {
+      last.after(drag.row);
+      drag.moved = true;
+    }
+  };
+
+  private readonly handleOverflowRowUp = (): void => {
+    const drag = this.overflowRowDrag;
+
+    this.endOverflowRowDrag();
+    if (drag === null || !drag.moved) {
+      return;
+    }
+    const neighbour = (element: Element | null, step: 'previousElementSibling' | 'nextElementSibling'): string | null => {
+      const next = element?.[step] ?? null;
+
+      if (next === null || !next.hasAttribute('data-blok-database-tab-overflow-item')) {
+        return null;
+      }
+
+      return next.getAttribute('data-view-id');
+    };
+
+    this.reorderBetween(drag.viewId, neighbour(drag.row, 'previousElementSibling'), neighbour(drag.row, 'nextElementSibling'));
+  };
+
+  private readonly handleOverflowRowCancel = (): void => {
+    this.endOverflowRowDrag();
+    this.overflowDropdownEl?.replaceChildren(...this.overflowRowsInViewOrder());
+  };
+
+  private endOverflowRowDrag(): void {
+    this.overflowRowDrag?.row.removeAttribute('data-dragging');
+    this.overflowRowDrag = null;
+    document.removeEventListener('pointermove', this.handleOverflowRowMove);
+    document.removeEventListener('pointerup', this.handleOverflowRowUp);
+    document.removeEventListener('pointercancel', this.handleOverflowRowCancel);
+  }
+
+  /** Moves a view between two neighbours, the same way for a tab and an overflow row. */
+  private reorderBetween(viewId: string, afterViewId: string | null, beforeViewId: string | null): void {
+    const afterView = afterViewId === null ? undefined : this.views.find((v) => v.id === afterViewId);
+    const beforeView = beforeViewId === null ? undefined : this.views.find((v) => v.id === beforeViewId);
+
+    this.onReorder(viewId, generateKeyBetween(afterView?.position ?? null, beforeView?.position ?? null));
   }
 
   private closeOverflowDropdown(): void {
     this.overflowPositionTracker?.detach();
     this.overflowPositionTracker = null;
+    this.endOverflowRowDrag();
+    this.overflowSearch?.destroy();
+    this.overflowSearch = null;
+    window.removeEventListener('keydown', this.handleOverflowKeyDown, true);
 
     if (this.overflowDropdownEl !== null) {
       this.overflowDropdownEl.remove();
@@ -662,17 +875,10 @@ export class DatabaseTabBar {
       return null;
     })();
 
-    const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
-    const beforeView = beforeViewId !== null ? orderedViews.find((v) => v.id === beforeViewId) : null;
-    const afterView = afterViewId !== null ? orderedViews.find((v) => v.id === afterViewId) : null;
-
-    const newPosition = generateKeyBetween(
-      afterView?.position ?? null,
-      beforeView?.position ?? null
-    );
+    const viewId = this.dragViewId;
 
     this.cleanupDrag();
-    this.onReorder(this.dragViewId, newPosition);
+    this.reorderBetween(viewId, afterViewId, beforeViewId);
   }
 
   private cleanupDrag(): void {

@@ -33,6 +33,7 @@ export const DATABASE_ROW_DATA = {
       properties: {
         frequency: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'yearly'] },
         interval: { type: 'integer', minimum: 1 },
+        timeZone: { type: 'string', description: 'IANA zone whose wall clock the runs keep across DST. Absent: UTC.' },
         start: { type: 'string', description: 'ISO date-time of the first run.' },
         lastRunAt: { type: 'string' },
       },

@@ -1,3 +1,5 @@
+import { addToDate } from './formula/dates';
+import type { DateUnit } from './formula/dates';
 import type { TemplateRepeat } from './types';
 
 /** A row block's data is a page template, not a row. */
@@ -5,26 +7,24 @@ export const isTemplateData = (data: { template?: unknown } | undefined | null):
 
 const DAY_MS = 86_400_000;
 
-/** The k-th run of a schedule, from its start. Months and years keep the day of the month where they can. */
-const occurrence = (start: Date, repeat: TemplateRepeat, k: number): Date => {
-  const step = Math.max(1, Math.floor(repeat.interval ?? 1)) * k;
-  const at = new Date(start.getTime());
+const UNITS: Record<TemplateRepeat['frequency'], DateUnit> = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' };
 
-  switch (repeat.frequency) {
-    case 'daily':
-      return new Date(start.getTime() + step * DAY_MS);
-    case 'weekly':
-      return new Date(start.getTime() + step * 7 * DAY_MS);
-    case 'monthly':
-      at.setUTCMonth(at.getUTCMonth() + step);
-
-      return at;
-    case 'yearly':
-      at.setUTCFullYear(at.getUTCFullYear() + step);
-
-      return at;
+/** The stored zone, or UTC when it is absent or unknown, so every client counts the same runs. */
+export const repeatZone = (repeat: Pick<TemplateRepeat, 'timeZone'>): string => {
+  if (repeat.timeZone === undefined) return 'UTC';
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: repeat.timeZone }).resolvedOptions().timeZone;
+  } catch {
+    return 'UTC';
   }
 };
+
+/**
+ * The k-th run of a schedule, counted from the start (never from the last run),
+ * so the 31st comes back after a short month. Runs keep the wall clock of the zone.
+ */
+const occurrence = (start: Date, repeat: TemplateRepeat, k: number): Date =>
+  new Date(addToDate(start.getTime(), Math.max(1, Math.floor(repeat.interval ?? 1)) * k, UNITS[repeat.frequency], repeatZone(repeat)));
 
 /** How many runs fit between the start and `now`, give or take one. */
 const roughIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {

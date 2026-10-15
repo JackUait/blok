@@ -255,6 +255,8 @@ export interface TemplateRepeat {
   interval?: number;
   /** ISO date-time of the first run. */
   start: string;
+  /** IANA zone whose wall clock the runs keep across DST. Absent: runs are counted in UTC. */
+  timeZone?: string;
   /** ISO date-time the host last made a row from it. */
   lastRunAt?: string;
 }

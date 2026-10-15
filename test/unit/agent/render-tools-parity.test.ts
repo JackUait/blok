@@ -65,15 +65,17 @@ const executeTool = (tools: RenderedTool[]): RenderedTool => {
   return tool;
 };
 
-/** Command names a blok_execute schema accepts, in envelope (enum) or full (oneOf + const) mode. */
+const branchNames = (branch: Schema): string[] => {
+  const name = branch.properties?.name;
+
+  return name?.const === undefined ? [...(name?.enum ?? [])] : [name.const];
+};
+
+/** Command names a blok_execute schema accepts: envelope (enum), full (oneOf + const) or mixed (both). */
 const executeNames = (tool: RenderedTool): string[] => {
   const item = schemaOf(tool).properties?.commands?.items ?? {};
 
-  if (item.oneOf !== undefined) {
-    return item.oneOf.map((branch) => branch.properties?.name?.const ?? '').sort();
-  }
-
-  return [...(item.properties?.name?.enum ?? [])].sort();
+  return (item.oneOf ?? [item]).flatMap(branchNames).sort();
 };
 
 /** Commands both contracts list but with a different `available` (06 R3-1). */
@@ -100,23 +102,30 @@ const withoutDeclaredDifferences = (tool: RenderedTool, skip: Set<string>): Reco
   const item = isRecord(commands.items) ? commands.items : {};
   const keep = (name: unknown): boolean => typeof name !== 'string' || !skip.has(name);
 
+  const dropFromEnum = (branch: Record<string, unknown>): void => {
+    const branchProperties = isRecord(branch.properties) ? branch.properties : {};
+    const name = isRecord(branchProperties.name) ? branchProperties.name : {};
+
+    if (Array.isArray(name.enum)) {
+      name.enum = name.enum.filter(keep);
+    }
+  };
+
   if (Array.isArray(item.oneOf)) {
-    item.oneOf = item.oneOf.filter((branch) => keep(asSchema(branch).properties?.name?.const));
+    const branches: unknown[] = item.oneOf.filter((branch) => keep(asSchema(branch).properties?.name?.const));
+
+    branches.filter(isRecord).forEach(dropFromEnum);
+    item.oneOf = branches;
   }
 
-  const itemProperties = isRecord(item.properties) ? item.properties : {};
-  const name = isRecord(itemProperties.name) ? itemProperties.name : {};
-
-  if (Array.isArray(name.enum)) {
-    name.enum = name.enum.filter(keep);
-  }
+  dropFromEnum(item);
 
   return copy;
 };
 
 const available = (c: AgentContract): string[] => c.commands.filter((x) => x.available).map((x) => x.name).sort();
 
-describe.each(['envelope', 'full'] as const)('renderAgentTools parity (%s)', (schema) => {
+describe.each(['envelope', 'full', 'mixed'] as const)('renderAgentTools parity (%s)', (schema) => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -163,5 +172,15 @@ describe.each(['envelope', 'full'] as const)('renderAgentTools parity (%s)', (sc
 
   it('matches the checked-in snapshot', async () => {
     await expect(JSON.stringify(inApp, null, 2)).toMatchFileSnapshot(`./__snapshots__/render-tools.anthropic.${schema}.json`);
+  });
+});
+
+describe('renderAgentTools mixed size', () => {
+  it('stays a small fraction of the full schema, which is too big to send on every call', () => {
+    const size = (schema: 'full' | 'mixed'): number =>
+      JSON.stringify(executeTool(renderAgentTools(editor, { format: 'anthropic', schema }))).length;
+
+    expect(size('mixed')).toBeLessThan(8_000);
+    expect(size('mixed') * 5).toBeLessThan(size('full'));
   });
 });

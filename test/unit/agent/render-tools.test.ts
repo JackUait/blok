@@ -472,6 +472,68 @@ describe('renderAgentTools full', () => {
   });
 });
 
+describe('renderAgentTools mixed', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const mixedInput = (contract = makeContract()): Schema =>
+    inputOf(byName(renderAgentTools(contract, { format: 'anthropic', schema: 'mixed' }), 'blok_execute'));
+  const branchesOf = (root: Schema): Schema[] =>
+    schemaList(schema(schema(propertiesOf(root).commands).items).oneOf);
+  const nameOf = (branch: Schema): Schema => schema(propertiesOf(branch).name);
+
+  it('gives the common commands their full arguments, so the model need not describe them first', () => {
+    const contract = makeContract([
+      ...makeContract().commands,
+      command('markdown.insert', { type: 'object', properties: { markdown: { type: 'string' } }, required: ['markdown'] }),
+    ]);
+    const full = branchesOf(mixedInput(contract)).filter(branch => nameOf(branch).const !== undefined);
+
+    expect(full.map(branch => nameOf(branch).const)).toEqual(['block.insert', 'markdown.insert']);
+    expect(propertiesOf(full[1]).args).toEqual({ type: 'object', properties: { markdown: { type: 'string' } }, required: ['markdown'] });
+    full.forEach(branch => {
+      expect(branch.additionalProperties).toBe(false);
+      expect(branch.required).toEqual(['name', 'args']);
+    });
+  });
+
+  it('keeps every other available command in one open envelope branch', () => {
+    const envelope = branchesOf(mixedInput()).filter(branch => nameOf(branch).const === undefined);
+
+    expect(envelope).toHaveLength(1);
+    expect(nameOf(envelope[0]).enum).toEqual(['doc.read', 'poll.addOption', 'table.insertRows']);
+    expect(propertiesOf(envelope[0]).args).toEqual({ type: 'object' });
+  });
+
+  it('hoists the definitions a common command refers to', () => {
+    const root = mixedInput(deepFreeze(makeContract()));
+
+    expect(Object.keys(schema(root.$defs))).toEqual(['block_insert__InsertSpec']);
+    expect(JSON.stringify(root)).toContain('#/$defs/block_insert__InsertSpec');
+  });
+
+  it('accepts a known command through exactly one branch', () => {
+    const root = mixedInput();
+
+    expect(validateAgainst(root, { commands: [{ name: 'block.insert', args: { type: 'paragraph' } }] })).toEqual([]);
+    expect(validateAgainst(root, { commands: [{ name: 'poll.addOption', args: { label: 'x' } }] })).toEqual([]);
+    expect(validateAgainst(root, { commands: [{ name: 'block.insert', args: { nope: 1 } }] })).not.toEqual([]);
+    expect(validateAgainst(root, { commands: [{ name: 'page.rename', args: {} }] })).not.toEqual([]);
+  });
+
+  it('tells the model which commands still need blok_describe', () => {
+    const execute = byName(renderAgentTools(makeContract(), { format: 'anthropic', schema: 'mixed' }), 'blok_execute');
+
+    expect(execute.description).toContain('block.insert');
+    expect(execute.description).toContain('blok_describe');
+  });
+});
+
 describe('renderAgentTools MCP', () => {
   beforeEach(() => {
     vi.clearAllMocks();

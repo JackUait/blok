@@ -1,4 +1,4 @@
-import type { AgentContract } from '../../types/tool-manifest';
+import type { AgentContract, CommandEntry } from '../../types/tool-manifest';
 
 import { EXECUTE_OUTPUT_SCHEMA, orError } from './result-schemas';
 import { cloneSchema, hoistDefs, isClosedSchema, measureSchema } from './schema-walk';
@@ -7,7 +7,8 @@ export type AgentToolName = 'blok_read' | 'blok_describe' | 'blok_execute';
 
 export interface RenderOptions {
   format: 'anthropic' | 'openai' | 'mcp';
-  schema?: 'envelope' | 'full';
+  /** 'mixed': full arguments for COMMON_COMMANDS, the envelope for the rest. */
+  schema?: 'envelope' | 'full' | 'mixed';
   strict?: boolean;
   handle?: boolean;
 }
@@ -51,6 +52,9 @@ export class AgentToolsTooLargeError extends Error {
   }
 }
 
+/** The commands most edits use. 'full' for all of them is too big to send on every call. */
+export const COMMON_COMMANDS: readonly string[] = ['block.insert', 'text.replace', 'block.delete', 'markdown.insert'];
+
 const DESCRIPTIONS: Record<AgentToolName, string> = {
   blok_read: 'Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.',
   blok_describe: 'Look up what you can do. With no arguments it lists tools and commands. Pass { tool } or { command } to get the argument schema.',
@@ -90,13 +94,12 @@ const executeInput = (items: Schema): Schema => ({
   required: ['commands'],
 });
 
-const fullExecuteInput = (contract: AgentContract): Schema => {
-  const commands = contract.commands.filter(entry => entry.available);
+const fullBranches = (commands: CommandEntry[], defs: Schema): Schema[] => {
   const safePrefix = (name: string): string => name.replace(/[^A-Za-z0-9_]/g, '_');
   const reserved = new Set(commands.map(entry => safePrefix(entry.name)));
   const used = new Set<string>();
-  const defs: Schema = {};
-  const branches = commands.map(entry => {
+
+  return commands.map(entry => {
     const base = safePrefix(entry.name);
     const candidate = { prefix: base, suffix: 2 };
 
@@ -117,9 +120,33 @@ const fullExecuteInput = (contract: AgentContract): Schema => {
       additionalProperties: false,
     };
   });
-  const root = executeInput({ oneOf: branches });
+};
 
-  return Object.keys(defs).length === 0 ? root : { ...root, $defs: defs };
+const withDefs = (root: Schema, defs: Schema): Schema => (Object.keys(defs).length === 0 ? root : { ...root, $defs: defs });
+
+const fullExecuteInput = (contract: AgentContract): Schema => {
+  const defs: Schema = {};
+  const branches = fullBranches(contract.commands.filter(entry => entry.available), defs);
+
+  return withDefs(executeInput({ oneOf: branches }), defs);
+};
+
+const isCommon = (entry: CommandEntry): boolean => COMMON_COMMANDS.includes(entry.name);
+
+// The envelope branch never lists a common command, so one item matches exactly one branch.
+const mixedExecuteInput = (contract: AgentContract): Schema => {
+  const available = contract.commands.filter(entry => entry.available);
+  const rest = available.filter(entry => !isCommon(entry)).map(entry => entry.name);
+  const defs: Schema = {};
+  const branches = [...fullBranches(available.filter(isCommon), defs), ...(rest.length === 0 ? [] : [envelopeItem(rest)])];
+
+  return withDefs(executeInput({ oneOf: branches }), defs);
+};
+
+const mixedExecuteDescription = (contract: AgentContract): string => {
+  const common = contract.commands.filter(entry => entry.available && isCommon(entry)).map(entry => entry.name);
+
+  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments.`;
 };
 
 const assertWithinLimits = (input: Schema): void => {
@@ -179,11 +206,11 @@ const outputFor = (contract: AgentContract, name: AgentToolName): Schema => {
 };
 
 const wrap = (contract: AgentContract, options: RenderOptions, name: AgentToolName, rawInput: Schema): RenderedTool => {
-  const description = DESCRIPTIONS[name];
+  const description = name === 'blok_execute' && options.schema === 'mixed' ? mixedExecuteDescription(contract) : DESCRIPTIONS[name];
   const input = withHandle(options, rawInput);
   const strict = strictFor(options, name, input);
 
-  if (name === 'blok_execute' && options.schema === 'full') {
+  if (name === 'blok_execute' && options.schema !== undefined && options.schema !== 'envelope') {
     assertWithinLimits(input);
   }
 
@@ -200,7 +227,8 @@ const wrap = (contract: AgentContract, options: RenderOptions, name: AgentToolNa
 
 export function renderAgentTools(contract: AgentContract, options: RenderOptions): RenderedTool[] {
   const names = contract.commands.filter(entry => entry.available).map(entry => entry.name);
-  const execute = options.schema === 'full' ? fullExecuteInput(contract) : executeInput(envelopeItem(names));
+  const inputs = { full: fullExecuteInput, mixed: mixedExecuteInput, envelope: () => executeInput(envelopeItem(names)) };
+  const execute = inputs[options.schema ?? 'envelope'](contract);
 
   return [
     wrap(contract, options, 'blok_read', readInput(contract)),

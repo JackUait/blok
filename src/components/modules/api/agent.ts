@@ -24,6 +24,7 @@ import { createAgentPresence, type AgentPresence } from './agent-presence';
 import { createEditorServices } from './agent-services';
 import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
+import type { RenderOptions } from '../../../agent/render-tools';
 
 export class AgentTurnOpenError extends Error {
   public constructor() {
@@ -35,6 +36,9 @@ export class AgentTurnOpenError extends Error {
 const IDLE: AgentState = { status: 'idle' };
 
 const DEFAULT_MAX_STEPS = 30;
+
+/** The public options, plus the assistant's own 'mixed' schema. */
+type ToolsOptions = Omit<AgentToolsOptions, 'schema'> & { schema?: RenderOptions['schema'] };
 
 const readIdentity = (agent: AgentIdentity | undefined): AgentIdentity => {
   if (typeof agent?.id !== 'string' || agent.id === '' || typeof agent.name !== 'string' || agent.name.trim() === '') {
@@ -147,7 +151,7 @@ export class AgentAPI extends Module {
       maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,
       thinking,
       prepare: async () => {
-        const [tools, system] = await Promise.all([this.tools({ format: 'anthropic' }), this.guidance()]);
+        const [tools, system] = await Promise.all([this.tools({ format: 'anthropic', schema: 'mixed' }), this.guidance()]);
 
         return { tools, system };
       },
@@ -229,9 +233,9 @@ export class AgentAPI extends Module {
     return this.presenceLayer;
   }
 
-  private tools(options: AgentToolsOptions & { format: 'anthropic' }): Promise<AgentAnthropicTool[]>;
-  private tools(options: AgentToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
-  private async tools(options: AgentToolsOptions): Promise<AgentAnthropicTool[] | AgentOpenAITool[]> {
+  private tools(options: ToolsOptions & { format: 'anthropic' }): Promise<AgentAnthropicTool[]>;
+  private tools(options: ToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
+  private async tools(options: ToolsOptions): Promise<AgentAnthropicTool[] | AgentOpenAITool[]> {
     const { renderAgentTools } = await import('../../../agent/render-tools');
     const tools = renderAgentTools(this.source().contract(), options);
 

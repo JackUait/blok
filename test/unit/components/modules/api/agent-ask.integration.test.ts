@@ -122,6 +122,23 @@ describe('editor.agent.ask', () => {
     run.end();
   });
 
+  it('sends the full arguments of the common commands, so a plain insert needs no blok_describe call', async () => {
+    const model = scripted(answer('Nothing to do.'));
+    const editor = await createEditor(model);
+
+    const run = editor.agent.ask('Hello');
+
+    await run.result;
+
+    const execute = model.requests[0].tools.find((tool) => tool.name === 'blok_execute');
+    const schema = JSON.stringify(execute?.input_schema);
+
+    expect(schema).toContain('"const":"markdown.insert"');
+    expect(schema).toContain('"const":"block.insert"');
+    expect(model.requests[0].system).not.toContain('before using a command for the first time');
+    run.end();
+  });
+
   it('keeps the turn open until end(), then goes idle', async () => {
     const editor = await createEditor(scripted(answer('Hi')));
     const run = editor.agent.ask('Say hi');

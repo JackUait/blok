@@ -1563,7 +1563,7 @@
   "tools.database.chartDownloadPng": "Скачать PNG",
   "tools.database.chartDownloadSvg": "Скачать SVG",
   "tools.database.chartCopied": "Диаграмма скопирована в буфер обмена",
-  "tools.database.chartCopyFailed": "Не удалось скопировать диаграмму. Скачайте PNG вместо этого.",
+  "tools.database.chartCopyFailed": "Не удалось скопировать диаграмму. Скачайте PNG.",
   "tools.database.chartDrilldownClose": "Закрыть",
   "tools.database.chartDrilldownCount": "{count} страниц",
   "tools.database.csvExport": "Экспортировать в CSV",

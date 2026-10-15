@@ -1558,7 +1558,7 @@
   "tools.database.chartLegendBottom": "下",
   "tools.database.chartLegendSide": "横",
   "tools.database.chartSaveAs": "グラフを次の形式で保存…",
-  "tools.database.chartBackground": "背景色",
+  "tools.database.chartBackground": "背景",
   "tools.database.chartCopyPng": "PNGとしてコピー",
   "tools.database.chartDownloadPng": "PNGをダウンロード",
   "tools.database.chartDownloadSvg": "SVGをダウンロード",

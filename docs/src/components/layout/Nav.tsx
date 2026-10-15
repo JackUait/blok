@@ -96,11 +96,11 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
       if (nav) nav.style.transform = `translateY(${-offset}px)`;
     };
 
-    const tickingState = { value: false };
+    const tickingState = { value: false, frame: 0 };
     const onScroll = () => {
       if (!tickingState.value) {
         tickingState.value = true;
-        window.requestAnimationFrame(() => {
+        tickingState.frame = window.requestAnimationFrame(() => {
           handleScroll();
           tickingState.value = false;
         });
@@ -108,7 +108,11 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
     };
 
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      // A frame left queued runs after jsdom teardown and fails the docs run.
+      if (tickingState.value) window.cancelAnimationFrame(tickingState.frame);
+    };
   }, [keepExpanded, staticPosition]);
 
   // Opening the menu pulls the bar fully back into view (smoothly), so the

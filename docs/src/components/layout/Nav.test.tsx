@@ -515,4 +515,26 @@ render(
       expect(offsetOf(nav)).toBe(0);
     });
   });
+  it('cancels a pending scroll frame on unmount', () => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let next = 0;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      next += 1;
+      frames.set(next, cb);
+      return next;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => {
+      frames.delete(id);
+    });
+    const { unmount } = render(
+      <TestWrapper>
+        <Nav links={mockLinks} />
+      </TestWrapper>
+    );
+
+    fireEvent.scroll(window);
+    unmount();
+
+    expect([...frames.keys()]).toEqual([]);
+  });
 });

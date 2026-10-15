@@ -115,3 +115,57 @@ export const remapDatabaseRefs = <T>(type: string, data: T, ids: ReadonlyMap<str
 
   return next;
 };
+
+/**
+ * New view ids for each copied database, by its original block id. Personal
+ * view state and `#view-<id>` links are keyed by view id, so a copy that kept
+ * them would share both with the original. View ids repeat across blocks, so
+ * each database gets its own map.
+ * @param copies - each copied block's original id, tool name and data
+ * @param mint - makes a new view id
+ */
+export const mintDatabaseViewIds = (
+  copies: ReadonlyArray<{ id: string; type: string; data: unknown }>,
+  mint: () => string
+): Map<string, Map<string, string>> => new Map(copies
+  .filter((copy) => copy.type === DATABASE && isFields(copy.data))
+  .map((copy) => [copy.id, new Map(fieldsIn((copy.data as Fields).views)
+    .filter((view) => typeof view.id === 'string')
+    .map((view) => [view.id as string, mint()]))]));
+
+/**
+ * `data` with its view ids, active view, automation scopes and dashboard
+ * widgets re-pointed through `viewIds`. Must run before `remapDatabaseRefs`:
+ * a widget's `databaseId` still names the original block here.
+ * @param type - the block's tool name
+ * @param id - the block's original id
+ * @param data - the block's data
+ * @param viewIds - original database block id to old view id to new view id
+ */
+export const remapDatabaseViewIds = <T>(type: string, id: string, data: T, viewIds: ReadonlyMap<string, ReadonlyMap<string, string>>): T => {
+  if (type !== DATABASE || !isFields(data)) return data;
+  const next = cloneRecord(data) as Fields;
+  const own = viewIds.get(id);
+  const refs: Array<BlockRef & { owner: ReadonlyMap<string, string> | undefined }> = [{ holder: next, key: 'activeViewId', owner: own }];
+
+  for (const view of fieldsIn(next.views)) {
+    refs.push({ holder: view, key: 'id', owner: own });
+    const rows = isFields(view.dashboard) ? fieldsIn(view.dashboard.rows) : [];
+
+    for (const widget of rows.flatMap((row) => fieldsIn(row.widgets))) {
+      const owner = typeof widget.databaseId === 'string' && widget.databaseId !== '' ? widget.databaseId : id;
+
+      refs.push({ holder: widget, key: 'viewId', owner: viewIds.get(owner) });
+    }
+  }
+  const automations = isFields(next.automations) ? fieldsIn(next.automations.definitions) : [];
+
+  automations.map((automation) => automation.scope).filter(isFields).forEach((scope) => refs.push({ holder: scope, key: 'viewId', owner: own }));
+  for (const { holder, key, owner } of refs) {
+    const mapped = typeof holder[key] === 'string' ? owner?.get(holder[key]) : undefined;
+
+    if (mapped !== undefined) holder[key] = mapped;
+  }
+
+  return next as T;
+};

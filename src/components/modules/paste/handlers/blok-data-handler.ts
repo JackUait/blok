@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid';
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../../../types/data-formats';
 import type { BlockToolData } from '../../../../../types';
@@ -9,7 +10,7 @@ import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
 import { isPagePointer } from '../../../../shared/page-pointer';
-import { mintDatabaseRefIds, remapDatabaseRefs } from '../../../../shared/database/linked-source';
+import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDatabaseViewIds } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
@@ -410,10 +411,9 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
      */
     const oldIdToEntry = new Map<string, { newBlock: Block; original: BlokClipboardBlock }>();
     // Kept apart from oldIdToNewId: remapIds rewrites every matching string in the data.
-    const copiedRefIds = mintDatabaseRefIds(
-      [...tableCells, ...documentFlow].map(({ sanitized, original }) => ({ id: original.id, type: sanitized.tool, data: sanitized.data })),
-      generateBlockId
-    );
+    const copies = [...tableCells, ...documentFlow].map(({ sanitized, original }) => ({ id: original.id, type: sanitized.tool, data: sanitized.data }));
+    const copiedRefIds = mintDatabaseRefIds(copies, generateBlockId);
+    const copiedViewIds = mintDatabaseViewIds(copies, nanoid);
 
     // Group every insert + setBlockParent call into a single Yjs undo entry
     // so that one Cmd+Z removes the whole pasted set. Without this wrapper
@@ -424,7 +424,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       // owning table block is inserted with its (remapped) content references.
       tableCells.forEach(({ sanitized, original }) => {
         const block = BlockManager.insert({ tool: sanitized.tool,
-          data: sanitized.data,
+          data: remapDatabaseViewIds(sanitized.tool, original.id, sanitized.data, copiedViewIds),
           origin: 'paste' });
 
         oldIdToEntry.set(original.id, { newBlock: block, original });
@@ -443,9 +443,10 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       // pre-inserted to avoid replacing a just-inserted cell paragraph rather
       // than the original empty block.
       documentFlow.forEach(({ sanitized, original }, idx) => {
+        const ownViews = remapDatabaseViewIds(sanitized.tool, original.id, sanitized.data, copiedViewIds);
         const remappedData = oldIdToNewId.size > 0
-          ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
-          : sanitized.data;
+          ? remapIds(ownViews, oldIdToNewId) as typeof sanitized.data
+          : ownViews;
         const id = copiedRefIds.get(original.id);
 
         const block = BlockManager.insert({

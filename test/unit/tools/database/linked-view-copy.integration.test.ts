@@ -436,3 +436,150 @@ describe('pasting a table cell database that a copied database names', () => {
     expect(named).toBe(cellCopy?.id);
   });
 });
+
+/**
+ * Personal view state and `#view-<id>` links are keyed by view id, so a copy
+ * gets its own view ids and every reference to them in its data follows.
+ */
+interface ViewRefs {
+  views: string[];
+  active: unknown;
+  automation: unknown;
+  widgets: Record<string, unknown>;
+}
+
+const viewRefsOf = (blocks: OutputBlockData[], databaseId: string): ViewRefs => {
+  const data = blocks.find((block) => block.id === databaseId)?.data as {
+    views: Array<{ id: string; dashboard?: { rows: Array<{ widgets: Array<{ id: string; viewId: unknown }> }> } }>;
+    activeViewId: unknown;
+    automations?: { definitions: Array<{ scope: { viewId?: unknown } }> };
+  };
+
+  return {
+    views: data.views.map((view) => view.id),
+    active: data.activeViewId,
+    automation: data.automations?.definitions[0]?.scope.viewId,
+    widgets: Object.fromEntries(data.views.flatMap((view) => view.dashboard?.rows ?? [])
+      .flatMap((row) => row.widgets).map((widget) => [widget.id, widget.viewId])),
+  };
+};
+
+const viewsDoc = (): OutputBlockData[] => [
+  { id: 'before', type: 'paragraph', data: { text: 'Before' } },
+  {
+    id: 'db',
+    type: 'database',
+    data: {
+      schema: [TITLE],
+      views: [
+        VIEW,
+        { ...VIEW, id: 'v2', name: 'Second', position: 'a1' },
+        {
+          ...VIEW,
+          id: 'dash',
+          name: 'Dash',
+          type: 'dashboard',
+          position: 'a2',
+          dashboard: { rows: [{ id: 'row', widgets: [
+            { id: 'wown', viewId: 'v', width: 4 },
+            { id: 'wself', viewId: 'v2', databaseId: 'db', width: 4 },
+            { id: 'wext', viewId: 'ev', databaseId: 'ext', width: 4 },
+          ] }] },
+        },
+      ],
+      activeViewId: 'v2',
+      automations: { version: 1, definitions: [{
+        id: 'auto', name: 'Auto', status: 'active', scope: { type: 'view', viewId: 'v2' }, triggerMode: 'any', triggers: [], actions: [],
+      }] },
+    },
+    content: ['r1'],
+  },
+  { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'One' }, position: 'a0' } },
+  { id: 'ext', type: 'database', data: { schema: [TITLE], views: [{ ...VIEW, id: 'ev' }], activeViewId: 'ev' }, content: ['e1'] },
+  { id: 'e1', type: 'database-row', parent: 'ext', data: { properties: { t: 'Ext' }, position: 'a0' } },
+];
+
+const ORIGINAL_VIEW_REFS: ViewRefs = {
+  views: ['v', 'v2', 'dash'],
+  active: 'v2',
+  automation: 'v2',
+  widgets: { wown: 'v', wself: 'v2', wext: 'ev' },
+};
+
+const expectOwnViewIds = (blocks: OutputBlockData[], cutFrom?: string): void => {
+  const copy = copyId(blocks);
+
+  expect(copy).toBeDefined();
+  const refs = viewRefsOf(blocks, copy ?? '');
+  const [v, v2] = refs.views;
+
+  expect(refs.views).toHaveLength(3);
+  expect(refs.views.filter((id) => ORIGINAL_VIEW_REFS.views.includes(id))).toEqual([]);
+  expect(new Set(refs.views).size).toBe(3);
+  expect(refs).toEqual({ views: refs.views, active: v2, automation: v2, widgets: { wown: v, wself: v2, wext: 'ev' } });
+  if (cutFrom === undefined) {
+    expect(viewRefsOf(blocks, 'db')).toEqual(ORIGINAL_VIEW_REFS);
+  }
+};
+
+describe('copying a database gives the copy its own view ids', () => {
+  it('Duplicate: new view ids, and the active view, automation scope and widgets follow them', async () => {
+    const instance = await make(viewsDoc());
+
+    await instance.module.dragManager.duplicateBlocksInPlace(blockOf(instance, 'db'));
+    await quiet();
+
+    expectOwnViewIds((await instance.save()).blocks);
+  });
+
+  it('copy and paste: new view ids, and the references follow them', async () => {
+    const instance = await make(viewsDoc());
+
+    await paste(instance, await copyDatabase(instance, false));
+
+    expectOwnViewIds((await instance.save()).blocks);
+  });
+
+  it('cut and paste: the pasted database gets new view ids too, like its new block id', async () => {
+    const instance = await make(viewsDoc());
+    const written = await copyDatabase(instance, true);
+
+    await instance.blocks.delete(instance.blocks.getBlockIndex('db'));
+    await quiet();
+    await paste(instance, written);
+
+    expectOwnViewIds((await instance.save()).blocks, 'db');
+  });
+
+  it('Duplicate of two databases: a widget naming the other copied database names its copy\'s view', async () => {
+    const instance = await make([
+      { id: 'tg', type: 'toggle', data: { text: 'Group' }, content: ['a', 'b'] },
+      {
+        id: 'a',
+        type: 'database',
+        parent: 'tg',
+        data: {
+          schema: [TITLE],
+          views: [VIEW, { ...VIEW, id: 'dash', name: 'Dash', type: 'dashboard', position: 'a1',
+            dashboard: { rows: [{ id: 'row', widgets: [{ id: 'wb', viewId: 'v', databaseId: 'b', width: 4 }] }] } }],
+          activeViewId: 'v',
+        },
+      },
+      { id: 'b', type: 'database', parent: 'tg', data: { schema: [TITLE], views: [VIEW], activeViewId: 'v' } },
+    ]);
+
+    await instance.module.dragManager.duplicateBlocksInPlace(blockOf(instance, 'tg'));
+    await quiet();
+
+    const blocks = (await instance.save()).blocks;
+    const toggleCopy = blocks.find((block) => block.type === 'toggle' && block.id !== 'tg');
+    const [aCopy, bCopy] = blocks.filter((block) => block.type === 'database' && block.parent === toggleCopy?.id);
+    const bView = viewRefsOf(blocks, bCopy?.id ?? '').views[0];
+    const widget = (aCopy?.data as { views: Array<{ dashboard?: { rows: Array<{ widgets: Array<{ viewId: unknown; databaseId: unknown }> }> } }> })
+      .views[1].dashboard?.rows[0].widgets[0];
+
+    expect(bView).not.toBe('v');
+    expect(widget).toEqual({ id: 'wb', viewId: bView, databaseId: bCopy?.id, width: 4 });
+    expect(viewRefsOf(blocks, 'a').widgets).toEqual({ wb: 'v' });
+  });
+});

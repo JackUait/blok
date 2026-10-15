@@ -2,8 +2,9 @@
  * DragOperations - Handles move and duplicate operations for drag and drop
  */
 
+import { nanoid } from 'nanoid';
 import type { BlockOrigin } from '../../../../../types';
-import { mintDatabaseRefIds, remapDatabaseRefs } from '../../../../shared/database/linked-source';
+import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDatabaseViewIds } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
@@ -293,13 +294,15 @@ export class DragOperations {
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
-    const copiedRefIds = mintDatabaseRefIds(prep.validResults.flatMap(({ saved, toolName, link }, index) =>
+    const copies = prep.validResults.flatMap(({ saved, toolName, link }, index) =>
       link === undefined ? [{ id: prep.sortedBlocks[index].id, type: toolName, data: saved.data }] : []
-    ), generateBlockId);
+    );
+    const copiedRefIds = mintDatabaseRefIds(copies, generateBlockId);
+    const copiedViewIds = mintDatabaseViewIds(copies, nanoid);
     // A block the resolver maps is inserted as what it returned. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
-      const data = link?.data ?? remapDatabaseRefs(toolName, structuredClone(saved.data), copiedRefIds);
+      const data = link?.data ?? remapDatabaseRefs(toolName, remapDatabaseViewIds(toolName, prep.sortedBlocks[index].id, structuredClone(saved.data), copiedViewIds), copiedRefIds);
       const id = copiedRefIds.get(prep.sortedBlocks[index].id);
       const text = data.text;
 

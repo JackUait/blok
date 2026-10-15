@@ -827,6 +827,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352;
     // database.css: the property menu's taken-name error line (research/14 §3).
     const DATABASE_PROPERTY_NAME_CLASH_BYTES = 233;
+    // database.css: page icon boxes in calendar events, timeline bars and feed cards (research/16 §2).
+    const DATABASE_VIEW_PAGE_ICON_BYTES = 1_462;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -911,7 +913,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CELL_BUTTON_KEYBOARD_BYTES
       + DATABASE_COMMENT_BADGE_BYTES
       + DATABASE_VIEW_OVERFLOW_LIST_BYTES
-      + DATABASE_PROPERTY_NAME_CLASH_BYTES;
+      + DATABASE_PROPERTY_NAME_CLASH_BYTES
+      + DATABASE_VIEW_PAGE_ICON_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

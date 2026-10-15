@@ -4859,6 +4859,48 @@ span[data-blok-slash-search] {
   display: inline;
 }
 
+[data-blok-database-calendar-event] > [data-blok-database-page-icon], [data-blok-database-timeline-bar] > [data-blok-database-page-icon], [data-blok-database-feed-head] > [data-blok-database-page-icon] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-blok-database-calendar-event] > [data-blok-database-page-icon] {
+  inline-size: 14px;
+  block-size: 14px;
+  margin-inline-end: calc(var(--blok-space-0-75) - var(--blok-space-1-5));
+  font-size: 12.6px;
+  line-height: 12.6px;
+}
+
+[data-blok-database-timeline-bar] > [data-blok-database-page-icon] {
+  inline-size: 20px;
+  block-size: 20px;
+  margin-inline-end: 0;
+  font-size: 18px;
+  line-height: 18px;
+}
+
+[data-blok-database-feed-head] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-feed-head] > [data-blok-database-page-icon] {
+  inline-size: 26px;
+  block-size: 26px;
+  margin-inline-end: 0;
+  font-size: 23.4px;
+  line-height: 23.4px;
+}
+
+[data-blok-database-page-icon] + [data-blok-database-calendar-event-title], [data-blok-database-page-icon] + [data-blok-database-timeline-bar-title] {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
 [data-blok-database-drawer-page-head] {
   flex-wrap: wrap;
   gap: var(--blok-space-1);

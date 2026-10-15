@@ -1,5 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { pageIconElement, showsPageIcon } from './page-icon';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from './types';
 import { renderCellValue } from './cells';
 import type { CellContext } from './cells';
@@ -386,6 +387,11 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     titleEl.textContent = typeof title === 'string' ? title : '';
     if (titleEl.textContent === '') {
       titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
+    }
+    const icon = row !== undefined && showsPageIcon(this.options.view) ? pageIconElement(row) : null;
+
+    if (icon !== null) {
+      el.appendChild(icon);
     }
     el.appendChild(titleEl);
 

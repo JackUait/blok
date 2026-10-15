@@ -1,5 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { pageIconElement, showsPageIcon } from './page-icon';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
 import { createOptionPill, renderCellValue } from './cells';
@@ -663,6 +664,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     titleEl.textContent = title;
     if (title === '') {
       titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
+    }
+    const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
+
+    if (icon !== null) {
+      el.appendChild(icon);
     }
     el.appendChild(titleEl);
 

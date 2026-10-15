@@ -5,6 +5,7 @@ import { renderCellValue } from './cells';
 import { formatDateDisplay } from './cells/date-format';
 import type { BodyBlock } from './row-body';
 import { resolveViewProperties } from './view-settings';
+import { pageIconElement, showsPageIcon } from './page-icon';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 
@@ -131,7 +132,18 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     titleEl.textContent = text;
     if (text === '') titleEl.setAttribute('data-placeholder', this.options.i18n.t('tools.database.cardTitlePlaceholder'));
     titleEl.addEventListener('click', () => this.options.handlers.openRow(row.id));
-    card.appendChild(titleEl);
+    const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
+
+    if (icon === null) {
+      card.appendChild(titleEl);
+    } else {
+      // The card stacks its children, so the icon needs a row to sit beside the title.
+      const head = document.createElement('div');
+
+      head.setAttribute('data-blok-database-feed-head', '');
+      head.append(icon, titleEl);
+      card.appendChild(head);
+    }
 
     const properties = this.createProperties(row);
 

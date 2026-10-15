@@ -3406,7 +3406,6 @@ export class DatabaseTool implements BlockTool {
     if (svg !== '' && blob !== null) downloadBlob(blob, `${this.fileBase()}.${format}`);
   }
 
-  /** A file picker for one CSV or TSV file. */
   /**
    * Hands the clipboard a promise of the PNG instead of awaiting it first:
    * Safari drops the click's user activation across an await and refuses the write.
@@ -3434,6 +3433,7 @@ export class DatabaseTool implements BlockTool {
     );
   }
 
+  /** A file picker for one CSV or TSV file. */
   private pickCsvFile(then: (file: { name: string; text: string }) => void): void {
     const input = document.createElement('input');
 

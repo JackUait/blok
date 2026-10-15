@@ -299,6 +299,23 @@ test.describe('gallery', () => {
       await expect.poll(() => selectedIds(page)).toEqual(['r3']);
     });
 
+    test('editor shortcuts still work while the gallery holds focus: undo a rename, open find', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('Renamed');
+      await page.keyboard.press('Enter');
+      await expect(card(page, 'r1').locator('[data-blok-database-gallery-title]')).toHaveText('Renamed');
+      await expect(page.locator('[data-blok-database-gallery]')).toBeFocused();
+
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect(card(page, 'r1').locator('[data-blok-database-gallery-title]')).toHaveText('Launch');
+
+      await page.keyboard.press('ControlOrMeta+f');
+      await expect(page.getByTestId('find-bar')).toBeVisible();
+    });
+
     test('Space on a selected card does nothing', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await clickBlank(page);

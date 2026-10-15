@@ -3082,6 +3082,7 @@ export class DatabaseTool implements BlockTool {
             this.updateRowTitleBlock(rowId, titlePropId, title);
             this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
           },
+          history: (redo: boolean) => (redo ? this.api.history.redo() : this.api.history.undo()),
         }),
       },
     });

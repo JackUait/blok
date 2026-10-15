@@ -701,7 +701,8 @@ test.describe('row page layout', () => {
       await expect(forward).toBeVisible();
       await expect(back).toBeHidden();
       expect(await forward.evaluate((el) => getComputedStyle(el).transition)).toContain('opacity 0.1s ease-in');
-      expect(await forward.boundingBox()).toMatchObject({ width: 32, height: 32 });
+      // Layout size: boundingBox follows ancestor transforms and once read 32.0000038.
+      expect(await forward.evaluate((el) => [(el as HTMLElement).offsetWidth, (el as HTMLElement).offsetHeight])).toEqual([32, 32]);
       await forward.click();
       await near(400);
       expect(await pins(page).evaluate((el) => Math.sign(el.scrollLeft))).toBe(dir === 'rtl' ? -1 : 1);

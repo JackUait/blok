@@ -93,6 +93,9 @@ export interface AgentModelMessage {
   content: string | AgentModelContentBlock[];
 }
 
+/** How hard the model thinks. Each adapter maps it to its provider's setting. */
+export type AgentThinkingLevel = 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 /** What the assistant sends to the host's model function. */
 export interface AgentModelRequest {
   system: string;
@@ -100,6 +103,8 @@ export interface AgentModelRequest {
   tools: AgentAnthropicTool[];
   /** Aborted when the user stops the run. Pass it to the HTTP request. */
   signal: AbortSignal;
+  /** The level for this prompt. Absent when the host set no `thinking` and the caller passed none. */
+  thinking?: AgentThinkingLevel;
 }
 
 /** The model's reply. An Anthropic `Message` fits this shape as is. */
@@ -118,11 +123,19 @@ export interface AgentAssistantConfig {
   name?: string;
   /** Model calls allowed per prompt. Default 30. */
   maxSteps?: number;
+  /** Levels the user may pick in the Ask AI bar. The picker shows only with two or more. */
+  thinking?: {
+    levels: AgentThinkingLevel[];
+    /** Must be one of `levels`. Default: the first level. */
+    default?: AgentThinkingLevel;
+  };
 }
 
 export interface AgentAskOptions {
   /** Tell the model where the caret is and what text is selected. Default true. */
   context?: boolean;
+  /** Thinking level for this run. Overrides the Ask AI bar's pick. */
+  thinking?: AgentThinkingLevel;
 }
 
 export interface AgentRunResult {

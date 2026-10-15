@@ -113,4 +113,31 @@ describe('geminiModel', () => {
     expect(await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }]))
       .toEqual({ status: 'failed', reply: '', error: 'Gemini: API key not valid' });
   });
+  it('fails the run on a stop reason it does not handle', async () => {
+    const missing = fakeSend({ candidates: [{ finishReason: 'MISSING_THOUGHT_SIGNATURE' }] });
+    const tooMany = fakeSend({ candidates: [{ content: { role: 'model', parts: [] }, finishReason: 'TOO_MANY_TOOL_CALLS' }] });
+
+    expect(await run(geminiModel({ model: 'm', send: missing.send }), [{ role: 'user', content: 'a' }]))
+      .toEqual({ status: 'failed', reply: '', error: 'Gemini stopped: MISSING_THOUGHT_SIGNATURE' });
+    expect(await run(geminiModel({ model: 'm', send: tooMany.send }), [{ role: 'user', content: 'a' }]))
+      .toEqual({ status: 'failed', reply: '', error: 'Gemini stopped: TOO_MANY_TOOL_CALLS' });
+  });
+
+  it('drops another adapter\'s provider blocks and rebuilds the turn', async () => {
+    const { send, bodies } = fakeSend(candidate([{ text: 'ok' }]));
+
+    await run(geminiModel({ model: 'm', send }), [
+      { role: 'user', content: 'a' },
+      { role: 'assistant', content: [
+        { type: 'text', text: 'b' },
+        { type: 'tool_use', id: 'u1', name: 'blok_read', input: { x: 1 } },
+        { type: 'provider', format: 'anthropic', raw: [{ type: 'thinking', signature: 'foreign' }] },
+      ] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'u1', content: '{"ok":true}' }] },
+    ]);
+    expect((bodies[0].contents as unknown[]).slice(1)).toEqual([
+      { role: 'model', parts: [{ text: 'b' }, { functionCall: { id: 'u1', name: 'blok_read', args: { x: 1 } } }] },
+      { role: 'user', parts: [{ functionResponse: { id: 'u1', name: 'blok_read', response: { result: '{"ok":true}' } } }] },
+    ]);
+  });
 });

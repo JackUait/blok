@@ -16,6 +16,8 @@ const LEVELS: Record<AgentThinkingLevel, Body> = {
 };
 
 const REFUSALS = new Set(['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII']);
+// Any other stop reason (MISSING_THOUGHT_SIGNATURE, TOO_MANY_TOOL_CALLS, ...) fails the run instead of passing as done.
+const HANDLED = new Set<unknown>([undefined, 'STOP', 'FINISH_REASON_UNSPECIFIED', 'MAX_TOKENS', 'MALFORMED_FUNCTION_CALL', ...REFUSALS]);
 
 const userContent = (message: AgentModelMessage, names: Map<string, string>): unknown => ({
   role: 'user',
@@ -82,6 +84,9 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   });
   const finish = first.finishReason;
 
+  if (!HANDLED.has(finish)) {
+    throw new Error(`Gemini stopped: ${String(finish)}`);
+  }
   if (finish === 'MALFORMED_FUNCTION_CALL') {
     content.push({ type: 'text', text: 'The model wrote a tool call that was not valid.' });
   }

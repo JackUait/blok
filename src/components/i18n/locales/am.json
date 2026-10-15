@@ -281,6 +281,7 @@
   "tools.database.editCardTitle": "ርዕስ አርትዕ",
   "tools.database.cardMenuLabel": "የካርድ አማራጮች",
   "tools.database.cardTitlePlaceholder": "ባዶ ገጽ",
+  "tools.database.cardNamePlaceholder": "ስም ይተይቡ…",
   "tools.database.columnTitlePlaceholder": "አምድ",
   "tools.database.noValueGroup": "{property} የለም",
   "tools.database.removeSortingTitle": "ደርደራውን ማስወገድ ይፈልጋሉ?",

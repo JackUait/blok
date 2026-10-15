@@ -276,6 +276,7 @@
   "tools.database.newPage": "新页面",
   "tools.database.addColumn": "添加列",
   "tools.database.cardTitlePlaceholder": "空白页面",
+  "tools.database.cardNamePlaceholder": "输入名称…",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.noValueGroup": "无{property}",
   "tools.database.removeSortingTitle": "要移除排序吗？",

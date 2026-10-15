@@ -276,6 +276,7 @@
   "tools.database.newPage": "صفحة جديدة",
   "tools.database.addColumn": "إضافة عمود",
   "tools.database.cardTitlePlaceholder": "صفحة فارغة",
+  "tools.database.cardNamePlaceholder": "اكتب اسمًا…",
   "tools.database.columnTitlePlaceholder": "عمود",
   "tools.database.noValueGroup": "بدون {property}",
   "tools.database.removeSortingTitle": "هل تريد إزالة الفرز؟",

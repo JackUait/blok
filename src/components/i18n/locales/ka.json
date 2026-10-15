@@ -276,6 +276,7 @@
   "tools.database.newPage": "ახალი გვერდი",
   "tools.database.addColumn": "სვეტის დამატება",
   "tools.database.cardTitlePlaceholder": "ცარიელი გვერდი",
+  "tools.database.cardNamePlaceholder": "აკრიფეთ სახელი…",
   "tools.database.columnTitlePlaceholder": "სვეტი",
   "tools.database.noValueGroup": "{property} არ არის",
   "tools.database.removeSortingTitle": "გსურთ დალაგების მოხსნა?",

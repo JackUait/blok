@@ -276,6 +276,7 @@
   "tools.database.newPage": "नया पृष्ठ",
   "tools.database.addColumn": "कॉलम जोड़ें",
   "tools.database.cardTitlePlaceholder": "खाली पेज",
+  "tools.database.cardNamePlaceholder": "कोई नाम लिखें…",
   "tools.database.columnTitlePlaceholder": "कॉलम",
   "tools.database.noValueGroup": "{property} नहीं",
   "tools.database.removeSortingTitle": "क्या आप क्रमबद्धता हटाना चाहते हैं?",

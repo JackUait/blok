@@ -3075,6 +3075,14 @@ export class DatabaseTool implements BlockTool {
           this.galleryShown.set(viewConfig.id, shown);
           this.rerenderView({ keepDrawer: true });
         },
+        ...(this.readOnly ? {} : {
+          selectRows: (rowIds: string[]) => this.selectRows(rowIds),
+          pickRow: (rowId: string, range: boolean, order: string[]) => this.pickRow(rowId, range, order),
+          renameRow: (rowId: string, title: string) => {
+            this.updateRowTitleBlock(rowId, titlePropId, title);
+            this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
+          },
+        }),
       },
     });
 
@@ -6817,9 +6825,11 @@ export class DatabaseTool implements BlockTool {
   // Board and list selection
   // ---------------------------------------------------------------------------
 
-  /** Cmd/Ctrl-click toggles a row; Shift-click adds every row from the last pick (view order). */
-  private pickRow(rowId: string, range: boolean): void {
-    const order = this.viewRowOrder().map((row) => row.id);
+  /**
+   * Cmd/Ctrl-click toggles a row; Shift-click adds every row from the last pick.
+   * `order` is the rows as drawn; without it, the view order, which ignores "Load more" cuts.
+   */
+  private pickRow(rowId: string, range: boolean, order = this.viewRowOrder().map((row) => row.id)): void {
     const from = this.selectionAnchor === null ? -1 : order.indexOf(this.selectionAnchor);
     const to = order.indexOf(rowId);
 
@@ -6831,6 +6841,14 @@ export class DatabaseTool implements BlockTool {
       this.rowSelection.add(rowId);
     }
     this.selectionAnchor = rowId;
+    this.paintRowSelection();
+  }
+
+  /** Gallery arrow keys: the selection becomes exactly these rows. */
+  private selectRows(rowIds: string[]): void {
+    this.rowSelection.clear();
+    rowIds.forEach((id) => this.rowSelection.add(id));
+    this.selectionAnchor = rowIds.at(-1) ?? null;
     this.paintRowSelection();
   }
 
@@ -6855,7 +6873,7 @@ export class DatabaseTool implements BlockTool {
     const present = new Set(this.model.getOrderedRows().map((row) => row.id));
 
     [...this.rowSelection].filter((id) => !present.has(id)).forEach((id) => this.rowSelection.delete(id));
-    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card], [data-blok-database-timeline-row], [data-blok-database-timeline-table-row]').forEach((el) => {
+    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-timeline-row], [data-blok-database-timeline-table-row]').forEach((el) => {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
       el.toggleAttribute('data-blok-database-row-selected', selected);

@@ -276,6 +276,7 @@
   "tools.database.newPage": "Νέα σελίδα",
   "tools.database.addColumn": "Προσθήκη στήλης",
   "tools.database.cardTitlePlaceholder": "Κενή σελίδα",
+  "tools.database.cardNamePlaceholder": "Πληκτρολογήστε ένα όνομα…",
   "tools.database.columnTitlePlaceholder": "Στήλη",
   "tools.database.noValueGroup": "Χωρίς {property}",
   "tools.database.removeSortingTitle": "Θέλετε να καταργήσετε την ταξινόμηση;",

@@ -276,6 +276,7 @@
   "tools.database.newPage": "نئون صفحو",
   "tools.database.addColumn": "ڪالم شامل ڪريو",
   "tools.database.cardTitlePlaceholder": "خالي صفحو",
+  "tools.database.cardNamePlaceholder": "ڪو نالو لکو…",
   "tools.database.columnTitlePlaceholder": "ڪالم",
   "tools.database.noValueGroup": "{property} ناهي",
   "tools.database.removeSortingTitle": "ڇا توهان ترتيب هٽائڻ چاهيو ٿا؟",

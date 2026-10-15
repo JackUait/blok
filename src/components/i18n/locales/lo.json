@@ -292,6 +292,7 @@
   "tools.database.editCardTitle": "ແກ້ໄຂຫົວຂໍ້",
   "tools.database.cardMenuLabel": "ຕົວເລືອກບັດ",
   "tools.database.cardTitlePlaceholder": "ໜ້າເປົ່າ",
+  "tools.database.cardNamePlaceholder": "ພິມຊື່…",
   "tools.database.columnTitlePlaceholder": "ຖັນ",
   "tools.database.noValueGroup": "ບໍ່ມີ {property}",
   "tools.database.removeSortingTitle": "ທ່ານຕ້ອງການເອົາການຈັດຮຽງອອກບໍ່?",

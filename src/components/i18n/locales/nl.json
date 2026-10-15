@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nieuwe pagina",
   "tools.database.addColumn": "Kolom toevoegen",
   "tools.database.cardTitlePlaceholder": "Lege pagina",
+  "tools.database.cardNamePlaceholder": "Typ een naam…",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.noValueGroup": "Geen {property}",
   "tools.database.removeSortingTitle": "Wil je de sortering verwijderen?",

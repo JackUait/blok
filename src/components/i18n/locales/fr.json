@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nouvelle page",
   "tools.database.addColumn": "Ajouter une colonne",
   "tools.database.cardTitlePlaceholder": "Page vide",
+  "tools.database.cardNamePlaceholder": "Saisissez un nom…",
   "tools.database.columnTitlePlaceholder": "Colonne",
   "tools.database.noValueGroup": "Sans {property}",
   "tools.database.removeSortingTitle": "Voulez-vous supprimer le tri ?",

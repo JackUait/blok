@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nová stránka",
   "tools.database.addColumn": "Pridať stĺpec",
   "tools.database.cardTitlePlaceholder": "Prázdna stránka",
+  "tools.database.cardNamePlaceholder": "Zadajte názov…",
   "tools.database.columnTitlePlaceholder": "Stĺpec",
   "tools.database.noValueGroup": "Bez {property}",
   "tools.database.removeSortingTitle": "Chcete odstrániť zoradenie?",

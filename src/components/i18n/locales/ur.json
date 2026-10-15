@@ -276,6 +276,7 @@
   "tools.database.newPage": "نیا صفحہ",
   "tools.database.addColumn": "کالم شامل کریں",
   "tools.database.cardTitlePlaceholder": "خالی صفحہ",
+  "tools.database.cardNamePlaceholder": "کوئی نام ٹائپ کریں…",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.noValueGroup": "کوئی {property} نہیں",
   "tools.database.removeSortingTitle": "کیا آپ ترتیب ہٹانا چاہیں گے؟",

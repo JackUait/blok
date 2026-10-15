@@ -276,6 +276,7 @@
   "tools.database.newPage": "އައު ޞަފްޙާ",
   "tools.database.addColumn": "ކޮލަމެއް އިތުރުކުރޭ",
   "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
+  "tools.database.cardNamePlaceholder": "ނަމެއް ލިޔޭ…",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",
   "tools.database.noValueGroup": "{property} ނެތް",
   "tools.database.removeSortingTitle": "ތަރުތީބު ނަގާލަން ބޭނުންތޯ؟",

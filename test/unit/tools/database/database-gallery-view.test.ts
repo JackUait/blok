@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { DatabaseGalleryView } from '../../../../src/tools/database/database-gallery-view';
 import type { GalleryGroup, GalleryHandlers, DatabaseGalleryViewOptions } from '../../../../src/tools/database/database-gallery-view';
@@ -424,6 +425,235 @@ describe('DatabaseGalleryView', () => {
       pointer('pointerup', document, 250, 10);
 
       expect(handlers.moveRow).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('keyboard selection (research/16 §3a)', () => {
+    const SELECTED = 'data-blok-database-row-selected';
+    const four = (): GalleryGroup[] => single([row('r1', 'Alpha'), row('r2', 'Bravo'), row('r3', 'Charlie'), row('r4', 'Delta')]);
+    const selected = (root: HTMLElement): string[] =>
+      cards(root).filter((card) => card.hasAttribute(SELECTED)).map((card) => card.getAttribute('data-row-id') ?? '');
+
+    /** Stands in for the tool: paints what it is told to select, as paintRowSelection does. */
+    const mountSelectable = (overrides: Partial<DatabaseGalleryViewOptions> = {}): Mounted & {
+      selectRows: Mock<(rowIds: string[]) => void>;
+      pickRow: Mock<(rowId: string, range: boolean, order: string[]) => void>;
+      renameRow: Mock<(rowId: string, title: string) => void>;
+    } => {
+      const paint = (ids: string[]): void => {
+        document.querySelectorAll<HTMLElement>('[data-blok-database-gallery-card]').forEach((card) => {
+          card.toggleAttribute(SELECTED, ids.includes(card.getAttribute('data-row-id') ?? ''));
+        });
+      };
+      const selectRows = vi.fn<(rowIds: string[]) => void>(paint);
+      const pickRow = vi.fn<(rowId: string, range: boolean, order: string[]) => void>();
+      const renameRow = vi.fn<(rowId: string, title: string) => void>();
+      const handlers: GalleryHandlers = { ...makeHandlers(), selectRows, pickRow, renameRow };
+      const view = new DatabaseGalleryView({
+        readOnly: false, i18n, view: galleryView(), schema, groups: four(), grouped: false, titlePropertyId: 'p-title',
+        bodyOf: () => [], handlers, ...overrides,
+      });
+      const root = view.createView();
+
+      document.body.appendChild(root);
+
+      return { root, view, handlers, selectRows, pickRow, renameRow };
+    };
+
+    const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+
+      target.dispatchEvent(event);
+
+      return event;
+    };
+
+    it('owns its keyboard and can hold focus without being a tab stop', () => {
+      const { root } = mountSelectable();
+
+      expect(root.getAttribute('tabindex')).toBe('-1');
+      expect(root.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('ArrowDown with nothing selected selects the first card; Down and Up move one card in reading order and stop at the ends', () => {
+      const { root } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      expect(selected(root)).toEqual(['r1']);
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      expect(selected(root)).toEqual(['r3']);
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      expect(selected(root)).toEqual(['r4']);
+      press(root, 'ArrowUp');
+      expect(selected(root)).toEqual(['r3']);
+      press(root, 'ArrowUp');
+      press(root, 'ArrowUp');
+      press(root, 'ArrowUp');
+      expect(selected(root)).toEqual(['r1']);
+    });
+
+    it('any arrow with nothing selected selects the first card', () => {
+      for (const key of ['ArrowRight', 'ArrowLeft', 'ArrowUp']) {
+        const { root, view } = mountSelectable();
+
+        press(root, key);
+        expect(selected(root)).toEqual(['r1']);
+        view.destroy();
+        root.remove();
+      }
+    });
+
+    it('moves across groups in reading order', () => {
+      const groups: GalleryGroup[] = [
+        { key: 'a', label: 'A', rows: [row('r1', 'Alpha')], total: 1 },
+        { key: 'b', label: 'B', rows: [row('r2', 'Bravo')], total: 1 },
+      ];
+      const { root } = mountSelectable({ groups, grouped: true });
+
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      expect(selected(root)).toEqual(['r2']);
+    });
+
+    it('Left and Right do nothing while a card is selected', () => {
+      const { root, selectRows } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      selectRows.mockClear();
+
+      const right = press(root, 'ArrowRight');
+      const left = press(root, 'ArrowLeft');
+
+      expect(selectRows).not.toHaveBeenCalled();
+      expect(selected(root)).toEqual(['r2']);
+      expect(right.defaultPrevented && left.defaultPrevented).toBe(true);
+    });
+
+    it('Shift+Up and Shift+Down extend the selection from where it started', () => {
+      const { root } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      press(root, 'ArrowUp', { shiftKey: true });
+      expect(selected(root)).toEqual(['r2', 'r3']);
+      press(root, 'ArrowUp', { shiftKey: true });
+      expect(selected(root)).toEqual(['r1', 'r2', 'r3']);
+      press(root, 'ArrowDown', { shiftKey: true });
+      expect(selected(root)).toEqual(['r2', 'r3']);
+    });
+
+    it('resumes from the card selected last once the selection is cleared', () => {
+      const { root, selectRows } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      selectRows([]);
+      press(root, 'ArrowDown');
+
+      expect(selected(root)).toEqual(['r2']);
+    });
+
+    it('Enter on the selected card renames its title in place, without opening it', () => {
+      const { root, handlers, renameRow } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      press(root, 'Enter');
+
+      const input = cards(root)[1].querySelector<HTMLInputElement>('input');
+
+      expect(input).not.toBeNull();
+      expect(input).toHaveFocus();
+      expect(input?.value).toBe('Bravo');
+      expect(input?.placeholder).toBe('tools.database.cardNamePlaceholder');
+      expect(selected(root)).toEqual([]);
+      expect(handlers.openRow).not.toHaveBeenCalled();
+
+      if (input === null) return;
+      input.value = 'Bravo 2';
+      press(input, 'Enter');
+
+      expect(renameRow).toHaveBeenCalledWith('r2', 'Bravo 2');
+      expect(selected(root)).toEqual(['r2']);
+      expect(root).toHaveFocus();
+    });
+
+    it('Escape from the rename keeps the title and selects the card again', () => {
+      const { root, renameRow } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(root, 'Enter');
+
+      const input = cards(root)[0].querySelector<HTMLInputElement>('input');
+
+      if (input === null) throw new Error('no rename input');
+      input.value = 'Changed';
+      press(input, 'Escape');
+
+      expect(renameRow).not.toHaveBeenCalled();
+      expect(titles(root)[0]).toBe('Alpha');
+      expect(selected(root)).toEqual(['r1']);
+      expect(root).toHaveFocus();
+    });
+
+    it('Enter does nothing while the card name is hidden', () => {
+      const { root, handlers } = mountSelectable({ view: galleryView({ properties: [{ id: 'p-title', visible: false }] }) });
+
+      press(root, 'ArrowDown');
+      press(root, 'Enter');
+
+      expect(root.querySelector('input')).toBeNull();
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('Space on a card does nothing, and still presses "+ New"', () => {
+      const { root, handlers } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(cards(root)[0], ' ');
+      press(root, ' ');
+      expect(handlers.openRow).not.toHaveBeenCalled();
+      expect(root.querySelector('input')).toBeNull();
+
+      const add = root.querySelector<HTMLElement>('[data-blok-database-gallery-new]');
+
+      if (add === null) throw new Error('no + New');
+      press(add, ' ');
+      expect(handlers.addRow).toHaveBeenCalledWith(null);
+    });
+
+    it('Enter on a Tab-focused card still opens it', () => {
+      const { root, handlers } = mountSelectable();
+
+      cards(root)[2].focus();
+      press(cards(root)[2], 'Enter');
+
+      expect(handlers.openRow).toHaveBeenCalledWith('r3');
+    });
+
+    it('Cmd, Ctrl or Shift-click picks the card instead of opening it, in the order the cards are drawn', () => {
+      const { root, handlers, pickRow } = mountSelectable();
+
+      cards(root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+      cards(root)[3].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+      cards(root)[0].dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
+
+      expect(handlers.openRow).not.toHaveBeenCalled();
+      expect(pickRow).toHaveBeenNthCalledWith(1, 'r2', false, ['r1', 'r2', 'r3', 'r4']);
+      expect(pickRow).toHaveBeenNthCalledWith(2, 'r4', true, ['r1', 'r2', 'r3', 'r4']);
+      expect(pickRow).toHaveBeenNthCalledWith(3, 'r1', false, ['r1', 'r2', 'r3', 'r4']);
+    });
+
+    it('selects nothing without the selection handlers (read-only)', () => {
+      const { root } = mount({ readOnly: true });
+
+      press(root, 'ArrowDown');
+      expect(selected(root)).toEqual([]);
+      expect(root.hasAttribute('tabindex')).toBe(false);
     });
   });
 

@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nova stran",
   "tools.database.addColumn": "Dodaj stolpec",
   "tools.database.cardTitlePlaceholder": "Prazna stran",
+  "tools.database.cardNamePlaceholder": "Vnesite ime…",
   "tools.database.columnTitlePlaceholder": "Stolpec",
   "tools.database.noValueGroup": "Brez {property}",
   "tools.database.removeSortingTitle": "Ali želite odstraniti razvrščanje?",

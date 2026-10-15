@@ -276,6 +276,7 @@
   "tools.database.newPage": "Új oldal",
   "tools.database.addColumn": "Oszlop hozzáadása",
   "tools.database.cardTitlePlaceholder": "Üres oldal",
+  "tools.database.cardNamePlaceholder": "Adjon meg egy nevet…",
   "tools.database.columnTitlePlaceholder": "Oszlop",
   "tools.database.noValueGroup": "Nincs {property}",
   "tools.database.removeSortingTitle": "Szeretné eltávolítani a rendezést?",

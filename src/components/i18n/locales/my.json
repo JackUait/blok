@@ -292,6 +292,7 @@
   "tools.database.editCardTitle": "ခေါင်းစဉ်ပြင်ရန်",
   "tools.database.cardMenuLabel": "ကတ်ရွေးချယ်စရာများ",
   "tools.database.cardTitlePlaceholder": "စာမျက်နှာအလွတ်",
+  "tools.database.cardNamePlaceholder": "အမည်တစ်ခု ရိုက်ပါ…",
   "tools.database.columnTitlePlaceholder": "ကော်လံ",
   "tools.database.noValueGroup": "{property} မရှိ",
   "tools.database.removeSortingTitle": "စီထားမှုကို ဖယ်ရှားလိုပါသလား။",

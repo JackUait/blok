@@ -503,6 +503,7 @@ export type BlokMessageKey =
   | 'tools.database.calendarWeek'
   | 'tools.database.cardDetails'
   | 'tools.database.cardMenuLabel'
+  | 'tools.database.cardNamePlaceholder'
   | 'tools.database.cardTitle'
   | 'tools.database.cardTitlePlaceholder'
   | 'tools.database.cellEmpty'

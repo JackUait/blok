@@ -276,6 +276,7 @@
   "tools.database.newPage": "Pagină nouă",
   "tools.database.addColumn": "Adaugă coloană",
   "tools.database.cardTitlePlaceholder": "Pagină goală",
+  "tools.database.cardNamePlaceholder": "Tastați un nume…",
   "tools.database.columnTitlePlaceholder": "Coloană",
   "tools.database.noValueGroup": "Fără {property}",
   "tools.database.removeSortingTitle": "Doriți să eliminați sortarea?",

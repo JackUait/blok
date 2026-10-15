@@ -12,6 +12,7 @@ import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus } from '../../components/icons';
+import { startInlineRename } from '../../components/utils/inline-rename';
 
 export interface GalleryGroup {
   /** '' when the gallery is not grouped. */
@@ -41,6 +42,11 @@ export interface GalleryHandlers {
   addRow: (groupKey: string | null) => void;
   moveRow: (result: GalleryDropResult) => void;
   loadMore: (groupKey: string) => void;
+  /** Replaces the selection. Without it the arrows select nothing (read-only). */
+  selectRows?: (rowIds: string[]) => void;
+  /** Cmd/Ctrl-click toggles, Shift-click adds a range of `order`, the cards as drawn. */
+  pickRow?: (rowId: string, range: boolean, order: string[]) => void;
+  renameRow?: (rowId: string, title: string) => void;
 }
 
 export interface DatabaseGalleryViewOptions {
@@ -61,6 +67,10 @@ export interface DatabaseGalleryViewOptions {
   /** The host's comment counts. Without it there are no badges. */
   commentBadges?: CommentBadges;
 }
+
+/** Painted by the tool's paintRowSelection; the gallery reads the selection back from it. */
+const SELECTED_ATTR = 'data-blok-database-row-selected';
+const CARD = '[data-blok-database-gallery-card]';
 
 /** Pixels the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 4;
@@ -86,6 +96,11 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   private drag: DragState | null = null;
   /** Set after a drag so the click that ends it does not open the card. */
   private suppressClick = false;
+  private root: HTMLElement | null = null;
+  /** The card the arrows move from; kept after the selection clears so the next arrow resumes there (research/16 §3a runs C, D). */
+  private cursor: string | null = null;
+  /** Where a Shift+arrow range starts. */
+  private anchor: string | null = null;
 
   constructor(options: DatabaseGalleryViewOptions) {
     this.options = options;
@@ -97,6 +112,10 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
   private t(key: string): string {
     return this.options.i18n.t(key);
+  }
+
+  private get selectable(): boolean {
+    return !this.options.readOnly && this.options.handlers?.selectRows !== undefined;
   }
 
   private get canDrag(): boolean {
@@ -113,6 +132,12 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     }
     root.setAttribute('role', 'region');
     root.setAttribute('aria-label', this.t('tools.database.galleryLabel'));
+    if (this.selectable) {
+      // Holds focus while the arrows select cards; core keys stand down inside.
+      root.tabIndex = -1;
+      root.setAttribute('data-blok-keyboard-owner', '');
+    }
+    this.root = root;
 
     for (const group of this.options.groups) {
       root.appendChild(this.options.grouped ? this.createGroup(group) : this.createGrid(group));
@@ -212,18 +237,13 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     }
 
     if (titleShown) {
-      const titleEl = document.createElement('div');
-
-      titleEl.setAttribute('data-blok-database-gallery-title', '');
-      titleEl.textContent = title;
-      if (title === '') {
-        titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
-      }
       const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
 
       if (icon !== null) {
         card.appendChild(icon);
       }
+      const titleEl = this.createTitle(title);
+
       card.appendChild(titleEl);
       if (this.options.commentBadges !== undefined) syncCommentBadge(titleEl, row.id, this.options.commentBadges, this.options.i18n);
     }
@@ -261,6 +281,18 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     }
 
     return card;
+  }
+
+  private createTitle(title: string): HTMLElement {
+    const titleEl = document.createElement('div');
+
+    titleEl.setAttribute('data-blok-database-gallery-title', '');
+    titleEl.textContent = title;
+    if (title === '') {
+      titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
+    }
+
+    return titleEl;
   }
 
   private createNewCard(groupKey: string): HTMLElement {
@@ -317,23 +349,164 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     const card = target.closest('[data-blok-database-gallery-card]');
     const rowId = card?.getAttribute('data-row-id');
 
-    if (rowId !== null && rowId !== undefined) {
-      handlers.openRow(rowId);
+    if (rowId === null || rowId === undefined) {
+      return;
+    }
+    if ((event.metaKey || event.ctrlKey || event.shiftKey) && !this.options.readOnly && handlers.pickRow !== undefined) {
+      handlers.pickRow(rowId, event.shiftKey, this.cardIds());
+      this.cursor = rowId;
+      this.anchor = rowId;
+
+      return;
+    }
+    handlers.openRow(rowId);
+  };
+
+  /**
+   * Notion's gallery keys (research/16 §3a): arrows select cards with focus
+   * on the root, Enter on a selected card renames it, Enter on a Tab-focused
+   * card opens it. Escape is the tool's selection handler.
+   */
+  private readonly onKeyDown = (event: KeyboardEvent): void => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+
+    if (target === null || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+    if (target.matches('[data-blok-database-gallery-new]') && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      target.click();
+
+      return;
+    }
+    if (target.matches(CARD) && (event.key === 'Enter' || event.key === ' ')) {
+      // Space does nothing on a card, as on Notion's card link.
+      event.preventDefault();
+      if (event.key === 'Enter') target.click();
+
+      return;
+    }
+    if (!this.selectable || this.root === null) {
+      return;
+    }
+    if (event.key.startsWith('Arrow')) {
+      event.preventDefault();
+      this.moveSelection(event.key, event.shiftKey);
+    } else if (event.key === 'Enter' && target === this.root) {
+      const selected = this.selectedIds();
+      const rowId = this.cursor !== null && selected.includes(this.cursor) ? this.cursor : selected[0];
+
+      if (rowId !== undefined && this.startRename(rowId)) {
+        event.preventDefault();
+      }
     }
   };
 
-  private readonly onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
+  private cardIds(): string[] {
+    return [...(this.root?.querySelectorAll<HTMLElement>(CARD) ?? [])].map((card) => card.getAttribute('data-row-id') ?? '');
+  }
+
+  private selectedIds(): string[] {
+    return [...(this.root?.querySelectorAll<HTMLElement>(`${CARD}[${SELECTED_ATTR}]`) ?? [])].map((card) => card.getAttribute('data-row-id') ?? '');
+  }
+
+  /** Down/Up go one card in reading order and stop at the ends; Left/Right only start a selection. */
+  private moveSelection(key: string, extend: boolean): void {
+    const order = this.cardIds();
+    const selected = this.selectedIds();
+
+    if (order.length === 0) {
+      return;
+    }
+    if (selected.length === 0) {
+      const focused = document.activeElement instanceof HTMLElement && document.activeElement.matches(CARD)
+        ? document.activeElement.getAttribute('data-row-id')
+        : null;
+      const resume = focused ?? this.cursor;
+      const start = resume !== null && order.includes(resume) ? resume : order[0];
+
+      this.select([start], start);
+      this.anchor = start;
+
+      return;
+    }
+    if (key !== 'ArrowDown' && key !== 'ArrowUp') {
       return;
     }
 
-    const target = event.target instanceof HTMLElement ? event.target : null;
+    const step = key === 'ArrowDown' ? 1 : -1;
+    const from = this.cursor !== null && selected.includes(this.cursor) ? this.cursor : selected[step > 0 ? selected.length - 1 : 0];
+    const next = order[Math.min(order.length - 1, Math.max(0, order.indexOf(from) + step))];
 
-    if (target?.matches('[data-blok-database-gallery-card], [data-blok-database-gallery-new]') === true) {
-      event.preventDefault();
-      target.click();
+    if (!extend) {
+      this.select([next], next);
+      this.anchor = next;
+
+      return;
     }
-  };
+
+    const anchor = this.anchor !== null && order.includes(this.anchor) ? this.anchor : from;
+    const [a, b] = [order.indexOf(anchor), order.indexOf(next)].sort((x, y) => x - y);
+
+    this.anchor = anchor;
+    this.select(order.slice(a, b + 1), next);
+  }
+
+  private select(rowIds: string[], cursor: string): void {
+    this.cursor = cursor;
+    this.options.handlers?.selectRows?.(rowIds);
+    this.root?.querySelector<HTMLElement>(`${CARD}[data-row-id="${CSS.escape(cursor)}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    if (document.activeElement !== this.root) {
+      this.root?.focus({ preventScroll: true });
+    }
+  }
+
+  /** Inline title rename (research/16 §3a): the selection clears, and comes back on the card when the rename ends. */
+  private startRename(rowId: string): boolean {
+    const card = this.root?.querySelector<HTMLElement>(`${CARD}[data-row-id="${CSS.escape(rowId)}"]`);
+    const titleEl = card?.querySelector<HTMLElement>('[data-blok-database-gallery-title]');
+
+    if (card === null || card === undefined || titleEl === null || titleEl === undefined) {
+      return false;
+    }
+    const original = titleEl.textContent ?? '';
+    // A blur onto another control ends the rename without pulling focus back.
+    const reselect = (): void => {
+      if (card.contains(document.activeElement)) {
+        this.select([rowId], rowId);
+      }
+    };
+
+    this.options.handlers?.selectRows?.([]);
+    startInlineRename({
+      target: titleEl,
+      currentValue: original,
+      label: this.t('tools.database.editCardTitle'),
+      configureInput: (input) => {
+        input.setAttribute('data-blok-database-gallery-title-input', '');
+        input.setAttribute('placeholder', this.t('tools.database.cardNamePlaceholder'));
+      },
+      // Keeps the comment-badge anchor attributes; the badge itself is the next sibling and survives the swap.
+      buildRestored: (title) => {
+        const restored = this.createTitle(title);
+
+        for (const { name, value } of titleEl.attributes) {
+          if (name !== 'data-placeholder') restored.setAttribute(name, value);
+        }
+
+        return restored;
+      },
+      onCommit: (title) => {
+        if (title !== original) {
+          this.options.handlers?.renameRow?.(rowId, title);
+        }
+        reselect();
+      },
+      onCancel: reselect,
+    });
+
+    return true;
+  }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button !== 0 || !this.canDrag || !(event.target instanceof Element)) {

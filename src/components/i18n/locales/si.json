@@ -281,6 +281,7 @@
   "tools.database.editCardTitle": "මාතෘකාව සංස්කරණය කරන්න",
   "tools.database.cardMenuLabel": "කාඩ්පත් විකල්ප",
   "tools.database.cardTitlePlaceholder": "හිස් පිටුව",
+  "tools.database.cardNamePlaceholder": "නමක් ටයිප් කරන්න…",
   "tools.database.columnTitlePlaceholder": "තීරුව",
   "tools.database.noValueGroup": "{property} නැත",
   "tools.database.removeSortingTitle": "ඔබට වර්ග කිරීම ඉවත් කිරීමට අවශ්‍යද?",

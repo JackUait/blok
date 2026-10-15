@@ -276,6 +276,7 @@
   "tools.database.newPage": "Новая страница",
   "tools.database.addColumn": "Добавить столбец",
   "tools.database.cardTitlePlaceholder": "Пустая страница",
+  "tools.database.cardNamePlaceholder": "Введите название…",
   "tools.database.columnTitlePlaceholder": "Столбец",
   "tools.database.noValueGroup": "Без {property}",
   "tools.database.removeSortingTitle": "Удалить сортировку?",

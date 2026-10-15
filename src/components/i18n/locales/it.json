@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nuova pagina",
   "tools.database.addColumn": "Aggiungi colonna",
   "tools.database.cardTitlePlaceholder": "Pagina vuota",
+  "tools.database.cardNamePlaceholder": "Digita un nome…",
   "tools.database.columnTitlePlaceholder": "Colonna",
   "tools.database.noValueGroup": "Senza {property}",
   "tools.database.removeSortingTitle": "Vuoi rimuovere l'ordinamento?",

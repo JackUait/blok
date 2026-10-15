@@ -276,6 +276,7 @@
   "tools.database.newPage": "Neue Seite",
   "tools.database.addColumn": "Spalte hinzufügen",
   "tools.database.cardTitlePlaceholder": "Leere Seite",
+  "tools.database.cardNamePlaceholder": "Namen eingeben…",
   "tools.database.columnTitlePlaceholder": "Spalte",
   "tools.database.noValueGroup": "Ohne {property}",
   "tools.database.removeSortingTitle": "Möchten Sie die Sortierung entfernen?",

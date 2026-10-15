@@ -287,6 +287,7 @@
   "tools.database.newPage": "Halaman baharu",
   "tools.database.addColumn": "Tambah lajur",
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
+  "tools.database.cardNamePlaceholder": "Taip nama…",
   "tools.database.columnTitlePlaceholder": "Lajur",
   "tools.database.noValueGroup": "Tiada {property}",
   "tools.database.removeSortingTitle": "Adakah anda mahu mengalih keluar isihan?",

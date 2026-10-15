@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nova página",
   "tools.database.addColumn": "Adicionar coluna",
   "tools.database.cardTitlePlaceholder": "Página vazia",
+  "tools.database.cardNamePlaceholder": "Digite um nome…",
   "tools.database.columnTitlePlaceholder": "Coluna",
   "tools.database.noValueGroup": "Sem {property}",
   "tools.database.removeSortingTitle": "Deseja remover a classificação?",

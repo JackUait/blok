@@ -276,6 +276,7 @@
   "tools.database.newPage": "Nova stranica",
   "tools.database.addColumn": "Dodaj stupac",
   "tools.database.cardTitlePlaceholder": "Prazna stranica",
+  "tools.database.cardNamePlaceholder": "Upiši naziv…",
   "tools.database.columnTitlePlaceholder": "Stupac",
   "tools.database.noValueGroup": "Bez {property}",
   "tools.database.removeSortingTitle": "Želite li ukloniti sortiranje?",

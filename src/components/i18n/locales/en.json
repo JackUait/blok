@@ -302,6 +302,7 @@
   "tools.database.editCardTitle": "Edit title",
   "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "Empty page",
+  "tools.database.cardNamePlaceholder": "Type a name…",
   "tools.database.columnTitlePlaceholder": "Column",
   "tools.database.noValueGroup": "No {property}",
   "tools.database.removeSortingTitle": "Would you like to remove sorting?",

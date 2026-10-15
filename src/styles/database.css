@@ -5953,6 +5953,11 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-color: var(--blok-database-gallery-card-hover-bg);
 }
 
+/* The gallery holds focus while arrows select cards; the gray selection marks the card, not a ring. */
+[data-blok-database-gallery]:focus-visible {
+  outline: none;
+}
+
 [data-blok-database-gallery-card]:focus-visible,
 [data-blok-database-gallery-new]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);

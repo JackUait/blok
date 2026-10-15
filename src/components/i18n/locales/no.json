@@ -276,6 +276,7 @@
   "tools.database.newPage": "Ny side",
   "tools.database.addColumn": "Legg til kolonne",
   "tools.database.cardTitlePlaceholder": "Tom side",
+  "tools.database.cardNamePlaceholder": "Skriv inn et navn…",
   "tools.database.columnTitlePlaceholder": "Kolonne",
   "tools.database.noValueGroup": "Ingen {property}",
   "tools.database.removeSortingTitle": "Vil du fjerne sorteringen?",

@@ -9277,6 +9277,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-gallery-card-hover-bg);
 }
 
+[data-blok-database-gallery]:focus-visible {
+  outline: none;
+}
+
 [data-blok-database-gallery-card]:focus-visible, [data-blok-database-gallery-new]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;

@@ -276,6 +276,7 @@
   "tools.database.newPage": "صفحه جدید",
   "tools.database.addColumn": "افزودن ستون",
   "tools.database.cardTitlePlaceholder": "صفحه خالی",
+  "tools.database.cardNamePlaceholder": "یک نام تایپ کنید…",
   "tools.database.columnTitlePlaceholder": "ستون",
   "tools.database.noValueGroup": "بدون {property}",
   "tools.database.removeSortingTitle": "آیا می‌خواهید مرتب‌سازی را بردارید؟",

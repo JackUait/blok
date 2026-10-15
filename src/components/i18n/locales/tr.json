@@ -276,6 +276,7 @@
   "tools.database.newPage": "Yeni sayfa",
   "tools.database.addColumn": "Sütun ekle",
   "tools.database.cardTitlePlaceholder": "Boş sayfa",
+  "tools.database.cardNamePlaceholder": "Bir ad yazın…",
   "tools.database.columnTitlePlaceholder": "Sütun",
   "tools.database.noValueGroup": "{property} yok",
   "tools.database.removeSortingTitle": "Sıralamayı kaldırmak istiyor musunuz?",

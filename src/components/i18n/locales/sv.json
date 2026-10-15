@@ -276,6 +276,7 @@
   "tools.database.newPage": "Ny sida",
   "tools.database.addColumn": "Lägg till kolumn",
   "tools.database.cardTitlePlaceholder": "Tom sida",
+  "tools.database.cardNamePlaceholder": "Skriv ett namn…",
   "tools.database.columnTitlePlaceholder": "Kolumn",
   "tools.database.noValueGroup": "Ingen {property}",
   "tools.database.removeSortingTitle": "Vill du ta bort sorteringen?",

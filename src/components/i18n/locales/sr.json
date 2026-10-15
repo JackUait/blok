@@ -276,6 +276,7 @@
   "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Додај колону",
   "tools.database.cardTitlePlaceholder": "Празна страница",
+  "tools.database.cardNamePlaceholder": "Унесите назив…",
   "tools.database.columnTitlePlaceholder": "Колона",
   "tools.database.noValueGroup": "Без {property}",
   "tools.database.removeSortingTitle": "Да ли желите да уклоните сортирање?",

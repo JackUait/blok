@@ -276,6 +276,7 @@
   "tools.database.newPage": "نوې پاڼه",
   "tools.database.addColumn": "کالم اضافه کړئ",
   "tools.database.cardTitlePlaceholder": "تشه پاڼه",
+  "tools.database.cardNamePlaceholder": "یو نوم ولیکئ…",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.noValueGroup": "{property} نشته",
   "tools.database.removeSortingTitle": "ایا غواړئ ترتیب لرې کړئ؟",

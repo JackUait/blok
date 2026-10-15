@@ -281,6 +281,7 @@
   "tools.database.editCardTitle": "ਸਿਰਲੇਖ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.database.cardMenuLabel": "ਕਾਰਡ ਵਿਕਲਪ",
   "tools.database.cardTitlePlaceholder": "ਖਾਲੀ ਪੰਨਾ",
+  "tools.database.cardNamePlaceholder": "ਕੋਈ ਨਾਮ ਲਿਖੋ…",
   "tools.database.columnTitlePlaceholder": "ਕਾਲਮ",
   "tools.database.noValueGroup": "{property} ਨਹੀਂ",
   "tools.database.removeSortingTitle": "ਕੀ ਤੁਸੀਂ ਕ੍ਰਮਬੱਧਤਾ ਹਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?",

@@ -287,6 +287,7 @@
   "tools.database.newPage": "Jauna lapa",
   "tools.database.addColumn": "Pievienot kolonnu",
   "tools.database.cardTitlePlaceholder": "Tukša lapa",
+  "tools.database.cardNamePlaceholder": "Ierakstiet nosaukumu…",
   "tools.database.columnTitlePlaceholder": "Kolonna",
   "tools.database.noValueGroup": "Bez {property}",
   "tools.database.removeSortingTitle": "Vai vēlaties noņemt kārtošanu?",

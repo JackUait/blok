@@ -208,6 +208,155 @@ test.describe('gallery', () => {
     await expect(drawer(page)).toHaveCount(0);
   });
 
+  test.describe('keyboard (research/16 §3a)', () => {
+    const selectedIds = async (page: Page): Promise<string[]> =>
+      page.locator('[data-blok-database-gallery-card][aria-selected="true"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-row-id') ?? ''));
+
+    /** A click on empty gallery space, in the gap after the first card: what Notion's runs start from. */
+    const clickBlank = async (page: Page): Promise<void> => {
+      const box = await card(page, 'r1').boundingBox();
+
+      if (box === null) throw new Error('no card');
+      await page.mouse.click(box.x + box.width + 8, box.y + box.height / 2);
+    };
+
+    test('arrows select cards in reading order, Left/Right keep it, Shift+Up extends, Escape clears', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      expect(await selectedIds(page)).toEqual(['r1']);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await selectedIds(page)).toEqual(['r3']);
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      expect(await selectedIds(page)).toEqual(['r3']);
+
+      await page.keyboard.press('Shift+ArrowUp');
+      expect(await selectedIds(page)).toEqual(['r2', 'r3']);
+      await expect(page.locator('[data-blok-database-table-selection-bar]')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+      expect(await selectedIds(page)).toEqual([]);
+      await expect(page.locator('[data-blok-database-table-selection-bar]')).toHaveCount(0);
+      await expect(drawer(page)).toHaveCount(0);
+    });
+
+    test('the selected card is gray, never blue, with the same ink as the others', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+
+      const look = async (rowId: string): Promise<{ image: string; color: string; bg: string }> =>
+        card(page, rowId).evaluate((el) => {
+          const style = getComputedStyle(el);
+
+          return { image: style.backgroundImage, color: style.color, bg: style.backgroundColor };
+        });
+      const picked = await look('r1');
+      const other = await look('r2');
+      const isBlue = (value: string): boolean => [...value.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)]
+        .some(([, r, g, b]) => Number(b) > Number(r) + 40 && Number(b) > Number(g) + 20);
+
+      expect(picked.image).not.toBe('none');
+      expect(isBlue(picked.image)).toBe(false);
+      expect(isBlue(picked.bg)).toBe(false);
+      expect(picked.color).toBe(other.color);
+    });
+
+    test('Enter renames the selected card; Escape selects it again, a second Escape clears', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+
+      const input = card(page, 'r2').getByRole('textbox');
+
+      await expect(input).toBeFocused();
+      await expect(input).toHaveAttribute('placeholder', 'Type a name…');
+      expect(await selectedIds(page)).toEqual([]);
+      await expect(drawer(page)).toHaveCount(0);
+
+      await page.keyboard.press('Escape');
+      await expect(input).toHaveCount(0);
+      expect(await selectedIds(page)).toEqual(['r2']);
+      await page.keyboard.press('Escape');
+      expect(await selectedIds(page)).toEqual([]);
+
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      await expect(input).toBeFocused();
+      // The rename selects the old title, so typing replaces it.
+      await page.keyboard.type('Road trip');
+      await page.keyboard.press('Enter');
+
+      await expect(card(page, 'r2').locator('[data-blok-database-gallery-title]')).toHaveText('Road trip');
+      await expect.poll(async () => (await savedRow(page, 'r2'))['p-title']).toBe('Road trip');
+      await expect.poll(() => selectedIds(page)).toEqual(['r2']);
+      await page.keyboard.press('ArrowDown');
+      await expect.poll(() => selectedIds(page)).toEqual(['r3']);
+    });
+
+    test('Space on a selected card does nothing', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Space');
+
+      expect(await selectedIds(page)).toEqual(['r1']);
+      await expect(drawer(page)).toHaveCount(0);
+      await expect(page.locator('[data-blok-database-gallery-card] input')).toHaveCount(0);
+    });
+
+    test('Tab focuses one card after another, and Enter opens the focused card', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+
+      await page.keyboard.press('Tab');
+      await expect(card(page, 'r1')).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(card(page, 'r2')).toBeFocused();
+      await page.keyboard.press('Enter');
+
+      await expect(drawer(page)).toBeVisible();
+    });
+
+    test('an arrow on a Tab-focused card selects that card, with no ring around the gallery', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await expect(card(page, 'r2')).toBeFocused();
+
+      await page.keyboard.press('ArrowDown');
+
+      expect(await selectedIds(page)).toEqual(['r2']);
+      await expect(page.locator('[data-blok-database-gallery]')).toBeFocused();
+      await expect(page.locator('[data-blok-database-gallery]')).toHaveCSS('outline-style', 'none');
+    });
+
+    test('Cmd/Ctrl-click and Shift-click pick cards for the selection bar instead of opening them', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+
+      await card(page, 'r1').click({ modifiers: ['ControlOrMeta'] });
+      await card(page, 'r3').click({ modifiers: ['Shift'] });
+
+      expect(await selectedIds(page)).toEqual(['r1', 'r2', 'r3']);
+      await expect(page.locator('[data-blok-database-table-selection-bar]')).toBeVisible();
+      await expect(drawer(page)).toHaveCount(0);
+    });
+
+    test('read-only: arrows select nothing', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }), true);
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+
+      expect(await selectedIds(page)).toEqual([]);
+    });
+  });
+
   test('load more reveals the rest of the rows', async ({ page }) => {
     const rows = Array.from({ length: 12 }, (_, i) => ({ id: `g${i}`, properties: { 'p-title': `Card ${i}` } }));
 

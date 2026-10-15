@@ -6,6 +6,7 @@ import {
   queryRows,
   rowMatchesFilters,
   sortRows,
+  THIS_PAGE_FILTER_VALUE,
 } from '../../../../src/tools/database/database-query';
 import type { QuerySource } from '../../../../src/tools/database/database-query';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
@@ -667,5 +668,47 @@ describe('database-query — Phase 2 types in Phase 3 filters', () => {
 
   it('searches email text', () => {
     expect(ids(queryRows({ schema: people, rows }, { view: view(), search: '@x.io' }).rows)).toEqual(['mine']);
+  });
+});
+
+describe('database-query — "This page" in a relation filter', () => {
+  const related: PropertyDefinition[] = [
+    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'back', name: 'Measure A', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'a' } },
+  ];
+  const rows = [
+    row('one', 'a0', { title: 'One', back: ['alpha'] }),
+    row('two', 'a1', { title: 'Two', back: [{ id: 'alpha' }] }),
+    row('three', 'a2', { title: 'Three', back: ['gamma'] }),
+  ];
+  const thisPage = (operator = 'contains'): DatabaseViewConfig => view({ filters: [{ propertyId: 'back', operator, value: [THIS_PAGE_FILTER_VALUE] }] });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reads "This page" as the row page the view is shown on', () => {
+    expect(ids(queryRows({ schema: related, rows, page: 'alpha' }, { view: thisPage() }).rows)).toEqual(['one', 'two']);
+    expect(ids(queryRows({ schema: related, rows, page: 'gamma' }, { view: thisPage() }).rows)).toEqual(['three']);
+    expect(ids(queryRows({ schema: related, rows, page: 'beta' }, { view: thisPage() }).rows)).toEqual([]);
+  });
+
+  it('matches no row when the "This page" filter\'s property is gone, and leaves other filters on a gone property alone', () => {
+    const gone = view({ filters: [{ propertyId: 'deleted', operator: 'contains', value: [THIS_PAGE_FILTER_VALUE] }] });
+    const goneTree = view({ filterTree: { id: 'g', conjunction: 'and', filterRules: [{ id: 'f', propertyId: 'deleted', operator: 'contains', value: [THIS_PAGE_FILTER_VALUE] }] } });
+    const other = view({ filters: [{ propertyId: 'deleted', operator: 'contains', value: ['alpha'] }] });
+
+    expect(ids(queryRows({ schema: related, rows, page: 'alpha' }, { view: gone }).rows)).toEqual([]);
+    expect(ids(queryRows({ schema: related, rows, page: 'alpha' }, { view: goneTree }).rows)).toEqual([]);
+    expect(ids(queryRows({ schema: related, rows, page: 'alpha' }, { view: other }).rows)).toEqual(['one', 'two', 'three']);
+  });
+
+  it('matches no row on "This page" outside a row page, as Notion shows the view empty', () => {
+    expect(ids(queryRows({ schema: related, rows }, { view: thisPage() }).rows)).toEqual([]);
+    expect(ids(queryRows({ schema: related, rows, page: null }, { view: thisPage('does_not_contain') }).rows)).toEqual(['one', 'two', 'three']);
   });
 });

@@ -499,6 +499,67 @@ describe('view settings panel', () => {
     expect(h.state.view.filters[0]).toMatchObject({ propertyId: 'owner', operator: 'contains', value: ['me', 'u1'] });
   });
 
+  it('offers "This page" first in a relation filter on a row page (research/13 §1c)', () => {
+    const h = harness();
+    const related: PropertyDefinition = { id: 'back', name: 'Measure A', type: 'relation', position: 'z0', relation: { targetDatabaseId: 'a' } };
+
+    h.ctx.schema = () => [...schema, related];
+    h.ctx.relatedRows = () => [{ id: 'r1', title: 'One' }];
+    h.ctx.thisPageDatabase = () => 'a';
+    h.open('filter');
+    click('database-filter-add');
+    click('database-pick-property-back');
+    const rows = [...document.querySelectorAll('[data-blok-testid^="database-filter-related-"]')].map((el) => el.getAttribute('data-blok-testid'));
+
+    expect(rows).toEqual(['database-filter-related-this-page', 'database-filter-related-r1']);
+    click('database-filter-related-this-page');
+
+    expect(h.state.view.filters[0]).toMatchObject({ propertyId: 'back', operator: 'contains', value: ['this_page'] });
+  });
+
+  it('offers no "This page" on a relation to another database than the row page\'s', () => {
+    const h = harness();
+    const other: PropertyDefinition = { id: 'toc', name: 'Measure C', type: 'relation', position: 'z0', relation: { targetDatabaseId: 'c' } };
+
+    h.ctx.schema = () => [...schema, other];
+    h.ctx.relatedRows = () => [{ id: 'c1', title: 'Uno' }];
+    h.ctx.thisPageDatabase = () => 'a';
+    h.open('filter');
+    click('database-filter-add');
+    click('database-pick-property-toc');
+
+    expect(document.querySelector('[data-blok-testid="database-filter-related-c1"]')).not.toBeNull();
+    expect(document.querySelector('[data-blok-testid="database-filter-related-this-page"]')).toBeNull();
+  });
+
+  it('offers no "This page" in a conditional color rule, which has no row page to read', () => {
+    const h = harness({ colorRules: [{ id: 'c1', propertyId: 'back', operator: 'contains', value: [], color: 'gray' }] });
+    const related: PropertyDefinition = { id: 'back', name: 'Measure A', type: 'relation', position: 'z0', relation: { targetDatabaseId: 'a' } };
+
+    h.ctx.schema = () => [...schema, related];
+    h.ctx.relatedRows = () => [{ id: 'r1', title: 'One' }];
+    h.ctx.thisPageDatabase = () => 'a';
+    h.open();
+    click('database-settings-color');
+    click('database-color-condition-c1');
+
+    expect(document.querySelector('[data-blok-testid="database-filter-related-r1"]')).not.toBeNull();
+    expect(document.querySelector('[data-blok-testid="database-filter-related-this-page"]')).toBeNull();
+  });
+
+  it('offers no "This page" in a relation filter away from a row page, unless it is chosen', () => {
+    const h = harness({ filters: [] });
+    const related: PropertyDefinition = { id: 'back', name: 'Measure A', type: 'relation', position: 'z0', relation: { targetDatabaseId: 'a' } };
+
+    h.ctx.schema = () => [...schema, related];
+    h.ctx.relatedRows = () => [{ id: 'r1', title: 'One' }];
+    h.open('filter');
+    click('database-filter-add');
+    click('database-pick-property-back');
+
+    expect(document.querySelector('[data-blok-testid="database-filter-related-this-page"]')).toBeNull();
+  });
+
   it('adds a conditional color rule and picks its background', () => {
     const h = harness();
 

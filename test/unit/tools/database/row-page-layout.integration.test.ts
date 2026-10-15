@@ -52,8 +52,9 @@ let holder: HTMLDivElement | undefined;
 
 const TAB_TOOLS = { tabs: TabsTool, tab: TabTool };
 
-const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}, readOnly = false, tabTools: Record<string, unknown> = TAB_TOOLS): Promise<void> => {
+const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}, readOnly = false, tabTools: Record<string, unknown> = TAB_TOOLS, editorConfig: Record<string, unknown> = {}): Promise<void> => {
   editor = new Blok({
+    ...editorConfig,
     holder,
     readOnly,
     dataModel: 'hierarchical',
@@ -1076,6 +1077,545 @@ describe('row page layout through the database tool', () => {
 
       expect(names(builderRoot())).toEqual(['Content']);
       expect(bar?.querySelector('[data-blok-database-layout-add-tab]')).toBeNull();
+    });
+
+    describe('Duplicate view and the row page tab menu (research/13 §3)', () => {
+      const FILTERED = { ...LINKED_VIEW, filters: [{ id: 'f1', propertyId: 't', operator: 'contains', value: 'Tw' }] };
+      const filteredDoc = (): OutputBlockData[] => tabbedDoc().map((block) => (block.id === 'lv' ? { ...block, data: { ...block.data, views: [FILTERED] } } : block));
+      const openTabMenu = async (name: string): Promise<void> => {
+        await click(tabNamed(builderRoot(), name) ?? null);
+        if (testId('database-layout-tab-menu') === null) await click(tabNamed(builderRoot(), name) ?? null);
+      };
+      const menuIds = (): Array<string | null> => [...(testId('database-layout-tab-menu')?.querySelectorAll('[data-blok-testid]') ?? [])].map((el) => el.getAttribute('data-blok-testid'));
+
+      it('View settings offers Duplicate view above Delete view; Content has neither', async () => {
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Roadmap');
+        const ids = menuIds();
+
+        expect(ids.indexOf('database-layout-duplicate-view')).toBeGreaterThan(-1);
+        expect(ids.indexOf('database-layout-duplicate-view')).toBeLessThan(ids.indexOf('database-layout-delete-view'));
+        await click(tabNamed(builderRoot(), 'Content') ?? null);
+        await openTabMenu('Content');
+
+        expect(testId('database-layout-duplicate-view')).toBeNull();
+      });
+
+      it('names the copy "<name> (1)" in any locale', async () => {
+        await make(filteredDoc(), {}, false, undefined, { i18n: { locale: 'ja' } });
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Roadmap');
+        await click(testId('database-layout-duplicate-view'));
+
+        expect(names(builderRoot())).toContain('Roadmap (1)');
+      });
+
+      it('appends the copy at the end as "<name> (1)", then (2), selects it and keeps its filter', async () => {
+        await make(filteredDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Roadmap');
+        await click(testId('database-layout-duplicate-view'));
+
+        expect(testId('database-layout-tab-menu')).toBeNull();
+        expect(names(builderRoot())).toEqual(['Content', 'Roadmap', 'Roadmap (1)']);
+        expect(selected(builderRoot())).toBe('Roadmap (1)');
+        await click(tabNamed(builderRoot(), 'Roadmap') ?? null);
+        await openTabMenu('Roadmap');
+        await click(testId('database-layout-duplicate-view'));
+
+        expect(names(builderRoot())).toEqual(['Content', 'Roadmap', 'Roadmap (1)', 'Roadmap (2)']);
+        const blocks = await savedBlocks();
+        const copies = blocks.filter((block) => block.type === 'database' && block.id !== 'lv' && (block.data as { source?: { databaseId?: string } }).source?.databaseId === 'db');
+        const views = copies.map((block) => (block.data as { views: Array<{ id: string; filters: unknown[] }>; activeViewId: string }));
+
+        expect(copies).toHaveLength(2);
+        // A view of its own: personal view state is keyed by view id.
+        expect(views.every((data) => data.views[0].id !== 'lvv' && data.activeViewId === data.views[0].id)).toBe(true);
+        expect(views.map((data) => data.views[0].filters)).toEqual([FILTERED.filters, FILTERED.filters]);
+        expect(blocks.find((block) => block.id === 'lv')?.data).toMatchObject({ views: [FILTERED] });
+      });
+
+      it('keeps $ patterns in a tab name literal in the copy\'s name', async () => {
+        await make(tabbedDoc().map((block) => (block.id === 'tv' ? { ...block, data: { title: 'Q$$A' } } : block)));
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Q$$A');
+        await click(testId('database-layout-duplicate-view'));
+
+        expect(names(builderRoot())).toEqual(['Content', 'Q$$A', 'Q$$A (1)']);
+      });
+
+      it('names the copy from a rename made just before', async () => {
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Roadmap');
+        const field = testId('database-layout-tab-name') as HTMLInputElement | null;
+
+        if (field !== null) {
+          field.value = 'Plan';
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        await click(testId('database-layout-duplicate-view'));
+
+        expect(names(builderRoot())).toEqual(['Content', 'Plan', 'Plan (1)']);
+      });
+
+      it('Discard removes the copy; Apply keeps it on every row page', async () => {
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Roadmap');
+        await click(testId('database-layout-duplicate-view'));
+        await click(b('[data-blok-database-layout-cancel]'));
+        await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+        expect((await savedBlocks()).filter((block) => block.type === 'tab')).toHaveLength(2);
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openTabMenu('Roadmap');
+        await click(testId('database-layout-duplicate-view'));
+        await click(b('[data-blok-database-layout-apply]'));
+        await openRow('r2');
+
+        expect(names(drawer())).toEqual(['Content', 'Roadmap', 'Roadmap (1)']);
+      });
+
+      it('on a row page the selected tab opens Customize layout, which opens the builder', async () => {
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        const menu = item('row-tab-customize-layout')?.closest('[data-blok-popover]');
+
+        expect(menu).not.toBeNull();
+        expect(menu?.textContent).toContain('Customize layout');
+        expect(menu?.textContent).not.toContain('Delete view');
+        await click(item('row-tab-customize-layout'));
+
+        expect(builderRoot()).not.toBeNull();
+      });
+
+      it('marks the selected view tab as opening a menu, and its expanded state', async () => {
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        const tab = (): HTMLElement | undefined => tabNamed(drawer(), 'Roadmap');
+
+        expect(tab()?.getAttribute('aria-haspopup')).toBe('menu');
+        expect(tab()?.getAttribute('aria-expanded')).toBe('false');
+        expect(tabNamed(drawer(), 'Content')?.hasAttribute('aria-haspopup')).toBe(false);
+        await click(tab() ?? null);
+
+        expect(tab()?.getAttribute('aria-expanded')).toBe('true');
+        (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await quiet();
+
+        expect(item('row-tab-customize-layout')).toBeNull();
+        expect(tab()?.getAttribute('aria-expanded')).toBe('false');
+      });
+
+      it('Escape closes the row page tab menu only, not the row page', async () => {
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        expect(item('row-tab-customize-layout')).not.toBeNull();
+        (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await quiet();
+
+        expect(item('row-tab-customize-layout')).toBeNull();
+        expect(drawer()?.isConnected).toBe(true);
+      });
+
+      it('opens no row page tab menu when the database cannot be customized', async () => {
+        await make(tabbedDoc(), {}, true);
+        await openRow('r1');
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+
+        expect(item('row-tab-customize-layout')).toBeNull();
+      });
+    });
+
+    describe('Related to this database (research/13 §1b-1c)', () => {
+      /**
+       * Measure A (db) relates two-way to Measure B (dbb), which comes AFTER it:
+       * the linked view of B renders before B's tool exists.
+       * r1 (One) → b1, b2; r2 (Two) → none; r3 (Three) → b3.
+       */
+      const relatedDoc = (): OutputBlockData[] => {
+        const blocks = doc({}, { pageLayoutStructure: 'tabbed' });
+        const a = blocks[0] as unknown as { data: { title?: string; schema: Array<Record<string, unknown>> } };
+
+        a.data.title = 'Measure A';
+        a.data.schema.push({ id: 'rel', name: 'Measure B', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'dbb', twoWay: true, syncedPropertyId: 'back' } });
+        (blocks[1].data as { properties: Record<string, unknown> }).properties.rel = ['b1', 'b2'];
+        (blocks[3].data as { properties: Record<string, unknown> }).properties.rel = ['b3'];
+        blocks.push(
+          {
+            id: 'dbb',
+            type: 'database',
+            data: {
+              title: 'Measure B',
+              schema: [
+                { id: 'bt', name: 'Name', type: 'title', position: 'a0' },
+                { id: 'back', name: 'Measure A', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'rel' } },
+              ],
+              views: [{ id: 'bv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+              activeViewId: 'bv',
+            },
+            content: ['b1', 'b2', 'b3'],
+          },
+          { id: 'b1', type: 'database-row', parent: 'dbb', data: { properties: { bt: 'Uno', back: ['r1'] }, position: 'a0' } },
+          { id: 'b2', type: 'database-row', parent: 'dbb', data: { properties: { bt: 'Dos', back: ['r1'] }, position: 'a1' } },
+          { id: 'b3', type: 'database-row', parent: 'dbb', data: { properties: { bt: 'Tres', back: ['r3'] }, position: 'a2' } },
+        );
+
+        return blocks;
+      };
+      const openAddTab = async (): Promise<HTMLElement | null> => {
+        const bar = builderRoot()?.querySelector('[data-blok-database-drawer-tabs]') ?? null;
+
+        hover(bar, true);
+        await click(bar?.querySelector('[data-blok-database-layout-add-tab]') ?? null);
+
+        return testId('database-layout-add-tab-menu');
+      };
+      const shownRows = (root: Element | null): string[] =>
+        [...(root?.querySelectorAll('[data-blok-database-drawer-tab-panel] [data-blok-database-table-row][data-row-id]') ?? [])].map((el) => el.getAttribute('data-row-id') ?? '');
+
+      it('lists each related database under Related to <this database>, then a divider and Link existing data source', async () => {
+        await make(relatedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        const menu = await openAddTab();
+        const text = [...(menu?.querySelectorAll('[data-blok-testid]') ?? [])].map((el) => el.getAttribute('data-blok-testid'));
+
+        expect(menu?.textContent).toContain('Related to Measure A');
+        expect(testId('database-layout-related-rel')?.textContent?.trim()).toBe('Measure B');
+        expect(text.indexOf('database-layout-related-rel')).toBeLessThan(text.indexOf('database-layout-link-data-source'));
+        expect(menu?.querySelector('[data-blok-database-panel-separator], hr, [role="separator"]')).not.toBeNull();
+      });
+
+      it('shows only Link existing data source when the database has no relation to another database', async () => {
+        await make(doc({}, { pageLayoutStructure: 'tabbed' }));
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        const menu = await openAddTab();
+
+        expect(menu?.textContent).not.toContain('Related to');
+        expect(menu?.querySelector('[data-blok-testid^="database-layout-related-"]')).toBeNull();
+        expect(testId('database-layout-link-data-source')).not.toBeNull();
+      });
+
+      it('adds a tab at once, named after the related database, showing its rows that link to this page', async () => {
+        await make(relatedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openAddTab();
+        await click(testId('database-layout-related-rel'));
+
+        // The filter is written as a token, so the one view changes per row.
+        const blocks = await savedBlocks();
+        const linked = blocks.find((block) => block.type === 'database' && (block.data as { source?: { databaseId?: string } }).source?.databaseId === 'dbb');
+
+        expect((linked?.data as { views: Array<{ filters: unknown[] }> } | undefined)?.views[0]?.filters).toEqual([
+          expect.objectContaining({ propertyId: 'back', operator: 'contains', value: ['this_page'] }),
+        ]);
+        expect(names(builderRoot())).toEqual(['Content', 'Measure B']);
+        expect(selected(builderRoot())).toBe('Measure B');
+        expect(shownRows(builderRoot())).toEqual(['b1', 'b2']);
+        await click(b('[data-blok-database-layout-preview]'));
+        await click(item('preview-r3'));
+
+        expect(shownRows(builderRoot())).toEqual(['b3']);
+      });
+
+      it('after Apply each row page lists only its own related rows', async () => {
+        await make(relatedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openAddTab();
+        await click(testId('database-layout-related-rel'));
+        await click(b('[data-blok-database-layout-apply]'));
+
+        expect(selected(drawer())).toBe('Measure B');
+        expect(shownRows(drawer())).toEqual(['b1', 'b2']);
+        await openRow('r2');
+
+        expect(selected(drawer())).toBe('Measure B');
+        expect(shownRows(drawer())).toEqual([]);
+        await openRow('r3');
+
+        expect(shownRows(drawer())).toEqual(['b3']);
+        // The filter pill names the token.
+        expect(drawer()?.querySelector('[data-blok-database-drawer-tab-panel]')?.textContent).toContain('Measure A: This page');
+      });
+
+      describe('Link existing data source > Add new relation (research/13 §1d, §2)', () => {
+        const openForm = async (): Promise<void> => {
+          await make(relatedDoc());
+          await openRow('r1');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-link-data-source'));
+          await click(testId('database-layout-source-dbb'));
+        };
+        const schemaOf = async (id: string): Promise<Array<Record<string, unknown>>> =>
+          ((await savedBlocks()).find((block) => block.id === id)?.data as { schema: Array<Record<string, unknown>> }).schema;
+
+        it('shows View of <source> and an Add new relation switch, off', async () => {
+          await openForm();
+
+          expect(testId('database-layout-view-of')?.textContent).toContain('View of');
+          expect(testId('database-layout-view-of')?.textContent).toContain('Measure B');
+          expect(testId('database-layout-add-relation')?.getAttribute('aria-checked')).toBe('false');
+          expect(testId('database-layout-add-view')?.textContent?.trim()).toBe('Add view');
+          expect(testId('database-layout-two-way')).toBeNull();
+          expect(testId('database-layout-related-name')).toBeNull();
+        });
+
+        it('turned on: View & relation name, a locked-on Two-way relation and a Related property name', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          const twoWay = testId('database-layout-two-way') as HTMLButtonElement | null;
+
+          expect((testId('database-layout-view-name') as HTMLInputElement | null)?.placeholder).toBe('View & relation name');
+          expect((testId('database-layout-view-name') as HTMLInputElement | null)?.value).toBe('Measure B');
+          expect(twoWay?.getAttribute('aria-checked')).toBe('true');
+          expect(twoWay?.disabled).toBe(true);
+          expect((testId('database-layout-related-name') as HTMLInputElement | null)?.placeholder).toBe('Measure A 1');
+          expect(testId('database-layout-add-view')?.textContent?.trim()).toBe('Add view & relation');
+        });
+
+        it('puts the Two-way hint outside the disabled switch, so hovering it works in every browser', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          const twoWay = testId('database-layout-two-way') as HTMLButtonElement | null;
+          const info = twoWay?.closest('[data-blok-database-layout-locked]')?.querySelector<HTMLElement>('[data-blok-database-layout-hint]') ?? null;
+
+          expect(info).not.toBeNull();
+          expect(info?.closest('button, :disabled')).toBeNull();
+          expect(twoWay?.disabled).toBe(true);
+          expect(twoWay?.getAttribute('aria-label')).toBe('Two-way relation');
+          expect(document.getElementById(twoWay?.getAttribute('aria-describedby') ?? '')?.textContent).toContain('required for relations of linked databases');
+        });
+
+        it('Add view & relation makes a relation, its mirror on the source, and a tab filtered by the mirror', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          await click(testId('database-layout-add-view'));
+          const a = await schemaOf('db');
+          const bSchema = await schemaOf('dbb');
+          const made = a.find((property) => property.type === 'relation' && property.id !== 'rel');
+          const mirror = bSchema.find((property) => property.type === 'relation' && property.id !== 'back');
+
+          expect(made).toMatchObject({ name: 'Measure B', relation: { targetDatabaseId: 'dbb', twoWay: true, syncedPropertyId: mirror?.id } });
+          expect(mirror).toMatchObject({ name: 'Measure A 1', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: made?.id } });
+          const linked = (await savedBlocks()).filter((block) => block.type === 'database' && (block.data as { source?: { databaseId?: string } }).source?.databaseId === 'dbb');
+
+          expect((linked[0]?.data as { views: Array<{ filters: unknown[] }> }).views[0]?.filters).toEqual([
+            expect.objectContaining({ propertyId: mirror?.id, operator: 'contains', value: ['this_page'] }),
+          ]);
+          expect(names(builderRoot())).toEqual(['Content', 'Measure B']);
+          expect(selected(builderRoot())).toBe('Measure B');
+          expect(shownRows(builderRoot())).toEqual([]);
+        });
+
+        it('keeps typed text unselected when Add new relation is turned on', async () => {
+          await openForm();
+          const before = testId('database-layout-view-name') as HTMLInputElement | null;
+
+          if (before !== null) {
+            before.value = 'Tasks';
+            before.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          await click(testId('database-layout-add-relation'));
+          const field = testId('database-layout-view-name') as HTMLInputElement | null;
+
+          expect(field?.value).toBe('Tasks');
+          expect(field?.selectionStart === 0 && field?.selectionEnd === field?.value.length).toBe(false);
+        });
+
+        it('fills Related property name with "<this database> 1" in any locale', async () => {
+          await make(relatedDoc(), {}, false, TAB_TOOLS, { i18n: { locale: 'ru' } });
+          await openRow('r1');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-link-data-source'));
+          await click(testId('database-layout-source-dbb'));
+          await click(testId('database-layout-add-relation'));
+
+          expect((testId('database-layout-related-name') as HTMLInputElement | null)?.placeholder).toBe('Measure A 1');
+        });
+
+        it('names both properties from the fields', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          const field = (id: string, value: string): void => {
+            const input = testId(id) as HTMLInputElement | null;
+
+            if (input === null) return;
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          };
+
+          field('database-layout-view-name', 'Tasks');
+          field('database-layout-related-name', 'Owner');
+          await click(testId('database-layout-add-view'));
+
+          expect((await schemaOf('db')).some((property) => property.name === 'Tasks' && property.type === 'relation')).toBe(true);
+          expect((await schemaOf('dbb')).some((property) => property.name === 'Owner' && property.type === 'relation')).toBe(true);
+          expect(names(builderRoot())).toEqual(['Content', 'Tasks']);
+        });
+
+        it('Discard removes both new properties and the tab, as other builder-made properties go', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          await click(testId('database-layout-add-view'));
+          await click(b('[data-blok-database-layout-cancel]'));
+          await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+          expect((await schemaOf('db')).map((property) => property.id)).toEqual(['t', 'due', 'rel']);
+          expect((await schemaOf('dbb')).map((property) => property.id)).toEqual(['bt', 'back']);
+          expect(await layoutTabs()).toEqual([]);
+        });
+
+        it('Discard removes the mirror even when the relation was deleted first', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          await click(testId('database-layout-add-view'));
+          const made = (await schemaOf('db')).find((property) => property.type === 'relation' && property.id !== 'rel');
+          const api = editor as unknown as { blocks: { getById: (id: string) => { call: (name: string, param: Record<string, unknown>) => void } | null } };
+
+          api.blocks.getById('db')?.call('deleteMirrorProperty', { propertyId: String(made?.id) });
+          await quiet();
+
+          expect((await schemaOf('db')).map((property) => property.id)).toEqual(['t', 'due', 'rel']);
+          await click(b('[data-blok-database-layout-cancel]'));
+          await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+
+          expect((await schemaOf('dbb')).map((property) => property.id)).toEqual(['bt', 'back']);
+        });
+
+        it('Apply keeps both properties and shows the tab on every row', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          await click(testId('database-layout-add-view'));
+          await click(b('[data-blok-database-layout-apply]'));
+
+          expect((await schemaOf('db'))).toHaveLength(4);
+          expect((await schemaOf('dbb'))).toHaveLength(3);
+          await openRow('r2');
+          await click(tabNamed(drawer(), 'Measure B') ?? null);
+
+          expect(shownRows(drawer())).toEqual([]);
+        });
+
+        it('offers no Add new relation for a locked source, whose properties stay as they are', async () => {
+          const blocks = relatedDoc().map((block) => {
+            if (block.id !== 'dbb') return block;
+            const data = block.data as { schema: Array<Record<string, unknown>> };
+
+            return { ...block, data: { ...data, schema: data.schema.map((property) => (property.type === 'title' ? { ...property, databaseLocked: true } : property)) } };
+          });
+
+          await make(blocks);
+          await openRow('r1');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-link-data-source'));
+          await click(testId('database-layout-source-dbb'));
+
+          expect(testId('database-layout-view-of')).not.toBeNull();
+          expect(testId('database-layout-add-relation')).toBeNull();
+        });
+
+        it('leaves no half-made relation when the source refuses the mirror', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          // The source turns read-only for writes after the form opened.
+          const source = document.querySelector('[data-blok-id="dbb"]');
+
+          expect(source).not.toBeNull();
+          vi.spyOn(DatabaseTool.prototype, 'addSyncedRelation').mockImplementation(() => undefined);
+          await click(testId('database-layout-add-view'));
+
+          expect((await schemaOf('db')).map((property) => property.id)).toEqual(['t', 'due', 'rel']);
+          expect(names(builderRoot())).toEqual(['Content']);
+          // No trace: no empty list on any row, no undo step.
+          const keys = (await savedBlocks()).filter((block) => block.parent === 'db' && block.type === 'database-row')
+            .flatMap((block) => Object.keys((block.data as { properties: Record<string, unknown> }).properties));
+
+          expect(keys.every((key) => ['t', 'due', 'rel'].includes(key))).toBe(true);
+          expect(editor?.history.canUndo()).toBe(false);
+        });
+
+        it('offers no Add new relation for a view of this database', async () => {
+          await make(relatedDoc());
+          await openRow('r1');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-link-data-source'));
+          await click(testId('database-layout-source-db'));
+
+          expect(testId('database-layout-view-of')).not.toBeNull();
+          expect(testId('database-layout-add-relation')).toBeNull();
+        });
+      });
+
+      it('a new row added in the tab links to this page, so it stays in the tab', async () => {
+        await make(relatedDoc());
+        await openRow('r2');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openAddTab();
+        await click(testId('database-layout-related-rel'));
+        await click(b('[data-blok-database-layout-apply]'));
+
+        expect(shownRows(drawer())).toEqual([]);
+        await click(q('[data-blok-database-drawer-tab-panel] [data-blok-database-table-add-row]'));
+        const blocks = await savedBlocks();
+        const added = blocks.find((block) => block.type === 'database-row' && block.parent === 'dbb' && !['b1', 'b2', 'b3'].includes(String(block.id)));
+        const back = (added?.data as { properties: Record<string, unknown> } | undefined)?.properties.back;
+
+        expect(JSON.stringify(back)).toContain('r2');
+        expect(shownRows(drawer())).toEqual([String(added?.id)]);
+        // Two-way: the page's own relation lists the new row too.
+        expect(q('[data-blok-database-table-row][data-row-id="r1"] [data-row-id="b1"]')).not.toBeNull();
+        expect(q(`[data-blok-database-table-row][data-row-id="r2"] [data-row-id="${String(added?.id)}"]`)).not.toBeNull();
+        editor?.history.undo();
+        await quiet();
+        const after = await savedBlocks();
+        const page = after.find((block) => block.id === 'r2')?.data as { properties: Record<string, unknown> } | undefined;
+
+        // One step: the row and the page's link to it go together.
+        expect(after.some((block) => block.id === added?.id)).toBe(false);
+        expect(JSON.stringify(page?.properties.rel ?? [])).not.toContain(String(added?.id));
+      });
+
+      it('keeps the per-row filter after a save and a reload', async () => {
+        await make(relatedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openAddTab();
+        await click(testId('database-layout-related-rel'));
+        await click(b('[data-blok-database-layout-apply]'));
+        const saved = await savedBlocks();
+
+        editor?.destroy();
+        holder?.remove();
+        holder = document.createElement('div');
+        document.body.appendChild(holder);
+        await make(saved);
+        await openRow('r3');
+        await click(tabNamed(drawer(), 'Measure B') ?? null);
+
+        expect(shownRows(drawer())).toEqual(['b3']);
+      });
     });
   });
 

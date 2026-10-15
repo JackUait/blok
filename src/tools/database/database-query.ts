@@ -103,6 +103,8 @@ export interface QuerySource {
   now?: Date;
   /** The current user's id, for a person filter's "Me". */
   me?: string | null;
+  /** The row page the view is shown on, for a relation filter's "This page". */
+  page?: string | null;
   /** Sub-items on: each sub-item's parent row. The view's sub-item options pick the rows. */
   parents?: Map<string, string>;
 }
@@ -380,6 +382,20 @@ const resolveMe = (target: PropertyValue, me: string | null | undefined): Proper
   });
 };
 
+/** A relation filter's value for the row page the view is shown on. */
+export const THIS_PAGE_FILTER_VALUE = 'this_page';
+
+/** Outside a row page "This page" matches nothing: Notion shows such a view empty. */
+const resolveThisPage = (target: PropertyValue, page: string | null | undefined): PropertyValue => {
+  const ids = toIdList(target);
+
+  if (!ids.includes(THIS_PAGE_FILTER_VALUE)) return target;
+
+  const resolved = page === undefined || page === null || page === '' ? NOBODY : page;
+
+  return ids.map((id) => (id === THIS_PAGE_FILTER_VALUE ? resolved : id));
+};
+
 /**
  * Whether one condition holds. `undefined` means the engine cannot read it
  * (unknown operator, wrong type, deleted property, missing value): hiding
@@ -390,7 +406,8 @@ export const matchCondition = (
   condition: Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>,
   schema: PropertyDefinition[],
   now: Date = new Date(),
-  me?: string | null
+  me?: string | null,
+  page?: string | null
 ): boolean | undefined => {
   const property = schema.find((p) => p.id === condition.propertyId);
 
@@ -399,11 +416,15 @@ export const matchCondition = (
       ? matchQuantified(readPropertyValue(row, property), condition.operator, condition.value)
       : undefined;
   }
+  // "This page" is a relation tab's only filter: with its property gone or no longer a relation it
+  // must show no row, not every row.
+  if (property?.type !== 'relation' && toIdList(condition.value).includes(THIS_PAGE_FILTER_VALUE)) return false;
   // A type from a newer client has no entry here: let the row through.
   if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(condition.operator) ?? false)) return undefined;
-  const target = PERSON_TYPES.includes(property.type) ? resolveMe(condition.value, me) : condition.value;
+  const target = property.type === 'relation' ? resolveThisPage(condition.value, page) : condition.value;
+  const resolved = PERSON_TYPES.includes(property.type) ? resolveMe(target, me) : target;
 
-  return MATCHERS[property.type](readPropertyValue(row, property), condition.operator, target, property, now);
+  return MATCHERS[property.type](readPropertyValue(row, property), condition.operator, resolved, property, now);
 };
 
 /** AND of every filter. A filter the engine cannot read lets the row through. */
@@ -412,21 +433,22 @@ export const rowMatchesFilters = (
   filters: FilterConfig[],
   schema: PropertyDefinition[],
   now: Date = new Date(),
-  me?: string | null
+  me?: string | null,
+  page?: string | null
 ): boolean =>
-  filters.every((filter) => matchCondition(row, filter, schema, now, me) ?? true);
+  filters.every((filter) => matchCondition(row, filter, schema, now, me, page) ?? true);
 
 export const isFilterGroup = (node: FilterNode): node is FilterGroup =>
   Array.isArray((node as Partial<FilterGroup>).filterRules);
 
 /** `undefined` means the node says nothing about the row: no readable rule inside. */
-const evaluate = (row: DatabaseRow, node: FilterNode, schema: PropertyDefinition[], now: Date, me: string | null | undefined): boolean | undefined => {
+const evaluate = (row: DatabaseRow, node: FilterNode, schema: PropertyDefinition[], now: Date, me: string | null | undefined, page: string | null | undefined): boolean | undefined => {
   if (!isFilterGroup(node)) {
-    return matchCondition(row, node, schema, now, me);
+    return matchCondition(row, node, schema, now, me, page);
   }
 
   const results = node.filterRules
-    .map((child) => evaluate(row, child, schema, now, me))
+    .map((child) => evaluate(row, child, schema, now, me, page))
     .filter((result): result is boolean => result !== undefined);
 
   if (results.length === 0) return undefined;
@@ -440,8 +462,9 @@ export const rowMatchesFilterTree = (
   tree: FilterGroup | undefined,
   schema: PropertyDefinition[],
   now: Date = new Date(),
-  me?: string | null
-): boolean => tree === undefined || (evaluate(row, tree, schema, now, me) ?? true);
+  me?: string | null,
+  page?: string | null
+): boolean => tree === undefined || (evaluate(row, tree, schema, now, me, page) ?? true);
 
 /** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
 const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => comparePositions(a.position, b.position);
@@ -599,9 +622,13 @@ const dateTargetValue = (operator: string, target: PropertyValue): string | unde
   }
 };
 
-const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue, me: string | null): PropertyValue | undefined => {
+const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue, me: string | null, page: string | null): PropertyValue | undefined => {
   if (type === 'date') {
     return dateTargetValue(operator, target);
+  }
+  // A relation tab's new row links to its page, or its own filter would hide it.
+  if (operator === 'contains' && type === 'relation' && page !== null && page !== '' && toIdList(target).includes(THIS_PAGE_FILTER_VALUE)) {
+    return [{ id: page }];
   }
   if (operator === 'contains' && type === 'person') {
     const id = toIdList(target).map((each) => (each === ME_FILTER_VALUE ? me ?? '' : each)).find((each) => each !== '');
@@ -643,13 +670,13 @@ const filterTargetValue = (type: PropertyType | undefined, operator: string, tar
 };
 
 /**
- * Values a new row takes from the view's `equals` filters (and a person
+ * Values a new row takes from the view's `equals` filters (and a person or a "This page" relation
  * `contains`), as Notion does, so the filter does not hide the row on the
  * next redraw.
  */
-export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[], me: string | null = null): Record<string, PropertyValue> =>
+export const newRowValues = (filters: FilterConfig[], schema: PropertyDefinition[], me: string | null = null, page: string | null = null): Record<string, PropertyValue> =>
   Object.fromEntries(filters.flatMap((filter) => {
-    const value = filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.operator, filter.value, me);
+    const value = filterTargetValue(schema.find((p) => p.id === filter.propertyId)?.type, filter.operator, filter.value, me, page);
 
     return value === undefined ? [] : [[filter.propertyId, value]];
   }));
@@ -704,8 +731,8 @@ const filteredRows = (source: QuerySource, view: DatabaseViewConfig, search?: st
   const now = source.now ?? new Date();
 
   const matching = source.rows.filter((row) =>
-    rowMatchesFilters(row, view.filters, source.schema, now, source.me) &&
-    rowMatchesFilterTree(row, view.filterTree, source.schema, now, source.me) &&
+    rowMatchesFilters(row, view.filters, source.schema, now, source.me, source.page) &&
+    rowMatchesFilterTree(row, view.filterTree, source.schema, now, source.me, source.page) &&
     rowMatchesSearch(row, search, source.schema));
 
   return source.parents === undefined ? matching : scopeSubItems(matching, view, source.parents);

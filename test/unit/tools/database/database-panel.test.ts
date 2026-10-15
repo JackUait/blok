@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabasePanel, panelReorderList, panelRow, panelSwitch } from '../../../../src/tools/database/database-panel';
 import type { PanelPage } from '../../../../src/tools/database/database-panel';
+import { HINT_DELAY, destroy as destroyTooltip, onHover } from '../../../../src/components/utils/tooltip';
 
 const byTestId = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="${id}"]`);
 
@@ -25,6 +26,39 @@ describe('DatabasePanel', () => {
 
     return panel;
   };
+
+  // A hint must not outlive its trigger: paging replaces the trigger, so no mouseleave ever comes.
+  it.each(['push', 'back', 'refresh'] as const)('hides a shown hint when the panel pages (%s)', (step) => {
+    vi.useFakeTimers();
+    try {
+      const shown = (): boolean => document.querySelector('[data-blok-testid="tooltip"]')?.getAttribute('data-blok-shown') === 'true';
+      const hinted = (): HTMLElement => {
+        const info = document.createElement('span');
+
+        info.setAttribute('data-blok-testid', 'hinted');
+        onHover(info, 'A hint');
+
+        return info;
+      };
+      const second: PanelPage = { title: 'Second', build: () => [hinted()] };
+      const panel = open({ title: 'First', build: () => [hinted()] });
+
+      if (step === 'back') panel.push(second);
+      byTestId('hinted')?.dispatchEvent(new MouseEvent('mouseenter'));
+      vi.advanceTimersByTime(HINT_DELAY);
+
+      expect(shown()).toBe(true);
+      if (step === 'push') panel.push(second);
+      if (step === 'back') panel.back();
+      if (step === 'refresh') panel.refresh();
+
+      expect(shown()).toBe(false);
+      panel.close();
+    } finally {
+      destroyTooltip();
+      vi.useRealTimers();
+    }
+  });
 
   it('pages forward on a row and back on Escape, then closes', () => {
     const onClose = vi.fn();

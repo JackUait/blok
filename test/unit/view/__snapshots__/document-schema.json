@@ -3108,7 +3108,7 @@
                               "type": "string"
                             },
                             "value": {
-                              "description": "Any property value; shape follows the property type."
+                              "description": "Any property value; shape follows the property type. A relation filter may hold \"this_page\": the row page the view is shown on (no row page: matches nothing)."
                             }
                           }
                         },
@@ -3155,7 +3155,7 @@
                                         "type": "string"
                                       },
                                       "value": {
-                                        "description": "Any property value; shape follows the property type."
+                                        "description": "Any property value; shape follows the property type. A relation filter may hold \"this_page\": the row page the view is shown on (no row page: matches nothing)."
                                       }
                                     }
                                   },
@@ -3200,7 +3200,7 @@
                                               "type": "string"
                                             },
                                             "value": {
-                                              "description": "Any property value; shape follows the property type."
+                                              "description": "Any property value; shape follows the property type. A relation filter may hold \"this_page\": the row page the view is shown on (no row page: matches nothing)."
                                             }
                                           }
                                         }

@@ -80,6 +80,12 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'contains', value: ['me', 'u1'] }, prop('person'), t, names)).toBe('Due: tools.database.filterMe, Ada');
   });
 
+  it('names "This page" and known rows on a relation pill (research/13 §1c)', () => {
+    const rows = (id: string): string | undefined => (id === 'r1' ? 'One' : undefined);
+
+    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterThisPage, One');
+  });
+
   it('labels sort directions per type (research/08)', () => {
     expect(sortDirectionLabelKey('number', 'asc')).toBe('tools.database.sortLowHigh');
     expect(sortDirectionLabelKey('date', 'desc')).toBe('tools.database.sortNewOld');

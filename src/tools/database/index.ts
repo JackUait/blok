@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData } from './tier3-values';
@@ -96,6 +96,7 @@ import { DatabaseListRowDrag } from './database-list-row-drag';
 import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import type { LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
+import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
 import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconPageLayout, IconUpload } from '../../components/icons';
@@ -408,11 +409,12 @@ export class DatabaseTool implements BlockTool {
 
     this.seeded = initialView !== undefined;
     const me = (): string | null => this.config.people?.me?.() ?? null;
+    const page = (): string | null => this.thisPage;
 
     this.source = sourceRefOf(data);
     this.stubSchema = Array.isArray(data?.schema) ? structuredClone(data.schema) : [];
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
-    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id, me, databaseId: this.dataId } : { me, databaseId: this.dataId });
+    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id, me, page, databaseId: this.dataId } : { me, page, databaseId: this.dataId });
     this.computedValues = new ComputedProperties(this.dataId);
     this.pullLinkedSchema();
     this.model.setValueProperty((property) => this.computedValues.valueProperty(property));
@@ -1552,8 +1554,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** A linked view's data: its one view copies the source's first table view (Notion, R:2021-12-23). */
-  private linkedViewData(databaseId: string, name: string): DatabaseData {
-    const view = this.linkedFirstView(databaseId);
+  private linkedViewData(databaseId: string, name: string, filters?: FilterConfig[]): DatabaseData {
+    const view = { ...this.linkedFirstView(databaseId), ...(filters !== undefined ? { filters } : {}) };
     const title = this.model.getSchema().find((p) => p.type === 'title');
 
     return {
@@ -1583,33 +1585,165 @@ export class DatabaseTool implements BlockTool {
     ];
   }
 
+  /** Makes a view tab of `sourceId` at once, with no undo step. `made` is what Discard deletes. */
+  private makeViewTab(sourceId: string, title: string, filters?: FilterConfig[]): { tabId: string; made: string; contentId: string | null } | null {
+    if (!this.canEditLayoutTabs()) return null;
+    const made: { tabId: string; made: string; contentId: string | null } = { tabId: '', made: '', contentId: null };
+
+    this.api.blocks.transactWithoutCapture?.(() => {
+      const existing = this.layoutTabsBlock();
+      const tabs = existing ?? this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end' });
+
+      // An undone Apply, or a peer's, can leave the block without Content: it comes first again.
+      if (existing === undefined || !this.hasContentTab(tabs.id)) {
+        made.contentId = this.api.blocks.insertAt('tab', { title: '' }, { parentId: tabs.id, position: 'start' }).id;
+      }
+      const tab = this.api.blocks.insertAt('tab', { title }, { parentId: tabs.id, position: 'end' });
+
+      this.api.blocks.insertAt('database', this.linkedViewData(sourceId, title, filters), { parentId: tab.id, position: 'end' });
+      made.tabId = tab.id;
+      made.made = existing === undefined ? tabs.id : tab.id;
+      if (existing === undefined) this.madeTabsBlocks.add(tabs.id);
+    });
+    this.mountRows();
+
+    return made.tabId === '' ? null : made;
+  }
+
+  private relatedTabSources(): ReturnType<typeof relatedTabSources> {
+    const titles = new Map(this.documentDatabases().map((database) => [database.id, database.title]));
+
+    return relatedTabSources(this.model.getSchema(), this.dataId, (property) => this.syncedMirror(property), (id) => titles.get(id));
+  }
+
+  /** The row page a linked view is shown on: its "This page" filters read it. */
+  private thisPage: string | null = null;
+
+  /** "Add new relation" relations of this session, by id: their mirror, for Discard. */
+  private readonly madeTabRelations = new Map<string, { databaseId: string; propertyId: string }>();
+
+  /** Another writable, unlocked database of this document: "Add new relation" can point to it. */
+  private canRelateTab(sourceId: string): boolean {
+    const owner = sourceId === this.dataId || this.isLinkedBlock(sourceId) ? undefined : this.dashboardOwner(sourceId);
+
+    // A locked source keeps its properties as they are, so it takes no mirror.
+    return owner !== undefined && !owner.readOnly && !owner.structureLocked();
+  }
+
+  /**
+   * research/13 §2 "Add view & relation": a two-way relation to `sourceId`,
+   * its mirror there named `relatedName`, in one undo step like a builder-made
+   * property; then a view tab of the source filtered by the mirror. The schema
+   * is written before the tab: an insert opens a sync window, and a database
+   * change inside it is saved outside the step.
+   */
+  private addRelationTab(sourceId: string, name: string, relatedName: string): ReturnType<LayoutTabsHost['addWithRelation']> {
+    if (!this.canEditLayoutTabs() || !this.canRelateTab(sourceId)) return null;
+    const made = { forward: '', back: null as string | null };
+    const write = (): void => {
+      // In the model only until the source takes the mirror, which needs this id:
+      // a refusal then leaves no row list, no undo step and no backend call.
+      made.forward = this.model.addProperty(name, 'relation', undefined, {}, { relation: { targetDatabaseId: sourceId } }).id;
+      made.back = this.addForeignRelation(sourceId, relatedName, { targetDatabaseId: this.dataId, twoWay: true, syncedPropertyId: made.forward });
+      if (made.back === null) {
+        this.model.deleteProperty(made.forward);
+
+        return;
+      }
+      const relation = { targetDatabaseId: sourceId, twoWay: true, syncedPropertyId: made.back };
+
+      this.model.updateProperty(made.forward, { relation });
+      this.writeEmptyLists(made.forward);
+      const prop = this.model.getProperty(made.forward);
+
+      if (prop !== undefined) void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position, relation });
+      this.writeSchema();
+    };
+
+    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(write);
+    else write();
+    if (made.back === null) return null;
+    this.madeTabRelations.set(made.forward, { databaseId: sourceId, propertyId: made.back });
+    this.syncRowsFromBlocks();
+    this.commitSchema();
+    const tab = this.makeViewTab(sourceId, name, [thisPageFilter(made.back)]);
+
+    return tab === null ? null : { ...tab, propertyId: made.forward };
+  }
+
+  /**
+   * research/13 §3c: a copy of a view tab at the end of the bar, made at once
+   * with no undo step, like Add view. Views are read live (the saved data lags
+   * until the async save) and get new ids: personal view state is keyed by them.
+   */
+  private duplicateViewTab(tabId: string, title: string): ReturnType<LayoutTabsHost['duplicate']> {
+    const tabs = this.layoutTabsBlock();
+    const view = this.api.blocks.getChildren(tabId).find((child) => child.name === 'database');
+
+    if (!this.canEditLayoutTabs() || tabs === undefined || view === undefined || this.api.blocks.getById(tabId)?.parentId !== tabs.id) return null;
+    const live: DatabaseViewConfig[][] = [];
+
+    view.call('readViews', { receive: (views: DatabaseViewConfig[]) => live.push(views) });
+    const saved = structuredClone(view.preservedData) as DatabaseData;
+    const ids = new Map((live[0] ?? saved.views ?? []).map((each) => [each.id, nanoid()]));
+    const views = (live[0] ?? saved.views ?? []).map((each) => ({ ...structuredClone(each), id: ids.get(each.id) ?? nanoid() }));
+    const made = { tabId: '' };
+
+    this.api.blocks.transactWithoutCapture?.(() => {
+      const tab = this.api.blocks.insertAt('tab', { title }, { parentId: tabs.id, position: 'end' });
+
+      this.api.blocks.insertAt('database', { ...saved, views, activeViewId: ids.get(saved.activeViewId ?? '') ?? views[0]?.id }, { parentId: tab.id, position: 'end' });
+      made.tabId = tab.id;
+    });
+    this.mountRows();
+
+    return made.tabId === '' ? null : { tabId: made.tabId, made: made.tabId, contentId: null };
+  }
+
+  /** Called by a database discarding a relation that "Add new relation" made: its mirror here goes too. */
+  deleteMirrorProperty(param: { propertyId: string }): void {
+    this.deleteProperty(param.propertyId);
+  }
+
+  /** Discard of "Add new relation": the relation and its mirror go, in one undo step. */
+  private removeTabRelation(propertyId: string): void {
+    // Recorded at creation: the relation may be gone already (the user or a peer deleted it).
+    const mirror = this.madeTabRelations.get(propertyId);
+
+    this.madeTabRelations.delete(propertyId);
+    if (this.readOnly) return;
+    const write = (): void => {
+      this.deleteProperty(propertyId);
+      if (mirror !== undefined) this.api.blocks.getById(mirror.databaseId)?.call('deleteMirrorProperty', { propertyId: mirror.propertyId });
+    };
+
+    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(write);
+    else write();
+    this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+  }
+
+  /** Called by the database whose row page shows this linked view. */
+  showOnRowPage(param: { rowId: string | null }): void {
+    if (this.destroyed || param.rowId === this.thisPage) return;
+    this.thisPage = param.rowId;
+    this.rerenderView();
+  }
+
   private readonly layoutTabsHost: LayoutTabsHost = {
     canEdit: () => this.canEditLayoutTabs(),
     list: () => this.layoutTabsList(),
     sources: () => this.documentDatabases().filter((database) => database.id === this.dataId || !this.isLinkedBlock(database.id)),
-    add: (sourceId, title) => {
-      if (!this.canEditLayoutTabs()) return null;
-      const made: { tabId: string; made: string; contentId: string | null } = { tabId: '', made: '', contentId: null };
+    add: (sourceId, title) => this.makeViewTab(sourceId, title),
+    related: () => this.relatedTabSources().map(({ propertyId, title }) => ({ propertyId, title })),
+    addRelated: (propertyId) => {
+      const source = this.relatedTabSources().find((each) => each.propertyId === propertyId);
 
-      this.api.blocks.transactWithoutCapture?.(() => {
-        const existing = this.layoutTabsBlock();
-        const tabs = existing ?? this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end' });
-
-        // An undone Apply, or a peer's, can leave the block without Content: it comes first again.
-        if (existing === undefined || !this.hasContentTab(tabs.id)) {
-          made.contentId = this.api.blocks.insertAt('tab', { title: '' }, { parentId: tabs.id, position: 'start' }).id;
-        }
-        const tab = this.api.blocks.insertAt('tab', { title }, { parentId: tabs.id, position: 'end' });
-
-        this.api.blocks.insertAt('database', this.linkedViewData(sourceId, title), { parentId: tab.id, position: 'end' });
-        made.tabId = tab.id;
-        made.made = existing === undefined ? tabs.id : tab.id;
-        if (existing === undefined) this.madeTabsBlocks.add(tabs.id);
-      });
-      this.mountRows();
-
-      return made.tabId === '' ? null : made;
+      return source === undefined ? null : this.makeViewTab(source.sourceId, source.title, [thisPageFilter(source.backPropertyId)]);
     },
+    canRelate: (sourceId) => this.canRelateTab(sourceId),
+    addWithRelation: (sourceId, name, relatedName) => this.addRelationTab(sourceId, name, relatedName),
+    removeRelation: (propertyId) => this.removeTabRelation(propertyId),
+    duplicate: (tabId, title) => this.duplicateViewTab(tabId, title),
     ensure: () => {
       if (!this.canEditLayoutTabs()) return null;
       const existing = this.layoutTabsBlock();
@@ -1643,7 +1777,7 @@ export class DatabaseTool implements BlockTool {
       if (live.length === 0 || this.readOnly) return;
       this.api.blocks.transactWithoutCapture?.(() => live.forEach((id) => this.removeBlock(id)));
     },
-    attach: (tabId, host) => this.attachLayoutTab(tabId, host),
+    attach: (tabId, host, rowId) => this.attachLayoutTab(tabId, host, rowId),
     detach: () => this.detachLayoutTab(),
     notify: (message) => this.api.notifier.show({ message }),
   };
@@ -1658,11 +1792,13 @@ export class DatabaseTool implements BlockTool {
    * while a tab's child outside its tab would fail it. Refused when `host`
    * sits inside the tabs block: a row page opened from the view itself.
    */
-  private attachLayoutTab(tabId: string, host: HTMLElement): boolean {
+  private attachLayoutTab(tabId: string, host: HTMLElement, rowId: string): boolean {
     const tabs = this.layoutTabsBlock();
     const tab = this.api.blocks.getById(tabId);
 
     if (tabs === undefined || tab === null || tab.parentId !== tabs.id || tabs.holder.contains(host)) return false;
+    // Not cleared on detach: the view is hidden then, and clearing would redraw it twice per refresh.
+    this.api.blocks.getChildren(tab.id).forEach((view) => view.call('showOnRowPage', { rowId }));
     moveElementToEnd(host, tabs.holder);
     this.layoutTabsLent = true;
     // The tab's own lever, as find-in-page uses it: open this tab in its tabs block.
@@ -3576,6 +3712,7 @@ export class DatabaseTool implements BlockTool {
       me: () => this.config.people?.me?.() ?? null,
       people: () => this.people ?? [],
       relatedRows: (property) => this.relationCandidates(property),
+      thisPageDatabase: () => (this.thisPage === null ? null : this.api.blocks.getById(this.thisPage)?.parentId ?? null),
       updateView: (changes) => this.updateActiveView(changes, context),
       setLayout: (type) => this.setActiveLayout(type),
       setLocked: (locked) => this.setDatabaseLocked(locked),
@@ -4616,6 +4753,21 @@ export class DatabaseTool implements BlockTool {
    * `rowData`, so the backend hears them too.
    */
   private insertNewRow(rowData: DatabaseRow, position = rowData.position, pick?: DatabaseRow | null): void {
+    if (this.thisPage === null) {
+      this.writeNewRow(rowData, position, pick);
+
+      return;
+    }
+    // On a row page: the row and the page's link to it are one undo step. The
+    // link goes first: an insert opens a sync window, and a database write
+    // inside it reads as an echo and is saved outside the step.
+    this.inOneStep(() => {
+      this.linkPageBack(rowData);
+      this.writeNewRow(rowData, position, pick);
+    });
+  }
+
+  private writeNewRow(rowData: DatabaseRow, position: string, pick?: DatabaseRow | null): void {
     const titlePropId = this.titlePropertyId();
     const template = pick === undefined ? this.defaultTemplate() : pick ?? undefined;
 
@@ -4641,6 +4793,24 @@ export class DatabaseTool implements BlockTool {
     );
     if (template !== undefined) {
       this.copyChildBlocks(template.id, rowData.id);
+    }
+  }
+
+  /**
+   * A relation tab's new row holds this page in its back relation (newRowValues).
+   * Two-way relations are stored on both sides, so the page row lists the new row
+   * too, as a relation cell edit writes it (commitRelation).
+   */
+  private linkPageBack(rowData: DatabaseRow): void {
+    const page = this.thisPage;
+
+    if (page === null) return;
+    for (const property of this.model.getSchema()) {
+      const synced = property.type === 'relation' ? this.syncedMirror(property) : undefined;
+      const target = property.relation?.targetDatabaseId;
+
+      if (synced === undefined || target === undefined || !relationIdsOf(rowData.properties[property.id]).includes(page)) continue;
+      this.writeForeignRow(target, page, { [synced]: addRelatedIds(this.storedRelationOf(target, page, synced), rowData.id, null) });
     }
   }
 
@@ -5469,7 +5639,7 @@ export class DatabaseTool implements BlockTool {
       : [];
     const filters = [...(effective?.filters ?? []), ...treeRules]
       .filter((f) => f.propertyId !== groupByPropId && f.propertyId !== subGroupBy);
-    const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema(), this.config.people?.me?.() ?? null), [titlePropId]: '' };
+    const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema(), this.config.people?.me?.() ?? null, this.thisPage), [titlePropId]: '' };
 
     const value = groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY ? undefined : this.groupValueFor(groupByPropId, optionId, effective);
 

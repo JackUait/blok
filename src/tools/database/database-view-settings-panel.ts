@@ -39,7 +39,7 @@ import {
 } from './filter-tree';
 import { GROUPABLE_TYPES, defaultGroupSort } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
-import { ME_FILTER_VALUE } from './database-query';
+import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
 import {
   LOAD_LIMITS,
@@ -109,6 +109,8 @@ export interface ViewSettingsContext {
   people?: () => Array<{ id: string; name: string }>;
   /** Rows a relation can point at, for relation filters. */
   relatedRows?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
+  /** The database whose row page shows this view, or null: a relation to it can name "This page". */
+  thisPageDatabase?: () => string | null;
   /**
    * The active layout's own rows (gallery, calendar), as menu items. A row
    * with children becomes a page of choices; one without becomes a switch.
@@ -804,6 +806,8 @@ export class ViewSettingsPages {
     update: (patch: Partial<Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>>) => void;
     remove: () => void;
     toAdvanced?: () => void;
+    /** A color rule reads no row page, so "This page" would never match there. */
+    noThisPage?: boolean;
   }): PanelPage {
     return {
       build: (panel) => {
@@ -828,7 +832,7 @@ export class ViewSettingsPages {
           ...this.valueControls(property, current, (patch) => {
             rule.update(patch);
             panel.refresh();
-          }),
+          }, rule.noThisPage !== true),
           panelSeparator(),
         ];
 
@@ -884,7 +888,8 @@ export class ViewSettingsPages {
   private valueControls(
     property: PropertyDefinition,
     filter: Pick<FilterConfig, 'operator' | 'value'>,
-    update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void
+    update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void,
+    thisPage = true
   ): HTMLElement[] {
     const { operator, value } = filter;
 
@@ -924,7 +929,7 @@ export class ViewSettingsPages {
       case 'lastEditedBy':
         return this.personControls(value, update);
       case 'relation':
-        return this.relationControls(property, value, update);
+        return this.relationControls(property, value, update, thisPage);
       case 'files':
       case 'formula':
       case 'rollup':
@@ -981,16 +986,29 @@ export class ViewSettingsPages {
     }
   }
 
-  /** A relation filter: the related database's rows, by title. */
-  private relationControls(property: PropertyDefinition, value: FilterConfig['value'], update: (patch: { value: string[] }) => void): HTMLElement[] {
+  /**
+   * A relation filter: "This page" first on a row page (research/13 §1c), or
+   * while chosen so it can be cleared, then the related database's rows.
+   */
+  private relationControls(property: PropertyDefinition, value: FilterConfig['value'], update: (patch: { value: string[] }) => void, thisPage: boolean): HTMLElement[] {
     const ids = idList(value);
+    const pageDatabase = thisPage ? this.ctx.thisPageDatabase?.() ?? null : null;
+    // Only a relation to the page's own database can hold the page's row.
+    const page = ids.includes(THIS_PAGE_FILTER_VALUE) || (pageDatabase !== null && property.relation?.targetDatabaseId === pageDatabase)
+      ? [panelRow({
+        label: this.t('filterThisPage'),
+        testId: 'database-filter-related-this-page',
+        checked: ids.includes(THIS_PAGE_FILTER_VALUE),
+        onClick: () => update({ value: ids.includes(THIS_PAGE_FILTER_VALUE) ? ids.filter((id) => id !== THIS_PAGE_FILTER_VALUE) : [...ids, THIS_PAGE_FILTER_VALUE] }),
+      })]
+      : [];
 
-    return (this.ctx.relatedRows?.(property) ?? []).map((row) => panelRow({
+    return [...page, ...(this.ctx.relatedRows?.(property) ?? []).map((row) => panelRow({
       label: row.title === '' ? this.t('relationUntitled') : row.title,
       testId: `database-filter-related-${row.id}`,
       checked: ids.includes(row.id),
       onClick: () => update({ value: ids.includes(row.id) ? ids.filter((id) => id !== row.id) : [...ids, row.id] }),
-    }));
+    }))];
   }
 
   /**
@@ -1546,6 +1564,7 @@ export class ViewSettingsPages {
                 read: () => rules().find((r) => r.id === rule.id),
                 update: (change) => patch(rule.id, change),
                 remove: () => write(rules().filter((r) => r.id !== rule.id)),
+                noThisPage: true,
               })),
             }),
             panelRow({

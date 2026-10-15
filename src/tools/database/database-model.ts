@@ -44,6 +44,8 @@ export interface DatabaseModelOptions {
   now?: () => Date;
   /** The current user's id, for a person filter's "Me" (the people lever). */
   me?: () => string | null;
+  /** The row page this view is shown on, for a relation filter's "This page". */
+  page?: () => string | null;
   /** The database block's id: a relation to it is a self-relation (sub-items). */
   databaseId?: string;
 }
@@ -71,6 +73,7 @@ export class DatabaseModel {
   /** Today, for relative dates. Tests pin it. */
   private readonly now: () => Date;
   private readonly me: () => string | null;
+  private readonly page: () => string | null;
   private readonly databaseId: string | undefined;
   /** Formula and rollup as their result type (ComputedProperties.valueProperty). */
   private valueOf: (property: PropertyDefinition) => PropertyDefinition = (property) => property;
@@ -78,6 +81,7 @@ export class DatabaseModel {
   constructor(data?: Partial<DatabaseData>, options: DatabaseModelOptions = {}) {
     this.now = options.now ?? ((): Date => new Date());
     this.me = options.me ?? ((): null => null);
+    this.page = options.page ?? ((): null => null);
     this.databaseId = options.databaseId;
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
@@ -367,6 +371,7 @@ export class DatabaseModel {
       rows: this.rows,
       now,
       me: this.me(),
+      page: this.page(),
       ...(subItems !== undefined ? { parents: parentMap(this.rows, subItems.forward) } : {}),
       ...(view.groupBy !== undefined
         ? { groupKeysOf: this.groupKeysOf(view.groupBy, { statusBy: view.groupByStatus, settings: view.groupSettings, now }) }

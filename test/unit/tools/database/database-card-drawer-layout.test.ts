@@ -520,6 +520,12 @@ describe('DatabaseCardDrawer — page layout', () => {
       list: () => [{ id: 'tc', title: '', view: false }, { id: 'tv', title: 'Roadmap', view: true }],
       sources: () => [],
       add: () => null,
+      related: () => [],
+      addRelated: () => null,
+      canRelate: () => false,
+      addWithRelation: () => null,
+      removeRelation: vi.fn(),
+      duplicate: () => null,
       ensure: () => null,
       renameMade: vi.fn(),
       discard: vi.fn(),
@@ -542,7 +548,7 @@ describe('DatabaseCardDrawer — page layout', () => {
     tabs[1].click();
 
     expect(q('[data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"]')?.textContent).toBe('Roadmap');
-    expect(layoutTabs.attach).toHaveBeenLastCalledWith('tv', q('[data-blok-database-drawer-tab-panel]'));
+    expect(layoutTabs.attach).toHaveBeenLastCalledWith('tv', q('[data-blok-database-drawer-tab-panel]'), ROW.id);
     expect(q('[data-blok-database-drawer-tab-panel]')?.textContent).toBe('all rows of tv');
     expect(q('[data-blok-database-drawer-editor]')?.hidden).toBe(true);
     expect(q('[data-blok-database-drawer-props]')).toBeNull();
@@ -558,6 +564,12 @@ describe('DatabaseCardDrawer — page layout', () => {
       list: () => [{ id: 'tc', title: '', view: false }, { id: 'tv', title: 'Roadmap', view: true }],
       sources: () => [{ id: 'db', title: 'Tasks' }],
       add: vi.fn(() => ({ tabId: 't9', made: 't9', contentId: null })),
+      related: () => [],
+      addRelated: () => null,
+      canRelate: () => false,
+      addWithRelation: () => null,
+      removeRelation: vi.fn(),
+      duplicate: () => null,
       ensure: () => null,
       renameMade: vi.fn(),
       discard: vi.fn(),
@@ -581,6 +593,81 @@ describe('DatabaseCardDrawer — page layout', () => {
 
     expect(layoutTabs.discard).toHaveBeenCalledWith(['t9']);
     expect(layoutTabs.detach).toHaveBeenCalled();
+  });
+
+  it('keeps $ patterns in a deleted tab\'s name literal in the toast', async () => {
+    const layoutTabs: LayoutTabsHost = {
+      canEdit: () => true,
+      list: () => [{ id: 'tc', title: '', view: false }, { id: 'tv', title: 'Q$$A', view: true }],
+      sources: () => [],
+      add: () => null,
+      related: () => [],
+      addRelated: () => null,
+      canRelate: () => false,
+      addWithRelation: () => null,
+      removeRelation: vi.fn(),
+      duplicate: () => null,
+      ensure: () => null,
+      renameMade: vi.fn(),
+      discard: vi.fn(),
+      attach: vi.fn(() => true),
+      detach: vi.fn(),
+      notify: vi.fn(),
+    };
+    const drawer = new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }), layoutTabs }));
+
+    drawer.open(ROW);
+    drawer.startCustomizing();
+    const tab = (): HTMLElement | null => q('[data-blok-interface="database-layout-builder"] [data-blok-database-drawer-tabs] [data-tab-id="tv"]');
+
+    tab()?.click();
+    tab()?.click();
+    q('[data-blok-testid="database-layout-delete-view"]')?.click();
+    q('[data-blok-database-confirm-action="confirm"]')?.click();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    expect(layoutTabs.notify).toHaveBeenCalledWith('Deleted Q$$A view');
+    drawer.destroy();
+  });
+
+  // Closing or destroying mid-draft is a Discard: a relation "Add new relation" made goes with its tab.
+  it.each(['close', 'destroy'] as const)('removes a relation made in an open Customize layout on %s', (exit) => {
+    const layoutTabs: LayoutTabsHost = {
+      canEdit: () => true,
+      list: () => [{ id: 'tc', title: '', view: false }],
+      sources: () => [{ id: 'dbb', title: 'Other' }],
+      add: () => null,
+      related: () => [],
+      addRelated: () => null,
+      canRelate: () => true,
+      addWithRelation: vi.fn(() => ({ tabId: 't9', made: 't9', contentId: null, propertyId: 'p9' })),
+      removeRelation: vi.fn(),
+      duplicate: () => null,
+      ensure: () => null,
+      renameMade: vi.fn(),
+      discard: vi.fn(),
+      attach: vi.fn(() => true),
+      detach: vi.fn(),
+      notify: vi.fn(),
+    };
+    const drawer = new DatabaseCardDrawer(createOptions({ schema: schemaWith({ pageLayoutStructure: 'tabbed' }), layoutTabs }));
+
+    drawer.open(ROW);
+    drawer.startCustomizing();
+    q('[data-blok-database-layout-add-tab]')?.click();
+    q('[data-blok-testid="database-layout-link-data-source"]')?.click();
+    q('[data-blok-testid="database-layout-source-dbb"]')?.click();
+    q('[data-blok-testid="database-layout-add-relation"]')?.click();
+    q('[data-blok-testid="database-layout-add-view"]')?.click();
+
+    expect(layoutTabs.addWithRelation).toHaveBeenCalled();
+    if (exit === 'close') drawer.close();
+    else drawer.destroy();
+
+    expect(layoutTabs.discard).toHaveBeenCalledWith(['t9']);
+    expect(layoutTabs.removeRelation).toHaveBeenCalledWith('p9');
   });
 
   it('draws only Content for a Tabbed page with no layout tabs, whatever relations the database has', () => {

@@ -1,5 +1,6 @@
 import { IconCheck, IconChevronLeft, IconChevronRight, IconMenu } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
+import { hide as hideTooltip } from '../../components/utils/tooltip';
 
 /**
  * One screen of a paged panel. `build` runs again on every refresh, so it
@@ -124,6 +125,9 @@ export class DatabasePanel {
 
   private render(): void {
     const page = this.stack[this.stack.length - 1];
+
+    // The page's hint triggers are replaced, so no mouseleave would hide a shown hint.
+    hideTooltip();
     const children: HTMLElement[] = [];
 
     if (this.stack.length > 1 || page.title !== undefined) {

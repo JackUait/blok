@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowUp, IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
+import { IconArrowDiagonal, IconArrowUp, IconCheck, IconCopy, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { onHover } from '../../components/utils/tooltip';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
@@ -51,8 +51,19 @@ export interface PreviewPage {
 export interface BuilderTabs {
   sources(): Array<{ id: string; title: string }>;
   add(sourceId: string, name: string): void;
+  /** Relations to other databases: each one is a one-click tab (research/13 §1b). */
+  related(): Array<{ propertyId: string; title: string }>;
+  /** This database's name, for the "Related to" heading. */
+  thisDatabase(): string;
+  addRelated(propertyId: string): void;
+  /** A source "Add new relation" can relate to: another database of this document. */
+  canRelate(sourceId: string): boolean;
+  /** research/13 §2: a two-way relation to `sourceId` and a tab filtered by its mirror. */
+  addWithRelation(sourceId: string, name: string, relatedName: string): void;
   rename(tabId: string, title: string): void;
   remove(tabId: string, name: string): void;
+  /** research/13 §3c: a copy at the end of the bar, named "<name> (n)", selected. */
+  duplicate(tabId: string): void;
 }
 
 export interface PageLayoutBuilderOptions {
@@ -1139,6 +1150,45 @@ export class PageLayoutBuilder {
     return card;
   }
 
+  /**
+   * An (i) whose hint shows on hover only (hint law), and the same text for
+   * keyboard and screen reader users: the (i) takes no focus, so `toggle`
+   * is described by it instead.
+   */
+  private hintParts(toggle: HTMLElement, hint: string): { info: HTMLElement; description: HTMLElement } {
+    const info = document.createElement('span');
+    const description = document.createElement('span');
+
+    info.setAttribute('data-blok-database-layout-hint', '');
+    info.innerHTML = IconInfo;
+    onHover(info, hint);
+    description.id = `blok-database-layout-hint-${nanoid()}`;
+    description.setAttribute('data-blok-database-sr-only', '');
+    description.textContent = hint;
+    toggle.setAttribute('aria-describedby', description.id);
+
+    return { info, description };
+  }
+
+  /**
+   * A disabled switch with a hint. Some browsers fire no mouse events inside a
+   * disabled button, so the label and the (i) sit outside it, in the row, and
+   * the button keeps only the track.
+   */
+  private lockedSwitch(toggle: HTMLButtonElement, hint: string): HTMLElement {
+    const row = document.createElement('div');
+    const label = toggle.querySelector('[data-blok-database-panel-label]');
+    const { info, description } = this.hintParts(toggle, hint);
+
+    row.setAttribute('data-blok-database-panel-row', '');
+    row.setAttribute('data-blok-database-layout-locked', '');
+    toggle.setAttribute('aria-label', label?.textContent ?? '');
+    if (label !== null) row.append(label);
+    row.append(info, toggle, description);
+
+    return row;
+  }
+
   /** A switch row; a hint shows on hovering its (i) only (hint law). */
   private option(key: string, hintKey: string | null, on: (layout: PageLayoutData) => boolean, op: (next: boolean) => PageLayoutOp): HTMLElement {
     const row = document.createElement('div');
@@ -1153,18 +1203,8 @@ export class PageLayoutBuilder {
     row.append(toggle);
     this.settings.push({ control: toggle, state: 'aria-checked', on });
     if (hintKey === null) return row;
-    const info = document.createElement('span');
-    const description = document.createElement('span');
-    const hint = this.label(hintKey);
+    const { info, description } = this.hintParts(toggle, this.label(hintKey));
 
-    info.setAttribute('data-blok-database-layout-hint', '');
-    info.innerHTML = IconInfo;
-    onHover(info, hint);
-    // The (i) takes no focus, so the switch carries the hint for keyboard and screen reader users.
-    description.id = `blok-database-layout-hint-${nanoid()}`;
-    description.setAttribute('data-blok-database-sr-only', '');
-    description.textContent = hint;
-    toggle.setAttribute('aria-describedby', description.id);
     toggle.querySelector('[data-blok-database-panel-label]')?.after(info);
     row.append(description);
 
@@ -1186,35 +1226,97 @@ export class PageLayoutBuilder {
 
   /** research/10 §2: Add tab > Link existing data source > a database > View name > Add view. */
   private openAddTab(anchor: HTMLElement, tabs: BuilderTabs): void {
-    const form = (source: { id: string; title: string }): PanelPage => ({
-      title: this.label('tools.database.layoutLinkDataSource'),
-      build: (panel) => {
-        const name = { value: source.title };
-        const field = panelInput({
-          value: source.title,
-          placeholder: this.label('tools.database.layoutViewName'),
-          testId: 'database-layout-view-name',
-          label: this.label('tools.database.layoutViewName'),
-          onInput: (value) => {
-            name.value = value;
-          },
-        });
-        const submit = (): void => {
-          panel.close();
-          tabs.add(source.id, name.value.trim() !== '' ? name.value.trim() : source.title);
-        };
+    const form = (source: { id: string; title: string }): PanelPage => {
+      const state = { name: source.title, relation: false, relatedName: '', built: false };
 
-        field.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter' && !event.isComposing) {
-            event.preventDefault();
-            submit();
+      return {
+        title: this.label('tools.database.layoutLinkDataSource'),
+        build: (panel) => {
+          // research/13 §2: the database name and " 1", the same in every language.
+          const relatedPlaceholder = `${tabs.thisDatabase() !== '' ? tabs.thisDatabase() : this.label('tools.database.relationUntitledDatabase')} 1`;
+          const nameLabel = this.label(state.relation ? 'tools.database.layoutViewRelationName' : 'tools.database.layoutViewName');
+          const field = panelInput({
+            value: state.name,
+            placeholder: nameLabel,
+            testId: 'database-layout-view-name',
+            label: nameLabel,
+            onInput: (value) => {
+              state.name = value;
+            },
+          });
+          const submit = (): void => {
+            const name = state.name.trim() !== '' ? state.name.trim() : source.title;
+
+            panel.close();
+            if (state.relation) {
+              // research/13 §2: a field left empty takes its placeholder.
+              tabs.addWithRelation(source.id, name, state.relatedName.trim() !== '' ? state.relatedName.trim() : relatedPlaceholder);
+            } else {
+              tabs.add(source.id, name);
+            }
+          };
+          const onEnter = (input: HTMLInputElement): void => input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.isComposing) {
+              event.preventDefault();
+              submit();
+            }
+          });
+          // research/13 §1d: "View of" names the source. Changing it from here is unmeasured, so the row is not a control.
+          const viewOf = document.createElement('div');
+          const viewOfLabel = document.createElement('span');
+          const viewOfValue = document.createElement('span');
+
+          viewOf.setAttribute('data-blok-database-panel-row', '');
+          viewOf.setAttribute('data-blok-testid', 'database-layout-view-of');
+          viewOfLabel.setAttribute('data-blok-database-panel-label', '');
+          viewOfLabel.textContent = this.label('tools.database.layoutViewOf');
+          viewOfValue.setAttribute('data-blok-database-panel-value', '');
+          viewOfValue.textContent = source.title;
+          viewOf.append(viewOfLabel, viewOfValue);
+          onEnter(field);
+          // First build only: a rebuild (the switch) must not select what was typed.
+          if (!state.built) queueMicrotask(() => field.select());
+          state.built = true;
+          const relationRows: HTMLElement[] = [];
+
+          if (tabs.canRelate(source.id)) {
+            relationRows.push(panelSwitch({
+              label: this.label('tools.database.layoutAddNewRelation'),
+              testId: 'database-layout-add-relation',
+              checked: state.relation,
+              onToggle: (next) => {
+                state.relation = next;
+                panel.refresh();
+              },
+            }));
           }
-        });
-        queueMicrotask(() => field.select());
+          if (state.relation) {
+            // Locked on: tabbed views need a two-way relation (research/13 §2).
+            const twoWay = panelSwitch({ label: this.label('tools.database.layoutTwoWayRelation'), testId: 'database-layout-two-way', checked: true, disabled: true, onToggle: () => undefined });
+            const related = panelInput({
+              value: state.relatedName,
+              placeholder: relatedPlaceholder,
+              testId: 'database-layout-related-name',
+              label: this.label('tools.database.layoutRelatedPropertyName'),
+              onInput: (value) => {
+                state.relatedName = value;
+              },
+            });
 
-        return [panelLabel(this.label('tools.database.layoutViewName')), field, panelRow({ label: this.label('tools.database.layoutAddView'), testId: 'database-layout-add-view', icon: IconPlus, onClick: submit })];
-      },
-    });
+            onEnter(related);
+            relationRows.push(this.lockedSwitch(twoWay, this.label('tools.database.layoutTwoWayRelationHint')), panelLabel(this.label('tools.database.layoutRelatedPropertyName')), related);
+          }
+
+          return [
+            panelLabel(nameLabel),
+            field,
+            viewOf,
+            ...relationRows,
+            panelRow({ label: this.label(state.relation ? 'tools.database.layoutAddViewRelation' : 'tools.database.layoutAddView'), testId: 'database-layout-add-view', icon: IconPlus, onClick: submit }),
+          ];
+        },
+      };
+    };
     const picker: PanelPage = {
       title: this.label('tools.database.layoutLinkDataSource'),
       build: (panel) => {
@@ -1236,7 +1338,28 @@ export class PageLayoutBuilder {
     };
 
     this.openPanel('add-tab', anchor, 'database-layout-add-tab-menu', {
-      build: (panel) => [panelRow({ label: this.label('tools.database.layoutLinkDataSource'), testId: 'database-layout-link-data-source', icon: IconDatabase, onClick: () => panel.push(picker) })],
+      build: (panel) => {
+        const related = tabs.related();
+        const link = panelRow({ label: this.label('tools.database.layoutLinkDataSource'), testId: 'database-layout-link-data-source', icon: IconDatabase, onClick: () => panel.push(picker) });
+
+        if (related.length === 0) return [link];
+        const name = tabs.thisDatabase();
+
+        return [
+          panelLabel(this.label('tools.database.layoutRelatedTo', { name: name !== '' ? name : this.label('tools.database.relationUntitledDatabase') })),
+          ...related.map((relation) => panelRow({
+            label: relation.title !== '' ? relation.title : this.label('tools.database.relationUntitledDatabase'),
+            testId: `database-layout-related-${relation.propertyId}`,
+            icon: IconArrowDiagonal,
+            onClick: () => {
+              panel.close();
+              tabs.addRelated(relation.propertyId);
+            },
+          })),
+          panelSeparator(),
+          link,
+        ];
+      },
     });
   }
 
@@ -1264,6 +1387,14 @@ export class PageLayoutBuilder {
         if (tab.content) return [field];
 
         return [field, panelSeparator(), panelRow({
+          label: this.label('tools.database.layoutDuplicateView'),
+          testId: 'database-layout-duplicate-view',
+          icon: IconCopy,
+          onClick: () => {
+            panel.close();
+            tabs.duplicate(tab.id);
+          },
+        }), panelRow({
           label: this.label('tools.database.layoutDeleteView'),
           testId: 'database-layout-delete-view',
           icon: IconTrash,

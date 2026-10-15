@@ -195,7 +195,7 @@ const FILTER_RULE = {
     id: { type: 'string' },
     propertyId: { type: 'string' },
     operator: { type: 'string' },
-    value: { description: 'Any property value; shape follows the property type.' },
+    value: { description: 'Any property value; shape follows the property type. A relation filter may hold "this_page": the row page the view is shown on (no row page: matches nothing).' },
   },
 };
 

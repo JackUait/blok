@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPageLayout, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -131,14 +131,30 @@ export interface LayoutTabsHost {
   sources(): Array<{ id: string; title: string }>;
   /** Makes a view tab at once, with no undo step. `made` is what Discard deletes. */
   add(sourceId: string, title: string): { tabId: string; made: string; contentId: string | null } | null;
+  /** Relations to other databases the Add tab menu offers (research/13 §1b). */
+  related(): Array<{ propertyId: string; title: string }>;
+  /** Like `add`: a view tab of the related database, filtered to the row page shown. */
+  addRelated(propertyId: string): { tabId: string; made: string; contentId: string | null } | null;
+  /** Another database of this document, which a new relation can point to. */
+  canRelate(sourceId: string): boolean;
+  /**
+   * research/13 §2: a two-way relation to `sourceId` (its mirror named
+   * `relatedName`) and a view tab filtered by the mirror. The properties save
+   * at once; `propertyId` is what Discard removes.
+   */
+  addWithRelation(sourceId: string, name: string, relatedName: string): { tabId: string; made: string; contentId: string | null; propertyId: string } | null;
+  /** Deletes a relation made while customizing and its mirror. */
+  removeRelation(propertyId: string): void;
+  /** Copies a view tab to the end of the bar as `title`, with its own view ids. Like `add`. */
+  duplicate(tabId: string, title: string): { tabId: string; made: string; contentId: string | null } | null;
   /** Makes the tabs block with only Content, with no undo step. Null when it exists. */
   ensure(): { contentId: string; made: string } | null;
   /** Renames a tab made while customizing, with no undo step. */
   renameMade(tabId: string, title: string): void;
   /** Deletes blocks made while customizing, with no undo step. */
   discard(made: string[]): void;
-  /** Moves the tab's database holder into `host`. False when it cannot. */
-  attach(tabId: string, host: HTMLElement): boolean;
+  /** Moves the tab's database holder into `host`, shown on row `rowId`. False when it cannot. */
+  attach(tabId: string, host: HTMLElement, rowId: string): boolean;
   detach(): void;
   notify(message: string): void;
 }
@@ -149,6 +165,8 @@ class PageLayoutTabEdits {
   readonly fresh = new Set<string>();
   readonly removed = new Set<string>();
   readonly titles = new Map<string, string>();
+  /** Relations "Add new relation" made: Discard deletes them, like other builder-made properties. */
+  readonly relations: string[] = [];
 
   static empty(): PageLayoutTabEdits {
     return new PageLayoutTabEdits();
@@ -753,8 +771,8 @@ export class DatabaseCardDrawer {
     this.cleanupEditor();
     this.closeModeMenu();
     this.stopWatchingPins();
-    // Closing mid-draft is a discard: tabs made in it go (research/11 §1).
-    if (this.draft !== null) this.layoutTabs?.discard(this.takeTabDraft().made);
+    // Closing mid-draft is a discard: tabs and relations made in it go (research/11 §1).
+    if (this.draft !== null) this.discardTabDraft();
     this.layoutTabs?.detach();
     this.draft = null;
     this.placeholder = null;
@@ -804,7 +822,7 @@ export class DatabaseCardDrawer {
     this.releasePeekHost();
     this.closeModeMenu();
     // Destroyed mid-draft is a discard too (research/11 §1).
-    if (this.draft !== null) this.layoutTabs?.discard(this.takeTabDraft().made);
+    if (this.draft !== null) this.discardTabDraft();
     this.layoutTabs?.detach();
     this.draft = null;
     this.placeholder = null;
@@ -1136,6 +1154,40 @@ export class DatabaseCardDrawer {
     label.append(title, description);
 
     return label;
+  }
+
+  /**
+   * The row page's view tab menu. Notion also has "Display as" and "Copy link
+   * to view"; Blok has no per-tab icons and no link that opens a row on a tab.
+   * Shares the mode menu's slot, so closing the page closes it too.
+   */
+  private openRowTabMenu(anchor: HTMLElement): void {
+    this.closeModeMenu();
+    const menu = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '240px',
+      items: [{
+        type: PopoverItemType.Default,
+        name: 'row-tab-customize-layout',
+        title: this.label('tools.database.layoutCustomize'),
+        icon: IconPageLayout,
+        closeOnActivate: true,
+        onActivate: () => this.startCustomizing(),
+      }],
+    });
+
+    menu.on(PopoverEvent.Closed, () => {
+      anchor.setAttribute('aria-expanded', 'false');
+      if (this.modeMenu === menu) {
+        this.modeMenu = null;
+        menu.destroy();
+      }
+    });
+    this.modeMenu = menu;
+    menu.show();
+    anchor.setAttribute('aria-expanded', 'true');
   }
 
   private closeModeMenu(): void {
@@ -1668,7 +1720,7 @@ export class DatabaseCardDrawer {
     }
     // Once the panel is in the page: the tab's database renders where it is shown.
     if (panel !== null) {
-      this.layoutTabs?.attach(this.shownTab, panel);
+      this.layoutTabs?.attach(this.shownTab, panel, row.id);
     }
     this.syncPageInfo();
     this.syncDetailsDock();
@@ -1820,10 +1872,21 @@ export class DatabaseCardDrawer {
       el.setAttribute('aria-selected', String(this.shownTab === id));
       el.tabIndex = this.shownTab === id ? 0 : -1;
       el.textContent = text;
+      // On a row page the selected view tab opens its menu.
+      if (builder === null && id !== 'content' && this.shownTab === id && this.customizable) {
+        el.setAttribute('aria-haspopup', 'menu');
+        el.setAttribute('aria-expanded', 'false');
+      }
       el.addEventListener('click', () => {
         // research/10 §2: clicking the selected tab in the builder opens its menu.
         if (editable && this.shownTab === id) {
           builder.openTabMenu(el, { id, title: text, content: id === 'content' }, this.builderTabs());
+
+          return;
+        }
+        // research/11 §4, research/13 §3b: on a row page the selected view tab opens its own menu.
+        if (builder === null && id !== 'content' && this.shownTab === id && this.customizable) {
+          this.openRowTabMenu(el);
 
           return;
         }
@@ -1857,16 +1920,28 @@ export class DatabaseCardDrawer {
   private builderTabs(): BuilderTabs {
     return {
       sources: () => this.layoutTabs?.sources() ?? [],
-      add: (sourceId, name) => {
-        const added = this.layoutTabs?.add(sourceId, name) ?? null;
+      related: () => this.layoutTabs?.related() ?? [],
+      thisDatabase: () => this.databaseTitle(),
+      addRelated: (propertyId) => this.addedTab(this.layoutTabs?.addRelated(propertyId) ?? null),
+      add: (sourceId, name) => this.addedTab(this.layoutTabs?.add(sourceId, name) ?? null),
+      canRelate: (sourceId) => this.layoutTabs?.canRelate(sourceId) ?? false,
+      duplicate: (tabId) => {
+        const tabs = this.viewTabs().views;
+        const name = tabs.find((tab) => tab.id === tabId)?.title ?? '';
+        const taken = new Set(tabs.map((tab) => tab.title));
+        // One pass with a function: a name's own "$&" or "{count}" stays literal.
+        // Notion's "Roadmap (1)": the same in every language, so no translated string.
+        const copyName = (count: number): string => `${name} (${count})`;
+        // research/13 §3c: " (1)", then the lowest number not shown yet.
+        const count = Array.from({ length: tabs.length + 1 }, (_, i) => i + 1).find((n) => !taken.has(copyName(n))) ?? tabs.length + 1;
 
-        if (added === null) return;
-        this.tabDraft.made.push(added.made);
-        this.tabDraft.fresh.add(added.tabId);
-        if (added.contentId !== null) this.tabDraft.fresh.add(added.contentId);
-        // research/10 §2: the new tab is selected.
-        this.activeTab = added.tabId;
-        this.rerender();
+        this.addedTab(this.layoutTabs?.duplicate(tabId, copyName(count)) ?? null);
+      },
+      addWithRelation: (sourceId, name, relatedName) => {
+        const added = this.layoutTabs?.addWithRelation(sourceId, name, relatedName) ?? null;
+
+        if (added !== null) this.tabDraft.relations.push(added.propertyId);
+        this.addedTab(added);
       },
       rename: (tabId, title) => {
         const id = tabId === 'content' ? this.contentTabId() : tabId;
@@ -1889,9 +1964,19 @@ export class DatabaseCardDrawer {
         }
         this.activeTab = 'content';
         this.rerender();
-        this.layoutTabs?.notify(this.label('tools.database.layoutViewDeleted').replace('{name}', name));
+        this.layoutTabs?.notify(this.label('tools.database.layoutViewDeleted').replace('{name}', () => name));
       },
     };
+  }
+
+  /** A tab made in the draft: Discard deletes it, and it is selected (research/10 §2). */
+  private addedTab(added: { tabId: string; made: string; contentId: string | null } | null): void {
+    if (added === null) return;
+    this.tabDraft.made.push(added.made);
+    this.tabDraft.fresh.add(added.tabId);
+    if (added.contentId !== null) this.tabDraft.fresh.add(added.contentId);
+    this.activeTab = added.tabId;
+    this.rerender();
   }
 
   /** The Content tab's block, made now when there is none (a rename needs one). */
@@ -2111,6 +2196,14 @@ export class DatabaseCardDrawer {
     this.rerender();
   }
 
+  /** Discard's tab half: the tabs and the "Add new relation" relations made in the draft. */
+  private discardTabDraft(): void {
+    const tabs = this.takeTabDraft();
+
+    this.layoutTabs?.discard(tabs.made);
+    for (const id of tabs.relations) this.layoutTabs?.removeRelation(id);
+  }
+
   private takeTabDraft(): PageLayoutTabEdits {
     const tabs = this.tabDraft;
 
@@ -2126,9 +2219,11 @@ export class DatabaseCardDrawer {
   /** Discard drops the draft and deletes the properties made meanwhile (research/09 §3b). */
   private discardCustomizing(): void {
     const made = this.draft?.madeProperties ?? [];
+    const relations = [...this.tabDraft.relations];
 
     this.finishCustomizing(false);
     for (const id of made) this.onDeleteProperty?.(id);
+    for (const id of relations) this.layoutTabs?.removeRelation(id);
   }
 
   /** Opens the full-window builder while a draft is open, and closes it once the draft is gone. */

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from './relative-dates';
-import { ME_FILTER_VALUE } from './database-query';
+import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -219,7 +219,7 @@ export const filterValueText = (
     return idsOf(value).map((id) => (id === ME_FILTER_VALUE ? t('tools.database.filterMe') : personName(id) ?? '')).filter((name) => name !== '').join(', ');
   }
   if (property.type === 'relation') {
-    return idsOf(value).map((id) => rowTitle(id) ?? '').filter((name) => name !== '').join(', ');
+    return idsOf(value).map((id) => (id === THIS_PAGE_FILTER_VALUE ? t('tools.database.filterThisPage') : rowTitle(id) ?? '')).filter((name) => name !== '').join(', ');
   }
   if (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status') {
     const ids = idsOf(value);

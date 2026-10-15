@@ -8889,6 +8889,17 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   opacity: 0.5;
 }
 
+[data-blok-database-layout-locked][data-blok-database-panel-row]:hover {
+  background-color: transparent;
+  cursor: default;
+}
+
+[data-blok-database-layout-locked] > [data-blok-database-panel-switch] {
+  flex: none;
+  width: auto;
+  padding: 0;
+}
+
 [data-blok-database-panel-row][data-danger] {
   color: var(--blok-color-danger);
 }

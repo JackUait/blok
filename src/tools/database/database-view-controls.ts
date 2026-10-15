@@ -42,6 +42,8 @@ export interface ViewControlsHost {
   people?: () => Array<{ id: string; name: string }>;
   /** Rows a relation can point at, for relation filters. */
   relatedRows?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
+  /** The database whose row page shows this view, or null: a relation to it can name "This page". */
+  thisPageDatabase?: () => string | null;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
   setLayout: (type: ViewType) => void;
@@ -350,6 +352,7 @@ export class DatabaseViewControls {
       groups: (sub) => this.host.groups(sub),
       people: () => this.host.people?.() ?? [],
       ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),
+      ...(this.host.thisPageDatabase !== undefined ? { thisPageDatabase: this.host.thisPageDatabase } : {}),
       ...(this.host.layoutItems !== undefined ? { layoutItems: this.host.layoutItems } : {}),
       ...(this.host.actions !== undefined ? { actions: this.host.actions } : {}),
       ...(this.host.customizeLayout !== undefined ? { customizeLayout: this.host.customizeLayout } : {}),

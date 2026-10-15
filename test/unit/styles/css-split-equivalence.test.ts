@@ -817,7 +817,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +1_687: the details panel header, its Close panel button and the Page info button (Phase 11).
     // +185: Page info's sidebar glyph mirrors in RTL.
     // +2_327: the Tabbed tab bar's container, Add tab reveal, and its menus (Phase 12).
-    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774 + 3_990 + 3_833 + 3_165 + 1_034 + 200 + 1_655 + 1_687 + 185 + 2_327;
+    // +247: the locked Two-way relation row and the row-page tab menu (tab extras).
+    const DATABASE_LAYOUT_BUILDER_BYTES = 5_143 + 1_760 + 26 + 2_774 + 3_990 + 3_833 + 3_165 + 1_034 + 200 + 1_655 + 1_687 + 185 + 2_327 + 247;
     // database.css: the title cell Open button shows on the keyboard-selected cell (Cmd/Ctrl+Enter presses it).
     const DATABASE_CELL_BUTTON_KEYBOARD_BYTES = 92;
     // database.css: the comment count badge after a row title (research/12 §3).

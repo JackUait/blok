@@ -52,7 +52,7 @@ const mount = async (page: Page, data: OutputBlockData[], dir: 'ltr' | 'rtl' = '
     window.blokInstance = new window.Blok({ holder, data: { blocks: input }, i18n: { direction } });
     await window.blokInstance.isReady;
   }, { data, dir });
-  await expect(page.getByRole('grid')).toBeVisible();
+  await expect(page.getByRole('grid').first()).toBeVisible();
 };
 
 const savedTitle = async (page: Page): Promise<Record<string, unknown> | undefined> => page.evaluate(async () => {
@@ -807,6 +807,65 @@ test.describe('row page layout', () => {
   });
 
   // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.
+  // research/13 §1b-1c: a relation is a one-click tab of the related database, filtered to the row page shown.
+  test('adds a Related to tab that lists each row page\'s own related rows', async ({ page }) => {
+    const view = (id: string): Record<string, unknown> => ({ id, name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] });
+
+    await mount(page, [
+      {
+        id: 'db-a',
+        type: 'database',
+        data: {
+          title: 'Measure A',
+          schema: [
+            { id: 'at', name: 'Name', type: 'title', position: 'a0', pageLayoutStructure: 'tabbed' },
+            { id: 'rel', name: 'Measure B', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db-b', twoWay: true, syncedPropertyId: 'back' } },
+          ],
+          views: [view('va')],
+          activeViewId: 'va',
+        },
+        content: ['ra', 'rb'],
+      },
+      { id: 'ra', type: 'database-row', parent: 'db-a', data: { position: 'a0', properties: { at: 'Alpha', rel: ['b1'] } } },
+      { id: 'rb', type: 'database-row', parent: 'db-a', data: { position: 'a1', properties: { at: 'Beta' } } },
+      {
+        id: 'db-b',
+        type: 'database',
+        data: {
+          title: 'Measure B',
+          schema: [
+            { id: 'bt', name: 'Name', type: 'title', position: 'a0' },
+            { id: 'back', name: 'Measure A', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db-a', twoWay: true, syncedPropertyId: 'rel' } },
+          ],
+          views: [view('vb')],
+          activeViewId: 'vb',
+        },
+        content: ['b1', 'b2'],
+      },
+      { id: 'b1', type: 'database-row', parent: 'db-b', data: { position: 'a0', properties: { bt: 'One', back: ['ra'] } } },
+      { id: 'b2', type: 'database-row', parent: 'db-b', data: { position: 'a1', properties: { bt: 'Two' } } },
+    ]);
+    await openRow(page, 'ra');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    const strip = builder(page).getByRole('tablist');
+
+    await strip.hover();
+    await builder(page).getByRole('button', { name: 'Add tab' }).click();
+    await expect(page.getByText('Related to Measure A')).toBeVisible();
+    await page.getByTestId('database-layout-related-rel').click();
+    await expect(strip.getByRole('tab', { name: 'Measure B' })).toHaveAttribute('aria-selected', 'true');
+    await builder(page).getByRole('button', { name: 'Apply to all pages' }).click();
+    await expect(builder(page)).toBeHidden();
+    const panel = peek(page).locator('[data-blok-database-drawer-tab-panel]');
+
+    await expect(panel.getByRole('grid')).toContainText('One');
+    await expect(panel.getByRole('grid')).not.toContainText('Two');
+    await openRow(page, 'rb');
+    await expect(peek(page).getByRole('tab', { name: 'Measure B' })).toHaveAttribute('aria-selected', 'true');
+    await expect(panel.locator('[data-blok-database-table-row][data-row-id]')).toHaveCount(0);
+  });
+
   test('previews another page from the Preview switch and keeps the draft', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');

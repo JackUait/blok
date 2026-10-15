@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "ਸਮੂਹ ਸੋਧੋ",
   "tools.database.groupHideAggregation": "ਗਣਨਾ ਲੁਕਾਓ",
   "tools.database.groupShowAggregation": "ਗਣਨਾ ਦਿਖਾਓ",
+  "tools.database.groupCalculationHint": "{property} ਵਿੱਚ {calculation}",
   "tools.database.groupHide": "ਸਮੂਹ ਲੁਕਾਓ",
   "tools.database.groupMoveToTrash": "ਰੱਦੀ ਵਿੱਚ ਭੇਜੋ",
   "tools.database.groupTrashConfirm": "ਕੀ ਤੁਹਾਨੂੰ ਯਕੀਨ ਹੈ? ਇਸ ਸਮੂਹ ਦੇ ਸਾਰੇ ਪੰਨੇ ਰੱਦੀ ਵਿੱਚ ਭੇਜ ਦਿੱਤੇ ਜਾਣਗੇ।",

@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Επεξεργασία ομάδων",
   "tools.database.groupHideAggregation": "Απόκρυψη υπολογισμού",
   "tools.database.groupShowAggregation": "Εμφάνιση υπολογισμού",
+  "tools.database.groupCalculationHint": "{calculation} σε {property}",
   "tools.database.groupHide": "Απόκρυψη ομάδας",
   "tools.database.groupMoveToTrash": "Μετακίνηση στον κάδο",
   "tools.database.groupTrashConfirm": "Είστε βέβαιοι; Όλες οι σελίδες αυτής της ομάδας θα μετακινηθούν στον κάδο.",

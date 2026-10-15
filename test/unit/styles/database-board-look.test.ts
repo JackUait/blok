@@ -127,6 +127,16 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('color: var(--_blok-group-accent, var(--blok-database-column-accent))');
   });
 
+  it('draws the count button as bare text with a gray hover (research/16 §1)', () => {
+    const body = ruleBody(database, 'button[data-blok-database-column-count]');
+
+    expect(body).toContain('border: none');
+    expect(body).toContain('background: none');
+    expect(body).toContain('font-family: inherit');
+    expect(body).toContain('cursor: pointer');
+    expect(ruleBody(database, 'button[data-blok-database-column-count]:hover')).toContain('background-color: var(--blok-item-hover-bg)');
+  });
+
   it('shows the no-value label as plain 14px/500 text, no pill', () => {
     const body = ruleBody(database, '[data-blok-database-no-value-group] [data-blok-database-column-pill]');
 

@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "Sunting kumpulan",
   "tools.database.groupHideAggregation": "Sembunyikan pengiraan",
   "tools.database.groupShowAggregation": "Tunjukkan pengiraan",
+  "tools.database.groupCalculationHint": "{calculation} dalam {property}",
   "tools.database.groupHide": "Sembunyikan kumpulan",
   "tools.database.groupMoveToTrash": "Alih ke sampah",
   "tools.database.groupTrashConfirm": "Adakah anda pasti? Semua halaman dalam kumpulan ini akan dialihkan ke sampah.",

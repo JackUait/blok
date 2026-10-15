@@ -781,6 +781,7 @@ export type BlokMessageKey =
   | 'tools.database.galleryLoadMore'
   | 'tools.database.galleryNew'
   | 'tools.database.groupBy'
+  | 'tools.database.groupCalculationHint'
   | 'tools.database.groupColorColumns'
   | 'tools.database.groupDateBy'
   | 'tools.database.groupDateDay'

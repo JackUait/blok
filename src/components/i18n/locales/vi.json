@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Chỉnh sửa nhóm",
   "tools.database.groupHideAggregation": "Ẩn tổng hợp",
   "tools.database.groupShowAggregation": "Hiển thị tổng hợp",
+  "tools.database.groupCalculationHint": "{calculation} trong {property}",
   "tools.database.groupHide": "Ẩn nhóm",
   "tools.database.groupMoveToTrash": "Chuyển vào thùng rác",
   "tools.database.groupTrashConfirm": "Bạn có chắc không? Tất cả các trang trong nhóm này sẽ được chuyển vào thùng rác.",

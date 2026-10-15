@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Изменить группы",
   "tools.database.groupHideAggregation": "Скрыть вычисления",
   "tools.database.groupShowAggregation": "Показать вычисления",
+  "tools.database.groupCalculationHint": "{calculation} в {property}",
   "tools.database.groupHide": "Скрыть группу",
   "tools.database.groupMoveToTrash": "Переместить в корзину",
   "tools.database.groupTrashConfirm": "Вы уверены? Все страницы в этой группе будут перемещены в корзину.",

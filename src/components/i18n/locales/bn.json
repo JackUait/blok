@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "গোষ্ঠী সম্পাদনা করুন",
   "tools.database.groupHideAggregation": "গণনা লুকান",
   "tools.database.groupShowAggregation": "গণনা দেখান",
+  "tools.database.groupCalculationHint": "{property}-এ {calculation}",
   "tools.database.groupHide": "গোষ্ঠী লুকান",
   "tools.database.groupMoveToTrash": "ট্র্যাশে সরান",
   "tools.database.groupTrashConfirm": "আপনি কি নিশ্চিত? এই গোষ্ঠীর সমস্ত পৃষ্ঠা ট্র্যাশে সরানো হবে।",

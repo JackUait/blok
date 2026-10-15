@@ -688,6 +688,12 @@ export interface DatabaseViewConfig {
   /** Hides the row count beside each group's name. */
   hideGroupAggregation?: boolean;
   /**
+   * Board: the calculation beside each group's name, the same on every column.
+   * Absent means Count all with large counts shown as "99+". Count all is
+   * saved only to keep the cap off; its `id` is then the title property.
+   */
+  groupCalculation?: ViewCalculation;
+  /**
    * The advanced filter. Rows must match it AND every entry of `filters`.
    * Clients older than this field ignore it and show more rows.
    */
@@ -721,7 +727,7 @@ export interface GroupRef {
 /** View fields a caller may set when creating or changing a view. */
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
-  | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation'
+  | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation' | 'groupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'

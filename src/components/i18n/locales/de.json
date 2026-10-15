@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Gruppen bearbeiten",
   "tools.database.groupHideAggregation": "Berechnung ausblenden",
   "tools.database.groupShowAggregation": "Berechnung einblenden",
+  "tools.database.groupCalculationHint": "{calculation} von {property}",
   "tools.database.groupHide": "Gruppe ausblenden",
   "tools.database.groupMoveToTrash": "In den Papierkorb verschieben",
   "tools.database.groupTrashConfirm": "Sind Sie sicher? Alle Seiten in dieser Gruppe werden in den Papierkorb verschoben.",

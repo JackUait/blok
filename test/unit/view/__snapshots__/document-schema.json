@@ -3101,6 +3101,50 @@
               "hideGroupAggregation": {
                 "type": "boolean"
               },
+              "groupCalculation": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "fn"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Property id."
+                  },
+                  "fn": {
+                    "type": "string",
+                    "enum": [
+                      "count",
+                      "count_values",
+                      "unique",
+                      "empty",
+                      "not_empty",
+                      "percent_empty",
+                      "percent_not_empty",
+                      "sum",
+                      "average",
+                      "median",
+                      "min",
+                      "max",
+                      "range",
+                      "earliest_date",
+                      "latest_date",
+                      "date_range",
+                      "checked",
+                      "unchecked",
+                      "percent_checked",
+                      "percent_unchecked"
+                    ]
+                  },
+                  "capCounts": {
+                    "type": "boolean",
+                    "description": "Show a count above 99 as \"99+\". Default false."
+                  }
+                },
+                "description": "Board: the calculation beside every group name. Absent means count all rows, shown as \"99+\" above 99. fn count is saved only to keep that cap off."
+              },
               "filterTree": {
                 "type": "object",
                 "required": [

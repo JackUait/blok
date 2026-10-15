@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "సమూహాలను సవరించు",
   "tools.database.groupHideAggregation": "సమీకరణను దాచు",
   "tools.database.groupShowAggregation": "సమీకరణను చూపించు",
+  "tools.database.groupCalculationHint": "{property} లో {calculation}",
   "tools.database.groupHide": "సమూహాన్ని దాచు",
   "tools.database.groupMoveToTrash": "ట్రాష్‌కు తరలించు",
   "tools.database.groupTrashConfirm": "మీరు ఖచ్చితంగా అనుకుంటున్నారా? ఈ సమూహంలోని అన్ని పేజీలు ట్రాష్‌కు తరలించబడతాయి.",

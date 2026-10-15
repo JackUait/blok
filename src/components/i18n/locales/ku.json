@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "دەستکاریکردنی گرووپەکان",
   "tools.database.groupHideAggregation": "شاردنەوەی کۆکردنەوە",
   "tools.database.groupShowAggregation": "پیشاندانی کۆکردنەوە",
+  "tools.database.groupCalculationHint": "{calculation} لە {property}",
   "tools.database.groupHide": "شاردنەوەی گرووپ",
   "tools.database.groupMoveToTrash": "گواستنەوە بۆ زبڵدان",
   "tools.database.groupTrashConfirm": "دڵنیایت؟ هەموو پەڕەکانی ناو ئەم گرووپە دەگوازرێنەوە بۆ زبڵدان.",

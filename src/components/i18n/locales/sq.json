@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Ndrysho grupet",
   "tools.database.groupHideAggregation": "Fshih agregimin",
   "tools.database.groupShowAggregation": "Shfaq agregimin",
+  "tools.database.groupCalculationHint": "{calculation} në {property}",
   "tools.database.groupHide": "Fshih grupin",
   "tools.database.groupMoveToTrash": "Zhvendos në kosh",
   "tools.database.groupTrashConfirm": "Je i sigurt? Të gjitha faqet në këtë grup do të zhvendosen në kosh.",

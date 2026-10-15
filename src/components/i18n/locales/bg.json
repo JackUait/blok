@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Редактирай групите",
   "tools.database.groupHideAggregation": "Скрий изчислението",
   "tools.database.groupShowAggregation": "Покажи изчислението",
+  "tools.database.groupCalculationHint": "{calculation} в {property}",
   "tools.database.groupHide": "Скрий групата",
   "tools.database.groupMoveToTrash": "Премести в кошчето",
   "tools.database.groupTrashConfirm": "Сигурни ли сте? Всички страници в тази група ще бъдат преместени в кошчето.",

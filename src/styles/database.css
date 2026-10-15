@@ -1472,6 +1472,17 @@
   transition: background 100ms ease-in-out;
 }
 
+button[data-blok-database-column-count] {
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button[data-blok-database-column-count]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
 /**
  * Empty column placeholder — centered muted text.
  */

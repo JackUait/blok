@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "Rediģēt grupas",
   "tools.database.groupHideAggregation": "Slēpt apkopojumu",
   "tools.database.groupShowAggregation": "Rādīt apkopojumu",
+  "tools.database.groupCalculationHint": "{calculation} kolonnā {property}",
   "tools.database.groupHide": "Slēpt grupu",
   "tools.database.groupMoveToTrash": "Pārvietot uz atkritni",
   "tools.database.groupTrashConfirm": "Vai tiešām? Visas šīs grupas lapas tiks pārvietotas uz atkritni.",

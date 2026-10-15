@@ -63,6 +63,45 @@ describe('DatabaseBoardView', () => {
       expect(view.createView().querySelector('[data-blok-database-column-count]')?.hasAttribute('hidden')).toBe(true);
     });
 
+    it('makes the count a menu button showing the board calculation', () => {
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [makeRow()], titlePropertyId: 'title',
+        aggregate: (optionId) => `sum-${optionId}`,
+      });
+      const count = view.createView().querySelector('[data-blok-database-column-count]');
+
+      expect(count?.textContent).toBe('sum-opt-1');
+      expect(count?.tagName).toBe('BUTTON');
+      expect(count?.getAttribute('aria-haspopup')).toBe('menu');
+      expect(count?.getAttribute('data-option-id')).toBe('opt-1');
+    });
+
+    it('keeps the count plain text in read-only mode, where the calculation cannot change', () => {
+      const view = new DatabaseBoardView({
+        readOnly: true, i18n, options: [makeOption()], getRows: () => [makeRow()], titlePropertyId: 'title',
+        aggregate: () => '15',
+      });
+      const count = view.createView().querySelector('[data-blok-database-column-count]');
+
+      expect(count?.textContent).toBe('15');
+      expect(count?.tagName).toBe('SPAN');
+    });
+
+    it('recomputes the calculation when a card is added', () => {
+      const totals = { value: '1' };
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [makeRow()], titlePropertyId: 'title',
+        aggregate: () => totals.value,
+      });
+      const board = view.createView();
+      const cards = board.querySelector<HTMLElement>('[data-blok-database-cards]');
+
+      totals.value = '8';
+      if (cards !== null) view.appendRow(cards, makeRow({ id: 'row-2' }));
+
+      expect(board.querySelector('[data-blok-database-column-count]')?.textContent).toBe('8');
+    });
+
     it('offers the hidden groups after the last column so they can be shown again', () => {
       const view = new DatabaseBoardView({
         readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 2,

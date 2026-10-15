@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "Uredi grupe",
   "tools.database.groupHideAggregation": "Sakrij izračun",
   "tools.database.groupShowAggregation": "Prikaži izračun",
+  "tools.database.groupCalculationHint": "{calculation} u {property}",
   "tools.database.groupHide": "Sakrij grupu",
   "tools.database.groupMoveToTrash": "Premjesti u smeće",
   "tools.database.groupTrashConfirm": "Jeste li sigurni? Sve stranice u ovoj grupi bit će premještene u smeće.",

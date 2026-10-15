@@ -192,19 +192,28 @@ export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, ro
     return;
   }
 
-  const result = computeCalculation(fn, rows.map((row) => readPropertyValue(row, property)), shown);
   const label = document.createElement('span');
   const value = document.createElement('span');
 
   label.setAttribute('data-blok-database-table-calc-label', '');
   label.textContent = i18n.t(CALCULATION_LABEL_KEYS[fn]);
   value.setAttribute('data-blok-database-table-calc-value', '');
-  value.textContent = formatCalculation(result, locale, {
-    ...(NUMBER_RESULT_FNS.has(fn) && shown.type === 'number' ? { number: shown.number ?? {} } : {}),
-    capCounts: capCounts && COUNT_RESULT_FNS.has(fn),
-  });
+  value.textContent = calculationText(fn, rows, property, shown, locale, capCounts);
   cell.append(label, value);
 };
+
+/** One calculation over `rows`, formatted as the footer shows it. The board's group calculation shares it. */
+export const calculationText = (
+  fn: CalculationFn,
+  rows: DatabaseRow[],
+  property: PropertyDefinition,
+  shown: PropertyDefinition,
+  locale: string | undefined,
+  capCounts = false
+): string => formatCalculation(computeCalculation(fn, rows.map((row) => readPropertyValue(row, property)), shown), locale, {
+  ...(NUMBER_RESULT_FNS.has(fn) && shown.type === 'number' ? { number: shown.number ?? {} } : {}),
+  capCounts: capCounts && COUNT_RESULT_FNS.has(fn),
+});
 
 /** Functions whose result is a value of the column, shown in its number format. Unverified against Notion. */
 const NUMBER_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['sum', 'average', 'median', 'min', 'max', 'range']);

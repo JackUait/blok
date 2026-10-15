@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "Уреди групи",
   "tools.database.groupHideAggregation": "Сокриј пресметка",
   "tools.database.groupShowAggregation": "Прикажи пресметка",
+  "tools.database.groupCalculationHint": "{calculation} во {property}",
   "tools.database.groupHide": "Сокриј група",
   "tools.database.groupMoveToTrash": "Премести во корпа",
   "tools.database.groupTrashConfirm": "Дали сте сигурни? Сите страници во оваа група ќе бидат преместени во корпа.",

@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "گۇرۇپپىلارنى تەھرىرلەش",
   "tools.database.groupHideAggregation": "يىغىندىنى يوشۇرۇش",
   "tools.database.groupShowAggregation": "يىغىندىنى كۆرسىتىش",
+  "tools.database.groupCalculationHint": "{property} دىكى {calculation}",
   "tools.database.groupHide": "گۇرۇپپىنى يوشۇرۇش",
   "tools.database.groupMoveToTrash": "ئەخلەت چېلىكىگە يۆتكەش",
   "tools.database.groupTrashConfirm": "راستتىنلا جەزىملەشتۈرەمسىز؟ بۇ گۇرۇپپىدىكى بارلىق بەتلەر ئەخلەت چېلىكىگە يۆتكىلىدۇ.",

@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Grupları düzenle",
   "tools.database.groupHideAggregation": "Hesaplamayı gizle",
   "tools.database.groupShowAggregation": "Hesaplamayı göster",
+  "tools.database.groupCalculationHint": "{property} içinde {calculation}",
   "tools.database.groupHide": "Grubu gizle",
   "tools.database.groupMoveToTrash": "Çöp kutusuna taşı",
   "tools.database.groupTrashConfirm": "Emin misiniz? Bu gruptaki tüm sayfalar çöp kutusuna taşınacak.",

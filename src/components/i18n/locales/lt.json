@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "Redaguoti grupes",
   "tools.database.groupHideAggregation": "Slėpti skaičiavimą",
   "tools.database.groupShowAggregation": "Rodyti skaičiavimą",
+  "tools.database.groupCalculationHint": "{calculation} stulpelyje {property}",
   "tools.database.groupHide": "Slėpti grupę",
   "tools.database.groupMoveToTrash": "Perkelti į šiukšlinę",
   "tools.database.groupTrashConfirm": "Ar tikrai? Visi šios grupės puslapiai bus perkelti į šiukšlinę.",

@@ -250,6 +250,45 @@ export const withCalculationCap = (view: DatabaseViewConfig, propertyId: string,
   return entries;
 };
 
+/** The board's calculation beside each group's name. No `propertyId` means Count all. */
+export interface ResolvedGroupCalculation {
+  fn: CalculationFn;
+  propertyId?: string;
+  /** "Show large counts as 99+". */
+  capCounts: boolean;
+}
+
+const COUNT_ALL: ResolvedGroupCalculation = { fn: 'count', capCounts: true };
+
+/** Count all, capped, unless the view saves a function its property's type offers (`schema` as result types). */
+export const resolveGroupCalculation = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ResolvedGroupCalculation => {
+  const entry = view.groupCalculation;
+
+  if (entry === undefined) return COUNT_ALL;
+  if (entry.fn === 'count') return { fn: 'count', capCounts: entry.capCounts === true };
+
+  const property = schema.find((p) => p.id === entry.id);
+
+  if (property === undefined || !(CALCULATIONS_FOR_TYPE[property.type]?.includes(entry.fn) ?? false)) return COUNT_ALL;
+
+  return { fn: entry.fn, propertyId: entry.id, capCounts: entry.capCounts === true };
+};
+
+/**
+ * `groupCalculation` after a pick. Count all clears it, so the capped default
+ * comes back; any other pick turns the cap off, as Notion's switch reads after
+ * leaving Count all. `capCounts` is always written: a peer's merge keeps no stale one.
+ */
+export const groupCalculationFor = (fn: CalculationFn, propertyId: string | undefined, titleId: string): ViewCalculation | undefined =>
+  fn === 'count' ? undefined : { id: propertyId ?? titleId, fn, capCounts: false };
+
+/** `groupCalculation` after the 99+ switch. Count all is saved only to keep the cap off. */
+export const groupCalculationCapped = (current: ResolvedGroupCalculation, cap: boolean, titleId: string): ViewCalculation | undefined => {
+  if (current.fn === 'count' && cap) return undefined;
+
+  return { id: current.propertyId ?? titleId, fn: current.fn, capCounts: cap };
+};
+
 /** The `calculations` list after setting one column's function, or clearing it with null. */
 export const withCalculation = (view: DatabaseViewConfig, propertyId: string, fn: CalculationFn | null): ViewCalculation[] => {
   const entries = (view.calculations ?? []).map((entry) => ({ ...entry }));

@@ -302,6 +302,7 @@
   "tools.database.groupEditGroups": "समूहहरू सम्पादन गर्नुहोस्",
   "tools.database.groupHideAggregation": "गणना लुकाउनुहोस्",
   "tools.database.groupShowAggregation": "गणना देखाउनुहोस्",
+  "tools.database.groupCalculationHint": "{property} मा {calculation}",
   "tools.database.groupHide": "समूह लुकाउनुहोस्",
   "tools.database.groupMoveToTrash": "रद्दीटोकरीमा सार्नुहोस्",
   "tools.database.groupTrashConfirm": "के तपाईं निश्चित हुनुहुन्छ? यस समूहभित्रका सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्।",

@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Editar grupos",
   "tools.database.groupHideAggregation": "Ocultar cálculo",
   "tools.database.groupShowAggregation": "Mostrar cálculo",
+  "tools.database.groupCalculationHint": "{calculation} em {property}",
   "tools.database.groupHide": "Ocultar grupo",
   "tools.database.groupMoveToTrash": "Mover para a lixeira",
   "tools.database.groupTrashConfirm": "Tem certeza? Todas as páginas deste grupo serão movidas para a lixeira.",

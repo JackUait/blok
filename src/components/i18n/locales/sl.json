@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Uredi skupine",
   "tools.database.groupHideAggregation": "Skrij agregacijo",
   "tools.database.groupShowAggregation": "Prikaži agregacijo",
+  "tools.database.groupCalculationHint": "{calculation} v {property}",
   "tools.database.groupHide": "Skrij skupino",
   "tools.database.groupMoveToTrash": "Premakni v koš",
   "tools.database.groupTrashConfirm": "Ali ste prepričani? Vse strani v tej skupini bodo premaknjene v koš.",

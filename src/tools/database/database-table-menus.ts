@@ -49,10 +49,10 @@ export const CALCULATION_LABEL_KEYS: Readonly<Record<CalculationFn, string>> = {
   percent_unchecked: 'tools.database.calcPercentUnchecked',
 };
 
-const COUNT_FNS: readonly CalculationFn[] = ['count', 'count_values', 'unique', 'empty', 'not_empty'];
-const PERCENT_FNS: readonly CalculationFn[] = ['percent_empty', 'percent_not_empty'];
-const NUMBER_FNS: readonly CalculationFn[] = ['sum', 'average', 'median', 'min', 'max', 'range'];
-const DATE_FNS: readonly CalculationFn[] = ['earliest_date', 'latest_date', 'date_range'];
+export const COUNT_FNS: readonly CalculationFn[] = ['count', 'count_values', 'unique', 'empty', 'not_empty'];
+export const PERCENT_FNS: readonly CalculationFn[] = ['percent_empty', 'percent_not_empty'];
+export const NUMBER_FNS: readonly CalculationFn[] = ['sum', 'average', 'median', 'min', 'max', 'range'];
+export const DATE_FNS: readonly CalculationFn[] = ['earliest_date', 'latest_date', 'date_range'];
 const CHECKBOX_COUNT_FNS: readonly CalculationFn[] = ['count', 'checked', 'unchecked'];
 const CHECKBOX_PERCENT_FNS: readonly CalculationFn[] = ['percent_checked', 'percent_unchecked'];
 

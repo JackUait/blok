@@ -302,6 +302,7 @@
   "tools.database.groupEditGroups": "ഗ്രൂപ്പുകൾ എഡിറ്റ് ചെയ്യുക",
   "tools.database.groupHideAggregation": "കണക്കുകൂട്ടൽ മറയ്ക്കുക",
   "tools.database.groupShowAggregation": "കണക്കുകൂട്ടൽ കാണിക്കുക",
+  "tools.database.groupCalculationHint": "{property} ൽ {calculation}",
   "tools.database.groupHide": "ഗ്രൂപ്പ് മറയ്ക്കുക",
   "tools.database.groupMoveToTrash": "ട്രാഷിലേക്ക് നീക്കുക",
   "tools.database.groupTrashConfirm": "ഉറപ്പാണോ? ഈ ഗ്രൂപ്പിലെ എല്ലാ പേജുകളും ട്രാഷിലേക്ക് നീക്കും.",

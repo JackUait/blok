@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Editează grupurile",
   "tools.database.groupHideAggregation": "Ascunde calculul",
   "tools.database.groupShowAggregation": "Afișează calculul",
+  "tools.database.groupCalculationHint": "{calculation} în {property}",
   "tools.database.groupHide": "Ascunde grupul",
   "tools.database.groupMoveToTrash": "Mută în coșul de gunoi",
   "tools.database.groupTrashConfirm": "Sigur? Toate paginile din acest grup vor fi mutate în coșul de gunoi.",

@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "그룹 편집",
   "tools.database.groupHideAggregation": "집계 숨기기",
   "tools.database.groupShowAggregation": "집계 표시하기",
+  "tools.database.groupCalculationHint": "{property}의 {calculation}",
   "tools.database.groupHide": "그룹 숨기기",
   "tools.database.groupMoveToTrash": "휴지통으로 이동",
   "tools.database.groupTrashConfirm": "계속하시겠습니까? 이 그룹 안의 모든 페이지가 휴지통으로 이동됩니다.",

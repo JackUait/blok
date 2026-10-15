@@ -302,6 +302,7 @@
   "tools.database.groupEditGroups": "အုပ်စုများ တည်းဖြတ်ရန်",
   "tools.database.groupHideAggregation": "တွက်ချက်မှုကို ဖျောက်ရန်",
   "tools.database.groupShowAggregation": "တွက်ချက်မှုကို ပြရန်",
+  "tools.database.groupCalculationHint": "{property} တွင် {calculation}",
   "tools.database.groupHide": "အုပ်စုကို ဖျောက်ရန်",
   "tools.database.groupMoveToTrash": "အမှိုက်ပုံးသို့ ရွှေ့ရန်",
   "tools.database.groupTrashConfirm": "သေချာပါသလား။ ဤအုပ်စုရှိ စာမျက်နှာအားလုံးကို အမှိုက်ပုံးသို့ ရွှေ့ပါမည်။",

@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Rediger grupper",
   "tools.database.groupHideAggregation": "Skjul beregning",
   "tools.database.groupShowAggregation": "Vis beregning",
+  "tools.database.groupCalculationHint": "{calculation} i {property}",
   "tools.database.groupHide": "Skjul gruppen",
   "tools.database.groupMoveToTrash": "Flyt til papirkurven",
   "tools.database.groupTrashConfirm": "Er du sikker? Alle sider i denne gruppe bliver flyttet til papirkurven.",

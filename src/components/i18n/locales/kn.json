@@ -302,6 +302,7 @@
   "tools.database.groupEditGroups": "ಗುಂಪುಗಳನ್ನು ಸಂಪಾದಿಸಿ",
   "tools.database.groupHideAggregation": "ಒಟ್ಟು ಮೊತ್ತವನ್ನು ಮರೆಮಾಡಿ",
   "tools.database.groupShowAggregation": "ಒಟ್ಟು ಮೊತ್ತವನ್ನು ತೋರಿಸಿ",
+  "tools.database.groupCalculationHint": "{property} ನಲ್ಲಿ {calculation}",
   "tools.database.groupHide": "ಗುಂಪನ್ನು ಮರೆಮಾಡಿ",
   "tools.database.groupMoveToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಿ",
   "tools.database.groupTrashConfirm": "ನೀವು ಖಚಿತವಾಗಿರುವಿರಾ? ಈ ಗುಂಪಿನಲ್ಲಿರುವ ಎಲ್ಲಾ ಪುಟಗಳನ್ನು ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಲಾಗುತ್ತದೆ.",

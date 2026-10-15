@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "تعديل المجموعات",
   "tools.database.groupHideAggregation": "إخفاء الحساب",
   "tools.database.groupShowAggregation": "إظهار الحساب",
+  "tools.database.groupCalculationHint": "{calculation} في {property}",
   "tools.database.groupHide": "إخفاء المجموعة",
   "tools.database.groupMoveToTrash": "نقل إلى سلة المهملات",
   "tools.database.groupTrashConfirm": "هل أنت متأكد؟ سيتم نقل جميع الصفحات داخل هذه المجموعة إلى سلة المهملات.",

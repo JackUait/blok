@@ -4025,7 +4025,7 @@ describe('DatabaseTool', () => {
       return block;
     };
 
-    const board = (readOnly = false): {
+    const board = (readOnly = false, data: Partial<DatabaseData> = {}): {
       tool: DatabaseTool;
       element: HTMLElement;
       options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
@@ -4036,7 +4036,7 @@ describe('DatabaseTool', () => {
         groupRow('row-2', { 'prop-title': 'Two', 'prop-status': 'opt-todo' }, 'a1'),
         groupRow('row-3', { 'prop-title': 'Three', 'prop-status': 'opt-done' }, 'a2'),
       ];
-      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const options = createDatabaseOptions(data, {}, { childBlocks });
       const transact = vi.fn((fn: () => void) => fn());
 
       options.readOnly = readOnly;
@@ -4131,6 +4131,52 @@ describe('DatabaseTool', () => {
 
       expect(queryAllByData(element, 'data-blok-database-column-count').every((el) => el.hidden)).toBe(true);
       expect(tool.save(element).views[0].hideGroupAggregation).toBe(true);
+
+      tool.destroy();
+    });
+
+    const boardView = (overrides: Partial<DatabaseViewConfig>): Partial<DatabaseData> => ({
+      views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [], ...overrides }],
+    });
+
+    const countOf = (element: HTMLElement, optionId: string): HTMLElement | undefined =>
+      queryAllByData(element, 'data-blok-database-column')
+        .find((col) => col.getAttribute('data-option-id') === optionId)
+        ?.querySelector<HTMLElement>('[data-blok-database-column-count]') ?? undefined;
+
+    it('opens the calculation menu from the count', () => {
+      const { tool, element } = board();
+
+      countOf(element, 'opt-todo')?.click();
+
+      expect([...document.body.querySelectorAll('[data-mock-popover-action]')].map((el) => el.getAttribute('data-mock-popover-action')))
+        .toEqual(['tools.database.calccount', 'tools.database.calcpercent']);
+
+      tool.destroy();
+    });
+
+    it('shows the saved board calculation in every column', () => {
+      const { tool, element } = board(false, boardView({ groupCalculation: { id: 'prop-title', fn: 'empty', capCounts: false } }));
+
+      expect(countOf(element, 'opt-todo')?.textContent).toBe('0');
+      expect(countOf(element, 'opt-done')?.textContent).toBe('0');
+
+      tool.destroy();
+    });
+
+    it('brings the counts back as Count all with "Show aggregation"', () => {
+      const { tool, element } = board(false, boardView({
+        hideGroupAggregation: true, groupCalculation: { id: 'prop-title', fn: 'count_values', capCounts: false },
+      }));
+
+      openMenu(element, 'opt-todo');
+      pick('tools.database.groupShowAggregation');
+
+      const saved = tool.save(element).views[0];
+
+      expect(saved.groupCalculation).toBeUndefined();
+      expect(saved.hideGroupAggregation).toBe(false);
+      expect(countOf(element, 'opt-todo')?.hidden).toBe(false);
 
       tool.destroy();
     });

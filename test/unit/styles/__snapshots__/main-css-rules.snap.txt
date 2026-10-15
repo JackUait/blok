@@ -5189,6 +5189,17 @@ span[data-blok-slash-search] {
   transition: background 100ms ease-in-out;
 }
 
+button[data-blok-database-column-count] {
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button[data-blok-database-column-count]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
 [data-blok-database-empty-placeholder] {
   color: var(--blok-database-add-text);
   font-size: 13px;

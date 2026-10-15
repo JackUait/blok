@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "ګروپونه سم کړئ",
   "tools.database.groupHideAggregation": "محاسبه پټه کړئ",
   "tools.database.groupShowAggregation": "محاسبه وښایئ",
+  "tools.database.groupCalculationHint": "په {property} کې {calculation}",
   "tools.database.groupHide": "ګروپ پټ کړئ",
   "tools.database.groupMoveToTrash": "کثافاتو ته ولېږدوئ",
   "tools.database.groupTrashConfirm": "ایا تاسو ډاډه یاست؟ د دې ګروپ ټولې پاڼې به کثافاتو ته ولېږدول شي.",

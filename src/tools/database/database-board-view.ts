@@ -12,6 +12,7 @@ import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewP
 import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { onHover } from '../../components/utils/tooltip';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 
@@ -25,6 +26,10 @@ interface DatabaseBoardViewOptions {
   onTitleEdit?: (rowId: string, newTitle: string) => void;
   /** The view hides each group's row count ("Hide aggregation"). */
   hideCounts?: boolean;
+  /** The board calculation beside a group's name; without it, the card count. Read live: a card add or removal asks again. */
+  aggregate?: (optionId: string) => string;
+  /** The count's hover hint. Default "Count all". */
+  aggregateHint?: string;
   /** How many groups the view hides; above zero, a button after the columns shows them again. */
   hiddenGroupCount?: number;
   /** The board's view: card size, preview and the properties cards show. Without it cards show only the title. */
@@ -74,11 +79,15 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
   private readonly hiddenGroupCount: number;
+  private readonly aggregate: ((optionId: string) => string) | undefined;
+  private readonly aggregateHint: string | undefined;
   private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges'>;
 
   constructor({
-    readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, ...settings
+    readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
   }: DatabaseBoardViewOptions) {
+    this.aggregate = aggregate;
+    this.aggregateHint = aggregateHint;
     this.settings = settings;
     this.readOnly = readOnly;
     this.i18n = i18n;
@@ -491,10 +500,18 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     header.appendChild(pill);
 
-    const countEl = document.createElement('span');
+    // Read-only cannot change the calculation, so the number is not a button there.
+    const countEl = document.createElement(this.readOnly ? 'span' : 'button');
 
+    if (countEl instanceof HTMLButtonElement) {
+      countEl.type = 'button';
+      countEl.setAttribute('aria-haspopup', 'menu');
+    }
     countEl.setAttribute('data-blok-database-column-count', '');
-    countEl.textContent = String(count);
+    countEl.setAttribute('data-blok-testid', 'database-column-count');
+    countEl.setAttribute('data-option-id', option.id);
+    countEl.textContent = this.aggregate?.(option.id) ?? String(count);
+    onHover(countEl, this.aggregateHint ?? this.i18n.t('tools.database.calcCountAll'));
 
     countEl.hidden = this.hideCounts;
     header.appendChild(countEl);
@@ -717,9 +734,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const countEl = columnEl.querySelector('[data-blok-database-column-count]');
 
     if (countEl !== null) {
+      const optionId = columnEl.getAttribute('data-option-id');
       const cardCount = cardsContainer.querySelectorAll('[data-blok-database-card]').length;
 
-      countEl.textContent = String(cardCount);
+      countEl.textContent = this.aggregate !== undefined && optionId !== null ? this.aggregate(optionId) : String(cardCount);
     }
   }
 }

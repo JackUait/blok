@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "编辑分组",
   "tools.database.groupHideAggregation": "隐藏汇总",
   "tools.database.groupShowAggregation": "显示汇总",
+  "tools.database.groupCalculationHint": "{property}的{calculation}",
   "tools.database.groupHide": "隐藏分组",
   "tools.database.groupMoveToTrash": "移至回收站",
   "tools.database.groupTrashConfirm": "确定吗？此分组中的所有页面都将移至回收站。",

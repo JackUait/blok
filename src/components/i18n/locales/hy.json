@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Խմբագրել խմբերը",
   "tools.database.groupHideAggregation": "Թաքցնել հաշվարկը",
   "tools.database.groupShowAggregation": "Ցույց տալ հաշվարկը",
+  "tools.database.groupCalculationHint": "{calculation} {property}-ում",
   "tools.database.groupHide": "Թաքցնել խումբը",
   "tools.database.groupMoveToTrash": "Տեղափոխել աղբարկղ",
   "tools.database.groupTrashConfirm": "Վստա՞հ եք։ Այս խմբի բոլոր էջերը կտեղափոխվեն աղբարկղ։",

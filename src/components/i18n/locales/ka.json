@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "ჯგუფების რედაქტირება",
   "tools.database.groupHideAggregation": "გამოთვლის დამალვა",
   "tools.database.groupShowAggregation": "გამოთვლის ჩვენება",
+  "tools.database.groupCalculationHint": "{property}-ში {calculation}",
   "tools.database.groupHide": "ჯგუფის დამალვა",
   "tools.database.groupMoveToTrash": "ნაგავში გადატანა",
   "tools.database.groupTrashConfirm": "დარწმუნებული ხართ? ამ ჯგუფის ყველა გვერდი ნაგავში გადავა.",

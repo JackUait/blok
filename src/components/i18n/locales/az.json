@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "Qrupları redaktə et",
   "tools.database.groupHideAggregation": "Hesablamanı gizlət",
   "tools.database.groupShowAggregation": "Hesablamanı göstər",
+  "tools.database.groupCalculationHint": "{property} üzrə {calculation}",
   "tools.database.groupHide": "Qrupu gizlət",
   "tools.database.groupMoveToTrash": "Zibil qutusuna köçür",
   "tools.database.groupTrashConfirm": "Əminsiniz? Bu qrupdakı bütün səhifələr zibil qutusuna köçürüləcək.",

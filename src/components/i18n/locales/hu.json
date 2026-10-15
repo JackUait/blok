@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Csoportok szerkesztése",
   "tools.database.groupHideAggregation": "Összesítés elrejtése",
   "tools.database.groupShowAggregation": "Összesítés megjelenítése",
+  "tools.database.groupCalculationHint": "{property}: {calculation}",
   "tools.database.groupHide": "Csoport elrejtése",
   "tools.database.groupMoveToTrash": "Áthelyezés a kukába",
   "tools.database.groupTrashConfirm": "Biztos benne? A csoportban lévő összes oldal a kukába kerül.",

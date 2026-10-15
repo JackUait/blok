@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "සමූහ සංස්කරණය කරන්න",
   "tools.database.groupHideAggregation": "ගණනය කිරීම සඟවන්න",
   "tools.database.groupShowAggregation": "ගණනය කිරීම පෙන්වන්න",
+  "tools.database.groupCalculationHint": "{property} හි {calculation}",
   "tools.database.groupHide": "සමූහය සඟවන්න",
   "tools.database.groupMoveToTrash": "කුණු බඳුනට ගෙන යන්න",
   "tools.database.groupTrashConfirm": "ඔබට විශ්වාසද? මෙම සමූහයේ සියලුම පිටු කුණු බඳුනට ගෙන යනු ඇත.",

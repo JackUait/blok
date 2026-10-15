@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "កែសម្រួលក្រុម",
   "tools.database.groupHideAggregation": "លាក់ការសរុប",
   "tools.database.groupShowAggregation": "បង្ហាញការសរុប",
+  "tools.database.groupCalculationHint": "{calculation} ក្នុង {property}",
   "tools.database.groupHide": "លាក់ក្រុម",
   "tools.database.groupMoveToTrash": "ផ្លាស់ទីទៅធុងសំរាម",
   "tools.database.groupTrashConfirm": "តើអ្នកប្រាកដទេ? ទំព័រទាំងអស់នៅក្នុងក្រុមនេះនឹងត្រូវផ្លាស់ទីទៅធុងសំរាម។",

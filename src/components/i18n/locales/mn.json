@@ -297,6 +297,7 @@
   "tools.database.groupEditGroups": "Бүлгүүдийг засах",
   "tools.database.groupHideAggregation": "Тооцооллыг нуух",
   "tools.database.groupShowAggregation": "Тооцооллыг харуулах",
+  "tools.database.groupCalculationHint": "{property} дахь {calculation}",
   "tools.database.groupHide": "Бүлгийг нуух",
   "tools.database.groupMoveToTrash": "Хогийн сав руу зөөх",
   "tools.database.groupTrashConfirm": "Итгэлтэй байна уу? Энэ бүлгийн бүх хуудас хогийн сав руу зөөгдөнө.",

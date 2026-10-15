@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "گروپ ترميم ڪريو",
   "tools.database.groupHideAggregation": "حساب لڪايو",
   "tools.database.groupShowAggregation": "حساب ڏيکاريو",
+  "tools.database.groupCalculationHint": "{property} ۾ {calculation}",
   "tools.database.groupHide": "گروپ لڪايو",
   "tools.database.groupMoveToTrash": "ڪچري ۾ منتقل ڪريو",
   "tools.database.groupTrashConfirm": "ڇا توهان کي پڪ آهي؟ هن گروپ جا سڀ صفحا ڪچري ۾ منتقل ڪيا ويندا.",

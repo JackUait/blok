@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Modifica gruppi",
   "tools.database.groupHideAggregation": "Nascondi aggregazione",
   "tools.database.groupShowAggregation": "Mostra aggregazione",
+  "tools.database.groupCalculationHint": "{calculation} di {property}",
   "tools.database.groupHide": "Nascondi gruppo",
   "tools.database.groupMoveToTrash": "Sposta nel cestino",
   "tools.database.groupTrashConfirm": "Sei sicuro? Tutte le pagine di questo gruppo verranno spostate nel cestino.",

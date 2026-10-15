@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Уреди групе",
   "tools.database.groupHideAggregation": "Сакриј агрегацију",
   "tools.database.groupShowAggregation": "Прикажи агрегацију",
+  "tools.database.groupCalculationHint": "{calculation} у {property}",
   "tools.database.groupHide": "Сакриј групу",
   "tools.database.groupMoveToTrash": "Премести у отпад",
   "tools.database.groupTrashConfirm": "Да ли сте сигурни? Све странице у овој групи биће премештене у отпад.",

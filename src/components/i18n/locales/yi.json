@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "רעדאַקטירן גרופּעס",
   "tools.database.groupHideAggregation": "באַהאַלטן סך־הכּל",
   "tools.database.groupShowAggregation": "ווײַזן סך־הכּל",
+  "tools.database.groupCalculationHint": "{calculation} אין {property}",
   "tools.database.groupHide": "באַהאַלטן גרופּע",
   "tools.database.groupMoveToTrash": "אַריבערפֿירן אין מיסט",
   "tools.database.groupTrashConfirm": "ביסטו זיכער? אַלע זײַטן אין דער גרופּע וועלן אַריבערגעפֿירט ווערן אין מיסט.",

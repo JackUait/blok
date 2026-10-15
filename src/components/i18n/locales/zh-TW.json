@@ -312,6 +312,7 @@
   "tools.database.groupEditGroups": "編輯群組",
   "tools.database.groupHideAggregation": "隱藏彙總",
   "tools.database.groupShowAggregation": "顯示彙總",
+  "tools.database.groupCalculationHint": "{property}的{calculation}",
   "tools.database.groupHide": "隱藏群組",
   "tools.database.groupMoveToTrash": "移至垃圾桶",
   "tools.database.groupTrashConfirm": "確定嗎？此群組內的所有頁面都會移至垃圾桶。",

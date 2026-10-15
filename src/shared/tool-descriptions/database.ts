@@ -186,6 +186,26 @@ const PROPERTY_SETTINGS = {
   },
 };
 
+/** A calculation on one property: a table footer cell, or a board's group calculation. */
+const VIEW_CALCULATION = {
+  type: 'object',
+  required: ['id', 'fn'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', description: 'Property id.' },
+    fn: {
+      type: 'string',
+      enum: [
+        'count', 'count_values', 'unique', 'empty', 'not_empty', 'percent_empty', 'percent_not_empty',
+        'sum', 'average', 'median', 'min', 'max', 'range',
+        'earliest_date', 'latest_date', 'date_range',
+        'checked', 'unchecked', 'percent_checked', 'percent_unchecked',
+      ],
+    },
+    capCounts: { type: 'boolean', description: 'Show a count above 99 as "99+". Default false.' },
+  },
+};
+
 /** Per-view group lists hold id objects so two peers' entries merge. */
 const GROUP_REFS = {
   type: 'array',
@@ -545,24 +565,7 @@ export const DATABASE_DATA = {
           calculations: {
             type: 'array',
             description: 'Footer calculations, one per property.',
-            items: {
-              type: 'object',
-              required: ['id', 'fn'],
-              additionalProperties: false,
-              properties: {
-                id: { type: 'string', description: 'Property id.' },
-                fn: {
-                  type: 'string',
-                  enum: [
-                    'count', 'count_values', 'unique', 'empty', 'not_empty', 'percent_empty', 'percent_not_empty',
-                    'sum', 'average', 'median', 'min', 'max', 'range',
-                    'earliest_date', 'latest_date', 'date_range',
-                    'checked', 'unchecked', 'percent_checked', 'percent_unchecked',
-                  ],
-                },
-                capCounts: { type: 'boolean', description: 'Show a count above 99 as "99+". Default false.' },
-              },
-            },
+            items: VIEW_CALCULATION,
           },
           openPagesIn: { type: 'string', enum: ['side', 'center', 'full'], description: 'Where a row page opens. Default side; center for gallery and calendar.' },
           cardSize: { type: 'string', enum: ['small', 'medium', 'large'], description: 'Gallery or board card size. Default medium.' },
@@ -626,6 +629,10 @@ export const DATABASE_DATA = {
           hiddenGroups: GROUP_REFS,
           collapsedGroups: GROUP_REFS,
           hideGroupAggregation: { type: 'boolean' },
+          groupCalculation: {
+            ...VIEW_CALCULATION,
+            description: 'Board: the calculation beside every group name. Absent means count all rows, shown as "99+" above 99. fn count is saved only to keep that cap off.',
+          },
           filterTree: { ...filterGroup(1), description: 'Advanced filter. Rows must match it and every simple filter. Older clients ignore it.' },
           groupSettings: GROUP_SETTINGS,
           subGroupBy: { type: 'string', description: 'Board only: property id of a second grouping inside each column. Its keys in hiddenGroups/collapsedGroups start with "sub:".' },

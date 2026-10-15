@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Muuda rühmi",
   "tools.database.groupHideAggregation": "Peida arvutus",
   "tools.database.groupShowAggregation": "Näita arvutust",
+  "tools.database.groupCalculationHint": "{calculation} veerus {property}",
   "tools.database.groupHide": "Peida rühm",
   "tools.database.groupMoveToTrash": "Teisalda prügikasti",
   "tools.database.groupTrashConfirm": "Kas olete kindel? Kõik selle rühma lehed teisaldatakse prügikasti.",

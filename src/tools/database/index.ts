@@ -41,6 +41,7 @@ import { openDatabaseConfirm } from './database-confirm-dialog';
 import { openAutofillSetup } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
 import { DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
+import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
@@ -81,6 +82,9 @@ import {
   resolveCountCaps,
   withPropertyOrder,
   withPropertySetting,
+  groupCalculationCapped,
+  groupCalculationFor,
+  resolveGroupCalculation,
 } from './view-settings';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { firstStrongDirection } from '../../shared/text-direction';
@@ -215,6 +219,7 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-add-card]',
   '[data-blok-database-column-new-page]',
   '[data-blok-database-column-menu]',
+  '[data-blok-database-column-count]',
   '[data-blok-database-hidden-groups]',
   '[data-blok-database-add-column]',
   '[data-blok-database-card-menu]',
@@ -4066,6 +4071,18 @@ export class DatabaseTool implements BlockTool {
     const paged = viewConfig !== undefined && lanes === null;
     const limit = viewConfig === undefined ? 0 : resolveLoadLimit(viewConfig);
     const shownRows = viewConfig === undefined ? new Map<string, number>() : this.galleryShown.get(viewConfig.id) ?? new Map<string, number>();
+    const localSchema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    const shownOf = (property: PropertyDefinition): PropertyDefinition => this.computedValues.valueProperty(property);
+    const calculation = viewConfig === undefined ? undefined : resolveGroupCalculation(viewConfig, localSchema.map(shownOf));
+    // The first draw reads the rows already queried; a later card add or removal queries again.
+    const drawn = { done: false };
+    // Lanes leave out the rows of hidden sub-groups.
+    const inShownLane = (row: DatabaseRow): boolean => lanes === null || lanes.keysOf(row).some((key) => lanes.lanes.some((lane) => lane.key === key));
+    const aggregate = viewConfig === undefined || calculation === undefined ? undefined : (optionId: string): string => {
+      const rows = (drawn.done ? this.queryGroupRows(viewConfig, [optionId]).get(optionId) : groups.get(optionId)) ?? [];
+
+      return groupCalculationText(calculation, rows.filter(inShownLane), localSchema, resolveLocale(undefined), shownOf);
+    };
 
     this.view = new DatabaseBoardView({
       readOnly: this.readOnly,
@@ -4081,7 +4098,7 @@ export class DatabaseTool implements BlockTool {
         if (lanes === null) return rows;
         if (subKey !== undefined) return rows.filter((row) => lanes.keysOf(row).includes(subKey));
 
-        return rows.filter((row) => lanes.keysOf(row).some((key) => lanes.lanes.some((lane) => lane.key === key)));
+        return rows.filter(inShownLane);
       },
       getTotal: (optionId) => groups.get(optionId)?.length ?? 0,
       onLoadMore: (optionId) => {
@@ -4092,9 +4109,12 @@ export class DatabaseTool implements BlockTool {
       },
       titlePropertyId: titlePropId,
       hideCounts: viewConfig?.hideGroupAggregation === true,
+      ...(aggregate !== undefined && calculation !== undefined
+        ? { aggregate, aggregateHint: groupCalculationHint(calculation, localSchema, this.api.i18n) }
+        : {}),
       hiddenGroupCount: allOptions.length - shown.length,
       ...(viewConfig !== undefined ? { view: viewConfig } : {}),
-      schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      schema: localSchema,
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
       locale: resolveLocale(undefined),
       cellContext: this.cellContext(),
@@ -4110,6 +4130,7 @@ export class DatabaseTool implements BlockTool {
 
     const boardEl = this.view.createView();
 
+    drawn.done = true;
     if (shown.length > options.length) {
       (boardEl.querySelector('[data-blok-database-board-heads]') ?? boardEl.querySelector('[data-blok-database-board]'))?.appendChild(this.loadMoreGroupsButton());
     }
@@ -5478,6 +5499,15 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      const calculationBtn = target.closest<HTMLElement>('button[data-blok-database-column-count]');
+
+      if (calculationBtn !== null) {
+        event.stopPropagation();
+        this.openGroupCalculationMenu(calculationBtn);
+
+        return;
+      }
+
       const groupMenuBtn = target.closest<HTMLElement>('[data-blok-database-column-menu]');
 
       if (groupMenuBtn !== null) {
@@ -5725,10 +5755,42 @@ export class DatabaseTool implements BlockTool {
       aggregationHidden: view.hideGroupAggregation === true,
       groups,
       onToggleGroup: (id) => this.toggleGroupHidden(id),
-      onToggleAggregation: () => this.updateActiveView({ hideGroupAggregation: view.hideGroupAggregation !== true }),
+      // Notion brings the numbers back as Count all, not the last calculation.
+      onToggleAggregation: () => this.updateActiveView(view.hideGroupAggregation === true
+        ? { hideGroupAggregation: false, groupCalculation: undefined }
+        : { hideGroupAggregation: true }),
       onHide: () => this.toggleGroupHidden(groupId),
       onTrash: () => this.trashGroup(groupId),
       onRecolor: (color) => this.recolorGroup(groupId, color),
+    }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined);
+  }
+
+  /** The count's calculation menu. The pick is the view's, so every column shows it. */
+  private openGroupCalculationMenu(anchor: HTMLElement): void {
+    const view = this.model.getView(this.activeViewId);
+
+    if (view === undefined) {
+      return;
+    }
+
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).map((property) => this.computedValues.valueProperty(property));
+    const current = resolveGroupCalculation(view, schema);
+    const titleId = this.titlePropertyId();
+
+    this.showGroupPopover(anchor, groupCalculationItems({
+      i18n: this.api.i18n,
+      schema,
+      groupBy: view.groupBy,
+      current,
+      // A leaf closes only its own list; the redraw drops the anchor, so close the whole menu.
+      onPick: (fn, propertyId) => {
+        this.groupMenuPopover?.hide();
+        this.updateActiveView({ groupCalculation: groupCalculationFor(fn, propertyId, titleId) });
+      },
+      onCapCounts: (cap) => {
+        this.groupMenuPopover?.hide();
+        this.updateActiveView({ groupCalculation: groupCalculationCapped(current, cap, titleId) });
+      },
     }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined);
   }
 
@@ -6278,6 +6340,7 @@ export class DatabaseTool implements BlockTool {
       if (columnHeader !== null) {
         // Do not start drag when the click originates from the pill (title element or its input)
         // or from a header button.
+        // The count stays a drag handle: a press without a move is still a click that opens its menu.
         const isPillTarget = target.closest('[data-blok-database-column-pill], [data-blok-database-column-actions]') !== null;
         if (isPillTarget) return;
 

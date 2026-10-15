@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Muokkaa ryhmiä",
   "tools.database.groupHideAggregation": "Piilota laskenta",
   "tools.database.groupShowAggregation": "Näytä laskenta",
+  "tools.database.groupCalculationHint": "{calculation} kentässä {property}",
   "tools.database.groupHide": "Piilota ryhmä",
   "tools.database.groupMoveToTrash": "Siirrä roskakoriin",
   "tools.database.groupTrashConfirm": "Oletko varma? Kaikki tämän ryhmän sivut siirretään roskakoriin.",

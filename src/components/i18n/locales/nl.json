@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "Groepen bewerken",
   "tools.database.groupHideAggregation": "Berekening verbergen",
   "tools.database.groupShowAggregation": "Berekening weergeven",
+  "tools.database.groupCalculationHint": "{calculation} van {property}",
   "tools.database.groupHide": "Groep verbergen",
   "tools.database.groupMoveToTrash": "Naar prullenbak verplaatsen",
   "tools.database.groupTrashConfirm": "Weet je het zeker? Alle pagina's in deze groep worden naar de prullenbak verplaatst.",

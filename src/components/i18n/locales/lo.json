@@ -302,6 +302,7 @@
   "tools.database.groupEditGroups": "ແກ້ໄຂກຸ່ມ",
   "tools.database.groupHideAggregation": "ເຊື່ອງຜົນລວມ",
   "tools.database.groupShowAggregation": "ສະແດງຜົນລວມ",
+  "tools.database.groupCalculationHint": "{calculation} ໃນ {property}",
   "tools.database.groupHide": "ເຊື່ອງກຸ່ມ",
   "tools.database.groupMoveToTrash": "ຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
   "tools.database.groupTrashConfirm": "ທ່ານແນ່ໃຈບໍ່? ທຸກໜ້າໃນກຸ່ມນີ້ຈະຖືກຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ.",

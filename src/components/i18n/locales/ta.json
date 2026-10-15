@@ -291,6 +291,7 @@
   "tools.database.groupEditGroups": "குழுக்களைத் திருத்து",
   "tools.database.groupHideAggregation": "திரட்டலை மறை",
   "tools.database.groupShowAggregation": "திரட்டலைக் காட்டு",
+  "tools.database.groupCalculationHint": "{property} இல் {calculation}",
   "tools.database.groupHide": "குழுவை மறை",
   "tools.database.groupMoveToTrash": "குப்பைக்கு நகர்த்து",
   "tools.database.groupTrashConfirm": "நிச்சயமாகவா? இந்தக் குழுவில் உள்ள அனைத்துப் பக்கங்களும் குப்பைக்கு நகர்த்தப்படும்.",

@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "ویرایش گروه‌ها",
   "tools.database.groupHideAggregation": "پنهان کردن محاسبه",
   "tools.database.groupShowAggregation": "نمایش محاسبه",
+  "tools.database.groupCalculationHint": "{calculation} در {property}",
   "tools.database.groupHide": "پنهان کردن گروه",
   "tools.database.groupMoveToTrash": "انتقال به سطل زباله",
   "tools.database.groupTrashConfirm": "آیا مطمئنید؟ همه صفحه‌های این گروه به سطل زباله منتقل می‌شوند.",

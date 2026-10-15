@@ -286,6 +286,7 @@
   "tools.database.groupEditGroups": "ގްރޫޕްތައް އެޑިޓްކުރޭ",
   "tools.database.groupHideAggregation": "ހިސާބު ފޮރުވާ",
   "tools.database.groupShowAggregation": "ހިސާބު ދައްކާ",
+  "tools.database.groupCalculationHint": "{property} ގައި {calculation}",
   "tools.database.groupHide": "ގްރޫޕް ފޮރުވާ",
   "tools.database.groupMoveToTrash": "ކުނިފޮށިއަށް ބަދަލުކުރޭ",
   "tools.database.groupTrashConfirm": "ޔަޤީންތޯ؟ މި ގްރޫޕްގައިވާ ހުރިހާ ޞަފްޙާއެއް ކުނިފޮށިއަށް ބަދަލުކުރެވޭނެ.",

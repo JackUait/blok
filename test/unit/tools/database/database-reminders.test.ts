@@ -242,3 +242,88 @@ describe('a reminder on a date with no time zone, seen from two zones', () => {
     expect((await client(doc, 'America/Los_Angeles')).offered).toEqual([]);
   });
 });
+
+describe('copies carry reminders, not their sent stamp', () => {
+  const stored = { remind: '1_day_before' as const, timeZone: 'Europe/Berlin', sentFor: '2027-06-14T07:00:00.000Z' };
+  const fresh = { remind: '1_day_before', timeZone: 'Europe/Berlin' };
+  const copyOf = (doc: ReturnType<typeof makeDoc>, known: string[]): string =>
+    doc.childrenOf('db').find((id) => !known.includes(id)) ?? '';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-06-01T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+  });
+
+  it('Cmd+D on a row', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'Ship', due: '2027-06-15' }, reminders: { due: stored } }),
+    ]);
+    const { el } = buildDatabase(doc, 'db', data());
+
+    el.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+    el.querySelector<HTMLElement>('[role="grid"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true, cancelable: true }));
+
+    const copy = copyOf(doc, ['r1']);
+
+    expect(copy).not.toBe('');
+    expect(doc.row(copy).reminders).toEqual({ due: fresh });
+    expect(doc.row('r1').reminders).toEqual({ due: stored });
+  });
+
+  it('a new row from a template, and a duplicated template', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('tpl', 'db', { properties: { title: 'Tpl', due: '2027-06-15' }, template: true, reminders: { due: stored } }),
+    ]);
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    expect(doc.row(tool.newFromTemplate('tpl') ?? '').reminders).toEqual({ due: fresh });
+    expect(doc.row(tool.duplicateTemplate('tpl') ?? '').reminders).toEqual({ due: fresh });
+  });
+
+  it('a template applied to an empty row page fills the reminder with the date it fills', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'Ship', due: null } }),
+      rowSeed('r2', 'db', { properties: { title: 'Kept', due: '2027-06-20' }, reminders: { due: { remind: '2_days_before' } } }),
+      rowSeed('tpl', 'db', { properties: { title: 'Tpl', due: '2027-06-15' }, template: true, reminders: { due: stored } }),
+    ]);
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    tool.applyTemplate({ rowId: 'r1', templateId: 'tpl' });
+    tool.applyTemplate({ rowId: 'r2', templateId: 'tpl' });
+
+    expect(doc.row('r1').reminders).toEqual({ due: fresh });
+    expect(doc.row('r2').reminders).toEqual({ due: { remind: '2_days_before' } });
+  });
+
+  it('a duplicated template keeps the reminder on its @today date', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('tpl', 'db', { properties: { title: 'Tpl', due: '@today' }, template: true, reminders: { due: stored } }),
+    ]);
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    expect(doc.row(tool.duplicateTemplate('tpl') ?? '').reminders).toEqual({ due: fresh });
+    expect(doc.row(tool.newFromTemplate('tpl') ?? '').reminders).toEqual({ due: fresh });
+  });
+
+  it('a reminder on a date the copy has no value for, or cannot take, stays behind', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('tpl', 'db', { properties: { title: 'Tpl', due: null }, template: true, reminders: { due: stored } }),
+    ]);
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    expect(doc.row(tool.newFromTemplate('tpl') ?? '').reminders).toBeUndefined();
+  });
+});

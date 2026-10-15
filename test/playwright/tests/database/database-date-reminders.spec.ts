@@ -234,3 +234,24 @@ test('one undo after Clear brings back the date and its reminder', async ({ page
     return { due: row?.properties['p-due'], reminders: row?.reminders };
   }).toEqual({ due: '2027-06-15', reminders: { 'p-due': { remind: '1_day_before' } } });
 });
+
+const openRowPage = async (page: Page, title: string): Promise<void> => {
+  const row = page.getByRole('row', { name: new RegExp(title) });
+
+  await row.hover();
+  await row.getByRole('button', { name: 'Open', exact: true }).click();
+};
+
+test('a duplicated page keeps its reminder, without the sent stamp, so the copy reminds too', async ({ page }) => {
+  await mount(page, undefined, { 'p-due': { remind: '1_day_before', timeZone: 'Europe/Berlin', sentFor: '2027-06-14T07:00:00.000Z' } });
+  await openRowPage(page, 'Alpha');
+  await page.getByRole('button', { name: 'Actions' }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+
+  await expect.poll(() => page.evaluate(async () => {
+    const saved = await window.blokInstance?.save();
+
+    return saved?.blocks.filter((block) => block.type === 'database-row' && block.id !== 'r1' && block.id !== 'r2')
+      .map((block) => (block.data as { reminders?: unknown }).reminders);
+  })).toEqual([{ 'p-due': { remind: '1_day_before', timeZone: 'Europe/Berlin' } }]);
+});

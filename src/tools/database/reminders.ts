@@ -1,5 +1,6 @@
 import { parseDateValue } from './cells/date-value';
 import { addToDate, parseIsoDate, wallTime, zonedToEpoch } from './formula/dates';
+import { resolveDynamicValue } from './dynamic-values';
 import type { DateReminder, DateReminderOffset, PropertyValue } from './types';
 
 /** Notion's lists, in order (research/17 §1b). None is the absence of a reminder. */
@@ -95,4 +96,22 @@ export const dueReminder = (
   const sent = reminder.sentFor === undefined ? Number.NaN : Date.parse(reminder.sentFor);
 
   return sent === due ? null : new Date(due).toISOString();
+};
+
+/**
+ * A copy's reminders (duplicate, template): only where the copy has a date that
+ * can take one, and without `sentFor`, so the copy reminds on its own.
+ */
+export const copiedReminders = (
+  reminders: Record<string, DateReminder> | undefined,
+  properties: Record<string, PropertyValue>
+): Record<string, DateReminder> | undefined => {
+  const kept = Object.entries(reminders ?? {})
+    // A template's @today / @now counts as the date it becomes.
+    .filter(([propertyId, reminder]) => reminderDueAt(
+      resolveDynamicValue(properties[propertyId] ?? null, { me: null, now: new Date() }), reminder.remind, undefined
+    ) !== null)
+    .map(([propertyId, { sentFor: _sent, ...reminder }]): [string, DateReminder] => [propertyId, reminder]);
+
+  return kept.length > 0 ? Object.fromEntries(kept) : undefined;
 };

@@ -23,7 +23,7 @@ import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRela
 import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
 import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData } from './templates';
-import { dueReminder, storedReminderDueAt, viewerTimeZone } from './reminders';
+import { copiedReminders, dueReminder, storedReminderDueAt, viewerTimeZone } from './reminders';
 import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDisplay } from './sub-items';
 import { comparePositions } from './positions';
 import { mapRowValues } from './row-move';
@@ -5065,6 +5065,8 @@ export class DatabaseTool implements BlockTool {
       const position = DatabaseModel.positionBetween(cursor.after, next);
       const title = properties[titlePropId];
 
+      const reminders = copiedReminders(source.reminders, properties);
+
       cursor.after = position;
       this.api.blocks.insertAt(
         'database-row',
@@ -5075,6 +5077,7 @@ export class DatabaseTool implements BlockTool {
           ...(source.icon !== undefined ? { icon: source.icon } : {}),
           ...(source.cover !== undefined ? { cover: source.cover } : {}),
           ...(source.fullWidth !== undefined ? { fullWidth: source.fullWidth } : {}),
+          ...(reminders !== undefined ? { reminders } : {}),
         },
         { parentId: this.dataId, position: 'end', id },
       );
@@ -5274,6 +5277,7 @@ export class DatabaseTool implements BlockTool {
       Object.assign(rowData.properties, resolveDynamicProperties(structuredClone(template.properties), { me: this.config.people?.me?.() ?? null, now: new Date() }), given);
     }
     const title = rowData.properties[titlePropId];
+    const reminders = copiedReminders(template?.reminders, rowData.properties);
 
     this.api.blocks.insertAt(
       'database-row',
@@ -5284,6 +5288,7 @@ export class DatabaseTool implements BlockTool {
         ...(template?.icon !== undefined ? { icon: template.icon } : {}),
         ...(template?.cover !== undefined ? { cover: template.cover } : {}),
         ...(template?.fullWidth !== undefined ? { fullWidth: template.fullWidth } : {}),
+        ...(reminders !== undefined ? { reminders } : {}),
       },
       { parentId: this.dataId, position: 'end', id: rowData.id },
     );
@@ -5384,6 +5389,9 @@ export class DatabaseTool implements BlockTool {
     const filled = resolveDynamicProperties(structuredClone(template.properties), { me: this.config.people?.me?.() ?? null, now: new Date() });
     const changes = Object.fromEntries(Object.entries(filled).filter(([id, value]) => !blank(value) && blank(row.properties[id])));
     const { [titlePropId]: title, ...values } = changes;
+    // Only beside a date the template fills, and never over the row's own reminder.
+    const reminders = Object.fromEntries(Object.entries(copiedReminders(template.reminders, changes) ?? {})
+      .filter(([propertyId]) => row.reminders?.[propertyId] === undefined));
 
     this.inOneStep(() => {
       if (typeof title === 'string') this.updateRowTitleBlock(param.rowId, titlePropId, title);
@@ -5391,6 +5399,7 @@ export class DatabaseTool implements BlockTool {
       if (row.icon === undefined && template.icon !== undefined) block.call('updateIcon', { icon: template.icon });
       if (row.cover === undefined && template.cover !== undefined) block.call('updateCover', { cover: template.cover });
       if (row.fullWidth === undefined && template.fullWidth !== undefined) block.call('updateFullWidth', { fullWidth: template.fullWidth });
+      if (Object.keys(reminders).length > 0) block.call('updateReminders', reminders);
       block.dispatchChange();
       this.copyChildBlocks(template.id, param.rowId);
     });
@@ -5447,6 +5456,7 @@ export class DatabaseTool implements BlockTool {
     const position = DatabaseModel.positionBetween(template.position, next?.position ?? null);
     const properties = structuredClone(template.properties);
     const title = properties[this.titlePropertyId()];
+    const reminders = copiedReminders(template.reminders, properties);
 
     this.inOneStep(() => {
       this.api.blocks.insertAt('database-row', {
@@ -5457,6 +5467,7 @@ export class DatabaseTool implements BlockTool {
         ...(template.icon !== undefined ? { icon: template.icon } : {}),
         ...(template.cover !== undefined ? { cover: template.cover } : {}),
         ...(template.fullWidth !== undefined ? { fullWidth: template.fullWidth } : {}),
+        ...(reminders !== undefined ? { reminders } : {}),
       }, { parentId: this.dataId, position: 'end', id });
       this.copyChildBlocks(templateId, id);
     });

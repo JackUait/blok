@@ -523,6 +523,22 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    it('keeps Cmd+Z from the editor while a tab is dragged', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      const undo = new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true });
+
+      document.dispatchEvent(undo);
+      bar.destroy();
+      el.remove();
+
+      expect(undo.defaultPrevented).toBe(true);
+    });
+
     it('cancels drag on Escape key', () => {
       const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
       const { bar, el } = createBarWithLayout(views, 'v1');

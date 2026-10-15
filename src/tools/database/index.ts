@@ -3087,7 +3087,6 @@ export class DatabaseTool implements BlockTool {
             this.updateRowTitleBlock(rowId, titlePropId, title);
             this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
           },
-          history: (redo: boolean) => (redo ? this.api.history.redo() : this.api.history.undo()),
         }),
       },
     });
@@ -4649,7 +4648,6 @@ export class DatabaseTool implements BlockTool {
       sortedRowDrop: (result) => this.onSortedRowDrop(result, context),
       bulkEdit: () => undefined,
       commitCells: (changes, newRows) => this.commitTableCells(changes, newRows, context),
-      history: (redo) => (redo ? this.api.history.redo() : this.api.history.undo()),
       editFilters: (anchor) => { if (writable()) (context?.controls ?? this.controls).openSettings(anchor, 'filter'); },
       groupToggled: (key, collapsed) => { if (writable()) (context?.owner ?? this).saveGroupCollapse(context?.viewId ?? this.activeViewId, key, collapsed); },
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),

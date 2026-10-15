@@ -25,6 +25,7 @@ import {
 import type { BarValues, BarWrite, TimelineWindow } from './timeline-dates';
 import { resolveCalculations, resolveCountCaps, resolveShowTimelineTable, resolveTimelineTableProperties, resolveTimelineZoom, resolveViewProperties } from './view-settings';
 import { fillCalculationCell } from './database-table-view';
+import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
@@ -1195,6 +1196,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   };
 
   private readonly onDragKeyDown = (event: KeyboardEvent): void => {
+    // The editor's undo would rewrite rows under the drag.
+    if (isHistoryKey(event)) {
+      event.preventDefault();
+    }
     if (event.key === 'Escape') {
       this.cancelDrag();
     }

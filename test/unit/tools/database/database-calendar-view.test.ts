@@ -347,6 +347,20 @@ describe('DatabaseCalendarView', () => {
       expect(day(root, '2026-10-14').hasAttribute('data-drop')).toBe(false);
     });
 
+    it('keeps Cmd+Z from the editor while an event is dragged', () => {
+      const { root } = mount();
+
+      layOut(root);
+      pointer('pointerdown', events(root, 'r1')[0], 550, 110);
+      pointer('pointermove', document, 350, 210);
+      const undo = new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true });
+
+      document.dispatchEvent(undo);
+      pointer('pointerup', document, 350, 210);
+
+      expect(undo.defaultPrevented).toBe(true);
+    });
+
     it('keeps the range length and the grabbed day under the pointer', () => {
       const { root, handlers } = mount();
 

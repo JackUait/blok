@@ -628,16 +628,16 @@ describe('table bulk actions and clipboard', () => {
   });
 
   describe('undo', () => {
-    it('forwards Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z from the grid, which owns its keys', () => {
-      const history = vi.fn();
-      const { root } = mount({ handlers: { ...makeHandlers(), history } });
+    it('leaves Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z to the editor, which handles them after the grid', () => {
+      const { root } = mount();
 
       selectCell(root, 'r1', 'p-notes');
       const undo = press(grid(root), 'z', { metaKey: true, code: 'KeyZ' });
-      press(grid(root), 'z', { metaKey: true, shiftKey: true, code: 'KeyZ' });
+      const redo = press(grid(root), 'z', { metaKey: true, shiftKey: true, code: 'KeyZ' });
 
-      expect(undo.defaultPrevented).toBe(true);
-      expect(history.mock.calls).toEqual([[false], [true]]);
+      expect(undo.defaultPrevented).toBe(false);
+      expect(redo.defaultPrevented).toBe(false);
+      expect(root.querySelector('input, textarea')).toBeNull();
     });
   });
 

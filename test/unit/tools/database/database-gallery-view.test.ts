@@ -439,7 +439,6 @@ describe('DatabaseGalleryView', () => {
       selectRows: Mock<(rowIds: string[]) => void>;
       pickRow: Mock<(rowId: string, range: boolean, order: string[]) => void>;
       renameRow: Mock<(rowId: string, title: string) => void>;
-      history: Mock<(redo: boolean) => void>;
     } => {
       const paint = (ids: string[]): void => {
         document.querySelectorAll<HTMLElement>('[data-blok-database-gallery-card]').forEach((card) => {
@@ -449,8 +448,7 @@ describe('DatabaseGalleryView', () => {
       const selectRows = vi.fn<(rowIds: string[]) => void>(paint);
       const pickRow = vi.fn<(rowId: string, range: boolean, order: string[]) => void>();
       const renameRow = vi.fn<(rowId: string, title: string) => void>();
-      const history = vi.fn<(redo: boolean) => void>();
-      const handlers: GalleryHandlers = { ...makeHandlers(), selectRows, pickRow, renameRow, history };
+      const handlers: GalleryHandlers = { ...makeHandlers(), selectRows, pickRow, renameRow };
       const view = new DatabaseGalleryView({
         readOnly: false, i18n, view: galleryView(), schema, groups: four(), grouped: false, titlePropertyId: 'p-title',
         bodyOf: () => [], handlers, ...overrides,
@@ -459,7 +457,7 @@ describe('DatabaseGalleryView', () => {
 
       document.body.appendChild(root);
 
-      return { root, view, handlers, selectRows, pickRow, renameRow, history };
+      return { root, view, handlers, selectRows, pickRow, renameRow };
     };
 
     const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
@@ -612,16 +610,14 @@ describe('DatabaseGalleryView', () => {
       expect(handlers.openRow).not.toHaveBeenCalled();
     });
 
-    it('passes undo and redo to the editor, which stands down inside the gallery', () => {
-      const { root, history } = mountSelectable();
+    it('leaves undo and redo to the editor, which handles them after the gallery', () => {
+      const { root } = mountSelectable();
 
       const undo = press(root, 'z', { metaKey: true });
+      const redo = press(cards(root)[0], 'Z', { ctrlKey: true, shiftKey: true });
 
-      press(cards(root)[0], 'Z', { ctrlKey: true, shiftKey: true });
-      press(root, 'y', { ctrlKey: true });
-
-      expect(history.mock.calls).toEqual([[false], [true], [true]]);
-      expect(undo.defaultPrevented).toBe(true);
+      expect(undo.defaultPrevented).toBe(false);
+      expect(redo.defaultPrevented).toBe(false);
     });
 
     it('Space on a card does nothing, and still presses "+ New"', () => {

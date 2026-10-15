@@ -2775,6 +2775,16 @@ describe('openDarkroom photo editor keys', () => {
       expect(dialog().getAttribute('data-mode')).toBe('crop');
     });
 
+    it('while it is open, Cmd+Z is kept from the editor behind it', () => {
+      open();
+      question();
+      const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true });
+
+      sheet()?.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+    });
+
     it('hides the Filters row when there are no filters', () => {
       open({ filters: resolveFilters([]) });
       question();

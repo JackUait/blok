@@ -727,18 +727,6 @@ export class TabsTool implements BlockTool, TabsHandle {
     });
     pill.addEventListener('keydown', (event) => {
       const opensMenu = event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey);
-      const mod = event.metaKey || event.ctrlKey;
-      const isZ = event.code === 'KeyZ' || event.key.toLowerCase() === 'z';
-      const isRedo = mod && ((isZ && event.shiftKey) || (event.ctrlKey && event.key.toLowerCase() === 'y'));
-
-      // The strip owns its keyboard, so the editor never sees these keys here.
-      if (isRedo || (mod && isZ)) {
-        event.preventDefault();
-        isRedo ? this.api.history.redo() : this.api.history.undo();
-
-        return;
-      }
-
       if (opensMenu && !this.readOnly) {
         event.preventDefault();
         this.openMenu(id);

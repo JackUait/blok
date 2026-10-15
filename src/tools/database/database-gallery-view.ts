@@ -47,8 +47,6 @@ export interface GalleryHandlers {
   /** Cmd/Ctrl-click toggles, Shift-click adds a range of `order`, the cards as drawn. */
   pickRow?: (rowId: string, range: boolean, order: string[]) => void;
   renameRow?: (rowId: string, title: string) => void;
-  /** The root owns its keyboard, so the editor's undo stands down there; the gallery passes it on. */
-  history?: (redo: boolean) => void;
 }
 
 export interface DatabaseGalleryViewOptions {
@@ -372,10 +370,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     const target = event.target instanceof HTMLElement ? event.target : null;
 
-    if (target === null || this.forwardHistory(event)) {
-      return;
-    }
-    if (event.metaKey || event.ctrlKey || event.altKey) {
+    if (target === null || event.metaKey || event.ctrlKey || event.altKey) {
       return;
     }
     if (target.matches('[data-blok-database-gallery-new]') && (event.key === 'Enter' || event.key === ' ')) {
@@ -406,22 +401,6 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       }
     }
   };
-
-  /** Cmd/Ctrl+Z undoes, Cmd/Ctrl+Shift+Z and Ctrl+Y redo. The rename input keeps its own undo. */
-  private forwardHistory(event: KeyboardEvent): boolean {
-    const history = this.options.handlers?.history;
-    const mod = event.metaKey || event.ctrlKey;
-    const isZ = event.code === 'KeyZ' || event.key.toLowerCase() === 'z';
-    const isRedo = mod && ((isZ && event.shiftKey) || (event.ctrlKey && event.key.toLowerCase() === 'y'));
-
-    if (history === undefined || !this.selectable || event.altKey || !(isRedo || (mod && isZ))) {
-      return false;
-    }
-    event.preventDefault();
-    history(isRedo);
-
-    return true;
-  }
 
   private cardIds(): string[] {
     return [...(this.root?.querySelectorAll<HTMLElement>(CARD) ?? [])].map((card) => card.getAttribute('data-row-id') ?? '');

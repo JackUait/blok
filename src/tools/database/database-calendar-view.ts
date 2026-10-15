@@ -20,6 +20,7 @@ import {
 } from './calendar-dates';
 import type { PlacedEvent } from './calendar-dates';
 import { resolveCalendarRange, resolveShowWeekends, resolveViewProperties } from './view-settings';
+import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconChevronLeft, IconChevronRight, IconPlus } from '../../components/icons';
 
@@ -709,6 +710,10 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   };
 
   private readonly onDragKeyDown = (event: KeyboardEvent): void => {
+    // The editor's undo would rewrite rows under the drag.
+    if (isHistoryKey(event)) {
+      event.preventDefault();
+    }
     if (event.key === 'Escape') {
       this.cancelDrag();
     }

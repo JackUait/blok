@@ -19,6 +19,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
 import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
+import { isHistoryKey } from './database-keyboard';
 
 const DRAG_THRESHOLD = 10;
 
@@ -112,6 +113,8 @@ export class DatabaseTabBar {
     this.boundDragUp = this.handleDragUp.bind(this);
     this.boundDragCancel = this.cleanupDrag.bind(this);
     this.boundDragKeyDown = (e: KeyboardEvent): void => {
+      // The editor's undo would rewrite views under the drag.
+      if (isHistoryKey(e)) { e.preventDefault(); }
       if (e.key === 'Escape') { this.cleanupDrag(); }
     };
   }

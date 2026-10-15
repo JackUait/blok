@@ -500,6 +500,20 @@ describe('DatabaseTimelineView', () => {
       expect(view.interacting).toBe(false);
     });
 
+    it('keeps Cmd+Z from the editor while a bar is dragged', () => {
+      const { root } = mount();
+
+      layOut(root);
+      pointer('pointerdown', bar(root, 'r1'), xOf('2026-10-09'), 50);
+      pointer('pointermove', document, xOf('2026-10-12'), 50);
+      const undo = new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true });
+
+      document.dispatchEvent(undo);
+      pointer('pointerup', document, xOf('2026-10-12'), 50);
+
+      expect(undo.defaultPrevented).toBe(true);
+    });
+
     it('does not drag when read-only', () => {
       const { root, handlers } = mount({ readOnly: true });
 

@@ -1193,16 +1193,23 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
       return;
     }
-    // The sheet's own Escape closes it; nothing else may edit the photo behind it.
-    if (st.sheet) return;
     // Same rule as the editor's shortcutLetter: the physical key counts only when the layout types a non-Latin letter there.
     const nonLatin = e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && !e.altKey;
     const isLetter = (letter: string): boolean =>
       e.key.toLowerCase() === letter || (nonLatin && e.code === `Key${letter.toUpperCase()}`);
     // Same history keys as the editor's KeyboardController: Ctrl+Y redoes on Windows and Linux.
     const redoY = e.ctrlKey && !e.shiftKey && isLetter('y');
+    const isHistory = (mod && isLetter('z')) || redoY;
 
-    if ((mod && isLetter('z')) || redoY) {
+    // The sheet's own Escape closes it; nothing else may edit the photo behind it.
+    // preventDefault, or the editor undoes the document behind the darkroom.
+    if (st.sheet) {
+      if (isHistory) e.preventDefault();
+
+      return;
+    }
+
+    if (isHistory) {
       e.preventDefault();
       flushAll();
       restore(e.shiftKey || redoY ? hist.stack.redo() : hist.stack.undo());

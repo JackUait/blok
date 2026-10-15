@@ -2023,4 +2023,130 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.BlockSelection.clearSelection).toHaveBeenCalledTimes(1);
     });
   });
+  describe('undo and redo inside a keyboard owner', () => {
+    const ownedInside = (harness: Harness, field: HTMLElement = document.createElement('button')): { owner: HTMLElement; field: HTMLElement } => {
+      const owner = document.createElement('div');
+
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      owner.appendChild(field);
+      harness.redactor.appendChild(owner);
+
+      return { owner, field };
+    };
+
+    it('undoes once, after the subtree has seen the key', () => {
+      const harness = enabledHarness();
+      const { field } = ownedInside(harness);
+
+      const { event, reachedTarget } = harness.press(field, { key: 'z', code: 'KeyZ', metaKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(reachedTarget).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('redoes on Cmd+Shift+Z and on Ctrl+Y', () => {
+      const harness = enabledHarness();
+      const { field } = ownedInside(harness);
+
+      harness.press(field, { key: 'z', code: 'KeyZ', metaKey: true, shiftKey: true });
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(100);
+      harness.press(field, { key: 'y', code: 'KeyY', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(2);
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('leaves the key to a subtree that handles it (preventDefault)', () => {
+      const harness = enabledHarness();
+      const { owner, field } = ownedInside(harness);
+
+      owner.addEventListener('keydown', (event) => event.preventDefault());
+      harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('leaves the key to a subtree that stops it', () => {
+      const harness = enabledHarness();
+      const { owner, field } = ownedInside(harness);
+
+      owner.addEventListener('keydown', (event) => event.stopPropagation());
+      harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('leaves a text input its native undo', () => {
+      const harness = enabledHarness();
+      const { field } = ownedInside(harness, document.createElement('input'));
+
+      const { event } = harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('leaves a contenteditable field its own undo', () => {
+      const harness = enabledHarness();
+      const editable = document.createElement('div');
+
+      editable.setAttribute('contenteditable', 'true');
+      const { field } = ownedInside(harness, editable);
+
+      const { event } = harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('undoes from a checkbox, which has no text undo', () => {
+      const harness = enabledHarness();
+      const checkbox = document.createElement('input');
+
+      checkbox.type = 'checkbox';
+      const { field } = ownedInside(harness, checkbox);
+
+      harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+    });
+
+    it('swallows the key while a drag is in progress', () => {
+      const harness = enabledHarness();
+      const { field } = ownedInside(harness);
+
+      harness.state.isDragging = true;
+      harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('ignores an owner inside another editor', () => {
+      const harness = enabledHarness();
+      const otherEditor = document.createElement('div');
+      const owner = document.createElement('div');
+      const field = document.createElement('button');
+
+      otherEditor.setAttribute('data-blok-testid', 'blok-editor');
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      owner.appendChild(field);
+      otherEditor.appendChild(owner);
+      document.body.appendChild(otherEditor);
+      harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('still stands down for other keys', () => {
+      const harness = enabledHarness();
+      const { field } = ownedInside(harness);
+
+      harness.state.currentBlockIndex = 0;
+      harness.press(field, { key: 'Enter' });
+
+      expect(harness.blok.BlockSelection.clearSelection).not.toHaveBeenCalled();
+    });
+  });
 });

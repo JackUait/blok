@@ -356,6 +356,10 @@ export const DATA_ATTR: {
    *  is right for a one-line title input and wrong for a field with its own
    *  keyboard semantics (Tab between sub-fields, Escape to cancel an edit, arrows
    *  to walk a suggestion list), which is exactly what this attribute is for.
+   *
+   *  Undo and redo (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, Ctrl+Y) still reach the
+   *  editor's history after the event bubbles. Call preventDefault to keep
+   *  them. Text inputs and contenteditables inside keep their native undo.
    *  Public authoring hook. */
   readonly keyboardOwner: 'data-blok-keyboard-owner';
   /** Marks a subtree whose right-click belongs to the tool: Blok's block

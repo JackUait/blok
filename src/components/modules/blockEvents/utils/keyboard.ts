@@ -5,7 +5,8 @@ import { KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP, PRINTABLE_SPECIAL_KEYS } from '../c
 /**
  * True when a keyboard event originated inside a subtree a Tool claimed with
  * `data-blok-keyboard-owner` — the declarative "this field owns its keyboard"
- * opt-out. Callers must stand their handling down entirely for such an event.
+ * opt-out. Callers must stand their handling down for such an event. Only the
+ * KeyboardController still runs undo/redo, after the event bubbles.
  * @param target - the event target to test (`event.target`)
  */
 export const isInsideKeyboardOwner = (target: EventTarget | null): boolean => {

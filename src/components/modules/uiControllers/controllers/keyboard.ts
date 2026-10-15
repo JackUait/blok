@@ -74,6 +74,9 @@ const shortcutLetter = (event: KeyboardEvent): string => {
   return event.code === 'KeyY' ? 'y' : key;
 };
 
+const isInsideEditable = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest('[contenteditable]:not([contenteditable="false"])') !== null;
+
 const isHistoryKey = (event: KeyboardEvent, letter: string): boolean =>
   ((event.metaKey || event.ctrlKey) && letter.toLowerCase() === 'z')
   || (event.ctrlKey && !event.shiftKey && letter.toLowerCase() === 'y');
@@ -147,6 +150,36 @@ export class KeyboardController extends Controller {
   private readonly documentKeydownHandler = (event: Event): void => {
     if (event instanceof KeyboardEvent) {
       this.handleKeydown(event);
+    }
+  };
+
+  /**
+   * A history key from inside a keyboard owner. It is decided after the event
+   * bubbles, so the subtree can keep it by calling preventDefault.
+   */
+  private pendingOwnerHistoryKey: KeyboardEvent | null = null;
+
+  private readonly ownerHistoryKeyHandler = (event: Event): void => {
+    if (event !== this.pendingOwnerHistoryKey || !(event instanceof KeyboardEvent)) {
+      return;
+    }
+    this.pendingOwnerHistoryKey = null;
+
+    if (event.defaultPrevented || this.isDisabled) {
+      return;
+    }
+
+    const target = event.target;
+    const closestEditor = target instanceof Element ? target.closest('[data-blok-testid="blok-editor"]') : null;
+
+    if ((closestEditor !== null && closestEditor !== this.wrapperElement) || !this.ownsHistoryKeyTarget(target)) {
+      return;
+    }
+
+    if (shortcutLetter(event).toLowerCase() === 'z') {
+      this.handleZ(event);
+    } else {
+      this.handleY(event);
     }
   };
 
@@ -244,6 +277,8 @@ export class KeyboardController extends Controller {
 
     // Document-level keydown handler
     this.readOnlyMutableListeners.on(document, 'keydown', this.documentKeydownHandler, true);
+    // Bubble phase on window: runs after every handler inside the page.
+    this.readOnlyMutableListeners.on(window, 'keydown', this.ownerHistoryKeyHandler);
 
     /**
      * Capture caret position before any input changes the DOM.
@@ -304,8 +339,14 @@ export class KeyboardController extends Controller {
      * too, not just the block-level pipeline. The input/textarea skip below only
      * covers NATIVE form controls — a Tool's field is often a contenteditable
      * sub-region or a custom widget, which this attribute covers tag-agnostically.
+     *
+     * Undo and redo are the exception: they still reach the editor's history
+     * unless the subtree calls preventDefault, or the target is a text field,
+     * which keeps its native undo.
      */
     if (isInsideKeyboardOwner(target)) {
+      this.pendingOwnerHistoryKey = historyKey && !isTextEntry(target) && !isInsideEditable(target) ? event : null;
+
       return;
     }
 

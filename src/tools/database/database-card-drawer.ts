@@ -137,6 +137,8 @@ export interface LayoutTabsHost {
   addRelated(propertyId: string): { tabId: string; made: string; contentId: string | null } | null;
   /** Another database of this document, which a new relation can point to. */
   canRelate(sourceId: string): boolean;
+  /** A database's property names, as saved. */
+  propertyNames?(sourceId: string): string[];
   /**
    * research/13 §2: a two-way relation to `sourceId` (its mirror named
    * `relatedName`) and a view tab filtered by the mirror. The properties save
@@ -1948,6 +1950,7 @@ export class DatabaseCardDrawer {
       sources: () => this.layoutTabs?.sources() ?? [],
       related: () => this.layoutTabs?.related() ?? [],
       thisDatabase: () => this.databaseTitle(),
+      propertyNames: (sourceId) => this.layoutTabs?.propertyNames?.(sourceId) ?? [],
       addRelated: (propertyId) => this.addedTab(this.layoutTabs?.addRelated(propertyId) ?? null),
       add: (sourceId, name) => this.addedTab(this.layoutTabs?.add(sourceId, name) ?? null),
       canRelate: (sourceId) => this.layoutTabs?.canRelate(sourceId) ?? false,

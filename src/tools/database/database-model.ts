@@ -23,7 +23,7 @@ import { visibleRowPropertyIds } from './view-settings';
 import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
 import { parentMap, relationPair } from './sub-items';
 import { comparePositions } from './positions';
-import { createDefaultSchema, createDefaultView, newView, positionBetween } from '../../shared/database/schema-ops';
+import { createDefaultSchema, createDefaultView, freePropertyName, newView, positionBetween } from '../../shared/database/schema-ops';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 
 export type { ViewCreateConfig };
@@ -123,6 +123,8 @@ export class DatabaseModel {
   /**
    * Adds a property at the end, or beside `at.afterId` / before `at.beforeId`.
    * Positions stay fractional keys, so two peers adding at once both land.
+   * A taken name gets the lowest free " N" (freePropertyName). Loads and peer
+   * merges do not come through here, so saved duplicates keep their names.
    */
   addProperty(
     name: string,
@@ -144,7 +146,7 @@ export class DatabaseModel {
     const prop: PropertyDefinition = {
       ...settings,
       id: nanoid(),
-      name,
+      name: freePropertyName(this.schema.map((p) => p.name), name),
       type,
       position: DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null),
       ...(config !== undefined ? { config } : {}),

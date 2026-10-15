@@ -1476,7 +1476,8 @@ describe('row page layout through the database tool', () => {
           const made = a.find((property) => property.type === 'relation' && property.id !== 'rel');
           const mirror = bSchema.find((property) => property.type === 'relation' && property.id !== 'back');
 
-          expect(made).toMatchObject({ name: 'Measure B', relation: { targetDatabaseId: 'dbb', twoWay: true, syncedPropertyId: mirror?.id } });
+          // research/13 §2, research/14 §6: A already has "Measure B", so the new relation is "Measure B 1"; the tab keeps "Measure B".
+          expect(made).toMatchObject({ name: 'Measure B 1', relation: { targetDatabaseId: 'dbb', twoWay: true, syncedPropertyId: mirror?.id } });
           expect(mirror).toMatchObject({ name: 'Measure A 1', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: made?.id } });
           const linked = (await savedBlocks()).filter((block) => block.type === 'database' && (block.data as { source?: { databaseId?: string } }).source?.databaseId === 'dbb');
 
@@ -1503,7 +1504,7 @@ describe('row page layout through the database tool', () => {
           expect(field?.selectionStart === 0 && field?.selectionEnd === field?.value.length).toBe(false);
         });
 
-        it('fills Related property name with "<this database> 1" in any locale', async () => {
+        it('fills Related property name with "<this database> 1" in any locale when the source has that name', async () => {
           await make(relatedDoc(), {}, false, TAB_TOOLS, { i18n: { locale: 'ru' } });
           await openRow('r1');
           await click(q('[data-blok-database-drawer-customize]'));
@@ -1513,6 +1514,41 @@ describe('row page layout through the database tool', () => {
           await click(testId('database-layout-add-relation'));
 
           expect((testId('database-layout-related-name') as HTMLInputElement | null)?.placeholder).toBe('Measure A 1');
+        });
+
+        // research/14 §5b: no clash on the source, no suffix.
+        it('fills Related property name with "<this database>" when the source has no property of that name', async () => {
+          const blocks = relatedDoc();
+          const back = (blocks.find((block) => block.id === 'dbb')?.data as { schema: Array<{ id: string; name: string }> }).schema.find((property) => property.id === 'back');
+
+          if (back !== undefined) back.name = 'Owner';
+          await make(blocks);
+          await openRow('r1');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-link-data-source'));
+          await click(testId('database-layout-source-dbb'));
+          await click(testId('database-layout-add-relation'));
+
+          expect((testId('database-layout-related-name') as HTMLInputElement | null)?.placeholder).toBe('Measure A');
+          await click(testId('database-layout-add-view'));
+
+          expect((await schemaOf('dbb')).filter((property) => property.type === 'relation').map((property) => property.name)).toEqual(['Owner', 'Measure A']);
+        });
+
+        // research/14 §5c: a typed taken related name is saved suffixed, with no error.
+        it('saves a typed related name the source already has as "<name> 1"', async () => {
+          await openForm();
+          await click(testId('database-layout-add-relation'));
+          const related = testId('database-layout-related-name') as HTMLInputElement | null;
+
+          if (related !== null) {
+            related.value = 'Name';
+            related.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          await click(testId('database-layout-add-view'));
+
+          expect((await schemaOf('dbb')).map((property) => property.name)).toEqual(['Name', 'Measure A', 'Name 1']);
         });
 
         it('names both properties from the fields', async () => {

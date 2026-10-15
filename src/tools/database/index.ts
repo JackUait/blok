@@ -1883,6 +1883,7 @@ export class DatabaseTool implements BlockTool {
       return source === undefined ? null : this.makeViewTab(source.sourceId, source.title, [thisPageFilter(source.backPropertyId)]);
     },
     canRelate: (sourceId) => this.canRelateTab(sourceId),
+    propertyNames: (sourceId) => (sourceId === this.dataId ? this.model.getSchema() : this.readDatabaseSource(sourceId)?.schema ?? []).map((property) => property.name),
     addWithRelation: (sourceId, name, relatedName) => this.addRelationTab(sourceId, name, relatedName),
     removeRelation: (propertyId) => this.removeTabRelation(propertyId),
     duplicate: (tabId, title) => this.duplicateViewTab(tabId, title),

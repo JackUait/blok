@@ -28,6 +28,21 @@ const randomKeySuffix = (): string => {
 };
 
 /**
+ * The name a new property gets: `wanted`, or "<wanted> N" with the lowest free N
+ * from 1 when that exact string is taken (research/14 §1, §2a, §4). Case-sensitive,
+ * untrimmed, and the suffix stacks: "Notes 1" taken gives "Notes 1 1".
+ */
+export const freePropertyName = (names: readonly string[], wanted: string): string => {
+  const taken = new Set(names);
+
+  if (!taken.has(wanted)) return wanted;
+  // Names can fill at most names.length suffixes, so one of 1..length+1 is free.
+  const free = Array.from({ length: names.length + 1 }, (_, i) => `${wanted} ${i + 1}`).find((name) => !taken.has(name));
+
+  return free ?? wanted;
+};
+
+/**
  * A fractional-index key between two neighbours (DatabaseModel.positionBetween documents
  * the cases). Appending (`before === null`) adds a random suffix, so two peers adding at
  * the same moment never land on the same key.

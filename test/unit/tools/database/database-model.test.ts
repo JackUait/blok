@@ -122,6 +122,22 @@ describe('DatabaseModel', () => {
       expect(model.getSchema()).toHaveLength(schemaBefore + 1);
     });
 
+    // research/14 §1-§2a: an add never makes a second property of the same name.
+    it('addProperty names a taken name "<name> N", the lowest free N', () => {
+      const model = new DatabaseModel(makeData({ schema: [makeProperty({ id: 't', name: 'Name', type: 'title' })] }));
+
+      expect(model.addProperty('Notes', 'text').name).toBe('Notes');
+      expect(model.addProperty('Notes', 'text').name).toBe('Notes 1');
+      expect(model.addProperty('Notes', 'text').name).toBe('Notes 2');
+      expect(model.addProperty('notes', 'text').name).toBe('notes');
+    });
+
+    it('keeps duplicate names a saved schema already has', () => {
+      const model = new DatabaseModel(makeData({ schema: [makeProperty({ id: 'a', name: 'Notes' }), makeProperty({ id: 'b', name: 'Notes', position: 'a2' })] }));
+
+      expect(model.getSchema().map((p) => p.name)).toEqual(['Notes', 'Notes']);
+    });
+
     it('updateProperty merges partial changes', () => {
       const opt1 = makeSelectOption({ id: 'o1', label: 'A', position: 'a0' });
       const prop = makeProperty({

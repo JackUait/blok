@@ -6,6 +6,7 @@ import {
   createDefaultStatusOptions,
   createDefaultStatusSettings,
   createDefaultView,
+  freePropertyName,
   isListValueType,
   newView,
   positionBetween,
@@ -324,7 +325,7 @@ const addProperty: ToolActionImpl<AddPropertyArgs, undefined, { propertyId: stri
       };
     const property: PropertyDefinition = {
       id: ctx.newId(),
-      name: args.name,
+      name: freePropertyName(state.schema.map(each => each.name), args.name),
       type: args.type,
       position: positionAround(ctx, state.schema, { before: args.before, after: args.after }),
       ...extra,
@@ -579,7 +580,7 @@ const duplicateProperty: ToolActionImpl<{ propertyId: string }, undefined, { pro
     const copy: PropertyDefinition = {
       ...rest,
       id: ctx.newId(),
-      name: DATABASE_DEFAULT_TEXT.duplicatePropertyName.replace('{name}', name),
+      name: freePropertyName(state.schema.map(each => each.name), DATABASE_DEFAULT_TEXT.duplicatePropertyName.replace('{name}', name)),
       position: positionAround(ctx, state.schema, { after: source.id }),
     };
 

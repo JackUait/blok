@@ -38,6 +38,7 @@ import {
   setStructure,
   setTemplates,
 } from './page-layout';
+import { freePropertyName } from '../../shared/database/schema-ops';
 import type { PageLayoutData, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import type { PageVisibility, PropertyDefinition } from './types';
 
@@ -55,6 +56,8 @@ export interface BuilderTabs {
   related(): Array<{ propertyId: string; title: string }>;
   /** This database's name, for the "Related to" heading. */
   thisDatabase(): string;
+  /** A source's property names, so the related name placeholder can dodge a clash. */
+  propertyNames?(sourceId: string): string[];
   addRelated(propertyId: string): void;
   /** A source "Add new relation" can relate to: another database of this document. */
   canRelate(sourceId: string): boolean;
@@ -1232,8 +1235,8 @@ export class PageLayoutBuilder {
       return {
         title: this.label('tools.database.layoutLinkDataSource'),
         build: (panel) => {
-          // research/13 §2: the database name and " 1", the same in every language.
-          const relatedPlaceholder = `${tabs.thisDatabase() !== '' ? tabs.thisDatabase() : this.label('tools.database.relationUntitledDatabase')} 1`;
+          // research/14 §5: the database name, suffixed " N" only when the source has it; the same in every language.
+          const relatedPlaceholder = freePropertyName(tabs.propertyNames?.(source.id) ?? [], tabs.thisDatabase() !== '' ? tabs.thisDatabase() : this.label('tools.database.relationUntitledDatabase'));
           const nameLabel = this.label(state.relation ? 'tools.database.layoutViewRelationName' : 'tools.database.layoutViewName');
           const field = panelInput({
             value: state.name,

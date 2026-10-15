@@ -94,6 +94,21 @@ describe('database properties', () => {
     expect((doc.get('r1')?.data.properties as Record<string, unknown>)[schema()[2].id]).toEqual([]);
   });
 
+  // research/14 §1-§2a: as the editor's add, a taken name gets the lowest free " N".
+  it('names a taken name "<name> N", and a duplicate of a duplicate too', () => {
+    const { doc, id, schema } = make();
+    const add = (name: string): string => (run(doc, id, 'addProperty', { name, type: 'text' }) as { propertyId: string }).propertyId;
+    const nameOf = (propertyId: string): string | undefined => schema().find(property => property.id === propertyId)?.name;
+    const first = add('Notes');
+
+    expect(nameOf(add('Notes'))).toBe('Notes 1');
+    expect(nameOf(add('notes'))).toBe('notes');
+    run(doc, id, 'duplicateProperty', { propertyId: first });
+    const { propertyId } = run(doc, id, 'duplicateProperty', { propertyId: first }) as { propertyId: string };
+
+    expect(nameOf(propertyId)).toBe('Notes (copy) 1');
+  });
+
   it('refuses options on a text property and a second title', () => {
     const { doc, id } = make();
 

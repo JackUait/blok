@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import en from '../../../../src/components/i18n/locales/en.json';
 import { DATABASE_DEFAULT_TEXT } from '../../../../src/shared/database/default-text';
-import { createDefaultSchema, createDefaultView, positionBetween } from '../../../../src/shared/database/schema-ops';
+import { createDefaultSchema, createDefaultView, freePropertyName, positionBetween } from '../../../../src/shared/database/schema-ops';
 import { DATABASE_DEFAULT_TEXT as EDITOR_DEFAULT_TEXT } from '../../../../src/tools/database/database-localization';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 
@@ -64,5 +64,24 @@ describe('shared database building blocks', () => {
 
     expect(schema).toEqual(model.getSchema());
     expect([createDefaultView(type, schema, mint)]).toEqual(model.getViews());
+  });
+});
+
+// research/14 §1, §2a, §4: a taken name gets " N", the lowest free N from 1, on an exact match.
+describe('freePropertyName', () => {
+  it.each<[string[], string, string]>([
+    [['Name'], 'Notes', 'Notes'],
+    [['Name', 'Notes'], 'Notes', 'Notes 1'],
+    [['Name', 'Notes', 'Notes 1'], 'Notes', 'Notes 2'],
+    [['Name', 'Notes', 'Notes 2'], 'Notes', 'Notes 1'],
+    [['Notes', 'Notes 1', 'Notes 2'], 'Notes', 'Notes 3'],
+    [['Notes', 'Notes 1'], 'Notes 1', 'Notes 1 1'],
+    [['Notes'], 'notes', 'notes'],
+    [['Notes'], 'NOTES', 'NOTES'],
+    [['notes'], 'notes', 'notes 1'],
+    [['Notes'], 'Notes ', 'Notes '],
+    [['Name'], 'name', 'name'],
+  ])('%j + %j -> %j', (names, wanted, expected) => {
+    expect(freePropertyName(names, wanted)).toBe(expected);
   });
 });

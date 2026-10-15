@@ -547,6 +547,9 @@ const main = async () => {
    * `database.css` too: the view renders database and database-row blocks
    * bare (`childrenOnly` in src/view/emitters.ts), so none of its rules can
    * match, and its cell tokens (pills, checkbox, date picker) read as carriers.
+   *
+   * `assistant.css` too: the Ask AI bar is editor UI, and its thinking menu
+   * rules only set custom properties, so they read as carriers.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
@@ -554,7 +557,8 @@ const main = async () => {
     .replace(/^@import '\.\/block-preview\.css';$/m, '')
     .replace(/^@import '\.\/loading\.css';$/m, '')
     .replace(/^@import '\.\/page-title\.css';$/m, '')
-    .replace(/^@import '\.\/database\.css';$/m, '');
+    .replace(/^@import '\.\/database\.css';$/m, '')
+    .replace(/^@import '\.\/assistant\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

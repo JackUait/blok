@@ -177,6 +177,14 @@ describe('view baseline stylesheet law', () => {
       }
     });
 
+    it('ships no assistant chrome — a view has no Ask AI bar', () => {
+      /**
+       * The thinking menu rules only carry custom properties, so the pruner
+       * keeps them like theme tokens, though no view ever renders the bar.
+       */
+      expect(readFileSync(join(repoRoot, 'view.css'), 'utf-8')).not.toContain('data-blok-assistant');
+    });
+
     it('ships no webfonts — a view inherits the host typography', () => {
       /**
        * fonts.css alone is ~226 KB of base64. Bundling it would quintuple the

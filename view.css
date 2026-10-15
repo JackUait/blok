@@ -1406,18 +1406,6 @@
 [data-blok-find-roll='down'] {
   --blok-find-roll-shift: -1;
 }
-[data-blok-assistant-thinking-menu] [data-blok-popover-item] {
-  --blok-icon-active-bg: transparent;
-  --blok-icon-active-text: var(--blok-text-primary);
-}
-@media (hover: hover) {
-  [data-blok-assistant-thinking-menu] [data-blok-popover-item]:hover, [data-blok-assistant-thinking-menu] [data-blok-popover-item][data-blok-force-hover] {
-    --blok-icon-active-bg: var(--blok-item-hover-bg);
-  }
-}
-[data-blok-assistant-thinking-menu] [data-blok-popover-item][data-blok-focused='true'] {
-  --blok-icon-active-bg: var(--blok-item-focus-bg);
-}
 @property --blok-spotlight-tint {
   syntax: '<color>';
   inherits: false;

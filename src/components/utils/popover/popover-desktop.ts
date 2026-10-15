@@ -912,6 +912,8 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private readonly closeOnNestedActivate = (): void => {
     this.hide();
+    // Re-emit so a menu three or more levels deep closes its root too.
+    this.emit(PopoverEvent.ClosedOnActivate);
   };
 
   /**

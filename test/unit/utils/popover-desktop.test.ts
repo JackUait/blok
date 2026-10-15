@@ -2004,6 +2004,21 @@ describe('PopoverDesktop', () => {
       // Verify the parent popover is hidden after child emits ClosedOnActivate
       expect(popover.getElement()).not.toHaveAttribute('data-blok-popover-opened');
     });
+
+    it('passes a close-on-activate from a third-level menu up to the root', () => {
+      const popover = createPopover({
+        items: [{ title: 'Parent', name: 'parent', children: { items: [{ title: 'Middle', name: 'middle', children: { items: [{ title: 'Leaf', name: 'leaf', closeOnActivate: true }] } }] } }],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const middle = instance.showNestedPopoverForItem(instance.items[0] as PopoverItemDefault);
+      const onParentClosed = vi.fn();
+
+      popover.show();
+      popover.on(PopoverEvent.ClosedOnActivate, onParentClosed);
+      middle.emit(PopoverEvent.ClosedOnActivate, undefined);
+
+      expect(onParentClosed).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('size cache invalidation', () => {

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "リンクを埋め込む",
   "tools.database.addProperty": "+ プロパティを追加",
   "tools.database.propertyName": "プロパティ名",
+  "tools.database.propertyNameTaken": "{name} という名前のプロパティはこのデータベースに既にあります。",
   "tools.database.propertyNamePlaceholder": "プロパティ名を入力…",
   "tools.database.propertyIcon": "プロパティのアイコン",
   "tools.database.editAutomation": "オートメーションを編集",

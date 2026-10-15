@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Iegult saiti",
   "tools.database.addProperty": "+ Pievienot rekvizītu",
   "tools.database.propertyName": "Rekvizīta nosaukums",
+  "tools.database.propertyNameTaken": "Šajā datubāzē jau ir rekvizīts ar nosaukumu {name}.",
   "tools.database.propertyNamePlaceholder": "Ierakstiet rekvizīta nosaukumu…",
   "tools.database.propertyIcon": "Rekvizīta ikona",
   "tools.database.editAutomation": "Rediģēt automatizāciju",

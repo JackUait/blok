@@ -7381,6 +7381,17 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   padding: var(--blok-space-1) var(--blok-space-2);
 }
 
+[data-blok-database-property-menu-name] {
+  flex-wrap: wrap;
+}
+
+[data-blok-database-property-menu-name-error] {
+  flex-basis: 100%;
+  padding-inline-start: calc(28px + var(--blok-space-1-5));
+  font-size: 14px;
+  color: var(--blok-color-danger);
+}
+
 [data-blok-database-property-menu-icon] {
   display: inline-flex;
   align-items: center;

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "లింక్‌ను పొందుపరచు",
   "tools.database.addProperty": "+ ప్రాపర్టీని జోడించండి",
   "tools.database.propertyName": "ప్రాపర్టీ పేరు",
+  "tools.database.propertyNameTaken": "{name} పేరుతో ప్రాపర్టీ ఈ డేటాబేస్‌లో ఇప్పటికే ఉంది.",
   "tools.database.propertyNamePlaceholder": "ప్రాపర్టీ పేరు టైప్ చేయండి…",
   "tools.database.propertyIcon": "ప్రాపర్టీ చిహ్నం",
   "tools.database.editAutomation": "ఆటోమేషన్‌ను సవరించు",

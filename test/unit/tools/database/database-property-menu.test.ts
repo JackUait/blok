@@ -382,3 +382,91 @@ describe('DatabasePropertyMenu', () => {
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { uniqueId: { prefix: 'TASK' } });
   });
 });
+
+// research/14 §3: a rename to a taken name is refused with an error; Enter does nothing; closing restores.
+describe('property menu rename to a taken name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    captured.popovers.length = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const open = (): { cb: ReturnType<typeof callbacks>; menu: InstanceType<typeof DatabasePropertyMenu>; input: HTMLInputElement; root: HTMLElement; type: (value: string) => void } => {
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string, params?: Record<string, string>) => `${key}:${params?.name ?? ''}`, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...cb,
+      isNameTaken: (propertyId: string, name: string) => propertyId === 'p' && name === 'Notes',
+    });
+
+    menu.open(prop('text', { name: 'Notes 2' }), document.createElement('button'));
+    const root = byName(lastItems(), 'name').element as HTMLElement;
+
+    document.body.append(root);
+    const input = root.querySelector<HTMLInputElement>('[data-blok-database-property-menu-name-input]');
+
+    if (input === null) throw new Error('no name input');
+    const type = (value: string): void => {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    return { cb, menu, input, root, type };
+  };
+  const error = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-property-menu-name-error]');
+
+  it('shows "A property named <name> already exists" under the field while the typed name is taken', () => {
+    const { input, root, menu, type } = open();
+
+    type('Notes');
+
+    expect(error(root)?.hidden).toBe(false);
+    expect(error(root)?.textContent).toBe('tools.database.propertyNameTaken:Notes');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe(error(root)?.id);
+    type('notes');
+
+    expect(error(root)?.hidden).toBe(true);
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+    menu.destroy();
+  });
+
+  it('Enter on a taken name neither renames nor closes', () => {
+    const { input, cb, menu, type } = open();
+
+    type('Notes');
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+    input.dispatchEvent(enter);
+
+    expect(cb.onRename).not.toHaveBeenCalled();
+    expect(enter.defaultPrevented).toBe(true);
+    expect(captured.popovers[captured.popovers.length - 1]?.destroyed).toBe(false);
+    menu.destroy();
+  });
+
+  it('leaving the field (change) with a taken name keeps the old name', () => {
+    const { input, cb, menu, type } = open();
+
+    type('Notes');
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(cb.onRename).not.toHaveBeenCalled();
+    menu.destroy();
+  });
+
+  it('a free name still renames on Enter', () => {
+    const { input, cb, menu, type } = open();
+
+    type('Memo');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    expect(cb.onRename).toHaveBeenCalledWith('p', 'Memo');
+    menu.destroy();
+  });
+});

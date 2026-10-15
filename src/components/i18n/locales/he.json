@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "הטמע קישור",
   "tools.database.addProperty": "+ הוסף מאפיין",
   "tools.database.propertyName": "שם המאפיין",
+  "tools.database.propertyNameTaken": "מאפיין בשם {name} כבר קיים במסד הנתונים הזה.",
   "tools.database.propertyNamePlaceholder": "הקלד שם מאפיין…",
   "tools.database.propertyIcon": "סמל המאפיין",
   "tools.database.editAutomation": "ערוך אוטומציה",

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Keçidi yerləşdir",
   "tools.database.addProperty": "+ Xüsusiyyət əlavə et",
   "tools.database.propertyName": "Xüsusiyyətin adı",
+  "tools.database.propertyNameTaken": "Bu verilənlər bazasında {name} adlı xüsusiyyət artıq var.",
   "tools.database.propertyNamePlaceholder": "Xüsusiyyətin adını yazın…",
   "tools.database.propertyIcon": "Xüsusiyyət simvolu",
   "tools.database.editAutomation": "Avtomatlaşdırmanı redaktə et",

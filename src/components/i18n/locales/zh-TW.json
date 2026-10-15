@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "嵌入連結",
   "tools.database.addProperty": "+ 新增屬性",
   "tools.database.propertyName": "屬性名稱",
+  "tools.database.propertyNameTaken": "此資料庫中已有名為「{name}」的屬性。",
   "tools.database.propertyNamePlaceholder": "輸入屬性名稱…",
   "tools.database.propertyIcon": "屬性圖示",
   "tools.database.editAutomation": "編輯自動化",

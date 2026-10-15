@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Угради везу",
   "tools.database.addProperty": "+ Додај својство",
   "tools.database.propertyName": "Назив својства",
+  "tools.database.propertyNameTaken": "Својство са називом {name} већ постоји у овој бази података.",
   "tools.database.propertyNamePlaceholder": "Унесите назив својства…",
   "tools.database.propertyIcon": "Икона својства",
   "tools.database.editAutomation": "Уреди аутоматизацију",

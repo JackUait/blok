@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Link einbetten",
   "tools.database.addProperty": "+ Eigenschaft hinzufügen",
   "tools.database.propertyName": "Name der Eigenschaft",
+  "tools.database.propertyNameTaken": "In dieser Datenbank gibt es bereits eine Eigenschaft namens {name}.",
   "tools.database.propertyNamePlaceholder": "Name der Eigenschaft eingeben…",
   "tools.database.propertyIcon": "Symbol der Eigenschaft",
   "tools.database.editAutomation": "Automatisierung bearbeiten",

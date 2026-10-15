@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "दुवा एम्बेड करा",
   "tools.database.addProperty": "+ गुणधर्म जोडा",
   "tools.database.propertyName": "गुणधर्माचे नाव",
+  "tools.database.propertyNameTaken": "या डेटाबेसमध्ये {name} नावाचा गुणधर्म आधीच आहे.",
   "tools.database.propertyNamePlaceholder": "गुणधर्माचे नाव टाइप करा…",
   "tools.database.propertyIcon": "गुणधर्म चिन्ह",
   "tools.database.editAutomation": "ऑटोमेशन संपादित करा",

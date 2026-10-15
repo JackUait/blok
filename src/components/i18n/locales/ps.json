@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "لینک ځای پر ځای کړئ",
   "tools.database.addProperty": "+ ځانګړتیا اضافه کړئ",
   "tools.database.propertyName": "د ځانګړتیا نوم",
+  "tools.database.propertyNameTaken": "په دې ډیټابیس کې د {name} په نوم ځانګړتیا له مخکې شته.",
   "tools.database.propertyNamePlaceholder": "د ځانګړتیا نوم ولیکئ…",
   "tools.database.propertyIcon": "د ځانګړتیا آیکن",
   "tools.database.editAutomation": "اتوماسیون سم کړئ",

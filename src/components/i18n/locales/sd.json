@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "لنڪ ايمبيڊ ڪريو",
   "tools.database.addProperty": "+ پراپرٽي شامل ڪريو",
   "tools.database.propertyName": "پراپرٽي جو نالو",
+  "tools.database.propertyNameTaken": "هن ڊيٽابيس ۾ {name} نالي پراپرٽي اڳ ۾ ئي موجود آهي.",
   "tools.database.propertyNamePlaceholder": "پراپرٽي جو نالو لکو…",
   "tools.database.propertyIcon": "پراپرٽي جو آئڪن",
   "tools.database.editAutomation": "آٽوميشن تبديل ڪريو",

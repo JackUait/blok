@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "लिङ्क इम्बेड गर्नुहोस्",
   "tools.database.addProperty": "+ गुण थप्नुहोस्",
   "tools.database.propertyName": "गुणको नाम",
+  "tools.database.propertyNameTaken": "यो डाटाबेसमा {name} नामको गुण पहिल्यै छ।",
   "tools.database.propertyNamePlaceholder": "गुणको नाम टाइप गर्नुहोस्…",
   "tools.database.propertyIcon": "गुणको आइकन",
   "tools.database.editAutomation": "स्वचालन सम्पादन गर्नुहोस्",

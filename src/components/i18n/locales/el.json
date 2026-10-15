@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Ενσωμάτωση συνδέσμου",
   "tools.database.addProperty": "+ Προσθήκη ιδιότητας",
   "tools.database.propertyName": "Όνομα ιδιότητας",
+  "tools.database.propertyNameTaken": "Υπάρχει ήδη ιδιότητα με το όνομα {name} σε αυτή τη βάση δεδομένων.",
   "tools.database.propertyNamePlaceholder": "Πληκτρολογήστε όνομα ιδιότητας…",
   "tools.database.propertyIcon": "Εικονίδιο ιδιότητας",
   "tools.database.editAutomation": "Επεξεργασία αυτοματισμού",

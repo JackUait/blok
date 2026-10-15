@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Vdelaj povezavo",
   "tools.database.addProperty": "+ Dodaj lastnost",
   "tools.database.propertyName": "Ime lastnosti",
+  "tools.database.propertyNameTaken": "Lastnost z imenom {name} v tej zbirki podatkov že obstaja.",
   "tools.database.propertyNamePlaceholder": "Vnesite ime lastnosti…",
   "tools.database.propertyIcon": "Ikona lastnosti",
   "tools.database.editAutomation": "Uredi avtomatizacijo",

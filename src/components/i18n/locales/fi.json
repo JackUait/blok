@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Upota linkki",
   "tools.database.addProperty": "+ Lisää ominaisuus",
   "tools.database.propertyName": "Ominaisuuden nimi",
+  "tools.database.propertyNameTaken": "Tässä tietokannassa on jo ominaisuus nimeltä {name}.",
   "tools.database.propertyNamePlaceholder": "Kirjoita ominaisuuden nimi…",
   "tools.database.propertyIcon": "Ominaisuuden kuvake",
   "tools.database.editAutomation": "Muokkaa automaatiota",

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "אײַנבעטן לינק",
   "tools.database.addProperty": "+ צולייגן אַן אייגנשאפט",
   "tools.database.propertyName": "אייגנשאפט נאָמען",
+  "tools.database.propertyNameTaken": "אַן אייגנשאפט מיטן נאָמען {name} איז שוין דאָ אין דעם דאטאבאנק.",
   "tools.database.propertyNamePlaceholder": "שרײַב דעם אייגנשאפט נאָמען…",
   "tools.database.propertyIcon": "אייגנשאפט אײַקאָן",
   "tools.database.editAutomation": "רעדאַקטירן אויטאָמאַטיזאַציע",

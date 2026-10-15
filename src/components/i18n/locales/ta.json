@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "இணைப்பை உட்பொதி",
   "tools.database.addProperty": "+ பண்பைச் சேர்",
   "tools.database.propertyName": "பண்பின் பெயர்",
+  "tools.database.propertyNameTaken": "{name} என்ற பெயரில் ஒரு பண்பு இந்தத் தரவுத்தளத்தில் ஏற்கெனவே உள்ளது.",
   "tools.database.propertyNamePlaceholder": "பண்பின் பெயரை உள்ளிடவும்…",
   "tools.database.propertyIcon": "பண்பு ஐகான்",
   "tools.database.editAutomation": "தன்னியக்கத்தைத் திருத்து",

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Vložit odkaz",
   "tools.database.addProperty": "+ Přidat vlastnost",
   "tools.database.propertyName": "Název vlastnosti",
+  "tools.database.propertyNameTaken": "Vlastnost s názvem {name} v této databázi už existuje.",
   "tools.database.propertyNamePlaceholder": "Zadejte název vlastnosti…",
   "tools.database.propertyIcon": "Ikona vlastnosti",
   "tools.database.editAutomation": "Upravit automatizaci",

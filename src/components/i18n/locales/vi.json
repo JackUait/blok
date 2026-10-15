@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Nhúng liên kết",
   "tools.database.addProperty": "+ Thêm thuộc tính",
   "tools.database.propertyName": "Tên thuộc tính",
+  "tools.database.propertyNameTaken": "Cơ sở dữ liệu này đã có thuộc tính tên {name}.",
   "tools.database.propertyNamePlaceholder": "Nhập tên thuộc tính…",
   "tools.database.propertyIcon": "Biểu tượng thuộc tính",
   "tools.database.editAutomation": "Chỉnh sửa tự động hóa",

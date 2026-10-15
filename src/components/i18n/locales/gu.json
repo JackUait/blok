@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "લિંક એમ્બેડ કરો",
   "tools.database.addProperty": "+ ગુણધર્મ ઉમેરો",
   "tools.database.propertyName": "ગુણધર્મનું નામ",
+  "tools.database.propertyNameTaken": "આ ડેટાબેઝમાં {name} નામનો ગુણધર્મ પહેલેથી છે.",
   "tools.database.propertyNamePlaceholder": "ગુણધર્મનું નામ લખો…",
   "tools.database.propertyIcon": "ગુણધર્મનું આઇકન",
   "tools.database.editAutomation": "ઑટોમેશન સંપાદિત કરો",

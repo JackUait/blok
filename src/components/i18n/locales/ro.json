@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Încorporează linkul",
   "tools.database.addProperty": "+ Adaugă o proprietate",
   "tools.database.propertyName": "Numele proprietății",
+  "tools.database.propertyNameTaken": "În această bază de date există deja o proprietate numită {name}.",
   "tools.database.propertyNamePlaceholder": "Introduceți numele proprietății…",
   "tools.database.propertyIcon": "Pictograma proprietății",
   "tools.database.editAutomation": "Editează automatizarea",

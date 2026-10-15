@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "လင့်ခ်ကို မြှုပ်သွင်းရန်",
   "tools.database.addProperty": "+ ဂုဏ်သတ္တိ ထည့်ရန်",
   "tools.database.propertyName": "ဂုဏ်သတ္တိအမည်",
+  "tools.database.propertyNameTaken": "{name} အမည်ရှိ ဂုဏ်သတ္တိသည် ဤဒေတာဘေ့စ်တွင် ရှိပြီးဖြစ်သည်။",
   "tools.database.propertyNamePlaceholder": "ဂုဏ်သတ္တိအမည် ရိုက်ထည့်ပါ…",
   "tools.database.propertyIcon": "ဂုဏ်သတ္တိ အိုင်ကွန်",
   "tools.database.editAutomation": "အလိုအလျောက်လုပ်ဆောင်မှု တည်းဖြတ်ရန်",

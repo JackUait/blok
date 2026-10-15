@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Ներկառուցել հղումը",
   "tools.database.addProperty": "+ Ավելացնել հատկություն",
   "tools.database.propertyName": "Հատկության անուն",
+  "tools.database.propertyNameTaken": "{name} անունով հատկություն արդեն կա այս տվյալների բազայում։",
   "tools.database.propertyNamePlaceholder": "Մուտքագրեք հատկության անունը…",
   "tools.database.propertyIcon": "Հատկության պատկերակ",
   "tools.database.editAutomation": "Խմբագրել ավտոմատացումը",

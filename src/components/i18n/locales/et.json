@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Manusta link",
   "tools.database.addProperty": "+ Lisa omadus",
   "tools.database.propertyName": "Omaduse nimi",
+  "tools.database.propertyNameTaken": "Selles andmebaasis on juba omadus nimega {name}.",
   "tools.database.propertyNamePlaceholder": "Sisesta omaduse nimi…",
   "tools.database.propertyIcon": "Omaduse ikoon",
   "tools.database.editAutomation": "Muuda automatiseeringut",

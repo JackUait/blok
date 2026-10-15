@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "جێگیرکردنی بەستەر",
   "tools.database.addProperty": "+ زیادکردنی تایبەتمەندی",
   "tools.database.propertyName": "ناوی تایبەتمەندی",
+  "tools.database.propertyNameTaken": "تایبەتمەندییەک بە ناوی {name} پێشتر لەم داتابەیسەدا هەیە.",
   "tools.database.propertyNamePlaceholder": "ناوی تایبەتمەندی بنووسە…",
   "tools.database.propertyIcon": "ئایکۆنی تایبەتمەندی",
   "tools.database.editAutomation": "دەستکاریکردنی ئۆتۆماسیۆن",

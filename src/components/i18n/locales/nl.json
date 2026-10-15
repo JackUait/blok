@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Link insluiten",
   "tools.database.addProperty": "+ Eigenschap toevoegen",
   "tools.database.propertyName": "Naam van eigenschap",
+  "tools.database.propertyNameTaken": "Er bestaat al een eigenschap met de naam {name} in deze database.",
   "tools.database.propertyNamePlaceholder": "Typ de naam van de eigenschap…",
   "tools.database.propertyIcon": "Pictogram van eigenschap",
   "tools.database.editAutomation": "Automatisering bewerken",

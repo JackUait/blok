@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Встроить ссылку",
   "tools.database.addProperty": "+ Добавить свойство",
   "tools.database.propertyName": "Название свойства",
+  "tools.database.propertyNameTaken": "Свойство с названием {name} уже есть в этой базе данных.",
   "tools.database.propertyNamePlaceholder": "Введите название свойства…",
   "tools.database.propertyIcon": "Значок свойства",
   "tools.database.editAutomation": "Изменить автоматизацию",

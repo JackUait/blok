@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "ئۇلانمىنى سىڭدۈرۈش",
   "tools.database.addProperty": "+ خاسلىق قوشۇش",
   "tools.database.propertyName": "خاسلىق ئاتى",
+  "tools.database.propertyNameTaken": "بۇ ساندا {name} ناملىق خاسلىق ئاللىبۇرۇن بار.",
   "tools.database.propertyNamePlaceholder": "خاسلىق ئاتىنى كىرگۈزۈڭ…",
   "tools.database.propertyIcon": "خاسلىق سىنبەلگىسى",
   "tools.database.editAutomation": "ئاپتوماتلاشتۇرۇشنى تەھرىرلەش",

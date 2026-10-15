@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "لنک ایمبیڈ کریں",
   "tools.database.addProperty": "+ پراپرٹی شامل کریں",
   "tools.database.propertyName": "پراپرٹی کا نام",
+  "tools.database.propertyNameTaken": "اس ڈیٹابیس میں {name} نامی پراپرٹی پہلے سے موجود ہے۔",
   "tools.database.propertyNamePlaceholder": "پراپرٹی کا نام ٹائپ کریں…",
   "tools.database.propertyIcon": "پراپرٹی کا آئیکن",
   "tools.database.editAutomation": "آٹومیشن میں ترمیم کریں",

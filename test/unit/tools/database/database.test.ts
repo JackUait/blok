@@ -6349,6 +6349,47 @@ describe('DatabaseTool — property operations', () => {
     expect(options.block.dispatchChange).toHaveBeenCalled();
   });
 
+  // research/14 §3: a rename to another property's exact name is refused; case differs is fine.
+  it('refuses a rename to a name another property has', () => {
+    const { tool } = build([]);
+
+    tool.renameProperty('prop-n', 'Note');
+    expect(schemaOf(tool).find((p) => p.id === 'prop-n')?.name).toBe('Amount');
+    tool.renameProperty('prop-n', 'note');
+    expect(schemaOf(tool).find((p) => p.id === 'prop-n')?.name).toBe('note');
+  });
+
+  // research/14 §1: Add property with a taken name gets the lowest free " N".
+  it('names a second "Notes" "Notes 1" and tells the backend that name', async () => {
+    const adapter = {
+      loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
+      createProperty: vi.fn().mockResolvedValue({}),
+    } as unknown as DatabaseAdapter;
+    const { tool } = build([], { adapter });
+
+    tool.addProperty({ name: 'Notes', type: 'text' });
+    const second = tool.addProperty({ name: 'Notes', type: 'text' });
+    await Promise.resolve();
+
+    expect(second?.name).toBe('Notes 1');
+    expect(adapter.createProperty).toHaveBeenLastCalledWith(expect.objectContaining({ id: second?.id, name: 'Notes 1' }));
+  });
+
+  it('the header menu shows the taken-name error for another property\'s name', () => {
+    const { tool } = build([]);
+
+    tool.openPropertyMenu('prop-n', document.createElement('button'));
+    const input = document.querySelector<HTMLInputElement>('[data-blok-database-property-menu-name-input]');
+
+    if (input === null) throw new Error('no name input');
+    input.value = 'Note';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // The stub i18n echoes keys; the menu test checks the {name} argument.
+    expect(document.querySelector<HTMLElement>('[data-blok-database-property-menu-name-error]')?.textContent).toBe('tools.database.propertyNameTaken');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+
   it('tells the backend about a type change with the converted property', async () => {
     const adapter = {
       loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),

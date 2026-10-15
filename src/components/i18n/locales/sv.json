@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Bädda in länk",
   "tools.database.addProperty": "+ Lägg till en egenskap",
   "tools.database.propertyName": "Egenskapsnamn",
+  "tools.database.propertyNameTaken": "Det finns redan en egenskap med namnet {name} i den här databasen.",
   "tools.database.propertyNamePlaceholder": "Skriv egenskapsnamn…",
   "tools.database.propertyIcon": "Egenskapsikon",
   "tools.database.editAutomation": "Redigera automatisering",

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Integrer link",
   "tools.database.addProperty": "+ Tilføj en egenskab",
   "tools.database.propertyName": "Egenskabsnavn",
+  "tools.database.propertyNameTaken": "Der findes allerede en egenskab med navnet {name} i denne database.",
   "tools.database.propertyNamePlaceholder": "Skriv egenskabsnavn…",
   "tools.database.propertyIcon": "Egenskabsikon",
   "tools.database.editAutomation": "Rediger automatisering",

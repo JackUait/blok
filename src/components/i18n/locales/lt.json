@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Įterpti nuorodą",
   "tools.database.addProperty": "+ Pridėti savybę",
   "tools.database.propertyName": "Savybės pavadinimas",
+  "tools.database.propertyNameTaken": "Šioje duomenų bazėje jau yra savybė pavadinimu {name}.",
   "tools.database.propertyNamePlaceholder": "Įveskite savybės pavadinimą…",
   "tools.database.propertyIcon": "Savybės piktograma",
   "tools.database.editAutomation": "Redaguoti automatizaciją",

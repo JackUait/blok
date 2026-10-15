@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "I-embed ang link",
   "tools.database.addProperty": "+ Magdagdag ng property",
   "tools.database.propertyName": "Pangalan ng property",
+  "tools.database.propertyNameTaken": "May property na nang {name} ang pangalan sa database na ito.",
   "tools.database.propertyNamePlaceholder": "I-type ang pangalan ng property…",
   "tools.database.propertyIcon": "Icon ng property",
   "tools.database.editAutomation": "I-edit ang automation",

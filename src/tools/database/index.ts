@@ -7509,9 +7509,17 @@ export class DatabaseTool implements BlockTool {
 
   renameProperty(propertyId: string, name: string): void {
     if (this.readOnly || this.destroyed || name.trim() === '' || this.model.getProperty(propertyId) === undefined) return;
+    if (this.isPropertyNameTaken(propertyId, name.trim())) return;
     this.model.updateProperty(propertyId, { name: name.trim() });
     void this.sync.syncUpdateProperty({ propertyId, changes: { name: name.trim() } });
     this.commitSchema();
+  }
+
+  /** research/14 §3-§4: another property has exactly this name, as saved or as shown. */
+  private isPropertyNameTaken(propertyId: string, name: string): boolean {
+    const others = (schema: PropertyDefinition[]): boolean => schema.some((p) => p.id !== propertyId && p.name === name);
+
+    return others(this.model.getSchema()) || others(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
   }
 
   /** Icon, description, page visibility, and the number, date, status and ID settings. */
@@ -7934,6 +7942,7 @@ export class DatabaseTool implements BlockTool {
         });
       },
       onRename: (id, name) => { if (parentWritable()) this.renameProperty(id, name); },
+      isNameTaken: (id, name) => this.isPropertyNameTaken(id, name),
       onUpdate: (id, patch) => { if (parentWritable()) this.updatePropertySettings(id, patch); },
       onIconUpdate: (id, patch) => { if (iconWritable()) this.updatePropertySettings(id, patch); },
       onChangeType: (id, type) => { if (parentWritable()) this.changePropertyType(id, type); },

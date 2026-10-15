@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Pachika kiungo",
   "tools.database.addProperty": "+ Ongeza sifa",
   "tools.database.propertyName": "Jina la sifa",
+  "tools.database.propertyNameTaken": "Sifa inayoitwa {name} tayari ipo katika hifadhidata hii.",
   "tools.database.propertyNamePlaceholder": "Andika jina la sifa…",
   "tools.database.propertyIcon": "Ikoni ya sifa",
   "tools.database.editAutomation": "Hariri otomatiki",

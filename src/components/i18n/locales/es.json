@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Insertar enlace",
   "tools.database.addProperty": "+ Añadir una propiedad",
   "tools.database.propertyName": "Nombre de la propiedad",
+  "tools.database.propertyNameTaken": "Ya existe una propiedad llamada {name} en esta base de datos.",
   "tools.database.propertyNamePlaceholder": "Escribe el nombre de la propiedad…",
   "tools.database.propertyIcon": "Icono de la propiedad",
   "tools.database.editAutomation": "Editar automatización",

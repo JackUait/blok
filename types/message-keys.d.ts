@@ -1011,6 +1011,7 @@ export type BlokMessageKey =
   | 'tools.database.propertyIcon'
   | 'tools.database.propertyName'
   | 'tools.database.propertyNamePlaceholder'
+  | 'tools.database.propertyNameTaken'
   | 'tools.database.propertyTypeButton'
   | 'tools.database.propertyTypeCheckbox'
   | 'tools.database.propertyTypeCreatedBy'

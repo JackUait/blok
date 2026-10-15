@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Bağlantıyı yerleştir",
   "tools.database.addProperty": "+ Özellik ekle",
   "tools.database.propertyName": "Özellik adı",
+  "tools.database.propertyNameTaken": "Bu veritabanında {name} adlı bir özellik zaten var.",
   "tools.database.propertyNamePlaceholder": "Özellik adını yazın…",
   "tools.database.propertyIcon": "Özellik simgesi",
   "tools.database.editAutomation": "Otomasyonu düzenle",

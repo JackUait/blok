@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Вбудувати посилання",
   "tools.database.addProperty": "+ Додати властивість",
   "tools.database.propertyName": "Назва властивості",
+  "tools.database.propertyNameTaken": "Властивість із назвою «{name}» уже є в цій базі даних.",
   "tools.database.propertyNamePlaceholder": "Введіть назву властивості…",
   "tools.database.propertyIcon": "Іконка властивості",
   "tools.database.editAutomation": "Редагувати автоматизацію",

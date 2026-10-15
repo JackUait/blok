@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Embed link",
   "tools.database.addProperty": "+ Add a property",
   "tools.database.propertyName": "Property name",
+  "tools.database.propertyNameTaken": "A property named {name} already exists in this database.",
   "tools.database.propertyNamePlaceholder": "Type property name…",
   "tools.database.propertyIcon": "Property icon",
   "tools.database.editAutomation": "Edit automation",

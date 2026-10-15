@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "ბმულის ჩაშენება",
   "tools.database.addProperty": "+ თვისების დამატება",
   "tools.database.propertyName": "თვისების სახელი",
+  "tools.database.propertyNameTaken": "ამ მონაცემთა ბაზაში {name} სახელის თვისება უკვე არსებობს.",
   "tools.database.propertyNamePlaceholder": "შეიყვანეთ თვისების სახელი…",
   "tools.database.propertyIcon": "თვისების ხატულა",
   "tools.database.editAutomation": "ავტომატიზაციის რედაქტირება",

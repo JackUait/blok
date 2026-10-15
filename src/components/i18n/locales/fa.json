@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "جاسازی پیوند",
   "tools.database.addProperty": "+ افزودن ویژگی",
   "tools.database.propertyName": "نام ویژگی",
+  "tools.database.propertyNameTaken": "ویژگی‌ای با نام {name} از قبل در این پایگاه داده وجود دارد.",
   "tools.database.propertyNamePlaceholder": "نام ویژگی را بنویسید…",
   "tools.database.propertyIcon": "نماد ویژگی",
   "tools.database.editAutomation": "ویرایش اتوماسیون",

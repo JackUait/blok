@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "ฝังลิงก์",
   "tools.database.addProperty": "+ เพิ่มคุณสมบัติ",
   "tools.database.propertyName": "ชื่อคุณสมบัติ",
+  "tools.database.propertyNameTaken": "มีคุณสมบัติชื่อ {name} อยู่แล้วในฐานข้อมูลนี้",
   "tools.database.propertyNamePlaceholder": "พิมพ์ชื่อคุณสมบัติ…",
   "tools.database.propertyIcon": "ไอคอนคุณสมบัติ",
   "tools.database.editAutomation": "แก้ไขระบบอัตโนมัติ",

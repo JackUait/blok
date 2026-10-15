@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "嵌入链接",
   "tools.database.addProperty": "+ 添加属性",
   "tools.database.propertyName": "属性名称",
+  "tools.database.propertyNameTaken": "此数据库中已存在名为“{name}”的属性。",
   "tools.database.propertyNamePlaceholder": "输入属性名称…",
   "tools.database.propertyIcon": "属性图标",
   "tools.database.editAutomation": "编辑自动化",

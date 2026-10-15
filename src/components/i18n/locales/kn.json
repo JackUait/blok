@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "ಲಿಂಕ್ ಎಂಬೆಡ್ ಮಾಡಿ",
   "tools.database.addProperty": "+ ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
   "tools.database.propertyName": "ಗುಣಲಕ್ಷಣದ ಹೆಸರು",
+  "tools.database.propertyNameTaken": "{name} ಹೆಸರಿನ ಗುಣಲಕ್ಷಣ ಈ ಡೇಟಾಬೇಸ್‌ನಲ್ಲಿ ಈಗಾಗಲೇ ಇದೆ.",
   "tools.database.propertyNamePlaceholder": "ಗುಣಲಕ್ಷಣದ ಹೆಸರು ಟೈಪ್ ಮಾಡಿ…",
   "tools.database.propertyIcon": "ಗುಣಲಕ್ಷಣದ ಐಕಾನ್",
   "tools.database.editAutomation": "ಸ್ವಯಂಚಾಲನೆ ಸಂಪಾದಿಸಿ",

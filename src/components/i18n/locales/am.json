@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "አገናኙን አካት",
   "tools.database.addProperty": "+ ንብረት ጨምር",
   "tools.database.propertyName": "የንብረት ስም",
+  "tools.database.propertyNameTaken": "{name} የሚባል ንብረት በዚህ የውሂብ ጎታ ውስጥ አስቀድሞ አለ።",
   "tools.database.propertyNamePlaceholder": "የንብረት ስም ይተይቡ…",
   "tools.database.propertyIcon": "የንብረት አዶ",
   "tools.database.editAutomation": "አውቶሜሽንን አርትዕ",

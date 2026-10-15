@@ -3887,6 +3887,18 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   padding: var(--blok-space-1) var(--blok-space-2);
 }
 
+/* research/14 §3: the taken-name error sits on its own line under the name input. */
+[data-blok-database-property-menu-name] {
+  flex-wrap: wrap;
+}
+
+[data-blok-database-property-menu-name-error] {
+  flex-basis: 100%;
+  padding-inline-start: calc(28px + var(--blok-space-1-5));
+  font-size: 14px;
+  color: var(--blok-color-danger);
+}
+
 [data-blok-database-property-menu-icon] {
   display: inline-flex;
   align-items: center;

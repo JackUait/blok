@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "ਲਿੰਕ ਏਮਬੈੱਡ ਕਰੋ",
   "tools.database.addProperty": "+ ਵਿਸ਼ੇਸ਼ਤਾ ਜੋੜੋ",
   "tools.database.propertyName": "ਵਿਸ਼ੇਸ਼ਤਾ ਦਾ ਨਾਮ",
+  "tools.database.propertyNameTaken": "ਇਸ ਡਾਟਾਬੇਸ ਵਿੱਚ {name} ਨਾਮ ਦੀ ਵਿਸ਼ੇਸ਼ਤਾ ਪਹਿਲਾਂ ਤੋਂ ਹੈ।",
   "tools.database.propertyNamePlaceholder": "ਵਿਸ਼ੇਸ਼ਤਾ ਦਾ ਨਾਮ ਲਿਖੋ…",
   "tools.database.propertyIcon": "ਵਿਸ਼ੇਸ਼ਤਾ ਦਾ ਆਈਕਨ",
   "tools.database.editAutomation": "ਆਟੋਮੇਸ਼ਨ ਸੰਪਾਦਿਤ ਕਰੋ",

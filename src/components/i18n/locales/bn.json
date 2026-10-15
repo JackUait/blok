@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "লিঙ্ক এম্বেড করুন",
   "tools.database.addProperty": "+ বৈশিষ্ট্য যোগ করুন",
   "tools.database.propertyName": "বৈশিষ্ট্যের নাম",
+  "tools.database.propertyNameTaken": "এই ডেটাবেসে {name} নামে একটি বৈশিষ্ট্য আগে থেকেই আছে।",
   "tools.database.propertyNamePlaceholder": "বৈশিষ্ট্যের নাম লিখুন…",
   "tools.database.propertyIcon": "বৈশিষ্ট্যের আইকন",
   "tools.database.editAutomation": "অটোমেশন সম্পাদনা করুন",

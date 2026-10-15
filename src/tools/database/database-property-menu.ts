@@ -1,4 +1,5 @@
 import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconPageLayout, IconWand } from '../../components/icons';
+import { nanoid } from 'nanoid';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -114,6 +115,8 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
   };
   /** Only the row page's menu ends with "Customize layout" (research/09 §1b); a column header's has none. */
   onCustomizeLayout?: () => void;
+  /** Another property of this database already has `name`. Such a rename is refused (research/14 §3). */
+  isNameTaken?: (propertyId: string, name: string) => boolean;
 }
 
 const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
@@ -286,23 +289,44 @@ export class DatabasePropertyMenu {
     input.value = property.name;
     input.setAttribute('data-blok-database-property-menu-name-input', '');
     input.setAttribute('aria-label', this.t('tools.database.propertyName'));
+    const error = document.createElement('div');
+
+    error.id = `blok-database-property-name-error-${nanoid()}`;
+    error.setAttribute('data-blok-database-property-menu-name-error', '');
+    error.hidden = true;
+    const taken = (name: string): boolean => name !== property.name && this.options.isNameTaken?.(property.id, name) === true;
+    const showError = (): void => {
+      const name = input.value.trim();
+
+      error.hidden = !taken(name);
+      error.textContent = error.hidden ? '' : this.options.i18n.t('tools.database.propertyNameTaken', { name });
+      if (error.hidden) {
+        input.removeAttribute('aria-invalid');
+        input.removeAttribute('aria-describedby');
+      } else {
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', error.id);
+      }
+    };
     const commit = (): void => {
       const name = input.value.trim();
 
-      if (name !== '' && name !== property.name) {
+      if (name !== '' && name !== property.name && !taken(name)) {
         this.options.onRename(property.id, name);
       }
     };
 
+    input.addEventListener('input', showError);
     input.addEventListener('change', commit);
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.isComposing) {
         event.preventDefault();
+        if (taken(input.value.trim())) return;
         commit();
         this.close();
       }
     });
-    row.append(icon, input);
+    row.append(icon, input, error);
 
     return row;
   }

@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "링크 임베드",
   "tools.database.addProperty": "+ 속성 추가",
   "tools.database.propertyName": "속성 이름",
+  "tools.database.propertyNameTaken": "이 데이터베이스에 이름이 {name}인 속성이 이미 있습니다.",
   "tools.database.propertyNamePlaceholder": "속성 이름 입력…",
   "tools.database.propertyIcon": "속성 아이콘",
   "tools.database.editAutomation": "자동화 편집",

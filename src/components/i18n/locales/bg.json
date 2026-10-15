@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "Вгради връзката",
   "tools.database.addProperty": "+ Добави свойство",
   "tools.database.propertyName": "Име на свойството",
+  "tools.database.propertyNameTaken": "В тази база данни вече има свойство с име {name}.",
   "tools.database.propertyNamePlaceholder": "Въведете име на свойството…",
   "tools.database.propertyIcon": "Икона на свойството",
   "tools.database.editAutomation": "Редактирай автоматизацията",

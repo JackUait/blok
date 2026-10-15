@@ -1306,6 +1306,7 @@
   "tools.database.filesEmbed": "ലിങ്ക് എംബെഡ് ചെയ്യുക",
   "tools.database.addProperty": "+ പ്രോപ്പർട്ടി ചേർക്കുക",
   "tools.database.propertyName": "പ്രോപ്പർട്ടിയുടെ പേര്",
+  "tools.database.propertyNameTaken": "{name} എന്ന പേരിലുള്ള പ്രോപ്പർട്ടി ഈ ഡാറ്റാബേസിൽ ഇതിനകം ഉണ്ട്.",
   "tools.database.propertyNamePlaceholder": "പ്രോപ്പർട്ടിയുടെ പേര് ടൈപ്പ് ചെയ്യുക…",
   "tools.database.propertyIcon": "പ്രോപ്പർട്ടി ഐക്കൺ",
   "tools.database.editAutomation": "ഓട്ടോമേഷൻ എഡിറ്റ് ചെയ്യുക",

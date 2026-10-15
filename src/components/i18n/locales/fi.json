@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Viikoittain",
   "tools.database.templateRepeatMonthly": "Kuukausittain",
   "tools.database.templateRepeatYearly": "Vuosittain",
+  "tools.database.templateRepeatEvery": "Toistoväli",
   "tools.database.templateDuplicate": "Monista",
   "tools.database.templateDelete": "Poista",
   "tools.database.templateEmptyPage": "Tyhjä sivu",

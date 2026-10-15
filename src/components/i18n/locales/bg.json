@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Ежеседмично",
   "tools.database.templateRepeatMonthly": "Ежемесечно",
   "tools.database.templateRepeatYearly": "Ежегодно",
+  "tools.database.templateRepeatEvery": "На всеки",
   "tools.database.templateDuplicate": "Дублирай",
   "tools.database.templateDelete": "Изтрий",
   "tools.database.templateEmptyPage": "Празна страница",

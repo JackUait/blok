@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Mingguan",
   "tools.database.templateRepeatMonthly": "Bulanan",
   "tools.database.templateRepeatYearly": "Tahunan",
+  "tools.database.templateRepeatEvery": "Setiap",
   "tools.database.templateDuplicate": "Gandakan",
   "tools.database.templateDelete": "Padam",
   "tools.database.templateEmptyPage": "Halaman kosong",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ყოველკვირეულად",
   "tools.database.templateRepeatMonthly": "ყოველთვიურად",
   "tools.database.templateRepeatYearly": "ყოველწლიურად",
+  "tools.database.templateRepeatEvery": "ყოველ",
   "tools.database.templateDuplicate": "დუბლირება",
   "tools.database.templateDelete": "წაშლა",
   "tools.database.templateEmptyPage": "ცარიელი გვერდი",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "매주",
   "tools.database.templateRepeatMonthly": "매월",
   "tools.database.templateRepeatYearly": "매년",
+  "tools.database.templateRepeatEvery": "간격",
   "tools.database.templateDuplicate": "복제",
   "tools.database.templateDelete": "삭제",
   "tools.database.templateEmptyPage": "빈 페이지",

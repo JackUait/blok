@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "هفتيوار",
   "tools.database.templateRepeatMonthly": "مهينيوار",
   "tools.database.templateRepeatYearly": "سالياني",
+  "tools.database.templateRepeatEvery": "هر",
   "tools.database.templateDuplicate": "نقل ٺاهيو",
   "tools.database.templateDelete": "ختم ڪريو",
   "tools.database.templateEmptyPage": "خالي صفحو",

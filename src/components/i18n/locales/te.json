@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ప్రతి వారం",
   "tools.database.templateRepeatMonthly": "ప్రతి నెల",
   "tools.database.templateRepeatYearly": "ప్రతి సంవత్సరం",
+  "tools.database.templateRepeatEvery": "ప్రతి",
   "tools.database.templateDuplicate": "నకలు చేయండి",
   "tools.database.templateDelete": "తొలగించు",
   "tools.database.templateEmptyPage": "ఖాళీ పేజీ",

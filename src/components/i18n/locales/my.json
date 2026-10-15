@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "အပတ်စဉ်",
   "tools.database.templateRepeatMonthly": "လစဉ်",
   "tools.database.templateRepeatYearly": "နှစ်စဉ်",
+  "tools.database.templateRepeatEvery": "ကြားကာလ",
   "tools.database.templateDuplicate": "မိတ္တူပွားရန်",
   "tools.database.templateDelete": "ဖျက်ရန်",
   "tools.database.templateEmptyPage": "စာမျက်နှာအလွတ်",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Săptămânal",
   "tools.database.templateRepeatMonthly": "Lunar",
   "tools.database.templateRepeatYearly": "Anual",
+  "tools.database.templateRepeatEvery": "La fiecare",
   "tools.database.templateDuplicate": "Duplică",
   "tools.database.templateDelete": "Șterge",
   "tools.database.templateEmptyPage": "Pagină goală",

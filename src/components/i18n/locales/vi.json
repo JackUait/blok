@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Hằng tuần",
   "tools.database.templateRepeatMonthly": "Hằng tháng",
   "tools.database.templateRepeatYearly": "Hằng năm",
+  "tools.database.templateRepeatEvery": "Mỗi",
   "tools.database.templateDuplicate": "Nhân bản",
   "tools.database.templateDelete": "Xóa",
   "tools.database.templateEmptyPage": "Trang trống",

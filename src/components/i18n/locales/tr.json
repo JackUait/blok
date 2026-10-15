@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Her hafta",
   "tools.database.templateRepeatMonthly": "Her ay",
   "tools.database.templateRepeatYearly": "Her yıl",
+  "tools.database.templateRepeatEvery": "Her",
   "tools.database.templateDuplicate": "Çoğalt",
   "tools.database.templateDelete": "Sil",
   "tools.database.templateEmptyPage": "Boş sayfa",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Lingguhan",
   "tools.database.templateRepeatMonthly": "Buwanan",
   "tools.database.templateRepeatYearly": "Taunan",
+  "tools.database.templateRepeatEvery": "Bawat",
   "tools.database.templateDuplicate": "Gumawa ng kopya",
   "tools.database.templateDelete": "Burahin",
   "tools.database.templateEmptyPage": "Walang laman na pahina",

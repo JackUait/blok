@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Iga nädal",
   "tools.database.templateRepeatMonthly": "Iga kuu",
   "tools.database.templateRepeatYearly": "Iga aasta",
+  "tools.database.templateRepeatEvery": "Iga",
   "tools.database.templateDuplicate": "Dubleeri",
   "tools.database.templateDelete": "Kustuta",
   "tools.database.templateEmptyPage": "Tühi leht",

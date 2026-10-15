@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "සතිපතා",
   "tools.database.templateRepeatMonthly": "මාසිකව",
   "tools.database.templateRepeatYearly": "වාර්ෂිකව",
+  "tools.database.templateRepeatEvery": "සෑම",
   "tools.database.templateDuplicate": "අනුපිටපත",
   "tools.database.templateDelete": "මකන්න",
   "tools.database.templateEmptyPage": "හිස් පිටුව",

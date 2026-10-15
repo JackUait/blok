@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ທຸກອາທິດ",
   "tools.database.templateRepeatMonthly": "ທຸກເດືອນ",
   "tools.database.templateRepeatYearly": "ທຸກປີ",
+  "tools.database.templateRepeatEvery": "ທຸກໆ",
   "tools.database.templateDuplicate": "ເຮັດສຳເນົາ",
   "tools.database.templateDelete": "ລຶບ",
   "tools.database.templateEmptyPage": "ໜ້າເປົ່າ",

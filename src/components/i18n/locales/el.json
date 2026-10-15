@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Εβδομαδιαία",
   "tools.database.templateRepeatMonthly": "Μηνιαία",
   "tools.database.templateRepeatYearly": "Ετήσια",
+  "tools.database.templateRepeatEvery": "Κάθε",
   "tools.database.templateDuplicate": "Διπλότυπο",
   "tools.database.templateDelete": "Διαγραφή",
   "tools.database.templateEmptyPage": "Κενή σελίδα",

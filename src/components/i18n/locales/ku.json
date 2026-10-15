@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "هەفتانە",
   "tools.database.templateRepeatMonthly": "مانگانە",
   "tools.database.templateRepeatYearly": "ساڵانە",
+  "tools.database.templateRepeatEvery": "هەموو",
   "tools.database.templateDuplicate": "دووبارەکردنەوە",
   "tools.database.templateDelete": "سڕینەوە",
   "tools.database.templateEmptyPage": "پەڕەی بەتاڵ",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Kila wiki",
   "tools.database.templateRepeatMonthly": "Kila mwezi",
   "tools.database.templateRepeatYearly": "Kila mwaka",
+  "tools.database.templateRepeatEvery": "Kila",
   "tools.database.templateDuplicate": "Rudufu",
   "tools.database.templateDelete": "Futa",
   "tools.database.templateEmptyPage": "Ukurasa tupu",

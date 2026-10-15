@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ทุกสัปดาห์",
   "tools.database.templateRepeatMonthly": "ทุกเดือน",
   "tools.database.templateRepeatYearly": "ทุกปี",
+  "tools.database.templateRepeatEvery": "ทุก",
   "tools.database.templateDuplicate": "ทำซ้ำ",
   "tools.database.templateDelete": "ลบ",
   "tools.database.templateEmptyPage": "หน้าเปล่า",

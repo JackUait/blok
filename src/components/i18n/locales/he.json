@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "שבועי",
   "tools.database.templateRepeatMonthly": "חודשי",
   "tools.database.templateRepeatYearly": "שנתי",
+  "tools.database.templateRepeatEvery": "כל",
   "tools.database.templateDuplicate": "שכפל",
   "tools.database.templateDelete": "מחק",
   "tools.database.templateEmptyPage": "דף ריק",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Долоо хоног бүр",
   "tools.database.templateRepeatMonthly": "Сар бүр",
   "tools.database.templateRepeatYearly": "Жил бүр",
+  "tools.database.templateRepeatEvery": "Давтамж",
   "tools.database.templateDuplicate": "Хувилах",
   "tools.database.templateDelete": "Устгах",
   "tools.database.templateEmptyPage": "Хоосон хуудас",

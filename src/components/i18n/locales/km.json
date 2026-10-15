@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "រៀងរាល់សប្ដាហ៍",
   "tools.database.templateRepeatMonthly": "រៀងរាល់ខែ",
   "tools.database.templateRepeatYearly": "រៀងរាល់ឆ្នាំ",
+  "tools.database.templateRepeatEvery": "រៀងរាល់",
   "tools.database.templateDuplicate": "ស្ទួន",
   "tools.database.templateDelete": "លុប",
   "tools.database.templateEmptyPage": "ទំព័រទទេ",

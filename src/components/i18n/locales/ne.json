@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "साप्ताहिक",
   "tools.database.templateRepeatMonthly": "मासिक",
   "tools.database.templateRepeatYearly": "वार्षिक",
+  "tools.database.templateRepeatEvery": "हरेक",
   "tools.database.templateDuplicate": "नक्कल बनाउनुहोस्",
   "tools.database.templateDelete": "मेटाउनुहोस्",
   "tools.database.templateEmptyPage": "खाली पृष्ठ",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ആഴ്ചതോറും",
   "tools.database.templateRepeatMonthly": "മാസംതോറും",
   "tools.database.templateRepeatYearly": "വർഷംതോറും",
+  "tools.database.templateRepeatEvery": "ഓരോ",
   "tools.database.templateDuplicate": "പകർപ്പുണ്ടാക്കുക",
   "tools.database.templateDelete": "ഇല്ലാതാക്കുക",
   "tools.database.templateEmptyPage": "ശൂന്യ പേജ്",

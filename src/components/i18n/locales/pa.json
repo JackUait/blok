@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ਹਫ਼ਤਾਵਾਰੀ",
   "tools.database.templateRepeatMonthly": "ਮਹੀਨਾਵਾਰ",
   "tools.database.templateRepeatYearly": "ਸਾਲਾਨਾ",
+  "tools.database.templateRepeatEvery": "ਹਰ",
   "tools.database.templateDuplicate": "ਨਕਲ ਬਣਾਓ",
   "tools.database.templateDelete": "ਮਿਟਾਓ",
   "tools.database.templateEmptyPage": "ਖਾਲੀ ਪੰਨਾ",

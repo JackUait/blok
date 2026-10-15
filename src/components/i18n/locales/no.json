@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Ukentlig",
   "tools.database.templateRepeatMonthly": "Månedlig",
   "tools.database.templateRepeatYearly": "Årlig",
+  "tools.database.templateRepeatEvery": "Hver",
   "tools.database.templateDuplicate": "Dupliser",
   "tools.database.templateDelete": "Slett",
   "tools.database.templateEmptyPage": "Tom side",

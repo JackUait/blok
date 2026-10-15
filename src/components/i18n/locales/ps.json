@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "اونیز",
   "tools.database.templateRepeatMonthly": "میاشتنی",
   "tools.database.templateRepeatYearly": "کلنی",
+  "tools.database.templateRepeatEvery": "هر",
   "tools.database.templateDuplicate": "کاپي جوړه کړئ",
   "tools.database.templateDelete": "ړنګ کړئ",
   "tools.database.templateEmptyPage": "تشه پاڼه",

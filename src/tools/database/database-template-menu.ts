@@ -1,6 +1,9 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
 import { IconCopy, IconPage, IconPencil, IconPlus, IconTrash } from '../../components/icons';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { wallTime, zonedToEpoch } from './formula/dates';
+import { repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
 
 /** What the "New" dropdown asks of the database tool. */
@@ -18,11 +21,79 @@ export interface TemplateMenuHost {
   setRepeat: (templateId: string, repeat: TemplateRepeat | null) => void;
   duplicate: (templateId: string) => void;
   remove: (templateId: string) => void;
+  /** IANA zone a new or re-timed schedule keeps. Default: the viewer's. */
+  timeZone?: string;
 }
 
 const FREQUENCIES: readonly TemplateRepeatFrequency[] = ['daily', 'weekly', 'monthly', 'yearly'];
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+
+const UNIT_KEYS: Record<TemplateRepeatFrequency, string> = { daily: 'filterUnitDay', weekly: 'filterUnitWeek', monthly: 'filterUnitMonth', yearly: 'filterUnitYear' };
+
+const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
+
+/** The keyboard-owner attribute keeps Blok's editor keydown handling out of the fields. */
+const fieldRow = (tag: 'label' | 'div', name: string): HTMLElement => {
+  const row = document.createElement(tag);
+
+  row.setAttribute('data-blok-database-property-menu-field', name);
+  row.setAttribute('data-blok-keyboard-owner', '');
+
+  return row;
+};
+
+const input = (type: string, value: string, onInput: (value: string) => void): HTMLInputElement => {
+  const el = document.createElement('input');
+
+  el.type = type;
+  el.value = value;
+  // `input`, not `change`: a popover closed by Escape removes the field without a blur.
+  el.addEventListener('input', () => onInput(el.value.trim()));
+
+  return el;
+};
+
+/** "Every [N] weeks": a whole number of at least 1; anything else keeps the stored one. */
+const intervalField = (name: string, t: (key: string) => string, repeat: TemplateRepeat, save: (patch: Partial<TemplateRepeat>) => void): PopoverItemParams => {
+  const row = fieldRow('label', name);
+
+  row.append(t('templateRepeatEvery'), input('number', String(repeat.interval ?? 1), (text) => {
+    const interval = Number(text);
+
+    if (text !== '' && Number.isInteger(interval) && interval >= 1) save({ interval });
+  }), t(UNIT_KEYS[repeat.frequency]));
+  row.querySelector('input')?.setAttribute('min', '1');
+
+  return { type: PopoverItemType.Html, element: row, name };
+};
+
+/**
+ * Start date and time, on the wall clock of the schedule's zone. A schedule
+ * with no zone is shown in the viewer's and takes it on its first edit.
+ */
+const startField = (name: string, t: (key: string) => string, repeat: TemplateRepeat, viewerZone: string, save: (patch: Partial<TemplateRepeat>) => void): PopoverItemParams => {
+  const zone = repeat.timeZone === undefined ? viewerZone : repeatZone(repeat);
+  const w = wallTime(new Date(repeat.start).getTime(), zone);
+  const row = fieldRow('div', name);
+  const date = input('date', `${pad(w.year, 4)}-${pad(w.month)}-${pad(w.day)}`, () => commit());
+  const time = input('time', `${pad(w.hour)}:${pad(w.minute)}`, () => commit());
+  const commit = (): void => {
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.value);
+    const h = /^(\d{2}):(\d{2})/.exec(time.value);
+
+    if (d === null || h === null) return;
+    const ms = zonedToEpoch({ year: Number(d[1]), month: Number(d[2]), day: Number(d[3]), hour: Number(h[1]), minute: Number(h[2]), second: 0, ms: 0 }, zone);
+
+    save({ start: new Date(ms).toISOString(), timeZone: zone });
+  };
+
+  date.setAttribute('aria-label', t('dateStart'));
+  time.setAttribute('aria-label', t('dateTime'));
+  row.append(t('dateStart'), date, time);
+
+  return { type: PopoverItemType.Html, element: row, name };
+};
 
 /**
  * The "New" dropdown (research/05 §7): one entry per template, then an
@@ -32,8 +103,22 @@ const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word
 export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] => {
   const t = (key: string): string => host.i18n.t(`tools.database.${key}`);
   const current = host.defaultTemplateId();
+  const viewerZone = host.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const entry = (id: string, title: string): PopoverItemParams => {
     const repeat = host.repeatOf(id);
+    // Reads the stored schedule again: an earlier edit in the same open menu must survive.
+    const patchRepeat = (patch: Partial<TemplateRepeat>): void => {
+      const latest = host.repeatOf(id);
+
+      if (latest !== undefined) host.setRepeat(id, { ...latest, ...patch });
+    };
+    const scheduleFields: PopoverItemParams[] = repeat === undefined
+      ? []
+      : [
+        { type: PopoverItemType.Separator },
+        intervalField(`template-${id}-repeat-interval`, t, repeat, patchRepeat),
+        startField(`template-${id}-repeat-start`, t, repeat, viewerZone, patchRepeat),
+      ];
 
     return {
       name: `template-${id}`,
@@ -55,8 +140,10 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
                   title: t(`templateRepeat${capital(frequency)}`),
                   isActive: repeat?.frequency === frequency,
                   closeOnActivate: true,
-                  onActivate: () => host.setRepeat(id, { frequency, interval: 1, start: repeat?.start ?? new Date().toISOString() }),
+                  // A spread keeps `lastRunAt`: without it the latest past run would be offered again.
+                  onActivate: () => host.setRepeat(id, repeat === undefined ? { frequency, start: new Date().toISOString(), timeZone: viewerZone } : { ...repeat, frequency }),
                 })),
+                ...scheduleFields,
               ],
             },
           },

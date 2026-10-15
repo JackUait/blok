@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ಪ್ರತಿ ವಾರ",
   "tools.database.templateRepeatMonthly": "ಪ್ರತಿ ತಿಂಗಳು",
   "tools.database.templateRepeatYearly": "ಪ್ರತಿ ವರ್ಷ",
+  "tools.database.templateRepeatEvery": "ಪ್ರತಿ",
   "tools.database.templateDuplicate": "ನಕಲು ಮಾಡಿ",
   "tools.database.templateDelete": "ಅಳಿಸಿ",
   "tools.database.templateEmptyPage": "ಖಾಲಿ ಪುಟ",

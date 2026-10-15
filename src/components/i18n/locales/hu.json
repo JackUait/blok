@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Hetente",
   "tools.database.templateRepeatMonthly": "Havonta",
   "tools.database.templateRepeatYearly": "Évente",
+  "tools.database.templateRepeatEvery": "Időköz",
   "tools.database.templateDuplicate": "Megkettőzés",
   "tools.database.templateDelete": "Törlés",
   "tools.database.templateEmptyPage": "Üres oldal",

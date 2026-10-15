@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "በየሳምንቱ",
   "tools.database.templateRepeatMonthly": "በየወሩ",
   "tools.database.templateRepeatYearly": "በየዓመቱ",
+  "tools.database.templateRepeatEvery": "በየ",
   "tools.database.templateDuplicate": "አባዛ",
   "tools.database.templateDelete": "ሰርዝ",
   "tools.database.templateEmptyPage": "ባዶ ገጽ",

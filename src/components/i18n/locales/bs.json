@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Sedmično",
   "tools.database.templateRepeatMonthly": "Mjesečno",
   "tools.database.templateRepeatYearly": "Godišnje",
+  "tools.database.templateRepeatEvery": "Svakih",
   "tools.database.templateDuplicate": "Dupliciraj",
   "tools.database.templateDelete": "Obriši",
   "tools.database.templateEmptyPage": "Prazna stranica",

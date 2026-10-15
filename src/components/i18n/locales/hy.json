@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Ամեն շաբաթ",
   "tools.database.templateRepeatMonthly": "Ամեն ամիս",
   "tools.database.templateRepeatYearly": "Ամեն տարի",
+  "tools.database.templateRepeatEvery": "Յուրաքանչյուր",
   "tools.database.templateDuplicate": "Կրկնօրինակել",
   "tools.database.templateDelete": "Ջնջել",
   "tools.database.templateEmptyPage": "Դատարկ էջ",

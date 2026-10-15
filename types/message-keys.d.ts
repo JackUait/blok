@@ -1238,6 +1238,7 @@ export type BlokMessageKey =
   | 'tools.database.templateNew'
   | 'tools.database.templateRepeat'
   | 'tools.database.templateRepeatDaily'
+  | 'tools.database.templateRepeatEvery'
   | 'tools.database.templateRepeatMonthly'
   | 'tools.database.templateRepeatOff'
   | 'tools.database.templateRepeatWeekly'

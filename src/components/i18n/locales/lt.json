@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Kas savaitę",
   "tools.database.templateRepeatMonthly": "Kas mėnesį",
   "tools.database.templateRepeatYearly": "Kasmet",
+  "tools.database.templateRepeatEvery": "Kas",
   "tools.database.templateDuplicate": "Dubliuoti",
   "tools.database.templateDelete": "Ištrinti",
   "tools.database.templateEmptyPage": "Tuščias puslapis",

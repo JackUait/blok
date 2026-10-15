@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ކޮންމެ ހަފްތާއަކު",
   "tools.database.templateRepeatMonthly": "ކޮންމެ މަހަކު",
   "tools.database.templateRepeatYearly": "ކޮންމެ އަހަރަކު",
+  "tools.database.templateRepeatEvery": "ކޮންމެ",
   "tools.database.templateDuplicate": "ކޮޕީ ހަދާ",
   "tools.database.templateDelete": "ފޮހެލާ",
   "tools.database.templateEmptyPage": "ހުސް ޞަފްޙާ",

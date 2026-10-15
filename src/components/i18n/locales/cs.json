@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Týdně",
   "tools.database.templateRepeatMonthly": "Měsíčně",
   "tools.database.templateRepeatYearly": "Ročně",
+  "tools.database.templateRepeatEvery": "Každých",
   "tools.database.templateDuplicate": "Duplikovat",
   "tools.database.templateDelete": "Smazat",
   "tools.database.templateEmptyPage": "Prázdná stránka",

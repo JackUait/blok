@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Katru nedēļu",
   "tools.database.templateRepeatMonthly": "Katru mēnesi",
   "tools.database.templateRepeatYearly": "Katru gadu",
+  "tools.database.templateRepeatEvery": "Ik pēc",
   "tools.database.templateDuplicate": "Dublēt",
   "tools.database.templateDelete": "Dzēst",
   "tools.database.templateEmptyPage": "Tukša lapa",

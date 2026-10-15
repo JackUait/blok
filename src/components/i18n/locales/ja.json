@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "毎週",
   "tools.database.templateRepeatMonthly": "毎月",
   "tools.database.templateRepeatYearly": "毎年",
+  "tools.database.templateRepeatEvery": "間隔",
   "tools.database.templateDuplicate": "複製",
   "tools.database.templateDelete": "削除",
   "tools.database.templateEmptyPage": "空のページ",

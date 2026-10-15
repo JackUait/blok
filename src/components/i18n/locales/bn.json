@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "প্রতি সপ্তাহে",
   "tools.database.templateRepeatMonthly": "প্রতি মাসে",
   "tools.database.templateRepeatYearly": "প্রতি বছর",
+  "tools.database.templateRepeatEvery": "প্রতি",
   "tools.database.templateDuplicate": "প্রতিলিপি",
   "tools.database.templateDelete": "মুছুন",
   "tools.database.templateEmptyPage": "খালি পৃষ্ঠা",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "દર અઠવાડિયે",
   "tools.database.templateRepeatMonthly": "દર મહિને",
   "tools.database.templateRepeatYearly": "દર વર્ષે",
+  "tools.database.templateRepeatEvery": "દર",
   "tools.database.templateDuplicate": "નકલ બનાવો",
   "tools.database.templateDelete": "કાઢી નાખો",
   "tools.database.templateEmptyPage": "ખાલી પાનું",

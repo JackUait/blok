@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "每周",
   "tools.database.templateRepeatMonthly": "每月",
   "tools.database.templateRepeatYearly": "每年",
+  "tools.database.templateRepeatEvery": "每",
   "tools.database.templateDuplicate": "创建副本",
   "tools.database.templateDelete": "删除",
   "tools.database.templateEmptyPage": "空白页面",

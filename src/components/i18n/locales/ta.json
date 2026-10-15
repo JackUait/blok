@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "வாரந்தோறும்",
   "tools.database.templateRepeatMonthly": "மாதந்தோறும்",
   "tools.database.templateRepeatYearly": "ஆண்டுதோறும்",
+  "tools.database.templateRepeatEvery": "இடைவெளி",
   "tools.database.templateDuplicate": "நகலெடு",
   "tools.database.templateDelete": "நீக்கு",
   "tools.database.templateEmptyPage": "வெற்று பக்கம்",

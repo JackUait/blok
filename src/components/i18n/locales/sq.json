@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Çdo javë",
   "tools.database.templateRepeatMonthly": "Çdo muaj",
   "tools.database.templateRepeatYearly": "Çdo vit",
+  "tools.database.templateRepeatEvery": "Çdo",
   "tools.database.templateDuplicate": "Dyfisho",
   "tools.database.templateDelete": "Fshi",
   "tools.database.templateEmptyPage": "Faqe boshe",

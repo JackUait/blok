@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "هفتگی",
   "tools.database.templateRepeatMonthly": "ماهانه",
   "tools.database.templateRepeatYearly": "سالانه",
+  "tools.database.templateRepeatEvery": "هر",
   "tools.database.templateDuplicate": "تکثیر",
   "tools.database.templateDelete": "حذف",
   "tools.database.templateEmptyPage": "صفحه خالی",

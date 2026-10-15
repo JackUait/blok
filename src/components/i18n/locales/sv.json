@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "Varje vecka",
   "tools.database.templateRepeatMonthly": "Varje månad",
   "tools.database.templateRepeatYearly": "Varje år",
+  "tools.database.templateRepeatEvery": "Intervall",
   "tools.database.templateDuplicate": "Duplicera",
   "tools.database.templateDelete": "Ta bort",
   "tools.database.templateEmptyPage": "Tom sida",

@@ -1606,6 +1606,7 @@
   "tools.database.templateRepeatWeekly": "ھەر ھەپتە",
   "tools.database.templateRepeatMonthly": "ھەر ئاي",
   "tools.database.templateRepeatYearly": "ھەر يىلى",
+  "tools.database.templateRepeatEvery": "ھەر",
   "tools.database.templateDuplicate": "كۆپەيتىش",
   "tools.database.templateDelete": "ئۆچۈرۈش",
   "tools.database.templateEmptyPage": "بوش بەت",

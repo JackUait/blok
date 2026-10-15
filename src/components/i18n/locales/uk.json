@@ -122,7 +122,7 @@
   "assistant.thinking.medium": "Середнє",
   "assistant.thinking.high": "Високе",
   "assistant.thinking.xhigh": "Дуже високе",
-  "assistant.thinking.max": "Максимум",
+  "assistant.thinking.max": "Максимальне",
   "assistant.thinkingCurrent": "Міркування: {level}",
   "assistant.working": "{agent} пише…",
   "assistant.stopped": "Зупинено. Уже написане залишиться.",

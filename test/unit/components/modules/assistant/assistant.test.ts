@@ -352,6 +352,14 @@ describe('in-editor assistant bar', () => {
       expect(model.requests.map((request) => request.thinking)).toEqual(['low', 'high']);
     });
 
+    it('reports the level menu as collapsed before it is ever opened', async () => {
+      const editor = await createEditor(scripted(), { levels: ['low', 'high'] });
+
+      editor.agent.openAssistant();
+
+      expect(within(bar()).getByRole('button', { name: 'Thinking: Low' })).toHaveAttribute('aria-expanded', 'false');
+    });
+
     it('hides the picker when the host offers one level', async () => {
       const editor = await createEditor(scripted(), { levels: ['high'] });
 

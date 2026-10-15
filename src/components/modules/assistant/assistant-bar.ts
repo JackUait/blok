@@ -110,6 +110,7 @@ export class AssistantBar {
       [ATTR.thinking]: '',
       'data-blok-testid': 'assistant-thinking',
       'aria-haspopup': 'menu',
+      'aria-expanded': 'false',
     });
     this.thinking.innerHTML = IconPlayerSpeed;
     this.thinking.hidden = true;

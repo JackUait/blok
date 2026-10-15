@@ -492,7 +492,7 @@ locale returns to `pending`.
 | `ps` | `root-global554-linguistic` | `sha256:4720b8d0f7308a0d8f0f0c65ffa17e328492ce5ebca25db801df97d873326631` | `root-global554-crosscheck` | `sha256:4720b8d0f7308a0d8f0f0c65ffa17e328492ce5ebca25db801df97d873326631` |
 | `pt` | `root-global554-callers` | `sha256:d455b115175244053b0c3ca8e33d173b6bd7d309b8e07b6149b4c557d8155d19` | `root-global554-crosscheck` | `sha256:d455b115175244053b0c3ca8e33d173b6bd7d309b8e07b6149b4c557d8155d19` |
 | `ro` | `root-global554-callers` | `sha256:016c8ae58e4003069cd347de51fd3492dbb68a9502dc941936f589ca125f0bf5` | `root-global554-crosscheck` | `sha256:016c8ae58e4003069cd347de51fd3492dbb68a9502dc941936f589ca125f0bf5` |
-| `ru` | `root-global554-callers` | `sha256:0049c8ba2c708b7a5ed1ec8532448a3d75fe388d0ce8cd71a16ef7df8714d14c` | `root-global554-crosscheck` | `sha256:0049c8ba2c708b7a5ed1ec8532448a3d75fe388d0ce8cd71a16ef7df8714d14c` |
+| `ru` | `root-global554-callers` | `sha256:7b6c5efce01d10b5d4dae6ddb8527c0add0f68c366d586884fd5f3d1f0651c02` | `root-global554-crosscheck` | `sha256:7b6c5efce01d10b5d4dae6ddb8527c0add0f68c366d586884fd5f3d1f0651c02` |
 | `sd` | `root-global554-callers` | `sha256:62abbd905d9b3cc3f38ea5b352402e48831ddb69881a26c47a461a2fd3c25a30` | `root-global554-crosscheck` | `sha256:62abbd905d9b3cc3f38ea5b352402e48831ddb69881a26c47a461a2fd3c25a30` |
 | `si` | `root-global554-callers` | `sha256:c75e72482bb820963921c8faccddb8236cf51b885444e36a16a2bf2f0bb6cc4c` | `root-global554-crosscheck` | `sha256:c75e72482bb820963921c8faccddb8236cf51b885444e36a16a2bf2f0bb6cc4c` |
 | `sk` | `root-global554-callers` | `sha256:c92e4a17508fe6a7375224ee271d83fbf934fed8686c4acc6294f309aeee2292` | `root-global554-crosscheck` | `sha256:c92e4a17508fe6a7375224ee271d83fbf934fed8686c4acc6294f309aeee2292` |
@@ -506,11 +506,11 @@ locale returns to `pending`.
 | `th` | `root-global554-callers` | `sha256:af998ac3f730c515886b45ed95cc146b1084fb5eddc428aab7df4ee8b87f0fcd` | `root-global554-crosscheck` | `sha256:af998ac3f730c515886b45ed95cc146b1084fb5eddc428aab7df4ee8b87f0fcd` |
 | `tr` | `root-global554-callers` | `sha256:ff21e7678ee3bdc15d74e0d1b25984be264ad5cba985b2e93cb52a53a0f25606` | `root-global554-crosscheck` | `sha256:ff21e7678ee3bdc15d74e0d1b25984be264ad5cba985b2e93cb52a53a0f25606` |
 | `ug` | `root-global554-callers` | `sha256:ff19f05bce403cabbf77f614163abb7158fba8f115421f09109de0f032a46af6` | `root-global554-crosscheck` | `sha256:ff19f05bce403cabbf77f614163abb7158fba8f115421f09109de0f032a46af6` |
-| `uk` | `root-global554-callers` | `sha256:4c2a644790f951a1f781264a67616e7445a00bb19178a7dbb96a76f640317bb2` | `root-global554-crosscheck` | `sha256:4c2a644790f951a1f781264a67616e7445a00bb19178a7dbb96a76f640317bb2` |
+| `uk` | `root-global554-callers` | `sha256:c4b8c235fbf72371685e1966ef936506cd0cb1e750ffd670217eb85701aea09b` | `root-global554-crosscheck` | `sha256:c4b8c235fbf72371685e1966ef936506cd0cb1e750ffd670217eb85701aea09b` |
 | `ur` | `root-global554-callers` | `sha256:aeeacef21bfb950e0eb45b5fde53150311a5e94e80f19ef83183cc0f7261a705` | `root-global554-crosscheck` | `sha256:aeeacef21bfb950e0eb45b5fde53150311a5e94e80f19ef83183cc0f7261a705` |
 | `vi` | `root-global554-callers` | `sha256:e50b3ccfc25ecf7aa928e70b08473c6604b8ea4a9152ab56b3ec6670f876a810` | `root-global554-crosscheck` | `sha256:e50b3ccfc25ecf7aa928e70b08473c6604b8ea4a9152ab56b3ec6670f876a810` |
 | `yi` | `root-global554-callers` | `sha256:6887673a7e4ed4248eed4cb8cd3bbff8bd76e8a016d1b240437bfb2e54659b4a` | `root-global554-crosscheck` | `sha256:6887673a7e4ed4248eed4cb8cd3bbff8bd76e8a016d1b240437bfb2e54659b4a` |
-| `zh` | `root-global554-callers` | `sha256:72b8d73117a2eb26825c3b1f2b322f2e140f75179dec828f7f34e3519b9c3606` | `root-global554-crosscheck` | `sha256:72b8d73117a2eb26825c3b1f2b322f2e140f75179dec828f7f34e3519b9c3606` |
+| `zh` | `root-global554-callers` | `sha256:fcd3c5cbc8c486cb65ed8c755da8ce48597d7d0882510ac8af22eaf1dcfc68a1` | `root-global554-crosscheck` | `sha256:fcd3c5cbc8c486cb65ed8c755da8ce48597d7d0882510ac8af22eaf1dcfc68a1` |
 | `zh-TW` | `root-global554-callers` | `sha256:2862424933733a18bbd7db0c53c2b639a82ec5c2ab431fee119c7f1011a0fa75` | `root-global554-crosscheck` | `sha256:2862424933733a18bbd7db0c53c2b639a82ec5c2ab431fee119c7f1011a0fa75` |
 
 ## 546-Key Recently-Used Label Migration

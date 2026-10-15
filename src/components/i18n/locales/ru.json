@@ -155,7 +155,7 @@
   "assistant.thinking.medium": "Среднее",
   "assistant.thinking.high": "Высокое",
   "assistant.thinking.xhigh": "Очень высокое",
-  "assistant.thinking.max": "Максимум",
+  "assistant.thinking.max": "Максимальное",
   "assistant.thinkingCurrent": "Рассуждение: {level}",
   "assistant.working": "{agent} пишет…",
   "assistant.stopped": "Остановлено. Уже написанное сохранится.",

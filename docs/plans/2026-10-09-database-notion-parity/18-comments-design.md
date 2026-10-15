@@ -14,9 +14,10 @@ Status: **design only, nothing built.** Storing threads in the document changes 
 - **Nothing here shipped.** `git show v1.16.1:types/tools/database.d.ts` has no `DatabaseComments` and no `DatabasePeople`. Changing either is ordinary work, not BREAKING (CLAUDE.md, "a surface that never shipped").
 - **The author lever is optional.** `DatabasePeople.me?(): string` (`types/tools/database.d.ts:523-527`). Without a host there is no current user.
 - **Row children are the page body.** 000e3710 (post-v1.16.1, already BREAKING) made row bodies the row's child blocks. `database-row` renders them all into one body slot (`src/tools/database-row/index.ts:97-131`). Every reader treats every row child as body:
-  - HTML view: `src/view/emitters.ts:203` (`renderList(env.childrenOf(block.id))`). The C# server embeds `src/view` (memory: tabs-block-levers).
-  - Unknown types in the view: `src/view/blocks-to-html.ts` emits the children, plus `<!-- blok:unknown type -->` when `onUnknownBlock === 'comment'`. An unknown thread block's replies would still render as body text.
+  - HTML view: `src/view/emitters.ts:203` (`renderList(env.childrenOf(block.id))`). The C# server embeds this repo's `src/view` (memory: tabs-block-levers), so it learns a new type in the same change as the view.
+  - Unknown types in the view (`src/view/blocks-to-html.ts:561-566`): the block's own data is dropped and only its CHILD blocks render. The default is `onUnknownBlock: 'skip'` (`:314`); `'comment'` adds a `<!-- blok:unknown type -->` marker. A thread whose text is in `data` and whose replies are also unknown blocks therefore renders nothing. Nothing leaks as text.
   - Agents: `src/shared/agent/snapshot.ts:231` `childrenOf` returns the raw `content` list. `blok_read` would show threads as page content.
+  - v1.16.1 clients: that release's `database-row` has no body slot (`git show v1.16.1:src/tools/database-row/index.ts` has no `nestedBlocks`). What it does with row children is **UNVERIFIED**; this is the same exposure 000e3710 already created for body blocks.
 - **Hidden children have a cost.** The database block already keeps one kind of non-row child (layout `tabs`). It took about 300 lines: dedupe races between peers ("losers"/"winner", `index.ts:1800-1820`), foreign drafts, `transactWithoutCapture` (`index.ts:1583-1890`). The view had to filter it too (`emitters.ts:790`).
 - **The undo escape hatch exists.** `api.blocks.transactWithoutCapture` (`types/api/blocks.d.ts:449`) writes with no undo entry.
 - **How collab stores an id-bearing array.** `plainToYValue` turns an array of objects that each have an `id` into a keyed identity map (`src/components/modules/yjs/serializer.ts:895-921`, `plainToIdentityMap`). Two peers adding threads with different ids land as separate keys. Whether the diffing write path merges a concurrent *append* without overwriting it: **UNVERIFIED** (not tested here).
@@ -30,7 +31,7 @@ All of the following is from research/12 §3 (lines 45-60), unless another line 
   - Table: a filled cell's hover toolbar has Autofill / **Comment** / Copy to Clipboard (L38, L51). Blok has this for url/email/phone only.
   - Table row context menu: **UNMEASURED** (L51).
   - Shortcut ⌘/Ctrl+⇧+M: research/06:103, 210.
-  - Timeline right-click has no Comment (research/06:102, a [DOC] quote: "any database view except the timeline view"). Calendar: **UNMEASURED**.
+  - Timeline right-click has no Comment (research/06:102, a [DOC] quote: "any database view except the timeline view"). That is a help-page quote, not a measurement, and it conflicts with audit row 15, which asks for a timeline entry. The user decides. Calendar: **UNMEASURED**.
 - **Composer popover** (L52), anchored under the card.
   - Box: 470×44, white, radius 10px, shadow `rgba(25,25,25,0.05) 0 20px 24px, rgba(25,25,25,0.027) 0 5px 8px, rgba(42,28,0,0.07) 0 0 0 1px`.
   - Contents: avatar, placeholder **"Add a comment…"**, then "Attach file", "Mention a person, page, or date", and "Send comment" (disabled while empty).
@@ -60,13 +61,13 @@ A `comment` block (data `{author, createdAt, text, resolved?}`); replies are its
 - find, the TOC, `bodyBlocks`, duplicate-row and apply-template copy paths
 - drag targets and keyboard navigation
 
-This follows the block law literally. The cost is that **every** child walker must learn the lever. Old clients and the C# server render the replies as body text (see the unknown-type note above). It is a new block type in saved documents.
+This follows the block law literally. The cost is that **every** child walker must learn the lever. An un-updated view renders nothing for it (§1); v1.16.1 behaviour is UNVERIFIED. It is a new block type in saved documents.
 
 **B. One hidden `comments` container child per row, holding thread blocks.**
-Fewer walkers need changing: skip one child type, like `tabs` at `emitters.ts:790`. But a per-row singleton needs the same create-race dedupe the layout tabs needed (`index.ts:1800-1820`). Old clients still render it.
+Fewer walkers need changing: skip one child type, like `tabs` at `emitters.ts:790`. But a per-row singleton needs the same create-race dedupe the layout tabs needed (`index.ts:1800-1820`).
 
 **C. Threads in row data (`data.comments: [{id, …}]`).**
-Old clients keep unknown row keys (`database-row/index.ts:17-25`), so nothing renders, exports or reaches agents by accident. The collab layer keys id-bearing arrays by id (§1); concurrent appends are UNVERIFIED. **Against it:** CLAUDE.md "Everything Is a Block": threads have ids, store data, and nest (replies). It is also the "internal data model that shadows the block tree" the law forbids.
+Old clients keep unknown row keys (v1.16.1 already had `KNOWN_KEYS`/`unknownKeys`: `git show v1.16.1:src/tools/database-row/index.ts` lines 6 and 14), so nothing renders, exports or reaches agents by accident. The collab layer keys id-bearing arrays by id (§1); concurrent appends are UNVERIFIED. **Against it:** CLAUDE.md "Everything Is a Block": threads have ids, store data, and nest (replies). It is also the "internal data model that shadows the block tree" the law forbids.
 
 **D. No in-document storage: Blok draws the measured UI, and the host stores threads.**
 Extend `DatabaseComments` (unshipped, so not BREAKING) with optional `list(target)`, `add`, `reply`, `edit`, `resolve` and `remove`. With them, Blok draws the composer, thread, row-page section and hover toolbar. With only `open`, behaviour stays as today. This is additive and touches no saved shape. But it gives **no** comments when there is no host, so it does not meet "no host → built-in". It is a fallback, not a recommendation.
@@ -81,7 +82,8 @@ Extend `DatabaseComments` (unshipped, so not BREAKING) with optional `list(targe
   - The composer is a keyboard owner, so it must `preventDefault` history keys or let native text undo work (memory: keyboard-owner-undo-passthrough, a field target is exempt).
 - **Exports skip comments**: HTML view, markdown, plain text, CSV, and the C# server via `src/view`.
 - **Escape closes one layer** (memory: escape-dismisses-one-layer-test-law). Resolve and selected states are gray, never blue (CLAUDE.md "No blue selected states"). Hover toolbar hints follow the hint-delay law.
-- **Read-only.** You can read comments. Whether a read-only viewer may comment (Notion's "Can comment" access) is decided by `permissions.can('comment')`.
+- **Read-only.** You can read comments. Whether a read-only viewer may comment is decided by `permissions.can('comment')` (assumption: the research did not measure Notion's access levels).
+- **Open risk, undo (UNVERIFIED).** A comment written without capture inside a row that an undoable step created is the "peer content inside a created container" case. memory core-undo-shared-container-divergence: undo spares such a container for a PEER's child (dc22e8c8). Whether it spares it for the same user's uncaptured write is not tested. A build must pin it first.
 
 ## 5. Decisions only the user can make
 
@@ -89,7 +91,7 @@ Extend `DatabaseComments` (unshipped, so not BREAKING) with optional `list(targe
 2. **Which option**: A (recommended for in-document), B, C, or D (host-only, no built-in fallback).
 3. **Agent and MCP surfaces.** Under A or B, `blok_read` shows threads as content until `src/shared/agent/snapshot.ts` (and the `src/agent`/`src/mcp` describe surfaces this task may not touch) learn the lever. Who changes them, and should agents be able to read or write comments?
 4. **Author when `people.me` is absent.** Use `collaboration.user` (types/configs/blok-config.d.ts:780-832), "Anonymous", or hide the built-in composer?
-5. **Release note.** A new block type in saved documents is not BREAKING under CLAUDE.md, because the surface is new. But v1.16.1 clients and the C# server will show reply text inside row bodies (A/B). Does the user want that called out, or the feature held until the server learns to skip it?
+5. **Release note.** A new block type in saved documents is not BREAKING under CLAUDE.md, because the surface is new. An un-updated view renders nothing for it (§1). How v1.16.1 clients treat row children is UNVERIFIED. Should that be measured on a v1.16.1 build before shipping?
 
 ## 6. Build plan once decided (Option A)
 
@@ -101,5 +103,5 @@ Extend `DatabaseComments` (unshipped, so not BREAKING) with optional `list(targe
 4. **Row page "Comments" section** under the properties, with the Page discussions switch (default ON) in the layout builder.
 5. **Built-in badges.** `count` comes from the thread blocks; refresh through the block-changed path.
 6. **Hover toolbar** (Resolve, More actions: Edit, Delete with confirm). Reactions, unread, mute and mentions only after measuring.
-7. **Remaining entry points.** All filled cells get the hover pill. The table row context menu waits on measuring. Calendar: measure first. Timeline: none (research/06:102).
+7. **Remaining entry points.** All filled cells get the hover pill. The table row context menu waits on measuring. Calendar: measure first. Timeline: per the user (see §2: research/06:102 says none, audit row 15 says add one).
 8. **i18n.** About 12 keys × 69 locales, plus `message-keys.d.ts` and the ledger. Add lifecycle pins and agent-coverage rows.

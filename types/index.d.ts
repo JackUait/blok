@@ -187,6 +187,7 @@ export {
   ComputedPropertyType,
   FormulaSettings,
   RelationSettings,
+  PersonSettings,
   RollupSettings,
   RollupFunction,
   RelationValue,

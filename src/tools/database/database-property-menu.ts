@@ -22,6 +22,7 @@ import type {
   NumberDisplay,
   NumberShowAs,
   PageVisibility,
+  PersonSettings,
   PropertyDefinition,
   PropertySettingsV2,
   PropertyType,
@@ -35,9 +36,9 @@ export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'd
 /** Rows that come before the view's own rows; the rest come after. */
 const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'displayAs', 'changeType']);
 
-/** Types whose "Edit property" panel holds settings Blok has. Person is in Notion's list too, but what its panel holds is unmeasured. */
+/** Types whose "Edit property" panel holds settings Blok has. */
 const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
-  'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button',
+  'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button', 'person',
 ]);
 
 /** Types whose Edit property is the options list. */
@@ -135,6 +136,15 @@ const timeZones = (): string[] => {
 };
 
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
+
+/** Person "Edit property" rows (research/16 §5). The first choice of each is what an absent key means. */
+const PERSON_LIMITS = [['one', 'tools.database.personLimitOne'], ['none', 'tools.database.relationLimitNone']] as const;
+const PERSON_DEFAULTS = [['none', 'tools.database.personDefaultNone'], ['createdBy', 'tools.database.propertyTypeCreatedBy']] as const;
+const PERSON_NOTIFICATIONS = [
+  ['usersAndGroups', 'tools.database.personNotificationsUsersAndGroups'],
+  ['usersOnly', 'tools.database.personNotificationsUsersOnly'],
+  ['none', 'tools.database.personNotificationsNone'],
+] as const;
 
 /** A copy of the settings with one key left out. */
 const without = <T extends NumberDisplay | DateDisplay, K extends keyof T>(value: T, key: K): Omit<T, K> =>
@@ -487,6 +497,40 @@ export class DatabasePropertyMenu {
     ];
   }
 
+  /** Limit, Default and Notifications, each showing its current choice (research/16 §5). Default choices leave their key out. */
+  private personItems(settings: PersonSettings, set: (person: PersonSettings) => void): PopoverItemParams[] {
+    const current = {
+      limit: settings.limit === 1 ? 'one' : 'none',
+      default: settings.default ?? 'none',
+      notifications: settings.notifications ?? 'usersOnly',
+    };
+    const write = (key: keyof PersonSettings, value: PersonSettings[keyof PersonSettings] | undefined): void => {
+      const rest = Object.fromEntries(Object.entries(settings).filter(([name]) => name !== key)) as PersonSettings;
+
+      set(value === undefined ? rest : { ...rest, [key]: value });
+    };
+    const row = <C extends string>(name: string, titleKey: string, choices: ReadonlyArray<readonly [C, string]>, chosen: string, pick: (choice: C) => void): PopoverItemParams => ({
+      name,
+      title: this.t(titleKey),
+      secondaryLabel: this.t(choices.find(([choice]) => choice === chosen)?.[1] ?? choices[0][1]),
+      children: {
+        items: choices.map(([choice, labelKey]) => ({
+          name: [name, choice].join('-'),
+          title: this.t(labelKey),
+          isActive: choice === chosen,
+          closeOnActivate: true,
+          onActivate: () => pick(choice),
+        })),
+      },
+    });
+
+    return [
+      row('limit', 'tools.database.relationLimit', PERSON_LIMITS, current.limit, (choice) => write('limit', choice === 'one' ? 1 : undefined)),
+      row('personDefault', 'tools.database.personDefault', PERSON_DEFAULTS, current.default, (choice) => write('default', choice === 'createdBy' ? choice : undefined)),
+      row('personNotifications', 'tools.database.personNotifications', PERSON_NOTIFICATIONS, current.notifications, (choice) => write('notifications', choice === 'usersOnly' ? undefined : choice)),
+    ];
+  }
+
   /** Relation › Property › Calculate (H-rr), then the number format when the result is a number. */
   private rollupItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
     const host = this.options.computed;
@@ -594,6 +638,9 @@ export class DatabasePropertyMenu {
     }
     if (property.type === 'relation') {
       return this.relationItems(property, update);
+    }
+    if (property.type === 'person') {
+      return this.personItems(property.person ?? {}, (person) => update({ person }));
     }
     if (property.type === 'rollup') {
       return this.rollupItems(property, update);

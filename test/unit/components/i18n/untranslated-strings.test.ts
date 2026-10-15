@@ -729,6 +729,18 @@ for (const [locale, keys] of Object.entries(DATABASE_OPTIONS_COGNATE_RETENTIONS)
   for (const key of keys) set.add(key);
 }
 
+/**
+ * Person property Edit property cognates. Each entry needs a matching ledger retention row.
+ */
+const DATABASE_PERSON_COGNATE_RETENTIONS: Record<string, string[]> = {
+  fr: ['tools.database.personNotifications'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_PERSON_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

@@ -263,8 +263,23 @@ export class DatabaseModel {
     return {
       id: nanoid(),
       position: DatabaseModel.positionBetween(lastPosition, null),
-      properties: withEmptyLists(this.schema, properties ?? {}),
+      properties: withEmptyLists(this.schema, this.withCreatedByDefaults(properties ?? {})),
     };
+  }
+
+  /** A person property set to default "Created by" starts with the current user, unless the caller gave a value. */
+  private withCreatedByDefaults(properties: Record<string, PropertyValue>): Record<string, PropertyValue> {
+    const me = this.me();
+    const result = { ...properties };
+
+    if (me === null) return result;
+    for (const property of this.schema) {
+      if (property.type === 'person' && property.person?.default === 'createdBy' && personIdsOf(result[property.id]).length === 0) {
+        result[property.id] = [{ id: me }];
+      }
+    }
+
+    return result;
   }
 
   // ─── View-oriented queries ───

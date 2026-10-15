@@ -250,6 +250,38 @@ describe('DatabaseModel', () => {
       });
     });
 
+    describe('person default "Created by" (research/16 §5)', () => {
+      const schema = [
+        makeProperty({ id: 'title', type: 'title' }),
+        makeProperty({ id: 'owner', type: 'person', person: { default: 'createdBy' } }),
+        makeProperty({ id: 'who', type: 'person' }),
+      ];
+
+      it('gives a new row the current user', () => {
+        const model = new DatabaseModel(makeData({ schema }), { me: () => 'u-me' });
+
+        model.setRows([]);
+
+        expect(model.createRowData({ title: 'New' }).properties).toEqual({ title: 'New', owner: [{ id: 'u-me' }], who: [] });
+      });
+
+      it('leaves the value empty when no current user is known', () => {
+        const model = new DatabaseModel(makeData({ schema }), { me: () => null });
+
+        model.setRows([]);
+
+        expect(model.createRowData({}).properties.owner).toEqual([]);
+      });
+
+      it('keeps a value the caller gives', () => {
+        const model = new DatabaseModel(makeData({ schema }), { me: () => 'u-me' });
+
+        model.setRows([]);
+
+        expect(model.createRowData({ owner: [{ id: 'u1' }] }).properties.owner).toEqual([{ id: 'u1' }]);
+      });
+    });
+
     it('should create row data with initial properties', () => {
       const model = new DatabaseModel(makeData());
       model.setRows([]);

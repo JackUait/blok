@@ -84,6 +84,39 @@ describe('person cell editor', () => {
     expect(lastCommit(ctx)).toEqual([{ id: 'u2' }]);
   });
 
+  describe('Limit "1 Person" (research/16 §5)', () => {
+    const openOne = (value: PropertyValue): CellEditorContext => {
+      const ctx = makeEditorContext({ people: PEOPLE, me: 'me' });
+
+      openCellEditor({ ...makeProperty('person'), person: { limit: 1 } }, value, makeAnchor(), ctx);
+
+      return ctx;
+    };
+
+    it('replaces the chosen person on pick', () => {
+      const ctx = openOne([{ id: 'u1' }]);
+
+      q('[data-blok-database-person-option="u2"]').click();
+
+      expect(lastCommit(ctx)).toEqual([{ id: 'u2' }]);
+    });
+
+    it('keeps one person when a stored value holds more', () => {
+      const ctx = openOne([{ id: 'u1' }, { id: 'u2' }]);
+
+      q('[data-blok-database-person-option="me"]').click();
+
+      expect(lastCommit(ctx)).toEqual([{ id: 'me' }]);
+    });
+
+    it('marks the list single-select and says so in the hint', () => {
+      openOne([]);
+
+      expect(q('[role="listbox"]').getAttribute('aria-multiselectable')).toBe('false');
+      expect(q('[data-blok-database-select-hint]').textContent).toBe('tools.database.personHintOne');
+    });
+  });
+
   it('opens nothing without a people directory', () => {
     const ctx = makeEditorContext();
     const handle = openCellEditor(makeProperty('person'), [], makeAnchor(), ctx);

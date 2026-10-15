@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1112 + 119 + 412 + 4 closure for all 1647 keys', () => {
+  it('rebuilds a disjoint 1120 + 119 + 412 + 4 closure for all 1655 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1647);
+    expect(lifecycle.size).toBe(1655);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -372,7 +372,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +10: the Tabbed layout's related tabs, View of / Add new relation form, Duplicate view and the "This page" filter value call their keys by literal.
       // +1: the row page view tab menu calls tools.database.layoutCopyLinkToView by literal.
       // +3: the view overflow list calls searchViews, newView and settingsDragToReorder by literal.
-      'executable-literal': 1112,
+      'executable-literal': 1120,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

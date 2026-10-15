@@ -52,10 +52,10 @@ class PersonEditor implements CellEditorHandle {
     const hint = document.createElement('div');
 
     hint.setAttribute('data-blok-database-select-hint', '');
-    hint.textContent = ctx.i18n.t('tools.database.personHint');
+    hint.textContent = ctx.i18n.t(this.limitOne ? 'tools.database.personHintOne' : 'tools.database.personHint');
     this.list.id = this.listId;
     this.list.setAttribute('role', 'listbox');
-    this.list.setAttribute('aria-multiselectable', 'true');
+    this.list.setAttribute('aria-multiselectable', this.limitOne ? 'false' : 'true');
     this.list.setAttribute('aria-label', property.name);
     this.root.append(this.chips, hint, this.list);
 
@@ -118,7 +118,20 @@ class PersonEditor implements CellEditorHandle {
     this.renderList();
   }
 
+  /** Limit "1 Person": a pick replaces every chosen person, as a relation's one-page limit does. */
+  private get limitOne(): boolean {
+    return this.property.person?.limit === 1;
+  }
+
   private toggle(id: string): void {
+    if (this.limitOne) {
+      this.selected = this.selected.includes(id) ? [] : [id];
+      this.search.value = '';
+      this.query = '';
+      this.commit();
+
+      return;
+    }
     if (!this.selected.includes(id) && this.ctx.maxSelections !== undefined && this.selected.length >= this.ctx.maxSelections) return;
     this.selected = this.selected.includes(id) ? this.selected.filter((s) => s !== id) : [...this.selected, id];
     this.search.value = '';

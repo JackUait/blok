@@ -177,6 +177,7 @@ export interface PropertySettingsV2 {
   button?: ButtonSettings;
   /** Read on the "Blocked by" relation only: how a date change moves the items it blocks. */
   dependency?: DependencySettings;
+  person?: PersonSettings;
 }
 
 // ─── Structure (Phase 6): sub-items, dependencies, templates, buttons ───
@@ -294,6 +295,19 @@ export type ComputedPropertyType = 'relation' | 'rollup' | 'formula';
 export interface FormulaSettings {
   /** The stored form: `prop("Name")` is saved as `{{property:<id>}}`, so a rename keeps working. */
   expression: string;
+}
+
+/**
+ * Person property settings from Notion's "Edit property" panel. Absent keys
+ * keep Notion's defaults: no limit, no default, "Users only".
+ */
+export interface PersonSettings {
+  /** `1` keeps one person. Absent or null means no limit. */
+  limit?: 1 | null;
+  /** `createdBy`: a new row starts with the user who adds it, when the people lever knows one. */
+  default?: 'createdBy';
+  /** Who gets told when they are added. Blok sends nothing: it only stores this for the host. Absent means users only. */
+  notifications?: 'usersAndGroups' | 'none';
 }
 
 export interface RelationSettings {

@@ -8,6 +8,7 @@ interface CapturedItem {
   name?: string;
   title?: string;
   icon?: string;
+  secondaryLabel?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
   isDestructive?: boolean;
@@ -84,6 +85,7 @@ describe('property menu entries (research/08 header menus, property-level items)
     ['files', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['createdTime', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
     ['uniqueId', ['editProperty', 'description', 'visibility', 'delete']],
+    ['person', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
   ])('%s → %j', (type, entries) => {
     expect(propertyMenuEntries(prop(type))).toEqual(entries);
   });
@@ -281,6 +283,78 @@ describe('DatabasePropertyMenu', () => {
     byName(options, 'displayAs-checkbox').onActivate?.(byName(options, 'displayAs-checkbox'));
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { status: { ...status, showAs: 'checkbox' } });
+  });
+
+  describe('Edit property for a person (research/16 §5)', () => {
+    const editItems = (property: PropertyDefinition): { cb: ReturnType<typeof callbacks>; items: CapturedItem[] } => {
+      const cb = open(property, true);
+
+      return { cb, items: byName(lastItems(), 'editProperty').children?.items ?? [] };
+    };
+    const choices = (row: CapturedItem): Array<[string | undefined, string | undefined, boolean]> =>
+      (row.children?.items ?? []).map((i) => [i.name, i.title, i.isActive === true]);
+
+    it('has Limit, Default and Notifications, each showing its current value', () => {
+      const { items } = editItems(prop('person'));
+
+      expect(items.map((i) => [i.name, i.title, i.secondaryLabel])).toEqual([
+        ['limit', 'tools.database.relationLimit', 'tools.database.relationLimitNone'],
+        ['personDefault', 'tools.database.personDefault', 'tools.database.personDefaultNone'],
+        ['personNotifications', 'tools.database.personNotifications', 'tools.database.personNotificationsUsersOnly'],
+      ]);
+    });
+
+    it('lists the options in Notion\'s order with No limit, No default and Users only checked', () => {
+      const { items } = editItems(prop('person'));
+
+      expect(choices(byName(items, 'limit'))).toEqual([
+        ['limit-one', 'tools.database.personLimitOne', false],
+        ['limit-none', 'tools.database.relationLimitNone', true],
+      ]);
+      expect(choices(byName(items, 'personDefault'))).toEqual([
+        ['personDefault-none', 'tools.database.personDefaultNone', true],
+        ['personDefault-createdBy', 'tools.database.propertyTypeCreatedBy', false],
+      ]);
+      expect(choices(byName(items, 'personNotifications'))).toEqual([
+        ['personNotifications-usersAndGroups', 'tools.database.personNotificationsUsersAndGroups', false],
+        ['personNotifications-usersOnly', 'tools.database.personNotificationsUsersOnly', true],
+        ['personNotifications-none', 'tools.database.personNotificationsNone', false],
+      ]);
+    });
+
+    it('shows and checks the stored choices', () => {
+      const { items } = editItems(prop('person', { person: { limit: 1, default: 'createdBy', notifications: 'none' } }));
+
+      expect(items.map((i) => i.secondaryLabel)).toEqual([
+        'tools.database.personLimitOne',
+        'tools.database.propertyTypeCreatedBy',
+        'tools.database.personNotificationsNone',
+      ]);
+      expect(byName(byName(items, 'limit').children?.items ?? [], 'limit-one').isActive).toBe(true);
+      expect(byName(byName(items, 'personDefault').children?.items ?? [], 'personDefault-createdBy').isActive).toBe(true);
+      expect(byName(byName(items, 'personNotifications').children?.items ?? [], 'personNotifications-none').isActive).toBe(true);
+    });
+
+    it('writes each choice and drops the key when the default comes back', () => {
+      const { cb, items } = editItems(prop('person', { person: { limit: 1, notifications: 'none' } }));
+      const pick = (row: string, name: string): void => {
+        const item = byName(byName(items, row).children?.items ?? [], name);
+
+        item.onActivate?.(item);
+      };
+
+      pick('personDefault', 'personDefault-createdBy');
+      pick('limit', 'limit-none');
+      pick('personNotifications', 'personNotifications-usersAndGroups');
+      pick('personNotifications', 'personNotifications-usersOnly');
+
+      expect(cb.onUpdate.mock.calls.map((call): unknown => call[1])).toEqual([
+        { person: { limit: 1, notifications: 'none', default: 'createdBy' } },
+        { person: { notifications: 'none' } },
+        { person: { limit: 1, notifications: 'usersAndGroups' } },
+        { person: { limit: 1 } },
+      ]);
+    });
   });
 
   describe('Edit property for a number', () => {

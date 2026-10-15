@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as Y from 'yjs';
 
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
@@ -206,5 +207,90 @@ describe('UndoHistory — undo does not delete a peer\'s content', () => {
 
     expect(textOf(storeA, 'b1')).toBe('First, edited by A');
     expect(textOf(storeA, 'b2')).toBe('Typed by B');
+  });
+
+  /**
+   * One push of several ids is ONE Yjs item, and the undo filter judges whole
+   * items. When the undo removes one named block and spares another, the id of
+   * the removed one must still go, or it dangles on the undoer only: peers drop
+   * it on receipt, so the two documents disagree.
+   */
+  describe('an order item naming a removed block and a spared one', () => {
+    const serializer = new YBlockSerializer();
+
+    /** The order item that holds `id`, or null. */
+    const orderItemOf = <T>(order: Y.Array<T>, id: string): Y.Item | null => {
+      for (let node = order._start; node !== null; node = node.right) {
+        if (!node.deleted && node.content.getContent().includes(id)) {
+          return node;
+        }
+      }
+
+      return null;
+    };
+
+    const danglingIds = (store: DocumentStore): string[] => {
+      const all = store.toJSON();
+      const root = store.rootOrder.toArray();
+
+      return [
+        ...root.filter((id) => !all.some((block) => block.id === id)),
+        ...all.flatMap((block) => (block.content ?? []).filter((id) => all.find((child) => child.id === id)?.parent !== block.id)),
+      ];
+    };
+
+    const addInOnePush = (blocks: Array<{ id: string; type: string; data: Record<string, unknown>; parent?: string; content?: string[] }>, rootIds: string[]): void => {
+      storeA.blocksMap.doc?.transact(() => {
+        blocks.forEach((block) => storeA.blocksMap.set(block.id, serializer.outputDataToYBlock(block)));
+        storeA.rootOrder.push(rootIds);
+      }, 'local');
+    };
+
+    it('removes the id of a container child the peer did not touch', () => {
+      addInOnePush([
+        { id: 'box', type: 'toggle', data: { text: 'box' }, content: ['k1', 'k2'] },
+        paragraph('k1', 'one'),
+        { ...paragraph('k2', 'two'), parent: 'box' },
+      ].map((block) => (block.id === 'k1' ? { ...block, parent: 'box' } : block)), ['box']);
+      sync(storeA, storeB);
+
+      const contentIds = storeA.blocksMap.get('box')?.get('contentIds');
+
+      expect(contentIds instanceof Y.Array && (orderItemOf(contentIds, 'k1')?.length ?? 0) > 1).toBe(true);
+
+      storeB.updateBlockData('k2', 'text', 'two, typed by B');
+      sync(storeA, storeB);
+
+      historyA.undo();
+
+      expect(danglingIds(storeA)).toEqual([]);
+      sync(storeA, storeB);
+
+      expect(storeA.toJSON()).toEqual(storeB.toJSON());
+      expect(hasBlock(storeA, 'k1')).toBe(false);
+      // A's own characters go, as in a spared block above; B's stay.
+      expect(textOf(storeA, 'k2')).toBe(', typed by B');
+    });
+
+    it('removes the id of a root block the peer did not touch', () => {
+      addInOnePush([paragraph('r1', 'one'), paragraph('r2', 'two')], ['r1', 'r2']);
+      sync(storeA, storeB);
+
+      expect((orderItemOf(storeA.rootOrder, 'r1')?.length ?? 0) > 1).toBe(true);
+
+      storeB.updateBlockData('r2', 'text', 'two, typed by B');
+      sync(storeA, storeB);
+
+      historyA.undo();
+
+      expect(danglingIds(storeA)).toEqual([]);
+      sync(storeA, storeB);
+
+      expect(storeA.toJSON()).toEqual(storeB.toJSON());
+      expect(storeA.rootOrder.toArray()).toEqual(storeB.rootOrder.toArray());
+      expect(hasBlock(storeA, 'r1')).toBe(false);
+      // A's own characters go, as in a spared block above; B's stay.
+      expect(textOf(storeA, 'r2')).toBe(', typed by B');
+    });
   });
 });

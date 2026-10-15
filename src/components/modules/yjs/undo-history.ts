@@ -395,6 +395,11 @@ export class UndoHistory {
       captureTimeout: this.captureHolds > 0 ? Infinity : CAPTURE_TIMEOUT_MS,
       trackedOrigins: new Set(['local']),
       deleteFilter: (item) => {
+        // Here and not in `mayUndoDelete`: that also answers read-only probes, and this writes.
+        if (this.isOrderArray(item.parent)) {
+          this.settleMixedOrderItem(item);
+        }
+
         const mayDelete = this.mayUndoDelete(item);
 
         if (mayDelete) {
@@ -475,6 +480,14 @@ export class UndoHistory {
       if (namesKeptBlock) {
         return false;
       }
+
+      // An id naming only blocks this same undo deletes must go with them,
+      // even inside a spared container. Kept, it dangles here, and only the
+      // peers drop it (`reconcileStructure` runs on remote updates), so the
+      // docs disagree.
+      if (this.namesOnlyBlocksThisUndoDeletes(item)) {
+        return true;
+      }
     }
 
     const owner = this.blockOwningKey(item);
@@ -499,6 +512,56 @@ export class UndoHistory {
     }
 
     return !this.holdsPeerItem(value, new Set());
+  }
+
+  /**
+   * Whether this id names a block the popped entry created and no peer wrote
+   * in, so the same undo removes that block.
+   * @param id - an entry of an order array
+   */
+  private undoDeletesBlock(id: unknown): boolean {
+    return typeof id === 'string' && this.blocksBornInPoppedEntry.has(id) && !this.blockHoldsPeerContent(id);
+  }
+
+  /**
+   * Whether every id in this order-array item names a block the same undo removes.
+   * @param item - an order-array item yjs is about to delete
+   */
+  private namesOnlyBlocksThisUndoDeletes(item: Y.Item): boolean {
+    const ids = item.content.getContent();
+
+    return ids.length > 0 && ids.every((id) => this.undoDeletesBlock(id));
+  }
+
+  /**
+   * One push of several ids is one Yjs item, and the filter can only keep or
+   * drop a whole item. When this undo deletes some of the named blocks and
+   * keeps others, split the item so `item` keeps only its first id, and judge
+   * and delete the other pieces here: yjs only asks about `item`.
+   * Runs inside the undo's own transaction, so the deletes are broadcast and
+   * land on the redo stack like the rest of the undo.
+   * @param item - an order-array item yjs is about to delete
+   */
+  private settleMixedOrderItem(item: Y.Item): void {
+    const ids = item.content.getContent();
+    const doc = item.parent instanceof Y.AbstractType ? item.parent.doc : null;
+
+    if (ids.length < 2 || this.blocksBornInPoppedEntry.size === 0 || doc === null) {
+      return;
+    }
+
+    const goes = ids.map((id) => this.undoDeletesBlock(id));
+
+    if (goes.every((verdict) => verdict === goes[0])) {
+      return;
+    }
+
+    doc.transact((transaction) => {
+      const pieces = ids.slice(1).map((_, index) =>
+        Y.getItemCleanStart(transaction, Y.createID(item.id.client, item.id.clock + index + 1)));
+
+      pieces.filter((piece) => this.mayUndoDelete(piece)).forEach((piece) => piece.delete(transaction));
+    });
   }
 
   /**

@@ -1253,6 +1253,7 @@ export class DatabaseTool implements BlockTool {
           ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
           ...(typeof rowData?.icon === 'string' && rowData.icon !== '' ? { icon: rowData.icon } : {}),
           ...(typeof rowData?.cover === 'string' && rowData.cover !== '' ? { cover: rowData.cover } : {}),
+          ...(typeof rowData?.fullWidth === 'boolean' ? { fullWidth: rowData.fullWidth } : {}),
           ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });
@@ -4920,6 +4921,7 @@ export class DatabaseTool implements BlockTool {
           title: typeof title === 'string' ? title : '',
           ...(source.icon !== undefined ? { icon: source.icon } : {}),
           ...(source.cover !== undefined ? { cover: source.cover } : {}),
+          ...(source.fullWidth !== undefined ? { fullWidth: source.fullWidth } : {}),
         },
         { parentId: this.dataId, position: 'end', id },
       );
@@ -5043,6 +5045,7 @@ export class DatabaseTool implements BlockTool {
         title: typeof title === 'string' ? title : '',
         ...(template?.icon !== undefined ? { icon: template.icon } : {}),
         ...(template?.cover !== undefined ? { cover: template.cover } : {}),
+        ...(template?.fullWidth !== undefined ? { fullWidth: template.fullWidth } : {}),
       },
       { parentId: this.dataId, position: 'end', id: rowData.id },
     );
@@ -5149,6 +5152,7 @@ export class DatabaseTool implements BlockTool {
       this.updateRowBlock(param.rowId, values);
       if (row.icon === undefined && template.icon !== undefined) block.call('updateIcon', { icon: template.icon });
       if (row.cover === undefined && template.cover !== undefined) block.call('updateCover', { cover: template.cover });
+      if (row.fullWidth === undefined && template.fullWidth !== undefined) block.call('updateFullWidth', { fullWidth: template.fullWidth });
       block.dispatchChange();
       this.copyChildBlocks(template.id, param.rowId);
     });
@@ -5214,6 +5218,7 @@ export class DatabaseTool implements BlockTool {
         template: true,
         ...(template.icon !== undefined ? { icon: template.icon } : {}),
         ...(template.cover !== undefined ? { cover: template.cover } : {}),
+        ...(template.fullWidth !== undefined ? { fullWidth: template.fullWidth } : {}),
       }, { parentId: this.dataId, position: 'end', id });
       this.copyChildBlocks(templateId, id);
     });
@@ -6268,6 +6273,30 @@ export class DatabaseTool implements BlockTool {
           this.syncRowsFromBlocks();
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
           this.rerenderView({ keepDrawer: true });
+        },
+        rowActions: (rowId) => {
+          // A template's page: the row actions would miss it, as they read the rows only.
+          if (this.model.getRow(rowId) === undefined) return undefined;
+          const copyLink = { onCopyLink: () => this.copyRowLink(rowId) };
+          const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
+
+          return !writable() ? copyLink : {
+            ...copyLink,
+            onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
+            onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
+            // A getter: the targets walk every block, so they are read only when the menu opens.
+            get moveTargets() { return listTargets(); },
+            onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+          };
+        },
+        onFullWidthChange: (rowId, fullWidth) => {
+          if (!writable()) return;
+          const row = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
+
+          row?.call('updateFullWidth', { fullWidth });
+          row?.dispatchChange();
+          this.syncRowsFromBlocks();
+          this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
         },
         onModeChange: (mode) => this.changeOpenMode(mode),
         onExpand: (rowId) => {

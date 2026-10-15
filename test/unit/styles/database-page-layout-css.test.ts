@@ -423,7 +423,17 @@ describe('database row page layout css', () => {
     expect(open).toContain('background-color: var(--blok-icon-active-bg)');
     expect(open).toContain('color: var(--blok-icon-active-text)');
     expect(open).not.toMatch(/blue|#2383e2|rgb\(35, 131, 226\)/i);
-    expect(ruleBody('[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden]')).toContain('display: none');
+  });
+
+  // research/09 §1b: "•••" ends the top bar. research/10 §10: Page info sits before it.
+  it('ends the page header with the Actions button, right after Page info when that shows', () => {
+    const header = ruleBody('[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-page-info], [data-blok-database-peek-actions]');
+
+    expect(header).toContain('width: 24px');
+    expect(header).toContain('background: none');
+    expect(ruleBody('[data-blok-database-peek-actions]')).toContain('margin-inline-start: auto');
+    expect(ruleBody('[data-blok-database-peek-page-info]:not([hidden]) + [data-blok-database-peek-actions]')).toContain('margin-inline-start: 0');
+    expect(ruleBody('[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-actions][hidden]')).toContain('display: none');
   });
 
   // The glyph's panel sits where the details panel opens: the inline end.

@@ -14,7 +14,7 @@ interface RowPagePrompt {
   list: Array<{ id: string; title: string }>;
 }
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'template', 'repeat']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -47,6 +47,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (typeof data.cover === 'string' && data.cover !== '') {
     row.cover = data.cover;
+  }
+  if (typeof data.fullWidth === 'boolean') {
+    row.fullWidth = data.fullWidth;
   }
   if (data.template === true) {
     row.template = true;
@@ -358,6 +361,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.cover !== undefined) {
       saved.cover = this._data.cover;
     }
+    if (this._data.fullWidth !== undefined) {
+      saved.fullWidth = this._data.fullWidth;
+    }
     if (this._data.template === true) {
       saved.template = true;
     }
@@ -456,6 +462,15 @@ export class DatabaseRowTool implements BlockTool {
       delete this._data.cover;
     } else {
       this._data.cover = param.cover;
+    }
+  }
+
+  /** The page's own Full width; null hands the width back to the layout. */
+  public updateFullWidth(param: { fullWidth: boolean | null }): void {
+    if (param.fullWidth === null) {
+      delete this._data.fullWidth;
+    } else {
+      this._data.fullWidth = param.fullWidth;
     }
   }
 

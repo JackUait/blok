@@ -23,6 +23,7 @@ export const DATABASE_ROW_DATA = {
     },
     icon: { type: 'string', description: 'The row page icon, an emoji.' },
     cover: { type: 'string', description: 'The row page cover, an image URL.' },
+    fullWidth: { type: 'boolean', description: 'The row page\'s own Full width. Absent: the database page layout decides. Only a full page widens.' },
     template: { type: 'boolean', description: 'A page template, not a row. Views and exports skip it.' },
     repeat: {
       type: 'object',

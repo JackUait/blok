@@ -6,12 +6,16 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconLink, IconPageLayout, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconLink, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { rowActionItems } from './database-table-menus';
+import type { RowActionContext } from './database-table-menus';
+import { createHeadingToggle } from '../table/table-heading-toggle';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import type { CoverPickerHandle } from '../audio/cover-picker';
@@ -244,6 +248,13 @@ export interface CardDrawerOptions {
   onCopyViewLink?: (rowId: string, tabId: string) => void;
   /** A page icon picked (an emoji) or removed (null). */
   onIconChange?: (rowId: string, icon: string | null) => void;
+  /**
+   * The row actions of the page's "•••" menu (research/09 §1b). Undefined for a
+   * page they cannot act on, such as a template.
+   */
+  rowActions?: (rowId: string) => Omit<RowActionContext, 'i18n'> | undefined;
+  /** The page's own Full width set, or null to follow the layout again. */
+  onFullWidthChange?: (rowId: string, fullWidth: boolean | null) => void;
   /** The row before (-1) or after (1) the open one in the view, if any. */
   adjacentRow?: (rowId: string, direction: 1 | -1) => DatabaseRow | undefined;
   /** The view's rows in its order, for the layout builder's Preview switch. */
@@ -374,6 +385,8 @@ export class DatabaseCardDrawer {
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
+  private readonly rowActions: CardDrawerOptions['rowActions'];
+  private readonly onFullWidthChange: CardDrawerOptions['onFullWidthChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
   private readonly onCoverChange: CardDrawerOptions['onCoverChange'];
   private readonly uploadCover: CardDrawerOptions['uploadCover'];
@@ -469,6 +482,8 @@ export class DatabaseCardDrawer {
     this.onModeChange = options.onModeChange;
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
+    this.rowActions = options.rowActions;
+    this.onFullWidthChange = options.onFullWidthChange;
     this.onEscapeClose = options.onEscapeClose;
     this.onCoverChange = options.onCoverChange;
     this.uploadCover = options.uploadCover;
@@ -732,6 +747,7 @@ export class DatabaseCardDrawer {
     this.currentRow = row;
     this.updateActiveCard(row.id);
     this.syncStepButtons();
+    this.syncActionsButton();
 
     const title = (row.properties[this.titlePropertyId] as string) ?? '';
 
@@ -1066,6 +1082,8 @@ export class DatabaseCardDrawer {
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
       button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSidebarRight, () => this.setDetailsOpen(!this.detailsOpen)),
+      // research/09 §1b: "•••" ends the bar, in a peek too (side peek: 30-row-page-actions-menu.png).
+      button('data-blok-database-peek-actions', 'popover.actions', IconDotsHorizontal, (el) => this.openActionsMenu(el)),
     ];
   }
 
@@ -1212,6 +1230,94 @@ export class DatabaseCardDrawer {
     anchor.setAttribute('aria-expanded', 'true');
   }
 
+  /** The page's "•••" menu, in Notion's order (research/12, 15-row-page-actions.png). Shares the mode menu's slot. */
+  private openActionsMenu(anchor: HTMLElement): void {
+    this.closeModeMenu();
+    const row = this.currentRow;
+    const items = row === null ? [] : this.actionItems(row);
+
+    if (items.length === 0) {
+      return;
+    }
+    const menu = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '240px',
+      autoFocusFirstItem: false,
+      searchable: true,
+      messages: { search: this.label('tools.database.searchActions') },
+      items,
+    });
+
+    menu.on(PopoverEvent.Closed, () => {
+      anchor.setAttribute('aria-expanded', 'false');
+      if (this.modeMenu === menu) {
+        this.modeMenu = null;
+        menu.destroy();
+      }
+    });
+    this.modeMenu = menu;
+    menu.show();
+    anchor.setAttribute('aria-expanded', 'true');
+  }
+
+  private actionItems(row: DatabaseRow): PopoverItemParams[] {
+    const actions = this.rowActions?.(row.id);
+    const rowItems = actions === undefined ? [] : rowActionItems({ ...actions, i18n: { t: (key: string) => this.label(key) } }, { trashShortcut: false });
+    const pageItems: PopoverItemParams[] = [
+      ...(!this.readOnly && this.onFullWidthChange !== undefined ? [this.fullWidthItem(row)] : []),
+      ...(this.customizable ? [{
+        type: PopoverItemType.Default as const,
+        name: 'row-page-customize-layout',
+        title: this.label('tools.database.layoutCustomize'),
+        icon: IconPageLayout,
+        closeOnActivate: true,
+        onActivate: () => this.startCustomizing(),
+      }] : []),
+    ];
+
+    return rowItems.length > 0 && pageItems.length > 0
+      ? [...rowItems, { type: PopoverItemType.Separator }, ...pageItems]
+      : [...rowItems, ...pageItems];
+  }
+
+  /** A switch: the page's own Full width, or the layout's while the page has none (research/09 §9). */
+  private fullWidthItem(row: DatabaseRow): PopoverItemParams {
+    // A named literal with onActivate: the agent-coverage scan lists menu items by that shape.
+    const toggle = { name: 'database-row-full-width', onActivate: (on: boolean): void => this.setPageFullWidth(row.id, on) };
+
+    return {
+      type: PopoverItemType.Html,
+      name: toggle.name,
+      element: createHeadingToggle({ icon: IconPlayerTheater, label: this.label('tools.database.layoutFullWidth'), isActive: this.pageFullWidth(row), onToggle: toggle.onActivate }),
+    };
+  }
+
+  /** The page's own value wins; a page without one follows the layout. */
+  private pageFullWidth(row: DatabaseRow): boolean {
+    return row.fullWidth ?? pageLayoutOf(this.schema.find((p) => p.type === 'title')).fullWidth;
+  }
+
+  /** Back at the layout's width, the page drops its own value and follows later layout changes again. */
+  private setPageFullWidth(rowId: string, on: boolean): void {
+    const layout = pageLayoutOf(this.schema.find((p) => p.type === 'title')).fullWidth;
+
+    this.onFullWidthChange?.(rowId, on === layout ? null : on);
+  }
+
+  /** Only a full page widens; the CSS leaves both peeks alone (research/09 §9). */
+  private syncFullWidth(row: DatabaseRow): void {
+    this.drawer?.toggleAttribute('data-full-width', this.pageFullWidth(row));
+  }
+
+  private syncActionsButton(): void {
+    const button = this.drawer?.querySelector<HTMLElement>('[data-blok-database-peek-actions]');
+    const row = this.currentRow;
+
+    button?.toggleAttribute('hidden', row === null || (this.rowActions?.(row.id) === undefined && (this.readOnly || this.onFullWidthChange === undefined) && !this.customizable));
+  }
+
   private closeModeMenu(): void {
     const menu = this.modeMenu;
 
@@ -1259,6 +1365,7 @@ export class DatabaseCardDrawer {
     }
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
     this.syncStepButtons();
+    this.syncActionsButton();
     this.syncDetailsDock();
   }
 
@@ -1359,6 +1466,7 @@ export class DatabaseCardDrawer {
     }
 
     this.currentRow = row;
+    this.syncFullWidth(row);
 
     const titleInput = this.drawer.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
     const title = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
@@ -1677,7 +1785,7 @@ export class DatabaseCardDrawer {
     const divider = content?.querySelector<HTMLElement>(':scope > hr') ?? null;
 
     // The saved layout, not the draft: Full width never changes the builder (research/09 §9).
-    this.drawer?.toggleAttribute('data-full-width', pageLayoutOf(this.schema.find((p) => p.type === 'title')).fullWidth);
+    this.syncFullWidth(row);
     this.syncBuilder();
     const builder = this.builder;
 

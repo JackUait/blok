@@ -890,12 +890,13 @@
   margin-inline: auto;
 }
 
-/* Header controls: expand, mode menu, previous and next row. */
+/* Header controls: expand, mode menu, previous and next row, Page info and Actions. */
 [data-blok-database-peek-expand],
 [data-blok-database-peek-mode],
 [data-blok-database-peek-prev],
 [data-blok-database-peek-next],
-[data-blok-database-peek-page-info] {
+[data-blok-database-peek-page-info],
+[data-blok-database-peek-actions] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -910,13 +911,22 @@
 }
 
 [data-blok-database-peek-expand][hidden],
-[data-blok-database-peek-page-info][hidden] {
+[data-blok-database-peek-page-info][hidden],
+[data-blok-database-peek-actions][hidden] {
   display: none;
 }
 
-/* research/10 §10: Page info sits at the bar's inline end. */
+/* research/10 §10: Page info sits at the bar's inline end, with "•••" after it (research/09 §1b). */
 [data-blok-database-peek-page-info] {
   margin-inline-start: auto;
+}
+
+[data-blok-database-peek-actions] {
+  margin-inline-start: auto;
+}
+
+[data-blok-database-peek-page-info]:not([hidden]) + [data-blok-database-peek-actions] {
+  margin-inline-start: 0;
 }
 
 /* The open fill is a selected state: gray, never blue. */
@@ -929,7 +939,8 @@
 [data-blok-database-peek-mode] svg,
 [data-blok-database-peek-prev] svg,
 [data-blok-database-peek-next] svg,
-[data-blok-database-peek-page-info] svg {
+[data-blok-database-peek-page-info] svg,
+[data-blok-database-peek-actions] svg {
   width: 16px;
   height: 16px;
 }
@@ -954,7 +965,8 @@
   [data-blok-database-peek-mode]:hover,
   [data-blok-database-peek-prev]:not(:disabled):hover,
   [data-blok-database-peek-next]:not(:disabled):hover,
-  [data-blok-database-peek-page-info]:hover {
+  [data-blok-database-peek-page-info]:hover,
+  [data-blok-database-peek-actions]:hover {
     background-color: var(--blok-database-drawer-border);
   }
 }

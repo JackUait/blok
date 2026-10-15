@@ -423,6 +423,8 @@ export interface DatabaseRow {
   icon?: string;
   /** The page cover, an image URL. */
   cover?: string;
+  /** The page's own Full width. Absent: the database's page layout decides. Only a full page widens. */
+  fullWidth?: boolean;
   /** Row block metadata, for the read-only time and person properties. */
   meta?: DatabaseRowMeta;
   /**
@@ -459,6 +461,8 @@ export interface DatabaseRowData extends BlockToolData {
   icon?: string;
   /** The page cover, an image URL. A plain leaf, like the icon. */
   cover?: string;
+  /** The page's own Full width, overriding the layout's. Absent: the layout decides. */
+  fullWidth?: boolean;
   /**
    * A page template, not a row. It lives as a row block so it keeps its body
    * as child blocks; every view, query and export skips it.

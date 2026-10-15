@@ -1014,6 +1014,50 @@ test.describe('row page layout', () => {
     expect(await titleWidth('side', true)).toBeCloseTo(await titleWidth('side', false), 0);
   });
 
+  // research/09 §9: the page's own Full width overrides the layout; the others keep the layout's.
+  test('turns Full width off for one page from its Actions menu while the layout is Full width', async ({ page }) => {
+    await mount(page, withView(blocks({ pageLayoutFullWidth: true }), { openPagesIn: 'full' }));
+    await openRow(page, 'r1');
+    const title = peek(page).locator('[data-blok-database-drawer-title]');
+    const width = async (): Promise<number> => (await title.boundingBox())?.width ?? 0;
+
+    await expect(title).toBeVisible();
+    expect(await width()).toBeGreaterThan(720);
+
+    await peek(page).getByRole('button', { name: 'Actions' }).click();
+    const fullWidth = page.getByRole('switch', { name: 'Full width' });
+
+    await expect(fullWidth).toHaveAttribute('aria-checked', 'true');
+    await fullWidth.click();
+    await expect(fullWidth).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(width).toBeCloseTo(720, 0);
+
+    await page.keyboard.press('Escape');
+    await expect(fullWidth).toBeHidden();
+    await peek(page).getByRole('button', { name: 'Next page' }).click();
+    await expect(title).toHaveValue('Bravo');
+    await expect.poll(width).toBeGreaterThan(720);
+  });
+
+  test('leaves both peeks alone when a page has its own Full width', async ({ page }) => {
+    const titleWidth = async (mode: 'center' | 'side', rowId: string): Promise<number> => {
+      const data = withView(blocks(), { openPagesIn: mode });
+
+      data[1].data.fullWidth = true;
+      await mount(page, data);
+      await openRow(page, rowId);
+      const title = peek(page).locator('[data-blok-database-drawer-title]');
+
+      await expect(title).toBeVisible();
+      await expect(peek(page)).toHaveAttribute('data-peek-mode', mode);
+
+      return (await title.boundingBox())?.width ?? 0;
+    };
+
+    expect(await titleWidth('center', 'r1')).toBeCloseTo(await titleWidth('center', 'r2'), 0);
+    expect(await titleWidth('side', 'r1')).toBeCloseTo(await titleWidth('side', 'r2'), 0);
+  });
+
   test('keeps a Full width page clear of the docked details panel', async ({ page }) => {
     await mount(page, withView(blocks({ pageLayoutFullWidth: true, pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), { openPagesIn: 'full' }));
     await openRow(page, 'r1');

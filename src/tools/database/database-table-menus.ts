@@ -319,11 +319,65 @@ export const commentMenuItem = (i18n: T): { type: PopoverItemType.Default; title
   secondaryLabel: beautifyShortcut('CMD+SHIFT+M'),
 });
 
+/** What the row menu and the row page's "•••" menu can do to the row itself. */
+export interface RowActionContext {
+  i18n: T;
+  onCopyLink: () => void;
+  /** Without it there is no Duplicate row. */
+  onDuplicate?: () => void;
+  /** Without it there is no Move to Trash row. */
+  onDelete?: () => void;
+  /** Other databases of this document. Without any there is no Move to row. */
+  moveTargets?: Array<{ id: string; title: string }>;
+  onMoveTo?: (databaseId: string) => void;
+}
+
+/**
+ * Copy link, Duplicate, Move to and Move to Trash, shared so the two menus cannot drift.
+ * Notion's row page shows no shortcut on Move to Trash (research/12, 15-row-page-actions.png).
+ */
+export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: boolean }): PopoverItemParams[] => {
+  const { i18n, onDuplicate, onDelete, onMoveTo } = ctx;
+  const targets = ctx.moveTargets ?? [];
+
+  return [
+    { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
+    ...(onDuplicate !== undefined
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: onDuplicate }]
+      : []),
+    ...(onMoveTo !== undefined && targets.length > 0
+      ? [{
+        type: PopoverItemType.Default as const,
+        title: i18n.t('tools.database.tableMoveTo'),
+        icon: IconArrowDiagonal,
+        secondaryLabel: beautifyShortcut('CMD+SHIFT+P'),
+        children: {
+          searchable: true,
+          items: targets.map((target) => ({
+            type: PopoverItemType.Default as const,
+            name: `database-row-move-to-${target.id}`,
+            title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
+            onActivate: () => onMoveTo(target.id),
+          })),
+        },
+      }]
+      : []),
+    ...(onDelete !== undefined
+      ? [{
+        type: PopoverItemType.Default as const,
+        name: 'database-row-delete',
+        title: i18n.t('tools.database.tableMoveToTrash'),
+        icon: IconTrash,
+        ...(options.trashShortcut ? { secondaryLabel: beautifyShortcut('DELETE') } : {}),
+        onActivate: onDelete,
+      }]
+      : []),
+  ];
+};
+
 /** The row ⋮⋮ menu (research/08), without Add to Favorites. Comment needs the host's lever. */
 export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
   const { i18n } = ctx;
-  const targets = ctx.moveTargets ?? [];
-  const onMoveTo = ctx.onMoveTo;
 
   return [
     { type: PopoverItemType.Default, name: 'database-row-edit-icon', title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: ctx.onEditIcon },
@@ -350,26 +404,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
     },
     { type: PopoverItemType.Separator },
     ...(ctx.onComment !== undefined ? [{ ...commentMenuItem(i18n), name: 'database-row-comment', onActivate: ctx.onComment }] : []),
-    { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
-    { type: PopoverItemType.Default, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: ctx.onDuplicate },
-    ...(onMoveTo !== undefined && targets.length > 0
-      ? [{
-        type: PopoverItemType.Default as const,
-        title: i18n.t('tools.database.tableMoveTo'),
-        icon: IconArrowDiagonal,
-        secondaryLabel: beautifyShortcut('CMD+SHIFT+P'),
-        children: {
-          searchable: true,
-          items: targets.map((target) => ({
-            type: PopoverItemType.Default as const,
-            name: `database-row-move-to-${target.id}`,
-            title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
-            onActivate: () => onMoveTo(target.id),
-          })),
-        },
-      }]
-      : []),
-    { type: PopoverItemType.Default, name: 'database-row-delete', title: i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, secondaryLabel: beautifyShortcut('DELETE'), onActivate: ctx.onDelete },
+    ...rowActionItems(ctx, { trashShortcut: true }),
     ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [{ type: PopoverItemType.Separator } as const, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
   ];
 };

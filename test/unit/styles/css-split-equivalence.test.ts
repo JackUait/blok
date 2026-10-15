@@ -837,6 +837,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABLE_LINK_CELL_PILL_BYTES = 1_126;
     // database.css: the board count as a calculation menu button (research/16 §1).
     const DATABASE_BOARD_CALCULATION_BYTES = 222;
+    // database.css: the row page's "•••" Actions button at the end of the peek header (research/09 §1b).
+    const DATABASE_ROW_PAGE_ACTIONS_BYTES = 414;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -926,7 +928,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_VIEW_PAGE_ICON_BYTES
       + DATABASE_GALLERY_KEYBOARD_BYTES
       + DATABASE_TABLE_LINK_CELL_PILL_BYTES
-      + DATABASE_BOARD_CALCULATION_BYTES;
+      + DATABASE_BOARD_CALCULATION_BYTES
+      + DATABASE_ROW_PAGE_ACTIONS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -163,6 +163,29 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('page full width', () => {
+    it.each([true, false])('saves the page\'s own full width (%s)', (fullWidth) => {
+      const tool = new DatabaseRowTool(createRowOptions({ fullWidth }));
+
+      expect(tool.save(document.createElement('div')).fullWidth).toBe(fullWidth);
+    });
+
+    it('drops a full width that is not a boolean', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ fullWidth: 'yes' } as unknown as Partial<DatabaseRowData>));
+
+      expect('fullWidth' in tool.save(document.createElement('div'))).toBe(false);
+    });
+
+    it('sets the page\'s own full width, and null hands the width back to the layout', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      tool.updateFullWidth({ fullWidth: false });
+      expect(tool.save(document.createElement('div')).fullWidth).toBe(false);
+      tool.updateFullWidth({ fullWidth: null });
+      expect('fullWidth' in tool.save(document.createElement('div'))).toBe(false);
+    });
+  });
+
   describe('updateTitle()', () => {
     it('writes the top-level title AND the properties mirror', () => {
       const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': '', 'p-status': 'o1' }, title: '' }));

@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse,
-  providerBlock, rawTurn, sendContext, toolNames, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'gemini';
@@ -72,8 +72,8 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
 
   const parts = isRecord(first.content) && Array.isArray(first.content.parts) ? first.content.parts.filter(isRecord) : [];
   // A call without an id gets one, and the stored parts get it too, so the response matches.
-  const stored = parts.map((part, index) => (isRecord(part.functionCall) && typeof part.functionCall.id !== 'string'
-    ? { ...part, functionCall: { ...part.functionCall, id: `call-${step}-${index}` } }
+  const stored = parts.map((part, index) => (isRecord(part.functionCall)
+    ? { ...part, functionCall: { ...part.functionCall, id: callId(part.functionCall.id, step, index) } }
     : part));
   const content: AgentModelContentBlock[] = stored.flatMap((part): AgentModelContentBlock[] => {
     if (isRecord(part.functionCall)) {
@@ -113,7 +113,7 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
 export function geminiModel(options: AdapterOptions): AgentModel {
   return async (request) => {
     const names = toolNames(request.messages);
-    const step = request.messages.filter((message) => message.role === 'assistant').length + 1;
+    const step = stepOf(request);
     const body = withLevel({
       systemInstruction: { parts: [{ text: request.system }] },
       contents: request.messages.map((message) => (message.role === 'user' ? userContent(message, names) : modelContent(message))),
@@ -123,6 +123,6 @@ export function geminiModel(options: AdapterOptions): AgentModel {
       generationConfig: { maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS },
     }, request, LEVELS, options);
 
-    return readReply(await options.send(body, sendContext(request, options)), step);
+    return readReply(await post(body, request, options), step);
   };
 }

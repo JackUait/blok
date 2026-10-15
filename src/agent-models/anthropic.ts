@@ -1,7 +1,7 @@
 import type { AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelResponse, AgentThinkingLevel } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, errorOf, isRecord, sendContext, withLevel, type AdapterOptions, type Body,
+  DEFAULT_MAX_TOKENS, errorOf, isRecord, post, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 // Claude Opus 5.5 rejects disabled thinking, so "off" is the lowest effort.
@@ -49,6 +49,6 @@ export function anthropicModel(options: AdapterOptions): AgentModel {
       tools: request.tools,
     }, request, LEVELS, options);
 
-    return readReply(await options.send(body, sendContext(request, options)));
+    return readReply(await post(body, request, options));
   };
 }

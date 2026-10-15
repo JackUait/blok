@@ -77,6 +77,38 @@ describe('anthropicModel', () => {
     expect((bodies[0].messages as AgentModelMessage[])[1]).toEqual({ role: 'assistant', content: [{ type: 'text', text: 'b' }] });
   });
 
+  it('a send that edits the body leaves the run\'s tools and history alone', async () => {
+    const toolTurn = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'u1', name: 'blok_read', input: {} }] };
+    const replies: unknown[] = [toolTurn, { ...toolTurn, content: [{ type: 'tool_use', id: 'u2', name: 'blok_read', input: {} }] },
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }] }];
+    const bodies: Record<string, unknown>[] = [];
+    const send = async (body: Record<string, unknown>): Promise<unknown> => {
+      bodies.push(structuredClone(body));
+      const { tools, messages } = body;
+
+      if (Array.isArray(tools)) {
+        tools.push({ name: 'extra' });
+      }
+      const turn: unknown = Array.isArray(messages) ? messages.at(-2) : undefined;
+      const block: unknown = typeof turn === 'object' && turn !== null && 'content' in turn && Array.isArray(turn.content)
+        ? turn.content.at(-1)
+        : undefined;
+
+      if (typeof block === 'object' && block !== null) {
+        Reflect.set(block, 'cache_control', { type: 'ephemeral' });
+      }
+
+      return replies.shift();
+    };
+
+    await run(anthropicModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+
+    expect((bodies[2].messages as AgentModelMessage[])[1]).toEqual({ role: 'assistant', content: [
+      { type: 'tool_use', id: 'u1', name: 'blok_read', input: {} },
+    ] });
+    expect(bodies.map((body) => (body.tools as unknown[]).length)).toEqual([1, 1, 1]);
+  });
+
   it('turns an error body into a failed run', async () => {
     const { send } = fakeSend({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } });
 

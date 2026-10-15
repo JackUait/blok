@@ -119,6 +119,39 @@ describe('openaiModel', () => {
     ]);
   });
 
+  it('a send that edits the level fragment does not change the next model\'s body', async () => {
+    const end = { status: 'completed', output: [] };
+    const bodies: Record<string, unknown>[] = [];
+    const editing = async (body: Record<string, unknown>): Promise<unknown> => {
+      if (typeof body.reasoning === 'object' && body.reasoning !== null) {
+        Reflect.set(body.reasoning, 'summary', 'auto');
+      }
+
+      return end;
+    };
+    const plain = async (body: Record<string, unknown>): Promise<unknown> => {
+      bodies.push(structuredClone(body));
+
+      return end;
+    };
+
+    await runAssistantLoop({ model: openaiModel({ model: 'm', send: editing }), system: 's', tools: [], messages: [{ role: 'user', content: 'a' }],
+      call: async () => ({ content: '', isError: false }), signal: new AbortController().signal, maxSteps: 5, thinking: 'low' });
+    await runAssistantLoop({ model: openaiModel({ model: 'm', send: plain }), system: 's', tools: [], messages: [{ role: 'user', content: 'a' }],
+      call: async () => ({ content: '', isError: false }), signal: new AbortController().signal, maxSteps: 5, thinking: 'low' });
+    expect(bodies[0].reasoning).toEqual({ effort: 'low' });
+  });
+
+  it('fails the run when the reply stops short for a reason it does not map', async () => {
+    const messages = fakeSend({ status: 'incomplete', incomplete_details: { reason: 'max_messages' }, output: [] });
+    const steered = fakeSend({ status: 'incomplete', incomplete_details: { reason: 'steered' }, output: [] });
+
+    expect(await run(openaiModel({ model: 'm', send: messages.send }), [{ role: 'user', content: 'a' }]))
+      .toEqual({ status: 'failed', reply: '', error: 'OpenAI stopped: max_messages' });
+    expect(await run(openaiModel({ model: 'm', send: steered.send }), [{ role: 'user', content: 'a' }]))
+      .toEqual({ status: 'failed', reply: '', error: 'OpenAI stopped: steered' });
+  });
+
   it('turns an error body into a failed run', async () => {
     const { send } = fakeSend({ error: { message: 'Invalid model' } });
 

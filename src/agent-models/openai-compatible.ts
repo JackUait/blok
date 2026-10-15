@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  providerBlock, rawTurn, sendContext, toolNames, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'openai-chat';
@@ -56,7 +56,7 @@ const textOf = (content: unknown): string => {
     : '';
 };
 
-const readReply = (reply: unknown): AgentModelResponse => {
+const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const error = errorOf(reply, 'OpenAI-compatible');
 
   if (error !== null) {
@@ -69,15 +69,17 @@ const readReply = (reply: unknown): AgentModelResponse => {
     throw new Error('OpenAI-compatible: the reply has no choices.');
   }
 
-  const { message } = first;
+  const calls = (Array.isArray(first.message.tool_calls) ? first.message.tool_calls : [])
+    .map((call, index): unknown => (isRecord(call) ? { ...call, id: callId(call.id, step, index) } : call));
+  // The stored turn carries the same ids as the tool messages that answer it.
+  const message = calls.length === 0 ? first.message : { ...first.message, tool_calls: calls };
   const text = textOf(message.content);
-  const uses: AgentModelContentBlock[] = (Array.isArray(message.tool_calls) ? message.tool_calls : [])
-    .filter(isRecord)
-    .map((call) => {
-      const fn = isRecord(call.function) ? call.function : {};
+  // An unnamed call keeps an empty name, so the run reports an unknown tool and the model can retry.
+  const uses: AgentModelContentBlock[] = calls.filter(isRecord).map((call) => {
+    const fn = isRecord(call.function) ? call.function : {};
 
-      return { type: 'tool_use', id: String(call.id), name: String(fn.name), input: parseArguments(fn.arguments) };
-    });
+    return { type: 'tool_use', id: String(call.id), name: typeof fn.name === 'string' ? fn.name : '', input: parseArguments(fn.arguments) };
+  });
   const content: AgentModelContentBlock[] = [
     ...(text === '' ? [] : [{ type: 'text', text }]),
     ...uses,
@@ -118,6 +120,6 @@ export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
       })),
     }, request, LEVELS, options);
 
-    return readReply(await options.send(body, sendContext(request, options)));
+    return readReply(await post(body, request, options), stepOf(request));
   };
 }

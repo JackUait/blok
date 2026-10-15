@@ -56,7 +56,7 @@ export const rawTurn = (content: AgentModelMessage['content'], format: string): 
 export const merge = (base: Body, extra: Body): Body => Object.entries(extra).reduce<Body>((out, [key, value]) => {
   const current = out[key];
 
-  return { ...out, [key]: isRecord(current) && isRecord(value) ? merge(current, value) : value };
+  return { ...out, [key]: isRecord(value) ? merge(isRecord(current) ? current : {}, value) : value };
 }, { ...base });
 
 export const withLevel = (
@@ -72,6 +72,9 @@ export const withLevel = (
 export const parseArguments = (value: unknown): unknown => {
   if (typeof value !== 'string') {
     return value ?? {};
+  }
+  if (value.trim() === '') {
+    return {};
   }
 
   try {
@@ -91,6 +94,21 @@ export const sendContext = (request: AgentModelRequest, options: AdapterOptions)
   model: options.model,
   ...(request.thinking === undefined ? {} : { thinking: request.thinking }),
 });
+
+/** A call without a usable id gets one, unique within the run. */
+export const callId = (id: unknown, step: number, index: number): string =>
+  (typeof id === 'string' && id !== '' ? id : `call-${step}-${index}`);
+
+/** Steps so far plus this one; part of a synthesized call id. */
+export const stepOf = (request: AgentModelRequest): number =>
+  request.messages.filter((message) => message.role === 'assistant').length + 1;
+
+/**
+ * Hands send its own copy of the body: the body shares objects with the run's history,
+ * tools and the level tables, and the docs invite hosts to edit it.
+ */
+export const post = (body: Body, request: AgentModelRequest, options: AdapterOptions): Promise<unknown> =>
+  options.send(structuredClone(body), sendContext(request, options));
 
 const errorMessage = (error: unknown): string => {
   if (isRecord(error) && typeof error.message === 'string') {

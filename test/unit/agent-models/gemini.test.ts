@@ -63,6 +63,16 @@ describe('geminiModel', () => {
     expect(responses[0].functionResponse).toEqual({ id: 'call-1-0', name: 'blok_read', response: { result: '{"ok":true}' } });
   });
 
+  it('treats an empty id as missing', async () => {
+    const { send, bodies } = fakeSend(candidate([{ functionCall: { id: '', name: 'blok_read', args: {} } }]), candidate([{ text: 'ok' }]));
+
+    await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+    expect((bodies[1].contents as unknown[]).slice(1)).toEqual([
+      { role: 'model', parts: [{ functionCall: { id: 'call-1-0', name: 'blok_read', args: {} } }] },
+      { role: 'user', parts: [{ functionResponse: { id: 'call-1-0', name: 'blok_read', response: { result: '{"ok":true}' } } }] },
+    ]);
+  });
+
   it('sends a failed tool result under error', async () => {
     const { send, bodies } = fakeSend(candidate([signedCall]), candidate([{ text: 'ok' }]));
 
@@ -105,6 +115,24 @@ describe('geminiModel', () => {
       return candidate([{ text: 'ok' }]);
     } }), [{ role: 'user', content: 'a' }]);
     expect(seen).toEqual(['gemini-3.8-flash']);
+  });
+
+  it('a send that edits the replayed parts leaves the stored turn alone', async () => {
+    const replies: unknown[] = [candidate([signedCall]), candidate([signedCall]), candidate([{ text: 'ok' }])];
+    const bodies: Record<string, unknown>[] = [];
+    const send = async (body: Record<string, unknown>): Promise<unknown> => {
+      bodies.push(structuredClone(body));
+      const turn: unknown = Array.isArray(body.contents) ? body.contents[1] : undefined;
+
+      if (typeof turn === 'object' && turn !== null && 'parts' in turn && Array.isArray(turn.parts)) {
+        Reflect.set(turn.parts, 0, { text: 'edited' });
+      }
+
+      return replies.shift();
+    };
+
+    await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+    expect((bodies[2].contents as unknown[])[1]).toEqual({ role: 'model', parts: [signedCall] });
   });
 
   it('turns an error body into a failed run', async () => {

@@ -27,6 +27,12 @@ describe('adapter helpers', () => {
     expect(merge({ a: { b: 1, c: [1] }, d: 1 }, { a: { c: [2] }, d: 2 })).toEqual({ a: { b: 1, c: [2] }, d: 2 });
   });
 
+  it('merges a fragment as a copy, not by reference', () => {
+    const fragment = { reasoning: { effort: 'low' } };
+
+    expect(merge({}, fragment).reasoning).not.toBe(fragment.reasoning);
+  });
+
   it('adds the default fragment for the level, a host override replaces it, and no level adds nothing', () => {
     expect(withLevel({ x: 1 }, request('low'), defaults, options)).toEqual({ x: 1, effort: 'low' });
     expect(withLevel({ x: 1 }, request('off'), defaults, { ...options, levels: { off: { mode: 'between' } } }))
@@ -47,6 +53,8 @@ describe('adapter helpers', () => {
     expect(parseArguments('{"a":')).toEqual({ invalidJson: '{"a":' });
     expect(parseArguments({ a: 1 })).toEqual({ a: 1 });
     expect(parseArguments(undefined)).toEqual({});
+    expect(parseArguments('')).toEqual({});
+    expect(parseArguments('  ')).toEqual({});
   });
 
   it('maps tool_use ids to names across the history', () => {

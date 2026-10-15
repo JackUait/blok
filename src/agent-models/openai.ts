@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  providerBlock, rawTurn, sendContext, withLevel, type AdapterOptions, type Body,
+  providerBlock, rawTurn, post, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'openai-responses';
@@ -81,6 +81,11 @@ const readReply = (reply: unknown): AgentModelResponse => {
   content.push(providerBlock(FORMAT, reply.output));
 
   const reason = isRecord(reply.incomplete_details) ? reply.incomplete_details.reason : undefined;
+
+  // max_messages, steered and any newer reason cut the reply short; passing it as done would store a partial turn.
+  if (reply.status === 'incomplete' && reason !== 'max_output_tokens' && reason !== 'content_filter') {
+    throw new Error(`OpenAI stopped: ${String(reason)}`);
+  }
   const stop = ((): string => {
     if (reason === 'max_output_tokens') {
       return 'max_tokens';
@@ -113,6 +118,6 @@ export function openaiModel(options: AdapterOptions): AgentModel {
       })),
     }, request, LEVELS, options);
 
-    return readReply(await options.send(body, sendContext(request, options)));
+    return readReply(await post(body, request, options));
   };
 }

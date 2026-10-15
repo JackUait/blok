@@ -16,6 +16,7 @@ export interface AgentModelAdapterOptions {
   /**
    * Post `body` to your backend, which adds the API key and forwards it to the provider.
    * Return the provider's JSON reply. Change the body here for provider extras (caching, store, …).
+   * Each call gets a fresh copy, so edits never reach the run's history.
    */
   send(body: Record<string, unknown>, context: AgentModelSendContext): Promise<unknown>;
   /** Output token cap. Default 16000. */

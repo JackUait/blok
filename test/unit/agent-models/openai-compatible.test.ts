@@ -116,6 +116,45 @@ describe('openaiCompatibleModel', () => {
     ]);
   });
 
+  it('a send that edits the replayed turn leaves the stored turn alone', async () => {
+    const replies: unknown[] = [choice(structuredClone(toolTurn), 'tool_calls'), choice(structuredClone(toolTurn), 'tool_calls'), choice({ role: 'assistant', content: 'Done.' }, 'stop')];
+    const bodies: Record<string, unknown>[] = [];
+    const send = async (body: Record<string, unknown>): Promise<unknown> => {
+      bodies.push(structuredClone(body));
+      const turn: unknown = Array.isArray(body.messages) ? body.messages[2] : undefined;
+
+      if (typeof turn === 'object' && turn !== null) {
+        Reflect.set(turn, 'reasoning_content', 'edited');
+      }
+
+      return replies.shift();
+    };
+
+    await run(openaiCompatibleModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+    expect((bodies[2].messages as unknown[])[2]).toEqual(toolTurn);
+  });
+
+  it('gives parallel calls without ids distinct ids, and the replay and tool messages carry them', async () => {
+    const noIds = {
+      role: 'assistant', content: null,
+      tool_calls: [
+        { type: 'function', function: { name: 'blok_read', arguments: '{}' } },
+        { id: '', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
+      ],
+    };
+    const { send, bodies } = fakeSend(choice(noIds, 'tool_calls'), choice({ role: 'assistant', content: 'Done.' }, 'stop'));
+
+    await run(openaiCompatibleModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+    expect((bodies[1].messages as unknown[]).slice(2)).toEqual([
+      { ...noIds, tool_calls: [
+        { id: 'call-1-0', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
+        { id: 'call-1-1', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
+      ] },
+      { role: 'tool', tool_call_id: 'call-1-0', name: 'blok_read', content: '{"ok":true}' },
+      { role: 'tool', tool_call_id: 'call-1-1', name: 'blok_read', content: '{"ok":true}' },
+    ]);
+  });
+
   it('turns an error body into a failed run', async () => {
     const { send } = fakeSend({ error: { message: 'Rate limited' } });
 

@@ -165,7 +165,8 @@ export class KeyboardController extends Controller {
     }
     this.pendingOwnerHistoryKey = null;
 
-    if (event.defaultPrevented || this.isDisabled) {
+    // An inert editor sits behind a modal dialog: undo would change a document the user cannot see.
+    if (event.defaultPrevented || this.isDisabled || this.wrapperElement?.closest('[inert]') != null) {
       return;
     }
 

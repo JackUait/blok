@@ -2148,5 +2148,37 @@ describe('KeyboardController — mutation coverage', () => {
 
       expect(harness.blok.BlockSelection.clearSelection).not.toHaveBeenCalled();
     });
+
+    const dialogOwner = (): HTMLElement => {
+      const dialog = document.createElement('div');
+      const field = document.createElement('button');
+
+      dialog.setAttribute('data-blok-keyboard-owner', '');
+      dialog.appendChild(field);
+      document.body.appendChild(dialog);
+
+      return field;
+    };
+
+    it('leaves the document alone while a modal dialog makes the editor inert', () => {
+      const harness = enabledHarness();
+      const field = dialogOwner();
+
+      harness.wrapper.setAttribute('inert', '');
+      const { event } = harness.press(field, { key: 'z', code: 'KeyZ', metaKey: true });
+      harness.press(field, { key: 'y', code: 'KeyY', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(harness.blok.YjsManager.redo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('undoes from an owner outside the editor while the editor is not inert', () => {
+      const harness = enabledHarness();
+
+      harness.press(dialogOwner(), { key: 'z', code: 'KeyZ', metaKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+    });
   });
 });

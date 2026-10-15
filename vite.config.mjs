@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
           adapters: path.resolve(__dirname, 'src', 'adapters.ts'),
           icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
           preprocess: path.resolve(__dirname, 'src', 'preprocess', 'index.ts'),
+          'agent-models': path.resolve(__dirname, 'src', 'agent-models', 'index.ts'),
         },
         formats: ['es', 'cjs'],
       },

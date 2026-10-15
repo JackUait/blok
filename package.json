@@ -33,6 +33,9 @@
       ],
       "preprocess": [
         "./types/preprocess.d.ts"
+      ],
+      "agent-models": [
+        "./types/agent-models.d.ts"
       ]
     }
   },
@@ -79,6 +82,11 @@
       "types": "./types/preprocess.d.ts",
       "import": "./dist/preprocess.mjs",
       "require": "./dist/preprocess.cjs"
+    },
+    "./agent-models": {
+      "types": "./types/agent-models.d.ts",
+      "import": "./dist/agent-models.mjs",
+      "require": "./dist/agent-models.cjs"
     },
     "./icons": {
       "types": "./types/icons.d.ts",

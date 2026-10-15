@@ -485,6 +485,19 @@ describe('package.json exports include require conditions', () => {
     }
   })
 
+  it('"./agent-models" export is wired to built files that really carry the entry point', () => {
+    const agentModelsExport = packageJson.exports['./agent-models'] as Record<string, string>
+    expect(agentModelsExport['import']).toBe('./dist/agent-models.mjs')
+    expect(agentModelsExport['require']).toBe('./dist/agent-models.cjs')
+    expect(agentModelsExport['types']).toBe('./types/agent-models.d.ts')
+
+    for (const file of ['dist/agent-models.mjs', 'dist/agent-models.cjs', 'types/agent-models.d.ts']) {
+      const built = readFileSync(resolve(repoRoot, file), 'utf-8')
+      expect(built).toContain('openaiCompatibleModel')
+      expect(built).toContain('geminiModel')
+    }
+  })
+
   it('"./umd" export points at the drop-in global bundle', () => {
     expect((packageJson.exports['./umd'] as Record<string, string>)['default']).toBe('./dist/blok.umd.js')
   })

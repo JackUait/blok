@@ -561,7 +561,8 @@ export class UndoHistory {
         Y.getItemCleanStart(transaction, Y.createID(item.id.client, item.id.clock + index + 1)));
 
       pieces.filter((piece) => this.mayUndoDelete(piece)).forEach((piece) => piece.delete(transaction));
-    });
+      // Nested in the undo's own transaction, which already has this origin.
+    }, this.currentUndoManager);
   }
 
   /**

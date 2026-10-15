@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Panel samping",
   "tools.database.tableCopyLink": "Salin tautan",
   "tools.database.tableComment": "Komentari",
+  "tools.database.cellCopy": "Salin ke papan klip",
+  "tools.database.cellCopied": "Properti disalin ke papan klip",
   "tools.database.openComments": "Buka komentar",
   "tools.database.tableMoveTo": "Pindahkan ke",
   "tools.database.searchActions": "Cari tindakan…",

@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Külgpaneelis",
   "tools.database.tableCopyLink": "Kopeeri link",
   "tools.database.tableComment": "Kommenteeri",
+  "tools.database.cellCopy": "Kopeeri lõikelauale",
+  "tools.database.cellCopied": "Omadus kopeeriti lõikelauale",
   "tools.database.openComments": "Ava kommentaarid",
   "tools.database.tableMoveTo": "Teisalda",
   "tools.database.searchActions": "Otsi toiminguid…",

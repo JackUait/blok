@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "ဘေးဘောင်",
   "tools.database.tableCopyLink": "လင့်ခ်ကူးယူရန်",
   "tools.database.tableComment": "မှတ်ချက်ပေးရန်",
+  "tools.database.cellCopy": "ကလစ်ဘုတ်သို့ ကူးယူရန်",
+  "tools.database.cellCopied": "ဂုဏ်သတ္တိကို ကလစ်ဘုတ်သို့ ကူးယူပြီးပါပြီ",
   "tools.database.openComments": "မှတ်ချက်များ ဖွင့်ရန်",
   "tools.database.tableMoveTo": "သို့ ရွှေ့ရန်",
   "tools.database.searchActions": "လုပ်ဆောင်ချက်များ ရှာပါ…",

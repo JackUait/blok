@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Side peek",
   "tools.database.tableCopyLink": "Copy link",
   "tools.database.tableComment": "Comment",
+  "tools.database.cellCopy": "Copy to clipboard",
+  "tools.database.cellCopied": "Copied property to clipboard",
   "tools.database.openComments": "Open comments",
   "tools.database.tableMoveTo": "Move to",
   "tools.database.searchActions": "Search actions…",

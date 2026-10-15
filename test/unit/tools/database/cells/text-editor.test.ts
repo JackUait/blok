@@ -148,6 +148,27 @@ describe('cell text editors', () => {
     expect(field().tagName).toBe('INPUT');
   });
 
+  // research/16 §4: Notion's editors are type=url, type=email and type=tel.
+  it.each([
+    ['url', 'https://example.com', 'url'],
+    ['email', 'test@example.com', 'email'],
+    ['phone', '+1 555 0100', 'tel'],
+  ] as const)('a %s cell opens an input of its own type holding the full value', (propertyType, value, inputType) => {
+    openCellEditor(makeProperty(propertyType), value, makeAnchor(), makeEditorContext());
+
+    expect(field().getAttribute('type')).toBe(inputType);
+    expect(field().value).toBe(value);
+  });
+
+  it('opening and closing an email whose saved value has a stray space writes nothing', () => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty('email'), ' a@b.io ', makeAnchor(), ctx);
+
+    handle.close();
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+  });
+
   it('does nothing when read-only', () => {
     const ctx = makeEditorContext({ readOnly: true });
     const handle = openCellEditor(makeProperty('text'), 'a', makeAnchor(), ctx);

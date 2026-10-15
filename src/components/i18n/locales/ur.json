@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "سائیڈ پینل",
   "tools.database.tableCopyLink": "لنک کاپی کریں",
   "tools.database.tableComment": "تبصرہ کریں",
+  "tools.database.cellCopy": "کلپ بورڈ پر کاپی کریں",
+  "tools.database.cellCopied": "پراپرٹی کلپ بورڈ پر کاپی ہو گئی",
   "tools.database.openComments": "تبصرے کھولیں",
   "tools.database.tableMoveTo": "منتقل کریں",
   "tools.database.searchActions": "کارروائیاں تلاش کریں…",

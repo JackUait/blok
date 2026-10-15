@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "സൈഡ് പാനൽ",
   "tools.database.tableCopyLink": "ലിങ്ക് പകർത്തുക",
   "tools.database.tableComment": "കമന്റ് ചെയ്യുക",
+  "tools.database.cellCopy": "ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തുക",
+  "tools.database.cellCopied": "പ്രോപ്പർട്ടി ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തി",
   "tools.database.openComments": "കമന്റുകൾ തുറക്കുക",
   "tools.database.tableMoveTo": "ഇതിലേക്ക് നീക്കുക",
   "tools.database.searchActions": "പ്രവർത്തനങ്ങൾ തിരയുക…",

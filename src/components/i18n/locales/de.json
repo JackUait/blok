@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Seitenvorschau",
   "tools.database.tableCopyLink": "Link kopieren",
   "tools.database.tableComment": "Kommentieren",
+  "tools.database.cellCopy": "In die Zwischenablage kopieren",
+  "tools.database.cellCopied": "Eigenschaft in die Zwischenablage kopiert",
   "tools.database.openComments": "Kommentare öffnen",
   "tools.database.tableMoveTo": "Verschieben nach",
   "tools.database.searchActions": "Aktionen suchen…",

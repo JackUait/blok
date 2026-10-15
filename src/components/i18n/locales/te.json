@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "సైడ్ ప్యానెల్",
   "tools.database.tableCopyLink": "లింక్‌ను కాపీ చేయి",
   "tools.database.tableComment": "వ్యాఖ్యానించండి",
+  "tools.database.cellCopy": "క్లిప్‌బోర్డ్‌కు కాపీ చేయి",
+  "tools.database.cellCopied": "ప్రాపర్టీ క్లిప్‌బోర్డ్‌కు కాపీ చేయబడింది",
   "tools.database.openComments": "వ్యాఖ్యలను తెరవండి",
   "tools.database.tableMoveTo": "ఇక్కడికి తరలించు",
   "tools.database.searchActions": "చర్యలను వెతకండి…",

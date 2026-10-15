@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Bočnom paneli",
   "tools.database.tableCopyLink": "Kopírovať odkaz",
   "tools.database.tableComment": "Komentovať",
+  "tools.database.cellCopy": "Kopírovať do schránky",
+  "tools.database.cellCopied": "Vlastnosť skopírovaná do schránky",
   "tools.database.openComments": "Otvoriť komentáre",
   "tools.database.tableMoveTo": "Presunúť do",
   "tools.database.searchActions": "Hľadať akcie…",

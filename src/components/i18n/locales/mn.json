@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Хажуугийн самбар",
   "tools.database.tableCopyLink": "Холбоос хуулах",
   "tools.database.tableComment": "Сэтгэгдэл бичих",
+  "tools.database.cellCopy": "Түр санах ой руу хуулах",
+  "tools.database.cellCopied": "Шинжийг түр санах ой руу хуулав",
   "tools.database.openComments": "Сэтгэгдэл нээх",
   "tools.database.tableMoveTo": "Зөөх",
   "tools.database.searchActions": "Үйлдэл хайх…",

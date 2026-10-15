@@ -153,6 +153,66 @@ describe('renderCellValue', () => {
       expect(click.defaultPrevented).toBe(false);
     });
   });
+
+  // research/16 §4: the table's url, email and phone values are links a plain click follows.
+  describe('followLinks (the table)', () => {
+    it.each([
+      ['url', 'https://example.com'],
+      ['email', 'test@example.com'],
+      ['phone', '+1 555 0100'],
+    ] as const)('a plain click on a %s link follows it while editable', (type, value) => {
+      const link = renderCellValue(prop(type), value, ctx({ followLinks: true })).querySelector('a');
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link?.dispatchEvent(click);
+
+      expect(click.defaultPrevented).toBe(false);
+    });
+
+    // Core's redactor click would swallow it and window.open the href without noopener.
+    it.each([
+      ['url', 'https://example.com'],
+      ['email', 'test@example.com'],
+      ['phone', '+1 555 0100'],
+    ] as const)('a %s link owns its clicks, so the browser follows it, not core', (type, value) => {
+      const link = renderCellValue(prop(type), value, ctx({ followLinks: true })).querySelector('a');
+
+      expect(link?.hasAttribute('data-blok-link-owner')).toBe(true);
+    });
+
+    it('without followLinks a link leaves its clicks to core', () => {
+      expect(renderCellValue(prop('url'), 'https://example.com', ctx()).querySelector('a')?.hasAttribute('data-blok-link-owner')).toBe(false);
+    });
+
+    it.each([
+      ['https://example.com', 'example.com'],
+      ['https://example.com/', 'example.com'],
+      ['http://example.com', 'example.com'],
+      ['https://example.com/a/b?q=1', 'example.com/a/b?q=1'],
+    ])('shows %s as %s, and the href keeps the full address', (value, shown) => {
+      const link = renderCellValue(prop('url'), value, ctx({ followLinks: true })).querySelector('a');
+
+      expect(link?.textContent).toBe(shown);
+      expect(link?.getAttribute('href')).toBe(value);
+    });
+
+    it('never links an unsafe scheme, and shows it as typed', () => {
+      const el = renderCellValue(prop('url'), 'javascript:alert(1)', ctx({ followLinks: true }));
+
+      expect(el.querySelector('[href]')).toBeNull();
+      expect(el.textContent).toBe('javascript:alert(1)');
+    });
+
+    it('a file chip in the table still does not follow on a plain click, so the cell edits', () => {
+      const files = [{ id: 'f1', name: 'brief.pdf', url: 'https://example.com/brief.pdf' }];
+      const link = renderCellValue(prop('files'), files, ctx({ followLinks: true })).querySelector('a');
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link?.dispatchEvent(click);
+
+      expect(click.defaultPrevented).toBe(true);
+    });
+  });
 });
 
 describe('option colors', () => {

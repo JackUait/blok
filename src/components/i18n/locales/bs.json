@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Bočnom panelu",
   "tools.database.tableCopyLink": "Kopiraj vezu",
   "tools.database.tableComment": "Komentariši",
+  "tools.database.cellCopy": "Kopiraj u međuspremnik",
+  "tools.database.cellCopied": "Svojstvo je kopirano u međuspremnik",
   "tools.database.openComments": "Otvori komentare",
   "tools.database.tableMoveTo": "Premjesti u",
   "tools.database.searchActions": "Pretražite radnje…",

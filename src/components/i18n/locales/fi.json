@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Sivupaneelissa",
   "tools.database.tableCopyLink": "Kopioi linkki",
   "tools.database.tableComment": "Kommentoi",
+  "tools.database.cellCopy": "Kopioi leikepöydälle",
+  "tools.database.cellCopied": "Ominaisuus kopioitu leikepöydälle",
   "tools.database.openComments": "Avaa kommentit",
   "tools.database.tableMoveTo": "Siirrä kohteeseen",
   "tools.database.searchActions": "Etsi toimintoja…",

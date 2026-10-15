@@ -54,6 +54,12 @@ export interface CellContext {
   openRelated?: (property: PropertyDefinition, rowId: string) => void;
   /** Rows a relation cell can pick, for the relation editor. */
   relationCandidates?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
+  /**
+   * The table (research/16 §4): a plain click on a url, email or phone link
+   * follows it, and a url shows without its http(s) scheme. Elsewhere a plain
+   * click is left to the host, which edits the value.
+   */
+  followLinks?: boolean;
 }
 
 /**

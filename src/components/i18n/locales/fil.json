@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Gilid na panel",
   "tools.database.tableCopyLink": "Kopyahin ang link",
   "tools.database.tableComment": "Magkomento",
+  "tools.database.cellCopy": "Kopyahin sa clipboard",
+  "tools.database.cellCopied": "Nakopya ang property sa clipboard",
   "tools.database.openComments": "Buksan ang mga komento",
   "tools.database.tableMoveTo": "Ilipat sa",
   "tools.database.searchActions": "Maghanap ng aksyon…",

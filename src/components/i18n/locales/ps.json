@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "څنګ پینل",
   "tools.database.tableCopyLink": "لینک کاپي کړئ",
   "tools.database.tableComment": "تبصره وکړئ",
+  "tools.database.cellCopy": "کلیپبورډ ته کاپي کړئ",
+  "tools.database.cellCopied": "ځانګړتیا کلیپبورډ ته کاپي شوه",
   "tools.database.openComments": "تبصرې خلاص کړئ",
   "tools.database.tableMoveTo": "ولېږدوئ",
   "tools.database.searchActions": "کړنې ولټوئ…",

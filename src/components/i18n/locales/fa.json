@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "پنل کناری",
   "tools.database.tableCopyLink": "کپی پیوند",
   "tools.database.tableComment": "افزودن نظر",
+  "tools.database.cellCopy": "کپی در کلیپ‌بورد",
+  "tools.database.cellCopied": "ویژگی در کلیپ‌بورد کپی شد",
   "tools.database.openComments": "باز کردن نظرها",
   "tools.database.tableMoveTo": "انتقال به",
   "tools.database.searchActions": "جستجوی اقدامات…",

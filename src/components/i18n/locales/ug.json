@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "يان تاختا",
   "tools.database.tableCopyLink": "ئۇلانمىنى كۆچۈر",
   "tools.database.tableComment": "ئىنكاس يېزىش",
+  "tools.database.cellCopy": "چاپلاش تاختىسىغا كۆچۈر",
+  "tools.database.cellCopied": "خاسلىق چاپلاش تاختىسىغا كۆچۈرۈلدى",
   "tools.database.openComments": "ئىنكاسلارنى ئېچىش",
   "tools.database.tableMoveTo": "يۆتكەش",
   "tools.database.searchActions": "مەشغۇلات ئىزدەش…",

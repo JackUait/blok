@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Visualização lateral",
   "tools.database.tableCopyLink": "Copiar link",
   "tools.database.tableComment": "Comentar",
+  "tools.database.cellCopy": "Copiar para a área de transferência",
+  "tools.database.cellCopied": "Propriedade copiada para a área de transferência",
   "tools.database.openComments": "Abrir comentários",
   "tools.database.tableMoveTo": "Mover para",
   "tools.database.searchActions": "Pesquisar ações…",

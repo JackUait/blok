@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Sidepanel",
   "tools.database.tableCopyLink": "Kopiér link",
   "tools.database.tableComment": "Kommenter",
+  "tools.database.cellCopy": "Kopiér til udklipsholder",
+  "tools.database.cellCopied": "Egenskab kopieret til udklipsholder",
   "tools.database.openComments": "Åbn kommentarer",
   "tools.database.tableMoveTo": "Flyt til",
   "tools.database.searchActions": "Søg efter handlinger…",

@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "اللوحة الجانبية",
   "tools.database.tableCopyLink": "نسخ الرابط",
   "tools.database.tableComment": "تعليق",
+  "tools.database.cellCopy": "نسخ إلى الحافظة",
+  "tools.database.cellCopied": "تم نسخ الخاصية إلى الحافظة",
   "tools.database.openComments": "فتح التعليقات",
   "tools.database.tableMoveTo": "نقل إلى",
   "tools.database.searchActions": "البحث في الإجراءات…",

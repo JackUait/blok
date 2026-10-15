@@ -1,4 +1,5 @@
 import { IconCheck } from '../../../components/icons';
+import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
@@ -44,8 +45,13 @@ const renderCheckState = (cell: HTMLElement, checked: boolean, ctx: CellContext)
   cell.append(box, state);
 };
 
+/** `https://example.com/` shows as `example.com`; a deeper path keeps its slashes. */
+const shortUrl = (url: string): string => url.replace(/^https?:\/\//i, '').replace(/^([^/?#]+)\/$/, '$1');
+
 const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
-  renderLink(cell, url, safeHref(url), ctx);
+  const href = safeHref(url);
+
+  renderLink(cell, href !== null && ctx.followLinks === true ? shortUrl(url) : url, href, ctx, ctx.followLinks);
 };
 
 /** `?` and `&` are encoded, so an address cannot add `?bcc=` or other headers. */
@@ -59,7 +65,7 @@ export const telHref = (phone: string): string | null => {
   return /\d/.test(dialable) ? safeHref(`tel:${dialable}`) : null;
 };
 
-const renderLink = (cell: HTMLElement, text: string, href: string | null, ctx: CellContext): void => {
+const renderLink = (cell: HTMLElement, text: string, href: string | null, ctx: CellContext, follow = false): void => {
   if (href === null) {
     cell.append(text);
 
@@ -73,9 +79,13 @@ const renderLink = (cell: HTMLElement, text: string, href: string | null, ctx: C
   link.rel = 'noopener noreferrer';
   link.textContent = text;
   link.setAttribute('data-blok-database-cell-link', '');
-  // A plain click edits the cell; Cmd/Ctrl-click opens the link.
+  if (follow) {
+    // Core's own link click would window.open the href without noopener; the browser follows target and rel.
+    link.setAttribute(DATA_ATTR.linkOwner, '');
+  }
+  // Without `follow` a plain click edits the cell; Cmd/Ctrl-click opens the link.
   link.addEventListener('click', (event) => {
-    if (!ctx.readOnly && !event.metaKey && !event.ctrlKey) {
+    if (!follow && !ctx.readOnly && !event.metaKey && !event.ctrlKey) {
       event.preventDefault();
     }
   });
@@ -263,12 +273,12 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
       break;
     case 'email':
       if (typeof value === 'string' && value !== '') {
-        renderLink(cell, value, mailtoHref(value), ctx);
+        renderLink(cell, value, mailtoHref(value), ctx, ctx.followLinks);
       }
       break;
     case 'phone':
       if (typeof value === 'string' && value !== '') {
-        renderLink(cell, value, telHref(value), ctx);
+        renderLink(cell, value, telHref(value), ctx, ctx.followLinks);
       }
       break;
     case 'number':

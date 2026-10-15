@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Կողային վահանակ",
   "tools.database.tableCopyLink": "Պատճենել հղումը",
   "tools.database.tableComment": "Մեկնաբանել",
+  "tools.database.cellCopy": "Պատճենել սեղմատախտակին",
+  "tools.database.cellCopied": "Հատկությունը պատճենվել է սեղմատախտակին",
   "tools.database.openComments": "Բացել մեկնաբանությունները",
   "tools.database.tableMoveTo": "Տեղափոխել",
   "tools.database.searchActions": "Որոնել գործողություններ…",

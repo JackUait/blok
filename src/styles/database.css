@@ -4887,6 +4887,48 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
+/* ─── URL, email and phone cells: hover pill with Comment and Copy (research/16 §4) ─── */
+
+/* Notion: 52x24 at the cell's right edge, radius 6, the OPEN button's shadow; hover only. */
+[data-blok-database-table-cell-actions] {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-end: 6px;
+  z-index: 1;
+  display: none;
+  padding: var(--blok-space-0-5);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-open-bg);
+  box-shadow: var(--blok-database-table-open-shadow);
+}
+
+[data-blok-database-table-cell]:hover > [data-blok-database-table-cell-actions] {
+  display: flex;
+}
+
+[data-blok-database-table-cell-action] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-table-cell-action]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-table-cell-action] svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ─── Comment badge: a row's comment count, after its title (research/12 §3) ─── */
 
 [data-blok-database-comment-badge] {

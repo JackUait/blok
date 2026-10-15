@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Šoniniame skydelyje",
   "tools.database.tableCopyLink": "Kopijuoti nuorodą",
   "tools.database.tableComment": "Komentuoti",
+  "tools.database.cellCopy": "Kopijuoti į iškarpinę",
+  "tools.database.cellCopied": "Savybė nukopijuota į iškarpinę",
   "tools.database.openComments": "Atidaryti komentarus",
   "tools.database.tableMoveTo": "Perkelti į",
   "tools.database.searchActions": "Ieškoti veiksmų…",

@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Panelin anësor",
   "tools.database.tableCopyLink": "Kopjo lidhjen",
   "tools.database.tableComment": "Komento",
+  "tools.database.cellCopy": "Kopjo në kujtesë",
+  "tools.database.cellCopied": "Vetia u kopjua në kujtesë",
   "tools.database.openComments": "Hap komentet",
   "tools.database.tableMoveTo": "Zhvendos te",
   "tools.database.searchActions": "Kërko veprime…",

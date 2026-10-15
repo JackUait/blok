@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "පැති පුවරුව",
   "tools.database.tableCopyLink": "සබැඳිය පිටපත් කරන්න",
   "tools.database.tableComment": "අදහස් දක්වන්න",
+  "tools.database.cellCopy": "පසුරු පුවරුවට පිටපත් කරන්න",
+  "tools.database.cellCopied": "ගුණාංගය පසුරු පුවරුවට පිටපත් කරන ලදී",
   "tools.database.openComments": "අදහස් විවෘත කරන්න",
   "tools.database.tableMoveTo": "වෙත ගෙන යන්න",
   "tools.database.searchActions": "ක්‍රියා සොයන්න…",

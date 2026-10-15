@@ -506,6 +506,8 @@ export type BlokMessageKey =
   | 'tools.database.cardNamePlaceholder'
   | 'tools.database.cardTitle'
   | 'tools.database.cardTitlePlaceholder'
+  | 'tools.database.cellCopied'
+  | 'tools.database.cellCopy'
   | 'tools.database.cellEmpty'
   | 'tools.database.changeCover'
   | 'tools.database.changeIcon'

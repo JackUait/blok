@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "側邊預覽",
   "tools.database.tableCopyLink": "複製連結",
   "tools.database.tableComment": "留言",
+  "tools.database.cellCopy": "複製到剪貼簿",
+  "tools.database.cellCopied": "已將屬性複製到剪貼簿",
   "tools.database.openComments": "開啟留言",
   "tools.database.tableMoveTo": "移至",
   "tools.database.searchActions": "搜尋動作…",

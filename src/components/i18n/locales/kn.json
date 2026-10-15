@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "ಪಕ್ಕದ ಫಲಕ",
   "tools.database.tableCopyLink": "ಲಿಂಕ್ ನಕಲಿಸಿ",
   "tools.database.tableComment": "ಕಾಮೆಂಟ್ ಮಾಡಿ",
+  "tools.database.cellCopy": "ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಿ",
+  "tools.database.cellCopied": "ಗುಣಲಕ್ಷಣ ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಾಗಿದೆ",
   "tools.database.openComments": "ಕಾಮೆಂಟ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ",
   "tools.database.tableMoveTo": "ಇಲ್ಲಿಗೆ ಸರಿಸಿ",
   "tools.database.searchActions": "ಕ್ರಿಯೆಗಳನ್ನು ಹುಡುಕಿ…",

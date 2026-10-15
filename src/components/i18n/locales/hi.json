@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "साइड पैनल",
   "tools.database.tableCopyLink": "लिंक कॉपी करें",
   "tools.database.tableComment": "टिप्पणी करें",
+  "tools.database.cellCopy": "क्लिपबोर्ड पर कॉपी करें",
+  "tools.database.cellCopied": "प्रॉपर्टी क्लिपबोर्ड पर कॉपी की गई",
   "tools.database.openComments": "टिप्पणियाँ खोलें",
   "tools.database.tableMoveTo": "इसमें ले जाएँ",
   "tools.database.searchActions": "कार्रवाइयाँ खोजें…",

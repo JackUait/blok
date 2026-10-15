@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Oldalsó panelen",
   "tools.database.tableCopyLink": "Hivatkozás másolása",
   "tools.database.tableComment": "Megjegyzés",
+  "tools.database.cellCopy": "Másolás a vágólapra",
+  "tools.database.cellCopied": "Tulajdonság a vágólapra másolva",
   "tools.database.openComments": "Megjegyzések megnyitása",
   "tools.database.tableMoveTo": "Áthelyezés ide",
   "tools.database.searchActions": "Műveletek keresése…",

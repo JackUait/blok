@@ -47,6 +47,7 @@ import {
   IconTrash,
   IconDotsHorizontal,
   IconCopy,
+  IconMessage,
   IconWand,
 } from '../../components/icons';
 
@@ -145,6 +146,8 @@ export interface DatabaseTableViewOptions {
   selectionBarSlot?: () => HTMLElement | null;
   /** AI Autofill run actions. The tool leaves it out when read-only, locked or without `config.ai`. */
   autofill?: TableAutofill;
+  /** Shows a toast: "Copied property to clipboard". */
+  notify?: (message: string) => void;
 }
 
 /** The cell "Autofill" button and the header sparkle of an autofill column (research/12 §2). */
@@ -210,6 +213,9 @@ const NUMBER_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['s
 const COUNT_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['count', 'count_values', 'unique', 'empty', 'not_empty', 'checked', 'unchecked']);
 
 const MAX_SHOWN_COUNT = 99;
+
+/** Cells whose value is a link: a click on it follows it, and a hover shows the action pill. */
+const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
 
 const tableIds = { next: 0 };
 
@@ -808,6 +814,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: this.options.readOnly,
+      followLinks: true,
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
     });
 
@@ -848,7 +855,69 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       cell.appendChild(open);
     }
     this.fillAutofill(cell, column.property, rowId, value);
+    // The autofill button takes the same corner; it wins.
+    if (LINK_TYPES.has(column.property.type) && cell.contains(value) && !value.hasAttribute('data-empty')
+      && cell.querySelector('[data-blok-database-table-autofill]') === null) {
+      cell.appendChild(this.createCellActions());
+    }
     if (fillHandle !== null) cell.appendChild(fillHandle);
+  }
+
+  /** research/16 §4: a filled url, email or phone cell's hover pill, "Comment" and "Copy to Clipboard". */
+  private createCellActions(): HTMLElement {
+    const pill = document.createElement('span');
+    const entries: Array<[action: string, key: string, icon: string]> = [['copy', 'tools.database.cellCopy', IconCopy]];
+
+    if (this.options.comment !== undefined) {
+      entries.unshift(['comment', 'tools.database.tableComment', IconMessage]);
+    }
+
+    pill.setAttribute('data-blok-database-table-cell-actions', '');
+    for (const [action, key, icon] of entries) {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.tabIndex = -1;
+      button.setAttribute('data-blok-database-table-cell-action', action);
+      button.setAttribute('aria-label', this.t(key));
+      button.innerHTML = icon;
+      onHover(button, this.t(key));
+      pill.appendChild(button);
+    }
+
+    return pill;
+  }
+
+  /** A link click follows the link; a pill button acts. Either way the cell neither selects nor edits. */
+  private clickLinkCell(target: Element): boolean {
+    const cellEl = target.closest<HTMLElement>('[role="gridcell"]');
+    const rowId = cellEl?.closest('[data-row-id]')?.getAttribute('data-row-id');
+
+    if (cellEl === null || cellEl === undefined || rowId === null || rowId === undefined || !LINK_TYPES.has(cellEl.getAttribute('data-type') ?? '')) {
+      return false;
+    }
+    const propertyId = cellEl.getAttribute('data-property-id') ?? '';
+    const action = target.closest('[data-blok-database-table-cell-action]')?.getAttribute('data-blok-database-table-cell-action');
+
+    if (action === 'comment') {
+      this.options.comment?.(rowId, propertyId, cellEl);
+    } else if (action === 'copy') {
+      this.copyCellValue(rowId, propertyId);
+    }
+
+    return action !== undefined || target.closest('a[data-blok-database-cell-link]') !== null;
+  }
+
+  private copyCellValue(rowId: string, propertyId: string): void {
+    const property = this.columns.find((column) => column.property.id === propertyId)?.property;
+    const row = this.rowMap.get(rowId);
+    const value = property === undefined || row === undefined ? undefined : readPropertyValue(row, property);
+
+    if (typeof value !== 'string' || value === '') return;
+    void navigator.clipboard?.writeText(value).then(
+      () => this.options.notify?.(this.t('tools.database.cellCopied')),
+      () => undefined
+    );
   }
 
   private fillAutofill(cell: HTMLElement, property: PropertyDefinition, rowId: string, value: HTMLElement): void {
@@ -1244,6 +1313,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const handlers = this.handlers;
 
     if (target === null) {
+      return;
+    }
+    if (this.clickLinkCell(target)) {
       return;
     }
     const closest = (selector: string): HTMLElement | null => target.closest<HTMLElement>(selector);

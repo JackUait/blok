@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Zijweergave",
   "tools.database.tableCopyLink": "Link kopiëren",
   "tools.database.tableComment": "Opmerking toevoegen",
+  "tools.database.cellCopy": "Kopiëren naar klembord",
+  "tools.database.cellCopied": "Eigenschap gekopieerd naar klembord",
   "tools.database.openComments": "Opmerkingen openen",
   "tools.database.tableMoveTo": "Verplaatsen naar",
   "tools.database.searchActions": "Acties zoeken…",

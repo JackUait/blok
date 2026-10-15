@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "پاسي واري پينل",
   "tools.database.tableCopyLink": "لنڪ ڪاپي ڪريو",
   "tools.database.tableComment": "تبصرو ڪريو",
+  "tools.database.cellCopy": "ڪلپ بورڊ ۾ ڪاپي ڪريو",
+  "tools.database.cellCopied": "پراپرٽي ڪلپ بورڊ ۾ ڪاپي ٿي وئي",
   "tools.database.openComments": "تبصرا کوليو",
   "tools.database.tableMoveTo": "منتقل ڪريو",
   "tools.database.searchActions": "عمل ڳوليو…",

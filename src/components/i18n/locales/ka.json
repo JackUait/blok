@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "გვერდითი პანელი",
   "tools.database.tableCopyLink": "ბმულის კოპირება",
   "tools.database.tableComment": "კომენტარი",
+  "tools.database.cellCopy": "ბუფერში კოპირება",
+  "tools.database.cellCopied": "თვისება დაკოპირდა ბუფერში",
   "tools.database.openComments": "კომენტარების გახსნა",
   "tools.database.tableMoveTo": "გადატანა",
   "tools.database.searchActions": "ქმედებების ძიება…",

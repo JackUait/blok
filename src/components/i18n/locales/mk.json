@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Страничен панел",
   "tools.database.tableCopyLink": "Копирај врска",
   "tools.database.tableComment": "Коментирај",
+  "tools.database.cellCopy": "Копирај во таблата со исечоци",
+  "tools.database.cellCopied": "Својството е копирано во таблата со исечоци",
   "tools.database.openComments": "Отвори коментари",
   "tools.database.tableMoveTo": "Премести во",
   "tools.database.searchActions": "Пребарајте дејства…",

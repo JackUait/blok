@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "サイドピーク",
   "tools.database.tableCopyLink": "リンクをコピー",
   "tools.database.tableComment": "コメント",
+  "tools.database.cellCopy": "クリップボードにコピー",
+  "tools.database.cellCopied": "プロパティをクリップボードにコピーしました",
   "tools.database.openComments": "コメントを開く",
   "tools.database.tableMoveTo": "移動先",
   "tools.database.searchActions": "アクションを検索…",

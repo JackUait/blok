@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "የጎን ፓነል",
   "tools.database.tableCopyLink": "አገናኝ ቅዳ",
   "tools.database.tableComment": "አስተያየት ስጥ",
+  "tools.database.cellCopy": "ወደ ቅንጥብ ሰሌዳ ቅዳ",
+  "tools.database.cellCopied": "ንብረቱ ወደ ቅንጥብ ሰሌዳ ተቀድቷል",
   "tools.database.openComments": "አስተያየቶችን ክፈት",
   "tools.database.tableMoveTo": "አንቀሳቅስ ወደ",
   "tools.database.searchActions": "እርምጃዎችን ፈልግ…",

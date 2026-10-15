@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "חלונית צדדית",
   "tools.database.tableCopyLink": "העתק קישור",
   "tools.database.tableComment": "הוסף תגובה",
+  "tools.database.cellCopy": "העתק ללוח",
+  "tools.database.cellCopied": "המאפיין הועתק ללוח",
   "tools.database.openComments": "פתח תגובות",
   "tools.database.tableMoveTo": "העבר אל",
   "tools.database.searchActions": "חיפוש פעולות…",

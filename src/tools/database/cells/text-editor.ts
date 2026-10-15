@@ -16,6 +16,9 @@ const parseNumberEntry = (text: string): Outcome | null => {
   return Number.isFinite(parsed) ? { kind: 'commit', value: parsed } : null;
 };
 
+/** research/16 §4: Notion's url, email and phone editors. */
+const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
+
 const initialText = (value: PropertyValue | undefined): string =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 
@@ -37,21 +40,19 @@ export const openTextEditor = (
 
   field.setAttribute('data-blok-database-cell-input', property.type);
   field.setAttribute('aria-label', property.name);
-  field.value = ctx.initialText ?? original;
   if (field instanceof HTMLInputElement) {
-    field.type = 'text';
+    field.type = INPUT_TYPES[property.type] ?? 'text';
     if (property.type === 'number') {
       field.inputMode = 'decimal';
-    } else if (property.type === 'url') {
-      field.inputMode = 'url';
-    } else if (property.type === 'email') {
-      field.inputMode = 'email';
-    } else if (property.type === 'phone') {
-      field.inputMode = 'tel';
     }
   } else {
     field.rows = 1;
   }
+  field.value = original;
+  // url and email inputs trim the value: compare against what the field holds, or opening and closing writes.
+  const shown = field.value;
+
+  field.value = ctx.initialText ?? shown;
   content.appendChild(field);
 
   const resolve = (): Outcome | null => {
@@ -82,7 +83,7 @@ export const openTextEditor = (
     const unchanged = outcome.kind === 'commit' && (
       property.type === 'number'
         ? outcome.value === (typeof value === 'number' ? value : null)
-        : outcome.value === original
+        : outcome.value === shown
     );
 
     if (outcome.kind === 'commit' && !unchanged) {
@@ -111,7 +112,10 @@ export const openTextEditor = (
 
   popover.show();
   field.focus();
-  field.setSelectionRange(field.value.length, field.value.length);
+  // An email input has no selection API: setSelectionRange throws there.
+  if (!(field instanceof HTMLInputElement && field.type === 'email')) {
+    field.setSelectionRange(field.value.length, field.value.length);
+  }
 
   return {
     get isOpen() {

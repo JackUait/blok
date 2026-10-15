@@ -4433,6 +4433,7 @@ export class DatabaseTool implements BlockTool {
       }),
       ...this.commentLever(),
       ...this.autofillLever(readOnly, context),
+      notify: (message) => this.api.notifier.show({ message }),
     });
 
     return { renderer, root: renderer.createView() };

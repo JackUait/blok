@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Боковой панели",
   "tools.database.tableCopyLink": "Копировать ссылку",
   "tools.database.tableComment": "Комментировать",
+  "tools.database.cellCopy": "Копировать в буфер обмена",
+  "tools.database.cellCopied": "Свойство скопировано в буфер обмена",
   "tools.database.openComments": "Открыть комментарии",
   "tools.database.tableMoveTo": "Переместить в",
   "tools.database.searchActions": "Поиск действий…",

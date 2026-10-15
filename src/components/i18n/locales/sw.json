@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Paneli ya kando",
   "tools.database.tableCopyLink": "Nakili kiungo",
   "tools.database.tableComment": "Toa maoni",
+  "tools.database.cellCopy": "Nakili kwenye ubao wa kunakili",
+  "tools.database.cellCopied": "Sifa imenakiliwa kwenye ubao wa kunakili",
   "tools.database.openComments": "Fungua maoni",
   "tools.database.tableMoveTo": "Hamishia",
   "tools.database.searchActions": "Tafuta vitendo…",

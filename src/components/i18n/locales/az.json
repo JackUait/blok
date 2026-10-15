@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Yan panel",
   "tools.database.tableCopyLink": "Keçidi kopyala",
   "tools.database.tableComment": "Şərh yaz",
+  "tools.database.cellCopy": "Mübadilə buferinə kopyala",
+  "tools.database.cellCopied": "Xüsusiyyət mübadilə buferinə kopyalandı",
   "tools.database.openComments": "Şərhləri aç",
   "tools.database.tableMoveTo": "Bura köçür",
   "tools.database.searchActions": "Əməliyyatları axtar…",

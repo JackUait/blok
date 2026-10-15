@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Yan panel",
   "tools.database.tableCopyLink": "Bağlantıyı kopyala",
   "tools.database.tableComment": "Yorum yap",
+  "tools.database.cellCopy": "Panoya kopyala",
+  "tools.database.cellCopied": "Özellik panoya kopyalandı",
   "tools.database.openComments": "Yorumları aç",
   "tools.database.tableMoveTo": "Şuraya taşı",
   "tools.database.searchActions": "Eylem arayın…",

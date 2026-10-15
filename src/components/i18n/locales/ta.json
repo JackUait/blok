@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "பக்கப் பலகம்",
   "tools.database.tableCopyLink": "இணைப்பை நகலெடு",
   "tools.database.tableComment": "கருத்து தெரிவி",
+  "tools.database.cellCopy": "கிளிப்போர்டுக்கு நகலெடு",
+  "tools.database.cellCopied": "பண்பு கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது",
   "tools.database.openComments": "கருத்துகளைத் திற",
   "tools.database.tableMoveTo": "இதற்கு நகர்த்து",
   "tools.database.searchActions": "செயல்களைத் தேடு…",

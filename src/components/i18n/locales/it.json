@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Pannello laterale",
   "tools.database.tableCopyLink": "Copia link",
   "tools.database.tableComment": "Commenta",
+  "tools.database.cellCopy": "Copia negli appunti",
+  "tools.database.cellCopied": "Proprietà copiata negli appunti",
   "tools.database.openComments": "Apri commenti",
   "tools.database.tableMoveTo": "Sposta in",
   "tools.database.searchActions": "Cerca azioni…",

@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Sidovy",
   "tools.database.tableCopyLink": "Kopiera länk",
   "tools.database.tableComment": "Kommentera",
+  "tools.database.cellCopy": "Kopiera till urklipp",
+  "tools.database.cellCopied": "Egenskapen kopierades till urklipp",
   "tools.database.openComments": "Öppna kommentarer",
   "tools.database.tableMoveTo": "Flytta till",
   "tools.database.searchActions": "Sök efter åtgärder…",

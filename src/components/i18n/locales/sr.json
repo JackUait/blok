@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Бочном панелу",
   "tools.database.tableCopyLink": "Копирај везу",
   "tools.database.tableComment": "Коментариши",
+  "tools.database.cellCopy": "Копирај у оставу",
+  "tools.database.cellCopied": "Својство копирано у оставу",
   "tools.database.openComments": "Отвори коментаре",
   "tools.database.tableMoveTo": "Премести у",
   "tools.database.searchActions": "Претражите радње…",

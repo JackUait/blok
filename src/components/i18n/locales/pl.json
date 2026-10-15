@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Panelu bocznym",
   "tools.database.tableCopyLink": "Kopiuj link",
   "tools.database.tableComment": "Skomentuj",
+  "tools.database.cellCopy": "Kopiuj do schowka",
+  "tools.database.cellCopied": "Skopiowano właściwość do schowka",
   "tools.database.openComments": "Otwórz komentarze",
   "tools.database.tableMoveTo": "Przenieś do",
   "tools.database.searchActions": "Wyszukaj działania…",

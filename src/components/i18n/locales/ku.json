@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "پانێڵی لاتەنیشت",
   "tools.database.tableCopyLink": "لەبەرگرتنەوەی بەستەر",
   "tools.database.tableComment": "لێدوان",
+  "tools.database.cellCopy": "کۆپیکردن بۆ کلیپبۆرد",
+  "tools.database.cellCopied": "تایبەتمەندی کۆپی کرا بۆ کلیپبۆرد",
   "tools.database.openComments": "کردنەوەی لێدوانەکان",
   "tools.database.tableMoveTo": "گواستنەوە بۆ",
   "tools.database.searchActions": "گەڕان لە کردارەکان…",

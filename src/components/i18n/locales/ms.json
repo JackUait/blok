@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Panel sisi",
   "tools.database.tableCopyLink": "Salin pautan",
   "tools.database.tableComment": "Ulas",
+  "tools.database.cellCopy": "Salin ke papan keratan",
+  "tools.database.cellCopied": "Sifat disalin ke papan keratan",
   "tools.database.openComments": "Buka ulasan",
   "tools.database.tableMoveTo": "Alihkan ke",
   "tools.database.searchActions": "Cari tindakan…",

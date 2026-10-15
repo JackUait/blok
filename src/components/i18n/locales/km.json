@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "ផ្ទាំងចំហៀង",
   "tools.database.tableCopyLink": "ចម្លងតំណ",
   "tools.database.tableComment": "បញ្ចេញមតិ",
+  "tools.database.cellCopy": "ចម្លងទៅក្ដារតម្បៀតខ្ទាស់",
+  "tools.database.cellCopied": "បានចម្លងលក្ខណៈទៅក្ដារតម្បៀតខ្ទាស់",
   "tools.database.openComments": "បើកមតិយោបល់",
   "tools.database.tableMoveTo": "ផ្លាស់ទីទៅ",
   "tools.database.searchActions": "ស្វែងរកសកម្មភាព…",

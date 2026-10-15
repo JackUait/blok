@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "ਸਾਈਡ ਪੈਨਲ",
   "tools.database.tableCopyLink": "ਲਿੰਕ ਕਾਪੀ ਕਰੋ",
   "tools.database.tableComment": "ਟਿੱਪਣੀ ਕਰੋ",
+  "tools.database.cellCopy": "ਕਲਿੱਪਬੋਰਡ ਵਿੱਚ ਕਾਪੀ ਕਰੋ",
+  "tools.database.cellCopied": "ਵਿਸ਼ੇਸ਼ਤਾ ਕਲਿੱਪਬੋਰਡ ਵਿੱਚ ਕਾਪੀ ਹੋ ਗਈ",
   "tools.database.openComments": "ਟਿੱਪਣੀਆਂ ਖੋਲ੍ਹੋ",
   "tools.database.tableMoveTo": "ਇਸ ਵਿੱਚ ਲਿਜਾਓ",
   "tools.database.searchActions": "ਕਾਰਵਾਈਆਂ ਲੱਭੋ…",

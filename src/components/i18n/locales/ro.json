@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Panoul lateral",
   "tools.database.tableCopyLink": "Copiază linkul",
   "tools.database.tableComment": "Comentează",
+  "tools.database.cellCopy": "Copiază în clipboard",
+  "tools.database.cellCopied": "Proprietate copiată în clipboard",
   "tools.database.openComments": "Deschide comentariile",
   "tools.database.tableMoveTo": "Mută în",
   "tools.database.searchActions": "Căutați acțiuni…",

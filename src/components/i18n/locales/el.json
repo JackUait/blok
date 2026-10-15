@@ -943,6 +943,8 @@
   "tools.database.tableSidePeek": "Πλαϊνό πλαίσιο",
   "tools.database.tableCopyLink": "Αντιγραφή συνδέσμου",
   "tools.database.tableComment": "Σχόλιο",
+  "tools.database.cellCopy": "Αντιγραφή στο πρόχειρο",
+  "tools.database.cellCopied": "Η ιδιότητα αντιγράφηκε στο πρόχειρο",
   "tools.database.openComments": "Άνοιγμα σχολίων",
   "tools.database.tableMoveTo": "Μετακίνηση σε",
   "tools.database.searchActions": "Αναζήτηση ενεργειών…",

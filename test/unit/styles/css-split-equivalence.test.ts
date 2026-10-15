@@ -589,6 +589,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const FIND_IN_PAGE_BYTES = 17_826;
     // assistant.css: the docked "Ask AI" prompt bar (reply, status, field, send, Keep/Discard) and its import line.
     const ASSISTANT_BAR_BYTES = 4_888;
+    // assistant.css: the bar's thinking level button and its menu's checkmark-only selected row.
+    const ASSISTANT_THINKING_PICKER_BYTES = 1_175;
     // Emoji sections past the first skip rendering, sized from their row count
     // and the measured cell: 592 bytes in emoji-picker.css.
     const EMOJI_DEFERRED_SECTIONS_BYTES = 592;
@@ -842,6 +844,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + SLOT_INDENT_BYTES
       + FIND_IN_PAGE_BYTES
       + ASSISTANT_BAR_BYTES
+      + ASSISTANT_THINKING_PICKER_BYTES
       + EMOJI_DEFERRED_SECTIONS_BYTES
       + PRESENCE_TONAL_GLYPHS_BYTES
       + TRASH_LID_HOVER_BYTES

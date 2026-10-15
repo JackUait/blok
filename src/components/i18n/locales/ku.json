@@ -156,6 +156,7 @@
   "assistant.thinking.high": "بەرز",
   "assistant.thinking.xhigh": "زۆر بەرز",
   "assistant.thinking.max": "زۆرترین",
+  "assistant.thinkingCurrent": "بیرکردنەوە: {level}",
   "assistant.working": "{agent} دەنووسێت…",
   "assistant.stopped": "وەستێنرا. ئەوەی نووسراوە دەمێنێتەوە.",
   "assistant.refused": "AI ئەم داواکارییەی ڕەتکردەوە.",

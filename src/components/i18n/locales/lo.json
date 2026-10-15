@@ -120,6 +120,7 @@
   "assistant.thinking.high": "ສູງ",
   "assistant.thinking.xhigh": "ສູງຫຼາຍ",
   "assistant.thinking.max": "ສູງສຸດ",
+  "assistant.thinkingCurrent": "ການຄິດ: {level}",
   "assistant.working": "{agent} ກຳລັງຂຽນ…",
   "assistant.stopped": "ຢຸດແລ້ວ. ສິ່ງທີ່ຂຽນໄປແລ້ວຍັງຄົງຢູ່.",
   "assistant.refused": "AI ປະຕິເສດຄຳຂໍນີ້.",

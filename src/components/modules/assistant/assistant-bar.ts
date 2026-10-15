@@ -1,5 +1,9 @@
+import type { AgentThinkingLevel } from '../../../../types/api';
+import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { IconArrowUp, IconEmojiSparkles } from '../../icons';
+import { IconArrowUp, IconCheck, IconEmojiSparkles, IconPlayerSpeed } from '../../icons';
+import { PopoverDesktop } from '../../utils/popover';
+import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 
 export interface AssistantBarCallbacks {
@@ -8,6 +12,13 @@ export interface AssistantBarCallbacks {
   onKeep(): void;
   onDiscard(): void;
   onEscape(): void;
+  onThinking(level: AgentThinkingLevel): void;
+}
+
+/** The levels the host allows, and the one picked now. */
+export interface AssistantThinkingView {
+  levels: AgentThinkingLevel[];
+  current: AgentThinkingLevel;
 }
 
 export type AssistantBarView =
@@ -24,6 +35,8 @@ const ATTR = {
   row: 'data-blok-assistant-row',
   icon: 'data-blok-assistant-icon',
   send: 'data-blok-assistant-send',
+  thinking: 'data-blok-assistant-thinking',
+  thinkingMenu: 'data-blok-assistant-thinking-menu',
   actions: 'data-blok-assistant-actions',
   button: 'data-blok-assistant-button',
   primary: 'data-blok-assistant-primary',
@@ -57,6 +70,9 @@ export class AssistantBar {
   private readonly send: HTMLButtonElement;
   private readonly stop: HTMLButtonElement;
   private readonly actions: HTMLElement;
+  private readonly thinking: HTMLButtonElement;
+  private thinkingView: AssistantThinkingView | null = null;
+  private thinkingMenu: PopoverDesktop | null = null;
 
   public constructor(
     private readonly t: (key: string, vars?: Record<string, string | number>) => string,
@@ -89,7 +105,15 @@ export class AssistantBar {
     this.send.innerHTML = IconArrowUp;
     this.stop = build('button', { type: 'button', [ATTR.button]: '' });
     this.stop.textContent = t('assistant.stop');
-    row.append(icon, this.field, this.send, this.stop);
+    this.thinking = build('button', {
+      type: 'button',
+      [ATTR.thinking]: '',
+      'data-blok-testid': 'assistant-thinking',
+      'aria-haspopup': 'menu',
+    });
+    this.thinking.innerHTML = IconPlayerSpeed;
+    this.thinking.hidden = true;
+    row.append(icon, this.field, this.thinking, this.send, this.stop);
 
     this.actions = build('div', { [ATTR.actions]: '' });
 
@@ -105,6 +129,7 @@ export class AssistantBar {
     this.field.addEventListener('keydown', (event) => this.onKeydown(event));
     this.field.addEventListener('input', () => this.syncSend());
     this.send.addEventListener('click', () => this.submit());
+    this.thinking.addEventListener('click', () => this.toggleThinkingMenu());
     this.stop.addEventListener('click', () => callbacks.onStop());
     keep.addEventListener('click', () => callbacks.onKeep());
     discard.addEventListener('click', () => callbacks.onDiscard());
@@ -133,6 +158,7 @@ export class AssistantBar {
 
   public close(): void {
     this.element.hidden = true;
+    this.thinkingMenu?.hide();
     this.field.value = '';
     removeFromTopLayer(this.element);
     this.render({ kind: 'prompt' });
@@ -165,14 +191,98 @@ export class AssistantBar {
     this.status.textContent = working ? view.status : '';
     this.stop.hidden = !working;
     this.send.hidden = working;
+    if (working) {
+      this.thinkingMenu?.hide();
+    }
+    this.thinking.hidden = working || this.thinkingView === null;
     this.field.readOnly = working;
     this.field.placeholder = this.t(view.kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
     this.actions.hidden = !((view.kind === 'answered' || view.kind === 'error') && view.changed);
     this.syncSend();
   }
 
+  /**
+   * Show the level picker, or hide it with null or a single level.
+   * @param view - the allowed levels and the current pick
+   */
+  public setThinking(view: AssistantThinkingView | null): void {
+    this.thinkingView = view !== null && view.levels.length >= 2 ? view : null;
+    this.thinking.hidden = this.thinkingView === null || this.element.hasAttribute(ATTR.working);
+    if (this.thinkingView === null) {
+      this.thinkingMenu?.hide();
+
+      return;
+    }
+
+    const label = this.t('assistant.thinkingCurrent', { level: this.t(`assistant.thinking.${this.thinkingView.current}`) });
+
+    this.thinking.setAttribute('aria-label', label);
+    onHover(this.thinking, label);
+  }
+
   public focusField(): void {
     this.field.focus({ preventScroll: true });
+  }
+
+  private toggleThinkingMenu(): void {
+    const view = this.thinkingView;
+
+    if (this.thinkingMenu !== null) {
+      this.thinkingMenu.hide();
+
+      return;
+    }
+    if (view === null) {
+      return;
+    }
+
+    const menu = new PopoverDesktop({
+      trigger: this.thinking,
+      flippable: true,
+      width: 'auto',
+      minWidth: '180px',
+      autoFocusFirstItem: false,
+      contextLabel: this.t('assistant.thinking'),
+      messages: { actions: this.t('assistant.thinking') },
+      items: view.levels.map((level) => ({
+        title: this.t(`assistant.thinking.${level}`),
+        name: level,
+        trailingIcon: level === view.current ? IconCheck : undefined,
+        // One toggle group makes the rows a radio group, so assistive tech hears which is chosen.
+        toggle: 'thinking',
+        isActive: level === view.current,
+        closeOnActivate: true,
+        onActivate: (): void => this.callbacks.onThinking(level),
+      })),
+    });
+    // One Escape closes one layer: the menu, not the bar. Window capture runs
+    // before the field's own handler and the popover registry's.
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        menu.hide();
+      }
+    };
+
+    menu.getElement().setAttribute(ATTR.thinkingMenu, '');
+    menu.on(PopoverEvent.Closed, () => {
+      window.removeEventListener('keydown', onKeydown, true);
+      if (this.thinkingMenu !== menu) {
+        return;
+      }
+      this.thinkingMenu = null;
+      this.thinking.setAttribute('aria-expanded', 'false');
+      // A row click or Escape leaves focus on <body>, where the bar's keys stop working.
+      if (this.isOpen && (document.activeElement === document.body || (document.activeElement !== null && menu.hasNode(document.activeElement)))) {
+        this.focusField();
+      }
+      menu.destroy();
+    });
+    window.addEventListener('keydown', onKeydown, true);
+    this.thinking.setAttribute('aria-expanded', 'true');
+    this.thinkingMenu = menu;
+    menu.show();
   }
 
   private syncSend(): void {

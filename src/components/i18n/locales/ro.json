@@ -123,6 +123,7 @@
   "assistant.thinking.high": "Ridicat",
   "assistant.thinking.xhigh": "Foarte ridicat",
   "assistant.thinking.max": "Maxim",
+  "assistant.thinkingCurrent": "Raționament: {level}",
   "assistant.working": "{agent} scrie…",
   "assistant.stopped": "Oprit. Ce s-a scris deja rămâne.",
   "assistant.refused": "AI a refuzat această solicitare.",

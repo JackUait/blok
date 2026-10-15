@@ -74,6 +74,7 @@ export type BlokMessageKey =
   | 'assistant.thinking.medium'
   | 'assistant.thinking.off'
   | 'assistant.thinking.xhigh'
+  | 'assistant.thinkingCurrent'
   | 'assistant.truncated'
   | 'assistant.working'
   | 'blockSettings.blocksSelected'

@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Высокое",
   "assistant.thinking.xhigh": "Очень высокое",
   "assistant.thinking.max": "Максимум",
+  "assistant.thinkingCurrent": "Рассуждение: {level}",
   "assistant.working": "{agent} пишет…",
   "assistant.stopped": "Остановлено. Уже написанное сохранится.",
   "assistant.refused": "ИИ отклонил этот запрос.",

@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Magas",
   "assistant.thinking.xhigh": "Nagyon magas",
   "assistant.thinking.max": "Maximális",
+  "assistant.thinkingCurrent": "Gondolkodás: {level}",
   "assistant.working": "{agent} ír…",
   "assistant.stopped": "Leállítva. A már megírt szöveg megmarad.",
   "assistant.refused": "Az MI elutasította ezt a kérést.",

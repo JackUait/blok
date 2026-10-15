@@ -21,6 +21,8 @@ declare global {
     assistantPrompts?: unknown[];
     /** Set by setup({ hold: true }): lets the held model call answer. */
     assistantRelease?: () => void;
+    /** The thinking level of each model request. */
+    assistantLevels?: unknown[];
   }
 }
 
@@ -36,8 +38,13 @@ const insertCall = (text: string): ScriptedResponse => ({
 
 const reply = (text: string): ScriptedResponse => ({ stop_reason: 'end_turn', content: [{ type: 'text', text }] });
 
-const setup = async (page: Page, script: ScriptedResponse[], options: { hold?: boolean } = {}): Promise<void> => {
-  await page.evaluate(async ({ holder, responses, hold }) => {
+interface SetupOptions {
+  hold?: boolean;
+  thinking?: { levels: string[]; default?: string };
+}
+
+const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptions = {}): Promise<void> => {
+  await page.evaluate(async ({ holder, responses, hold, thinking }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -50,6 +57,7 @@ const setup = async (page: Page, script: ScriptedResponse[], options: { hold?: b
     document.body.append(container);
     window.assistantScript = responses;
     window.assistantPrompts = [];
+    window.assistantLevels = [];
 
     const blok = new window.Blok({
       holder,
@@ -60,8 +68,10 @@ const setup = async (page: Page, script: ScriptedResponse[], options: { hold?: b
       agent: {
         assistant: {
           name: 'Claude',
+          ...(thinking === undefined ? {} : { thinking }),
           model: async (request: AgentModelRequest) => {
             window.assistantPrompts?.push(request.messages[0]?.content);
+            window.assistantLevels?.push(request.thinking);
             if (hold) {
               // Answers only when the test says so, or when Stop aborts it.
               await new Promise<void>((resolve) => {
@@ -83,7 +93,7 @@ const setup = async (page: Page, script: ScriptedResponse[], options: { hold?: b
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true });
+  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true, thinking: options.thinking });
 };
 
 const savedTexts = (page: Page): Promise<string[]> => page.evaluate(async () => {
@@ -241,5 +251,81 @@ test.describe('in-editor assistant', () => {
     await page.keyboard.press(`${MOD}+z`);
 
     expect(await savedTexts(page)).toEqual(['The quick brown fox', 'Second', 'From Claude']);
+  });
+});
+
+test.describe('thinking toggle', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  const openBar = async (page: Page): Promise<void> => {
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+KeyJ`);
+    await expect(page.getByTestId('assistant-bar')).toBeVisible();
+  };
+
+  test('is absent with one level, and shown with two', async ({ page }) => {
+    await gotoTestPage(page);
+    await setup(page, [], { thinking: { levels: ['high'] } });
+    await openBar(page);
+    await expect(page.getByTestId('assistant-thinking')).toBeHidden();
+
+    await setup(page, [], { thinking: { levels: ['low', 'high'] } });
+    await openBar(page);
+    await expect(page.getByTestId('assistant-thinking')).toBeVisible();
+  });
+
+  test('the picked level reaches the next prompt, and the menu marks it without blue', async ({ page }) => {
+    await gotoTestPage(page);
+    await setup(page, [reply('One'), reply('Two')], { thinking: { levels: ['low', 'high'], default: 'low' } });
+    await openBar(page);
+
+    const bar = page.getByTestId('assistant-bar');
+    const trigger = page.getByTestId('assistant-thinking');
+
+    await bar.getByRole('textbox').fill('First');
+    await bar.getByRole('textbox').press('Enter');
+    await expect(bar.getByText('One')).toBeVisible();
+
+    await expect(trigger).toHaveAccessibleName('Thinking: Low');
+    await trigger.click();
+
+    const high = page.getByRole('menuitemradio', { name: 'High' });
+
+    await high.click();
+    await expect(trigger).toHaveAccessibleName('Thinking: High');
+    await bar.getByRole('textbox').fill('Second');
+    await bar.getByRole('textbox').press('Enter');
+    await expect(bar.getByText('Two')).toBeVisible();
+
+    expect(await page.evaluate(() => window.assistantLevels)).toEqual(['low', 'high']);
+
+    await trigger.click();
+    await expect(page.getByRole('menuitemradio', { name: 'High' })).toHaveAttribute('aria-checked', 'true');
+    const look = (name: string): Promise<string[]> => page.getByRole('menuitemradio', { name })
+      .evaluate((element) => [getComputedStyle(element).color, getComputedStyle(element).backgroundColor]);
+
+    expect(await look('High')).toEqual(await look('Low'));
+  });
+
+  // The picker hides while the model writes, so a level can only change between prompts.
+  test('a run already answering keeps its level, and the picker hides until it ends', async ({ page }) => {
+    await gotoTestPage(page);
+    await setup(page, [reply('One')], { thinking: { levels: ['low', 'high'], default: 'low' }, hold: true });
+    await openBar(page);
+
+    const bar = page.getByTestId('assistant-bar');
+    const trigger = page.getByTestId('assistant-thinking');
+
+    await bar.getByRole('textbox').fill('First');
+    await bar.getByRole('textbox').press('Enter');
+    await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(1);
+    await expect(trigger).toBeHidden();
+    await page.evaluate(() => window.assistantRelease?.());
+    await expect(bar.getByText('One')).toBeVisible();
+    await expect(trigger).toBeVisible();
+
+    expect(await page.evaluate(() => window.assistantLevels)).toEqual(['low']);
   });
 });

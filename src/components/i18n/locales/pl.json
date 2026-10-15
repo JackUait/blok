@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Wysokie",
   "assistant.thinking.xhigh": "Bardzo wysokie",
   "assistant.thinking.max": "Maksymalne",
+  "assistant.thinkingCurrent": "Rozumowanie: {level}",
   "assistant.working": "{agent} pisze…",
   "assistant.stopped": "Zatrzymano. To, co już napisano, zostaje.",
   "assistant.refused": "AI odrzuciła tę prośbę.",

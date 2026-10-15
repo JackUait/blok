@@ -120,6 +120,7 @@
   "assistant.thinking.high": "ඉහළ",
   "assistant.thinking.xhigh": "ඉතා ඉහළ",
   "assistant.thinking.max": "උපරිම",
+  "assistant.thinkingCurrent": "සිතීම: {level}",
   "assistant.working": "{agent} ලියමින් සිටී…",
   "assistant.stopped": "නැවැත්වුණා. දැනටමත් ලියූ දේ ඉතිරි වේ.",
   "assistant.refused": "AI මෙම ඉල්ලීම ප්‍රතික්ෂේප කළේය.",

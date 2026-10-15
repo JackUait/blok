@@ -156,6 +156,7 @@
   "assistant.thinking.high": "مرتفع",
   "assistant.thinking.xhigh": "مرتفع جدًا",
   "assistant.thinking.max": "أقصى",
+  "assistant.thinkingCurrent": "التفكير: {level}",
   "assistant.working": "{agent} يكتب…",
   "assistant.stopped": "تم الإيقاف. يبقى ما كُتب بالفعل.",
   "assistant.refused": "رفض الذكاء الاصطناعي هذا الطلب.",

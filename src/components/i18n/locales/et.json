@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Kõrge",
   "assistant.thinking.xhigh": "Väga kõrge",
   "assistant.thinking.max": "Maksimum",
+  "assistant.thinkingCurrent": "Arutlus: {level}",
   "assistant.working": "{agent} kirjutab…",
   "assistant.stopped": "Peatatud. Juba kirjutatu jääb alles.",
   "assistant.refused": "Tehisintellekt keeldus sellest päringust.",

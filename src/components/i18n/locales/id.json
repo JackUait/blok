@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Tinggi",
   "assistant.thinking.xhigh": "Sangat tinggi",
   "assistant.thinking.max": "Maksimum",
+  "assistant.thinkingCurrent": "Penalaran: {level}",
   "assistant.working": "{agent} sedang menulis…",
   "assistant.stopped": "Dihentikan. Yang sudah ditulis tetap ada.",
   "assistant.refused": "AI menolak permintaan ini.",

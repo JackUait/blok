@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Cao",
   "assistant.thinking.xhigh": "Rất cao",
   "assistant.thinking.max": "Tối đa",
+  "assistant.thinkingCurrent": "Suy luận: {level}",
   "assistant.working": "{agent} đang viết…",
   "assistant.stopped": "Đã dừng. Nội dung đã viết vẫn được giữ.",
   "assistant.refused": "AI đã từ chối yêu cầu này.",

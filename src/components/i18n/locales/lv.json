@@ -123,6 +123,7 @@
   "assistant.thinking.high": "Augsta",
   "assistant.thinking.xhigh": "Ļoti augsta",
   "assistant.thinking.max": "Maksimāla",
+  "assistant.thinkingCurrent": "Spriešana: {level}",
   "assistant.working": "{agent} raksta…",
   "assistant.stopped": "Apturēts. Jau uzrakstītais paliek.",
   "assistant.refused": "MI noraidīja šo pieprasījumu.",

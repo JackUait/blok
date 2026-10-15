@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Høy",
   "assistant.thinking.xhigh": "Ekstra høy",
   "assistant.thinking.max": "Maks.",
+  "assistant.thinkingCurrent": "Resonnering: {level}",
   "assistant.working": "{agent} skriver…",
   "assistant.stopped": "Stoppet. Det som allerede er skrevet, blir værende.",
   "assistant.refused": "KI avslo denne forespørselen.",

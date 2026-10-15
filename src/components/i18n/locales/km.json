@@ -153,6 +153,7 @@
   "assistant.thinking.high": "ខ្ពស់",
   "assistant.thinking.xhigh": "ខ្ពស់ខ្លាំង",
   "assistant.thinking.max": "អតិបរមា",
+  "assistant.thinkingCurrent": "ការគិត៖ {level}",
   "assistant.working": "{agent} កំពុងសរសេរ…",
   "assistant.stopped": "បានបញ្ឈប់។ អ្វីដែលបានសរសេររួចនៅដដែល។",
   "assistant.refused": "AI បានបដិសេធសំណើនេះ។",

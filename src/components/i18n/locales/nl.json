@@ -128,6 +128,7 @@
   "assistant.thinking.high": "Hoog",
   "assistant.thinking.xhigh": "Extra hoog",
   "assistant.thinking.max": "Maximaal",
+  "assistant.thinkingCurrent": "Redeneren: {level}",
   "assistant.working": "{agent} schrijft…",
   "assistant.stopped": "Gestopt. Wat al geschreven is, blijft staan.",
   "assistant.refused": "AI heeft dit verzoek geweigerd.",

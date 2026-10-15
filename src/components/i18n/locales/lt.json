@@ -123,6 +123,7 @@
   "assistant.thinking.high": "Aukštas",
   "assistant.thinking.xhigh": "Labai aukštas",
   "assistant.thinking.max": "Maksimalus",
+  "assistant.thinkingCurrent": "Mąstymas: {level}",
   "assistant.working": "{agent} rašo…",
   "assistant.stopped": "Sustabdyta. Tai, kas jau parašyta, lieka.",
   "assistant.refused": "DI atmetė šią užklausą.",

@@ -4,7 +4,8 @@
  *
  * Present only when `agent.assistant.model` is configured.
  */
-import type { AgentRun, AgentRunResult } from '../../../../types/api';
+import type { AgentRun, AgentRunResult, AgentThinkingLevel } from '../../../../types/api';
+import type { ThinkingChoice } from '../../../agent/thinking';
 import { Module } from '../../__module';
 import { getUserOS } from '../../utils/browser';
 import { syncPortalDirection } from '../../utils/portal-direction';
@@ -35,6 +36,8 @@ export class Assistant extends Module {
   /** Bumps on every answer, so a late result of a stopped one is ignored. */
   private answerId = 0;
   private changed = false;
+  /** The bar's pick. Undefined when the host offers no choice. */
+  private level: AgentThinkingLevel | undefined;
 
   public get isOpen(): boolean {
     return this.bar?.isOpen === true;
@@ -73,6 +76,7 @@ export class Assistant extends Module {
       this.returnPoint = this.captureReturnPoint();
     }
     syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
+    this.syncThinking();
     bar.open(this.Blok.UI.nodes.wrapper);
   }
 
@@ -120,6 +124,10 @@ export class Assistant extends Module {
       onKeep: () => this.close(),
       onDiscard: () => void this.discard(),
       onEscape: () => this.escape(),
+      onThinking: (level) => {
+        this.level = level;
+        this.syncThinking();
+      },
     });
 
     return this.bar;
@@ -158,7 +166,7 @@ export class Assistant extends Module {
 
   private startRun(prompt: string): Promise<AgentRunResult> | null {
     try {
-      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => undefined, (text) => this.progress(text));
+      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, (text) => this.progress(text));
 
       return this.run.result;
     } catch (thrown) {
@@ -167,6 +175,20 @@ export class Assistant extends Module {
 
       return null;
     }
+  }
+
+  private syncThinking(): void {
+    const choice = ((): ThinkingChoice | null => {
+      try {
+        return this.Blok.AgentAPI.thinkingChoice();
+      } catch {
+        // A bad config is reported when the user sends.
+        return null;
+      }
+    })();
+
+    this.level ??= choice?.initial;
+    this.bar?.setThinking(choice === null || this.level === undefined ? null : { levels: choice.levels, current: this.level });
   }
 
   private show(result: AgentRunResult): void {

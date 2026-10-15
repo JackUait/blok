@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Alto",
   "assistant.thinking.xhigh": "Muito alto",
   "assistant.thinking.max": "Máximo",
+  "assistant.thinkingCurrent": "Raciocínio: {level}",
   "assistant.working": "{agent} está escrevendo…",
   "assistant.stopped": "Parado. O que já foi escrito permanece.",
   "assistant.refused": "A IA recusou esta solicitação.",

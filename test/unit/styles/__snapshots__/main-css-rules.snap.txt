@@ -21899,7 +21899,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   font-size: var(--blok-font-size-ui-label);
 }
 
-[data-blok-assistant-send], [data-blok-assistant-button] {
+[data-blok-assistant-send], [data-blok-assistant-thinking], [data-blok-assistant-button] {
   flex: none;
   height: 28px;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
@@ -21919,6 +21919,38 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-assistant-send] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-assistant-thinking] {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  padding: 0;
+  background: transparent;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-assistant-thinking]:hover, [data-blok-assistant-thinking][aria-expanded='true'] {
+  background: var(--blok-item-hover-bg);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-assistant-thinking] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-assistant-thinking-menu] [data-blok-popover-item] {
+  --blok-icon-active-bg: transparent;
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+
+[@media (hover: hover)] [data-blok-assistant-thinking-menu] [data-blok-popover-item]:hover, [data-blok-assistant-thinking-menu] [data-blok-popover-item][data-blok-force-hover] {
+  --blok-icon-active-bg: var(--blok-item-hover-bg);
+}
+
+[data-blok-assistant-thinking-menu] [data-blok-popover-item][data-blok-focused='true'] {
+  --blok-icon-active-bg: var(--blok-item-focus-bg);
 }
 
 [data-blok-assistant-send]:disabled {

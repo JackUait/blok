@@ -156,6 +156,7 @@
   "assistant.thinking.high": "وڌيڪ",
   "assistant.thinking.xhigh": "تمام گهڻو",
   "assistant.thinking.max": "وڌ ۾ وڌ",
+  "assistant.thinkingCurrent": "سوچ: {level}",
   "assistant.working": "{agent} لکي رهيو آهي…",
   "assistant.stopped": "روڪيو ويو. جيڪو لکيو ويو آهي سو رهندو.",
   "assistant.refused": "AI هن درخواست کي رد ڪيو.",

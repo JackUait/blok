@@ -153,6 +153,7 @@
   "assistant.thinking.high": "Yüksək",
   "assistant.thinking.xhigh": "Çox yüksək",
   "assistant.thinking.max": "Maksimum",
+  "assistant.thinkingCurrent": "Düşünmə: {level}",
   "assistant.working": "{agent} yazır…",
   "assistant.stopped": "Dayandırıldı. Artıq yazılanlar qalır.",
   "assistant.refused": "Süni intellekt bu sorğunu rədd etdi.",

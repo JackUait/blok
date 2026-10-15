@@ -153,6 +153,7 @@
   "assistant.thinking.high": "မြင့်",
   "assistant.thinking.xhigh": "အလွန်မြင့်",
   "assistant.thinking.max": "အမြင့်ဆုံး",
+  "assistant.thinkingCurrent": "တွေးခေါ်မှု- {level}",
   "assistant.working": "{agent} ရေးနေသည်…",
   "assistant.stopped": "ရပ်လိုက်ပါပြီ။ ရေးပြီးသားအရာများ ကျန်ရှိနေမည်။",
   "assistant.refused": "AI က ဤတောင်းဆိုချက်ကို ငြင်းပယ်ခဲ့သည်။",

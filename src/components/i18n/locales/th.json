@@ -123,6 +123,7 @@
   "assistant.thinking.high": "สูง",
   "assistant.thinking.xhigh": "สูงมาก",
   "assistant.thinking.max": "สูงสุด",
+  "assistant.thinkingCurrent": "การคิด: {level}",
   "assistant.working": "{agent} กำลังเขียน…",
   "assistant.stopped": "หยุดแล้ว สิ่งที่เขียนไปแล้วยังคงอยู่",
   "assistant.refused": "AI ปฏิเสธคำขอนี้",

@@ -156,6 +156,7 @@
   "assistant.thinking.high": "הויך",
   "assistant.thinking.xhigh": "זייער הויך",
   "assistant.thinking.max": "מאַקסימום",
+  "assistant.thinkingCurrent": "טראַכטן: {level}",
   "assistant.working": "{agent} שרײַבט…",
   "assistant.stopped": "אָפּגעשטעלט. וואָס איז שוין געשריבן בלײַבט.",
   "assistant.refused": "דער AI האָט אָפּגעזאָגט די בקשה.",

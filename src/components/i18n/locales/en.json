@@ -167,6 +167,7 @@
   "assistant.thinking.high": "High",
   "assistant.thinking.xhigh": "Extra high",
   "assistant.thinking.max": "Max",
+  "assistant.thinkingCurrent": "Thinking: {level}",
   "assistant.working": "{agent} is writing…",
   "assistant.stopped": "Stopped. What was already written stays.",
   "assistant.refused": "AI declined this request.",

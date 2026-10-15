@@ -128,6 +128,7 @@
   "assistant.thinking.high": "Բարձր",
   "assistant.thinking.xhigh": "Շատ բարձր",
   "assistant.thinking.max": "Առավելագույն",
+  "assistant.thinkingCurrent": "Մտածում՝ {level}",
   "assistant.working": "{agent}-ը գրում է…",
   "assistant.stopped": "Կանգնեցված է։ Արդեն գրվածը մնում է։",
   "assistant.refused": "ԱԲ-ն մերժեց այս հարցումը։",

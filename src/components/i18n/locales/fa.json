@@ -128,6 +128,7 @@
   "assistant.thinking.high": "زیاد",
   "assistant.thinking.xhigh": "خیلی زیاد",
   "assistant.thinking.max": "حداکثر",
+  "assistant.thinkingCurrent": "استدلال: {level}",
   "assistant.working": "{agent} در حال نوشتن است…",
   "assistant.stopped": "متوقف شد. آنچه نوشته شده باقی می‌ماند.",
   "assistant.refused": "هوش مصنوعی این درخواست را رد کرد.",

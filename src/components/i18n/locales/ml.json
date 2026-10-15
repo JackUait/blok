@@ -153,6 +153,7 @@
   "assistant.thinking.high": "കൂടുതൽ",
   "assistant.thinking.xhigh": "വളരെ കൂടുതൽ",
   "assistant.thinking.max": "പരമാവധി",
+  "assistant.thinkingCurrent": "ചിന്ത: {level}",
   "assistant.working": "{agent} എഴുതുന്നു…",
   "assistant.stopped": "നിർത്തി. ഇതിനകം എഴുതിയത് നിലനിൽക്കും.",
   "assistant.refused": "AI ഈ അഭ്യർത്ഥന നിരസിച്ചു.",

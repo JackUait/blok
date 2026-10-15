@@ -156,6 +156,7 @@
   "assistant.thinking.high": "高",
   "assistant.thinking.xhigh": "超高",
   "assistant.thinking.max": "最大",
+  "assistant.thinkingCurrent": "思考：{level}",
   "assistant.working": "{agent}が書いています…",
   "assistant.stopped": "停止しました。書かれた内容は残ります。",
   "assistant.refused": "AIはこのリクエストを拒否しました。",

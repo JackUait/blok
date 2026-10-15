@@ -153,6 +153,7 @@
   "assistant.thinking.high": "அதிகம்",
   "assistant.thinking.xhigh": "மிக அதிகம்",
   "assistant.thinking.max": "அதிகபட்சம்",
+  "assistant.thinkingCurrent": "சிந்தனை: {level}",
   "assistant.working": "{agent} எழுதுகிறது…",
   "assistant.stopped": "நிறுத்தப்பட்டது. ஏற்கெனவே எழுதியவை அப்படியே இருக்கும்.",
   "assistant.refused": "AI இந்தக் கோரிக்கையை மறுத்தது.",

@@ -5,7 +5,7 @@ import { Blok } from '../../../../../src/blok';
 import { getUserOS } from '../../../../../src/components/utils/browser';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { BlokConfig, OutputData } from '../../../../../types';
-import type { Agent, AgentModel, AgentModelRequest, AgentModelResponse } from '../../../../../types/api';
+import type { Agent, AgentAssistantConfig, AgentModel, AgentModelRequest, AgentModelResponse } from '../../../../../types/api';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -77,7 +77,7 @@ const plain = (value: unknown): string => (Array.isArray(value)
 const texts = async (editor: TestEditor): Promise<string[]> =>
   (await editor.save()).blocks.map((block) => plain(block.data.text));
 
-const createEditor = async (model: AgentModel | null): Promise<TestEditor> => {
+const createEditor = async (model: AgentModel | null, thinking?: AgentAssistantConfig['thinking']): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -86,7 +86,7 @@ const createEditor = async (model: AgentModel | null): Promise<TestEditor> => {
     holder,
     tools: { paragraph: Paragraph },
     data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }] },
-    ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer' } } }),
+    ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer', ...(thinking === undefined ? {} : { thinking }) } } }),
   };
   const editor = new Blok(config) as unknown as TestEditor;
 
@@ -325,5 +325,48 @@ describe('in-editor assistant bar', () => {
 
     expect(model.requests).toHaveLength(0);
     expect(editor.agent.state.status).toBe('idle');
+  });
+
+  describe('thinking level', () => {
+    const thinkingButton = (): HTMLElement | null => within(bar()).queryByRole('button', { name: /^Thinking/ });
+
+    it('names the current level on the button, and sends the picked level from the next prompt', async () => {
+      const model = scripted(answer('First answer'), answer('Second answer'));
+      const editor = await createEditor(model, { levels: ['low', 'high'], default: 'low' });
+
+      editor.agent.openAssistant();
+
+      const button = within(bar()).getByRole('button', { name: 'Thinking: Low' });
+
+      submit('One');
+      await waitFor(() => expect(within(bar()).getByText('First answer')).toBeVisible());
+
+      button.click();
+      screen.getByRole('menuitemradio', { name: 'High' }).click();
+      await settle();
+
+      expect(button).toHaveAccessibleName('Thinking: High');
+
+      submit('Two');
+      await waitFor(() => expect(within(bar()).getByText('Second answer')).toBeVisible());
+      expect(model.requests.map((request) => request.thinking)).toEqual(['low', 'high']);
+    });
+
+    it('hides the picker when the host offers one level', async () => {
+      const editor = await createEditor(scripted(), { levels: ['high'] });
+
+      editor.agent.openAssistant();
+
+      expect(thinkingButton()).toBeNull();
+    });
+
+    it('hides the picker, and still opens the bar, when the thinking config is invalid', async () => {
+      const editor = await createEditor(scripted(), { levels: [] });
+
+      editor.agent.openAssistant();
+
+      expect(bar()).toBeVisible();
+      expect(thinkingButton()).toBeNull();
+    });
   });
 });

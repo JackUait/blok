@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Vysoké",
   "assistant.thinking.xhigh": "Velmi vysoké",
   "assistant.thinking.max": "Maximální",
+  "assistant.thinkingCurrent": "Uvažování: {level}",
   "assistant.working": "{agent} píše…",
   "assistant.stopped": "Zastaveno. Co už bylo napsáno, zůstává.",
   "assistant.refused": "AI tento požadavek odmítla.",

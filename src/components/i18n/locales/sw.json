@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Juu",
   "assistant.thinking.xhigh": "Juu sana",
   "assistant.thinking.max": "Kima cha juu",
+  "assistant.thinkingCurrent": "Kufikiri: {level}",
   "assistant.working": "{agent} anaandika…",
   "assistant.stopped": "Imesimamishwa. Kilichokwisha kuandikwa kinabaki.",
   "assistant.refused": "AI imekataa ombi hili.",

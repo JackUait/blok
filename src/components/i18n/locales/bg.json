@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Високо",
   "assistant.thinking.xhigh": "Много високо",
   "assistant.thinking.max": "Максимално",
+  "assistant.thinkingCurrent": "Разсъждение: {level}",
   "assistant.working": "{agent} пише…",
   "assistant.stopped": "Спряно. Вече написаното остава.",
   "assistant.refused": "ИИ отказа тази заявка.",

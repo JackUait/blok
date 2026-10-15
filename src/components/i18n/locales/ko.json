@@ -156,6 +156,7 @@
   "assistant.thinking.high": "높음",
   "assistant.thinking.xhigh": "매우 높음",
   "assistant.thinking.max": "최대",
+  "assistant.thinkingCurrent": "추론: {level}",
   "assistant.working": "{agent}이(가) 작성 중…",
   "assistant.stopped": "중지했습니다. 이미 작성된 내용은 남아 있습니다.",
   "assistant.refused": "AI가 이 요청을 거절했습니다.",

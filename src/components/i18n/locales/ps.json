@@ -156,6 +156,7 @@
   "assistant.thinking.high": "لوړ",
   "assistant.thinking.xhigh": "ډېر لوړ",
   "assistant.thinking.max": "اعظمي",
+  "assistant.thinkingCurrent": "فکر کول: {level}",
   "assistant.working": "{agent} لیکي…",
   "assistant.stopped": "ودرول شو. څه چې لیکل شوي پاتې کېږي.",
   "assistant.refused": "AI دا غوښتنه رد کړه.",

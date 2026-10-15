@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Өндөр",
   "assistant.thinking.xhigh": "Маш өндөр",
   "assistant.thinking.max": "Хамгийн их",
+  "assistant.thinkingCurrent": "Сэтгэлгээ: {level}",
   "assistant.working": "{agent} бичиж байна…",
   "assistant.stopped": "Зогсоосон. Аль хэдийн бичсэн хэсэг хэвээр үлдэнэ.",
   "assistant.refused": "AI энэ хүсэлтээс татгалзлаа.",

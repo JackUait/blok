@@ -125,6 +125,7 @@
   "assistant.thinking.high": "ከፍተኛ",
   "assistant.thinking.xhigh": "በጣም ከፍተኛ",
   "assistant.thinking.max": "ከፍተኛው",
+  "assistant.thinkingCurrent": "ማሰብ፦ {level}",
   "assistant.working": "{agent} እየጻፈ ነው…",
   "assistant.stopped": "ቆሟል። አስቀድሞ የተጻፈው ይቀራል።",
   "assistant.refused": "AI ይህን ጥያቄ አልተቀበለም።",

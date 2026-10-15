@@ -128,6 +128,7 @@
   "assistant.thinking.high": "Élevée",
   "assistant.thinking.xhigh": "Très élevée",
   "assistant.thinking.max": "Maximale",
+  "assistant.thinkingCurrent": "Réflexion : {level}",
   "assistant.working": "{agent} écrit…",
   "assistant.stopped": "Arrêté. Ce qui a déjà été écrit est conservé.",
   "assistant.refused": "L’IA a refusé cette demande.",

@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Visoko",
   "assistant.thinking.xhigh": "Vrlo visoko",
   "assistant.thinking.max": "Maksimalno",
+  "assistant.thinkingCurrent": "Razmišljanje: {level}",
   "assistant.working": "{agent} piše…",
   "assistant.stopped": "Zaustavljeno. Već napisano ostaje.",
   "assistant.refused": "AI je odbio ovaj zahtjev.",

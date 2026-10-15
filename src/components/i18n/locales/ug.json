@@ -156,6 +156,7 @@
   "assistant.thinking.high": "يۇقىرى",
   "assistant.thinking.xhigh": "ناھايىتى يۇقىرى",
   "assistant.thinking.max": "ئەڭ يۇقىرى",
+  "assistant.thinkingCurrent": "تەپەككۇر: {level}",
   "assistant.working": "{agent} يېزىۋاتىدۇ…",
   "assistant.stopped": "توختىتىلدى. يېزىلغانلىرى قالىدۇ.",
   "assistant.refused": "AI بۇ تەلەپنى رەت قىلدى.",

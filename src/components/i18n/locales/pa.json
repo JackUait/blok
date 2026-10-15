@@ -120,6 +120,7 @@
   "assistant.thinking.high": "ਵੱਧ",
   "assistant.thinking.xhigh": "ਬਹੁਤ ਵੱਧ",
   "assistant.thinking.max": "ਵੱਧ ਤੋਂ ਵੱਧ",
+  "assistant.thinkingCurrent": "ਸੋਚ: {level}",
   "assistant.working": "{agent} ਲਿਖ ਰਿਹਾ ਹੈ…",
   "assistant.stopped": "ਰੋਕਿਆ ਗਿਆ। ਜੋ ਪਹਿਲਾਂ ਹੀ ਲਿਖਿਆ ਗਿਆ ਹੈ ਉਹ ਰਹੇਗਾ।",
   "assistant.refused": "AI ਨੇ ਇਹ ਬੇਨਤੀ ਅਸਵੀਕਾਰ ਕਰ ਦਿੱਤੀ।",

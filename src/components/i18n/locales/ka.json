@@ -123,6 +123,7 @@
   "assistant.thinking.high": "მაღალი",
   "assistant.thinking.xhigh": "ძალიან მაღალი",
   "assistant.thinking.max": "მაქსიმალური",
+  "assistant.thinkingCurrent": "აზროვნება: {level}",
   "assistant.working": "{agent} წერს…",
   "assistant.stopped": "შეჩერდა. უკვე დაწერილი რჩება.",
   "assistant.refused": "AI-მ უარყო ეს მოთხოვნა.",

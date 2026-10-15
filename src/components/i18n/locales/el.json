@@ -128,6 +128,7 @@
   "assistant.thinking.high": "Υψηλός",
   "assistant.thinking.xhigh": "Πολύ υψηλός",
   "assistant.thinking.max": "Μέγιστος",
+  "assistant.thinkingCurrent": "Συλλογισμός: {level}",
   "assistant.working": "Ο/Η {agent} γράφει…",
   "assistant.stopped": "Διακόπηκε. Όσα έχουν ήδη γραφτεί παραμένουν.",
   "assistant.refused": "Η ΤΝ απέρριψε αυτό το αίτημα.",

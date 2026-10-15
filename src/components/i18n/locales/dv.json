@@ -128,6 +128,7 @@
   "assistant.thinking.high": "މަތި",
   "assistant.thinking.xhigh": "ވަރަށް މަތި",
   "assistant.thinking.max": "އެންމެ މަތި",
+  "assistant.thinkingCurrent": "ވިސްނުން: {level}",
   "assistant.working": "{agent} ލިޔަނީ…",
   "assistant.stopped": "ހުއްޓުނީ. ލިޔެވިފައިވާ ބައި ބާކީ ހުންނާނެ.",
   "assistant.refused": "AI މި އެދުން ރައްދުކޮށްފި.",

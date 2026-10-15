@@ -125,6 +125,7 @@
   "assistant.thinking.high": "বেশি",
   "assistant.thinking.xhigh": "অনেক বেশি",
   "assistant.thinking.max": "সর্বোচ্চ",
+  "assistant.thinkingCurrent": "চিন্তা: {level}",
   "assistant.working": "{agent} লিখছে…",
   "assistant.stopped": "থামানো হয়েছে। যা লেখা হয়েছে তা থাকবে।",
   "assistant.refused": "AI এই অনুরোধ প্রত্যাখ্যান করেছে।",

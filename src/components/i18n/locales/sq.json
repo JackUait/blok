@@ -156,6 +156,7 @@
   "assistant.thinking.high": "I lartë",
   "assistant.thinking.xhigh": "Shumë i lartë",
   "assistant.thinking.max": "Maksimal",
+  "assistant.thinkingCurrent": "Arsyetimi: {level}",
   "assistant.working": "{agent} po shkruan…",
   "assistant.stopped": "U ndal. Ajo që është shkruar mbetet.",
   "assistant.refused": "AI e refuzoi këtë kërkesë.",

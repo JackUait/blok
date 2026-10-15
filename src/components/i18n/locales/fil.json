@@ -153,6 +153,7 @@
   "assistant.thinking.high": "Mataas",
   "assistant.thinking.xhigh": "Napakataas",
   "assistant.thinking.max": "Pinakamataas",
+  "assistant.thinkingCurrent": "Pag-iisip: {level}",
   "assistant.working": "Nagsusulat si {agent}…",
   "assistant.stopped": "Inihinto. Mananatili ang naisulat na.",
   "assistant.refused": "Tinanggihan ng AI ang kahilingang ito.",

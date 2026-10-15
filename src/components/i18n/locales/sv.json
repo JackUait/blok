@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Hög",
   "assistant.thinking.xhigh": "Extra hög",
   "assistant.thinking.max": "Maximal",
+  "assistant.thinkingCurrent": "Resonemang: {level}",
   "assistant.working": "{agent} skriver…",
   "assistant.stopped": "Stoppad. Det som redan skrivits finns kvar.",
   "assistant.refused": "AI avböjde den här begäran.",

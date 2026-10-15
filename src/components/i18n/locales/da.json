@@ -156,6 +156,7 @@
   "assistant.thinking.high": "Høj",
   "assistant.thinking.xhigh": "Ekstra høj",
   "assistant.thinking.max": "Maks.",
+  "assistant.thinkingCurrent": "Ræsonnering: {level}",
   "assistant.working": "{agent} skriver…",
   "assistant.stopped": "Standset. Det, der allerede er skrevet, bliver.",
   "assistant.refused": "AI afviste denne anmodning.",

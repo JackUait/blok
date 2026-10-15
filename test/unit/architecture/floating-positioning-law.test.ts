@@ -211,6 +211,7 @@ const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
 };
 
 const POPOVER_DESKTOP_CONSUMERS = [
+  'components/modules/assistant/assistant-bar.ts',
   'components/modules/find/find-bar.ts',
   'components/modules/toolbar/blockSettings.ts',
   'components/ui/toolbox.ts',

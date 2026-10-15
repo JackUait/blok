@@ -128,6 +128,7 @@
   "assistant.thinking.high": "高",
   "assistant.thinking.xhigh": "超高",
   "assistant.thinking.max": "最高",
+  "assistant.thinkingCurrent": "思考：{level}",
   "assistant.working": "{agent} 正在撰写…",
   "assistant.stopped": "已停止。已写的内容会保留。",
   "assistant.refused": "AI 拒绝了此请求。",

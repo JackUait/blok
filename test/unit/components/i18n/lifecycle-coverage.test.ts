@@ -24,14 +24,6 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
-  // The Ask AI thinking picker has no caller yet. Move these out when it calls them.
-  'assistant.thinking',
-  'assistant.thinking.off',
-  'assistant.thinking.low',
-  'assistant.thinking.medium',
-  'assistant.thinking.high',
-  'assistant.thinking.xhigh',
-  'assistant.thinking.max',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -205,6 +197,8 @@ const deriveLifecycle = (): {
   for (const count of [2, 3, 4, 5]) addDynamic(`tools.columns.col${count}`);
   for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`tools.header.toggleHeading${level}`);
   for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`toolbox.preview.heading${level}`);
+  // The Ask AI bar's thinking menu reads assistant.thinking.<level>.
+  for (const level of ['off', 'low', 'medium', 'high', 'xhigh', 'max']) addDynamic(`assistant.thinking.${level}`);
   addDynamic('tools.image.errorRetry');
   addDynamic('tools.image.errorReplace');
   // The tab block has no toolbox entry. Its name is read as toolNames.<block.name>
@@ -273,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1124 + 119 + 412 + 11 closure for all 1666 keys', () => {
+  it('rebuilds a disjoint 1126 + 125 + 412 + 4 closure for all 1667 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -287,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1666);
+    expect(lifecycle.size).toBe(1667);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -382,7 +376,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the view overflow list calls searchViews, newView and settingsDragToReorder by literal.
       // +1: the gallery card rename calls tools.database.cardNamePlaceholder by literal.
       // +2: the table's url, email and phone pill calls tools.database.cellCopy and cellCopied by literal.
-      'executable-literal': 1124,
+      // +2: the thinking picker calls assistant.thinking and assistant.thinkingCurrent by literal.
+      'executable-literal': 1126,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -390,7 +385,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: toolNames.tabs (titleKey), searchTerms.tabs, toolNames.tab (block name).
       // +1: the "Linked view of database" toolbox entry's toolNames.linkedDatabase.
       // +1: toolNames.askAi, the Ask AI inline tool's titleKey.
-      'finite-dynamic': 119,
+      // +6: the thinking menu's assistant.thinking.<level> labels.
+      'finite-dynamic': 125,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.
@@ -414,8 +410,7 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.settingsDragToReorder gained a literal caller in the view overflow list.
       // +1: tools.database.aiAutofillNew, called through the view settings panel's namespaced t().
       'registered-namespace-compatible': 412,
-      // +7: the assistant.thinking* keys, see CATALOG_ONLY_KEYS.
-      'catalog-only': 11,
+      'catalog-only': 4,
     });
     expect(
       [...lifecycle.entries()]

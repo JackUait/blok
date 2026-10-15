@@ -128,6 +128,7 @@
   "assistant.thinking.high": "Korkea",
   "assistant.thinking.xhigh": "Erittäin korkea",
   "assistant.thinking.max": "Maksimi",
+  "assistant.thinkingCurrent": "Päättely: {level}",
   "assistant.working": "{agent} kirjoittaa…",
   "assistant.stopped": "Pysäytetty. Jo kirjoitettu teksti säilyy.",
   "assistant.refused": "Tekoäly kieltäytyi tästä pyynnöstä.",

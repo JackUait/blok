@@ -49,6 +49,7 @@ import {
   IconCopy,
   IconMessage,
   IconWand,
+  IconWarning,
 } from '../../components/icons';
 
 export { createTableState };
@@ -146,6 +147,8 @@ export interface DatabaseTableViewOptions {
   autofill?: TableAutofill;
   /** Shows a toast: "Copied property to clipboard". */
   notify?: (message: string) => void;
+  /** A button property with an action that cannot run: its header shows a warning. */
+  buttonError?: (property: PropertyDefinition) => boolean;
 }
 
 /** The cell "Autofill" button and the header sparkle of an autofill column (research/12 §2). */
@@ -573,6 +576,19 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     button.append(icon, name);
     cell.appendChild(button);
     onHover(cell, property.name);
+    if (property.type === 'button' && this.options.buttonError?.(property) === true) {
+      const warning = document.createElement('span');
+      const label = this.t('tools.database.buttonError');
+
+      // Takes the type icon's size and ink from its attribute: no rule of its own.
+      warning.setAttribute('data-blok-database-table-column-icon', '');
+      warning.setAttribute('data-blok-database-button-error', '');
+      warning.setAttribute('role', 'img');
+      warning.setAttribute('aria-label', label);
+      warning.innerHTML = IconWarning;
+      button.appendChild(warning);
+      onHover(warning, label);
+    }
     if (this.options.autofill !== undefined && property.autofill !== undefined) {
       const sparkle = document.createElement('button');
 

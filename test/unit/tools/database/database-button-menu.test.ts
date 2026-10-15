@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buttonEditItems, valueChoicesFor } from '../../../../src/tools/database/database-button-menu';
-import type { ButtonSettings, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { Mock } from 'vitest';
+import { buttonEditItems, buttonHasError, valueChoicesFor } from '../../../../src/tools/database/database-button-menu';
+import type { ButtonMenuContext } from '../../../../src/tools/database/database-button-menu';
+import type { ButtonAction, ButtonSettings, PropertyDefinition, PropertySettingsV2 } from '../../../../src/tools/database/types';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 
 const schema: PropertyDefinition[] = [
@@ -14,7 +16,7 @@ const schema: PropertyDefinition[] = [
 
 const button: PropertyDefinition = { id: 'btn', name: 'Act', type: 'button', position: 'a6', button: { label: 'Go', buttonActions: [{ id: 'a1', type: 'openPage' }] } };
 
-interface Item { name?: string; title?: string; onActivate?: () => void; children?: { items?: Item[] } }
+interface Item { name?: string; title?: string; secondaryLabel?: string; element?: HTMLElement; isActive?: boolean | (() => boolean); onActivate?: () => void; children?: { items?: Item[] } }
 
 const find = (items: PopoverItemParams[] | Item[] | undefined, ...path: string[]): Item | undefined => {
   let level = items as Item[] | undefined;
@@ -80,5 +82,158 @@ describe('button settings items', () => {
 
     expect(find(withHost, 'buttonAddAction', 'buttonAdd-callback')).toBeDefined();
     expect(find(without, 'buttonAddAction', 'buttonAdd-callback')).toBeUndefined();
+  });
+});
+
+const OTHER: PropertyDefinition[] = [
+  { id: 'ot', name: 'Task', type: 'title', position: 'a0' },
+  { id: 'flag', name: 'Flag', type: 'checkbox', position: 'a1' },
+];
+
+type Update = Mock<(patch: Partial<PropertySettingsV2>) => void>;
+
+const ctxOf = (actions: ButtonAction[], extra: Partial<Omit<ButtonMenuContext, 'update'>> = {}): ButtonMenuContext & { update: Update } => ({
+  i18n: { t: (k: string, vars?: Record<string, unknown>) => (vars === undefined ? k : `${k} ${JSON.stringify(vars)}`) },
+  schema: () => [...schema, { ...button, button: { buttonActions: actions } }],
+  hasHostActions: true,
+  hasNotify: true,
+  databaseId: 'db',
+  dataSources: () => [{ id: 'db', title: 'Here' }, { id: 'other', title: 'Other' }],
+  targetSchema: (id: string) => (id === 'other' ? OTHER : schema),
+  people: () => Array.from({ length: 25 }, (_, i) => ({ id: `u${i}`, name: `User ${i}` })),
+  editFilter: vi.fn(),
+  update: vi.fn<(patch: Partial<PropertySettingsV2>) => void>(),
+  ...extra,
+});
+
+const lastActions = (update: Update): ButtonAction[] =>
+  (update.mock.calls.at(-1)?.[0] as { button: ButtonSettings }).button.buttonActions ?? [];
+
+const itemsFor = (actions: ButtonAction[], ctx = ctxOf(actions)): PopoverItemParams[] =>
+  buttonEditItems({ ...button, button: { buttonActions: actions } }, ctx);
+
+describe('button settings items — Notion actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('lists the actions in Notion\'s order (research/17 §3b), Blok\'s own two last', () => {
+    const add = find(itemsFor([]), 'buttonAddAction')?.children?.items ?? [];
+
+    expect(add.map((i) => i.name)).toEqual([
+      'buttonAdd-editProperty', 'buttonAdd-addPage', 'buttonAdd-editPages', 'buttonAdd-sendNotification',
+      'buttonAdd-showConfirmation', 'buttonAdd-openPage', 'buttonAdd-defineVariables', 'buttonAdd-insertBlocks', 'buttonAdd-callback',
+    ]);
+    expect(add.map((i) => i.title).slice(1, 7)).toEqual([
+      'tools.database.buttonActionAddPage', 'tools.database.buttonActionEditPages', 'tools.database.buttonActionSendNotification',
+      'tools.database.buttonActionShowConfirmation', 'tools.database.buttonActionOpenPage', 'tools.database.buttonActionDefineVariables',
+    ]);
+  });
+
+  it('offers Send notification only with the host lever, and only once', () => {
+    const names = (items: PopoverItemParams[]): Array<string | undefined> => (find(items, 'buttonAddAction')?.children?.items ?? []).map((i) => i.name);
+
+    expect(names(itemsFor([], ctxOf([], { hasNotify: false })))).not.toContain('buttonAdd-sendNotification');
+    expect(names(itemsFor([{ id: 'n', type: 'sendNotification' }]))).not.toContain('buttonAdd-sendNotification');
+  });
+
+  it('starts a confirmation with Notion\'s message and button texts', () => {
+    const ctx = ctxOf([]);
+
+    find(itemsFor([], ctx), 'buttonAddAction', 'buttonAdd-showConfirmation')?.onActivate?.();
+
+    expect(lastActions(ctx.update)[0]).toMatchObject({
+      type: 'showConfirmation',
+      message: 'tools.database.buttonConfirmDefault',
+      confirmLabel: 'tools.database.buttonConfirmContinue',
+      cancelLabel: 'tools.database.optionDeleteCancel',
+    });
+  });
+
+  it('Add page to: picks a data source, which clears values set for the old one', () => {
+    const actions: ButtonAction[] = [{ id: 'a', type: 'addPage', edits: [{ id: 'e', propertyId: 'done', value: true }] }];
+    const ctx = ctxOf(actions);
+    const source = find(itemsFor(actions, ctx), 'buttonAction-a', 'buttonAction-a-source');
+
+    expect(source?.children?.items?.map((i) => i.title)).toEqual(['Here', 'Other']);
+    find(itemsFor(actions, ctx), 'buttonAction-a', 'buttonAction-a-source', 'buttonSource-a-other')?.onActivate?.();
+
+    expect(lastActions(ctx.update)[0]).toEqual({ id: 'a', type: 'addPage', databaseId: 'other', edits: [] });
+  });
+
+  it('Add page to: sets a value from the picked database\'s schema', () => {
+    const actions: ButtonAction[] = [{ id: 'a', type: 'addPage', databaseId: 'other' }];
+    const ctx = ctxOf(actions);
+    const props = find(itemsFor(actions, ctx), 'buttonAction-a', 'buttonAction-a-edit')?.children?.items ?? [];
+
+    expect(props.map((i) => i.title)).toEqual(['Flag']);
+    find(itemsFor(actions, ctx), 'buttonAction-a', 'buttonAction-a-edit', 'buttonAction-a-edit-flag', 'buttonAction-a-value-flag-0')?.onActivate?.();
+
+    expect(lastActions(ctx.update)[0]).toMatchObject({ databaseId: 'other', edits: [{ propertyId: 'flag', value: true }] });
+  });
+
+  it('Edit pages in: offers This page, each earlier added page, then the data sources', () => {
+    const actions: ButtonAction[] = [{ id: 'a', type: 'addPage', databaseId: 'other' }, { id: 'b', type: 'editPages' }];
+    const target = find(itemsFor(actions), 'buttonAction-b', 'buttonAction-b-target')?.children?.items ?? [];
+
+    expect(target.map((i) => i.name)).toEqual(['buttonTarget-b-thisPage', 'buttonTarget-b-step-a', 'buttonTarget-b-db', 'buttonTarget-b-other']);
+    expect(target[1].secondaryLabel).toBe('tools.database.buttonPageAddedTo {"name":"Other"}');
+  });
+
+  it('Edit pages in: a data source edits all pages until a filter is set, and the filter row opens the filter editor', () => {
+    const all: ButtonAction[] = [{ id: 'b', type: 'editPages', target: { type: 'database', databaseId: 'other' } }];
+    const some: ButtonAction[] = [{ id: 'b', type: 'editPages', target: { type: 'database', databaseId: 'other', filters: [{ propertyId: 'flag', operator: 'is', value: true }] } }];
+    const ctx = ctxOf(all);
+
+    expect(find(itemsFor(all, ctx), 'buttonAction-b', 'buttonAction-b-filter')?.title).toBe('tools.database.buttonAllPages');
+    expect(find(itemsFor(some), 'buttonAction-b', 'buttonAction-b-filter')?.title).toBe('tools.database.buttonMatchOneFilter');
+    find(itemsFor(all, ctx), 'buttonAction-b', 'buttonAction-b-filter')?.onActivate?.();
+
+    expect(ctx.editFilter).toHaveBeenCalledWith('b');
+  });
+
+  it('Define variables starts with Variable 1 and adds the next one', () => {
+    const ctx = ctxOf([]);
+
+    find(itemsFor([], ctx), 'buttonAddAction', 'buttonAdd-defineVariables')?.onActivate?.();
+    const added = lastActions(ctx.update);
+
+    expect(added[0]).toMatchObject({ type: 'defineVariables', variables: [{ name: 'tools.database.buttonVariableName {"n":1}', kind: 'text', value: '' }] });
+    find(itemsFor(added, ctx), `buttonAction-${added[0].id}`, `buttonAction-${added[0].id}-addVariable`)?.onActivate?.();
+
+    expect(lastActions(ctx.update)[0]).toMatchObject({ variables: [{ name: 'tools.database.buttonVariableName {"n":1}' }, { name: 'tools.database.buttonVariableName {"n":2}' }] });
+  });
+
+  it('Send notification: picks up to 20 specific people, or a person property', () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({ id: `u${i}` }));
+    const full: ButtonAction[] = [{ id: 'n', type: 'sendNotification', recipients: { type: 'people', people: many } }];
+    const ctx = ctxOf(full);
+    const people = find(itemsFor(full, ctx), 'buttonAction-n', 'buttonAction-n-recipients', 'buttonRecipients-n-people')?.children?.items ?? [];
+
+    find(itemsFor(full, ctx), 'buttonAction-n', 'buttonAction-n-recipients', 'buttonRecipients-n-people', 'buttonPerson-n-u21')?.onActivate?.();
+    expect(ctx.update).not.toHaveBeenCalled();
+    expect(people).toHaveLength(25);
+    const props = find(itemsFor([{ id: 'n', type: 'sendNotification' }], ctx), 'buttonAction-n', 'buttonAction-n-recipients', 'buttonRecipients-n-property')?.children?.items ?? [];
+
+    expect(props.map((i) => i.title)).toEqual(['Owner']);
+  });
+
+  it('flags an action that cannot run (research/17 §3d)', () => {
+    const ctx = ctxOf([]);
+    const flag = (actions: ButtonAction[]): boolean => buttonHasError({ buttonActions: actions }, ctx);
+
+    expect(flag([{ id: 'n', type: 'sendNotification' }])).toBe(true);
+    expect(flag([{ id: 'n', type: 'sendNotification', recipients: { type: 'people', people: [] } }])).toBe(true);
+    expect(flag([{ id: 'n', type: 'sendNotification', recipients: { type: 'property', propertyId: 'done' } }])).toBe(true);
+    expect(flag([{ id: 'n', type: 'sendNotification', recipients: { type: 'property', propertyId: 'owner' } }])).toBe(false);
+    expect(flag([{ id: 'b', type: 'editPages' }])).toBe(true);
+    expect(flag([{ id: 'b', type: 'editPages', target: { type: 'addedPage', stepId: 'gone' } }])).toBe(true);
+    expect(flag([{ id: 'a', type: 'addPage', databaseId: 'gone' }])).toBe(true);
+    expect(flag([{ id: 'a', type: 'editProperty', propertyId: 'gone', value: null }])).toBe(true);
+    expect(flag([{ id: 'a', type: 'addPage', databaseId: 'other', edits: [{ id: 'e', propertyId: 'flag', value: true }] }])).toBe(false);
   });
 });

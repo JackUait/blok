@@ -1812,6 +1812,21 @@ export const openViewSettings = (
 };
 
 /** Opens one simple filter's popover (research/08: 220 wide). */
+/** The Filter page on its own: a button's "Edit pages in" filter reuses it (research/17 §3c). */
+export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, testId: string): DatabasePanel => {
+  const panel = new DatabasePanel({
+    anchor,
+    root: new ViewSettingsPages(ctx).filters(),
+    testId,
+    width: 290,
+    backLabel: ctx.i18n.t('tools.database.settingsBack'),
+  });
+
+  panel.open();
+
+  return panel;
+};
+
 export const openFilterPill = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void): DatabasePanel => {
   const panel = new DatabasePanel({
     anchor,

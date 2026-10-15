@@ -20,7 +20,8 @@ import { openFormulaEditor } from './database-formula-editor';
 import type { FormulaEditorHandle } from './database-formula-editor';
 import type { DatabaseSource } from './computed-properties';
 import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
-import { runButtonActions } from './database-button';
+import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
+import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData } from './templates';
 import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDisplay } from './sub-items';
 import { comparePositions } from './positions';
@@ -123,7 +124,9 @@ import { DatabaseViewControls } from './database-view-controls';
 import type { ViewControlsHost } from './database-view-controls';
 import type { ViewStateFallback } from './database-view-state';
 import { TabDisplayPreference } from './database-tab-display';
-import type { ViewGroupEntry, ViewSettingsAction } from './database-view-settings-panel';
+import type { ViewGroupEntry, ViewSettingsAction, ViewSettingsContext } from './database-view-settings-panel';
+import { openFilterList } from './database-view-settings-panel';
+import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
 import { GROUPABLE_TYPES, groupValueForKey } from './group-keys';
 import { resolveRowColors } from './view-data';
@@ -1193,6 +1196,8 @@ export class DatabaseTool implements BlockTool {
     this.formulaEditor?.close();
     this.propertyMenu = null;
     this.autofillSetup?.close();
+    this.buttonFilter?.close();
+    this.buttonFilter = null;
     this.addPropertyPopover?.destroy();
     this.addPropertyPopover = null;
     this.stopWaitingForIdle();
@@ -4616,6 +4621,7 @@ export class DatabaseTool implements BlockTool {
       ...this.commentLever(),
       ...this.autofillLever(readOnly, context),
       notify: (message) => this.api.notifier.show({ message }),
+      ...(readOnly ? {} : { buttonError: (property: PropertyDefinition) => this.buttonHasError(property.id) }),
     });
 
     return { renderer, root: renderer.createView() };
@@ -5076,13 +5082,25 @@ export class DatabaseTool implements BlockTool {
     const property = this.model.getProperty(propertyId);
 
     if (this.readOnly || property?.type !== 'button' || this.model.getRow(rowId) === undefined) return;
-    runButtonActions(property.button?.buttonActions ?? [], rowId, {
+    const isHere = (databaseId: string | undefined): boolean => databaseId === undefined || databaseId === this.dataId;
+    const t = (key: string): string => this.api.i18n.t(key);
+    const actions = property.button?.buttonActions ?? [];
+    const run = (kept: typeof actions): void => runButtonActions(kept, rowId, {
       oneStep: (fn) => this.inOneStep(fn),
-      writeValues: (id, changes) => Object.entries(changes).forEach(([key, value]) => this.commitTableCell(id, key, value)),
+      writeValues: (id, changes, databaseId) => {
+        if (isHere(databaseId)) {
+          Object.entries(changes).forEach(([key, value]) => this.commitTableCell(id, key, value));
+        } else {
+          this.api.blocks.getById(databaseId ?? '')?.call('writeButtonValues', { rowId: id, changes });
+        }
+      },
       insertBlocks: (id, blocks) => blocks.forEach((block) => {
         this.api.blocks.insertAt(block.type, structuredClone(block.data), { parentId: id, position: 'end' });
       }),
-      openRow: (id) => this.handleRowClick(id),
+      openRow: (id, databaseId) => {
+        if (isHere(databaseId)) this.handleRowClick(id);
+        else this.api.blocks.getById(databaseId ?? '')?.call('openRow', { rowId: id });
+      },
       openUrl: (url) => {
         const href = safeHref(url);
 
@@ -5093,8 +5111,81 @@ export class DatabaseTool implements BlockTool {
       },
       me: () => this.config.people?.me?.() ?? null,
       now: () => new Date(),
+      addPage: (databaseId, name, properties) => {
+        if (isHere(databaseId)) return this.addButtonRow(name, properties);
+        const received: Array<string | null> = [];
+
+        this.api.blocks.getById(databaseId ?? '')?.call('addButtonPage', { name, properties, receive: (id: string | null) => received.push(id) });
+
+        return received[0] ?? null;
+      },
+      source: (databaseId) => (isHere(databaseId)
+        ? { schema: this.model.getSchema(), rows: this.model.getOrderedRows() }
+        : this.readDatabaseSource(databaseId)),
+      rowValues: (id) => this.model.getRow(id)?.properties,
+      notify: (action, to, message) => {
+        void Promise.resolve(this.config.buttons?.onNotify?.({ databaseId: this.dataId, rowId, propertyId, action, to, message })).catch((error: unknown) => this.showBackendError(error));
+      },
     });
-    this.rerenderView({ keepDrawer: true });
+
+    if (!needsConfirmation(actions)) {
+      run(actions);
+      this.rerenderView({ keepDrawer: true });
+
+      return;
+    }
+    void askConfirmations(actions, (action) => openDatabaseConfirm({
+      title: action.message ?? t('tools.database.buttonConfirmDefault'),
+      confirmLabel: action.confirmLabel ?? t('tools.database.buttonConfirmContinue'),
+      cancelLabel: action.cancelLabel ?? t('tools.database.optionDeleteCancel'),
+      directionSource: this.element,
+    })).then((kept) => {
+      // The dialog took time: the row, the block or write access may be gone.
+      if (this.readOnly || this.destroyed || this.model.getRow(rowId) === undefined) return;
+      run(kept);
+      this.rerenderView({ keepDrawer: true });
+    });
+  }
+
+  /** A button of this database has an action that cannot run. */
+  private buttonHasError(propertyId: string): boolean {
+    const property = this.model.getProperty(propertyId);
+
+    return property?.type === 'button' && buttonHasError(property.button ?? {}, {
+      schema: () => this.model.getSchema(),
+      databaseId: this.dataId,
+      dataSources: () => [{ id: this.dataId, title: this.title }, ...this.moveTargets()],
+      targetSchema: (databaseId) => (databaseId === this.dataId ? this.model.getSchema() : this.readDatabaseSource(databaseId)?.schema ?? []),
+    });
+  }
+
+  /** "Add page to" this database: `name` as the title. Null when writes are refused. */
+  private addButtonRow(name: string, properties: Record<string, PropertyValue>): string | null {
+    const title = name === '' ? {} : { [this.titlePropertyId()]: name };
+
+    return this.insertRow({ ...properties, ...title }, { rerender: true }) ?? null;
+  }
+
+  /** Another database's button adds a page here. A linked view passes it to its source. */
+  addButtonPage(param: { name: string; properties: Record<string, PropertyValue>; receive: (rowId: string | null) => void }): void {
+    if (this.source !== undefined) {
+      this.api.blocks.getById(this.source.databaseId)?.call('addButtonPage', param);
+
+      return;
+    }
+    param.receive(this.addButtonRow(param.name, param.properties));
+  }
+
+  /** Another database's button edits a page here, as a cell edit does. */
+  writeButtonValues(param: { rowId: string; changes: Record<string, PropertyValue> }): void {
+    if (this.source !== undefined) {
+      this.api.blocks.getById(this.source.databaseId)?.call('writeButtonValues', param);
+
+      return;
+    }
+    if (this.readOnly || this.destroyed || this.model.getRow(param.rowId) === undefined) return;
+    Object.entries(param.changes).forEach(([key, value]) => this.commitTableCell(param.rowId, key, value));
+    this.redrawWhenIdle();
   }
 
   // ---------------------------------------------------------------------------
@@ -8275,6 +8366,11 @@ export class DatabaseTool implements BlockTool {
         onEditFormula: (id) => { if (parentWritable()) this.openFormulaEditor(id, anchor); },
         onSetTwoWay: (id, twoWay) => { if (parentWritable()) this.setRelationTwoWay(id, twoWay); },
         hasHostActions: this.config.buttons?.onAction !== undefined,
+        hasNotify: this.config.buttons?.onNotify !== undefined,
+        databaseId: this.dataId,
+        dataSources: () => [{ id: this.dataId, title: this.title }, ...this.moveTargets()],
+        ...(this.config.people === undefined ? {} : { people: () => this.people ?? [] }),
+        onEditButtonFilter: (id, actionId) => { if (parentWritable()) this.openButtonFilter(id, actionId, anchor); },
       },
       ...(this.config.ai === undefined ? {} : {
         autofill: {
@@ -8311,6 +8407,68 @@ export class DatabaseTool implements BlockTool {
     });
 
     menu.open({ ...saved, name: property.name }, anchor, viewItems, property);
+  }
+
+  private buttonFilter: DatabasePanel | null = null;
+
+  /**
+   * An "Edit pages in" step's filter, in the view's filter editor. Each edit
+   * writes the button property. It is not tied to the menu: the menu closes as it opens.
+   */
+  private openButtonFilter(propertyId: string, actionId: string, anchor: HTMLElement): void {
+    const current = () => {
+      const actions = this.model.getProperty(propertyId)?.button?.buttonActions ?? [];
+      const action = actions.find((a) => a.id === actionId);
+
+      return action?.type === 'editPages' && action.target?.type === 'database' ? { actions, target: action.target } : undefined;
+    };
+    const found = current();
+
+    if (found === undefined || this.destroyed || this.readOnly || this.structureLocked()) return;
+    const databaseId = found.target.databaseId;
+    const view = (): DatabaseViewConfig => {
+      const target = current()?.target;
+
+      return {
+        id: `button-${actionId}`, name: '', type: 'table', position: 'a0', sorts: [], visibleProperties: [],
+        filters: target?.filters ?? [],
+        ...(target?.filterTree === undefined ? {} : { filterTree: target.filterTree }),
+      };
+    };
+    const write: ViewSettingsContext['updatePersonal'] = (patch) => {
+      const now = current();
+      const button = this.model.getProperty(propertyId)?.button;
+
+      if (now === undefined || button === undefined || this.destroyed || this.readOnly || this.structureLocked()) return;
+      const { filters: _filters, filterTree: _tree, ...rest } = now.target;
+      const filters = patch.filters ?? now.target.filters ?? [];
+      const filterTree = 'filterTree' in patch ? patch.filterTree : now.target.filterTree;
+      const target = { ...rest, ...(filters.length > 0 ? { filters } : {}), ...(filterTree === undefined ? {} : { filterTree }) };
+
+      this.updatePropertySettings(propertyId, {
+        button: { ...button, buttonActions: now.actions.map((a) => (a.id === actionId && a.type === 'editPages' ? { ...a, target } : a)) },
+      });
+    };
+    const ctx: ViewSettingsContext = {
+      i18n: this.api.i18n,
+      view,
+      schema: () => localizeDatabaseSchema(databaseId === this.dataId ? this.model.getValueSchema() : this.readDatabaseSource(databaseId)?.schema ?? [], this.api.i18n),
+      locked: () => false,
+      layouts: [],
+      canDeleteView: () => false,
+      updateView: () => undefined,
+      updatePersonal: write,
+      setLayout: () => undefined,
+      setLocked: () => undefined,
+      duplicateView: () => undefined,
+      deleteView: () => undefined,
+      copyViewLink: () => undefined,
+      groups: () => [],
+      people: () => this.people ?? [],
+    };
+
+    this.buttonFilter?.close();
+    this.buttonFilter = openFilterList(anchor, ctx, 'database-button-filter');
   }
 
   /** The AI Autofill setup. It is not tied to the menu: the menu closes as it opens. */

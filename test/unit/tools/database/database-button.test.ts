@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolveDynamicValue, resolveDynamicProperties } from '../../../../src/tools/database/dynamic-values';
-import { runButtonActions } from '../../../../src/tools/database/database-button';
+import { askConfirmations, runButtonActions } from '../../../../src/tools/database/database-button';
 import type { ButtonHost } from '../../../../src/tools/database/database-button';
-import type { ButtonAction, PropertyValue } from '../../../../src/tools/database/types';
+import type { ButtonAction, DatabaseRow, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 
 const NOW = new Date(2026, 9, 9, 14, 5);
 
 const host = (): ButtonHost & { log: string[] } => {
   const log: string[] = [];
+  const added = { count: 0 };
 
   return {
     log,
@@ -23,8 +24,28 @@ const host = (): ButtonHost & { log: string[] } => {
     callback: vi.fn((action) => log.push(`callback:${action.name ?? ''}`)),
     me: () => 'u1',
     now: () => NOW,
+    addPage: vi.fn((databaseId: string | undefined, name: string, properties: Record<string, PropertyValue>) => {
+      log.push(`add:${databaseId ?? 'self'}:${name}:${JSON.stringify(properties)}`);
+
+      added.count += 1;
+
+      return `new-${added.count}`;
+    }),
+    source: vi.fn(() => undefined),
+    rowValues: vi.fn(() => undefined),
+    notify: vi.fn((action, to: string[], message: string) => log.push(`notify:${to.join(',')}:${message}`)),
   };
 };
+
+const OTHER_SCHEMA: PropertyDefinition[] = [
+  { id: 't', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'done', name: 'Done', type: 'checkbox', position: 'a1' },
+];
+const OTHER_ROWS: DatabaseRow[] = [
+  { id: 'o1', position: 'a0', properties: { t: 'Alpha', done: false } },
+  { id: 'o2', position: 'a1', properties: { t: 'Beta', done: true } },
+  { id: 'o3', position: 'a2', properties: { t: 'Alpine', done: false } },
+];
 
 describe('dynamic values', () => {
   beforeEach(() => {
@@ -114,6 +135,152 @@ describe('runButtonActions', () => {
     const h = host();
 
     runButtonActions([{ id: '1', type: 'sendMail' } as unknown as ButtonAction], 'r1', h);
+
+    expect(h.log).toEqual([]);
+  });
+});
+
+describe('runButtonActions — Notion actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('adds a page to a database with its name and property edits, in the same transact', () => {
+    const h = host();
+
+    runButtonActions([
+      { id: '1', type: 'editProperty', propertyId: 'status', value: 'done' },
+      { id: '2', type: 'addPage', databaseId: 'other', name: 'Follow-up', edits: [{ id: 'e', propertyId: 'due', value: '@today' }] },
+      { id: '3', type: 'addPage' },
+    ], 'r1', h);
+
+    expect(h.oneStep).toHaveBeenCalledTimes(1);
+    expect(h.log).toEqual([
+      'transact:start',
+      'write:r1:{"status":"done"}',
+      'add:other:Follow-up:{"due":"2026-10-09"}',
+      'add:self::{}',
+      'transact:end',
+    ]);
+  });
+
+  it('edits this page, the page an earlier step added, and the pages of a database that match its filters', () => {
+    const h = host();
+
+    vi.mocked(h.source).mockImplementation((databaseId) => (databaseId === 'other' ? { schema: OTHER_SCHEMA, rows: OTHER_ROWS } : undefined));
+    runButtonActions([
+      { id: 'add', type: 'addPage', databaseId: 'other' },
+      { id: '2', type: 'editPages', target: { type: 'thisPage' }, edits: [{ id: 'e1', propertyId: 'status', value: 'x' }] },
+      { id: '3', type: 'editPages', target: { type: 'addedPage', stepId: 'add' }, edits: [{ id: 'e2', propertyId: 'done', value: true }] },
+      {
+        id: '4', type: 'editPages',
+        target: { type: 'database', databaseId: 'other', filters: [{ propertyId: 't', operator: 'contains', value: 'Alp' }] },
+        edits: [{ id: 'e3', propertyId: 'done', value: true }],
+      },
+    ], 'r1', h);
+
+    expect(h.writeValues).toHaveBeenCalledWith('r1', { status: 'x' }, undefined);
+    expect(h.writeValues).toHaveBeenCalledWith('new-1', { done: true }, 'other');
+    expect(h.writeValues).toHaveBeenCalledWith('o1', { done: true }, 'other');
+    expect(h.writeValues).toHaveBeenCalledWith('o3', { done: true }, 'other');
+    expect(h.writeValues).not.toHaveBeenCalledWith('o2', expect.anything(), 'other');
+    expect(h.oneStep).toHaveBeenCalledTimes(1);
+  });
+
+  it('edits every page of a database when it has no filter', () => {
+    const h = host();
+
+    vi.mocked(h.source).mockReturnValue({ schema: OTHER_SCHEMA, rows: OTHER_ROWS });
+    runButtonActions([
+      { id: '1', type: 'editPages', target: { type: 'database', databaseId: 'other' }, edits: [{ id: 'e', propertyId: 'done', value: true }] },
+    ], 'r1', h);
+
+    expect(vi.mocked(h.writeValues).mock.calls.map((call) => call[0])).toEqual(['o1', 'o2', 'o3']);
+  });
+
+  it('skips an edit-pages step whose added page never came: its step is gone', () => {
+    const h = host();
+
+    runButtonActions([
+      { id: '2', type: 'editPages', target: { type: 'addedPage', stepId: 'missing' }, edits: [{ id: 'e', propertyId: 'done', value: true }] },
+    ], 'r1', h);
+
+    expect(h.writeValues).not.toHaveBeenCalled();
+  });
+
+  it('asks each confirmation in order and keeps every action when all are confirmed', async () => {
+    const confirm = vi.fn(() => Promise.resolve(true));
+    const actions: ButtonAction[] = [
+      { id: '1', type: 'editProperty', propertyId: 'a', value: 'x' },
+      { id: '2', type: 'showConfirmation', message: 'Sure?' },
+      { id: '3', type: 'showConfirmation', message: 'Really?' },
+    ];
+
+    expect(await askConfirmations(actions, confirm)).toEqual(actions);
+    expect(confirm.mock.calls.map((call: unknown[]) => (call[0] as { message?: string }).message)).toEqual(['Sure?', 'Really?']);
+  });
+
+  it('drops the cancelled confirmation and every action after it, asking nothing more', async () => {
+    const confirm = vi.fn(() => Promise.resolve(false));
+    const kept = await askConfirmations([
+      { id: '1', type: 'editProperty', propertyId: 'a', value: 'x' },
+      { id: '2', type: 'showConfirmation' },
+      { id: '3', type: 'editProperty', propertyId: 'b', value: 'y' },
+      { id: '4', type: 'showConfirmation' },
+    ], confirm);
+
+    expect(kept.map((action) => action.id)).toEqual(['1']);
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a kept confirmation as nothing: it only gates', () => {
+    const h = host();
+
+    runButtonActions([{ id: '1', type: 'showConfirmation' }, { id: '2', type: 'editProperty', propertyId: 'a', value: 'x' }], 'r1', h);
+
+    expect(h.log).toEqual(['transact:start', 'write:r1:{"a":"x"}', 'transact:end']);
+  });
+
+  it('sends a notification to specific people or to the people of a person property, after the writes', () => {
+    const h = host();
+
+    vi.mocked(h.rowValues).mockReturnValue({ owner: [{ id: 'u7' }, { id: 'u8' }] });
+    runButtonActions([
+      { id: '1', type: 'sendNotification', recipients: { type: 'people', people: [{ id: 'u2' }] }, message: 'Hi' },
+      { id: '2', type: 'sendNotification', recipients: { type: 'property', propertyId: 'owner' } },
+      { id: '3', type: 'editProperty', propertyId: 'a', value: 'x' },
+    ], 'r1', h);
+
+    expect(h.log).toEqual(['transact:start', 'write:r1:{"a":"x"}', 'transact:end', 'notify:u2:Hi', 'notify:u7,u8:']);
+  });
+
+  it('sends no notification without recipients', () => {
+    const h = host();
+
+    runButtonActions([
+      { id: '1', type: 'sendNotification' },
+      { id: '2', type: 'sendNotification', recipients: { type: 'people', people: [] } },
+    ], 'r1', h);
+
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it('opens the page an earlier step added', () => {
+    const h = host();
+
+    runButtonActions([{ id: 'add', type: 'addPage' }, { id: '2', type: 'openPage', stepId: 'add' }], 'r1', h);
+
+    expect(h.openRow).toHaveBeenCalledWith('new-1', undefined);
+  });
+
+  it('only stores variables: running them writes nothing', () => {
+    const h = host();
+
+    runButtonActions([{ id: '1', type: 'defineVariables', variables: [{ id: 'v', name: 'Variable 1', kind: 'formula', value: '1 + 1' }] }], 'r1', h);
 
     expect(h.log).toEqual([]);
   });

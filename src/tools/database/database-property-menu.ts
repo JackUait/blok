@@ -100,6 +100,16 @@ export interface ComputedMenuHost {
   onSetTwoWay: (propertyId: string, twoWay: boolean) => void;
   /** The host set `config.buttons.onAction`: buttons may call it. */
   hasHostActions?: boolean;
+  /** The host set `config.buttons.onNotify`: buttons may send notifications. */
+  hasNotify?: boolean;
+  /** This database block. */
+  databaseId?: string;
+  /** Databases a button can add pages to or edit, this one first. */
+  dataSources?: () => Array<{ id: string; title: string }>;
+  /** People the host lists. */
+  people?: () => Array<{ id: string; name: string }>;
+  /** Opens the filter editor of a button's "Edit pages in" step. */
+  onEditButtonFilter?: (propertyId: string, actionId: string) => void;
 }
 
 export interface PropertyMenuOptions extends PropertyMenuCallbacks {
@@ -646,11 +656,19 @@ export class DatabasePropertyMenu {
       return this.rollupItems(property, update);
     }
     if (property.type === 'button') {
+      const computed = this.options.computed;
+
       return buttonEditItems(property, {
         i18n: this.options.i18n,
-        schema: () => this.options.computed?.schema() ?? [],
-        hasHostActions: this.options.computed?.hasHostActions === true,
+        schema: () => computed?.schema() ?? [],
+        hasHostActions: computed?.hasHostActions === true,
         update,
+        hasNotify: computed?.hasNotify === true,
+        ...(computed?.databaseId === undefined ? {} : { databaseId: computed.databaseId }),
+        ...(computed?.dataSources === undefined ? {} : { dataSources: computed.dataSources }),
+        ...(computed === undefined ? {} : { targetSchema: computed.targetSchema }),
+        ...(computed?.people === undefined ? {} : { people: computed.people }),
+        ...(computed?.onEditButtonFilter === undefined ? {} : { editFilter: (actionId: string) => computed.onEditButtonFilter?.(property.id, actionId) }),
       });
     }
     if (property.type === 'number') {

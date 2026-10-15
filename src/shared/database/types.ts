@@ -228,6 +228,81 @@ export interface ButtonOpenPageAction {
   type: 'openPage';
   /** A URL. Absent means the row's own page. */
   url?: string;
+  /** The page an earlier "Add page to" step of the same click added. Wins over `url`. */
+  stepId?: string;
+}
+
+/** One value an added or edited page gets. */
+export interface ButtonPropertyEdit {
+  id: string;
+  propertyId: string;
+  /** Filled in on click like an edit-property value. */
+  value: PropertyValue;
+}
+
+/** "Add page to": a new row in this database or another one of the document. */
+export interface ButtonAddPageAction {
+  id: string;
+  type: 'addPage';
+  /** The database block. Absent means this database. */
+  databaseId?: string;
+  /** The new page's name. Empty shows "Untitled". */
+  name?: string;
+  edits?: ButtonPropertyEdit[];
+}
+
+/** The pages "Edit pages in" edits. */
+export type ButtonPagesTarget =
+  | { type: 'thisPage' }
+  /** The page an earlier "Add page to" step of the same click added. */
+  | { type: 'addedPage'; stepId: string }
+  /** Every page of a database, or those matching both filter lists. */
+  | { type: 'database'; databaseId: string; filters?: FilterConfig[]; filterTree?: FilterGroup };
+
+export interface ButtonEditPagesAction {
+  id: string;
+  type: 'editPages';
+  /** Absent: not picked yet, so the step edits nothing. */
+  target?: ButtonPagesTarget;
+  edits?: ButtonPropertyEdit[];
+}
+
+/** Asks first. Cancel stops this action and every one after it. */
+export interface ButtonShowConfirmationAction {
+  id: string;
+  type: 'showConfirmation';
+  message?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+}
+
+export interface ButtonVariable {
+  id: string;
+  name: string;
+  /** Default text. */
+  kind?: 'text' | 'formula';
+  value?: string;
+}
+
+/** Stored only: no action field reads a variable yet. */
+export interface ButtonDefineVariablesAction {
+  id: string;
+  type: 'defineVariables';
+  variables: ButtonVariable[];
+}
+
+export type ButtonRecipients =
+  /** At most 20 people. */
+  | { type: 'people'; people: Array<{ id: string }> }
+  /** The people in this row's person property, read on click. */
+  | { type: 'property'; propertyId: string };
+
+/** Sent by the host's `config.buttons.onNotify`. Blok sends nothing itself. */
+export interface ButtonSendNotificationAction {
+  id: string;
+  type: 'sendNotification';
+  recipients?: ButtonRecipients;
+  message?: string;
 }
 
 /** Runs the host's `config.buttons.onAction` (automations, webhooks). */
@@ -238,7 +313,16 @@ export interface ButtonCallbackAction {
   name?: string;
 }
 
-export type ButtonAction = ButtonEditPropertyAction | ButtonInsertBlocksAction | ButtonOpenPageAction | ButtonCallbackAction;
+export type ButtonAction =
+  | ButtonEditPropertyAction
+  | ButtonInsertBlocksAction
+  | ButtonOpenPageAction
+  | ButtonCallbackAction
+  | ButtonAddPageAction
+  | ButtonEditPagesAction
+  | ButtonShowConfirmationAction
+  | ButtonDefineVariablesAction
+  | ButtonSendNotificationAction;
 
 export interface ButtonSettings {
   label?: string;
@@ -246,9 +330,11 @@ export interface ButtonSettings {
   buttonActions?: ButtonAction[];
 }
 
-/** Host lever for a button's `callback` action. */
+/** Host lever for a button's `callback` and `sendNotification` actions. */
 export interface DatabaseButtons {
   onAction?(input: { databaseId: string; rowId: string; propertyId: string; action: ButtonCallbackAction }): void | Promise<void>;
+  /** Without it, buttons offer no "Send notification to". `to` holds user ids. */
+  onNotify?(input: { databaseId: string; rowId: string; propertyId: string; action: ButtonSendNotificationAction; to: string[]; message: string }): void | Promise<void>;
 }
 
 export type TemplateRepeatFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';

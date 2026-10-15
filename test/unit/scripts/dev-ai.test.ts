@@ -98,10 +98,21 @@ describe('messageParams', () => {
     expect(params).toMatchObject({
       model: AI_MODEL,
       max_tokens: 64_000,
-      system: 'sys',
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
     });
+  });
+});
+
+describe('messageParams caching', () => {
+  const params = messageParams(AI_MODEL, { system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [] });
+
+  it('marks the end of the tools and system prompt, which stay the same for a whole run', () => {
+    expect(params.system).toEqual([{ type: 'text', text: 'sys', cache_control: { type: 'ephemeral' } }]);
+  });
+
+  it('caches the growing conversation, so each step reads the one before it', () => {
+    expect(params.cache_control).toEqual({ type: 'ephemeral' });
   });
 });
 

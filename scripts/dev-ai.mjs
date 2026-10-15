@@ -51,9 +51,13 @@ export function messageParams(model, { system, messages, tools }) {
   return {
     model,
     max_tokens: MAX_TOKENS,
-    system,
+    // Tools render before system, so this mark caches both. They stay the same
+    // for a whole run (agent-run.ts), and every step after the first reads them.
+    system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
     messages,
     tools,
+    // Moves to the last block on each call, so a step reads the steps before it.
+    cache_control: { type: 'ephemeral' },
     output_config: { effort: 'medium' },
     // On a refusal the API re-runs the request on a model chosen by refusal category.
     betas: ['server-side-fallback-2026-07-01'],

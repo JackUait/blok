@@ -272,6 +272,33 @@ const rowMetaOf = (child: BlockAPI): DatabaseRowMeta => ({
 /** The `#rowId` link whose page the user closed in this page load. */
 const rowLink: { closed: string | null } = { closed: null };
 
+/** The `#view-<id>` link a database already applied in this page load. */
+const viewLink: { applied: string | null } = { applied: null };
+
+/**
+ * The view a "Copy link to view" fragment (`#view-<id>`) names, if `owns` it.
+ * Applied once per page load: a later render (undo, a peer replace) must not
+ * undo the user's own tab switch.
+ */
+const consumeViewLink = (owns: (viewId: string) => boolean): string | null => {
+  const hash = window.location.hash.slice(1);
+
+  if (!hash.startsWith('view-') || hash === viewLink.applied) return null;
+  // A malformed escape in someone else's hash must not break the render.
+  const viewId = ((): string => {
+    try {
+      return decodeURIComponent(hash.slice('view-'.length));
+    } catch {
+      return '';
+    }
+  })();
+
+  if (viewId === '' || !owns(viewId)) return null;
+  viewLink.applied = hash;
+
+  return viewId;
+};
+
 export class DatabaseTool implements BlockTool {
   public static describe = describeDatabase;
   public static actionHandlers = DATABASE_ACTION_HANDLERS;
@@ -421,7 +448,8 @@ export class DatabaseTool implements BlockTool {
     this.pullLinkedSchema();
     this.model.setValueProperty((property) => this.computedValues.valueProperty(property));
     const views = this.model.getViews();
-    this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
+    this.activeViewId = consumeViewLink((viewId) => this.model.getView(viewId) !== undefined)
+      ?? (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
     this.hostLevers = new DatabaseHostLevers({
       databaseId: block.id,
@@ -3992,9 +4020,9 @@ export class DatabaseTool implements BlockTool {
     this.refreshRowPrompts();
   }
 
-  /** Views have no addressable URL yet: the page URL with the view id as its fragment. */
+  /** Views have no addressable URL yet: the page URL with the view id as its fragment. Read by `consumeViewLink`. */
   private copyViewLink(): void {
-    const url = `${window.location.href.split('#')[0]}#view-${this.activeViewId}`;
+    const url = `${window.location.href.split('#')[0]}#view-${encodeURIComponent(this.activeViewId)}`;
 
     void navigator.clipboard?.writeText(url).then(
       () => this.api.notifier.show({ message: this.api.i18n.t('tools.database.viewLinkCopied') }),

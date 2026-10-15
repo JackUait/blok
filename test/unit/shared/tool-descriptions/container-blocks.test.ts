@@ -239,7 +239,7 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
         { id: 'd', name: 'Due', type: 'date', position: 'a3', date: { dateFormat: 'relative', timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } },
         { id: 'm', name: 'Mail', type: 'email', position: 'a4' },
         { id: 't', name: 'Tel', type: 'phone', position: 'a5' },
-        { id: 'p', name: 'Owner', type: 'person', position: 'a6' },
+        { id: 'p', name: 'Owner', type: 'person', position: 'a6', person: { limit: 1, default: 'createdBy', notifications: 'none' } },
         { id: 'f', name: 'Files', type: 'files', position: 'a7' },
         { id: 'ct', name: 'Created', type: 'createdTime', position: 'a8' },
         { id: 'et', name: 'Edited', type: 'lastEditedTime', position: 'a9' },
@@ -681,7 +681,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('b8a9f874daad322ddb858edb6162af3568eeee251be113d93f7f6d94487c6adc');
+      .toBe('53bb81129bbe27ed0b2b0155529bf6cb9c601527603cf38c5a34a801c4be555d');
 
     const published: unknown = JSON.parse(snapshot);
 

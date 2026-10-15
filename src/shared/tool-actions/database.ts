@@ -540,7 +540,7 @@ const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
 // ─── Property settings, option colour, templates (the editor's property and template menus) ───
 
 /** Setting keys a property menu writes (PropertySettingsV2). `type` and `config` are not settings. */
-const SETTING_KEYS = ['description', 'icon', 'pageVisibility', 'number', 'date', 'status', 'uniqueId', 'formula', 'relation', 'rollup', 'button', 'dependency', 'autofill'] as const;
+const SETTING_KEYS = ['description', 'icon', 'pageVisibility', 'number', 'date', 'status', 'uniqueId', 'person', 'formula', 'relation', 'rollup', 'button', 'dependency', 'autofill'] as const;
 
 /** As DatabaseModel.updateProperty: a key given as null is removed, any other value replaces it. */
 const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settings?: Record<string, unknown> }> = {

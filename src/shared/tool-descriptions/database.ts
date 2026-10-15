@@ -73,6 +73,16 @@ const PROPERTY_SETTINGS = {
     },
   },
   uniqueId: { type: 'object', additionalProperties: false, properties: { prefix: { type: 'string' } } },
+  person: {
+    type: 'object',
+    description: 'Person options. Blok sends no notifications: it only stores the choice for the host.',
+    additionalProperties: false,
+    properties: {
+      limit: { anyOf: [{ type: 'integer', enum: [1] }, { type: 'null' }], description: '1 keeps one person. Absent or null means no limit.' },
+      default: { type: 'string', enum: ['createdBy'], description: 'createdBy: a new row starts with the user who adds it.' },
+      notifications: { type: 'string', enum: ['usersAndGroups', 'none'], description: 'Absent means users only.' },
+    },
+  },
   formula: {
     type: 'object',
     required: ['expression'],

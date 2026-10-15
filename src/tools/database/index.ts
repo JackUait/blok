@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData } from './tier3-values';
@@ -23,6 +23,7 @@ import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRela
 import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
 import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData } from './templates';
+import { dueReminder } from './reminders';
 import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDisplay } from './sub-items';
 import { comparePositions } from './positions';
 import { mapRowValues } from './row-move';
@@ -1091,6 +1092,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.emit(DATABASE_RENDERED_EVENT, { databaseId: this.block.id });
     this.queueDraftCleanup();
     this.offerDueTemplates();
+    this.offerDueReminders();
     this.openLinkedRow();
 
     if ((initialProjection || !hadRows) && this.model.getOrderedRows().length > 0) {
@@ -1385,6 +1387,7 @@ export class DatabaseTool implements BlockTool {
           ...(typeof rowData?.icon === 'string' && rowData.icon !== '' ? { icon: rowData.icon } : {}),
           ...(typeof rowData?.cover === 'string' && rowData.cover !== '' ? { cover: rowData.cover } : {}),
           ...(typeof rowData?.fullWidth === 'boolean' ? { fullWidth: rowData.fullWidth } : {}),
+          ...(rowData?.reminders !== undefined ? { reminders: rowData.reminders } : {}),
           ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });
@@ -2649,7 +2652,12 @@ export class DatabaseTool implements BlockTool {
       return [propertyId, value === null && type !== undefined && isListValueType(type) ? [] : value];
     }));
 
+    // A cleared date takes its reminder along in the same write, so one undo restores both.
+    const reminders = this.model.getRow(rowId)?.reminders ?? {};
+    const dropped = Object.keys(stored).filter((propertyId) => stored[propertyId] === null && reminders[propertyId] !== undefined);
+
     if (rowBlock !== undefined && Object.keys(stored).length > 0) {
+      if (dropped.length > 0) rowBlock.call('updateReminders', Object.fromEntries(dropped.map((propertyId) => [propertyId, null])));
       rowBlock.call('updateProperties', stored);
       rowBlock.dispatchChange();
     }
@@ -4786,6 +4794,7 @@ export class DatabaseTool implements BlockTool {
 
     return {
       commitCell: (rowId, propertyId, value) => { if (writable()) this.commitTableCell(rowId, propertyId, value); },
+      commitReminder: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder); },
       editEnded: () => context === undefined ? this.redrawWhenIdle() : context.redraw(),
       addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId, context),
       deleteRows: (rowIds) => { if (writable()) this.deleteTableRows(rowIds); },
@@ -4892,6 +4901,17 @@ export class DatabaseTool implements BlockTool {
     if (this.cardDrawer?.openRowId === rowId) {
       this.cardDrawer.syncOpenRow(this.rowOrTemplate(rowId));
     }
+  }
+
+  /** A date's Remind choice. Stored on the row block only: the backend adapter has no reminders. */
+  private commitReminder(rowId: string, propertyId: string, reminder: DateReminderOffset | null): void {
+    const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
+
+    if (this.readOnly || this.destroyed || block === undefined) return;
+    if ((this.model.getRow(rowId)?.reminders?.[propertyId]?.remind ?? null) === reminder) return;
+    block.call('updateReminders', { [propertyId]: reminder === null ? null : { remind: reminder } });
+    block.dispatchChange();
+    this.syncRowsFromBlocks();
   }
 
   /**
@@ -5515,6 +5535,39 @@ export class DatabaseTool implements BlockTool {
         },
       });
     }
+  }
+
+  /** Hands every due date reminder to the host, as `offerDueTemplates` does for templates. */
+  private offerDueReminders(): void {
+    const onReminderDue = this.config.reminders?.onReminderDue;
+
+    if (onReminderDue === undefined || this.readOnly || this.linked) return;
+    const now = new Date();
+    const dates = this.model.getSchema().filter((property) => property.type === 'date');
+    // Model rows leave templates out, so a template's date never reminds.
+    const due = this.model.getOrderedRows().flatMap((row) => dates.map((property) => {
+      const reminder = row.reminders?.[property.id];
+      const dueAt = reminder === undefined ? null : dueReminder(row.properties[property.id], reminder, property.date?.timeZone, now);
+
+      return reminder === undefined || dueAt === null ? null : { rowId: row.id, propertyId: property.id, remind: reminder.remind, dueAt };
+    })).filter((entry) => entry !== null);
+
+    due.forEach(({ rowId, propertyId, remind, dueAt }) => onReminderDue({
+      databaseId: this.dataId,
+      rowId,
+      propertyId,
+      remind,
+      dueAt,
+      markSent: () => {
+        const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
+
+        if (this.destroyed || block === undefined) return;
+        block.call('updateReminders', { [propertyId]: { remind, sentFor: dueAt } });
+        // Derived: a host stamp is not the user's edit, so undo must not take it back.
+        block.dispatchChange({ derived: true });
+        this.syncRowsFromBlocks();
+      },
+    }));
   }
 
   private templateRepeat(block: BlockAPI | undefined): TemplateRepeat | undefined {

@@ -143,6 +143,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/popover-desktop.ts': 'Shared root popover delegates boundary resolution and continuously tracks movement.',
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',
   'tools/callout/emoji-picker/index.ts': 'Fixed-backdrop picker continuously repositions from its live callout anchor.',
+  'tools/database/cells/date-editor.ts': 'The Remind menu is placed once beside the date picker when it opens, clamped to the viewport; it lives inside the picker and closes with it.',
   'tools/database/database-card-drag.ts': 'Fixed pointer-following card ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-column-drag.ts': 'Fixed pointer-following column ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-list-row-drag.ts': 'Fixed pointer-following row ghost refreshes coordinates on every drag pointer move.',

@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1157 + 125 + 416 + 4 closure for all 1702 keys', () => {
+  it('rebuilds a disjoint 1161 + 125 + 427 + 4 closure for all 1717 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1702);
+    expect(lifecycle.size).toBe(1717);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -380,7 +380,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +4: the row page's backlinks count, its zero form and "Linked to this page" call their keys by literal.
       // +25: the button editor's Notion actions, confirmation, variables, recipients and header warning call their tools.database.button* keys by literal.
       // +2: it also calls tools.database.automationPageAdded and filterValue by literal (see below).
-      'executable-literal': 1157,
+      // +4: the date picker's Remind row, its None, the alarm label and the property's Notifications row, by literal.
+      'executable-literal': 1161,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -414,7 +415,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.aiAutofillNew, called through the view settings panel's namespaced t().
       // +5: "Save chart as…" swaps chartSavePng/chartSaveSvg for 7 chart export keys, all built from a short name.
       // -2: tools.database.automationPageAdded and filterValue gained literal callers in the button editor.
-      'registered-namespace-compatible': 416,
+      // +11: the date reminder choices, built from tools.database.dateRemind.<offset>.
+      'registered-namespace-compatible': 427,
       'catalog-only': 4,
     });
     expect(

@@ -8069,6 +8069,90 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   transition: none;
 }
 
+[data-blok-database-date-remind], [data-blok-database-date-remind-option] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font: inherit;
+  color: var(--blok-text-primary);
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-date-remind] {
+  margin-bottom: var(--blok-space-1);
+}
+
+[data-blok-database-date-remind-value] {
+  margin-inline-start: auto;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-date-remind-chevron], [data-blok-database-date-remind-check] {
+  display: flex;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-date-remind-chevron] > svg, [data-blok-database-date-remind-check] > svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-date-remind-check] {
+  margin-inline-start: auto;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-date-remind] + [data-blok-database-date-clear] {
+  border-top: 1px solid var(--blok-database-drawer-border);
+  border-radius: 0;
+  padding-top: var(--blok-space-1);
+}
+
+[data-blok-database-date-remind-menu], [data-blok-database-date-remind-menu][data-blok-top-layer][popover] {
+  display: flex;
+  flex-direction: column;
+  width: 250px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--blok-space-1);
+  border: none;
+  background: var(--blok-database-popover-bg);
+  border-radius: var(--blok-radius-surface);
+  box-shadow: var(--blok-database-popover-shadow);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
+}
+
+[@media (hover: hover)] [data-blok-database-date-remind]:hover, [data-blok-database-date-remind-option]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-date-remind-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: none;
+  background-color: var(--blok-item-focus-bg);
+}
+
+[data-blok-database-cell="date"][data-reminder] {
+  color: var(--blok-color-accent);
+}
+
+[data-blok-database-date-reminder] {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline: var(--blok-space-1-25) var(--blok-space-0-5);
+  padding-bottom: var(--blok-space-0-75);
+}
+
+[data-blok-database-date-reminder] > svg {
+  width: 1.2em;
+  height: 1.2em;
+}
+
 [data-blok-item-name="database-show-page-icon"] {
   --blok-icon-active-bg: transparent;
   --blok-icon-active-text: var(--blok-text-primary);

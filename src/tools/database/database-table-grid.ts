@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
-import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
+import type { DatabaseRow, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import { cellText, gridToClipboard, parseClipboard, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 
@@ -55,6 +55,8 @@ export const createTableState = (): TableState => ({
 
 export interface GridCallbacks {
   commitCell: (rowId: string, propertyId: string, value: PropertyValue) => void;
+  /** A date's Remind choice. Without it the date picker has no Remind row. */
+  commitReminder?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
   editEnded: () => void;
   deleteRows: (rowIds: string[]) => void;
   duplicateRows: (rowIds: string[]) => void;
@@ -244,11 +246,16 @@ export class DatabaseTableGrid {
     // Registered before the editor's own window listener, so it runs first.
     window.addEventListener('keydown', this.recordKey, true);
 
+    const reminder = row.reminders?.[property.id]?.remind;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext,
       i18n: this.i18n,
       readOnly: false,
       options: property.config?.options ?? [],
+      ...(reminder !== undefined ? { reminder } : {}),
+      ...(property.type === 'date' && this.callbacks.commitReminder !== undefined
+        ? { onReminderChange: (next: DateReminderOffset | null) => this.commitReminder(ref, next) }
+        : {}),
       ...(initialText !== undefined ? { initialText } : {}),
       ...(this.callbacks.optionsChange !== undefined
         ? { onOptionsChange: (next: SelectOption[]) => this.callbacks.optionsChange?.(ref.propertyId, next) }
@@ -277,6 +284,19 @@ export class DatabaseTableGrid {
       this.state.freshRowId = undefined;
     }
     this.callbacks.commitCell(ref.rowId, ref.propertyId, value);
+    this.repaintCell(ref);
+  }
+
+  private commitReminder(ref: CellRef, next: DateReminderOffset | null): void {
+    const row = this.rows.get(ref.rowId);
+
+    if (row !== undefined) {
+      const { [ref.propertyId]: _old, ...others } = row.reminders ?? {};
+      const reminders = next === null ? others : { ...others, [ref.propertyId]: { remind: next } };
+
+      this.rows.set(ref.rowId, { ...row, reminders });
+    }
+    this.callbacks.commitReminder?.(ref.rowId, ref.propertyId, next);
     this.repaintCell(ref);
   }
 

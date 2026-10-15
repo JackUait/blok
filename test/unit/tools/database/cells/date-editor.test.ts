@@ -4,6 +4,8 @@ import { openCellEditor } from '../../../../../src/tools/database/cells';
 import type { CellEditorContext } from '../../../../../src/tools/database/cells/types';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press } from './helpers';
+import en from '../../../../../src/components/i18n/locales/en.json';
+import type { DateReminderOffset, PropertyDefinition } from '../../../../../src/tools/database/types';
 
 const q = <T extends Element = HTMLElement>(selector: string): T => {
   const el = editorRoot()?.querySelector<T>(selector);
@@ -277,6 +279,164 @@ describe('date cell editor', () => {
       const stops = [...(editorRoot()?.querySelectorAll('[data-blok-database-date-day]') ?? [])].filter((d) => d.getAttribute('tabindex') === '0');
 
       expect(stops.map((d) => d.getAttribute('data-blok-database-date-day'))).toEqual(['2026-10-09']);
+    });
+  });
+
+  describe('Remind (research/17 §1)', () => {
+    const dict = en as Record<string, string>;
+    const i18n = { t: (key: string, vars?: Record<string, string | number>): string =>
+      Object.entries(vars ?? {}).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), dict[key] ?? key) };
+    const remindRow = (): HTMLButtonElement => q<HTMLButtonElement>('[data-blok-database-date-remind]');
+    const menu = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-date-remind-menu]');
+    const text = (el: Element | null | undefined): string => el?.textContent?.trim() ?? '';
+    const rowText = (): string => text(remindRow());
+    const menuLabels = (): string[] => [...(menu()?.querySelectorAll('[role="menuitemradio"]') ?? [])].map((item) => text(item));
+    const pick = (label: string): void => {
+      [...(menu()?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [])].find((item) => text(item) === label)?.click();
+    };
+    const openRemind = (
+      value: string | null,
+      reminder?: DateReminderOffset,
+      overrides: Partial<CellEditorContext> = {},
+      property: PropertyDefinition = makeProperty('date')
+    ): CellEditorContext => {
+      const ctx = makeEditorContext({ i18n, hourCycle: 'h12', onReminderChange: vi.fn(), ...(reminder !== undefined ? { reminder } : {}), ...overrides });
+
+      openCellEditor(property, value, makeAnchor(), ctx);
+
+      return ctx;
+    };
+
+    it('has no Remind row when the host cannot store a reminder', () => {
+      openDate('2026-10-09');
+
+      expect(editorRoot()?.querySelector('[data-blok-database-date-remind]')).toBeNull();
+    });
+
+    it('sits just above Clear and reads None by default', () => {
+      openRemind('2026-10-09');
+
+      const options = [...q('[data-blok-database-date-options]').children];
+
+      expect(options.indexOf(remindRow())).toBeLessThan(options.indexOf(q('[data-blok-database-date-clear]')));
+      expect(rowText()).toBe('RemindNone');
+    });
+
+    it('lists the date-only reminders, with the 9:00 AM time', () => {
+      openRemind('2026-10-09');
+      remindRow().click();
+
+      expect(menuLabels()).toEqual(['None', 'On day of event (9:00 AM)', '1 day before (9:00 AM)', '2 days before (9:00 AM)', '1 week before (9:00 AM)']);
+    });
+
+    it('lists the date-and-time reminders when the value has a time', () => {
+      openRemind('2026-10-09T14:00');
+      remindRow().click();
+
+      expect(menuLabels()).toEqual([
+        'None', 'At time of event', '5 minutes before', '10 minutes before', '15 minutes before', '30 minutes before',
+        '1 hour before', '2 hours before', '1 day before (9:00 AM)', '2 days before (9:00 AM)',
+      ]);
+    });
+
+    it('writes the 9:00 time on the 24-hour clock', () => {
+      openRemind('2026-10-09', undefined, { hourCycle: 'h23' });
+      remindRow().click();
+
+      expect(menuLabels()[1]).toBe('On day of event (09:00)');
+    });
+
+    it('checks the current reminder', () => {
+      openRemind('2026-10-09', '2_days_before');
+      remindRow().click();
+
+      const checked = menu()?.querySelectorAll('[aria-checked="true"]');
+
+      expect([...(checked ?? [])].map((item) => text(item))).toEqual(['2 days before (9:00 AM)']);
+    });
+
+    it('a pick stores the reminder, closes the menu and shows it without the time', () => {
+      const ctx = openRemind('2026-10-09');
+
+      remindRow().click();
+      pick('1 day before (9:00 AM)');
+
+      expect(ctx.onReminderChange).toHaveBeenCalledWith('1_day_before');
+      expect(menu()).toBeNull();
+      expect(rowText()).toBe('Remind1 day before');
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+    });
+
+    it('None removes the reminder', () => {
+      const ctx = openRemind('2026-10-09', '1_day_before');
+
+      remindRow().click();
+      pick('None');
+
+      expect(ctx.onReminderChange).toHaveBeenCalledWith(null);
+    });
+
+    it('Escape closes the menu first, then the picker', () => {
+      const ctx = openRemind('2026-10-09');
+
+      remindRow().click();
+      press(document.activeElement ?? document.body, 'Escape');
+
+      expect(menu()).toBeNull();
+      expect(ctx.onClose).not.toHaveBeenCalled();
+      press(document.activeElement ?? document.body, 'Escape');
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    // The host drops a cleared date's reminder in the same write, so one undo restores both.
+    it('Clear leaves the reminder to the host that clears the date', () => {
+      const ctx = openRemind('2026-10-09', '1_day_before');
+
+      q('[data-blok-database-date-clear]').click();
+
+      expect(ctx.onReminderChange).not.toHaveBeenCalled();
+      expect(ctx.onCommit).toHaveBeenCalledWith(null);
+    });
+
+    it('turning Include time on drops a reminder the timed list has not got', () => {
+      const ctx = openRemind('2026-10-09', '1_week_before');
+
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onReminderChange).toHaveBeenCalledWith(null);
+      expect(rowText()).toBe('RemindNone');
+    });
+
+    it('turning Include time on keeps a reminder both lists have', () => {
+      const ctx = openRemind('2026-10-09', '1_day_before');
+
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onReminderChange).not.toHaveBeenCalled();
+      expect(rowText()).toBe('Remind1 day before');
+    });
+
+    describe('the property default (research/17 §1d)', () => {
+      const withDefault = (): PropertyDefinition => ({ ...makeProperty('date'), date: { defaultReminder: '1_week_before' } });
+
+      it('an empty cell starts on the default and the first date stores it', () => {
+        const ctx = openRemind(null, undefined, {}, withDefault());
+
+        expect(rowText()).toBe('Remind1 week before');
+        day('2026-10-20').click();
+
+        expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-20');
+        expect(ctx.onReminderChange).toHaveBeenCalledWith('1_week_before');
+      });
+
+      it('leaves a date that already has a value alone', () => {
+        const ctx = openRemind('2026-10-09', undefined, {}, withDefault());
+
+        expect(rowText()).toBe('RemindNone');
+        day('2026-10-20').click();
+
+        expect(ctx.onReminderChange).not.toHaveBeenCalled();
+      });
     });
   });
 });

@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import type { DatabaseRow, DatabaseViewConfig, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
+import type { DatabaseRow, DatabaseViewConfig, DateReminderOffset, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill, openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
@@ -76,6 +76,8 @@ export interface TableGroup {
 export interface TableHandlers {
   /** One cell's new value. Live editors (multi-select, date) call it while open. */
   commitCell: (rowId: string, propertyId: string, value: PropertyValue) => void;
+  /** A date's Remind choice, null for None. Without it the date picker has no Remind row. */
+  commitReminder?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
   /** An editor closed or a clear finished: the tool may redraw now. */
   editEnded: () => void;
   /** Adds a row to a group ('' or null when ungrouped), after `afterRowId` when given. Returns its id. */
@@ -381,6 +383,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...(this.options.cellContext !== undefined ? { cellContext: this.options.cellContext } : {}),
       callbacks: {
         commitCell: (rowId, propertyId, value) => this.handlers?.commitCell(rowId, propertyId, value),
+        ...(this.handlers?.commitReminder !== undefined
+          ? { commitReminder: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => this.handlers?.commitReminder?.(rowId, propertyId, reminder) }
+          : {}),
         editEnded: () => this.handlers?.editEnded(),
         deleteRows: (rowIds) => this.handlers?.deleteRows(rowIds),
         duplicateRows: (rowIds) => rowIds.forEach((rowId) => this.handlers?.duplicateRow(rowId)),
@@ -832,11 +837,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (column === undefined || row === undefined) {
       return;
     }
+    const reminder = row.reminders?.[column.property.id]?.remind;
     const value = renderCellValue(column.property, readPropertyValue(row, column.property), {
       ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: this.options.readOnly,
       followLinks: true,
+      ...(reminder !== undefined ? { reminder } : {}),
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
     });
 

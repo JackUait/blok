@@ -443,6 +443,35 @@ describe('DatabasePropertyMenu', () => {
       byName(zones, 'timeZone-Asia/Tokyo').onActivate?.(byName(zones, 'timeZone-Asia/Tokyo'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } });
     });
+
+    // research/17 §1d: Notifications, the Remind a new date starts with.
+    it('sets Notifications from the date-only reminders, None by default', () => {
+      const cb = open(prop('date', { date: { timeFormat: '24_hour' } }));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+      const notifications = byName(items, 'dateNotifications');
+      const choices = notifications.children?.items ?? [];
+
+      expect(items.map((item) => item.name).at(-1)).toBe('dateNotifications');
+      expect(notifications.title).toBe('tools.database.dateNotifications');
+      expect(notifications.secondaryLabel).toBe('tools.database.dateRemind.none');
+      expect(choices.map((c) => c.name)).toEqual([
+        'dateNotifications-none', 'dateNotifications-on_day_of_event', 'dateNotifications-1_day_before',
+        'dateNotifications-2_days_before', 'dateNotifications-1_week_before',
+      ]);
+      expect(choices.map((c) => c.isActive)).toEqual([true, false, false, false, false]);
+      byName(choices, 'dateNotifications-1_week_before').onActivate?.(byName(choices, 'dateNotifications-1_week_before'));
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', defaultReminder: '1_week_before' } });
+    });
+
+    it('shows the chosen default without its time, and None removes it', () => {
+      const cb = open(prop('date', { date: { defaultReminder: '1_week_before' } }));
+      const notifications = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'dateNotifications');
+      const choices = notifications.children?.items ?? [];
+
+      expect(notifications.secondaryLabel).toBe('tools.database.dateRemind.1_week_before');
+      byName(choices, 'dateNotifications-none').onActivate?.(byName(choices, 'dateNotifications-none'));
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: {} });
+    });
   });
 
   it('sets the ID prefix', () => {

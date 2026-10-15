@@ -105,6 +105,33 @@ describe('renderCellValue', () => {
     expect(text).toContain('14:05');
   });
 
+  describe('a date with a reminder (research/17 §1c)', () => {
+    it('keeps the date text and puts an alarm after it', () => {
+      const cell = renderCellValue(prop('date'), '2027-06-15', ctx({ reminder: '1_day_before' }));
+      const alarm = cell.querySelector('[data-blok-database-date-reminder]');
+
+      expect(cell.textContent?.trim()).toBe('June 15, 2027');
+      expect(cell.hasAttribute('data-reminder')).toBe(true);
+      expect(alarm?.querySelector('svg')).not.toBeNull();
+      expect(alarm?.previousSibling?.textContent).toBe('June 15, 2027');
+      expect(alarm?.getAttribute('role')).toBe('img');
+      expect(alarm?.getAttribute('aria-label')).toBe('tools.database.dateReminderSet');
+    });
+
+    it('shows no alarm without a reminder', () => {
+      const cell = renderCellValue(prop('date'), '2027-06-15', ctx());
+
+      expect(cell.hasAttribute('data-reminder')).toBe(false);
+      expect(cell.querySelector('[data-blok-database-date-reminder]')).toBeNull();
+    });
+
+    it('shows no alarm for a reminder the value cannot take', () => {
+      const cell = renderCellValue(prop('date'), '2027-06-15', ctx({ reminder: '5_minutes_before' }));
+
+      expect(cell.querySelector('[data-blok-database-date-reminder]')).toBeNull();
+    });
+  });
+
   it('shows a value that is not a date as plain text', () => {
     expect(renderCellValue(prop('date'), 'someday', ctx()).textContent).toBe('someday');
   });

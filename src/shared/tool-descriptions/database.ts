@@ -47,6 +47,11 @@ const PROPERTY_SETTINGS = {
       dateFormat: { type: 'string', enum: ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'] },
       timeFormat: { type: 'string', enum: ['12_hour', '24_hour', 'hidden'] },
       timeZone: { type: 'string', description: 'IANA zone. Absent means the viewer\'s zone.' },
+      defaultReminder: {
+        type: 'string',
+        enum: ['on_day_of_event', '1_day_before', '2_days_before', '1_week_before'],
+        description: 'Notifications: the reminder a date set afterwards in an empty cell starts with. Existing reminders stay.',
+      },
     },
   },
   status: {

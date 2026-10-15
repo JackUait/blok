@@ -300,6 +300,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/timeFormat-*': cmd('database.updateProperty'),
   'menu:database/timeZone-local': cmd('database.updateProperty'),
   'menu:database/timeZone-*': cmd('database.updateProperty'),
+  'menu:database/dateNotifications-*': cmd('database.updateProperty'),
   'menu:database/format-*': cmd('database.updateProperty'),
   'menu:database/decimals-default': cmd('database.updateProperty'),
   'menu:database/decimals-*': cmd('database.updateProperty'),

@@ -5,7 +5,7 @@ import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPage, IconPlus } from '../../components/icons';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
-import type { ConvertedValue, DatabaseRowData, PropertyValue, TemplateRepeat } from '../database/types';
+import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
 
 /** What the parent database answers when an empty page asks what to offer. */
 interface RowPagePrompt {
@@ -14,7 +14,7 @@ interface RowPagePrompt {
   list: Array<{ id: string; title: string }>;
 }
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -56,6 +56,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (typeof data.repeat === 'object' && data.repeat !== null) {
     row.repeat = structuredClone(data.repeat);
+  }
+  if (typeof data.reminders === 'object' && data.reminders !== null && Object.keys(data.reminders).length > 0) {
+    row.reminders = structuredClone(data.reminders);
   }
 
   return row;
@@ -370,6 +373,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.repeat !== undefined) {
       saved.repeat = structuredClone(this._data.repeat);
     }
+    if (this._data.reminders !== undefined) {
+      saved.reminders = structuredClone(this._data.reminders);
+    }
 
     return saved;
   }
@@ -480,6 +486,20 @@ export class DatabaseRowTool implements BlockTool {
       delete this._data.repeat;
     } else {
       this._data.repeat = structuredClone(param.repeat);
+    }
+  }
+
+  /** Sets date reminders by property id; null removes one. */
+  public updateReminders(changes: Record<string, DateReminder | null>): void {
+    const next: Record<string, DateReminder> = Object.fromEntries(
+      Object.entries({ ...this._data.reminders, ...changes })
+        .filter((entry): entry is [string, DateReminder] => entry[1] !== null)
+        .map(([propertyId, reminder]) => [propertyId, structuredClone(reminder)])
+    );
+    if (Object.keys(next).length === 0) {
+      delete this._data.reminders;
+    } else {
+      this._data.reminders = next;
     }
   }
 

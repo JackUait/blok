@@ -1,6 +1,8 @@
-import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
+import { IconCheck, IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
-import type { PropertyDefinition, PropertyValue } from '../types';
+import { promoteToTopLayer, removeFromTopLayer } from '../../../components/utils/top-layer';
+import { reminderFits, reminderLabel, remindersFor } from '../reminders';
+import type { DateReminderOffset, PropertyDefinition, PropertyValue } from '../types';
 import { CellPopover } from './cell-popover';
 import { formatDatePart, resolveHourCycle, resolveLocale, resolveWeekStart, toIsoDay, toIsoTime, toLocalDate } from './date-format';
 import { formatDateValue, parseDateValue } from './date-value';
@@ -96,10 +98,13 @@ const createSwitch = (attribute: string, label: string, checked: boolean, onTogg
   return button;
 };
 
+/** Gap between the picker and its Remind menu. */
+const MENU_GAP = 4;
+
 /**
- * Date picker: a typed field, a month grid, End date (range), Include time
- * and Clear. Every change commits at once; Escape and an outside press just
- * close.
+ * Date picker: a typed field, a month grid, End date (range), Include time,
+ * Remind and Clear. Every change commits at once; Escape and an outside press
+ * just close.
  */
 class DateEditor {
   private start: Part | null;
@@ -111,6 +116,10 @@ class DateEditor {
   private viewMonth: number;
   private focusedDay: string;
   private lastValue: string | null;
+  /** The Remind row's choice. On an empty cell it can wait for the first date. */
+  private remind: DateReminderOffset | null;
+  private storedRemind: DateReminderOffset | null;
+  private remindMenu: HTMLElement | null = null;
   private open = true;
   private readonly locale: string;
   private readonly weekStart: number;
@@ -132,6 +141,9 @@ class DateEditor {
     this.rangeOn = this.end !== null;
     this.timeOn = parsed?.hasTime ?? false;
     this.lastValue = this.serialize();
+    this.storedRemind = ctx.reminder ?? null;
+    // The property default fills only an empty cell: existing dates keep their own reminder.
+    this.remind = this.storedRemind ?? (parsed === null ? property.date?.defaultReminder ?? null : null);
 
     const shown = toLocalDate(this.start?.day ?? toIsoDay(new Date()));
 
@@ -145,7 +157,13 @@ class DateEditor {
       anchor,
       content: this.root,
       minWidth: '252px',
-      onEscape: () => this.finish(true),
+      onEscape: () => {
+        if (this.remindMenu !== null) {
+          this.closeRemindMenu(true);
+        } else {
+          this.finish(true);
+        }
+      },
       onDismiss: () => this.finish(false),
     });
     this.render();
@@ -162,6 +180,7 @@ class DateEditor {
       return;
     }
     this.open = false;
+    this.closeRemindMenu(false);
     if (closePopover) {
       this.popover.close();
     }
@@ -187,10 +206,46 @@ class DateEditor {
   private commit(): void {
     const next = this.serialize();
 
+    this.commitRemind(next);
     if (next !== this.lastValue) {
       this.lastValue = next;
       this.ctx.onCommit(next);
     }
+  }
+
+  /** Stores the reminder a value change brings: the default on a first date, none on Clear or a list change. */
+  private commitRemind(next: string | null): void {
+    if (this.ctx.onReminderChange === undefined) {
+      return;
+    }
+    if (this.remind !== null && !reminderFits(this.remind, this.timeOn)) {
+      this.remind = null;
+    }
+    // A cleared date's reminder is the host's to drop, in the same write as the value.
+    if (next === null) {
+      this.storedRemind = null;
+
+      return;
+    }
+    if (this.remind !== this.storedRemind) {
+      this.storedRemind = this.remind;
+      this.ctx.onReminderChange(this.remind);
+    }
+  }
+
+  private pickRemind(choice: DateReminderOffset | null): void {
+    this.remind = choice;
+    this.closeRemindMenu(false);
+    if (this.start !== null && choice !== this.storedRemind) {
+      this.storedRemind = choice;
+      this.ctx.onReminderChange?.(choice);
+    }
+    this.render();
+    this.root.querySelector<HTMLElement>('[data-blok-database-date-remind]')?.focus();
+  }
+
+  private remindLabel(choice: DateReminderOffset | null, withTime: boolean): string {
+    return reminderLabel((key, vars) => this.ctx.i18n.t(key, vars), choice, withTime, this.hourCycle);
   }
 
   private showDay(day: string): void {
@@ -469,6 +524,10 @@ class DateEditor {
       this.render();
     }));
 
+    if (this.ctx.onReminderChange !== undefined) {
+      options.appendChild(this.renderRemindRow());
+    }
+
     clear.type = 'button';
     clear.setAttribute('data-blok-database-date-clear', '');
     clear.textContent = this.t('tools.database.dateClear');
@@ -482,6 +541,127 @@ class DateEditor {
 
     return options;
   }
+
+  private renderRemindRow(): HTMLButtonElement {
+    const row = document.createElement('button');
+    const label = document.createElement('span');
+    const value = document.createElement('span');
+    const chevron = document.createElement('span');
+
+    row.type = 'button';
+    row.setAttribute('data-blok-database-date-remind', '');
+    row.setAttribute('aria-haspopup', 'menu');
+    row.setAttribute('aria-expanded', 'false');
+    label.textContent = this.t('tools.database.dateRemind');
+    value.setAttribute('data-blok-database-date-remind-value', '');
+    value.textContent = this.remindLabel(this.remind, false);
+    chevron.setAttribute('data-blok-database-date-remind-chevron', '');
+    chevron.innerHTML = IconChevronRight;
+    row.append(label, value, chevron);
+    row.addEventListener('click', () => {
+      if (this.remindMenu === null) {
+        this.openRemindMenu(row);
+      } else {
+        this.closeRemindMenu(false);
+      }
+    });
+
+    return row;
+  }
+
+  /**
+   * The Remind submenu, beside the picker as in Notion. It lives inside the
+   * editor so a press in it is not an outside press, and goes to the top layer
+   * so the popover's clipping cannot cut it.
+   */
+  private openRemindMenu(row: HTMLElement): void {
+    const menu = document.createElement('div');
+    const choices: Array<DateReminderOffset | null> = [null, ...remindersFor(this.timeOn)];
+
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('data-blok-database-date-remind-menu', '');
+    menu.setAttribute('aria-label', this.t('tools.database.dateRemind'));
+    choices.forEach((choice) => {
+      const item = document.createElement('button');
+      const text = document.createElement('span');
+      const checked = choice === this.remind;
+
+      item.type = 'button';
+      item.tabIndex = -1;
+      item.setAttribute('role', 'menuitemradio');
+      item.setAttribute('aria-checked', String(checked));
+      item.setAttribute('data-blok-database-date-remind-option', choice ?? 'none');
+      text.textContent = this.remindLabel(choice, true);
+      item.appendChild(text);
+      if (checked) {
+        const check = document.createElement('span');
+
+        check.setAttribute('data-blok-database-date-remind-check', '');
+        check.innerHTML = IconCheck;
+        item.appendChild(check);
+      }
+      item.addEventListener('click', () => this.pickRemind(choice));
+      menu.appendChild(item);
+    });
+    menu.addEventListener('keydown', this.handleMenuKey);
+    this.root.appendChild(menu);
+    this.remindMenu = menu;
+    row.setAttribute('aria-expanded', 'true');
+    promoteToTopLayer(menu);
+    this.placeRemindMenu(row, menu);
+    const current = menu.querySelector<HTMLElement>('[aria-checked="true"]') ?? menu.querySelector<HTMLElement>('[role="menuitemradio"]');
+
+    current?.setAttribute('tabindex', '0');
+    current?.focus();
+  }
+
+  private placeRemindMenu(row: HTMLElement, menu: HTMLElement): void {
+    const box = this.root.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    const rtl = getElementDirection(this.anchor) === 'rtl';
+    const after = rtl ? box.left - MENU_GAP - width : box.right + MENU_GAP;
+    const before = rtl ? box.right + MENU_GAP : box.left - MENU_GAP - width;
+    const fits = rtl ? after >= 0 : after + width <= window.innerWidth;
+    const left = fits ? after : before;
+    const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - MENU_GAP));
+
+    Object.assign(menu.style, { position: 'fixed', left: `${Math.max(0, left)}px`, top: `${top}px` });
+  }
+
+  private closeRemindMenu(focusRow: boolean): void {
+    const menu = this.remindMenu;
+
+    if (menu === null) {
+      return;
+    }
+    this.remindMenu = null;
+    removeFromTopLayer(menu);
+    menu.remove();
+    const row = this.root.querySelector<HTMLElement>('[data-blok-database-date-remind]');
+
+    row?.setAttribute('aria-expanded', 'false');
+    if (focusRow) {
+      row?.focus();
+    }
+  }
+
+  private readonly handleMenuKey = (event: KeyboardEvent): void => {
+    const items = [...(this.remindMenu?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [])];
+    const index = items.findIndex((item) => item === document.activeElement);
+    const steps: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
+    const step = steps[event.key];
+    const edge: Record<string, number> = { Home: 0, End: items.length - 1 };
+    const target = step !== undefined ? (index + step + items.length) % items.length : edge[event.key];
+
+    if (target === undefined) {
+      return;
+    }
+    event.preventDefault();
+    items.forEach((item, i) => item.setAttribute('tabindex', i === target ? '0' : '-1'));
+    items[target]?.focus();
+  };
 
   private dayButton(day: string): HTMLButtonElement | null {
     return this.root.querySelector<HTMLButtonElement>(`[data-blok-database-date-day="${day}"]`);

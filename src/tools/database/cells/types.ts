@@ -1,5 +1,5 @@
 import type { I18n } from '../../../../types';
-import type { DatabasePerson, PropertyDefinition, PropertyValue, SelectOption } from '../types';
+import type { DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
 /**
  * What every cell renderer and editor needs from its host: the table, a board
@@ -60,6 +60,8 @@ export interface CellContext {
    * click is left to the host, which edits the value.
    */
   followLinks?: boolean;
+  /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */
+  reminder?: DateReminderOffset;
 }
 
 /**
@@ -79,6 +81,11 @@ export interface CellEditorCallbacks {
   onClose?: () => void;
   /** The status editor's "Edit property" footer: open the property menu. Without it there is no footer. */
   onEditProperty?: () => void;
+  /**
+   * Date: the Remind row's new choice, null for None. Without it the picker has
+   * no Remind row. Not called on Clear: the host drops the reminder with the value.
+   */
+  onReminderChange?: (reminder: DateReminderOffset | null) => void;
 }
 
 export type CellEditorContext = CellContext & CellEditorCallbacks;

@@ -105,6 +105,7 @@ export declare const IconGallery: string;
 export declare const IconList: string;
 export declare const IconTimeline: string;
 export declare const IconCalendar: string;
+export declare const IconAlarm: string;
 export declare const IconMergeCells: string;
 export declare const IconSplitCell: string;
 export declare const IconSplitView: string;

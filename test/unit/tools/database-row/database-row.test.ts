@@ -163,6 +163,32 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('date reminders', () => {
+    it('loads and saves reminders by property id', () => {
+      const reminders = { due: { remind: '1_day_before' as const, sentFor: '2027-06-14T13:00:00.000Z' } };
+      const tool = new DatabaseRowTool(createRowOptions({ reminders }));
+
+      expect(tool.save(document.createElement('div')).reminders).toEqual(reminders);
+    });
+
+    it('sets one reminder without touching another, and null removes it', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ reminders: { a: { remind: 'on_day_of_event' } } }));
+
+      tool.updateReminders({ b: { remind: '1_week_before' } });
+      expect(tool.save(document.createElement('div')).reminders).toEqual({ a: { remind: 'on_day_of_event' }, b: { remind: '1_week_before' } });
+      tool.updateReminders({ a: null });
+      expect(tool.save(document.createElement('div')).reminders).toEqual({ b: { remind: '1_week_before' } });
+      tool.updateReminders({ b: null });
+      expect('reminders' in tool.save(document.createElement('div'))).toBe(false);
+    });
+
+    it('never adds reminders to a row that has none', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      expect('reminders' in tool.save(document.createElement('div'))).toBe(false);
+    });
+  });
+
   describe('page full width', () => {
     it.each([true, false])('saves the page\'s own full width (%s)', (fullWidth) => {
       const tool = new DatabaseRowTool(createRowOptions({ fullWidth }));

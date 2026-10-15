@@ -61,6 +61,12 @@ const makeBlock = (doc: () => Doc, id: string, name: string, parentId: string | 
 
         entry.data = { ...entry.data, repeat: repeat ?? undefined };
       }
+      if (method === 'updateReminders') {
+        const changes = param as Record<string, unknown>;
+        const next = Object.fromEntries(Object.entries({ ...row.reminders, ...changes }).filter(([, reminder]) => reminder !== null));
+
+        entry.data = { ...entry.data, reminders: Object.keys(next).length > 0 ? next : undefined };
+      }
       if (method === 'setRowData') entry.data = { ...entry.data, ...(param as Record<string, unknown>) };
 
       return undefined;

@@ -130,6 +130,21 @@ export interface DateDisplay {
   timeFormat?: TimeFormat;
   /** IANA zone used to show times. Absent means the viewer's zone. */
   timeZone?: string;
+  /** "Notifications": the Remind a date set afterwards in an empty cell starts with. Date-only offsets. */
+  defaultReminder?: DateReminderOffset;
+}
+
+/** A date's "Remind" choice, as Notion's date picker lists it. The day offsets remind at 9:00. */
+export type DateReminderOffset =
+  | 'on_day_of_event' | '1_day_before' | '2_days_before' | '1_week_before'
+  | 'at_time_of_event' | '5_minutes_before' | '10_minutes_before' | '15_minutes_before' | '30_minutes_before'
+  | '1_hour_before' | '2_hours_before';
+
+/** A reminder on one date value of a row. */
+export interface DateReminder {
+  remind: DateReminderOffset;
+  /** The due time (ISO) the host last handled. While it equals the current due time, it is not offered again. */
+  sentFor?: string;
 }
 
 export type StatusGroupKind = 'todo' | 'inProgress' | 'complete';
@@ -357,6 +372,16 @@ export interface DatabaseTemplates {
   onRepeatDue?(input: { databaseId: string; templateId: string; dueAt: string; createRow: () => string | null }): void;
 }
 
+/** Host lever for date reminders. Blok stores them and has no notification service. */
+export interface DatabaseReminders {
+  /**
+   * Called for each reminder whose time has come, on each client that renders
+   * the database. `markSent` stamps that due time so it is not offered again;
+   * the host decides which client sends it and to whom.
+   */
+  onReminderDue?(input: { databaseId: string; rowId: string; propertyId: string; remind: DateReminderOffset; dueAt: string; markSent: () => void }): void;
+}
+
 /** A linked database shows another database's rows and schema. */
 export interface DatabaseSourceRef {
   /** The source database block. */
@@ -531,6 +556,8 @@ export interface DatabaseRow {
   cover?: string;
   /** The page's own Full width. Absent: the database's page layout decides. Only a full page widens. */
   fullWidth?: boolean;
+  /** Date reminders by date property id. */
+  reminders?: Record<string, DateReminder>;
   /** Row block metadata, for the read-only time and person properties. */
   meta?: DatabaseRowMeta;
   /**
@@ -573,6 +600,8 @@ export interface DatabaseRowData extends BlockToolData {
   template?: boolean;
   /** Templates only: the schedule of a repeating template. */
   repeat?: TemplateRepeat;
+  /** Date reminders by date property id. A map, so reminders on two date properties merge. */
+  reminders?: Record<string, DateReminder>;
 }
 
 // ─── View config ───
@@ -1256,6 +1285,8 @@ export interface DatabaseConfig {
   buttons?: DatabaseButtons;
   /** Repeating templates. */
   templates?: DatabaseTemplates;
+  /** Date reminders. */
+  reminders?: DatabaseReminders;
   /** Linked databases whose source is in another document. */
   linkedSources?: DatabaseLinkedSources;
   /** Mentions of a row in other documents, for its "N backlinks". */

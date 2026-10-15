@@ -16,9 +16,12 @@ import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
 import { SHOW_PAGE_ICON_ITEM } from './database-table-menus';
+import { reminderLabel, remindersFor } from './reminders';
+import { resolveHourCycle, resolveLocale } from './cells/date-format';
 import type {
   DateDisplay,
   DateFormat,
+  DateReminderOffset,
   NumberDisplay,
   NumberShowAs,
   PageVisibility,
@@ -132,6 +135,7 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
 
 const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
 const TIME_FORMATS: readonly TimeFormat[] = ['12_hour', '24_hour', 'hidden'];
+const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 'h12', '24_hour': 'h23' };
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
 const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidden'];
 
@@ -732,7 +736,31 @@ export class DatabasePropertyMenu {
           ],
         },
       },
+      this.notificationsItem(date, update),
     ];
+  }
+
+  /** "Notifications" (research/17 §1d): the Remind a date set afterwards starts with. Date-only choices. */
+  private notificationsItem(date: DateDisplay, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
+    const t = (key: string, vars?: Record<string, string | number>): string => this.options.i18n.t(key, vars);
+    const hourCycle = HOUR_CYCLES[date.timeFormat ?? ''] ?? resolveHourCycle(resolveLocale(this.options.i18n.getLocale()));
+    const chosen = date.defaultReminder ?? null;
+    const choices: Array<DateReminderOffset | null> = [null, ...remindersFor(false)];
+
+    return {
+      name: 'dateNotifications',
+      title: this.t('tools.database.dateNotifications'),
+      secondaryLabel: reminderLabel(t, chosen, false, hourCycle),
+      children: {
+        items: choices.map((choice) => ({
+          name: `dateNotifications-${choice ?? 'none'}`,
+          title: reminderLabel(t, choice, true, hourCycle),
+          isActive: choice === chosen,
+          closeOnActivate: true,
+          onActivate: () => update({ date: choice === null ? without(date, 'defaultReminder') : { ...date, defaultReminder: choice } }),
+        })),
+      },
+    };
   }
 
   private numberItems(number: NumberDisplay, set: (number: NumberDisplay) => void): PopoverItemParams[] {

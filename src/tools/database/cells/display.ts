@@ -1,10 +1,11 @@
-import { IconCheck } from '../../../components/icons';
+import { IconAlarm, IconCheck } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
 import { relationIdsOf } from '../relation-values';
 import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
+import { reminderDueAt } from '../reminders';
 import { formatDateDisplay, resolveLocale } from './date-format';
 import { formatNumberValue, numberFill } from './number-format';
 import { optionColorOf } from './option-colors';
@@ -12,6 +13,18 @@ import type { CellContext } from './types';
 
 export const optionsFor = (property: PropertyDefinition, ctx: Pick<CellContext, 'options'>): SelectOption[] =>
   ctx.options ?? property.config?.options ?? [];
+
+/** A set reminder: an alarm after the date, and the date in the accent (database.css `[data-reminder]`). */
+const renderReminder = (cell: HTMLElement, label: string): void => {
+  const alarm = document.createElement('span');
+
+  cell.setAttribute('data-reminder', '');
+  alarm.setAttribute('data-blok-database-date-reminder', '');
+  alarm.setAttribute('role', 'img');
+  alarm.setAttribute('aria-label', label);
+  alarm.innerHTML = IconAlarm;
+  cell.appendChild(alarm);
+};
 
 /** A colored option pill. Colors come from `[data-color]` in database.css. */
 export const createOptionPill = (option: Pick<SelectOption, 'label' | 'color'>): HTMLSpanElement => {
@@ -265,6 +278,9 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
     case 'lastEditedTime':
       cell.textContent = formatDateDisplay(value, resolveLocale(ctx.locale), property.date, ctx.now, ctx.hourCycle)
         ?? (typeof value === 'string' ? value : '');
+      if (property.type === 'date' && ctx.reminder !== undefined && reminderDueAt(value, ctx.reminder, property.date?.timeZone) !== null) {
+        renderReminder(cell, ctx.i18n.t('tools.database.dateReminderSet', { reminder: ctx.i18n.t(`tools.database.dateRemind.${ctx.reminder}`) }));
+      }
       break;
     case 'url':
       if (typeof value === 'string' && value !== '') {

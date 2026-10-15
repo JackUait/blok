@@ -2,7 +2,9 @@
  * Dev AI endpoint for `yarn serve`: the playground's stand-in for the host
  * backend route that calls the LLM for the in-editor assistant.
  * `POST /ai` takes `{ system, messages, tools }` (what `agent.assistant.model`
- * receives) and answers with the model's message.
+ * receives) and streams NDJSON: `{ type: 'delta', index, text }` while the model
+ * writes, then `{ type: 'message', content, stop_reason, usage }` or
+ * `{ type: 'error', error }`. src/playground/ai-model.ts reads it.
  *
  * The key never reaches the page. It comes from the shell, or from
  * ~/.config/blok/ai.env, which lives outside the repo so it cannot be committed.
@@ -59,8 +61,12 @@ export function messageParams(model, { system, messages, tools }) {
     // Moves to the last block on each call, so a step reads the steps before it.
     cache_control: { type: 'ephemeral' },
     output_config: { effort: 'medium' },
-    // On a refusal the API re-runs the request on a model chosen by refusal category.
-    betas: ['server-side-fallback-2026-07-01'],
+    // The notes Opus writes between tool calls arrive as thinking blocks, empty
+    // unless display is 'updates'. Keep this the same on every step: changing it
+    // drops the cached conversation.
+    thinking: { type: 'adaptive', display: 'updates' },
+    // fallback: on a refusal the API re-runs the request on a model chosen by refusal category.
+    betas: ['server-side-fallback-2026-07-01', 'thinking-display-updates-2026-08-18'],
     fallbacks: 'default',
   };
 }
@@ -74,6 +80,13 @@ const json = (status, headers, value) => ({
   body: JSON.stringify(value),
 });
 
+const errorText = (error) => {
+  const message = error instanceof Error ? error.message : String(error);
+
+  // The SDK's wording when no key or profile is found.
+  return message.startsWith('Could not resolve authentication method') ? NO_KEY_MESSAGE : message;
+};
+
 /**
  * @param {object} options
  * @param {string[]} options.origins Pages allowed to call.
@@ -84,9 +97,10 @@ const json = (status, headers, value) => ({
  * @param {string} options.url
  * @param {string} options.body
  * @param {AbortSignal} options.signal Aborted when the page drops the request.
- * @param {(params: Record<string, unknown>, signal: AbortSignal) => Promise<{ content: unknown[], stop_reason: string | null }>} options.createMessage
+ * @param {CreateMessage} options.createMessage
  * @param {string} [options.model]
- * @returns {Promise<{ status: number, headers: Record<string, string>, body?: string }>}
+ * @returns {Promise<{ status: number, headers: Record<string, string>, body?: string, pipe?: (write: (chunk: string) => void) => Promise<void> }>}
+ *   `pipe` is set on the streamed answer. Headers are sent before it runs, so a model error is its last line.
  */
 export async function handleAiRequest({ origins, hosts, host, origin, method, url, body, signal, createMessage, model = AI_MODEL }) {
   const allowed = origin !== undefined && origins.includes(origin);
@@ -120,36 +134,58 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
     return json(400, headers, { error: 'Send { system, messages, tools }.' });
   }
 
-  try {
-    const message = await createMessage(messageParams(model, parsed), signal);
+  return {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' },
+    pipe: async (write) => {
+      const send = (value) => write(`${JSON.stringify(value)}\n`);
 
-    return json(200, headers, { content: message.content, stop_reason: message.stop_reason });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    // The SDK's wording when no key or profile is found.
-    const noKey = message.startsWith('Could not resolve authentication method');
+      try {
+        const message = await createMessage(messageParams(model, parsed), signal, (index, text) => send({ type: 'delta', index, text }));
 
-    return json(502, headers, { error: noKey ? NO_KEY_MESSAGE : message });
-  }
+        send({ type: 'message', content: message.content, stop_reason: message.stop_reason, ...(message.usage === undefined ? {} : { usage: message.usage }) });
+      } catch (error) {
+        send({ type: 'error', error: errorText(error) });
+      }
+    },
+  };
 }
+
+/**
+ * @typedef {(params: Record<string, unknown>, signal: AbortSignal, onDelta: (index: number, text: string) => void)
+ *   => Promise<{ content: unknown[], stop_reason: string | null, usage?: unknown }>} CreateMessage
+ */
 
 /**
  * The real model call. Imported late, so a checkout without the SDK still serves the playground.
  *
  * @param {{ apiKey: string | undefined, baseURL: string | undefined }} settings
- * @returns {Promise<(params: Record<string, unknown>, signal: AbortSignal) => Promise<{ content: unknown[], stop_reason: string | null }>>}
+ * @returns {Promise<CreateMessage>}
  */
 async function anthropicCreateMessage({ apiKey, baseURL }) {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const state = { client: null };
 
-  return async (params, signal) => {
+  return async (params, signal, onDelta) => {
     // Built on first use: a missing key then shows in the bar, not at startup.
     // Undefined fields fall back to the SDK's own lookup (env, then `ant auth login`).
     state.client ??= new Anthropic({ apiKey, baseURL });
 
-    // Streaming: a 64k max_tokens request would time out as one HTTP call.
-    return state.client.beta.messages.stream(params, { signal }).finalMessage();
+    const stream = state.client.beta.messages.stream(params, { signal });
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta') {
+        // A thinking delta is a progress note: reasoning stays empty under display 'updates'.
+        const piece = { text_delta: event.delta.text, thinking_delta: event.delta.thinking }[event.delta.type];
+
+        if (typeof piece === 'string' && piece !== '') {
+          onDelta(event.index, piece);
+        }
+      }
+    }
+
+    // The message as the API built it: thinking blocks must go back unchanged.
+    return stream.finalMessage();
   };
 }
 
@@ -213,8 +249,11 @@ export async function startAiEndpoint({ port, origins }) {
         createMessage,
         model: settings.model,
       }))
-      .then(({ status, headers, body }) => {
+      .then(async ({ status, headers, body, pipe }) => {
         response.writeHead(status, headers);
+        if (pipe !== undefined) {
+          await pipe((chunk) => response.write(chunk));
+        }
         response.end(body);
       })
       .catch(() => {

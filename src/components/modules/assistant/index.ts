@@ -135,9 +135,8 @@ export class Assistant extends Module {
     }
 
     const id = ++this.answerId;
-    const name = this.config.agent?.assistant?.name?.trim() || 'AI';
 
-    this.bar?.render({ kind: 'working', status: this.Blok.I18n.t('assistant.working', { agent: name }) });
+    this.bar?.render({ kind: 'working', status: this.workingStatus() });
     void pending.then((result) => {
       if (id === this.answerId) {
         this.show(result);
@@ -145,9 +144,21 @@ export class Assistant extends Module {
     });
   }
 
+  private workingStatus(): string {
+    const name = this.config.agent?.assistant?.name?.trim() || 'AI';
+
+    return this.Blok.I18n.t('assistant.working', { agent: name });
+  }
+
+  private progress(text: string): void {
+    if (this.isWorking()) {
+      this.bar?.render({ kind: 'working', status: this.workingStatus(), progress: text });
+    }
+  }
+
   private startRun(prompt: string): Promise<AgentRunResult> | null {
     try {
-      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => undefined);
+      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => undefined, (text) => this.progress(text));
 
       return this.run.result;
     } catch (thrown) {

@@ -214,6 +214,55 @@ describe('in-editor assistant bar', () => {
     expect(editor.agent.state.status).toBe('working');
   });
 
+  it('shows the text the model streams while it works, outside the status line', async () => {
+    const { model, release } = gated(answer('Added a line.'));
+    const streaming: AgentModel = async (request) => {
+      request.onText?.('Reading');
+      request.onText?.('Reading the document first.');
+
+      return model(request);
+    };
+    const editor = await createEditor(streaming);
+
+    editor.agent.openAssistant();
+    submit('Write');
+    await settle();
+
+    expect(within(bar()).getByText('Reading the document first.')).toBeVisible();
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Writer is writing');
+    expect(within(bar()).getByRole('status')).not.toHaveTextContent('Reading');
+
+    release();
+    await waitFor(() => expect(within(bar()).getByText('Added a line.')).toBeVisible());
+    expect(within(bar()).queryByText('Reading the document first.')).toBeNull();
+    expect(editor.agent.state.status).toBe('working');
+  });
+
+  it('streams a follow-up answer too', async () => {
+    const replies = [answer('First answer'), answer('Second answer')];
+    const shown: string[] = [];
+    const streaming: AgentModel = async (request) => {
+      request.onText?.(`streaming ${replies.length}`);
+      shown.push(within(bar()).queryByText(`streaming ${replies.length}`)?.textContent ?? '');
+      const next = replies.shift();
+
+      if (next === undefined) {
+        throw new Error('unscripted model call');
+      }
+
+      return next;
+    };
+    const editor = await createEditor(streaming);
+
+    editor.agent.openAssistant();
+    submit('One');
+    await waitFor(() => expect(within(bar()).getByText('First answer')).toBeVisible());
+    submit('Two');
+    await waitFor(() => expect(within(bar()).getByText('Second answer')).toBeVisible());
+    expect(shown).toEqual(['streaming 2', 'streaming 1']);
+    expect(editor.agent.state.status).toBe('working');
+  });
+
   it('sends a second prompt as a follow-up in the same conversation', async () => {
     const model = scripted(answer('First answer'), answer('Second answer'));
     const editor = await createEditor(model);

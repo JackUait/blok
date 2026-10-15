@@ -264,4 +264,60 @@ describe('runAssistantLoop', () => {
 
     expect('thinking' in without.requests[0]).toBe(false);
   });
+
+  it('passes the model a way to show text while it streams', async () => {
+    const shown: string[] = [];
+    const result = await runAssistantLoop({
+      model: async ({ onText }) => {
+        onText?.('Reading');
+        onText?.('Reading the document');
+
+        return reply([{ type: 'text', text: 'Done.' }], 'end_turn');
+      },
+      system: '',
+      tools: [],
+      messages: [{ role: 'user', content: 'x' }],
+      call: async () => ok(),
+      signal: new AbortController().signal,
+      maxSteps: 5,
+      onText: (text) => shown.push(text),
+    });
+
+    expect(shown).toEqual(['Reading', 'Reading the document']);
+    expect(result.reply).toBe('Done.');
+  });
+
+  it('shows nothing a model streams after the user stopped the run', async () => {
+    const controller = new AbortController();
+    const shown: string[] = [];
+
+    await runAssistantLoop({
+      model: async ({ onText }) => {
+        onText?.('before');
+        controller.abort();
+        onText?.('after');
+
+        return reply([{ type: 'text', text: 'late' }], 'end_turn');
+      },
+      system: '',
+      tools: [],
+      messages: [{ role: 'user', content: 'x' }],
+      call: async () => ok(),
+      signal: controller.signal,
+      maxSteps: 5,
+      onText: (text) => shown.push(text),
+    });
+
+    expect(shown).toEqual(['before']);
+  });
+
+  it('sends no onText to the model when nobody listens', async () => {
+    const model = scripted(reply([{ type: 'text', text: 'ok' }], 'end_turn'));
+
+    await runAssistantLoop({
+      model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call: async () => ok(), signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(model.requests[0]).not.toHaveProperty('onText');
+  });
 });

@@ -12,7 +12,7 @@ export interface AssistantBarCallbacks {
 
 export type AssistantBarView =
   | { kind: 'prompt' }
-  | { kind: 'working'; status: string }
+  | { kind: 'working'; status: string; progress?: string }
   | { kind: 'answered'; reply: string; changed: boolean }
   | { kind: 'error'; message: string; changed: boolean };
 
@@ -156,7 +156,9 @@ export class AssistantBar {
     const working = view.kind === 'working';
 
     this.element.toggleAttribute(ATTR.working, working);
-    this.reply.textContent = view.kind === 'answered' ? view.reply : '';
+    // Streamed text goes here, not into the status live region: a screen reader
+    // would announce every token.
+    this.reply.textContent = (view.kind === 'answered' && view.reply) || (view.kind === 'working' && view.progress) || '';
     this.reply.hidden = this.reply.textContent === '';
     this.alert.textContent = view.kind === 'error' ? view.message : '';
     this.alert.hidden = this.alert.textContent === '';

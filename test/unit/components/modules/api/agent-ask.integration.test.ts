@@ -1,10 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../../src/blok';
+import type { Core } from '../../../../../src/components/core';
 import { CORE_TOOL_NAMES } from '../../../../../src/mcp/tools';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, BlokConfig, OutputData } from '../../../../../types';
-import type { Agent, AgentModel, AgentModelRequest, AgentModelResponse } from '../../../../../types/api';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type {
+  Agent,
+  AgentModel,
+  AgentModelRequest,
+  AgentModelResponse,
+  AgentThinkingLevel,
+} from '../../../../../types/api';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -42,6 +50,16 @@ const createEditor = async (
 
   return editor;
 };
+
+/** Exposes the module graph so a test can call AgentAPI.startRun the way the assistant bar does. */
+class BootedEditor extends Blok {
+  public moduleGraph: BlokModules | undefined;
+
+  public override exportAPI(core: Core): void {
+    this.moduleGraph = core.moduleInstances;
+    super.exportAPI(core);
+  }
+}
 
 const insertBatch = (text: string): AgentModelResponse => ({
   stop_reason: 'tool_use',
@@ -247,5 +265,55 @@ describe('editor.agent.ask', () => {
     const editor = await createEditor(scripted());
 
     expect(() => editor.agent.ask('Hi', { thinking: 'turbo' as never })).toThrow(TypeError);
+  });
+
+  it('keeps the level an answer started with, and a follow-up reads the new pick', async () => {
+    const pick: { level: AgentThinkingLevel } = { level: 'high' };
+    const firstCall: { release: () => void } = { release: () => undefined };
+    const released = new Promise<void>((resolve) => {
+      firstCall.release = resolve;
+    });
+    const inner = scripted(insertBatch('Added'), answer('Done'), answer('Again'));
+    const model: AgentModel = async (request) => {
+      if (inner.requests.length === 0) {
+        await released;
+      }
+
+      return inner(request);
+    };
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+
+    const editor = new BootedEditor({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'First line here' } }] },
+      agent: { assistant: { model, name: 'Writer' } },
+    });
+
+    editors.push(editor as unknown as TestEditor);
+    await editor.isReady;
+    await settle();
+
+    const agentApi = editor.moduleGraph?.AgentAPI;
+
+    if (agentApi === undefined) {
+      throw new Error('The ready editor has no AgentAPI module.');
+    }
+
+    const run = agentApi.startRun('First', '', () => pick.level);
+
+    // The pick changes after the prompt is sent and again while the model is answering.
+    pick.level = 'medium';
+    await settle();
+    pick.level = 'low';
+    firstCall.release();
+    await run.result;
+
+    await run.followUp('Next');
+    run.end();
+
+    expect(inner.requests.map((request) => request.thinking)).toEqual(['high', 'high', 'low']);
   });
 });

@@ -35,8 +35,9 @@ function fillImage(box: HTMLElement, url: string | undefined, scope: CardPreview
 }
 
 /**
- * What a card shows above its title: the page cover, the page content (its
- * first image, else its first lines), or a Files & media property's image.
+ * What a card shows above its title: the page cover (the row's own cover,
+ * else its first body image), the page content (its first image, else its
+ * first lines), or a Files & media property's image.
  */
 export const createCardPreview = (
   preview: ResolvedCardPreview,
@@ -62,7 +63,9 @@ export const createCardPreview = (
   const body = bodyOf(row.id);
 
   if (preview.kind === 'cover') {
-    fillImage(box, coverImageOf(body), scope);
+    const ownCover = row.cover !== undefined && safeImageSrc(row.cover) !== null ? row.cover : undefined;
+
+    fillImage(box, ownCover ?? coverImageOf(body), scope);
 
     return box;
   }

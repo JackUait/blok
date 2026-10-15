@@ -115,7 +115,7 @@ export const pageContentPreview = (blocks: BodyBlock[]): PageContentPreview => {
   return { lines };
 };
 
-/** Rows have no cover field yet; the first image in the body stands in for one. */
+/** The first image in the body. Card previews use it when the row has no cover of its own. */
 export const coverImageOf = (blocks: BodyBlock[]): string | undefined => {
   for (const block of blocks) {
     const image = imageOf(block);

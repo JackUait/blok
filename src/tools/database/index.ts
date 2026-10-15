@@ -6111,6 +6111,7 @@ export class DatabaseTool implements BlockTool {
           row?.dispatchChange();
           this.syncRowsFromBlocks();
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
+          this.rerenderView({ keepDrawer: true });
         },
         uploadCover: this.coverUploader(),
         onIconChange: (rowId, icon) => {

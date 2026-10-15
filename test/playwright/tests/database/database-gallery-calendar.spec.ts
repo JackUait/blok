@@ -33,6 +33,7 @@ const SCHEMA = [
 interface RowSeed {
   id: string;
   properties: Record<string, unknown>;
+  cover?: string;
 }
 
 const ROWS: RowSeed[] = [
@@ -55,7 +56,7 @@ const blocks = (view: Record<string, unknown>, rows: RowSeed[] = ROWS): OutputBl
   ...rows.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: rowKey(i), properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties, ...(row.cover !== undefined ? { cover: row.cover } : {}) },
   })),
 ];
 
@@ -144,6 +145,29 @@ test.describe('gallery', () => {
 
     await expect(image).toHaveCount(1);
     await expect(image).toHaveCSS('object-fit', 'contain');
+  });
+
+  test('"Page cover" shows the row\'s own cover, and follows a cover set in the drawer', async ({ page }) => {
+    const pixel = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    const rows = [
+      { id: 'r1', properties: { 'p-title': 'Covered' }, cover: pixel },
+      { id: 'r2', properties: { 'p-title': 'Bare' } },
+    ];
+
+    await mount(page, blocks({ type: 'gallery', cardPreview: 'cover' }, rows));
+
+    await expect(card(page, 'r1').locator('[data-blok-database-gallery-image]')).toHaveAttribute('src', pixel);
+    await expect(card(page, 'r2').locator('[data-blok-database-gallery-image]')).toHaveCount(0);
+
+    await card(page, 'r2').click();
+    await drawer(page).locator('[data-blok-database-drawer-add-cover]').click();
+    const picker = page.getByRole('dialog', { name: 'Set cover image' });
+
+    await picker.getByRole('tab', { name: 'Link' }).click();
+    await picker.getByRole('textbox', { name: 'Image URL' }).fill('https://example.com/new-cover.png');
+    await picker.getByRole('button', { name: 'Insert' }).click();
+
+    await expect(card(page, 'r2').locator('[data-blok-database-gallery-image]')).toHaveAttribute('src', 'https://example.com/new-cover.png');
   });
 
   test('large cards are wider than small ones', async ({ page }) => {

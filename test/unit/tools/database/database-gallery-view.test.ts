@@ -121,6 +121,38 @@ describe('DatabaseGalleryView', () => {
       expect(img?.getAttribute('alt')).toBe('');
     });
 
+    it('shows the row\'s own page cover over an image in the body', () => {
+      const { root } = mount({
+        view: galleryView({ cardPreview: 'cover' }),
+        groups: single([{ ...row('r1', 'Alpha'), cover: 'https://example.com/page-cover.png' }]),
+        bodyOf: () => [text, image],
+      });
+
+      expect(cards(root)[0].querySelector('img')?.getAttribute('src')).toBe('https://example.com/page-cover.png');
+    });
+
+    it('shows the page cover when the body has no image', () => {
+      const { root } = mount({
+        view: galleryView({ cardPreview: 'cover' }),
+        groups: single([{ ...row('r1', 'Alpha'), cover: 'https://example.com/page-cover.png' }]),
+      });
+      const preview = cards(root)[0].querySelector('[data-blok-database-gallery-preview]');
+
+      expect(preview?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/page-cover.png');
+      expect(preview?.hasAttribute('data-empty')).toBe(false);
+    });
+
+    it('never loads a script URL page cover, and falls back to the body image', () => {
+      const { root } = mount({
+        view: galleryView({ cardPreview: 'cover' }),
+        groups: single([{ ...row('r1', 'Alpha'), cover: 'javascript:alert(1)' }]),
+        bodyOf: () => [image],
+      });
+      const imgs = [...cards(root)[0].querySelectorAll('img')];
+
+      expect(imgs.map((img) => img.getAttribute('src'))).toEqual(['https://example.com/cover.png']);
+    });
+
     it('shows a property value as the image', () => {
       const { root } = mount({
         view: galleryView({ cardPreview: 'property:p-link' }),

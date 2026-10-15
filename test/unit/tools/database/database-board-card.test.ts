@@ -132,6 +132,37 @@ describe('DatabaseBoardView card parity', () => {
       expect(card(board, 'r9').querySelector('[data-blok-database-card-image]')).toBeNull();
     });
 
+    it('shows the row\'s own page cover over an image in the body', () => {
+      const board = mount({
+        view: boardView({ cardPreview: 'cover' }),
+        getRows: (id) => (id === 'o1' ? [{ id: 'r1', position: 'a0', properties: { title: 'One' }, cover: 'https://example.com/page-cover.png' }] : []),
+        bodyOf: () => [{ type: 'image', data: { url: 'https://example.com/body.png' } }],
+      });
+
+      expect(card(board, 'r1').querySelector('[data-blok-database-card-preview] [data-blok-database-card-image]')?.getAttribute('src'))
+        .toBe('https://example.com/page-cover.png');
+    });
+
+    it('shows the page cover when the body has no image', () => {
+      const board = mount({
+        view: boardView({ cardPreview: 'cover' }),
+        getRows: (id) => (id === 'o1' ? [{ id: 'r1', position: 'a0', properties: { title: 'One' }, cover: 'https://example.com/page-cover.png' }] : []),
+      });
+      const preview = card(board, 'r1').querySelector('[data-blok-database-card-preview]');
+
+      expect(preview?.querySelector('[data-blok-database-card-image]')?.getAttribute('src')).toBe('https://example.com/page-cover.png');
+      expect(preview?.hasAttribute('data-empty')).toBe(false);
+    });
+
+    it('falls back to the first body image when the row has no page cover', () => {
+      const board = mount({
+        view: boardView({ cardPreview: 'cover' }),
+        bodyOf: (rowId) => (rowId === 'r1' ? [{ type: 'image', data: { url: 'https://example.com/body.png' } }] : []),
+      });
+
+      expect(card(board, 'r1').querySelector('[data-blok-database-card-image]')?.getAttribute('src')).toBe('https://example.com/body.png');
+    });
+
     it('shows the page content preview from the row body', () => {
       const board = mount({
         view: boardView({ cardPreview: 'content' }),

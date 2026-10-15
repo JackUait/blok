@@ -4,6 +4,7 @@ import type {
   AgentModelMessage,
   AgentRun,
   AgentRunResult,
+  AgentThinkingLevel,
   AgentTurn,
 } from '../../../../types/api';
 import { runAssistantLoop } from '../../../agent/assistant-loop';
@@ -16,6 +17,8 @@ export interface AgentRunDeps {
   prepare(): Promise<{ system: string; tools: AgentAnthropicTool[] }>;
   /** Ids the turn changed so far. */
   changed(): string[];
+  /** Read once per prompt, so a run already answering keeps its level. */
+  thinking(): AgentThinkingLevel | undefined;
 }
 
 const busy = (): Error => new Error('editor.agent: this run is still answering. Await `result` or call stop() first.');
@@ -36,6 +39,7 @@ export function createAgentRun(prompt: string, deps: AgentRunDeps): AgentRun {
 
   const answer = (text: string): Promise<AgentRunResult> => {
     const controller = new AbortController();
+    const thinking = deps.thinking();
 
     state.controller = controller;
     messages.push({ role: 'user', content: text });
@@ -51,6 +55,7 @@ export function createAgentRun(prompt: string, deps: AgentRunDeps): AgentRun {
           call: (name, input) => deps.turn.call(name, input),
           signal: controller.signal,
           maxSteps: deps.maxSteps,
+          ...(thinking === undefined ? {} : { thinking }),
         });
 
         return { ...outcome, changed: deps.changed() };

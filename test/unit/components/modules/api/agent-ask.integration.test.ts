@@ -20,7 +20,10 @@ const settle = (ms = 0): Promise<void> => new Promise((resolve) => {
 
 const editors: TestEditor[] = [];
 
-const createEditor = async (model: AgentModel | null): Promise<TestEditor> => {
+const createEditor = async (
+  model: AgentModel | null,
+  assistant: Partial<NonNullable<NonNullable<BlokConfig['agent']>['assistant']>> = {}
+): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -29,7 +32,7 @@ const createEditor = async (model: AgentModel | null): Promise<TestEditor> => {
     holder,
     tools: { paragraph: Paragraph },
     data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'First line here' } }] },
-    ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer' } } }),
+    ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer', ...assistant } } }),
   };
   const editor = new Blok(config) as unknown as TestEditor;
 
@@ -202,5 +205,47 @@ describe('editor.agent.ask', () => {
 
     await expect(run.result).resolves.toMatchObject({ status: 'failed', error: 'No API key' });
     run.end();
+  });
+
+  it('sends the configured default level, and an ask() option overrides it', async () => {
+    const model = scripted(answer('One'), answer('Two'));
+    const editor = await createEditor(model, { thinking: { levels: ['low', 'high'], default: 'high' } });
+
+    const first = editor.agent.ask('First');
+
+    await first.result;
+    first.end();
+
+    const second = editor.agent.ask('Second', { thinking: 'low' });
+
+    await second.result;
+    second.end();
+
+    expect(model.requests.map((request) => request.thinking)).toEqual(['high', 'low']);
+  });
+
+  it('sends no level when the host configured none', async () => {
+    const model = scripted(answer('Hi'));
+    const editor = await createEditor(model);
+    const run = editor.agent.ask('Hi');
+
+    await run.result;
+    run.end();
+
+    expect('thinking' in model.requests[0]).toBe(false);
+  });
+
+  it('throws on a bad thinking config, before any model call', async () => {
+    const model = scripted();
+    const editor = await createEditor(model, { thinking: { levels: ['low', 'turbo' as never] } });
+
+    expect(() => editor.agent.ask('Hi')).toThrow(TypeError);
+    expect(model.requests).toHaveLength(0);
+  });
+
+  it('throws on an unknown ask() level', async () => {
+    const editor = await createEditor(scripted());
+
+    expect(() => editor.agent.ask('Hi', { thinking: 'turbo' as never })).toThrow(TypeError);
   });
 });

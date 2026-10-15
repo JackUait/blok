@@ -6,6 +6,7 @@ import type {
   AgentIdentity,
   AgentOpenAITool,
   AgentState,
+  AgentThinkingLevel,
   AgentToolsOptions,
   AgentTurn,
   AgentTurnOptions,
@@ -16,6 +17,7 @@ import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
 import { inputIndexForField } from '../collaboration/agent-placement';
+import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../../agent/thinking';
 
 import { createAgentPresence, type AgentPresence } from './agent-presence';
 
@@ -92,6 +94,11 @@ export class AgentAPI extends Module {
     return typeof this.config.agent?.assistant?.model === 'function';
   }
 
+  /** The host's thinking levels, or null. Throws TypeError on a bad config. */
+  public thinkingChoice(): ThinkingChoice | null {
+    return readThinkingConfig(this.config.agent?.assistant?.thinking);
+  }
+
   /**
    * Where the user is, as text for the model. Read before focus leaves the document.
    */
@@ -103,12 +110,18 @@ export class AgentAPI extends Module {
    * Start an assistant run with editor context captured earlier.
    * @param prompt - the user's request
    * @param context - from describeUserPlace()
+   * @param thinking - the bar's current pick, read at each prompt
    */
-  public startRun(prompt: string, context: string): AgentRun {
-    return this.ask(prompt, { context: false }, context);
+  public startRun(prompt: string, context: string, thinking: () => AgentThinkingLevel | undefined): AgentRun {
+    return this.ask(prompt, { context: false }, context, thinking);
   }
 
-  private ask(prompt: string, options: AgentAskOptions = {}, captured = ''): AgentRun {
+  private ask(
+    prompt: string,
+    options: AgentAskOptions = {},
+    captured = '',
+    picked: () => AgentThinkingLevel | undefined = () => undefined
+  ): AgentRun {
     const assistant = this.config.agent?.assistant;
 
     if (typeof assistant?.model !== 'function') {
@@ -117,6 +130,12 @@ export class AgentAPI extends Module {
     if (typeof prompt !== 'string' || prompt.trim() === '') {
       throw new TypeError('editor.agent.ask() needs a non-empty prompt.');
     }
+    if (options.thinking !== undefined && !isThinkingLevel(options.thinking)) {
+      throw new TypeError(`editor.agent.ask() got an unknown thinking level: ${String(options.thinking)}.`);
+    }
+
+    const choice = this.thinkingChoice();
+    const thinking = (): AgentThinkingLevel | undefined => options.thinking ?? picked() ?? choice?.initial;
 
     const context = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
@@ -126,6 +145,7 @@ export class AgentAPI extends Module {
       turn,
       model: assistant.model,
       maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,
+      thinking,
       prepare: async () => {
         const [tools, system] = await Promise.all([this.tools({ format: 'anthropic' }), this.guidance()]);
 

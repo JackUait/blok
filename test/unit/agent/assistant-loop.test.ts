@@ -241,4 +241,27 @@ describe('runAssistantLoop', () => {
 
     expect(result.status).toBe('failed');
   });
+
+  it('puts the thinking level on every model request of the run, and leaves it off when none is given', async () => {
+    const withLevel = scripted(
+      reply([{ type: 'tool_use', id: 't1', name: 'blok_read', input: {} }], 'tool_use'),
+      reply([{ type: 'text', text: 'Done.' }], 'end_turn')
+    );
+
+    await runAssistantLoop({
+      model: withLevel, system: 's', tools: [], messages: [{ role: 'user', content: 'Go' }],
+      call: async () => ok(), signal: new AbortController().signal, maxSteps: 5, thinking: 'high',
+    });
+
+    expect(withLevel.requests.map((request) => request.thinking)).toEqual(['high', 'high']);
+
+    const without = scripted(reply([{ type: 'text', text: 'Hi' }], 'end_turn'));
+
+    await runAssistantLoop({
+      model: without, system: 's', tools: [], messages: [{ role: 'user', content: 'Go' }],
+      call: async () => ok(), signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect('thinking' in without.requests[0]).toBe(false);
+  });
 });

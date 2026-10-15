@@ -147,7 +147,7 @@ export class Assistant extends Module {
 
   private startRun(prompt: string): Promise<AgentRunResult> | null {
     try {
-      this.run = this.Blok.AgentAPI.startRun(prompt, this.context);
+      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => undefined);
 
       return this.run.result;
     } catch (thrown) {

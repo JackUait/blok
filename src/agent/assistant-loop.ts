@@ -4,6 +4,7 @@ import type {
   AgentModelContentBlock,
   AgentModelMessage,
   AgentModelResponse,
+  AgentThinkingLevel,
   AgentToolResult,
 } from '../../types/api';
 
@@ -26,6 +27,8 @@ export interface AssistantLoopOptions {
   signal: AbortSignal;
   /** Model calls allowed in this run. */
   maxSteps: number;
+  /** Sent on every model request of this run. */
+  thinking?: AgentThinkingLevel;
 }
 
 type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
@@ -67,7 +70,13 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promis
 type Step = { next: 'continue'; reply: string } | { next: 'return'; result: AssistantLoopResult };
 
 const ask = (options: AssistantLoopOptions): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> =>
-  options.model({ system: options.system, messages: options.messages, tools: options.tools, signal: options.signal }).then(
+  options.model({
+    system: options.system,
+    messages: options.messages,
+    tools: options.tools,
+    signal: options.signal,
+    ...(options.thinking === undefined ? {} : { thinking: options.thinking }),
+  }).then(
     (value) => ({ ok: true as const, value }),
     (thrown: unknown) => ({ ok: false as const, error: messageOf(thrown) })
   );

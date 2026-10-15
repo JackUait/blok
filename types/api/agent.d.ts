@@ -140,7 +140,7 @@ export interface AgentAssistantConfig {
 export interface AgentAskOptions {
   /** Tell the model where the caret is and what text is selected. Default true. */
   context?: boolean;
-  /** Thinking level for this run. Overrides the Ask AI bar's pick. */
+  /** Thinking level for this run. Without it, the run uses `thinking.default`. Prompts sent from the Ask AI bar use the level picked there. */
   thinking?: AgentThinkingLevel;
 }
 

@@ -19,6 +19,8 @@ export interface DocumentSource {
     options: { ifVersion: string | null },
   ): Promise<{ version: string | null }>;
   list?(request: { query?: string; cursor?: string; limit: number }): Promise<SourceListing>;
+  /** Whether two ids name one stored file, as a symlink and its target do. */
+  sameDocument?(first: string, second: string): Promise<boolean>;
 }
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

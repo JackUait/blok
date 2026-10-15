@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { setImmediate as dispatchCheckpoint } from 'node:timers/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,9 +14,41 @@ import type { Caller } from '../../../src/mcp/dispatcher';
 import type { BlokMcpOptions } from '../../../src/mcp/options';
 import type { AssembledMcp } from '../../../src/mcp/server';
 import type { HandleSession, McpExecuteResult } from '../../../src/mcp/session';
+import type * as StoredSessionModule from '../../../src/mcp/stored-session';
 import type { BlokCustomToolsFile, ManifestOverrides } from '../../../types/tool-manifest';
 
 const caller: Caller = { principal: 'alice', clientName: 'test', scopes: null };
+
+// Lets a test hold the close of the stored session opened for one document.
+const slowClose = vi.hoisted(() => ({ documentId: null as string | null, gate: Promise.resolve(), started: false, done: false }));
+
+vi.mock('../../../src/mcp/stored-session', async (importOriginal) => {
+  const actual = await importOriginal<typeof StoredSessionModule>();
+
+  return {
+    ...actual,
+    openStoredSession: async (input: StoredSessionModule.StoredSessionInput): Promise<HandleSession> => {
+      const opened = await actual.openStoredSession(input);
+
+      if (input.documentId !== slowClose.documentId) {
+        return opened;
+      }
+
+      return {
+        ...opened,
+        close: async (reason) => {
+          slowClose.started = true;
+          await slowClose.gate;
+          const summary = await opened.close(reason);
+
+          slowClose.done = true;
+
+          return summary;
+        },
+      };
+    },
+  };
+});
 const owned: AssembledMcp[] = [];
 
 const within = async <T>(work: Promise<T>): Promise<T> => {
@@ -357,6 +392,144 @@ describe('assembleMcp shutdown during an open', () => {
     } finally {
       openRelease.release();
       closeRelease.release();
+    }
+  });
+
+  it('stops within a deadline when an open never settles', async () => {
+    const openCalled = expiryBarrier();
+    const openRelease = expiryBarrier();
+    let stopped = false;
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    const server = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' } }, {
+      open: async () => {
+        openCalled.release();
+        await openRelease.wait;
+
+        return session();
+      },
+    });
+
+    owned.push(server);
+    try {
+      void server.dispatch('blok_open', { documentId: 'notes', mode: 'stored' }, caller).catch(() => undefined);
+      await openCalled.wait;
+      void server.stop().then(() => { stopped = true; });
+
+      // Above the 15 s room sync, a slow open is still waited for.
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(stopped).toBe(false);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(stopped).toBe(true);
+    } finally {
+      vi.useRealTimers();
+      openRelease.release();
+    }
+  });
+
+  it('stops within a deadline when an open handle never finishes closing', async () => {
+    let stopped = false;
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    const server = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' } }, {
+      open: async () => session(vi.fn<HandleSession['close']>(() => new Promise(() => undefined))),
+    });
+
+    owned.push(server);
+    try {
+      expect((await server.dispatch('blok_open', { documentId: 'notes', mode: 'stored' }, caller)).isError).toBe(false);
+      void server.stop().then(() => { stopped = true; });
+
+      await vi.advanceTimersByTimeAsync(75_000);
+      expect(stopped).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('waits for the page session that a page.rename closes', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-mcp-stop-'));
+    const closeRelease = expiryBarrier();
+    let stopped = false;
+
+    writeFileSync(join(dir, 'parent.json'), JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'child' } }] }));
+    writeFileSync(join(dir, 'child.json'), JSON.stringify({ blocks: [], title: 'Old' }));
+    Object.assign(slowClose, { documentId: 'child', gate: closeRelease.wait, started: false, done: false });
+    const server = assemble({ source: { kind: 'files', dir }, pageTitles: 'page-map' });
+
+    try {
+      const opened = await within(server.dispatch('blok_open', { documentId: 'parent', write: true }, caller));
+      const renamed = await within(server.dispatch('blok_execute', {
+        handle: opened.structuredContent.handle,
+        commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New name' } }],
+      }, caller));
+
+      expect(renamed.structuredContent).toMatchObject({ ok: true });
+      expect(slowClose.started).toBe(true);
+      const stopping = server.stop().then(() => { stopped = true; });
+
+      await within(dispatchCheckpoint());
+      expect(stopped).toBe(false);
+      closeRelease.release();
+      await within(stopping);
+      expect(slowClose.done).toBe(true);
+    } finally {
+      closeRelease.release();
+      slowClose.documentId = null;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('waits for a page.rename close that starts after stop', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-mcp-stop-'));
+    const childAuthorized = expiryBarrier();
+    const authRelease = expiryBarrier();
+    const closeRelease = expiryBarrier();
+    let stopped = false;
+
+    writeFileSync(join(dir, 'parent.json'), JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'child' } }] }));
+    writeFileSync(join(dir, 'child.json'), JSON.stringify({ blocks: [], title: 'Old' }));
+    Object.assign(slowClose, { documentId: 'child', gate: closeRelease.wait, started: false, done: false });
+    const server = assemble({
+      source: { kind: 'files', dir },
+      pageTitles: 'page-map',
+      authorize: async (_principal, documentId) => {
+        if (documentId === 'child') {
+          childAuthorized.release();
+          await authRelease.wait;
+        }
+
+        return true;
+      },
+    });
+
+    try {
+      const opened = await within(server.dispatch('blok_open', { documentId: 'parent', write: true }, caller));
+      const renaming = server.dispatch('blok_execute', {
+        handle: opened.structuredContent.handle,
+        commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New name' } }],
+      }, caller);
+
+      void renaming.catch(() => undefined);
+      await within(childAuthorized.wait);
+      const stopping = server.stop().then(() => { stopped = true; });
+
+      authRelease.release();
+      await within((async () => {
+        while (!slowClose.started) {
+          await dispatchCheckpoint();
+        }
+      })());
+      await within(dispatchCheckpoint());
+      expect(stopped).toBe(false);
+      closeRelease.release();
+      await within(stopping);
+      expect(slowClose.done).toBe(true);
+    } finally {
+      authRelease.release();
+      closeRelease.release();
+      slowClose.documentId = null;
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

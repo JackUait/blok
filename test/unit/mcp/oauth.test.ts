@@ -123,6 +123,11 @@ describe('createJwtVerifier', () => {
     expect(isInvalidToken(await refusal(token({ ...good, sub: 'client:claude' })))).toBe(true);
   });
 
+  // Otherwise principalOf would map it to its client's principal, shared with every such user.
+  it.each(['', 123, {}])('refuses a malformed sub %j even with a client_id', async (sub) => {
+    expect(isInvalidToken(await refusal(token({ ...good, sub, client_id: 'web' })))).toBe(true);
+  });
+
   it('refuses a token that names no sub, client_id or azp', async () => {
     expect(isInvalidToken(await refusal(token({ ...good, sub: undefined, client_id: undefined })))).toBe(true);
     expect(isInvalidToken(await refusal(token({ ...good, sub: '', client_id: undefined })))).toBe(true);

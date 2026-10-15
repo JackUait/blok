@@ -87,10 +87,12 @@ Pick a source with `--source`.
   - On a disk that ignores case (the macOS and Windows default), two ids that differ only by case cannot both exist. Whichever is saved first owns the name.
 - Saves are atomic: a temp file, then a rename. The file keeps its permissions, and the data is flushed to disk before the rename.
 - A save checks a SHA-256 hash of the file first. If the file changed since it was opened, the save is refused.
-- Saves of one document run one at a time, across processes too: each save holds a `.<id>.lock` file in the directory.
+- Saves of one file run one at a time, across processes too. Each save holds a lock file beside the file it writes, named after it in lower case: `.<file name>.lock`, like `.doc.json.lock`.
   - Only blok-mcp honors the lock. Another program writing the file is still caught by the hash check, except in the moment between the check and the rename.
   - A lock older than 30 seconds is treated as left by a crashed process and removed.
-- A document that is a symlink is saved through to its target, so the link stays. A link to a missing file is refused.
+- A document that is a symlink is saved through to its target, so the link stays. The lock sits beside the target, so saves through the link and saves of the target wait for each other.
+  - A link to a missing file is refused, on open and on save.
+  - `page.rename` and `page.setIcon` refuse a page block whose id links to the open document, as they do for the open document's own id.
 
 Stored mode is refused when `--sync-url` is set. A sync service owns those documents, and a stored write would fight the room.
 
@@ -107,7 +109,7 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - Scopes: `blok.read` (list, open read-only, read, describe) and `blok.write` (open for writing, execute).
   - Protected Resource Metadata is served at `/.well-known/oauth-protected-resource`.
   - The principal is the token's `sub`. A token with no `sub` gets `client:<client_id>` (or its `azp`), so a machine client never shares a user's handles or `--authorize` answers.
-  - A `sub` starting with `client:` is refused, and so is a token that names no `sub`, `client_id` or `azp`.
+  - A `sub` that is not a non-empty string, or that starts with `client:`, is refused. So is a token that names no `sub`, `client_id` or `azp`.
 - A request with a non-loopback `Origin` header is refused.
 - Live handles hold sockets, so run it as a long-lived process.
 - To scale out, route on the `Mcp-Param-Blok-Handle` header, so every call for a handle reaches the process that holds it.

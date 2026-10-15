@@ -199,6 +199,9 @@ export const createJwtVerifier = (
         ? claims.scope.split(' ').filter((scope) => scope !== '')
         : scp.filter((scope): scope is string => typeof scope === 'string');
       // principalOf maps a missing sub to `client:<id>`, so a sub in that namespace, or no id at all, would share handles.
+      if (claims.sub !== undefined && (typeof claims.sub !== 'string' || claims.sub === '')) {
+        throw invalid('Malformed subject');
+      }
       if (typeof claims.sub === 'string' && claims.sub.startsWith('client:')) {
         throw invalid('Reserved subject');
       }

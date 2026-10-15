@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { isMcpSurfaceError } from '../../../src/mcp/errors';
 import { createFilesSource } from '../../../src/mcp/sources/files';
+import type { DocumentSource } from '../../../src/mcp/sources/types';
 import { assertDocumentShape } from '../../../src/mcp/sources/types';
 
 const FIXTURE_PARENT = tmpdir();
@@ -302,7 +303,7 @@ describe('files source', () => {
   });
 
   it('breaks a stale lock left by a crashed process', async () => {
-    const lock = join(dir, '.doc.lock');
+    const lock = join(dir, '.doc.json.lock');
 
     writeFileSync(lock, '');
     const old = new Date(Date.now() - 10 * 60 * 1000);
@@ -313,7 +314,7 @@ describe('files source', () => {
   });
 
   it('gives up with SOURCE_UNAVAILABLE while another process holds a fresh lock', async () => {
-    const lock = join(dir, '.doc.lock');
+    const lock = join(dir, '.doc.json.lock');
 
     writeFileSync(lock, '');
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -328,7 +329,7 @@ describe('files source', () => {
     expect(code).toBe('SOURCE_UNAVAILABLE');
     expect(message).toContain('doc.json');
     expect(message).not.toContain(root);
-    expect(readdirSync(dir)).toEqual(['.doc.lock']);
+    expect(readdirSync(dir)).toEqual(['.doc.json.lock']);
   }, 10_000);
 
   const caseInsensitiveDisk = (): boolean => {
@@ -442,6 +443,46 @@ describe('files source', () => {
     expect(lstatSync(join(dir, 'doc.json')).isSymbolicLink()).toBe(true);
     expect(statSync(outside, { throwIfNoEntry: false })).toBeUndefined();
     expect(readdirSync(dir)).toEqual(['doc.json']);
+  });
+
+  it('refuses to load a dangling symlink with SOURCE_UNAVAILABLE', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    symlinkSync(join(root, 'gone.json'), join(dir, 'doc.json'));
+
+    expect(await messageOf(() => createFilesSource(dir).load('doc'))).toBe('doc.json is a link to a missing file.');
+  });
+
+  // a.json links to b.json, so a save of `a` and a save of `b` write one file.
+  it.each([
+    { label: 'one source', sources: (): [DocumentSource, DocumentSource] => {
+      const source = createFilesSource(dir);
+
+      return [source, source];
+    } },
+    { label: 'two sources', sources: (): [DocumentSource, DocumentSource] => [createFilesSource(dir), createFilesSource(dir)] },
+  ])('keeps every edit when saves of a link and its target race ($label)', async ({ sources }) => {
+    writeFileSync(join(dir, 'b.json'), '{"blocks":[]}');
+    symlinkSync('b.json', join(dir, 'a.json'));
+    const [viaLink, viaTarget] = sources();
+
+    for (let round = 0; round < 10; round += 1) {
+      const version = sha(readFileSync(join(dir, 'b.json')));
+      const outcomes = await Promise.allSettled([
+        viaLink.save('a', { blocks: [], title: `link ${round}` }, { ifVersion: version }),
+        viaTarget.save('b', { blocks: [], title: `target ${round}` }, { ifVersion: version }),
+      ]);
+      const codes = outcomes.map((outcome) => {
+        if (outcome.status === 'fulfilled') {
+          return 'ok';
+        }
+        const reason: unknown = outcome.reason;
+
+        return isMcpSurfaceError(reason) ? reason.agentError.code : String(reason);
+      });
+
+      expect(codes.sort()).toEqual(['DOCUMENT_CHANGED', 'ok']);
+    }
+    expect(readdirSync(dir).sort()).toEqual(['a.json', 'b.json']);
   });
 
   it('does not show server paths in read, write or list errors', async () => {

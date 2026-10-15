@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -186,6 +186,27 @@ describe('stored mode through the MCP dispatcher', () => {
 
     expect(renamed.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' } });
     expect(JSON.stringify(renamed.structuredContent)).toContain('doc.setTitle');
+    expect(readFileSync(join(dir, 'self.json'), 'utf-8')).toBe(before);
+    const next = await mcp.dispatch('blok_execute', {
+      handle, commands: [{ name: 'block.insert', args: { type: 'paragraph', id: 'p1', data: { text: 'x' } } }],
+    }, caller);
+
+    expect(next.structuredContent).toMatchObject({ ok: true });
+  });
+
+  it('refuses a page.rename of a page block that reaches this document through a symlink', async () => {
+    await mcp.stop();
+    mcp = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir }, pageTitles: 'page-map' });
+    const before = JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'alias' } }], title: 'Old' });
+
+    writeFileSync(join(dir, 'self.json'), before);
+    symlinkSync('self.json', join(dir, 'alias.json'));
+    const handle = await openWrite('self');
+    const renamed = await mcp.dispatch('blok_execute', {
+      handle, commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New name' } }],
+    }, caller);
+
+    expect(renamed.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' } });
     expect(readFileSync(join(dir, 'self.json'), 'utf-8')).toBe(before);
     const next = await mcp.dispatch('blok_execute', {
       handle, commands: [{ name: 'block.insert', args: { type: 'paragraph', id: 'p1', data: { text: 'x' } } }],

@@ -76,8 +76,8 @@ export const createFilesSource = (dir: string): DocumentSource => {
   };
 
   // Takes the lock or throws; the caller must release it.
-  const lock = async (documentId: string): Promise<string> => {
-    const path = join(dir, `.${documentId.toLowerCase()}.lock`);
+  const lock = async (documentId: string, target: string): Promise<string> => {
+    const path = join(dirname(target), `.${basename(target).toLowerCase()}.lock`);
     const deadline = Date.now() + LOCK_WAIT_MS;
 
     const tryCreate = async (): Promise<boolean> => {
@@ -177,8 +177,9 @@ export const createFilesSource = (dir: string): DocumentSource => {
   };
 
   /**
-   * The file a save replaces. A symlinked document is written through to its
-   * target, so the link survives; a link to a missing file is refused, not replaced.
+   * The file a save replaces, fully resolved so every spelling of one file
+   * gives one path. A symlinked document is written through to its target,
+   * so the link survives; a link to a missing file is refused, not replaced.
    */
   const writeTargetOf = async (documentId: string, path: string): Promise<string> => {
     const entry = await lstat(path).catch((thrown: unknown) => {
@@ -188,22 +189,28 @@ export const createFilesSource = (dir: string): DocumentSource => {
       throw unavailable(`Cannot read ${documentId}.json.`, path, thrown);
     });
 
-    if (entry === null || !entry.isSymbolicLink()) {
-      return path;
+    if (entry === null) {
+      return join(await nativeRealpath(dir).catch(() => dir), basename(path));
     }
 
     return nativeRealpath(path).catch((thrown: unknown) => {
+      if (!entry.isSymbolicLink()) {
+        return path;
+      }
       throw unavailable(`${documentId}.json is a link to a missing file.`, path, thrown);
     });
   };
 
+  // Lower case: on a case-insensitive disk `doc` and `DOC` are one file.
+  const sameFileKey = (target: string): string => target.toLowerCase();
+
   const saveLocked = async (
     documentId: string,
     path: string,
+    target: string,
     document: unknown,
     ifVersion: string | null,
   ): Promise<{ version: string }> => {
-    const target = await writeTargetOf(documentId, path);
     const current = await readBytes(documentId, path);
 
     if (current !== null) {
@@ -247,6 +254,9 @@ export const createFilesSource = (dir: string): DocumentSource => {
       const bytes = await readBytes(documentId, path);
 
       if (bytes === null) {
+        // Throws for a link to a missing file, which a save would refuse.
+        await writeTargetOf(documentId, path);
+
         return { raw: { blocks: [] }, version: null };
       }
       await assertExactName(documentId, path);
@@ -264,17 +274,33 @@ export const createFilesSource = (dir: string): DocumentSource => {
 
       return { raw, version: hash(bytes) };
     },
-    // Keyed in lower case: on a case-insensitive disk `doc` and `DOC` are one file.
-    save: (documentId, document, { ifVersion }) => serialized(documentId.toLowerCase(), async () => {
+    // Keyed on the file written, so a link and its target share one queue and one lock.
+    save: async (documentId, document, { ifVersion }) => {
       const path = pathOf(documentId);
-      const held = await lock(documentId);
+      const target = await writeTargetOf(documentId, path);
 
-      try {
-        return await saveLocked(documentId, path, document, ifVersion);
-      } finally {
-        await rm(held, { force: true });
-      }
-    }),
+      return serialized(sameFileKey(target), async () => {
+        const held = await lock(documentId, target);
+
+        try {
+          return await saveLocked(documentId, path, target, document, ifVersion);
+        } finally {
+          await rm(held, { force: true });
+        }
+      });
+    },
+    sameDocument: async (first, second) => {
+      const keyOf = async (documentId: string): Promise<string | null> => {
+        try {
+          return sameFileKey(await writeTargetOf(documentId, pathOf(documentId)));
+        } catch {
+          return null;
+        }
+      };
+      const [a, b] = await Promise.all([keyOf(first), keyOf(second)]);
+
+      return a !== null && a === b;
+    },
     list: async ({ query, cursor, limit }) => {
       const names = await readdir(dir).catch((thrown: unknown) => {
         throw unavailable('Cannot list the documents directory.', dir, thrown);

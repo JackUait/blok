@@ -24,6 +24,14 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
+  // The Ask AI thinking picker has no caller yet. Move these out when it calls them.
+  'assistant.thinking',
+  'assistant.thinking.off',
+  'assistant.thinking.low',
+  'assistant.thinking.medium',
+  'assistant.thinking.high',
+  'assistant.thinking.xhigh',
+  'assistant.thinking.max',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -265,7 +273,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1124 + 119 + 412 + 4 closure for all 1659 keys', () => {
+  it('rebuilds a disjoint 1124 + 119 + 412 + 11 closure for all 1666 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +287,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1659);
+    expect(lifecycle.size).toBe(1666);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -406,7 +414,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.settingsDragToReorder gained a literal caller in the view overflow list.
       // +1: tools.database.aiAutofillNew, called through the view settings panel's namespaced t().
       'registered-namespace-compatible': 412,
-      'catalog-only': 4,
+      // +7: the assistant.thinking* keys, see CATALOG_ONLY_KEYS.
+      'catalog-only': 11,
     });
     expect(
       [...lifecycle.entries()]

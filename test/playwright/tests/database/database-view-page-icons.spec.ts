@@ -138,3 +138,20 @@ for (const { type, item, title, size, gap } of VIEWS) {
     expect((await savedView(page)).showPageIcon).toBe(false);
   });
 }
+
+for (const { type, item, title } of VIEWS) {
+  test(`${type}: an icon picked on the row page shows on the open view`, async ({ page }) => {
+    await mount(page, blocks(type));
+    await page.locator(`${item}[data-row-id="r2"] ${title}`).click();
+    await page.getByRole('button', { name: 'Add icon' }).click();
+
+    const emoji = page.locator('[data-blok-emoji-picker] [data-emoji-native]').first();
+
+    await expect(emoji).toBeVisible();
+    const native = await emoji.getAttribute('data-emoji-native');
+
+    await emoji.click();
+
+    await expect(page.locator(`${item}[data-row-id="r2"] [data-blok-database-page-icon]`)).toHaveText(native ?? '');
+  });
+}

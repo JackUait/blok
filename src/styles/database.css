@@ -2263,6 +2263,96 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-drawer-content]:hover [data-blok-database-drawer-customize],
 [data-blok-database-drawer-customize]:focus-visible { opacity: 1; }
 
+/* "N backlinks", first in the hover row (research/17 §2c): 28 high, padding 0 8px, gap 6px, radius 6px, 14px. */
+[data-blok-database-drawer-backlinks] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+[data-blok-database-drawer-content]:hover [data-blok-database-drawer-backlinks],
+[data-blok-database-drawer-backlinks][aria-expanded="true"],
+[data-blok-database-drawer-backlinks]:focus-visible { opacity: 1; }
+
+/* Notion's arrow points down-left: IconArrowDiagonal turned half a turn. */
+[data-blok-database-backlinks-icon] {
+  display: inline-flex;
+  flex: none;
+}
+
+[data-blok-database-backlinks-icon] svg {
+  width: 16px;
+  height: 16px;
+  transform: rotate(180deg);
+}
+
+[dir="rtl"] [data-blok-database-backlinks-icon] svg {
+  transform: rotate(90deg);
+}
+
+[data-blok-database-layout-backlinks] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+}
+
+/* "Linked to this page" (research/17 §2d): header 12px in secondary ink. */
+[data-blok-database-backlinks-heading] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+}
+
+[data-blok-database-backlink-icon] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  color: var(--blok-database-add-text);
+}
+
+[data-blok-database-backlink-icon] > span:last-child svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-backlink-line] {
+  display: flex;
+  align-items: baseline;
+  gap: var(--blok-space-2);
+  min-width: 0;
+}
+
+[data-blok-database-backlink-title] {
+  overflow: hidden;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-backlink-path] {
+  margin-inline-start: auto;
+  overflow: hidden;
+  color: var(--blok-database-add-text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /*
  * The full-window "Customize page layout" builder (research/09 §1, §10;
  * research/10 §8). It mounts on body, so only attribute selectors reach it.
@@ -3408,6 +3498,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 @media (hover: hover) {
+  [data-blok-database-drawer-backlinks]:hover,
   [data-blok-database-drawer-customize]:hover,
   [data-blok-database-layout-cancel]:hover,
   [data-blok-database-layout-add-section]:hover,
@@ -3432,6 +3523,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-drawer-section-toggle] svg { transition: none; }
   [data-blok-database-drawer-customize] { transition: none; }
+  [data-blok-database-drawer-backlinks] { transition: none; }
   [data-blok-database-drawer-pins-back], [data-blok-database-drawer-pins-forward] { transition: none; }
 }
 

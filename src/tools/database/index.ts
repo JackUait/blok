@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData } from './tier3-values';
@@ -99,7 +99,7 @@ import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseListRowDrag } from './database-list-row-drag';
 import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
-import type { LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
+import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
@@ -141,6 +141,8 @@ import { downloadBlob } from './database-download';
 import { chartExportPage } from './database-chart-export';
 import { LAYOUT_MAKER_ABSENCE_MS, layoutDraftSession, type LayoutDraftSession } from './layout-drafts';
 import { layoutDraftOf } from '../tabs/draft';
+import { scanBacklinkSources } from './backlinks';
+import type { BacklinkSource } from './backlinks';
 
 interface DrawerAuthority {
   writable(): boolean;
@@ -240,6 +242,9 @@ const LINK_PICKER_KEY = 'linkPicker';
 /** Emitted on the editor's own event bus when a database block's tool goes away. */
 const DATABASE_GONE_EVENT = 'database gone';
 
+/** Backlinks are counted again this long after the last block change, so typing never scans per keystroke. */
+const BACKLINKS_SETTLE_MS = 300;
+
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
@@ -326,6 +331,9 @@ export class DatabaseTool implements BlockTool {
   private readonly config: DatabaseConfig;
 
   private title: string;
+  private backlinksTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The host's backlinks of the last row whose page opened. */
+  private hostBacklinks: { rowId: string; items: DatabaseBacklink[] } | null = null;
   private unknown: Record<string, unknown>;
   private savedAutomations: DatabaseSavedAutomations | undefined;
   /** Set when the insert data carried the toolbox seed, which the document still holds. */
@@ -479,6 +487,8 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
+    this.api.events.on('block changed', this.scheduleBacklinks);
+    this.api.events.on('block replayed', this.scheduleBacklinks);
     this.api.events.on('collaboration:status', this.handleCollaborationStatus);
   }
 
@@ -500,6 +510,119 @@ export class DatabaseTool implements BlockTool {
     // Another database's row or a template reads no values, so it fills nothing.
     if (row !== undefined) this.hostLevers.bodyEdited(row);
   };
+
+  /**
+   * A block changed while a row page is open: count its backlinks again once
+   * edits settle. Each event only resets the timer; the scan runs once.
+   */
+  private readonly scheduleBacklinks = (): void => {
+    if (this.destroyed || this.cardDrawer?.openRowId === null || this.cardDrawer?.openRowId === undefined) return;
+    if (this.backlinksTimer !== null) clearTimeout(this.backlinksTimer);
+    this.backlinksTimer = setTimeout(() => {
+      this.backlinksTimer = null;
+      if (!this.destroyed) this.cardDrawer?.refreshBacklinks();
+    }, BACKLINKS_SETTLE_MS);
+  };
+
+  /** The pages that mention the row (research/17 §2): this document's, then the host's. */
+  private backlinksFor(rowId: string): DrawerBacklink[] {
+    const row = this.model.getRow(rowId);
+
+    // api.ui.nodes is read when the API is built, before the editor wrapper exists.
+    const root = this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null;
+
+    if (row === undefined || this.destroyed || root === null) return [];
+    const ids = [rowId, ...(row.pageId === undefined ? [] : [row.pageId])];
+    const sources = scanBacklinkSources({
+      root,
+      rowId,
+      ids,
+      block: (id) => {
+        const block = this.api.blocks.getById(id);
+
+        return block === null || block === undefined ? undefined : { id: block.id, name: block.name, parentId: block.parentId ?? null };
+      },
+    });
+    const local = sources.map((source) => this.documentBacklink(source, root));
+    const seen = new Set(local.flatMap((link) => link.pageIds));
+    const hosted = (this.hostBacklinks?.rowId === rowId ? this.hostBacklinks.items : [])
+      .filter((link) => !seen.has(link.pageId))
+      .map((link): DrawerBacklink => ({
+        key: `host-${link.pageId}`,
+        title: link.title !== undefined && link.title.trim() !== '' ? link.title : this.api.i18n.t('tools.database.relationUntitled'),
+        path: link.path ?? [],
+        open: () => this.config.backlinks?.open(link),
+      }));
+
+    if (this.hostBacklinks?.rowId !== rowId) void this.loadHostBacklinks(rowId, row.pageId);
+
+    return [...local.map((link) => link.item), ...hosted];
+  }
+
+  /** Asks the host once per opened row; a late answer for a row no longer open is dropped. */
+  private async loadHostBacklinks(rowId: string, pageId: string | undefined): Promise<void> {
+    const lever = this.config.backlinks;
+
+    if (lever === undefined) return;
+    const request = { rowId, items: [] as Awaited<ReturnType<typeof lever.list>> };
+
+    this.hostBacklinks = request;
+    try {
+      const items = await lever.list({ databaseId: this.dataId, rowId, ...(pageId === undefined ? {} : { pageId }) });
+
+      if (this.hostBacklinks !== request || this.destroyed || !Array.isArray(items)) return;
+      request.items = items.filter((item) => typeof item?.pageId === 'string' && item.pageId !== '');
+    } catch {
+      return;
+    }
+    if (this.cardDrawer?.openRowId === rowId) this.cardDrawer.refreshBacklinks();
+  }
+
+  /** A page of this document that mentions the row: another row's page, or the document itself. */
+  private documentBacklink(source: BacklinkSource, root: HTMLElement): { item: DrawerBacklink; pageIds: string[] } {
+    const untitled = this.api.i18n.t('tools.database.relationUntitled');
+    const go = (): void => {
+      const target = source.blockId;
+
+      // Next frame: the row's body is attached to its page by then.
+      requestAnimationFrame(() => this.api.blocks.scrollToBlock?.(target, { select: false }));
+    };
+
+    if (source.rowId === null) {
+      // The title may be mounted outside the editor; then the page reads "Untitled".
+      const title = root.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent?.trim() ?? '';
+
+      return {
+        item: { key: 'document', title: title === '' ? untitled : title, path: [], open: () => { this.cardDrawer?.close(); go(); } },
+        pageIds: [],
+      };
+    }
+    const rowId = source.rowId;
+    const rowBlock = this.api.blocks.getById(rowId);
+    const live: DatabaseRowData[] = [];
+
+    rowBlock?.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+    const data = live[0];
+    const databaseId = rowBlock?.parentId ?? null;
+    const databaseTitle = databaseId === this.dataId ? this.title
+      : this.api.blocks.getById(databaseId ?? '')?.preservedData.title;
+    const title = typeof data?.title === 'string' && data.title.trim() !== '' ? data.title : untitled;
+
+    return {
+      item: {
+        key: rowId,
+        title,
+        path: [typeof databaseTitle === 'string' && databaseTitle.trim() !== '' ? databaseTitle : this.api.i18n.t('tools.database.relationUntitledDatabase')],
+        ...(typeof data?.icon === 'string' && data.icon !== '' ? { icon: data.icon } : {}),
+        open: () => {
+          if (databaseId !== this.dataId) this.cardDrawer?.close();
+          if (databaseId !== null) this.api.blocks.getById(databaseId)?.call('openRow', { rowId });
+          go();
+        },
+      },
+      pageIds: [rowId, ...(typeof data?.pageId === 'string' ? [data.pageId] : [])],
+    };
+  }
 
   /** The nearest database-row at or above `id`: a nested database's row body belongs to that database. */
   private nearestRow(id: unknown, seen: Set<string>): string | undefined {
@@ -1055,6 +1178,9 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.handleBlockChanged);
     this.api.events.off('block replayed', this.handleBlockReplayed);
     this.api.events.off('block changed', this.handleBodyEdit);
+    this.api.events.off('block changed', this.scheduleBacklinks);
+    this.api.events.off('block replayed', this.scheduleBacklinks);
+    if (this.backlinksTimer !== null) clearTimeout(this.backlinksTimer);
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.off('collaboration:status', this.handleCollaborationStatus);
     if (this.draftGraceTimer !== null) clearTimeout(this.draftGraceTimer);
@@ -6111,6 +6237,7 @@ export class DatabaseTool implements BlockTool {
         wrapper: this.element,
         readOnly: session.readOnly,
         databaseId: this.block.id,
+        backlinks: (rowId) => this.backlinksFor(rowId),
         i18n: this.api.i18n,
         events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),

@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconLink, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -288,7 +288,35 @@ export interface CardDrawerOptions {
   databaseTitle?: () => string;
   /** The database block's id. Section folds are kept per database in this browser; without it they last the session. */
   databaseId?: string;
+  /** The pages that mention the row, asked each time its page head is drawn. */
+  backlinks?: (rowId: string) => readonly DrawerBacklink[];
 }
+
+/** A page that mentions the open row (research/17 §2). */
+export interface DrawerBacklink {
+  /** One per page. */
+  key: string;
+  title: string;
+  /** The titles above the page, top first. */
+  path: readonly string[];
+  /** The page's emoji. */
+  icon?: string;
+  /** Goes to the block holding the mention. */
+  open(): void;
+}
+
+const backlinksKey = (rowId: string, items: readonly DrawerBacklink[]): string =>
+  JSON.stringify([rowId, items.map((item) => [item.key, item.title, item.path, item.icon ?? ''])]);
+
+/** An icon constant as a node. Its indent text would join the label's text. */
+const iconNode = (markup: string): Element => {
+  const template = document.createElement('template');
+
+  // A trusted constant from the icon module.
+  template.innerHTML = markup.trim().replace(/>\s+</g, '><');
+
+  return template.content.firstElementChild ?? document.createElement('span');
+};
 
 /** Null when there is no key, nothing stored, or storage is blocked. */
 const readStorage = (key: string | null): string | null => {
@@ -385,6 +413,11 @@ export class DatabaseCardDrawer {
   private readonly onModeChange: CardDrawerOptions['onModeChange'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
+  private readonly backlinks: CardDrawerOptions['backlinks'];
+  /** The open "Linked to this page" list; it shares the mode menu's slot. */
+  private backlinksMenu: PopoverDesktop | null = null;
+  /** What the drawn "N backlinks" lists, to skip a redraw that changes nothing. */
+  private backlinksShown: string | null = null;
   private readonly rowActions: CardDrawerOptions['rowActions'];
   private readonly onFullWidthChange: CardDrawerOptions['onFullWidthChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
@@ -482,6 +515,7 @@ export class DatabaseCardDrawer {
     this.onModeChange = options.onModeChange;
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
+    this.backlinks = options.backlinks;
     this.rowActions = options.rowActions;
     this.onFullWidthChange = options.onFullWidthChange;
     this.onEscapeClose = options.onEscapeClose;
@@ -908,6 +942,7 @@ export class DatabaseCardDrawer {
 
     head.setAttribute('data-blok-database-drawer-page-head', '');
     const src = row.cover === undefined ? null : safeImageSrc(row.cover);
+    const backlinks = this.buildBacklinks(row.id);
 
     if (src !== null) {
       const cover = document.createElement('div');
@@ -927,7 +962,11 @@ export class DatabaseCardDrawer {
         cover.appendChild(change);
       }
       head.appendChild(cover);
-    } else if (!this.readOnly && this.onCoverChange !== undefined) {
+    }
+    if (backlinks !== null) {
+      head.appendChild(backlinks);
+    }
+    if (src === null && !this.readOnly && this.onCoverChange !== undefined) {
       const add = document.createElement('button');
 
       add.type = 'button';
@@ -960,6 +999,144 @@ export class DatabaseCardDrawer {
     }
 
     return head;
+  }
+
+  /** "N backlinks", or null when no page mentions the row: Notion draws nothing then (research/17 §2a). */
+  private buildBacklinks(rowId: string, items = this.backlinks?.(rowId) ?? []): HTMLButtonElement | null {
+    if (this.backlinksMenu !== null && this.modeMenu === this.backlinksMenu) {
+      this.closeModeMenu();
+    }
+    this.backlinksShown = backlinksKey(rowId, items);
+    if (items.length === 0) {
+      return null;
+    }
+    const button = document.createElement('button');
+    const icon = document.createElement('span');
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-drawer-backlinks', '');
+    button.setAttribute('aria-haspopup', 'true');
+    button.setAttribute('aria-expanded', 'false');
+    icon.setAttribute('data-blok-database-backlinks-icon', '');
+    icon.append(iconNode(IconArrowDiagonal));
+    button.append(icon, this.backlinksLabel(items.length));
+    button.addEventListener('click', () => this.openBacklinks(button, rowId));
+
+    return button;
+  }
+
+  private backlinksLabel(count: number): string {
+    if (count === 0) return this.label('tools.database.backlinksNone');
+
+    return this.label(count === 1 ? 'tools.database.backlinksOne' : 'tools.database.backlinks').replace('{count}', String(count));
+  }
+
+  /** Redraws "N backlinks" for the open row after a mention came or went. */
+  refreshBacklinks(): void {
+    const head = this.drawer?.querySelector('[data-blok-database-drawer-page-head]');
+    const rowId = this.currentRowId;
+
+    if (head === null || head === undefined || rowId === null) {
+      return;
+    }
+    const items = this.backlinks?.(rowId) ?? [];
+
+    // Same pages: keep the item, so an open list stays open.
+    if (backlinksKey(rowId, items) === this.backlinksShown) {
+      return;
+    }
+    const next = this.buildBacklinks(rowId, items);
+    const current = head.querySelector('[data-blok-database-drawer-backlinks]');
+
+    if (current !== null && next !== null) {
+      current.replaceWith(next);
+    } else if (current !== null) {
+      current.remove();
+    } else if (next !== null) {
+      head.insertBefore(next, head.querySelector('[data-blok-database-drawer-cover]')?.nextSibling ?? head.firstChild);
+    }
+  }
+
+  /** "Linked to this page": each mentioning page, its path in grey (research/17 §2d). */
+  private openBacklinks(anchor: HTMLElement, rowId: string): void {
+    this.closeModeMenu();
+    const items = this.backlinks?.(rowId) ?? [];
+    const heading = document.createElement('div');
+
+    heading.setAttribute('data-blok-database-backlinks-heading', '');
+    heading.textContent = this.label('tools.database.backlinksTitle');
+    const menu = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      trigger: anchor,
+      width: 'auto',
+      // Notion's list is 500 wide; a phone keeps a 16px gutter.
+      minWidth: `${Math.max(0, Math.min(500, window.innerWidth - 32))}px`,
+      items: [
+        { type: PopoverItemType.Html, element: heading },
+        ...items.map((item): PopoverItemParams => ({
+          type: PopoverItemType.Default,
+          name: `backlink-${item.key}`,
+          title: item.title,
+          // Not secondaryLabel: that draws a keyboard shortcut from markup.
+          titleEl: this.backlinkTitle(item),
+          icon: this.backlinkIcon(item),
+          closeOnActivate: true,
+          onActivate: () => item.open(),
+        })),
+      ],
+    });
+
+    menu.on(PopoverEvent.Closed, () => {
+      anchor.setAttribute('aria-expanded', 'false');
+      if (this.modeMenu === menu) {
+        this.modeMenu = null;
+        this.backlinksMenu = null;
+        menu.destroy();
+      }
+    });
+    this.modeMenu = menu;
+    this.backlinksMenu = menu;
+    menu.show();
+    anchor.setAttribute('aria-expanded', 'true');
+  }
+
+  /** The page's title, then its path in grey. */
+  private backlinkTitle(item: DrawerBacklink): HTMLElement {
+    const line = document.createElement('span');
+    const title = document.createElement('span');
+
+    line.setAttribute('data-blok-database-backlink-line', '');
+    title.setAttribute('data-blok-database-backlink-title', '');
+    title.textContent = item.title;
+    line.appendChild(title);
+    if (item.path.length > 0) {
+      const path = document.createElement('span');
+
+      path.setAttribute('data-blok-database-backlink-path', '');
+      path.textContent = item.path.join(' / ');
+      line.appendChild(path);
+    }
+
+    return line;
+  }
+
+  /** The arrow, then the page's emoji or the page glyph. */
+  private backlinkIcon(item: DrawerBacklink): HTMLElement {
+    const icon = document.createElement('span');
+    const arrow = document.createElement('span');
+    const page = document.createElement('span');
+
+    icon.setAttribute('data-blok-database-backlink-icon', '');
+    arrow.setAttribute('data-blok-database-backlinks-icon', '');
+    arrow.append(iconNode(IconArrowDiagonal));
+    if (item.icon === undefined) {
+      page.append(iconNode(IconPage));
+    } else {
+      page.textContent = item.icon;
+    }
+    icon.append(arrow, page);
+
+    return icon;
   }
 
   /** The shared cover picker (upload or link), anchored on the cover button. */
@@ -1919,6 +2096,15 @@ export class DatabaseCardDrawer {
     const heading = [title, ...regions.filter((region) => region.matches('[data-blok-database-drawer-pins-row], [data-blok-database-drawer-tabs], [data-blok-database-drawer-tab-panel]'))];
     const entry = (def: PropertyDefinition): PageLayoutModuleEntry => ({ def, element: this.createPropertyRow(def, readPropertyValue(row, def) ?? null) });
 
+    // research/09 §6: the builder always shows the count, "No backlinks" at zero.
+    const backlinks = document.createElement('div');
+    const icon = document.createElement('span');
+
+    backlinks.setAttribute('data-blok-database-layout-backlinks', '');
+    icon.setAttribute('data-blok-database-backlinks-icon', '');
+    icon.append(iconNode(IconArrowDiagonal));
+    backlinks.append(icon, this.backlinksLabel(this.placeholder === null ? this.backlinks?.(row.id).length ?? 0 : 0));
+    heading.unshift(backlinks);
     title.setAttribute('data-blok-database-layout-canvas-title', '');
     title.textContent = name.trim() !== '' ? name : this.label('tools.database.layoutNewPage');
     title.toggleAttribute('data-placeholder', name.trim() === '');

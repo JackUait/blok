@@ -284,6 +284,29 @@ export interface DatabaseLinkedSources {
   resolve(input: { documentId: string; databaseId: string }): Promise<{ schema: PropertyDefinition[]; rows: DatabaseRow[] } | null>;
 }
 
+/** A page in another document that mentions a row. */
+export interface DatabaseBacklink {
+  /** The page holding the mention. */
+  pageId: string;
+  title?: string;
+  /** Titles of the pages above it, top first. Shown in grey after the title. */
+  path?: string[];
+  /** The block holding the mention. */
+  blockId?: string;
+}
+
+/**
+ * Host lever for row backlinks. Blok finds mentions of a row in this document
+ * itself; this adds the ones in other documents. Without it, backlinks count
+ * this document only.
+ */
+export interface DatabaseBacklinks {
+  /** Pages in other documents that mention the row. `pageId` is the row's page, when it has one. Asked when the row's page opens. */
+  list(input: { databaseId: string; rowId: string; pageId?: string }): Promise<DatabaseBacklink[]>;
+  /** Opens a page from the list at its mention. */
+  open(backlink: DatabaseBacklink): void;
+}
+
 // ─── Computed properties (Phase 6) ───
 
 /** Relation stores row ids; formula and rollup are computed and never stored in `properties`. */
@@ -1149,6 +1172,8 @@ export interface DatabaseConfig {
   templates?: DatabaseTemplates;
   /** Linked databases whose source is in another document. */
   linkedSources?: DatabaseLinkedSources;
+  /** Mentions of a row in other documents, for its "N backlinks". */
+  backlinks?: DatabaseBacklinks;
 }
 
 /**

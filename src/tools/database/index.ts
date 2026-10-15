@@ -23,7 +23,7 @@ import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRela
 import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
 import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData } from './templates';
-import { dueReminder } from './reminders';
+import { dueReminder, storedReminderDueAt, viewerTimeZone } from './reminders';
 import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDisplay } from './sub-items';
 import { comparePositions } from './positions';
 import { mapRowValues } from './row-move';
@@ -4909,7 +4909,8 @@ export class DatabaseTool implements BlockTool {
 
     if (this.readOnly || this.destroyed || block === undefined) return;
     if ((this.model.getRow(rowId)?.reminders?.[propertyId]?.remind ?? null) === reminder) return;
-    block.call('updateReminders', { [propertyId]: reminder === null ? null : { remind: reminder } });
+    // The setter's zone: a date with no property zone is then due at one time on every client.
+    block.call('updateReminders', { [propertyId]: reminder === null ? null : { remind: reminder, timeZone: viewerTimeZone() } });
     block.dispatchChange();
     this.syncRowsFromBlocks();
   }
@@ -5560,9 +5561,14 @@ export class DatabaseTool implements BlockTool {
       dueAt,
       markSent: () => {
         const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
+        const row = this.model.getRow(rowId);
+        const current = row?.reminders?.[propertyId];
+        const zone = this.model.getProperty(propertyId)?.date?.timeZone;
 
-        if (this.destroyed || block === undefined) return;
-        block.call('updateReminders', { [propertyId]: { remind, sentFor: dueAt } });
+        // The host may call later: a reminder changed, removed or moved since the offer is not this one.
+        if (this.destroyed || block === undefined || current === undefined
+          || storedReminderDueAt(row?.properties[propertyId], current, zone) !== Date.parse(dueAt)) return;
+        block.call('updateReminders', { [propertyId]: { ...current, sentFor: dueAt } });
         // Derived: a host stamp is not the user's edit, so undo must not take it back.
         block.dispatchChange({ derived: true });
         this.syncRowsFromBlocks();

@@ -51,6 +51,7 @@ export const DATABASE_ROW_DATA = {
             enum: ['on_day_of_event', '1_day_before', '2_days_before', '1_week_before', 'at_time_of_event', '5_minutes_before', '10_minutes_before', '15_minutes_before', '30_minutes_before', '1_hour_before', '2_hours_before'],
             description: 'When to remind. The day offsets remind at 9:00; minutes and hours count back from a timed date.',
           },
+          timeZone: { type: 'string', description: 'IANA zone of whoever set the reminder. A date with no property time zone is due in it, so every client agrees. Absent: each viewer\'s zone.' },
           sentFor: { type: 'string', description: 'The due time (ISO) the host last sent. Not offered again while it equals the current due time.' },
         },
       },

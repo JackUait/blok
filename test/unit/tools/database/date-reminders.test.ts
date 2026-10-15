@@ -92,6 +92,17 @@ describe('date reminders', () => {
       expect(dueReminder(value, { remind: '1_day_before', sentFor: '2027-06-14T13:00:00.000Z' }, NY, new Date('2027-06-20T00:00:00.000Z'))).toBeNull();
     });
 
+    it('uses the zone stored on the reminder when the property has none', () => {
+      const tokyo = { remind: '1_day_before' as const, timeZone: 'Asia/Tokyo' };
+
+      expect(dueReminder(value, tokyo, undefined, new Date('2027-06-20T00:00:00.000Z'))).toBe('2027-06-14T00:00:00.000Z');
+      expect(dueReminder(value, { ...tokyo, sentFor: '2027-06-14T00:00:00.000Z' }, undefined, new Date('2027-06-20T00:00:00.000Z'))).toBeNull();
+    });
+
+    it('lets the property zone win over the zone stored on the reminder', () => {
+      expect(dueReminder(value, { remind: '1_day_before', timeZone: 'Asia/Tokyo' }, NY, new Date('2027-06-20T00:00:00.000Z'))).toBe('2027-06-14T13:00:00.000Z');
+    });
+
     it('is offered again after the date moves', () => {
       const moved = dueReminder('2027-06-17', { remind: '1_day_before', sentFor: '2027-06-14T13:00:00.000Z' }, NY, new Date('2027-06-20T00:00:00.000Z'));
 

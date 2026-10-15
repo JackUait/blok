@@ -61,6 +61,10 @@ const rowData = async (page: Page, id: string): Promise<{ properties: Record<str
   return saved?.blocks.find((block) => block.id === rowId)?.data as { properties: Record<string, unknown>; reminders?: Record<string, unknown> } | undefined;
 }, id);
 
+/** A reminder records the zone of whoever set it. */
+const setInBrowserZone = async (page: Page, remind: string): Promise<Record<string, unknown>> =>
+  ({ remind, timeZone: await page.evaluate(() => new Intl.DateTimeFormat().resolvedOptions().timeZone) });
+
 const dueCell = (page: Page, title: string) => page.getByRole('row', { name: new RegExp(title) }).getByRole('gridcell').nth(1);
 
 test.beforeAll(ensureBlokBundleBuilt);
@@ -98,7 +102,7 @@ test('Remind sits above Clear, lists the date-only reminders, and a pick shows a
   await menu.getByRole('menuitemradio', { name: '1 day before (9:00 AM)' }).click();
   await expect(menu).toBeHidden();
   await expect(remind).toHaveAccessibleName('Remind 1 day before');
-  await expect.poll(async () => (await rowData(page, 'r1'))?.reminders).toEqual({ 'p-due': { remind: '1_day_before' } });
+  await expect.poll(async () => (await rowData(page, 'r1'))?.reminders).toEqual({ 'p-due': await setInBrowserZone(page, '1_day_before') });
 
   await page.keyboard.press('Escape');
   const alarm = cell.getByRole('img', { name: 'Reminder: 1 day before' });
@@ -159,7 +163,7 @@ test('Notifications pre-fills Remind for a new date and leaves an existing one a
   await page.getByRole('textbox', { name: 'Start date' }).fill('Jun 20, 2027');
   await page.keyboard.press('Enter');
 
-  await expect.poll(async () => (await rowData(page, 'r2'))?.reminders).toEqual({ 'p-due': { remind: '1_week_before' } });
+  await expect.poll(async () => (await rowData(page, 'r2'))?.reminders).toEqual({ 'p-due': await setInBrowserZone(page, '1_week_before') });
   await expect.poll(async () => (await rowData(page, 'r1'))?.reminders).toBeUndefined();
 });
 
@@ -203,7 +207,7 @@ test('one undo takes back a first date and the default reminder it brought', asy
   await dueCell(page, 'Beta').click();
   await page.getByRole('textbox', { name: 'Start date' }).fill('Jun 20, 2027');
   await page.keyboard.press('Enter');
-  await expect.poll(async () => (await rowData(page, 'r2'))?.reminders).toEqual({ 'p-due': { remind: '1_week_before' } });
+  await expect.poll(async () => (await rowData(page, 'r2'))?.reminders).toEqual({ 'p-due': await setInBrowserZone(page, '1_week_before') });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Clear' })).toBeHidden();
 

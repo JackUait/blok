@@ -3888,6 +3888,10 @@
                 ],
                 "description": "When to remind. The day offsets remind at 9:00; minutes and hours count back from a timed date."
               },
+              "timeZone": {
+                "type": "string",
+                "description": "IANA zone of whoever set the reminder. A date with no property time zone is due in it, so every client agrees. Absent: each viewer's zone."
+              },
               "sentFor": {
                 "type": "string",
                 "description": "The due time (ISO) the host last sent. Not offered again while it equals the current due time."

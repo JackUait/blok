@@ -148,6 +148,11 @@ export type DateReminderOffset =
 /** A reminder on one date value of a row. */
 export interface DateReminder {
   remind: DateReminderOffset;
+  /**
+   * IANA zone of whoever set it. A date with no property zone is due in this
+   * zone, so every client computes the same due time. Absent: the viewer's zone.
+   */
+  timeZone?: string;
   /** The due time (ISO) the host last handled. While it equals the current due time, it is not offered again. */
   sentFor?: string;
 }

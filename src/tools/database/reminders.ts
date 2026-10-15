@@ -75,6 +75,13 @@ export const reminderDueAt = (value: PropertyValue | undefined, remind: DateRemi
   return zonedToEpoch({ ...day, hour: REMINDER_HOUR, minute: 0, second: 0, ms: 0 }, zone);
 };
 
+/** The viewer's IANA zone, read on each call: a reminder records it when set. */
+export const viewerTimeZone = (): string => new Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+/** When a stored reminder goes off: the property's zone, else the zone stored on the reminder, else the viewer's. */
+export const storedReminderDueAt = (value: PropertyValue | undefined, reminder: DateReminder, timeZone: string | undefined): number | null =>
+  reminderDueAt(value, reminder.remind, timeZone ?? reminder.timeZone);
+
 /** The due time as an ISO string once it has come and the host has not handled it, else null. */
 export const dueReminder = (
   value: PropertyValue | undefined,
@@ -82,7 +89,7 @@ export const dueReminder = (
   timeZone: string | undefined,
   now: Date
 ): string | null => {
-  const due = reminderDueAt(value, reminder.remind, timeZone);
+  const due = storedReminderDueAt(value, reminder, timeZone);
 
   if (due === null || due > now.getTime()) return null;
   const sent = reminder.sentFor === undefined ? Number.NaN : Date.parse(reminder.sentFor);

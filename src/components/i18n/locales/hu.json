@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Csak bizonyos tulajdonságok",
   "tools.database.aiAutofillTriggerContent": "Oldal tartalmának szerkesztésekor",
   "tools.database.aiAutofillTriggerContentValue": "Oldal tartalma",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Tulajdonság frissítésekor"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Tulajdonság frissítésekor",
+  "tools.database.aiAutofillNew": "Új MI-alapú automatikus kitöltés"
 }

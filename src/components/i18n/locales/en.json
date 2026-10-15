@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Only specific properties",
   "tools.database.aiAutofillTriggerContent": "When page content is edited",
   "tools.database.aiAutofillTriggerContentValue": "Page content",
-  "tools.database.aiAutofillTriggerPropertyHeading": "When a property is updated"
+  "tools.database.aiAutofillTriggerPropertyHeading": "When a property is updated",
+  "tools.database.aiAutofillNew": "New AI Autofill"
 }

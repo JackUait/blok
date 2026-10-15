@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "특정 속성만",
   "tools.database.aiAutofillTriggerContent": "페이지 콘텐츠 편집 시",
   "tools.database.aiAutofillTriggerContentValue": "페이지 콘텐츠",
-  "tools.database.aiAutofillTriggerPropertyHeading": "속성 업데이트 시"
+  "tools.database.aiAutofillTriggerPropertyHeading": "속성 업데이트 시",
+  "tools.database.aiAutofillNew": "새 AI 자동 채우기"
 }

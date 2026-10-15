@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "শুধু নির্দিষ্ট বৈশিষ্ট্য",
   "tools.database.aiAutofillTriggerContent": "পৃষ্ঠার বিষয়বস্তু সম্পাদিত হলে",
   "tools.database.aiAutofillTriggerContentValue": "পৃষ্ঠার বিষয়বস্তু",
-  "tools.database.aiAutofillTriggerPropertyHeading": "কোনো বৈশিষ্ট্য আপডেট হলে"
+  "tools.database.aiAutofillTriggerPropertyHeading": "কোনো বৈশিষ্ট্য আপডেট হলে",
+  "tools.database.aiAutofillNew": "নতুন AI অটোফিল"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Միայն որոշակի հատկություններ",
   "tools.database.aiAutofillTriggerContent": "Էջի բովանդակությունը խմբագրելիս",
   "tools.database.aiAutofillTriggerContentValue": "Էջի բովանդակություն",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Հատկությունը թարմացնելիս"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Հատկությունը թարմացնելիս",
+  "tools.database.aiAutofillNew": "Նոր ԱԲ ինքնալրացում"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Alleen specifieke eigenschappen",
   "tools.database.aiAutofillTriggerContent": "Bij het bewerken van de pagina-inhoud",
   "tools.database.aiAutofillTriggerContentValue": "Pagina-inhoud",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Bij het bijwerken van een eigenschap"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Bij het bijwerken van een eigenschap",
+  "tools.database.aiAutofillNew": "Nieuwe automatische invulling met AI"
 }

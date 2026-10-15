@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Kun bestemte egenskaber",
   "tools.database.aiAutofillTriggerContent": "Når sidens indhold redigeres",
   "tools.database.aiAutofillTriggerContentValue": "Sidens indhold",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Når en egenskab opdateres"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Når en egenskab opdateres",
+  "tools.database.aiAutofillNew": "Ny AI-autoudfyld"
 }

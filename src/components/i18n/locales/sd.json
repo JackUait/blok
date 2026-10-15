@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٽيون",
   "tools.database.aiAutofillTriggerContent": "صفحي جو مواد تبديل ٿيڻ تي",
   "tools.database.aiAutofillTriggerContentValue": "صفحي جو مواد",
-  "tools.database.aiAutofillTriggerPropertyHeading": "پراپرٽي اپڊيٽ ٿيڻ تي"
+  "tools.database.aiAutofillTriggerPropertyHeading": "پراپرٽي اپڊيٽ ٿيڻ تي",
+  "tools.database.aiAutofillNew": "نئون AI آٽو فل"
 }

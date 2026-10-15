@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "केवल चुनिंदा प्रॉपर्टी",
   "tools.database.aiAutofillTriggerContent": "पृष्ठ सामग्री संपादित होने पर",
   "tools.database.aiAutofillTriggerContentValue": "पृष्ठ सामग्री",
-  "tools.database.aiAutofillTriggerPropertyHeading": "कोई प्रॉपर्टी अपडेट होने पर"
+  "tools.database.aiAutofillTriggerPropertyHeading": "कोई प्रॉपर्टी अपडेट होने पर",
+  "tools.database.aiAutofillNew": "नया AI ऑटोफ़िल"
 }

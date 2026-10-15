@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "یوازې ټاکلې ځانګړتیاوې",
   "tools.database.aiAutofillTriggerContent": "د پاڼې د منځپانګې د سمون پر مهال",
   "tools.database.aiAutofillTriggerContentValue": "د پاڼې منځپانګه",
-  "tools.database.aiAutofillTriggerPropertyHeading": "د ځانګړتیا د تازه کېدو پر مهال"
+  "tools.database.aiAutofillTriggerPropertyHeading": "د ځانګړتیا د تازه کېدو پر مهال",
+  "tools.database.aiAutofillNew": "د AI په مرسته نوی اتومات ډکول"
 }

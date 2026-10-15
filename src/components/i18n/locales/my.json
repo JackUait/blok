@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "သတ်မှတ်ထားသော ဂုဏ်သတ္တိများသာ",
   "tools.database.aiAutofillTriggerContent": "စာမျက်နှာ အကြောင်းအရာ တည်းဖြတ်သည့်အခါ",
   "tools.database.aiAutofillTriggerContentValue": "စာမျက်နှာ အကြောင်းအရာ",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ဂုဏ်သတ္တိ အပ်ဒိတ်လုပ်သည့်အခါ"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ဂုဏ်သတ္တိ အပ်ဒိတ်လုပ်သည့်အခါ",
+  "tools.database.aiAutofillNew": "AI ဖြင့် အလိုအလျောက်ဖြည့်ခြင်း အသစ်"
 }

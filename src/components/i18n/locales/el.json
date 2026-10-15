@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Μόνο συγκεκριμένες ιδιότητες",
   "tools.database.aiAutofillTriggerContent": "Κατά την επεξεργασία του περιεχομένου σελίδας",
   "tools.database.aiAutofillTriggerContentValue": "Περιεχόμενο σελίδας",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Κατά την ενημέρωση ιδιότητας"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Κατά την ενημέρωση ιδιότητας",
+  "tools.database.aiAutofillNew": "Νέα αυτόματη συμπλήρωση με ΤΝ"
 }

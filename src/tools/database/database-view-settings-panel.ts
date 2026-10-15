@@ -1,4 +1,4 @@
-import { IconCopy, IconLink, IconPlus, IconTrash } from '../../components/icons';
+import { IconCopy, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -76,6 +76,7 @@ import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './s
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
 import type { AutomationSettings } from './database-automations-panel';
+import { offersAutofill } from './property-values';
 
 export interface ViewGroupEntry {
   key: string;
@@ -124,6 +125,16 @@ export interface ViewSettingsContext {
   /** "Customize page layout": the last row of More settings (research/09 §1). */
   customizeLayout?: () => ViewSettingsAction | undefined;
   automations?: AutomationSettings;
+  /** The host gave `config.ai`. Without it there is no AI Autofill row. */
+  autofill?: AutofillPanelSettings;
+}
+
+export interface AutofillPanelSettings {
+  /** The saved schema, localized: a formula's value type must not make it look autofillable. */
+  properties: () => PropertyDefinition[];
+  writable: () => boolean;
+  /** Opens the property's AI Autofill setup. The panel is closed first. */
+  open: (propertyId: string) => void;
 }
 
 /** Database-level sub-item and dependency settings (research/05 §11). */
@@ -285,6 +296,20 @@ export class ViewSettingsPages {
 
           rows.push(control);
         }
+        const autofill = this.ctx.autofill;
+
+        if (autofill !== undefined) {
+          rows.push(panelRow({
+            label: this.t('aiAutofill'),
+            testId: 'database-settings-autofill',
+            value: String(autofill.properties().filter((p) => p.autofill !== undefined).length),
+            opensPage: true,
+            disabled: !autofill.writable(),
+            onClick: () => {
+              if (autofill.writable()) panel.push(this.autofillList(autofill));
+            },
+          }));
+        }
         if (this.ctx.structure !== undefined || this.ctx.customizeLayout?.() !== undefined) {
           rows.push(panelRow({
             label: this.t('settingsMoreSettings'),
@@ -339,6 +364,50 @@ export class ViewSettingsPages {
             },
           })
         );
+
+        return rows;
+      },
+    };
+  }
+
+  // ─── AI Autofill: one row per set-up property, then "New AI Autofill" (research/12 §2) ───
+
+  private autofillList(autofill: AutofillPanelSettings): PanelPage {
+    const open = (panel: DatabasePanel, id: string): void => {
+      if (!autofill.writable()) return;
+      panel.close();
+      autofill.open(id);
+    };
+
+    return {
+      title: this.t('aiAutofill'),
+      build: (panel) => {
+        const properties = autofill.properties();
+        const rows = properties.filter((p) => p.autofill !== undefined).map((property) => panelRow({
+          label: this.t('aiAutofillProperty', { name: property.name }),
+          testId: `database-autofill-open-${property.id}`,
+          icon: IconWand,
+          disabled: !autofill.writable(),
+          onClick: () => open(panel, property.id),
+        }));
+        const candidates = (): PropertyDefinition[] => autofill.properties()
+          .filter((p) => p.autofill === undefined && offersAutofill(p.type));
+
+        rows.push(panelRow({
+          label: this.t('aiAutofillNew'),
+          testId: 'database-autofill-new',
+          icon: IconPlus,
+          disabled: !autofill.writable() || candidates().length === 0,
+          onClick: () => panel.push({
+            title: this.t('aiAutofillNew'),
+            build: () => candidates().map((property) => panelRow({
+              label: property.name,
+              testId: `database-autofill-pick-${property.id}`,
+              disabled: !autofill.writable(),
+              onClick: () => open(panel, property.id),
+            })),
+          }),
+        }));
 
         return rows;
       },

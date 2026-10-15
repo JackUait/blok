@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "მხოლოდ კონკრეტული თვისებები",
   "tools.database.aiAutofillTriggerContent": "გვერდის შიგთავსის რედაქტირებისას",
   "tools.database.aiAutofillTriggerContentValue": "გვერდის შიგთავსი",
-  "tools.database.aiAutofillTriggerPropertyHeading": "თვისების განახლებისას"
+  "tools.database.aiAutofillTriggerPropertyHeading": "თვისების განახლებისას",
+  "tools.database.aiAutofillNew": "ახალი ავტოშევსება ხელოვნური ინტელექტით"
 }

@@ -3917,6 +3917,19 @@ export class DatabaseTool implements BlockTool {
           return true;
         },
       },
+      ...(this.config.ai === undefined ? {} : {
+        autofill: {
+          properties: () => localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+          writable: () => !this.destroyed && !this.readOnly && !this.structureLocked() && (context === undefined || context.writable()),
+          open: (propertyId: string) => {
+            const property = this.model.getProperty(propertyId);
+
+            if (property !== undefined && this.element !== null) {
+              this.openAutofillSetup(propertyId, localizeDatabaseSchema([property], this.api.i18n)[0]?.name ?? property.name, this.element, context);
+            }
+          },
+        },
+      }),
       newRow: () => {
         this.newRow();
       },

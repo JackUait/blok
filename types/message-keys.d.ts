@@ -404,6 +404,7 @@ export type BlokMessageKey =
   | 'tools.database.aiAutofillGenerate'
   | 'tools.database.aiAutofillInstructions'
   | 'tools.database.aiAutofillMore'
+  | 'tools.database.aiAutofillNew'
   | 'tools.database.aiAutofillOnCreate'
   | 'tools.database.aiAutofillOnUpdate'
   | 'tools.database.aiAutofillParagraph'

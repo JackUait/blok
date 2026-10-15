@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Зөвхөн тодорхой шинжүүд",
   "tools.database.aiAutofillTriggerContent": "Хуудасны агуулгыг засах үед",
   "tools.database.aiAutofillTriggerContentValue": "Хуудасны агуулга",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Шинж шинэчлэх үед"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Шинж шинэчлэх үед",
+  "tools.database.aiAutofillNew": "Шинэ AI автомат бөглөлт"
 }

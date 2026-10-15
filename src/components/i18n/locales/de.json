@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Nur bestimmte Eigenschaften",
   "tools.database.aiAutofillTriggerContent": "Beim Bearbeiten des Seiteninhalts",
   "tools.database.aiAutofillTriggerContentValue": "Seiteninhalt",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Beim Aktualisieren einer Eigenschaft"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Beim Aktualisieren einer Eigenschaft",
+  "tools.database.aiAutofillNew": "Neues automatisches Ausfüllen mit KI"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "پەقەت بەلگىلىك خاسلىقلار",
   "tools.database.aiAutofillTriggerContent": "بەت مەزمۇنى تەھرىرلەنگەندە",
   "tools.database.aiAutofillTriggerContentValue": "بەت مەزمۇنى",
-  "tools.database.aiAutofillTriggerPropertyHeading": "خاسلىق يېڭىلانغاندا"
+  "tools.database.aiAutofillTriggerPropertyHeading": "خاسلىق يېڭىلانغاندا",
+  "tools.database.aiAutofillNew": "يېڭى سۈنئىي ئەقىل ئاپتوماتىك تولدۇرۇش"
 }

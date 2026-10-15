@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "ਸਿਰਫ਼ ਖਾਸ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ",
   "tools.database.aiAutofillTriggerContent": "ਪੰਨੇ ਦੀ ਸਮੱਗਰੀ ਸੰਪਾਦਿਤ ਕਰਨ 'ਤੇ",
   "tools.database.aiAutofillTriggerContentValue": "ਪੰਨੇ ਦੀ ਸਮੱਗਰੀ",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ਵਿਸ਼ੇਸ਼ਤਾ ਅੱਪਡੇਟ ਕਰਨ 'ਤੇ"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ਵਿਸ਼ੇਸ਼ਤਾ ਅੱਪਡੇਟ ਕਰਨ 'ਤੇ",
+  "tools.database.aiAutofillNew": "ਨਵਾਂ AI ਆਟੋਫਿਲ"
 }

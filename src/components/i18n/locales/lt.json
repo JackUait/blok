@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Tik tam tikros savybės",
   "tools.database.aiAutofillTriggerContent": "Redagavus puslapio turinį",
   "tools.database.aiAutofillTriggerContentValue": "Puslapio turinys",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Atnaujinus savybę"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Atnaujinus savybę",
+  "tools.database.aiAutofillNew": "Naujas DI automatinis pildymas"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "ನಿರ್ದಿಷ್ಟ ಗುಣಲಕ್ಷಣಗಳು ಮಾತ್ರ",
   "tools.database.aiAutofillTriggerContent": "ಪುಟದ ವಿಷಯ ಸಂಪಾದಿಸಿದಾಗ",
   "tools.database.aiAutofillTriggerContentValue": "ಪುಟದ ವಿಷಯ",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ಗುಣಲಕ್ಷಣ ನವೀಕರಿಸಿದಾಗ"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ಗುಣಲಕ್ಷಣ ನವೀಕರಿಸಿದಾಗ",
+  "tools.database.aiAutofillNew": "ಹೊಸ AI ಸ್ವಯಂ ಭರ್ತಿ"
 }

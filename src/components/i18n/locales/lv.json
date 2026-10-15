@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Tikai noteikti rekvizīti",
   "tools.database.aiAutofillTriggerContent": "Rediģējot lapas saturu",
   "tools.database.aiAutofillTriggerContentValue": "Lapas saturs",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Atjauninot rekvizītu"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Atjauninot rekvizītu",
+  "tools.database.aiAutofillNew": "Jauna MI automātiskā aizpilde"
 }

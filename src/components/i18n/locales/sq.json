@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Vetëm veti të caktuara",
   "tools.database.aiAutofillTriggerContent": "Kur ndryshohet përmbajtja e faqes",
   "tools.database.aiAutofillTriggerContentValue": "Përmbajtja e faqes",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Kur përditësohet një veti"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Kur përditësohet një veti",
+  "tools.database.aiAutofillNew": "Plotësim i ri automatik me IA"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Samo određena svojstva",
   "tools.database.aiAutofillTriggerContent": "Pri uređivanju sadržaja stranice",
   "tools.database.aiAutofillTriggerContentValue": "Sadržaj stranice",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Pri ažuriranju svojstva"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Pri ažuriranju svojstva",
+  "tools.database.aiAutofillNew": "Novo AI automatsko popunjavanje"
 }

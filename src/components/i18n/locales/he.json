@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "רק מאפיינים מסוימים",
   "tools.database.aiAutofillTriggerContent": "בעריכת תוכן הדף",
   "tools.database.aiAutofillTriggerContentValue": "תוכן הדף",
-  "tools.database.aiAutofillTriggerPropertyHeading": "בעדכון מאפיין"
+  "tools.database.aiAutofillTriggerPropertyHeading": "בעדכון מאפיין",
+  "tools.database.aiAutofillNew": "מילוי אוטומטי חדש באמצעות AI"
 }

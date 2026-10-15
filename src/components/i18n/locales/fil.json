@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Mga partikular na property lang",
   "tools.database.aiAutofillTriggerContent": "Sa pag-edit ng nilalaman ng pahina",
   "tools.database.aiAutofillTriggerContentValue": "Nilalaman ng pahina",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Sa pag-update ng property"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Sa pag-update ng property",
+  "tools.database.aiAutofillNew": "Bagong awtomatikong pagpuno gamit ang AI"
 }

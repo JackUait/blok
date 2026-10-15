@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Лише певні властивості",
   "tools.database.aiAutofillTriggerContent": "Під час редагування вмісту сторінки",
   "tools.database.aiAutofillTriggerContentValue": "Вміст сторінки",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Під час оновлення властивості"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Під час оновлення властивості",
+  "tools.database.aiAutofillNew": "Нове автозаповнення з ШІ"
 }

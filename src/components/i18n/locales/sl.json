@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Samo določene lastnosti",
   "tools.database.aiAutofillTriggerContent": "Ob urejanju vsebine strani",
   "tools.database.aiAutofillTriggerContentValue": "Vsebina strani",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Ob posodobitvi lastnosti"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Ob posodobitvi lastnosti",
+  "tools.database.aiAutofillNew": "Novo samodejno izpolnjevanje z UI"
 }

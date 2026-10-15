@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "فقط ویژگی‌های مشخص",
   "tools.database.aiAutofillTriggerContent": "هنگام ویرایش محتوای صفحه",
   "tools.database.aiAutofillTriggerContentValue": "محتوای صفحه",
-  "tools.database.aiAutofillTriggerPropertyHeading": "هنگام به‌روزرسانی یک ویژگی"
+  "tools.database.aiAutofillTriggerPropertyHeading": "هنگام به‌روزرسانی یک ویژگی",
+  "tools.database.aiAutofillNew": "تکمیل خودکار جدید با هوش مصنوعی"
 }

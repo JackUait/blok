@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Vain tietyt ominaisuudet",
   "tools.database.aiAutofillTriggerContent": "Kun sivun sisältöä muokataan",
   "tools.database.aiAutofillTriggerContentValue": "Sivun sisältö",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Kun ominaisuutta päivitetään"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Kun ominaisuutta päivitetään",
+  "tools.database.aiAutofillNew": "Uusi tekoälyn automaattinen täyttö"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "የተወሰኑ ንብረቶች ብቻ",
   "tools.database.aiAutofillTriggerContent": "የገጽ ይዘት ሲስተካከል",
   "tools.database.aiAutofillTriggerContentValue": "የገጽ ይዘት",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ንብረት ሲዘመን"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ንብረት ሲዘመን",
+  "tools.database.aiAutofillNew": "አዲስ AI ራስ-ሙላ"
 }

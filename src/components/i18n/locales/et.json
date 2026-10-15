@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Ainult kindlad omadused",
   "tools.database.aiAutofillTriggerContent": "Lehe sisu muutmisel",
   "tools.database.aiAutofillTriggerContentValue": "Lehe sisu",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Omaduse uuendamisel"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Omaduse uuendamisel",
+  "tools.database.aiAutofillNew": "Uus AI automaattäitmine"
 }

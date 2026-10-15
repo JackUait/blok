@@ -750,3 +750,96 @@ describe('view settings panel — sub-items and dependencies', () => {
     expect(calls.updateDependency).toHaveBeenCalledWith({ avoidWeekends: true });
   });
 });
+
+// research/12 §2 + shot 32: Data source settings reads Automations, "AI Autofill" (count), then More settings.
+describe('view settings panel — AI Autofill', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const autofillSchema: PropertyDefinition[] = [
+    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'sum', name: 'Summary', type: 'text', position: 'a1', autofill: { mode: 'summary', instruction: 'x' } },
+    { id: 'notes', name: 'Notes', type: 'text', position: 'a2' },
+    { id: 'calc', name: 'Calc', type: 'formula', position: 'a3' },
+  ];
+
+  const rowIds = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid^="database-settings-"]')]
+    .map((el) => el.getAttribute('data-blok-testid') ?? '');
+
+  const withAutofill = (writable = true): { h: Harness; open: ReturnType<typeof vi.fn> } => {
+    const h = harness();
+    const open = vi.fn();
+
+    h.ctx.customizeLayout = () => ({ testId: 'database-settings-customize-layout', label: 'Customize page layout', icon: '', onClick: vi.fn() });
+    h.ctx.automations = { read: () => undefined, schema: () => [], views: () => [], writable: () => true, write: () => true };
+    h.ctx.autofill = { properties: () => autofillSchema, writable: () => writable, open };
+
+    return { h, open };
+  };
+
+  it('puts AI Autofill between Automations and More settings, with the count of autofill properties', () => {
+    withAutofill().h.open();
+    const root = rowIds();
+    const at = root.indexOf('database-settings-autofill');
+
+    expect(at).toBeGreaterThan(-1);
+    expect(root[at - 1]).toBe('database-settings-automations');
+    expect(root[at + 1]).toBe('database-settings-more');
+    const row = document.querySelector('[data-blok-testid="database-settings-autofill"]');
+
+    expect(row?.textContent).toContain('tools.database.aiAutofill');
+    expect(row?.textContent).toContain('1');
+  });
+
+  it('has no AI Autofill row when the host gives no autofill', () => {
+    harness().open();
+
+    expect(exists('database-settings-autofill')).toBe(false);
+  });
+
+  it('disables the row when the database cannot be written', () => {
+    withAutofill(false).h.open();
+
+    expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-settings-autofill"]')?.disabled).toBe(true);
+  });
+
+  it('lists each autofill property and opens its setup, closing the panel first', () => {
+    const { h, open } = withAutofill();
+    const panel = h.open();
+    const close = vi.spyOn(panel, 'close');
+
+    click('database-settings-autofill');
+
+    expect(exists('database-autofill-open-sum')).toBe(true);
+    expect(exists('database-autofill-open-notes')).toBe(false);
+    expect(document.querySelector('[data-blok-testid="database-autofill-open-sum"]')?.textContent).toContain('tools.database.aiAutofillProperty');
+    click('database-autofill-open-sum');
+
+    expect(close).toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith('sum');
+    expect(close.mock.invocationCallOrder[0]).toBeLessThan(open.mock.invocationCallOrder[0]);
+  });
+
+  it('"New AI Autofill" picks a property that can autofill and has none yet, then opens its setup', () => {
+    const { h, open } = withAutofill();
+
+    h.open();
+    click('database-settings-autofill');
+
+    expect(document.querySelector('[data-blok-testid="database-autofill-new"]')?.textContent).toContain('tools.database.aiAutofillNew');
+    click('database-autofill-new');
+
+    expect(exists('database-autofill-pick-notes')).toBe(true);
+    expect(exists('database-autofill-pick-sum')).toBe(false);
+    expect(exists('database-autofill-pick-calc')).toBe(false);
+    click('database-autofill-pick-notes');
+
+    expect(open).toHaveBeenCalledWith('notes');
+  });
+});

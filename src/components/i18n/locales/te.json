@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "నిర్దిష్ట ప్రాపర్టీలు మాత్రమే",
   "tools.database.aiAutofillTriggerContent": "పేజీ కంటెంట్ సవరించబడినప్పుడు",
   "tools.database.aiAutofillTriggerContentValue": "పేజీ కంటెంట్",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ప్రాపర్టీ అప్‌డేట్ అయినప్పుడు"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ప్రాపర్టీ అప్‌డేట్ అయినప్పుడు",
+  "tools.database.aiAutofillNew": "కొత్త AI ఆటోఫిల్"
 }

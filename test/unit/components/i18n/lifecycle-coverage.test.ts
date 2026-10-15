@@ -265,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1112 + 119 + 411 + 4 closure for all 1646 keys', () => {
+  it('rebuilds a disjoint 1112 + 119 + 412 + 4 closure for all 1647 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1646);
+    expect(lifecycle.size).toBe(1647);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -402,7 +402,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: tools.database.templateNew and templateUntitled gained literal callers in the row page template picker.
       // -1: tools.database.settingsTitle gained a literal caller in the builder's tab menu.
       // -1: tools.database.settingsDragToReorder gained a literal caller in the view overflow list.
-      'registered-namespace-compatible': 411,
+      // +1: tools.database.aiAutofillNew, called through the view settings panel's namespaced t().
+      'registered-namespace-compatible': 412,
       'catalog-only': 4,
     });
     expect(

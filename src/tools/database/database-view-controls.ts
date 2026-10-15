@@ -7,7 +7,7 @@ import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
 import { openFilterPill, openViewSettings } from './database-view-settings-panel';
-import type { StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
+import type { AutofillPanelSettings, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
 import type { AutomationSettings } from './database-automations-panel';
@@ -61,6 +61,8 @@ export interface ViewControlsHost {
   /** "Customize page layout" in More settings. */
   customizeLayout?: () => ViewSettingsAction | undefined;
   automations?: AutomationSettings;
+  /** AI Autofill: only when the host gave `config.ai`. */
+  autofill?: AutofillPanelSettings;
   /** Database settings: sub-items and dependencies. */
   structure?: StructureSettings;
   /** "New": a row from the default template. */
@@ -357,6 +359,7 @@ export class DatabaseViewControls {
       ...(this.host.actions !== undefined ? { actions: this.host.actions } : {}),
       ...(this.host.customizeLayout !== undefined ? { customizeLayout: this.host.customizeLayout } : {}),
       ...(this.host.automations !== undefined ? { automations: this.host.automations } : {}),
+      ...(this.host.autofill !== undefined ? { autofill: this.host.autofill } : {}),
       ...(this.host.structure !== undefined ? { structure: this.host.structure } : {}),
     };
   }

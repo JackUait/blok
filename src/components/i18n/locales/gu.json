@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "ફક્ત ચોક્કસ ગુણધર્મો",
   "tools.database.aiAutofillTriggerContent": "પૃષ્ઠની સામગ્રી સંપાદિત થાય ત્યારે",
   "tools.database.aiAutofillTriggerContentValue": "પૃષ્ઠની સામગ્રી",
-  "tools.database.aiAutofillTriggerPropertyHeading": "કોઈ ગુણધર્મ અપડેટ થાય ત્યારે"
+  "tools.database.aiAutofillTriggerPropertyHeading": "કોઈ ગુણધર્મ અપડેટ થાય ત્યારે",
+  "tools.database.aiAutofillNew": "નવું AI ઑટોફિલ"
 }

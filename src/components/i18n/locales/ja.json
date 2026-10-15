@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "特定のプロパティのみ",
   "tools.database.aiAutofillTriggerContent": "ページコンテンツの編集時",
   "tools.database.aiAutofillTriggerContentValue": "ページコンテンツ",
-  "tools.database.aiAutofillTriggerPropertyHeading": "プロパティ更新時"
+  "tools.database.aiAutofillTriggerPropertyHeading": "プロパティ更新時",
+  "tools.database.aiAutofillNew": "新しいAI自動入力"
 }

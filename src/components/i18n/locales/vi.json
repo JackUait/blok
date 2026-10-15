@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Chỉ các thuộc tính cụ thể",
   "tools.database.aiAutofillTriggerContent": "Khi chỉnh sửa nội dung trang",
   "tools.database.aiAutofillTriggerContentValue": "Nội dung trang",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Khi cập nhật thuộc tính"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Khi cập nhật thuộc tính",
+  "tools.database.aiAutofillNew": "Tự động điền bằng AI mới"
 }

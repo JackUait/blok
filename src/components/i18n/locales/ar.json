@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "خصائص محددة فقط",
   "tools.database.aiAutofillTriggerContent": "عند تعديل محتوى الصفحة",
   "tools.database.aiAutofillTriggerContentValue": "محتوى الصفحة",
-  "tools.database.aiAutofillTriggerPropertyHeading": "عند تحديث خاصية"
+  "tools.database.aiAutofillTriggerPropertyHeading": "عند تحديث خاصية",
+  "tools.database.aiAutofillNew": "تعبئة تلقائية جديدة بالذكاء الاصطناعي"
 }

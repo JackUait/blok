@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Само одредени својства",
   "tools.database.aiAutofillTriggerContent": "При уредување на содржината на страницата",
   "tools.database.aiAutofillTriggerContentValue": "Содржина на страницата",
-  "tools.database.aiAutofillTriggerPropertyHeading": "При ажурирање својство"
+  "tools.database.aiAutofillTriggerPropertyHeading": "При ажурирање својство",
+  "tools.database.aiAutofillNew": "Ново автоматско пополнување со ВИ"
 }

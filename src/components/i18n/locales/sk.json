@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Iba určité vlastnosti",
   "tools.database.aiAutofillTriggerContent": "Pri úprave obsahu stránky",
   "tools.database.aiAutofillTriggerContentValue": "Obsah stránky",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Pri aktualizácii vlastnosti"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Pri aktualizácii vlastnosti",
+  "tools.database.aiAutofillNew": "Nové automatické vypĺňanie AI"
 }

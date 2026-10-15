@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "केवल निश्चित गुणहरू",
   "tools.database.aiAutofillTriggerContent": "पृष्ठको सामग्री सम्पादन हुँदा",
   "tools.database.aiAutofillTriggerContentValue": "पृष्ठको सामग्री",
-  "tools.database.aiAutofillTriggerPropertyHeading": "गुण अद्यावधिक हुँदा"
+  "tools.database.aiAutofillTriggerPropertyHeading": "गुण अद्यावधिक हुँदा",
+  "tools.database.aiAutofillNew": "नयाँ AI स्वतः भराइ"
 }

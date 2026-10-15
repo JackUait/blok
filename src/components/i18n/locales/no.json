@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Bare bestemte egenskaper",
   "tools.database.aiAutofillTriggerContent": "Når sidens innhold redigeres",
   "tools.database.aiAutofillTriggerContentValue": "Sidens innhold",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Når en egenskap oppdateres"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Når en egenskap oppdateres",
+  "tools.database.aiAutofillNew": "Ny AI-autoutfylling"
 }

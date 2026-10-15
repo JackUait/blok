@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "නිශ්චිත ගුණාංග පමණි",
   "tools.database.aiAutofillTriggerContent": "පිටු අන්තර්ගතය සංස්කරණය කරන විට",
   "tools.database.aiAutofillTriggerContentValue": "පිටු අන්තර්ගතය",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ගුණාංගයක් යාවත්කාලීන කරන විට"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ගුණාංගයක් යාවත්කාලීන කරන විට",
+  "tools.database.aiAutofillNew": "නව AI ස්වයං පිරවීමක්"
 }

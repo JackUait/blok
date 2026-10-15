@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Hanya properti tertentu",
   "tools.database.aiAutofillTriggerContent": "Saat konten halaman diedit",
   "tools.database.aiAutofillTriggerContentValue": "Konten halaman",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Saat properti diperbarui"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Saat properti diperbarui",
+  "tools.database.aiAutofillNew": "Isi Otomatis AI baru"
 }

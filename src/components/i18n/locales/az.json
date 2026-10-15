@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Yalnız müəyyən xüsusiyyətlər",
   "tools.database.aiAutofillTriggerContent": "Səhifənin məzmunu redaktə ediləndə",
   "tools.database.aiAutofillTriggerContentValue": "Səhifənin məzmunu",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Xüsusiyyət yenilənəndə"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Xüsusiyyət yenilənəndə",
+  "tools.database.aiAutofillNew": "Yeni Sİ ilə avtodoldurma"
 }

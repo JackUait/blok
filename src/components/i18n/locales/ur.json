@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "صرف مخصوص پراپرٹیز",
   "tools.database.aiAutofillTriggerContent": "صفحے کے مواد میں ترمیم ہونے پر",
   "tools.database.aiAutofillTriggerContentValue": "صفحے کا مواد",
-  "tools.database.aiAutofillTriggerPropertyHeading": "پراپرٹی اپ ڈیٹ ہونے پر"
+  "tools.database.aiAutofillTriggerPropertyHeading": "پراپرٹی اپ ڈیٹ ہونے پر",
+  "tools.database.aiAutofillNew": "نیا AI آٹو فل"
 }

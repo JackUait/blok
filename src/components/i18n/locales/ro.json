@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Doar anumite proprietăți",
   "tools.database.aiAutofillTriggerContent": "La editarea conținutului paginii",
   "tools.database.aiAutofillTriggerContentValue": "Conținutul paginii",
-  "tools.database.aiAutofillTriggerPropertyHeading": "La actualizarea unei proprietăți"
+  "tools.database.aiAutofillTriggerPropertyHeading": "La actualizarea unei proprietăți",
+  "tools.database.aiAutofillNew": "Completare automată nouă cu IA"
 }

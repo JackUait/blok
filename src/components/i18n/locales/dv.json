@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "ހަމައެކަނި ކަނޑައެޅިފައިވާ ޕްރޮޕަރޓީތައް",
   "tools.database.aiAutofillTriggerContent": "ޞަފްޙާގެ މަޒުމޫނު އެޑިޓްކުރުމުން",
   "tools.database.aiAutofillTriggerContentValue": "ޞަފްޙާގެ މަޒުމޫނު",
-  "tools.database.aiAutofillTriggerPropertyHeading": "ޕްރޮޕަރޓީއެއް އަޕްޑޭޓްކުރުމުން"
+  "tools.database.aiAutofillTriggerPropertyHeading": "ޕްރޮޕަރޓީއެއް އަޕްޑޭޓްކުރުމުން",
+  "tools.database.aiAutofillNew": "އައު AI އޮޓޯފިލް"
 }

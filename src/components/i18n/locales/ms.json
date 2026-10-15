@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Sifat tertentu sahaja",
   "tools.database.aiAutofillTriggerContent": "Semasa kandungan halaman disunting",
   "tools.database.aiAutofillTriggerContentValue": "Kandungan halaman",
-  "tools.database.aiAutofillTriggerPropertyHeading": "Semasa sifat dikemas kini"
+  "tools.database.aiAutofillTriggerPropertyHeading": "Semasa sifat dikemas kini",
+  "tools.database.aiAutofillNew": "Autoisi AI baharu"
 }

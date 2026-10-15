@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "Само определени свойства",
   "tools.database.aiAutofillTriggerContent": "При редактиране на съдържанието на страницата",
   "tools.database.aiAutofillTriggerContentValue": "Съдържание на страницата",
-  "tools.database.aiAutofillTriggerPropertyHeading": "При обновяване на свойство"
+  "tools.database.aiAutofillTriggerPropertyHeading": "При обновяване на свойство",
+  "tools.database.aiAutofillNew": "Ново автоматично попълване с ИИ"
 }

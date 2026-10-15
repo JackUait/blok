@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "តែលក្ខណៈជាក់លាក់",
   "tools.database.aiAutofillTriggerContent": "នៅពេលកែសម្រួលខ្លឹមសារទំព័រ",
   "tools.database.aiAutofillTriggerContentValue": "ខ្លឹមសារទំព័រ",
-  "tools.database.aiAutofillTriggerPropertyHeading": "នៅពេលធ្វើបច្ចុប្បន្នភាពលក្ខណៈ"
+  "tools.database.aiAutofillTriggerPropertyHeading": "នៅពេលធ្វើបច្ចុប្បន្នភាពលក្ខណៈ",
+  "tools.database.aiAutofillNew": "ការបំពេញស្វ័យប្រវត្តិដោយ AI ថ្មី"
 }

@@ -1644,5 +1644,6 @@
   "tools.database.aiAutofillTriggerSpecific": "僅特定屬性",
   "tools.database.aiAutofillTriggerContent": "編輯頁面內容時",
   "tools.database.aiAutofillTriggerContentValue": "頁面內容",
-  "tools.database.aiAutofillTriggerPropertyHeading": "更新屬性時"
+  "tools.database.aiAutofillTriggerPropertyHeading": "更新屬性時",
+  "tools.database.aiAutofillNew": "新增 AI 自動填入"
 }

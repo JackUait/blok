@@ -5,6 +5,7 @@ import type { DatabaseAdapter, DatabaseData, DatabaseConfig, DatabaseRow, Databa
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
+import { DatabaseChartView } from '../../../../src/tools/database/database-chart-view';
 import { DataPersistenceManager } from '../../../../src/components/block/data-persistence-manager';
 import { NO_VALUE_GROUP_KEY, type DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
@@ -6769,11 +6770,135 @@ describe('DatabaseTool — property menu and insert placement', () => {
       const { tool } = mount({ type: 'chart', groupBy: 'prop-status' });
 
       expect(internals(tool).csvActions().map((a) => a.testId)).toEqual([
-        'database-settings-chart-png', 'database-settings-chart-svg',
+        'database-settings-chart-save',
         'database-settings-csv-export', 'database-settings-csv-import', 'database-settings-csv-merge',
       ]);
 
       tool.destroy();
+    });
+
+    describe('Save chart as', () => {
+      const press = (id: string): void => {
+        const control = document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
+
+        if (control === null) throw new Error(`missing ${id}`);
+        control.click();
+      };
+      const openSaveAs = (element: HTMLElement): void => {
+        const settings = element.querySelector<HTMLElement>('[data-blok-testid="database-toolbar-settings"]');
+
+        if (settings === null) throw new Error('missing settings button');
+        settings.click();
+        press('database-settings-chart-save');
+      };
+
+      afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+      });
+
+      it('opens a page with a background switch, then copy and download rows', () => {
+        const { tool, element } = mount({ type: 'chart', groupBy: 'prop-status' });
+
+        openSaveAs(element);
+
+        expect(document.querySelector('[data-blok-testid="database-settings-chart-background"]')?.getAttribute('aria-checked')).toBe('true');
+        expect(['database-settings-chart-copy', 'database-settings-chart-png', 'database-settings-chart-svg']
+          .map((id) => document.querySelector(`[data-blok-testid="${id}"]`) !== null)).toEqual([true, true, true]);
+
+        tool.destroy();
+      });
+
+      it('tells the user when this browser cannot copy an image', () => {
+        vi.stubGlobal('ClipboardItem', undefined);
+        const { tool, element, options } = mount({ type: 'chart', groupBy: 'prop-status' });
+
+        openSaveAs(element);
+        press('database-settings-chart-copy');
+
+        expect(options.api.notifier.show).toHaveBeenCalledWith({ message: 'tools.database.chartCopyFailed', style: 'error' });
+
+        tool.destroy();
+      });
+
+      it('copies a PNG without its background when the switch is off', async () => {
+        const items: Array<Record<string, Promise<Blob>>> = [];
+        const write = vi.fn((_: unknown[]) => Promise.resolve());
+
+        vi.stubGlobal('ClipboardItem', class {
+          constructor(record: Record<string, Promise<Blob>>) {
+            items.push(record);
+          }
+        });
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { write } });
+        const png = vi.spyOn(DatabaseChartView.prototype, 'toPngBlob').mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
+        const { tool, element, options } = mount({ type: 'chart', groupBy: 'prop-status' });
+
+        openSaveAs(element);
+        press('database-settings-chart-background');
+        press('database-settings-chart-copy');
+
+        expect(png).toHaveBeenCalledWith({ background: false });
+        expect(write).toHaveBeenCalledTimes(1);
+        expect(Object.keys(items[0] ?? {})).toEqual(['image/png']);
+        await vi.waitFor(() => expect(options.api.notifier.show).toHaveBeenCalledWith({ message: 'tools.database.chartCopied' }));
+
+        tool.destroy();
+      });
+
+      it('reports a failed copy when the chart cannot be painted', async () => {
+        const write = vi.fn(async (list: Array<{ record: Record<string, Promise<Blob>> }>) => {
+          await list[0]?.record['image/png'];
+        });
+
+        vi.stubGlobal('ClipboardItem', class {
+          readonly record: Record<string, Promise<Blob>>;
+
+          constructor(record: Record<string, Promise<Blob>>) {
+            this.record = record;
+          }
+        });
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { write } });
+        vi.spyOn(DatabaseChartView.prototype, 'toPngBlob').mockResolvedValue(null);
+        const { tool, element, options } = mount({ type: 'chart', groupBy: 'prop-status' });
+
+        openSaveAs(element);
+        press('database-settings-chart-copy');
+
+        await vi.waitFor(() => expect(options.api.notifier.show).toHaveBeenCalledWith({ message: 'tools.database.chartCopyFailed', style: 'error' }));
+        expect(options.api.notifier.show).not.toHaveBeenCalledWith({ message: 'tools.database.chartCopied' });
+
+        tool.destroy();
+      });
+
+      it('downloads the PNG and the SVG with the background choice', async () => {
+        const saved: string[] = [];
+
+        vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:https://example.com/chart');
+        vi.spyOn(HTMLElement.prototype, 'click').mockImplementation(function (this: HTMLElement) {
+          if (this instanceof HTMLAnchorElement) {
+            saved.push(this.download);
+          } else {
+            this.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          }
+        });
+        const png = vi.spyOn(DatabaseChartView.prototype, 'toPngBlob').mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
+        const svg = vi.spyOn(DatabaseChartView.prototype, 'toSvgString');
+        const { tool, element } = mount({ type: 'chart', groupBy: 'prop-status' });
+
+        openSaveAs(element);
+        press('database-settings-chart-background');
+        press('database-settings-chart-png');
+        expect(png).toHaveBeenCalledWith({ background: false });
+        await vi.waitFor(() => expect(saved).toEqual(['Tasks.png']));
+
+        openSaveAs(element);
+        press('database-settings-chart-svg');
+        expect(svg).toHaveBeenLastCalledWith({ background: true });
+        await vi.waitFor(() => expect(saved).toEqual(['Tasks.png', 'Tasks.svg']));
+
+        tool.destroy();
+      });
     });
 
     it('keeps export but drops import and merge in read-only mode', () => {

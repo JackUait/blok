@@ -138,6 +138,7 @@ import { DatabaseFeedView } from './database-feed-view';
 import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
+import { chartExportPage } from './database-chart-export';
 import { LAYOUT_MAKER_ABSENCE_MS, layoutDraftSession, type LayoutDraftSession } from './layout-drafts';
 import { layoutDraftOf } from '../tabs/draft';
 
@@ -3394,17 +3395,44 @@ export class DatabaseTool implements BlockTool {
     downloadBlob(new Blob([this.exportCsv()], { type: 'text/csv;charset=utf-8' }), `${this.fileBase()}.csv`);
   }
 
-  private async saveChart(format: 'png' | 'svg'): Promise<void> {
+  private async saveChart(format: 'png' | 'svg', background: boolean): Promise<void> {
     const view = this.view;
 
     if (!(view instanceof DatabaseChartView)) return;
-    const svg = view.toSvgString();
-    const blob = format === 'svg' ? new Blob([svg], { type: 'image/svg+xml' }) : await view.toPngBlob();
+    const svg = view.toSvgString({ background });
+    const blob = format === 'svg' ? new Blob([svg], { type: 'image/svg+xml' }) : await view.toPngBlob({ background });
 
     if (svg !== '' && blob !== null) downloadBlob(blob, `${this.fileBase()}.${format}`);
   }
 
   /** A file picker for one CSV or TSV file. */
+  /**
+   * Hands the clipboard a promise of the PNG instead of awaiting it first:
+   * Safari drops the click's user activation across an await and refuses the write.
+   */
+  private copyChart(background: boolean): void {
+    const view = this.view;
+    const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
+    const fail = (): void => this.api.notifier.show({ message: t('chartCopyFailed'), style: 'error' });
+
+    if (!(view instanceof DatabaseChartView)) return;
+    if (typeof ClipboardItem === 'undefined' || typeof navigator.clipboard?.write !== 'function') {
+      fail();
+
+      return;
+    }
+    const png = view.toPngBlob({ background }).then((blob) => {
+      if (blob === null) throw new Error('chart image failed');
+
+      return blob;
+    });
+
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]).then(
+      () => this.api.notifier.show({ message: t('chartCopied') }),
+      fail
+    );
+  }
+
   private pickCsvFile(then: (file: { name: string; text: string }) => void): void {
     const input = document.createElement('input');
 
@@ -3456,10 +3484,16 @@ export class DatabaseTool implements BlockTool {
     const actions: ViewSettingsAction[] = [];
 
     if (view?.type === 'chart' && resolveChartSettings(view, this.chartSchema()).type !== 'number') {
-      actions.push(
-        { testId: 'database-settings-chart-png', label: t('chartSavePng'), icon: IconImage, onClick: () => void this.saveChart('png') },
-        { testId: 'database-settings-chart-svg', label: t('chartSaveSvg'), icon: IconImage, onClick: () => void this.saveChart('svg') }
-      );
+      actions.push({
+        testId: 'database-settings-chart-save',
+        label: t('chartSaveAs'),
+        icon: IconImage,
+        page: () => chartExportPage({
+          t,
+          copy: (background) => this.copyChart(background),
+          download: (format, background) => void this.saveChart(format, background),
+        }),
+      });
     }
     actions.push({ testId: 'database-settings-csv-export', label: t('csvExport'), icon: IconDownload, onClick: () => this.downloadCsv() });
     if (!this.readOnly) {

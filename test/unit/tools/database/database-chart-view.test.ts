@@ -291,4 +291,28 @@ describe('DatabaseChartView', () => {
     expect(svg).not.toContain('var(--');
     expect(svg).not.toContain('data-blok-database-chart-hit');
   });
+
+  it('paints the page surface behind the export, and nothing when the background is off', () => {
+    const view = new DatabaseChartView({
+      settings: resolveChartSettings(chartView(), []),
+      data: data(),
+      xName: 'Status',
+      yName: 'Count',
+      i18n: { t: (key: string) => key },
+      formatValue: (n) => String(n),
+      handlers,
+    });
+
+    document.body.appendChild(view.createView());
+    const backdrop = (text: string): string | null => {
+      const host = document.createElement('div');
+
+      host.innerHTML = text;
+
+      return host.querySelector('svg > rect:first-child')?.getAttribute('width') ?? null;
+    };
+
+    expect(backdrop(view.toSvgString({ background: false }))).toBeNull();
+    expect(backdrop(view.toSvgString())).toBe('100%');
+  });
 });

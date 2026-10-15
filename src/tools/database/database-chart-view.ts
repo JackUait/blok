@@ -63,6 +63,11 @@ export const chartColors = (theme: ChartColorTheme, count: number): ChartColor[]
   }));
 };
 
+export interface ChartExportOptions {
+  /** Paints the page surface behind the chart. Defaults to true. */
+  background?: boolean;
+}
+
 export interface ChartViewHandlers {
   /** A click on a group (a series' segment passes the series). */
   drilldown: (point: ChartPoint, series: ChartSeries | undefined) => void;
@@ -252,8 +257,11 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     this.observer = null;
   }
 
-  /** A standalone SVG of the chart, colors and fonts resolved, for "Save chart as". */
-  toSvgString(): string {
+  /**
+   * A standalone SVG of the chart, colors and fonts resolved, for "Save chart as".
+   * Without a background the image is transparent (Notion lets a paid plan remove it).
+   */
+  toSvgString({ background = true }: ChartExportOptions = {}): string {
     const svg = this.plot?.querySelector('svg');
 
     if (svg === null || svg === undefined) return '';
@@ -283,17 +291,15 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     const family = getComputedStyle(host).fontFamily;
 
     clone.setAttribute('style', `font-family:${family === '' ? 'system-ui, sans-serif' : family}`);
-    const background = svgEl('rect', { width: '100%', height: '100%', fill: resolve(SURFACE) });
-
-    clone.insertBefore(background, clone.firstChild);
+    if (background) clone.insertBefore(svgEl('rect', { width: '100%', height: '100%', fill: resolve(SURFACE) }), clone.firstChild);
 
     return new XMLSerializer().serializeToString(clone);
   }
 
   /** The chart as a PNG at twice its size. Null when the browser cannot paint it. */
-  async toPngBlob(): Promise<Blob | null> {
+  async toPngBlob(options: ChartExportOptions = {}): Promise<Blob | null> {
     const svg = this.plot?.querySelector('svg');
-    const text = this.toSvgString();
+    const text = this.toSvgString(options);
 
     if (svg === null || svg === undefined || text === '') return null;
     const width = Number(svg.getAttribute('width'));

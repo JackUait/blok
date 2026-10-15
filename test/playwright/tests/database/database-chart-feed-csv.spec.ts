@@ -110,6 +110,26 @@ const openSettingsAction = async (page: Page, testId: string): Promise<void> => 
   await byTestId(page, testId).click();
 };
 
+const openSaveChartAs = async (page: Page): Promise<void> => {
+  await byTestId(page, 'database-toolbar-settings').click();
+  await page.getByRole('button', { name: 'Save chart as…' }).click();
+};
+
+/** RGBA of the image's top-left pixel, decoded by the browser. */
+const cornerPixel = async (page: Page, png: Buffer): Promise<number[]> => page.evaluate(async (base64) => {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+  const canvas = document.createElement('canvas');
+
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const context = canvas.getContext('2d');
+
+  context?.drawImage(bitmap, 0, 0);
+
+  return [...(context?.getImageData(1, 1, 1, 1).data ?? [])];
+}, png.toString('base64'));
+
 test.beforeAll(ensureBlokBundleBuilt);
 
 test.beforeEach(async ({ page }) => {
@@ -256,13 +276,86 @@ test.describe('chart view', () => {
     await mount(page, blocks({ type: 'chart', groupBy: 'p-status' }));
     const download = page.waitForEvent('download');
 
-    await openSettingsAction(page, 'database-settings-chart-svg');
+    await openSaveChartAs(page);
+    await page.getByRole('button', { name: 'Download SVG' }).click();
     const file = await download;
     const text = await downloaded(file);
 
     expect(file.suggestedFilename()).toBe('Tasks.svg');
     expect(text).toContain('xmlns="http://www.w3.org/2000/svg"');
     expect(text).not.toContain('var(--');
+  });
+
+  test('downloads a PNG painted on the page surface', async ({ page }) => {
+    await mount(page, blocks({ type: 'chart', groupBy: 'p-status' }));
+    const download = page.waitForEvent('download');
+
+    await openSaveChartAs(page);
+    await page.getByRole('button', { name: 'Download PNG' }).click();
+    const file = await download;
+    const bytes = readFileSync(await file.path());
+
+    expect(file.suggestedFilename()).toBe('Tasks.png');
+    expect(bytes.subarray(0, 4).toString('latin1')).toBe('\x89PNG');
+    expect(await cornerPixel(page, bytes)).toEqual([255, 255, 255, 255]);
+  });
+
+  test('downloads a PNG on the dark surface in the dark theme', async ({ page }) => {
+    await mount(page, blocks({ type: 'chart', groupBy: 'p-status' }));
+    await page.evaluate(() => window.blokInstance?.theme.set('dark'));
+    const download = page.waitForEvent('download');
+
+    await openSaveChartAs(page);
+    await page.getByRole('button', { name: 'Download PNG' }).click();
+
+    expect(await cornerPixel(page, readFileSync(await (await download).path()))).toEqual([29, 29, 28, 255]);
+  });
+
+  test('downloads a transparent PNG with the background switched off, and the switch resets', async ({ page }) => {
+    await mount(page, blocks({ type: 'chart', groupBy: 'p-status' }));
+    const download = page.waitForEvent('download');
+
+    await openSaveChartAs(page);
+    await page.getByRole('switch', { name: 'Background' }).click();
+    await page.getByRole('button', { name: 'Download PNG' }).click();
+
+    expect((await cornerPixel(page, readFileSync(await (await download).path())))[3]).toBe(0);
+    await openSaveChartAs(page);
+    await expect(page.getByRole('switch', { name: 'Background' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('copies the chart to the clipboard as a PNG', async ({ page }) => {
+    const context = page.context();
+
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    try {
+      await mount(page, blocks({ type: 'chart', groupBy: 'p-status' }));
+      await openSaveChartAs(page);
+      await page.getByRole('button', { name: 'Copy as PNG' }).click();
+
+      await expect(page.getByText('Chart copied to clipboard')).toBeVisible();
+      const types = await page.evaluate(async () => (await navigator.clipboard.read()).flatMap((item) => [...item.types]));
+
+      expect(types).toContain('image/png');
+    } finally {
+      await context.clearPermissions();
+    }
+  });
+
+  test('says so when the browser cannot copy an image', async ({ page }) => {
+    await mount(page, blocks({ type: 'chart', groupBy: 'p-status' }));
+    await page.evaluate(() => {
+      Reflect.set(window, '__clipboardItem', Reflect.get(window, 'ClipboardItem'));
+      Reflect.deleteProperty(window, 'ClipboardItem');
+    });
+    try {
+      await openSaveChartAs(page);
+      await page.getByRole('button', { name: 'Copy as PNG' }).click();
+
+      await expect(page.getByText('Couldn’t copy the chart. Download the PNG instead.')).toBeVisible();
+    } finally {
+      await page.evaluate(() => Reflect.set(window, 'ClipboardItem', Reflect.get(window, '__clipboardItem')));
+    }
   });
 
   test('still draws and drills down when read-only', async ({ page }) => {

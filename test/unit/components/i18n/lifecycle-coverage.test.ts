@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1126 + 125 + 412 + 4 closure for all 1667 keys', () => {
+  it('rebuilds a disjoint 1126 + 125 + 417 + 4 closure for all 1672 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1667);
+    expect(lifecycle.size).toBe(1672);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -409,7 +409,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.settingsTitle gained a literal caller in the builder's tab menu.
       // -1: tools.database.settingsDragToReorder gained a literal caller in the view overflow list.
       // +1: tools.database.aiAutofillNew, called through the view settings panel's namespaced t().
-      'registered-namespace-compatible': 412,
+      // +5: "Save chart as…" swaps chartSavePng/chartSaveSvg for 7 chart export keys, all built from a short name.
+      'registered-namespace-compatible': 417,
       'catalog-only': 4,
     });
     expect(

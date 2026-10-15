@@ -152,7 +152,9 @@ export interface ViewSettingsAction {
   label: string;
   icon: string;
   disabled?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
+  /** Opens a page instead of acting, and keeps the panel open. */
+  page?: () => PanelPage;
 }
 
 interface LayoutItem {
@@ -319,14 +321,22 @@ export class ViewSettingsPages {
           }));
         }
         for (const action of this.ctx.actions?.() ?? []) {
+          const page = action.page;
+
           rows.push(panelRow({
             label: action.label,
             testId: action.testId,
             icon: action.icon,
             disabled: action.disabled === true,
+            opensPage: page !== undefined,
             onClick: () => {
+              if (page !== undefined) {
+                panel.push(page());
+
+                return;
+              }
               panel.close();
-              action.onClick();
+              action.onClick?.();
             },
           }));
         }
@@ -452,7 +462,7 @@ export class ViewSettingsPages {
             disabled: customize.disabled === true,
             onClick: () => {
               panel.close();
-              customize.onClick();
+              customize.onClick?.();
             },
           }));
         }

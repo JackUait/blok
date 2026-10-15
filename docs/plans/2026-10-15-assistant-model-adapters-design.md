@@ -63,7 +63,7 @@ unknown level, a duplicate, or a `default` not in `levels`. They are not checked
 at startup, because core swallows errors thrown in a module's `prepare()`
 (`core.ts:458-470`). The bar shows the `ask()` error when the user sends.
 
-### Adapters — new subpath `@jackuait/blok/agent-models`
+### Adapters — new subpath `@bloklabs/core/agent-models`
 
 ```ts
 anthropicModel(options: AdapterOptions): AgentModel;        // Messages API

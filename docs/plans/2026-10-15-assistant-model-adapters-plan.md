@@ -1666,7 +1666,7 @@ git fetch -q && git merge-base --is-ancestor origin/main HEAD && git push origin
 
 ---
 
-### Task 8: Publish `@jackuait/blok/agent-models`
+### Task 8: Publish `@bloklabs/core/agent-models`
 
 **Files:**
 - Create: `src/agent-models/index.ts`
@@ -1818,7 +1818,7 @@ Expected: PASS. Also confirm the main bundle doesn't carry the adapters: `grep -
 npx eslint src/agent-models/index.ts test/unit/agent-models/public-types.test.ts test/unit/build/bundle-outputs.test.ts
 NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit
 git add src/agent-models/index.ts types/agent-models.d.ts vite.config.mjs package.json test/unit/agent-models/public-types.test.ts test/unit/build/bundle-outputs.test.ts
-git commit --only -m "feat(agent-models): publish @jackuait/blok/agent-models" -- src/agent-models/index.ts types/agent-models.d.ts vite.config.mjs package.json test/unit/agent-models/public-types.test.ts test/unit/build/bundle-outputs.test.ts
+git commit --only -m "feat(agent-models): publish @bloklabs/core/agent-models" -- src/agent-models/index.ts types/agent-models.d.ts vite.config.mjs package.json test/unit/agent-models/public-types.test.ts test/unit/build/bundle-outputs.test.ts
 git fetch -q && git merge-base --is-ancestor origin/main HEAD && git push origin HEAD:main
 ```
 
@@ -2122,7 +2122,7 @@ git fetch -q && git merge-base --is-ancestor origin/main HEAD && git push origin
 Then add one paragraph after the list:
 
 ```
-Adapters for other providers ship in `@jackuait/blok/agent-models`: `anthropicModel`, `openaiModel`, `openaiCompatibleModel` (DeepSeek, Mistral, Groq, Ollama, OpenRouter) and `geminiModel`. Each takes `{ model, send }`. Your `send` posts the body to your backend, which adds the key.
+Adapters for other providers ship in `@bloklabs/core/agent-models`: `anthropicModel`, `openaiModel`, `openaiCompatibleModel` (DeepSeek, Mistral, Groq, Ollama, OpenRouter) and `geminiModel`. Each takes `{ model, send }`. Your `send` posts the body to your backend, which adds the key.
 ```
 
 - [ ] **Step 3: Extend the `editor.agent.ask` entry** (find it with `grep -n '"editor.agent.ask' docs/src/components/api/api-data.ts`). Add: "`options.thinking` sets the level for this run. It overrides the Ask AI bar's pick."

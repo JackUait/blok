@@ -24,6 +24,7 @@ import { foldPill, measurePill, moveIndicator, popInPill, type PillBox } from '.
 import { renderTabsPreview } from './preview';
 import { tabRegistry, type TabsHandle } from './registry';
 import type { TabData, TabsData } from './types';
+import { layoutDraftOf, type LayoutDraft } from './draft';
 
 /** Origins that mean "the author just made this block". Only these seed tabs. */
 const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
@@ -52,6 +53,7 @@ export class TabsTool implements BlockTool, TabsHandle {
   private readonly block: BlockAPI;
   private readonly isCreation: boolean;
   private readonly noSeed: boolean;
+  private draft: LayoutDraft | undefined;
   private readOnly: boolean;
   private root: HTMLElement | null = null;
   private scroller: HTMLElement | null = null;
@@ -75,6 +77,8 @@ export class TabsTool implements BlockTool, TabsHandle {
   private readonly isProbe: boolean;
   private panelsObserver: MutationObserver | null = null;
   private stripResizeObserver: ResizeObserver | null = null;
+  /** Tabs the owning database hides here: another session's unapplied layout drafts. */
+  private readonly hiddenTabs = new Set<string>();
 
   constructor({ data, api, block, readOnly, origin }: BlockToolConstructorOptions<TabsData & SeedData>) {
     this.api = api;
@@ -83,6 +87,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.readOnly = readOnly;
     this.isCreation = CREATION_ORIGINS.has(origin);
     this.noSeed = (data as SeedData | undefined)?.noSeed === true;
+    this.draft = layoutDraftOf(data);
     // A probe instance only reads data and is never destroyed: it must not listen.
     this.isProbe = origin === 'probe';
 
@@ -200,7 +205,36 @@ export class TabsTool implements BlockTool, TabsHandle {
   }
 
   public save(): TabsData {
-    return {};
+    return this.draft === undefined ? {} : { draft: { ...this.draft } };
+  }
+
+  /** Replaces the data in place: only a database's draft mark lives there, and the strip does not draw it. */
+  public setData(data: TabsData): boolean {
+    this.draft = layoutDraftOf(data);
+
+    return true;
+  }
+
+  /**
+   * Called by the database whose row-page layout this block holds. A hidden
+   * tab's holder is marked chrome, so find-in-page never reaches it.
+   * @param param - every tab to hide; the rest are shown
+   * @param param.ids - their block ids
+   */
+  public hideTabs(param: { ids: string[] }): void {
+    this.hiddenTabs.clear();
+    param.ids.forEach((id) => this.hiddenTabs.add(id));
+    this.markHiddenTabs();
+  }
+
+  /** On this block's own child holders (decoration law); inert, as the panels are mutation-free. */
+  private markHiddenTabs(): void {
+    this.api.blocks.getChildren(this.blockId).forEach((tab) => tab.holder.toggleAttribute(DATA_ATTR.chrome, this.hiddenTabs.has(tab.id)));
+  }
+
+  /** The live data, before the next save: a database reads the draft mark from it. */
+  public readData(param: { receive: (data: TabsData) => void }): void {
+    param.receive(this.save());
   }
 
   public validate(_data: TabsData): boolean {
@@ -252,6 +286,7 @@ export class TabsTool implements BlockTool, TabsHandle {
    * order changed.
    */
   public sync(): void {
+    this.markHiddenTabs();
     if (this.scroller === null || this.panels === null || this.renaming) {
       return;
     }

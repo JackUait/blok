@@ -8,6 +8,16 @@ export const TAB_DATA = {
   properties: {
     title: { type: 'string', description: 'Plain text, not HTML. Empty for an untitled tab.' },
     icon: { type: 'string', description: 'Emoji shown before the title. Omitted when the tab has none.' },
+    draft: {
+      type: 'object',
+      description: "Set by a database's Customize layout on a row-page view tab not applied yet. Other editors hide it; Apply removes it. Never write it.",
+      required: ['at', 'by'],
+      additionalProperties: false,
+      properties: {
+        at: { type: 'number', description: 'Epoch ms when it was made.' },
+        by: { type: 'array', items: { type: 'integer' }, description: "The maker's collaboration client ids; empty without collaboration." },
+      },
+    },
   },
 };
 

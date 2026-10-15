@@ -4,10 +4,16 @@ import { ToolboxConfig } from './tool-settings';
 
 /**
  * Tabs Tool's input and output data format.
- * The tabs block saves nothing itself: its tabs are its `tab` child blocks
+ * The tabs block saves no content itself: its tabs are its `tab` child blocks
  * (contentIds). Which tab is open is UI state and is never saved.
  */
-export interface TabsData extends BlockToolData {}
+export interface TabsData extends BlockToolData {
+  /**
+   * Set on a database's row-page layout tabs block made in Customize layout
+   * and not applied yet. Same shape as `TabData.draft`.
+   */
+  draft?: { at: number; by: number[] };
+}
 
 /**
  * Tabs Tool constructor options

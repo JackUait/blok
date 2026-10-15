@@ -12,12 +12,15 @@ import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { TABS_ATTR, TABS_TOOL } from '../tabs/constants';
 import { tabRegistry, type TabHandle } from '../tabs/registry';
 import type { TabData } from '../tabs/types';
+import { layoutDraftOf } from '../tabs/draft';
 
 const normalize = (data: Partial<TabData> | undefined): TabData => {
   const title = typeof data?.title === 'string' ? data.title : '';
   const icon = typeof data?.icon === 'string' && data.icon !== '' ? data.icon : undefined;
+  // A database hides a draft tab from every other session until Apply.
+  const draft = layoutDraftOf(data);
 
-  return icon === undefined ? { title } : { title, icon };
+  return { title, ...(icon === undefined ? {} : { icon }), ...(draft === undefined ? {} : { draft }) };
 };
 
 /**

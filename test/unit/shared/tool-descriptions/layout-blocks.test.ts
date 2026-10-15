@@ -306,3 +306,16 @@ describe('layout block descriptions', () => {
     expect(validateAgainst(descriptionFor(name).data, data).length).toBeGreaterThan(0);
   });
 });
+
+describe('tab and tabs: the database layout draft mark', () => {
+  const draft = { at: 1_700_000_000_000, by: [12, 34] };
+
+  it('accepts a draft mark on a tab and on a tabs block', () => {
+    expect(validateAgainst(TAB_DATA, { title: 'Roadmap', draft })).toEqual([]);
+    expect(validateAgainst(TABS_DATA, { draft })).toEqual([]);
+  });
+
+  it('rejects a malformed draft mark', () => {
+    expect(validateAgainst(TAB_DATA, { title: 'Roadmap', draft: { at: 'now' } })).not.toEqual([]);
+  });
+});

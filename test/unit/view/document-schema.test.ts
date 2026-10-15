@@ -251,10 +251,11 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   column: new Column(options({ widthRatio: 2 })).save(),
 
-  tabs: new TabsTool(options({})).save(),
+  // A database layout draft mark, so the sample covers every key the tool can save.
+  tabs: new TabsTool(options({ draft: { at: 1, by: [2] } })).save(),
 
   // TabData is an interface, so spread it into a plain record.
-  tab: { ...new TabTool(options({ title: 'Overview', icon: '📋' })).save() },
+  tab: { ...new TabTool(options({ title: 'Overview', icon: '📋', draft: { at: 1, by: [2] } })).save() },
 
   embed: new Embed(options({
     service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x',
@@ -429,13 +430,13 @@ describe('blokDocumentSchema', () => {
   });
 
   describe('tabs', () => {
-    it('describes an empty tabs container and a tab with a required plain title and optional icon', () => {
+    it('describes a tabs container and a tab with a required plain title, an optional icon and a layout draft mark', () => {
       expect(defs.tabs).toMatchObject({ type: 'object', additionalProperties: false });
-      expect(Object.keys(defs.tabs.properties ?? {})).toEqual([]);
+      expect(Object.keys(defs.tabs.properties ?? {})).toEqual(['draft']);
 
       expect(defs.tab.required).toEqual(['title']);
       expect(defs.tab.additionalProperties).toBe(false);
-      expect(Object.keys(defs.tab.properties ?? {})).toEqual(['title', 'icon']);
+      expect(Object.keys(defs.tab.properties ?? {})).toEqual(['title', 'icon', 'draft']);
       expect(defs.tab.properties?.title).toMatchObject({ type: 'string' });
       expect(defs.tab.properties?.icon).toMatchObject({ type: 'string' });
     });

@@ -16,6 +16,14 @@ export interface TabData extends BlockToolData {
    * Optional emoji shown before the title
    */
   icon?: string;
+
+  /**
+   * Set on a database's row-page view tab made in Customize layout and not
+   * applied yet. Other editors hide the tab; Apply removes the mark.
+   * `at` is epoch ms; `by` holds the maker's collaboration client ids, empty
+   * without collaboration.
+   */
+  draft?: { at: number; by: number[] };
 }
 
 /**

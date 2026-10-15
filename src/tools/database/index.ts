@@ -134,6 +134,8 @@ import { DatabaseFeedView } from './database-feed-view';
 import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
+import { LAYOUT_MAKER_ABSENCE_MS, layoutDraftSession, type LayoutDraftSession } from './layout-drafts';
+import { layoutDraftOf } from '../tabs/draft';
 
 interface DrawerAuthority {
   writable(): boolean;
@@ -443,6 +445,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
+    this.api.events.on('collaboration:status', this.handleCollaborationStatus);
   }
 
   /**
@@ -926,6 +929,7 @@ export class DatabaseTool implements BlockTool {
     this.subscribeComments();
     // A database that rendered first read this one before its tool existed.
     this.api.events.emit(DATABASE_RENDERED_EVENT, { databaseId: this.block.id });
+    this.queueDraftCleanup();
     this.offerDueTemplates();
     this.openLinkedRow();
 
@@ -1018,6 +1022,8 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block replayed', this.handleBlockReplayed);
     this.api.events.off('block changed', this.handleBodyEdit);
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
+    this.api.events.off('collaboration:status', this.handleCollaborationStatus);
+    if (this.draftGraceTimer !== null) clearTimeout(this.draftGraceTimer);
     this.viewControls?.destroy();
     this.dashboardStates.clear();
     this.dashboardSources.clear();
@@ -1423,6 +1429,10 @@ export class DatabaseTool implements BlockTool {
     const lent = this.layoutTabsLent ? this.layoutTabsBlock()?.id : undefined;
     const pooled = children.filter((child) => child.name === 'tabs' && child.id !== lent);
 
+    // Lent to a row page, the holder carries every tab: find must not reach another session's draft.
+    children.filter((child) => child.name === 'tabs').forEach((tabs) => tabs.call('hideTabs', {
+      ids: this.api.blocks.getChildren(tabs.id).filter((tab) => this.isForeignDraft(tab)).map((tab) => tab.id),
+    }));
     if (pool === null || pooled.every((tabs, i) => pool.children[i] === tabs.holder)) return;
     pooled.forEach((tabs) => moveElementToEnd(pool, tabs.holder));
   }
@@ -1431,7 +1441,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The `tabs` child named by `pageLayoutTabsId`, else the first one: a duplicate's id still names the original's. */
   private layoutTabsBlock(): BlockAPI | undefined {
-    const blocks = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'tabs');
+    const blocks = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'tabs' && !this.isForeignDraft(child));
     const named = this.model.getPageLayout().tabsId;
 
     return blocks.find((block) => block.id === named) ?? blocks[0];
@@ -1442,11 +1452,8 @@ export class DatabaseTool implements BlockTool {
 
     if (block === undefined) return [];
 
-    return this.api.blocks.getChildren(block.id).filter((child) => child.name === 'tab').map((child) => {
-      const live: Array<{ title?: unknown }> = [];
-
-      child.call('readData', { receive: (data: { title?: unknown }) => live.push(data) });
-      const title = (live[0] ?? child.preservedData)?.title;
+    return this.api.blocks.getChildren(block.id).filter((child) => child.name === 'tab' && !this.isForeignDraft(child)).map((child) => {
+      const title = (this.layoutDataOf(child) as { title?: unknown }).title;
 
       return { id: child.id, title: typeof title === 'string' ? title : '', view: this.isViewTab(child.id) };
     });
@@ -1458,7 +1465,131 @@ export class DatabaseTool implements BlockTool {
   }
 
   private hasContentTab(tabsId: string): boolean {
-    return this.api.blocks.getChildren(tabsId).some((child) => child.name === 'tab' && !this.isViewTab(child.id));
+    return this.api.blocks.getChildren(tabsId).some((child) => child.name === 'tab' && !this.isForeignDraft(child) && !this.isViewTab(child.id));
+  }
+
+  /** Live data of a tab or tabs block: `preservedData` lags until the async save. */
+  private layoutDataOf(block: BlockAPI): unknown {
+    const live: unknown[] = [];
+
+    block.call('readData', { receive: (data: unknown) => live.push(data) });
+
+    return live[0] ?? block.preservedData;
+  }
+
+  /** Drafts and presence of this editor. Keyed by the editor: a replay can rebuild this tool mid-draft. */
+  private get layoutDrafts(): LayoutDraftSession {
+    return layoutDraftSession((this.api.ui as Partial<API['ui']> | undefined)?.nodes?.wrapper ?? this.api);
+  }
+
+  /**
+   * A tab or tabs block another editor drafted in Customize layout: hidden
+   * here until it is applied. A tabs block holding an applied tab is never
+   * one, whatever its mark says: an undone Apply puts the mark back on a block
+   * a peer has added to since.
+   */
+  private isForeignDraft(block: BlockAPI): boolean {
+    // The applied layout block is never one, even if a racing write left a mark on it.
+    if (block.id === this.model.getPageLayout().tabsId) return false;
+    if (this.layoutDrafts.made.has(block.id) || layoutDraftOf(this.layoutDataOf(block)) === undefined) return false;
+
+    return block.name !== 'tabs' || this.api.blocks.getChildren(block.id).every((tab) => this.isForeignDraft(tab));
+  }
+
+  /** Data for a block made in Customize layout: marked as this editor's draft until Apply. */
+  private draftData<T extends Record<string, unknown>>(data: T): T & { draft: ReturnType<LayoutDraftSession['newDraft']> } {
+    return { ...data, draft: this.layoutDrafts.newDraft(Date.now()) };
+  }
+
+  private readonly handleCollaborationStatus = (payload: unknown): void => {
+    this.layoutDrafts.notePresence(payload as Parameters<LayoutDraftSession['notePresence']>[0], Date.now());
+    this.queueDraftCleanup();
+    if (!this.layoutDrafts.connected || this.draftGraceTimer !== null) return;
+    // A quiet room sends no status: check again once a maker could have been away the whole window.
+    this.draftGraceTimer = setTimeout(() => {
+      this.draftGraceTimer = null;
+      this.queueDraftCleanup();
+    }, LAYOUT_MAKER_ABSENCE_MS);
+  };
+
+  private draftGraceTimer: ReturnType<typeof setTimeout> | null = null;
+  private draftCleanupQueued = false;
+
+  /** Deletes drafts nobody can apply or discard any more. Waits out the sync window, like the merge. */
+  private queueDraftCleanup(): void {
+    if (this.draftCleanupQueued || this.readOnly || this.linked) return;
+    this.draftCleanupQueued = true;
+    const run = (): void => {
+      if (this.destroyed) return;
+      if (this.api.blocks.isSyncingFromYjs) {
+        requestAnimationFrame(run);
+
+        return;
+      }
+      this.draftCleanupQueued = false;
+      this.deleteAbandonedDrafts();
+    };
+
+    queueMicrotask(run);
+  }
+
+  /**
+   * A peer deleted this editor's draft layout block while its Apply (or the
+   * redo of one) was still on the way: the merged document names a missing
+   * block, and the tabs put back in it sit at the root. The block comes back
+   * with the same id and its tabs go into it, Content first. Only the maker
+   * can do it: no record says which root tabs were whose.
+   */
+  private repairLayoutBlock(): void {
+    const named = this.model.getPageLayout().tabsId;
+
+    if (named === undefined || !this.layoutDrafts.made.has(named) || this.api.blocks.getById(named) !== null) return;
+    const strays = [...this.layoutDrafts.made]
+      .map((id) => this.api.blocks.getById(id))
+      .filter((block): block is BlockAPI => block !== null && block.name === 'tab' && (block.parentId === null || this.api.blocks.getById(block.parentId) === null))
+      .sort((a, b) => Number(this.isViewTab(a.id)) - Number(this.isViewTab(b.id)));
+
+    if (strays.length === 0) return;
+    // Taken out and put back with the same ids, as Apply does: moveTo refuses a tabs block, which owns its tabs.
+    const subtrees = strays.map((tab) => this.subtreeOf(tab.id).map((block) => (block.id === tab.id ? { ...block, parentId: named } : block)));
+
+    this.api.blocks.transactWithoutCapture?.(() => {
+      this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end', id: named });
+      strays.forEach((tab) => this.removeBlock(tab.id));
+    });
+    const putBack = (): void => {
+      if (this.destroyed) return;
+      if (this.api.blocks.isSyncingFromYjs) {
+        requestAnimationFrame(putBack);
+
+        return;
+      }
+      this.api.blocks.transactWithoutCapture?.(() => this.putBackTabs(subtrees));
+      this.mountRows();
+    };
+
+    putBack();
+  }
+
+  private deleteAbandonedDrafts(): void {
+    if (!this.canEditLayoutTabs()) return;
+    this.repairLayoutBlock();
+    const now = Date.now();
+    const abandoned = (block: BlockAPI): boolean => {
+      const draft = layoutDraftOf(this.layoutDataOf(block));
+
+      return draft !== undefined && this.isForeignDraft(block) && this.layoutDrafts.isAbandoned(block.id, draft, now);
+    };
+    // A tabs block goes whole only when every tab in it goes too.
+    const doomed = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'tabs').flatMap((tabs) => {
+      const gone = this.api.blocks.getChildren(tabs.id).filter(abandoned).map((tab) => tab.id);
+
+      return abandoned(tabs) && gone.length === this.api.blocks.getChildren(tabs.id).length ? [tabs.id] : gone;
+    });
+
+    if (doomed.length === 0) return;
+    this.api.blocks.transactWithoutCapture?.(() => doomed.forEach((id) => this.removeBlock(id)));
+    this.mountRows();
   }
 
   /** A change to the layout tabs block or a tab in it: remount and redraw the open row page once. */
@@ -1503,14 +1634,19 @@ export class DatabaseTool implements BlockTool {
     const losers = this.api.blocks.getChildren(this.dataId)
       .filter((child) => child.name === 'tabs' && child.id !== winner?.id && this.madeTabsBlocks.has(child.id)
         // An open draft still owns it: Discard must find its tabs where it made them.
-        && !(this.cardDrawer?.draftTabBlocks.includes(child.id) ?? false));
+        && !(this.cardDrawer?.draftTabBlocks.includes(child.id) ?? false)
+        // A draft tab in it, anyone's, waits for its Apply or Discard: then the merge runs again.
+        && !this.api.blocks.getChildren(child.id).some((tab) => layoutDraftOf(this.layoutDataOf(tab)) !== undefined));
 
     if (winner === undefined || losers.length === 0 || this.readOnly || this.model.getPageLayout().tabsId !== winner.id) return;
     // Copies, not moves: the tabs sit in this editor's Apply step, and undoing
     // a step whose blocks moved under another parent leaves their ids behind
     // in that parent on this peer only.
     // Only view tabs come: the winner has its own Content.
-    const copies = losers.flatMap((loser) => this.api.blocks.getChildren(loser.id).filter((tab) => this.isViewTab(tab.id)).map((tab) => this.subtreeOf(tab.id)));
+    // A draft tab stays with its maker's Discard or Apply.
+    const copies = losers.flatMap((loser) => this.api.blocks.getChildren(loser.id)
+      .filter((tab) => this.isViewTab(tab.id) && layoutDraftOf(this.layoutDataOf(tab)) === undefined)
+      .map((tab) => this.subtreeOf(tab.id)));
 
     this.api.blocks.transactWithoutCapture?.(() => {
       for (const loser of losers) {
@@ -1541,6 +1677,7 @@ export class DatabaseTool implements BlockTool {
       this.mountRows();
       const seen = JSON.stringify([this.layoutTabsBlock()?.id, this.layoutTabsList()]);
 
+      this.queueDraftCleanup();
       if (seen === this.layoutTabsSeen) return;
       this.layoutTabsSeen = seen;
       this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
@@ -1592,14 +1729,18 @@ export class DatabaseTool implements BlockTool {
 
     this.api.blocks.transactWithoutCapture?.(() => {
       const existing = this.layoutTabsBlock();
-      const tabs = existing ?? this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end' });
+      const tabs = existing ?? this.api.blocks.insertAt('tabs', this.draftData({ noSeed: true }), { parentId: this.dataId, position: 'end' });
 
       // An undone Apply, or a peer's, can leave the block without Content: it comes first again.
+      // Unmarked in a block that exists: neither Apply nor Discard takes it, and peers draw Content anyway.
       if (existing === undefined || !this.hasContentTab(tabs.id)) {
-        made.contentId = this.api.blocks.insertAt('tab', { title: '' }, { parentId: tabs.id, position: 'start' }).id;
+        made.contentId = this.api.blocks.insertAt('tab', existing === undefined ? this.draftData({ title: '' }) : { title: '' }, { parentId: tabs.id, position: 'start' }).id;
+        this.layoutDrafts.made.add(made.contentId);
       }
-      const tab = this.api.blocks.insertAt('tab', { title }, { parentId: tabs.id, position: 'end' });
+      const tab = this.api.blocks.insertAt('tab', this.draftData({ title }), { parentId: tabs.id, position: 'end' });
 
+      this.layoutDrafts.made.add(tab.id);
+      if (existing === undefined) this.layoutDrafts.made.add(tabs.id);
       this.api.blocks.insertAt('database', this.linkedViewData(sourceId, title, filters), { parentId: tab.id, position: 'end' });
       made.tabId = tab.id;
       made.made = existing === undefined ? tabs.id : tab.id;
@@ -1690,8 +1831,9 @@ export class DatabaseTool implements BlockTool {
     const made = { tabId: '' };
 
     this.api.blocks.transactWithoutCapture?.(() => {
-      const tab = this.api.blocks.insertAt('tab', { title }, { parentId: tabs.id, position: 'end' });
+      const tab = this.api.blocks.insertAt('tab', this.draftData({ title }), { parentId: tabs.id, position: 'end' });
 
+      this.layoutDrafts.made.add(tab.id);
       this.api.blocks.insertAt('database', { ...saved, views, activeViewId: ids.get(saved.activeViewId ?? '') ?? views[0]?.id }, { parentId: tab.id, position: 'end' });
       made.tabId = tab.id;
     });
@@ -1752,11 +1894,13 @@ export class DatabaseTool implements BlockTool {
       const made = { contentId: '', made: '' };
 
       this.api.blocks.transactWithoutCapture?.(() => {
-        const tabs = existing ?? this.api.blocks.insertAt('tabs', { noSeed: true }, { parentId: this.dataId, position: 'end' });
+        const tabs = existing ?? this.api.blocks.insertAt('tabs', this.draftData({ noSeed: true }), { parentId: this.dataId, position: 'end' });
 
-        made.contentId = this.api.blocks.insertAt('tab', { title: '' }, { parentId: tabs.id, position: 'start' }).id;
+        made.contentId = this.api.blocks.insertAt('tab', this.draftData({ title: '' }), { parentId: tabs.id, position: 'start' }).id;
+        this.layoutDrafts.made.add(made.contentId);
         made.made = existing === undefined ? tabs.id : made.contentId;
         if (existing === undefined) this.madeTabsBlocks.add(tabs.id);
+        if (existing === undefined) this.layoutDrafts.made.add(tabs.id);
       });
       this.mountRows();
 
@@ -1820,9 +1964,9 @@ export class DatabaseTool implements BlockTool {
    */
   private takeMadeTabs(made: string[]): Array<Array<{ id: string; name: string; parentId: string | null; data: BlockToolData }>> {
     const live = made.filter((id) => this.api.blocks.getById(id) !== null);
-    // A tabs block made now stays: deleting a database child schedules the
-    // database's own sync outside any step, and that sync would write the new
-    // layout there too. Its tabs go and come back instead.
+    // A tabs block made now stays out of the step: once a peer's tab sits in
+    // it, undoing the step that inserted it spares the block and leaves stale
+    // content ids on the undoer. Its tabs go and come back instead.
     const roots = live.flatMap((id) => {
       const block = this.api.blocks.getById(id);
 
@@ -1839,8 +1983,9 @@ export class DatabaseTool implements BlockTool {
     // Parents come first in each subtree, so every parent exists by its children's turn.
     for (const block of subtrees.flat()) {
       if (block.parentId === null || this.api.blocks.getById(block.parentId) !== null) {
-        // A tabs block must not seed tabs of its own: its tabs follow.
-        const data = block.name === 'tabs' ? { ...block.data, noSeed: true } : block.data;
+        // A tabs block must not seed tabs of its own: its tabs follow. Applied now: no draft mark.
+        const { draft: _draft, ...applied } = block.data as BlockToolData & { draft?: unknown };
+        const data = block.name === 'tabs' ? { ...applied, noSeed: true } : applied;
 
         this.api.blocks.insertAt(block.name, data, { parentId: block.parentId, position: 'end', id: block.id });
       }
@@ -1893,6 +2038,11 @@ export class DatabaseTool implements BlockTool {
 
           return named ? setTabsId(tabsId)(next) : next;
         });
+      }
+      // In the step: undo puts the mark back, so an undone first Apply leaves a draft, not a stray block.
+      if (tabs?.reset !== true && block !== undefined && layoutDraftOf(this.layoutDataOf(block)) !== undefined) {
+        block.call('setData', {});
+        block.dispatchChange();
       }
       this.putBackTabs(subtrees);
       for (const id of tabs?.removed ?? []) this.removeBlock(id);

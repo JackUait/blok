@@ -71,9 +71,20 @@ export const TABS_ACTIONS: ToolActionDeclaration[] = [
 
 export const TABS_DATA = {
   type: 'object',
-  description: 'A set of tabs. Carries no data — the tabs are its `content` children, which are only `tab` blocks. The open tab is not saved.',
+  description: "A set of tabs. Carries no data except a database's draft mark — the tabs are its `content` children, which are only `tab` blocks. The open tab is not saved.",
   additionalProperties: false,
-  properties: {},
+  properties: {
+    draft: {
+      type: 'object',
+      description: "Set by a database's Customize layout on a row-page view tab not applied yet. Other editors hide it; Apply removes it. Never write it.",
+      required: ['at', 'by'],
+      additionalProperties: false,
+      properties: {
+        at: { type: 'number', description: 'Epoch ms when it was made.' },
+        by: { type: 'array', items: { type: 'integer' }, description: "The maker's collaboration client ids; empty without collaboration." },
+      },
+    },
+  },
 };
 
 export const describeTabs = (_config: Record<string, unknown> = {}): BlockToolDescription => ({

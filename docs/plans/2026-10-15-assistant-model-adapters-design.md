@@ -58,8 +58,10 @@ interface AgentModelRequest {
 
 `xhigh` is in the set because Anthropic, OpenAI, OpenRouter and Groq all name it.
 
-Config errors throw `TypeError` when the editor starts: an empty `levels`, an
-unknown level, a duplicate, or a `default` not in `levels`.
+Config errors throw `TypeError` from `editor.agent.ask()`: an empty `levels`, an
+unknown level, a duplicate, or a `default` not in `levels`. They are not checked
+at startup, because core swallows errors thrown in a module's `prepare()`
+(`core.ts:458-470`). The bar shows the `ask()` error when the user sends.
 
 ### Adapters — new subpath `@jackuait/blok/agent-models`
 
@@ -73,7 +75,7 @@ interface AdapterOptions {
   /** Provider model id, e.g. 'gpt-5.5', 'deepseek-v4-pro'. */
   model: string;
   /** Posts `body` to the host's backend, which adds the key and forwards it. Returns the provider's JSON. */
-  send(body: Record<string, unknown>, context: { signal: AbortSignal; thinking?: AgentThinkingLevel }): Promise<unknown>;
+  send(body: Record<string, unknown>, context: { signal: AbortSignal; model: string; thinking?: AgentThinkingLevel }): Promise<unknown>;
   /** Default 16000. */
   maxTokens?: number;
   /** Replace the default body fragment for a level. Deep-merged into the request body. */

@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Změnit ikonu",
   "tools.database.propertiesSection": "Vlastnosti",
   "tools.database.layoutCustomize": "Přizpůsobit rozvržení",
+  "tools.database.layoutCopyLinkToView": "Kopírovat odkaz na zobrazení",
   "tools.database.layoutCustomizing": "Přizpůsobení rozvržení stránky",
   "tools.database.layoutCustomizePage": "Přizpůsobit rozvržení stránky",
   "tools.database.layoutPageSettings": "Nastavení stránky",

@@ -5048,17 +5048,23 @@ export class DatabaseTool implements BlockTool {
     return (live[0] ?? block?.preservedData as DatabaseRowData | undefined)?.repeat;
   }
 
-  /** Rows have no addressable URL yet: copies the page URL with the row id as its fragment. */
-  /** A link from "Copy link" (`#rowId`) opens that row's page on load. Its source opens it, never a linked view. */
+  /**
+   * A link from "Copy link" (`#rowId`) or "Copy link to view" (`#rowId?v=tabId`)
+   * opens that row's page on load. Its source opens it, never a linked view.
+   */
   private openLinkedRow(): void {
     const hash = window.location.hash.slice(1);
 
     // A later render (undo, a peer replace) must not reopen a page the user closed.
     if (hash === rowLink.closed) return;
+    // Split before decoding: an encoded "?" in a row id is not the separator.
+    const split = hash.indexOf('?');
+    const rawRowId = split === -1 ? hash : hash.slice(0, split);
+    const tabId = split === -1 ? null : new URLSearchParams(hash.slice(split + 1)).get('v');
     // A malformed escape in someone else's hash must not break the render.
     const rowId = ((): string => {
       try {
-        return decodeURIComponent(hash);
+        return decodeURIComponent(rawRowId);
       } catch {
         return '';
       }
@@ -5067,13 +5073,17 @@ export class DatabaseTool implements BlockTool {
     if (this.source === undefined && rowId !== '' && this.model.getRow(rowId) !== undefined) {
       this.openedRowLink = hash;
       this.handleRowClick(rowId);
+      // A host's full page (rowPages.navigate) gets the row only: its drawer did not open.
+      if (tabId !== null && tabId !== '' && this.cardDrawer?.openRowId === rowId) this.cardDrawer.showTab(tabId);
     }
   }
 
   private openedRowLink: string | null = null;
 
-  private copyRowLink(rowId: string): void {
-    const url = `${window.location.href.split('#')[0]}#${rowId}`;
+  /** Rows have no addressable URL yet: copies the page URL with the row id (and a view tab) as its fragment. */
+  private copyRowLink(rowId: string, tabId?: string): void {
+    const view = tabId === undefined ? '' : `?v=${encodeURIComponent(tabId)}`;
+    const url = `${window.location.href.split('#')[0]}#${encodeURIComponent(rowId)}${view}`;
 
     void navigator.clipboard?.writeText(url).then(
       () => this.api.notifier.show({ message: this.api.i18n.t('tools.database.tableLinkCopied') }),
@@ -5880,6 +5890,7 @@ export class DatabaseTool implements BlockTool {
           rowLink.closed = this.openedRowLink ?? rowLink.closed;
           this.openedRowLink = null;
         },
+        onCopyViewLink: (rowId, tabId) => this.copyRowLink(rowId, tabId),
         onAddProperty: (type, name) => {
           if (this.addProperty({ name, type }) !== null) {
             this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));

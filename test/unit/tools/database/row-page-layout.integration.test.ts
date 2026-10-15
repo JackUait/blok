@@ -1241,6 +1241,68 @@ describe('row page layout through the database tool', () => {
       });
     });
 
+    describe('Copy link to view (research/11 §4, research/13 §3)', () => {
+      const base = (): string => window.location.href.split('#')[0];
+      // Every hash differs: a closed link page stays closed for the whole file.
+      const loadWithHash = async (hash: string): Promise<void> => {
+        window.history.replaceState(null, '', `${base()}${hash}`);
+        await make(tabbedDoc());
+      };
+
+      afterEach(() => {
+        window.history.replaceState(null, '', base());
+      });
+
+      it('copies the row link naming the selected view tab', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+        await make(tabbedDoc());
+        await openRow('r1');
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        expect(item('row-tab-copy-link-to-view')?.textContent).toContain('Copy link to view');
+        await click(item('row-tab-copy-link-to-view'));
+
+        expect(writeText).toHaveBeenCalledWith(`${base()}#r1?v=tv`);
+        expect(item('row-tab-copy-link-to-view')).toBeNull();
+        Reflect.deleteProperty(navigator, 'clipboard');
+      });
+
+      it('a locked database still offers Copy link to view, as the row menu offers Copy link', async () => {
+        await make(tabbedDoc().map((block) => (block.id === 'db'
+          ? { ...block, data: { ...block.data, schema: (block.data.schema as Array<Record<string, unknown>>).map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p)) } }
+          : block)));
+        await openRow('r1');
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+        await click(tabNamed(drawer(), 'Roadmap') ?? null);
+
+        expect(item('row-tab-copy-link-to-view')).not.toBeNull();
+        expect(item('row-tab-customize-layout')).toBeNull();
+      });
+
+      it('a view link opens the row page on that tab', async () => {
+        await loadWithHash('#r1?v=tv');
+
+        expect(shownTitle()).toBe('One');
+        expect(selected(drawer())).toBe('Roadmap');
+      });
+
+      it('a row link without a view still opens the row page on Content', async () => {
+        await loadWithHash('#r2');
+
+        expect(shownTitle()).toBe('Two');
+        expect(selected(drawer())).toBe('Content');
+      });
+
+      it('a view link naming a tab that is gone opens the row page on Content', async () => {
+        await loadWithHash('#r3?v=gone');
+
+        expect(shownTitle()).toBe('Three');
+        expect(selected(drawer())).toBe('Content');
+      });
+    });
+
     describe('Related to this database (research/13 §1b-1c)', () => {
       /**
        * Measure A (db) relates two-way to Measure B (dbb), which comes AFTER it:

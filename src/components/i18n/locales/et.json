@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Vaheta ikooni",
   "tools.database.propertiesSection": "Omadused",
   "tools.database.layoutCustomize": "Kohanda paigutust",
+  "tools.database.layoutCopyLinkToView": "Kopeeri vaate link",
   "tools.database.layoutCustomizing": "Lehe paigutuse kohandamine",
   "tools.database.layoutCustomizePage": "Kohanda lehe paigutust",
   "tools.database.layoutPageSettings": "Lehe sätted",

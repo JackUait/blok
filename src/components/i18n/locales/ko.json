@@ -595,6 +595,7 @@
   "tools.database.changeIcon": "아이콘 변경",
   "tools.database.propertiesSection": "속성",
   "tools.database.layoutCustomize": "레이아웃 사용자 지정",
+  "tools.database.layoutCopyLinkToView": "보기 링크 복사",
   "tools.database.layoutCustomizing": "페이지 레이아웃 사용자 지정 중",
   "tools.database.layoutCustomizePage": "페이지 레이아웃 사용자 지정",
   "tools.database.layoutPageSettings": "페이지 설정",

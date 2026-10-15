@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Simgeyi değiştir",
   "tools.database.propertiesSection": "Özellikler",
   "tools.database.layoutCustomize": "Düzeni özelleştir",
+  "tools.database.layoutCopyLinkToView": "Görünüm bağlantısını kopyala",
   "tools.database.layoutCustomizing": "Sayfa düzeni özelleştiriliyor",
   "tools.database.layoutCustomizePage": "Sayfa düzenini özelleştir",
   "tools.database.layoutPageSettings": "Sayfa ayarları",

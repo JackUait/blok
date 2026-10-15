@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Endre ikon",
   "tools.database.propertiesSection": "Egenskaper",
   "tools.database.layoutCustomize": "Tilpass oppsett",
+  "tools.database.layoutCopyLinkToView": "Kopier lenke til visning",
   "tools.database.layoutCustomizing": "Tilpasser sideoppsettet",
   "tools.database.layoutCustomizePage": "Tilpass sideoppsettet",
   "tools.database.layoutPageSettings": "Sideinnstillinger",

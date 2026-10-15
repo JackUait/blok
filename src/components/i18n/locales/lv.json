@@ -593,6 +593,7 @@
   "tools.database.changeIcon": "Mainīt ikonu",
   "tools.database.propertiesSection": "Rekvizīti",
   "tools.database.layoutCustomize": "Pielāgot izkārtojumu",
+  "tools.database.layoutCopyLinkToView": "Kopēt saiti uz skatu",
   "tools.database.layoutCustomizing": "Lapas izkārtojuma pielāgošana",
   "tools.database.layoutCustomizePage": "Pielāgot lapas izkārtojumu",
   "tools.database.layoutPageSettings": "Lapas iestatījumi",

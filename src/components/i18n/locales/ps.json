@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "آیکون بدل کړئ",
   "tools.database.propertiesSection": "ځانګړتیاوې",
   "tools.database.layoutCustomize": "جوړښت سفارشي کړئ",
+  "tools.database.layoutCopyLinkToView": "د لید لینک کاپي کړئ",
   "tools.database.layoutCustomizing": "د پاڼې جوړښت سفارشي کېږي",
   "tools.database.layoutCustomizePage": "د پاڼې جوړښت سفارشي کړئ",
   "tools.database.layoutPageSettings": "د پاڼې تنظیمات",

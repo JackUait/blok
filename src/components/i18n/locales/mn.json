@@ -593,6 +593,7 @@
   "tools.database.changeIcon": "Дүрс солих",
   "tools.database.propertiesSection": "Шинжүүд",
   "tools.database.layoutCustomize": "Бүтцийг тохируулах",
+  "tools.database.layoutCopyLinkToView": "Харагдацын холбоос хуулах",
   "tools.database.layoutCustomizing": "Хуудасны бүтцийг тохируулж байна",
   "tools.database.layoutCustomizePage": "Хуудасны бүтцийг тохируулах",
   "tools.database.layoutPageSettings": "Хуудасны тохиргоо",

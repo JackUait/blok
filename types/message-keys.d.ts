@@ -840,6 +840,7 @@ export type BlokMessageKey =
   | 'tools.database.layoutCancel'
   | 'tools.database.layoutClosePanel'
   | 'tools.database.layoutContentTab'
+  | 'tools.database.layoutCopyLinkToView'
   | 'tools.database.layoutCreateNew'
   | 'tools.database.layoutCustomize'
   | 'tools.database.layoutCustomizePage'

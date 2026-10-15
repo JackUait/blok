@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Промени иконата",
   "tools.database.propertiesSection": "Свойства",
   "tools.database.layoutCustomize": "Персонализирай оформлението",
+  "tools.database.layoutCopyLinkToView": "Копирай връзката към изгледа",
   "tools.database.layoutCustomizing": "Персонализиране на оформлението на страницата",
   "tools.database.layoutCustomizePage": "Персонализирай оформлението на страницата",
   "tools.database.layoutPageSettings": "Настройки на страницата",

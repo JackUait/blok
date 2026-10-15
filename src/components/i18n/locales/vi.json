@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Đổi biểu tượng",
   "tools.database.propertiesSection": "Thuộc tính",
   "tools.database.layoutCustomize": "Tùy chỉnh bố cục",
+  "tools.database.layoutCopyLinkToView": "Sao chép liên kết đến chế độ xem",
   "tools.database.layoutCustomizing": "Đang tùy chỉnh bố cục trang",
   "tools.database.layoutCustomizePage": "Tùy chỉnh bố cục trang",
   "tools.database.layoutPageSettings": "Cài đặt trang",

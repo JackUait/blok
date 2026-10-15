@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Cambiar icono",
   "tools.database.propertiesSection": "Propiedades",
   "tools.database.layoutCustomize": "Personalizar diseño",
+  "tools.database.layoutCopyLinkToView": "Copiar enlace a la vista",
   "tools.database.layoutCustomizing": "Personalizando el diseño de la página",
   "tools.database.layoutCustomizePage": "Personalizar diseño de la página",
   "tools.database.layoutPageSettings": "Configuración de la página",

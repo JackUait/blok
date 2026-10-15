@@ -593,6 +593,7 @@
   "tools.database.changeIcon": "आइकन बदल्नुहोस्",
   "tools.database.propertiesSection": "गुणहरू",
   "tools.database.layoutCustomize": "लेआउट अनुकूलन गर्नुहोस्",
+  "tools.database.layoutCopyLinkToView": "दृश्यको लिङ्क प्रतिलिपि गर्नुहोस्",
   "tools.database.layoutCustomizing": "पृष्ठ लेआउट अनुकूलन गरिँदै",
   "tools.database.layoutCustomizePage": "पृष्ठ लेआउट अनुकूलन गर्नुहोस्",
   "tools.database.layoutPageSettings": "पृष्ठ सेटिङहरू",

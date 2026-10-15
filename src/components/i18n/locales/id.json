@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Ganti ikon",
   "tools.database.propertiesSection": "Properti",
   "tools.database.layoutCustomize": "Sesuaikan tata letak",
+  "tools.database.layoutCopyLinkToView": "Salin tautan ke tampilan",
   "tools.database.layoutCustomizing": "Menyesuaikan tata letak halaman",
   "tools.database.layoutCustomizePage": "Sesuaikan tata letak halaman",
   "tools.database.layoutPageSettings": "Pengaturan halaman",

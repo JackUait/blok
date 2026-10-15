@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Changer l’icône",
   "tools.database.propertiesSection": "Propriétés",
   "tools.database.layoutCustomize": "Personnaliser la disposition",
+  "tools.database.layoutCopyLinkToView": "Copier le lien vers la vue",
   "tools.database.layoutCustomizing": "Personnalisation de la disposition de la page",
   "tools.database.layoutCustomizePage": "Personnaliser la disposition de la page",
   "tools.database.layoutPageSettings": "Paramètres de la page",

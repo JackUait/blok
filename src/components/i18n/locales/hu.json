@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Ikon módosítása",
   "tools.database.propertiesSection": "Tulajdonságok",
   "tools.database.layoutCustomize": "Elrendezés testreszabása",
+  "tools.database.layoutCopyLinkToView": "Nézet hivatkozásának másolása",
   "tools.database.layoutCustomizing": "Oldalelrendezés testreszabása",
   "tools.database.layoutCustomizePage": "Oldalelrendezés testreszabása",
   "tools.database.layoutPageSettings": "Oldalbeállítások",

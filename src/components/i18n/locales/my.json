@@ -593,6 +593,7 @@
   "tools.database.changeIcon": "အိုင်ကွန် ပြောင်းရန်",
   "tools.database.propertiesSection": "ဂုဏ်သတ္တိများ",
   "tools.database.layoutCustomize": "အပြင်အဆင်ကို စိတ်ကြိုက်ပြင်ရန်",
+  "tools.database.layoutCopyLinkToView": "မြင်ကွင်းသို့ လင့်ခ်ကူးယူရန်",
   "tools.database.layoutCustomizing": "စာမျက်နှာ အပြင်အဆင်ကို စိတ်ကြိုက်ပြင်နေသည်",
   "tools.database.layoutCustomizePage": "စာမျက်နှာ အပြင်အဆင်ကို စိတ်ကြိုက်ပြင်ရန်",
   "tools.database.layoutPageSettings": "စာမျက်နှာ ဆက်တင်များ",

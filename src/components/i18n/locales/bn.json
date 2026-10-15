@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "আইকন বদলান",
   "tools.database.propertiesSection": "বৈশিষ্ট্য",
   "tools.database.layoutCustomize": "লেআউট কাস্টমাইজ করুন",
+  "tools.database.layoutCopyLinkToView": "ভিউয়ের লিঙ্ক কপি করুন",
   "tools.database.layoutCustomizing": "পৃষ্ঠার লেআউট কাস্টমাইজ করা হচ্ছে",
   "tools.database.layoutCustomizePage": "পৃষ্ঠার লেআউট কাস্টমাইজ করুন",
   "tools.database.layoutPageSettings": "পৃষ্ঠার সেটিংস",

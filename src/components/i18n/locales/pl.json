@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Zmień ikonę",
   "tools.database.propertiesSection": "Właściwości",
   "tools.database.layoutCustomize": "Dostosuj układ",
+  "tools.database.layoutCopyLinkToView": "Kopiuj link do widoku",
   "tools.database.layoutCustomizing": "Dostosowywanie układu strony",
   "tools.database.layoutCustomizePage": "Dostosuj układ strony",
   "tools.database.layoutPageSettings": "Ustawienia strony",

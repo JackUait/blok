@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "تغيير الأيقونة",
   "tools.database.propertiesSection": "الخصائص",
   "tools.database.layoutCustomize": "تخصيص التخطيط",
+  "tools.database.layoutCopyLinkToView": "نسخ رابط العرض",
   "tools.database.layoutCustomizing": "جارٍ تخصيص تخطيط الصفحة",
   "tools.database.layoutCustomizePage": "تخصيص تخطيط الصفحة",
   "tools.database.layoutPageSettings": "إعدادات الصفحة",

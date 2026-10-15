@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Pictogram wijzigen",
   "tools.database.propertiesSection": "Eigenschappen",
   "tools.database.layoutCustomize": "Indeling aanpassen",
+  "tools.database.layoutCopyLinkToView": "Link naar weergave kopiëren",
   "tools.database.layoutCustomizing": "Pagina-indeling aanpassen",
   "tools.database.layoutCustomizePage": "Pagina-indeling aanpassen",
   "tools.database.layoutPageSettings": "Pagina-instellingen",

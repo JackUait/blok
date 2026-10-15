@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "アイコンを変更",
   "tools.database.propertiesSection": "プロパティ",
   "tools.database.layoutCustomize": "レイアウトをカスタマイズ",
+  "tools.database.layoutCopyLinkToView": "ビューへのリンクをコピー",
   "tools.database.layoutCustomizing": "ページレイアウトをカスタマイズ中",
   "tools.database.layoutCustomizePage": "ページレイアウトをカスタマイズ",
   "tools.database.layoutPageSettings": "ページ設定",

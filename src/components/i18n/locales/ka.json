@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "ხატულის შეცვლა",
   "tools.database.propertiesSection": "თვისებები",
   "tools.database.layoutCustomize": "განლაგების მორგება",
+  "tools.database.layoutCopyLinkToView": "ხედის ბმულის კოპირება",
   "tools.database.layoutCustomizing": "გვერდის განლაგების მორგება",
   "tools.database.layoutCustomizePage": "გვერდის განლაგების მორგება",
   "tools.database.layoutPageSettings": "გვერდის პარამეტრები",

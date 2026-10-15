@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Schimbă pictograma",
   "tools.database.propertiesSection": "Proprietăți",
   "tools.database.layoutCustomize": "Personalizează aspectul",
+  "tools.database.layoutCopyLinkToView": "Copiază linkul către vizualizare",
   "tools.database.layoutCustomizing": "Se personalizează aspectul paginii",
   "tools.database.layoutCustomizePage": "Personalizează aspectul paginii",
   "tools.database.layoutPageSettings": "Setările paginii",

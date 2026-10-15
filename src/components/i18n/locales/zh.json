@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "更换图标",
   "tools.database.propertiesSection": "属性",
   "tools.database.layoutCustomize": "自定义布局",
+  "tools.database.layoutCopyLinkToView": "复制视图链接",
   "tools.database.layoutCustomizing": "正在自定义页面布局",
   "tools.database.layoutCustomizePage": "自定义页面布局",
   "tools.database.layoutPageSettings": "页面设置",

@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "አዶ ቀይር",
   "tools.database.propertiesSection": "ንብረቶች",
   "tools.database.layoutCustomize": "አቀማመጥን አብጅ",
+  "tools.database.layoutCopyLinkToView": "የዕይታውን አገናኝ ቅዳ",
   "tools.database.layoutCustomizing": "የገጽ አቀማመጥ እየተበጀ ነው",
   "tools.database.layoutCustomizePage": "የገጽ አቀማመጥን አብጅ",
   "tools.database.layoutPageSettings": "የገጽ ቅንብሮች",

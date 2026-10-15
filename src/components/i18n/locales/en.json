@@ -700,6 +700,7 @@
   "tools.database.changeIcon": "Change icon",
   "tools.database.propertiesSection": "Properties",
   "tools.database.layoutCustomize": "Customize layout",
+  "tools.database.layoutCopyLinkToView": "Copy link to view",
   "tools.database.layoutCustomizing": "Customizing page layout",
   "tools.database.layoutCustomizePage": "Customize page layout",
   "tools.database.layoutPageSettings": "Page settings",

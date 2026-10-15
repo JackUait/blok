@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Ndërro ikonën",
   "tools.database.propertiesSection": "Vetitë",
   "tools.database.layoutCustomize": "Personalizo strukturën",
+  "tools.database.layoutCopyLinkToView": "Kopjo lidhjen e pamjes",
   "tools.database.layoutCustomizing": "Po personalizohet struktura e faqes",
   "tools.database.layoutCustomizePage": "Personalizo strukturën e faqes",
   "tools.database.layoutPageSettings": "Cilësimet e faqes",

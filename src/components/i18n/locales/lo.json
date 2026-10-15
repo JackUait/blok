@@ -595,6 +595,7 @@
   "tools.database.changeIcon": "ປ່ຽນໄອຄອນ",
   "tools.database.propertiesSection": "ຄຸນສົມບັດ",
   "tools.database.layoutCustomize": "ປັບແຕ່ງໂຄງຮ່າງ",
+  "tools.database.layoutCopyLinkToView": "ສຳເນົາລິ້ງໄປຫາມຸມມອງ",
   "tools.database.layoutCustomizing": "ກຳລັງປັບແຕ່ງໂຄງຮ່າງໜ້າ",
   "tools.database.layoutCustomizePage": "ປັບແຕ່ງໂຄງຮ່າງໜ້າ",
   "tools.database.layoutPageSettings": "ການຕັ້ງຄ່າໜ້າ",

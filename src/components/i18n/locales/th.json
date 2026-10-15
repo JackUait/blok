@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "เปลี่ยนไอคอน",
   "tools.database.propertiesSection": "คุณสมบัติ",
   "tools.database.layoutCustomize": "ปรับแต่งเลย์เอาต์",
+  "tools.database.layoutCopyLinkToView": "คัดลอกลิงก์ไปยังมุมมอง",
   "tools.database.layoutCustomizing": "กำลังปรับแต่งเลย์เอาต์หน้า",
   "tools.database.layoutCustomizePage": "ปรับแต่งเลย์เอาต์หน้า",
   "tools.database.layoutPageSettings": "การตั้งค่าหน้า",

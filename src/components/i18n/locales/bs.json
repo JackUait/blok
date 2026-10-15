@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Promijeni ikonu",
   "tools.database.propertiesSection": "Svojstva",
   "tools.database.layoutCustomize": "Prilagodi raspored",
+  "tools.database.layoutCopyLinkToView": "Kopiraj vezu do prikaza",
   "tools.database.layoutCustomizing": "Prilagođavanje rasporeda stranice",
   "tools.database.layoutCustomizePage": "Prilagodi raspored stranice",
   "tools.database.layoutPageSettings": "Postavke stranice",

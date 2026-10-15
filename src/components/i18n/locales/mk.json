@@ -593,6 +593,7 @@
   "tools.database.changeIcon": "Промени икона",
   "tools.database.propertiesSection": "Својства",
   "tools.database.layoutCustomize": "Прилагоди распоред",
+  "tools.database.layoutCopyLinkToView": "Копирај врска до приказот",
   "tools.database.layoutCustomizing": "Прилагодување на распоредот на страницата",
   "tools.database.layoutCustomizePage": "Прилагоди распоред на страницата",
   "tools.database.layoutPageSettings": "Поставки на страницата",

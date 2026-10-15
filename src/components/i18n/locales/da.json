@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Skift ikon",
   "tools.database.propertiesSection": "Egenskaber",
   "tools.database.layoutCustomize": "Tilpas opsætning",
+  "tools.database.layoutCopyLinkToView": "Kopiér link til visning",
   "tools.database.layoutCustomizing": "Tilpasser sidens opsætning",
   "tools.database.layoutCustomizePage": "Tilpas sidens opsætning",
   "tools.database.layoutPageSettings": "Sideindstillinger",

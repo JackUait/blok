@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Փոխել պատկերակը",
   "tools.database.propertiesSection": "Հատկություններ",
   "tools.database.layoutCustomize": "Հարմարեցնել դասավորությունը",
+  "tools.database.layoutCopyLinkToView": "Պատճենել տեսքի հղումը",
   "tools.database.layoutCustomizing": "Էջի դասավորության հարմարեցում",
   "tools.database.layoutCustomizePage": "Հարմարեցնել էջի դասավորությունը",
   "tools.database.layoutPageSettings": "Էջի կարգավորումներ",

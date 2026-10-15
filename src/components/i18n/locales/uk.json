@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Змінити іконку",
   "tools.database.propertiesSection": "Властивості",
   "tools.database.layoutCustomize": "Налаштувати макет",
+  "tools.database.layoutCopyLinkToView": "Копіювати посилання на подання",
   "tools.database.layoutCustomizing": "Налаштування макета сторінки",
   "tools.database.layoutCustomizePage": "Налаштувати макет сторінки",
   "tools.database.layoutPageSettings": "Налаштування сторінки",

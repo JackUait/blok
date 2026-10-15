@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Byt ikon",
   "tools.database.propertiesSection": "Egenskaper",
   "tools.database.layoutCustomize": "Anpassa utformning",
+  "tools.database.layoutCopyLinkToView": "Kopiera länk till vy",
   "tools.database.layoutCustomizing": "Anpassar sidans utformning",
   "tools.database.layoutCustomizePage": "Anpassa sidans utformning",
   "tools.database.layoutPageSettings": "Sidinställningar",

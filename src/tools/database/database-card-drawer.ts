@@ -6,7 +6,7 @@ import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, Proper
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconPageLayout, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconExpandFullscreen, IconLink, IconPageLayout, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -238,6 +238,8 @@ export interface CardDrawerOptions {
   uploadCover?: (file: File) => Promise<string>;
   /** Escape closed the page of this row. */
   onEscapeClose?: (rowId: string) => void;
+  /** "Copy link to view" on a row page's view tab. Without it, the tab menu has no such item. */
+  onCopyViewLink?: (rowId: string, tabId: string) => void;
   /** A page icon picked (an emoji) or removed (null). */
   onIconChange?: (rowId: string, icon: string | null) => void;
   /** The row before (-1) or after (1) the open one in the view, if any. */
@@ -352,6 +354,7 @@ export class DatabaseCardDrawer {
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
+  private readonly onCopyViewLink: CardDrawerOptions['onCopyViewLink'];
   private readonly onAddProperty: CardDrawerOptions['onAddProperty'];
   private readonly onOpenPropertyMenu: CardDrawerOptions['onOpenPropertyMenu'];
   private readonly onOpenAddProperty: CardDrawerOptions['onOpenAddProperty'];
@@ -448,6 +451,7 @@ export class DatabaseCardDrawer {
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
+    this.onCopyViewLink = options.onCopyViewLink;
     this.onAddProperty = options.onAddProperty;
     this.onOpenPropertyMenu = options.onOpenPropertyMenu;
     this.onOpenAddProperty = options.onOpenAddProperty;
@@ -1156,26 +1160,42 @@ export class DatabaseCardDrawer {
     return label;
   }
 
+  /** A row page's selected view tab opens a menu: Customize layout, Copy link to view, or both. */
+  private get rowTabMenu(): boolean {
+    return this.customizable || (!this.readOnly && this.onCopyViewLink !== undefined);
+  }
+
   /**
-   * The row page's view tab menu. Notion also has "Display as" and "Copy link
-   * to view"; Blok has no per-tab icons and no link that opens a row on a tab.
+   * The row page's view tab menu. Notion also has "Display as"; Blok has no per-tab icons.
    * Shares the mode menu's slot, so closing the page closes it too.
    */
-  private openRowTabMenu(anchor: HTMLElement): void {
+  private openRowTabMenu(anchor: HTMLElement, tabId: string): void {
     this.closeModeMenu();
+    const rowId = this.openRowId;
+    const copyLink = this.onCopyViewLink;
     const menu = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
       trigger: anchor,
       width: 'auto',
       minWidth: '240px',
-      items: [{
-        type: PopoverItemType.Default,
-        name: 'row-tab-customize-layout',
-        title: this.label('tools.database.layoutCustomize'),
-        icon: IconPageLayout,
-        closeOnActivate: true,
-        onActivate: () => this.startCustomizing(),
-      }],
+      items: [
+        ...(this.customizable ? [{
+          type: PopoverItemType.Default as const,
+          name: 'row-tab-customize-layout',
+          title: this.label('tools.database.layoutCustomize'),
+          icon: IconPageLayout,
+          closeOnActivate: true,
+          onActivate: () => this.startCustomizing(),
+        }] : []),
+        ...(copyLink !== undefined && rowId !== null ? [{
+          type: PopoverItemType.Default as const,
+          name: 'row-tab-copy-link-to-view',
+          title: this.label('tools.database.layoutCopyLinkToView'),
+          icon: IconLink,
+          closeOnActivate: true,
+          onActivate: () => copyLink(rowId, tabId),
+        }] : []),
+      ],
     });
 
     menu.on(PopoverEvent.Closed, () => {
@@ -1263,6 +1283,12 @@ export class DatabaseCardDrawer {
   /** Id of the row the drawer shows, or null when closed. */
   get openRowId(): string | null {
     return this.drawer === null ? null : this.currentRowId;
+  }
+
+  /** Shows a view tab (a link to it). An id with no tab shows Content, as a tab gone for now does. */
+  showTab(tabId: string): void {
+    this.activeTab = tabId;
+    this.rerender();
   }
 
   setBodyMigrationPending(rowId: string, pending: boolean): void {
@@ -1873,7 +1899,7 @@ export class DatabaseCardDrawer {
       el.tabIndex = this.shownTab === id ? 0 : -1;
       el.textContent = text;
       // On a row page the selected view tab opens its menu.
-      if (builder === null && id !== 'content' && this.shownTab === id && this.customizable) {
+      if (builder === null && id !== 'content' && this.shownTab === id && this.rowTabMenu) {
         el.setAttribute('aria-haspopup', 'menu');
         el.setAttribute('aria-expanded', 'false');
       }
@@ -1885,8 +1911,8 @@ export class DatabaseCardDrawer {
           return;
         }
         // research/11 §4, research/13 §3b: on a row page the selected view tab opens its own menu.
-        if (builder === null && id !== 'content' && this.shownTab === id && this.customizable) {
-          this.openRowTabMenu(el);
+        if (builder === null && id !== 'content' && this.shownTab === id && this.rowTabMenu) {
+          this.openRowTabMenu(el, id);
 
           return;
         }

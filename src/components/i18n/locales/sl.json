@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Zamenjaj ikono",
   "tools.database.propertiesSection": "Lastnosti",
   "tools.database.layoutCustomize": "Prilagodi postavitev",
+  "tools.database.layoutCopyLinkToView": "Kopiraj povezavo do pogleda",
   "tools.database.layoutCustomizing": "Prilagajanje postavitve strani",
   "tools.database.layoutCustomizePage": "Prilagodi postavitev strani",
   "tools.database.layoutPageSettings": "Nastavitve strani",

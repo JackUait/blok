@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "ប្ដូររូបតំណាង",
   "tools.database.propertiesSection": "លក្ខណៈ",
   "tools.database.layoutCustomize": "ប្ដូរប្លង់តាមបំណង",
+  "tools.database.layoutCopyLinkToView": "ចម្លងតំណទៅទិដ្ឋភាព",
   "tools.database.layoutCustomizing": "កំពុងប្ដូរប្លង់ទំព័រតាមបំណង",
   "tools.database.layoutCustomizePage": "ប្ដូរប្លង់ទំព័រតាមបំណង",
   "tools.database.layoutPageSettings": "ការកំណត់ទំព័រ",

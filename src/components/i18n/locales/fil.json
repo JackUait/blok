@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Palitan ang icon",
   "tools.database.propertiesSection": "Mga property",
   "tools.database.layoutCustomize": "Iangkop ang ayos",
+  "tools.database.layoutCopyLinkToView": "Kopyahin ang link sa view",
   "tools.database.layoutCustomizing": "Iniaangkop ang ayos ng pahina",
   "tools.database.layoutCustomizePage": "Iangkop ang ayos ng pahina",
   "tools.database.layoutPageSettings": "Mga setting ng pahina",

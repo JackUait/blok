@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Αλλαγή εικονιδίου",
   "tools.database.propertiesSection": "Ιδιότητες",
   "tools.database.layoutCustomize": "Προσαρμογή διάταξης",
+  "tools.database.layoutCopyLinkToView": "Αντιγραφή συνδέσμου προβολής",
   "tools.database.layoutCustomizing": "Προσαρμογή διάταξης σελίδας",
   "tools.database.layoutCustomizePage": "Προσαρμογή διάταξης σελίδας",
   "tools.database.layoutPageSettings": "Ρυθμίσεις σελίδας",

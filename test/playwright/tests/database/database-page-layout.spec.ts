@@ -806,6 +806,58 @@ test.describe('row page layout', () => {
     expect(await savedTitle(page)).toMatchObject({ pageLayoutStructure: 'tabbed', pageLayoutTabsId: expect.any(String) });
   });
 
+  // research/11 §4, research/13 §3: the link names the row and the view tab, and opens both.
+  test('copies a link to a view tab that opens the row page on that tab', async ({ page }) => {
+    const data = blocks({ pageLayoutStructure: 'tabbed', pageLayoutTabsId: 'lt' });
+
+    (data[0] as { content: string[] }).content.push('lt');
+    data.push(
+      { id: 'lt', type: 'tabs', parent: 'db-1', data: {}, content: ['tc', 'tv'] },
+      { id: 'tc', type: 'tab', parent: 'lt', data: { title: '' } },
+      { id: 'tv', type: 'tab', parent: 'lt', data: { title: 'Roadmap' }, content: ['lv'] },
+      {
+        id: 'lv',
+        type: 'database',
+        parent: 'tv',
+        data: {
+          title: '',
+          schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+          views: [{ id: 'lvv', name: 'Roadmap', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+          activeViewId: 'lvv',
+          source: { databaseId: 'db-1' },
+        },
+      },
+    );
+    await mount(page, data);
+    // A stub, so the copy reads the same in every browser without a permission prompt.
+    await page.evaluate(() => {
+      const copied: string[] = [];
+
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => { copied.push(text); } } });
+      (window as unknown as { copied: string[] }).copied = copied;
+    });
+    // The layout's hidden tabs block also holds a grid listing r2.
+    const row = page.locator('[data-blok-database-table-row][data-row-id="r2"]').filter({ visible: true });
+
+    await row.hover();
+    await row.locator('[data-blok-database-table-open]').click();
+    const roadmap = peek(page).getByRole('tab', { name: 'Roadmap' });
+
+    await roadmap.click();
+    await roadmap.click();
+    await page.getByRole('menuitem', { name: 'Copy link to view' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Copy link to view' })).toHaveCount(0);
+    const link = await page.evaluate(() => (window as unknown as { copied: string[] }).copied[0]);
+
+    expect(new URL(link).hash).toBe('#r2?v=tv');
+
+    await page.evaluate((url) => window.history.replaceState(null, '', url), link);
+    await mount(page, data);
+
+    await expect(peek(page).getByRole('textbox', { name: 'Card title' })).toHaveValue('Bravo');
+    await expect(peek(page).getByRole('tab', { name: 'Roadmap' })).toHaveAttribute('aria-selected', 'true');
+  });
+
   // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.
   // research/13 §1b-1c: a relation is a one-click tab of the related database, filtered to the row page shown.
   test('adds a Related to tab that lists each row page\'s own related rows', async ({ page }) => {

@@ -595,6 +595,7 @@
   "tools.database.changeIcon": "Keisti piktogramą",
   "tools.database.propertiesSection": "Savybės",
   "tools.database.layoutCustomize": "Tinkinti išdėstymą",
+  "tools.database.layoutCopyLinkToView": "Kopijuoti rodinio nuorodą",
   "tools.database.layoutCustomizing": "Tinkinamas puslapio išdėstymas",
   "tools.database.layoutCustomizePage": "Tinkinti puslapio išdėstymą",
   "tools.database.layoutPageSettings": "Puslapio nustatymai",

@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "ஐகானை மாற்று",
   "tools.database.propertiesSection": "பண்புகள்",
   "tools.database.layoutCustomize": "தளவமைப்பைத் தனிப்பயனாக்கு",
+  "tools.database.layoutCopyLinkToView": "காட்சிக்கான இணைப்பை நகலெடு",
   "tools.database.layoutCustomizing": "பக்கத் தளவமைப்பு தனிப்பயனாக்கப்படுகிறது",
   "tools.database.layoutCustomizePage": "பக்கத் தளவமைப்பைத் தனிப்பயனாக்கு",
   "tools.database.layoutPageSettings": "பக்க அமைப்புகள்",

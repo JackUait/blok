@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "Vaihda kuvake",
   "tools.database.propertiesSection": "Ominaisuudet",
   "tools.database.layoutCustomize": "Mukauta asettelua",
+  "tools.database.layoutCopyLinkToView": "Kopioi linkki näkymään",
   "tools.database.layoutCustomizing": "Mukautetaan sivun asettelua",
   "tools.database.layoutCustomizePage": "Mukauta sivun asettelua",
   "tools.database.layoutPageSettings": "Sivun asetukset",

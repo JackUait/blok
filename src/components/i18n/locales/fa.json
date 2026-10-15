@@ -582,6 +582,7 @@
   "tools.database.changeIcon": "تغییر نماد",
   "tools.database.propertiesSection": "ویژگی‌ها",
   "tools.database.layoutCustomize": "سفارشی‌سازی چیدمان",
+  "tools.database.layoutCopyLinkToView": "کپی پیوند نما",
   "tools.database.layoutCustomizing": "در حال سفارشی‌سازی چیدمان صفحه",
   "tools.database.layoutCustomizePage": "سفارشی‌سازی چیدمان صفحه",
   "tools.database.layoutPageSettings": "تنظیمات صفحه",

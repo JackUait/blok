@@ -700,6 +700,7 @@
   "tools.database.changeIcon": "變更圖示",
   "tools.database.propertiesSection": "屬性",
   "tools.database.layoutCustomize": "自訂版面配置",
+  "tools.database.layoutCopyLinkToView": "複製檢視連結",
   "tools.database.layoutCustomizing": "正在自訂頁面版面配置",
   "tools.database.layoutCustomizePage": "自訂頁面版面配置",
   "tools.database.layoutPageSettings": "頁面設定",

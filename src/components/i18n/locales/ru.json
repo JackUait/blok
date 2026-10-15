@@ -584,6 +584,7 @@
   "tools.database.changeIcon": "Сменить значок",
   "tools.database.propertiesSection": "Свойства",
   "tools.database.layoutCustomize": "Настроить макет",
+  "tools.database.layoutCopyLinkToView": "Копировать ссылку на представление",
   "tools.database.layoutCustomizing": "Настройка макета страницы",
   "tools.database.layoutCustomizePage": "Настроить макет страницы",
   "tools.database.layoutPageSettings": "Настройки страницы",

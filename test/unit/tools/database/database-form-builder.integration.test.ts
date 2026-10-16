@@ -537,6 +537,7 @@ describe('local form question builder', () => {
     expect(add).not.toBeNull();
     if (add === null) throw new Error('Missing add-question control');
     add.click();
+    requireElement(byTestId('database-form-new-text')).click();
     edit('database-form-question-name', 'Project budget');
     requireElement(byTestId('database-form-question-type')).click();
     requireElement(byTestId('database-form-question-type-number')).click();

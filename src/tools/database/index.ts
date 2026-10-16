@@ -3,12 +3,12 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData } from './tier3-values';
 import { DatabaseHostLevers } from './database-host-levers';
-import { DatabaseFormView } from './database-form-view';
+import { DatabaseFormView, isAutoQuestion } from './database-form-view';
 import { DatabaseMapView } from './database-map-view';
 import { DatabaseDashboardView } from './database-dashboard-view';
 import type { DashboardMount } from './database-dashboard-view';
@@ -105,7 +105,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash, IconCheck, IconCopy, IconDownload, IconImage, IconMergeCells, IconPageLayout, IconUpload } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconUpload } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -363,6 +363,7 @@ export class DatabaseTool implements BlockTool {
   /** Form views showing their confirmation. Session only, so a redraw keeps it. */
   private readonly submittedForms = new Set<string>();
   private formQuestionEdit = false;
+  private formPromptAbort: AbortController | null = null;
   /** Automations and AI autofill. Made once: every view switch makes a new sync with it. */
   private readonly hostLevers: DatabaseHostLevers;
 
@@ -1175,6 +1176,7 @@ export class DatabaseTool implements BlockTool {
 
   destroy(): void {
     this.destroyed = true;
+    this.formPromptAbort?.abort();
     this.api.events.off(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.emit(DATABASE_GONE_EVENT, { databaseId: this.block.id });
     this.hostLevers.destroy();
@@ -2870,6 +2872,47 @@ export class DatabaseTool implements BlockTool {
     });
     void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);
+    if (type === 'form') this.askFormAutoCreate(newView.id);
+  }
+
+  /**
+   * Notion asks this on every new form view (research/19 §3a). The view starts
+   * with every supported property as a question, so Escape keeps that.
+   */
+  private askFormAutoCreate(viewId: string): void {
+    const count = this.model.getSchema().filter(isAutoQuestion).length;
+
+    if (count === 0 || this.readOnly) return;
+    const t = (key: string, vars?: Record<string, string | number>): string => this.api.i18n.t(`tools.database.${key}`, vars);
+
+    this.formPromptAbort?.abort();
+    const abort = new AbortController();
+
+    this.formPromptAbort = abort;
+    void openDatabaseConfirm({
+      title: t('formAutoCreateTitle'),
+      description: t('formAutoCreateDescription'),
+      confirmLabel: count === 1 ? t('formAutoCreateOne') : t('formAutoCreateMany', { count }),
+      cancelLabel: t('formAutoCreateScratch'),
+      role: 'dialog',
+      primary: true,
+      dismissAs: true,
+      art: [IconTable, IconChevronRight, IconListChecklist],
+      directionSource: this.element,
+      signal: abort.signal,
+    }).then((create) => {
+      if (this.formPromptAbort === abort) this.formPromptAbort = null;
+      if (create || abort.signal.aborted || this.destroyed || this.readOnly || this.structureLocked()) return;
+      const view = this.model.getView(viewId);
+
+      if (view?.type !== 'form') return;
+      const properties = this.model.getSchema().map((property) => ({ id: property.id, visible: property.type === 'title' }));
+
+      this.model.updateView(viewId, { properties });
+      this.block.dispatchChange();
+      void this.sync.syncUpdateView({ viewId, changes: { properties: structuredClone(properties) } });
+      if (this.activeViewId === viewId) this.rerenderView({ keepDrawer: true });
+    });
   }
 
   renameView(viewId: string, name: string): void {
@@ -3100,7 +3143,7 @@ export class DatabaseTool implements BlockTool {
         schema,
         readOnly: this.readOnly,
         source: this.source,
-        cellContext: this.cellContext(),
+        cellContext: { ...this.cellContext(), relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
         hasPeople: this.hasPeople,
         onInteractionEnd: () => {
           if (this.redrawWhenIdleRetry !== null) this.redrawWhenIdle();
@@ -3108,12 +3151,43 @@ export class DatabaseTool implements BlockTool {
         submitted: this.submittedForms.has(viewId),
         onSubmittedChange: (submitted) => (submitted ? this.submittedForms.add(viewId) : this.submittedForms.delete(viewId)),
         onSubmit: (values) => this.submitForm(viewId, values),
+        ...(this.readOnly || this.structureLocked() ? {} : {
+          share: {
+            ...(this.config.forms === undefined ? {} : {
+              host: {
+                ...(this.config.forms.workspaceName === undefined ? {} : { workspaceName: this.config.forms.workspaceName }),
+                ...this.formLink(viewId),
+              },
+            }),
+            settings: () => this.model.getView(viewId)?.form ?? {},
+            update: (patch: Partial<FormSettings>) => editQuestion(() => {
+              const merged: FormSettings = { ...this.model.getView(viewId)?.form, ...patch };
+              const form: FormSettings = Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== undefined));
+
+              this.updateActiveView({ form });
+            }, undefined),
+            copyLink: (link: string) => {
+              void navigator.clipboard?.writeText(link).then(
+                () => this.api.notifier.show({ message: this.api.i18n.t('tools.database.tableLinkCopied') }),
+                () => undefined
+              );
+            },
+          },
+        }),
         ...(this.structureLocked()
           ? {}
           : {
             setRequired: (propertyId: string, required: boolean) => setQuestionSetting(propertyId, { required }),
             setQuestionSetting,
-            addQuestion: () => editQuestion(() => this.addProperty({ name: '', type: 'text' }), null),
+            addQuestion: (type: PropertyType) => editQuestion(() => this.addProperty({ name: '', type }), null),
+            showQuestion: (propertyId: string) => editQuestion(() => {
+              const current = this.model.getView(viewId);
+
+              if (current === undefined) return;
+              const shown = { ...current, properties: withPropertySetting(current, this.model.getSchema(), propertyId, { visible: true }) };
+
+              this.updateActiveView({ properties: withPropertyOrder(shown, this.model.getSchema(), propertyId, null) });
+            }, undefined),
             renameProperty: (propertyId: string, name: string) => editQuestion(() => this.renameProperty(propertyId, name), undefined),
             changePropertyType: (propertyId: string, type: PropertyType) => editQuestion(() => this.changePropertyType(propertyId, type), undefined),
             duplicateProperty: (propertyId: string) => editQuestion(() => this.duplicateProperty(propertyId), null),
@@ -3143,6 +3217,17 @@ export class DatabaseTool implements BlockTool {
     return this.view.createView();
   }
 
+  /** The host's link for a form, for the Share panel. A throwing host gives none. */
+  private formLink(viewId: string): { link?: string } {
+    try {
+      const link = this.config.forms?.link?.({ databaseId: this.block.id, viewId });
+
+      return typeof link === 'string' && link !== '' ? { link } : {};
+    } catch {
+      return {};
+    }
+  }
+
   /** A form answer becomes a row (Notion: responses land in the database). Read-only only tells the host. */
   private submitForm(viewId: string, values: Record<string, PropertyValue>): void {
     const view = this.model.getView(viewId);
@@ -3153,7 +3238,13 @@ export class DatabaseTool implements BlockTool {
 
     if (forms === undefined) return;
     try {
-      void Promise.resolve(forms.onSubmit({ databaseId: this.block.id, viewId, values, ...(rowId !== undefined ? { rowId } : {}) })).catch(() => undefined);
+      const sharing = {
+        public: view.form?.public === true,
+        anonymous: view.form?.anonymous === true,
+        submissionAccess: view.form?.submissionAccess ?? 'none',
+      };
+
+      void Promise.resolve(forms.onSubmit({ databaseId: this.block.id, viewId, values, ...(rowId !== undefined ? { rowId } : {}), sharing })).catch(() => undefined);
     } catch {
       // The row is already saved; a failing host must not undo it.
     }
@@ -4085,6 +4176,11 @@ export class DatabaseTool implements BlockTool {
       duplicateView: () => this.duplicateView(this.activeViewId),
       deleteView: () => this.deleteView(this.activeViewId),
       copyViewLink: () => this.copyViewLink(),
+      ...(context === undefined ? {
+        shareForm: (anchor: HTMLElement) => {
+          if (this.view instanceof DatabaseFormView) this.view.openShare(anchor);
+        },
+      } : {}),
       groups: (sub) => this.groupEntries(sub),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
       layoutItems: () => this.layoutItems(),
@@ -7679,6 +7775,14 @@ export class DatabaseTool implements BlockTool {
         this.rerenderView({ keepDrawer: true });
       })
       .catch(() => undefined);
+  }
+
+  /** The related database's title, for a form's page picker. */
+  private relatedDatabaseName(property: PropertyDefinition): string {
+    const databaseId = property.relation?.targetDatabaseId;
+    const title = databaseId === undefined || databaseId === this.dataId ? this.title : this.api.blocks.getById(databaseId)?.preservedData.title;
+
+    return typeof title === 'string' && title.trim() !== '' ? title : this.api.i18n.t('tools.database.relationUntitledDatabase');
   }
 
   private relationCandidates(property: PropertyDefinition): Array<{ id: string; title: string }> {

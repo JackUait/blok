@@ -55,6 +55,11 @@ export interface CellContext {
   /** Rows a relation cell can pick, for the relation editor. */
   relationCandidates?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
   /**
+   * A form's page picker (research/19 §3b): the related database's name. The
+   * relation editor then reads "Select a page" under "Search…" and "In <name>".
+   */
+  relationScope?: (property: PropertyDefinition) => string;
+  /**
    * The table (research/16 §4): a plain click on a url, email or phone link
    * follows it, and a url shows without its http(s) scheme. Elsewhere a plain
    * click is left to the host, which edits the value.

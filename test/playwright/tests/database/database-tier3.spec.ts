@@ -72,7 +72,11 @@ const mount = async (page: Page, data: OutputBlockData[], lever: Lever): Promise
     const config: Record<string, unknown> = {};
 
     if (which === 'forms') {
-      config.forms = { onSubmit: (submission: unknown) => log.push(submission) };
+      config.forms = {
+        onSubmit: (submission: unknown) => log.push(submission),
+        workspaceName: 'Personal',
+        link: () => 'https://forms.example.test/f/1',
+      };
     }
     if (which === 'map') {
       config.map = {
@@ -142,7 +146,10 @@ test.describe('form view', () => {
 
     expect(added?.properties).toMatchObject({ 'p-email': 'ada@example.com', 'p-where': { address: '1 Main St' } });
     expect(await page.evaluate(() => window.tier3Log)).toEqual([
-      { databaseId: 'db-1', viewId: 'v1', values: { 'p-title': 'Ada', 'p-email': 'ada@example.com', 'p-where': { address: '1 Main St' } }, rowId: added?.id },
+      {
+        databaseId: 'db-1', viewId: 'v1', values: { 'p-title': 'Ada', 'p-email': 'ada@example.com', 'p-where': { address: '1 Main St' } }, rowId: added?.id,
+        sharing: { public: false, anonymous: false, submissionAccess: 'none' },
+      },
     ]);
   });
 
@@ -156,6 +163,45 @@ test.describe('form view', () => {
     await expect(question(page, 'p-email').getByRole('textbox')).toBeFocused();
     expect(await savedRows(page)).toHaveLength(1);
     expect(await page.evaluate(() => window.tier3Log)).toEqual([]);
+  });
+});
+
+test.describe('form view, research/19 §3', () => {
+  test('a new form view asks to auto-create questions; "Start from scratch" keeps only Name', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }), 'forms');
+
+    await page.getByRole('button', { name: 'Add view' }).click();
+    await page.getByText('Form', { exact: true }).click();
+    const prompt = page.getByRole('dialog', { name: 'Auto-create form questions based on existing properties?' });
+
+    await expect(prompt).toBeVisible();
+    await expect(prompt.getByRole('button', { name: 'Create 2 questions' })).toBeVisible();
+    await prompt.getByRole('button', { name: 'Start from scratch' }).click();
+
+    await expect(prompt).toBeHidden();
+    await expect(page.locator('[data-blok-database-form-question]')).toHaveCount(1);
+    await expect(question(page, 'p-title')).toBeVisible();
+  });
+
+  test('"Share form" closes the form for everyone with "No access", and "Change" opens it again', async ({ page }) => {
+    await mount(page, blocks({ type: 'form' }), 'forms');
+
+    await expect(page.getByText('Only members at Personal can fill out this form.')).toBeVisible();
+    await page.getByRole('button', { name: 'Share form' }).click();
+    await expect(page.getByTestId('database-form-share-link')).toHaveValue('https://forms.example.test/f/1');
+    await page.getByTestId('database-form-share-who').click();
+    await page.getByTestId('database-form-share-who-closed').click();
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByTestId('database-form-share')).toBeHidden();
+    await expect(page.getByText('No one can fill out this form.')).toBeVisible();
+    await page.getByTestId('database-form-access-change').click();
+    await page.getByTestId('database-form-share-who').click();
+    await page.getByTestId('database-form-share-who-workspace').click();
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByText('Only members at Personal can fill out this form.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
   });
 });
 

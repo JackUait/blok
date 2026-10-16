@@ -182,7 +182,7 @@ describe('provider-backed form questions', () => {
     submit();
     const saved = await save();
 
-    expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'form', values: { title: 'Response' } });
+    expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'form', values: { title: 'Response' }, sharing: { public: false, anonymous: false, submissionAccess: 'none' } });
     expect(saved.blocks.filter((block) => block.type === 'database-row')).toEqual([]);
     expect(saved.blocks.find((block) => block.id === 'db')?.content).toBeUndefined();
     expect(saved.blocks.find((block) => block.id === 'db')?.data.source).toEqual(source);
@@ -230,6 +230,7 @@ describe('provider-backed form questions', () => {
     if (response === undefined || response.id === undefined || response.id === '') throw new Error('Missing response id');
     expect(onSubmit).toHaveBeenCalledWith({
       databaseId: 'db', viewId: 'form', rowId: response.id, values: { title: 'Response' },
+      sharing: { public: false, anonymous: false, submissionAccess: 'none' },
     });
     expect(response.parent).toBe('db');
     expect(saved.blocks.find((block) => block.id === 'db')?.content).toEqual(['target', response.id]);

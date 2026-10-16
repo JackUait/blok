@@ -342,6 +342,11 @@ const TIER3_VIEW_FIELDS = {
     properties: {
       closed: { type: 'boolean', description: 'The form takes no answers. Default false.' },
       anonymous: { type: 'boolean', description: 'Answers carry no respondent. Default false.' },
+      public: { type: 'boolean', description: 'Anyone on the web with the link can fill it out. Default false: workspace members only.' },
+      submissionAccess: {
+        type: 'string', enum: ['none', 'view', 'comment', 'edit', 'full'],
+        description: 'What a respondent may do with the page their answer becomes. Default none.',
+      },
       submitLabel: { type: 'string' },
       confirmation: { type: 'string', description: 'Text shown after a submit.' },
     },

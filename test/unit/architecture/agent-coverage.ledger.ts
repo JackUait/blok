@@ -81,6 +81,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-confirm-dialog.ts': exempt('chrome', 'Confirm or cancel of a destructive action; the confirmed action has its own id.'),
   'ui-file:src/tools/database/database-feed-view.ts': exempt('view-only', 'Loads more rows or opens a row in the feed; the document does not change.'),
   'ui-file:src/tools/database/database-form-view.ts': cmds(['database.addRow'], 'Submitting the form adds a row. Question settings are view config, cut from v1 by D6.'),
+  'ui-file:src/tools/database/database-form-share.ts': exempt('cut-v1', 'Writes the form view\'s Share settings (who can fill out, anonymous, access to submission) or copies the host\'s link. Form settings are view config, cut from v1 by D6.'),
   'ui-file:src/tools/database/database-formula-editor.ts': cmds(['database.updateProperty'], 'Edits a formula property: writes its formula settings.'),
   'ui-file:src/tools/database/database-gallery-view.ts': cmds(['database.addRow', 'database.moveRow'], 'Add a card; drag a card to reorder.'),
   'ui-file:src/tools/database/database-group-toggle.ts': exempt('cut-v1', 'Opens and closes a group. View-state control is cut from v1 by D6 (user can revisit).'),

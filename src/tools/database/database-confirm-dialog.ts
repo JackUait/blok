@@ -15,8 +15,14 @@ export interface DatabaseConfirmOptions {
   role?: DialogRole;
   /** Over another modal: mount inside its surface, or the two focus traps pull focus back and forth forever. */
   container?: HTMLElement;
-  /** Aborting closes the dialog as a cancel: the modal it sits in is going away. */
+  /** Aborting closes the dialog as a dismiss: the modal it sits in is going away. */
   signal?: AbortSignal;
+  /** A blue confirm and a borderless cancel, as Notion's form auto-create prompt (research/19 §3a). */
+  primary?: boolean;
+  /** Icon SVG constants drawn in a row above the title. */
+  art?: string[];
+  /** What Escape, a press outside and an abort resolve to. Defaults to false. */
+  dismissAs?: boolean;
 }
 
 const counter = { next: 0 };
@@ -34,6 +40,14 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
   // Mounted on body: the popover scope brings the editor font and preflight.
   backdrop.setAttribute('data-blok-popover', '');
   panel.setAttribute('data-blok-database-confirm-dialog', '');
+  if (options.art !== undefined) {
+    const art = document.createElement('div');
+
+    art.setAttribute('data-blok-database-confirm-art', '');
+    art.setAttribute('aria-hidden', 'true');
+    art.innerHTML = options.art.join('');
+    panel.appendChild(art);
+  }
   title.setAttribute('data-blok-database-confirm-title', '');
   counter.next += 1;
   title.id = `blok-database-confirm-title-${counter.next}`;
@@ -65,6 +79,10 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
   if (options.destructive === true) {
     confirmButton.setAttribute('data-destructive', '');
   }
+  if (options.primary === true) {
+    confirmButton.setAttribute('data-primary', '');
+    cancelButton.setAttribute('data-quiet', '');
+  }
   backdrop.appendChild(panel);
 
   const handle = openModalDialog({
@@ -73,10 +91,10 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
     role: options.role ?? 'alertdialog',
     labelledBy: title.id,
     ...(description === null ? {} : { describedBy: description.id }),
-    initialFocus: () => cancelButton,
+    initialFocus: () => (options.primary === true ? confirmButton : cancelButton),
     directionSource: options.directionSource ?? null,
     ...(options.container === undefined ? {} : { container: options.container, topLayer: false }),
-    onDismiss: () => finish(false),
+    onDismiss: () => finish(options.dismissAs ?? false),
   });
 
   const settled = { done: false };
@@ -90,7 +108,7 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
     resolve(answer);
   }
 
-  options.signal?.addEventListener('abort', () => finish(false), { once: true });
+  options.signal?.addEventListener('abort', () => finish(options.dismissAs ?? false), { once: true });
   confirmButton.addEventListener('click', () => finish(true));
   cancelButton.addEventListener('click', () => finish(false));
 });

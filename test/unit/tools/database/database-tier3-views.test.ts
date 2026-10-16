@@ -56,7 +56,7 @@ describe('DatabaseTool — form, map and dashboard views', () => {
     const rowId = doc.order[0];
 
     expect(doc.rows.get(rowId)?.data.properties.title).toBe('Ada');
-    expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'v', values: { title: 'Ada' }, rowId });
+    expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'v', values: { title: 'Ada' }, rowId, sharing: { public: false, anonymous: false, submissionAccess: 'none' } });
     expect(onTrigger).toHaveBeenCalledWith(expect.objectContaining({ type: 'pageAdded', rowId }), expect.anything());
     expect(el.querySelector('[data-blok-database-form-confirmation]')).not.toBeNull();
   });
@@ -72,7 +72,7 @@ describe('DatabaseTool — form, map and dashboard views', () => {
     el.querySelector<HTMLButtonElement>('[data-blok-database-form-submit]')?.click();
 
     expect(doc.order).toEqual([]);
-    expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'v', values: { title: 'Ada' } });
+    expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'v', values: { title: 'Ada' }, sharing: { public: false, anonymous: false, submissionAccess: 'none' } });
   });
 
   it('the form builder\'s Required toggle saves on the view property', () => {

@@ -69,6 +69,8 @@ export interface ViewControlsHost {
   newRow?: () => void;
   /** The "New" chevron: templates and "+ New template". */
   openNewMenu?: (anchor: HTMLElement) => void;
+  /** A form view's "Share form" (research/19 §3d). */
+  shareForm?: (anchor: HTMLElement) => void;
 }
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
@@ -109,6 +111,7 @@ export class DatabaseViewControls {
   private readonly searchInput: HTMLInputElement;
   private readonly settingsButton: HTMLButtonElement;
   private readonly lockBadge: HTMLElement;
+  private readonly shareFormButton: HTMLButtonElement;
   private panel: DatabasePanel | null = null;
   private query = '';
 
@@ -161,7 +164,10 @@ export class DatabaseViewControls {
     this.searchInput.addEventListener('blur', () => {
       if (this.query === '') this.hideSearch();
     });
-    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton);
+    this.shareFormButton = button('database-toolbar-share-form', this.t('formShare'), { text: this.t('formShare') });
+    this.shareFormButton.setAttribute('data-blok-database-toolbar-share-form', '');
+    this.shareFormButton.addEventListener('click', () => this.host.shareForm?.(this.shareFormButton));
+    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -231,6 +237,7 @@ export class DatabaseViewControls {
     const view = this.effective(saved);
 
     this.lockBadge.hidden = !this.host.locked();
+    this.shareFormButton.hidden = this.host.shareForm === undefined || saved.type !== 'form' || this.host.locked();
     this.filterButton.toggleAttribute('data-active', view.filters.length + countFilterRules(view.filterTree) > 0);
     this.sortButton.toggleAttribute('data-active', view.sorts.length > 0);
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS && this.query === '';

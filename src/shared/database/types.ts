@@ -995,11 +995,21 @@ export interface ViewPropertySetting {
   showOptionsAs?: 'list' | 'dropdown';
 }
 
+/** What a respondent may do with the page their answer becomes. */
+export type FormSubmissionAccess = 'none' | 'view' | 'comment' | 'edit' | 'full';
+
 export interface FormSettings {
-  /** The form takes no answers. Default false. */
+  /** The form takes no answers ("Who can fill out: No access"). Default false. */
   closed?: boolean;
   /** Answers carry no respondent. Default false. */
   anonymous?: boolean;
+  /**
+   * Anyone on the web with the link can fill it out. Default false: only the
+   * host's workspace members. The host enforces it.
+   */
+  public?: boolean;
+  /** Default `'none'`. The host enforces it. */
+  submissionAccess?: FormSubmissionAccess;
   submitLabel?: string;
   /** Text shown after a submit. */
   confirmation?: string;
@@ -1111,10 +1121,16 @@ export interface DatabaseFormSubmission {
   values: Record<string, PropertyValue>;
   /** The row Blok added. Absent in read-only, where only the host can store the answer. */
   rowId?: string;
+  /** The form's Share settings, defaults filled in. */
+  sharing: { public: boolean; anonymous: boolean; submissionAccess: FormSubmissionAccess };
 }
 
 export interface DatabaseForms {
   onSubmit(submission: DatabaseFormSubmission): void | Promise<void>;
+  /** The workspace the Share panel names ("Anyone at <name> with link"). Absent: a generic label. */
+  workspaceName?: string;
+  /** The form's link, shown and copied by the Share panel. Absent or undefined: no link row. */
+  link?(ctx: { databaseId: string; viewId: string }): string | undefined;
 }
 
 export interface DatabaseMapItem {

@@ -52,7 +52,13 @@ class RelationEditor implements CellEditorHandle {
     this.list.setAttribute('role', 'listbox');
     this.list.setAttribute('aria-multiselectable', property.relation?.limit === 1 ? 'false' : 'true');
     this.list.setAttribute('aria-label', property.name);
-    this.root.append(this.search, hint, this.list);
+    const scope = ctx.relationScope?.(property);
+
+    if (scope === undefined) {
+      this.root.append(this.search, hint, this.list);
+    } else {
+      this.root.append(this.formHeader(scope), this.list);
+    }
 
     this.search.addEventListener('input', () => {
       this.query = this.search.value;
@@ -77,6 +83,28 @@ class RelationEditor implements CellEditorHandle {
     this.renderList();
     this.popover.show();
     this.search.focus();
+  }
+
+  /** Research/19 §3b: "Search…" with "In <database>" at its end, then "Select a page". */
+  private formHeader(scope: string): HTMLElement {
+    const header = document.createElement('div');
+    const bar = document.createElement('div');
+    const chip = document.createElement('span');
+    const name = document.createElement('strong');
+    const heading = document.createElement('div');
+    const [before, after = ''] = this.ctx.i18n.t('tools.database.formRelationScope').split('{database}');
+
+    this.search.placeholder = this.ctx.i18n.t('tools.database.formRelationSearch');
+    bar.setAttribute('data-blok-database-relation-search-bar', '');
+    chip.setAttribute('data-blok-database-relation-scope', '');
+    name.textContent = scope;
+    chip.append(before, name, after);
+    heading.setAttribute('data-blok-database-relation-heading', '');
+    heading.textContent = this.ctx.i18n.t('tools.database.formRelationHeading');
+    bar.append(this.search, chip);
+    header.append(bar, heading);
+
+    return header;
   }
 
   get isOpen(): boolean {

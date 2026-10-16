@@ -1,12 +1,16 @@
-import { IconDotsHorizontal } from '../../components/icons';
+import { IconDotsHorizontal, IconLock } from '../../components/icons';
+import { formatBytes } from '../../components/utils/format-bytes';
 import type { I18n } from '../../../types';
+import { DEFAULT_MAX_SIZE } from '../file/constants';
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
-import { DatabasePanel, panelInput, panelRow, panelSwitch } from './database-panel';
-import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
+import { accessLine, openFormShare } from './database-form-share';
+import type { FormShareHost } from './database-form-share';
+import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './database-panel';
+import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { isReadOnlyType } from './property-values';
-import type { DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, SelectOption, ViewPropertySetting } from './types';
+import type { DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, FormSettings, PropertyDefinition, PropertyType, PropertyValue, SelectOption, ViewPropertySetting } from './types';
 import { resolveViewProperties, withPropertySetting } from './view-settings';
 import type { ViewPropertyPatch } from './view-settings';
 
@@ -19,7 +23,10 @@ export interface DatabaseFormViewOptions {
   onSubmit: (values: Record<string, PropertyValue>) => void;
   setRequired?: (propertyId: string, required: boolean) => void;
   setQuestionSetting?: (propertyId: string, changes: ViewPropertyPatch) => void;
-  addQuestion?: () => PropertyDefinition | null;
+  /** A new property of this type, asked as the last question. */
+  addQuestion?: (type: PropertyType) => PropertyDefinition | null;
+  /** Makes an existing property the last question. */
+  showQuestion?: (propertyId: string) => void;
   renameProperty?: (propertyId: string, name: string) => void;
   changePropertyType?: (propertyId: string, type: PropertyType) => void;
   duplicateProperty?: (propertyId: string) => PropertyDefinition | null;
@@ -29,12 +36,33 @@ export interface DatabaseFormViewOptions {
   onInteractionEnd?: () => void;
   submitted?: boolean;
   onSubmittedChange?: (submitted: boolean) => void;
+  /** The Share panel and the builder's access line. Only for someone who may edit the form. */
+  share?: {
+    /** Absent without `config.forms`: only closing the form is offered. */
+    host?: FormShareHost;
+    /** The saved settings, read live: the panel stays open across writes. */
+    settings: () => FormSettings;
+    update: (patch: Partial<FormSettings>) => void;
+    copyLink: (link: string) => void;
+  };
 }
 
+/** Status is never a question in Notion: auto-create skips it and "Existing properties" leaves it out (research/19 §3a-b). */
 const ASKABLE: readonly PropertyType[] = [
-  'title', 'text', 'richText', 'url', 'email', 'phone', 'number', 'checkbox', 'select', 'status', 'multiSelect', 'date', 'place',
+  'title', 'text', 'richText', 'url', 'email', 'phone', 'number', 'checkbox', 'select', 'multiSelect', 'date', 'place',
   'person', 'files', 'relation',
 ];
+
+/** A property "Create N questions" counts and turns into a question. */
+export const isAutoQuestion = (property: PropertyDefinition): boolean =>
+  property.type !== 'title' && ASKABLE.includes(property.type) && !isReadOnlyType(property.type);
+
+/** "New question" in Notion's "Select type" and "Question type" (research/19 §3b). Select, status and relation are absent. */
+const NEW_QUESTION_TYPES: readonly PropertyType[] = [
+  'text', 'multiSelect', 'date', 'person', 'files', 'number', 'checkbox', 'email', 'url', 'phone', 'place',
+];
+
+const PICKS_MANY: readonly PropertyType[] = ['multiSelect', 'person', 'relation'];
 
 const INPUT_TYPES: Partial<Record<PropertyType, string>> = {
   url: 'url', email: 'email', phone: 'tel', number: 'number', date: 'date', checkbox: 'checkbox',
@@ -43,7 +71,7 @@ const INPUT_TYPES: Partial<Record<PropertyType, string>> = {
 /** Notion's "Max selection" presets (research/12 §4); any other count goes in the custom field. */
 const MAX_SELECTION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
-/** Multi-select defaults to a list (measured). Select and status keep a dropdown: Notion's choice there is unmeasured. */
+/** Multi-select defaults to a list (measured). Select keeps a dropdown: Notion's choice there is unmeasured. */
 const showOptionsAs = (property: PropertyDefinition, setting: ViewPropertySetting): 'list' | 'dropdown' =>
   setting.showOptionsAs ?? (property.type === 'multiSelect' ? 'list' : 'dropdown');
 
@@ -160,6 +188,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     root.replaceChildren();
     this.fields.clear();
     this.answers.clear();
+    if (this.options.share !== undefined && !this.options.readOnly) root.appendChild(this.accessBar());
     if (view.form?.closed === true) {
       // Detached fields keep draft transfer's schema checks while closed.
       this.questions();
@@ -189,7 +218,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       const add = panelRow({
         label: i18n.t('tools.database.formAddQuestion'),
         testId: 'database-form-add-question',
-        onClick: () => this.addQuestion(add),
+        onClick: () => this.openSelectType(add),
       });
 
       form.appendChild(add);
@@ -202,6 +231,51 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     submit.textContent = view.form?.submitLabel ?? i18n.t('tools.database.formSubmit');
     form.appendChild(submit);
     root.appendChild(form);
+  }
+
+  /** "🔒 Only members at <workspace> can fill out this form." + "Change" (research/19 §3d). */
+  private accessBar(): HTMLElement {
+    const bar = document.createElement('div');
+    const icon = document.createElement('span');
+    const text = document.createElement('span');
+    const change = document.createElement('button');
+
+    bar.setAttribute('data-blok-database-form-access', '');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = IconLock;
+    text.textContent = accessLine(this.options.i18n, this.options.view.form, this.options.share?.host?.workspaceName);
+    change.type = 'button';
+    change.setAttribute('data-blok-testid', 'database-form-access-change');
+    change.textContent = this.options.i18n.t('tools.database.formShareChange');
+    change.addEventListener('click', () => this.openShare(change));
+    bar.append(icon, text, change);
+
+    return bar;
+  }
+
+  /** Opens the Share panel; the toolbar's "Share form" and the access line's "Change" both land here. */
+  openShare(anchor: HTMLElement): void {
+    const share = this.options.share;
+
+    if (this.destroying || share === undefined || this.options.readOnly) return;
+    this.building = true;
+    this.panel?.close();
+    const panel = openFormShare({
+      anchor,
+      i18n: this.options.i18n,
+      settings: share.settings,
+      ...(share.host === undefined ? {} : { host: share.host }),
+      update: share.update,
+      copyLink: share.copyLink,
+      onClose: () => {
+        if (this.panel === panel) this.panel = null;
+        if (!this.destroying) this.options.onInteractionEnd?.();
+      },
+    });
+
+    this.panel = panel;
+    panel.open();
+    this.building = false;
   }
 
   private confirmation(): HTMLElement {
@@ -288,7 +362,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     }
     const hints: string[] = [];
 
-    if (property.type === 'multiSelect') {
+    if (PICKS_MANY.includes(property.type)) {
       const limit = document.createElement('p');
 
       limit.id = `${id}-limit`;
@@ -296,6 +370,15 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       limit.textContent = setting.maxSelections === undefined
         ? i18n.t('tools.database.formSelectionUnlimited')
         : i18n.t('tools.database.formSelectionLimit', { count: setting.maxSelections });
+      hints.push(limit.id);
+      wrapper.appendChild(limit);
+    }
+    if (property.type === 'files' && this.options.cellContext?.uploadFile !== undefined) {
+      const limit = document.createElement('p');
+
+      limit.id = `${id}-file-limit`;
+      limit.setAttribute('data-blok-database-form-file-limit', '');
+      limit.textContent = i18n.t('tools.database.formFileSizeLimit', { size: formatBytes(DEFAULT_MAX_SIZE) });
       hints.push(limit.id);
       wrapper.appendChild(limit);
     }
@@ -330,9 +413,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       wrapper.appendChild(toggle);
     }
 
-    const maxSelections = property.type === 'multiSelect' || property.type === 'person' || property.type === 'relation'
-      ? setting.maxSelections
-      : undefined;
+    const maxSelections = PICKS_MANY.includes(property.type) ? setting.maxSelections : undefined;
 
     this.fields.set(property.id, { property, field, required, maxSelections });
 
@@ -345,13 +426,13 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (property.type === 'person' || property.type === 'files' || property.type === 'relation') {
       return this.providerField(property, id, setting);
     }
-    if ((property.type === 'select' || property.type === 'status') && showOptionsAs(property, setting) === 'list') {
+    if (property.type === 'select' && showOptionsAs(property, setting) === 'list') {
       return this.choiceList(options, id, 'radio');
     }
     if (property.type === 'multiSelect' && showOptionsAs(property, setting) === 'dropdown') {
       return this.providerField(property, id, setting);
     }
-    if (property.type === 'select' || property.type === 'status') {
+    if (property.type === 'select') {
       const select = document.createElement('select');
       const none = document.createElement('option');
 
@@ -379,6 +460,13 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     field.id = id;
 
     return field;
+  }
+
+  /** Notion names both select types "Multiple choice" as questions. */
+  private typeLabel(type: PropertyType): string {
+    return this.options.i18n.t(type === 'select' || type === 'multiSelect'
+      ? 'tools.database.formTypeMultipleChoice'
+      : propertyTypeMeta(type).labelKey);
   }
 
   private choiceList(options: SelectOption[], id: string, kind: 'radio' | 'checkbox', maxSelections?: number): HTMLFieldSetElement {
@@ -434,6 +522,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       this.editor?.close();
       this.editor = openCellEditor(property, this.answers.get(property.id), field, {
         ...context,
+        ...(property.type === 'files' && context.uploadFile !== undefined ? { uploadFile: this.cappedUpload(field, context.uploadFile) } : {}),
         maxSelections: setting.maxSelections,
         onCommit: (value) => {
           if (this.destroying) return;
@@ -453,10 +542,91 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return field;
   }
 
-  private addQuestion(anchor: HTMLElement): void {
+  /**
+   * The database upload path has no size cap of its own, so the form keeps
+   * the file tool's default; a larger file shows the file tool's message.
+   */
+  private cappedUpload(field: HTMLElement, upload: NonNullable<CellContext['uploadFile']>): NonNullable<CellContext['uploadFile']> {
+    return (file) => {
+      const wrapper = field.closest('[data-blok-database-form-question]');
+
+      wrapper?.querySelector('[data-blok-database-form-file-error]')?.remove();
+      if (file.size <= DEFAULT_MAX_SIZE) return upload(file);
+      const error = document.createElement('p');
+
+      error.setAttribute('data-blok-database-form-file-error', '');
+      error.setAttribute('role', 'alert');
+      error.textContent = this.options.i18n.t('tools.file.errorFileTooLarge')
+        .replace(/\{size\}/g, formatBytes(file.size))
+        .replace(/\{max\}/g, formatBytes(DEFAULT_MAX_SIZE));
+      field.after(error);
+
+      return Promise.reject(new Error('FILE_TOO_LARGE'));
+    };
+  }
+
+  /** Notion's "Select type" (research/19 §3b): existing properties that are not questions yet, then new question types. */
+  private openSelectType(anchor: HTMLElement): void {
     if (this.destroying) return;
     this.building = true;
-    const property = this.options.addQuestion?.();
+    this.panel?.close();
+    const { i18n, view, schema } = this.options;
+    const asked = new Set(resolveViewProperties(view, schema).filter((entry) => entry.visible).map((entry) => entry.id));
+    const panel = new DatabasePanel({
+      anchor,
+      testId: 'database-form-select-type',
+      width: 290,
+      backLabel: i18n.t('tools.database.peekBack'),
+      onClose: () => {
+        if (this.panel === panel) this.panel = null;
+        if (!this.destroying) this.options.onInteractionEnd?.();
+      },
+      root: {
+        title: i18n.t('tools.database.formSelectType'),
+        build: () => {
+          const existing = this.options.showQuestion === undefined
+            ? []
+            : this.options.schema.filter((property) => isAutoQuestion(property) && !asked.has(property.id));
+          const rows: HTMLElement[] = existing.length === 0 ? [] : [
+            panelLabel(i18n.t('tools.database.formExistingProperties')),
+            ...existing.map((property) => panelRow({
+              label: property.name,
+              description: i18n.t(propertyTypeMeta(property.type).labelKey),
+              icon: propertyTypeMeta(property.type).icon,
+              testId: `database-form-existing-${property.id}`,
+              onClick: () => {
+                panel.close();
+                this.options.showQuestion?.(property.id);
+              },
+            })),
+          ];
+
+          return [
+            ...rows,
+            panelLabel(i18n.t('tools.database.formNewQuestion')),
+            ...NEW_QUESTION_TYPES.filter((type) => type !== 'person' || this.options.hasPeople === true).map((type) => panelRow({
+              label: this.typeLabel(type),
+              icon: propertyTypeMeta(type).icon,
+              testId: `database-form-new-${type}`,
+              onClick: () => {
+                panel.close();
+                this.addQuestion(anchor, type);
+              },
+            })),
+          ];
+        },
+      },
+    });
+
+    this.panel = panel;
+    panel.open();
+    this.building = false;
+  }
+
+  private addQuestion(anchor: HTMLElement, type: PropertyType): void {
+    if (this.destroying) return;
+    this.building = true;
+    const property = this.options.addQuestion?.(type);
 
     if (property === undefined || property === null) {
       this.building = false;
@@ -541,19 +711,19 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             }),
             panelRow({
               label: i18n.t('tools.database.changeType'),
-              value: i18n.t(propertyTypeMeta(state.property.type).labelKey),
+              value: this.typeLabel(state.property.type),
               testId: 'database-form-question-type',
               disabled: state.property.type === 'title',
               opensPage: true,
               onClick: () => panel.push({
                 title: i18n.t('tools.database.changeType'),
-                build: () => addablePropertyTypes(this.options.hasPeople === true)
-                  .filter((type) => ASKABLE.includes(type))
+                build: () => NEW_QUESTION_TYPES
+                  .filter((type) => type !== 'person' || this.options.hasPeople === true)
                   .map((type) => panelRow({
-                    label: i18n.t(propertyTypeMeta(type).labelKey),
+                    label: this.typeLabel(type),
                     testId: `database-form-question-type-${type}`,
                     icon: propertyTypeMeta(type).icon,
-                    checked: type === state.property.type,
+                    checked: type === state.property.type || (type === 'multiSelect' && state.property.type === 'select'),
                     onClick: () => {
                       this.options.changePropertyType?.(state.property.id, type);
                       state.property = { ...state.property, type };
@@ -572,7 +742,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
               onToggle: (longAnswer) => change({ longAnswer }),
             }));
           }
-          if (state.property.type === 'select' || state.property.type === 'status' || state.property.type === 'multiSelect') {
+          if (state.property.type === 'select' || state.property.type === 'multiSelect') {
             const shown = showOptionsAs(state.property, state.setting);
             const label = (choice: 'list' | 'dropdown'): string =>
               i18n.t(choice === 'list' ? 'tools.database.formShowOptionsList' : 'tools.database.formShowOptionsDropdown');
@@ -596,7 +766,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
               }),
             }));
           }
-          if (state.property.type === 'multiSelect' || state.property.type === 'person' || state.property.type === 'relation') {
+          if (PICKS_MANY.includes(state.property.type)) {
             const unlimited = i18n.t('tools.database.formSelectionUnlimitedChoice');
 
             rows.push(panelRow({
@@ -640,8 +810,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
               }),
             }));
           }
-          rows.push(
-            panelRow({
+          // Notion offers no "Duplicate question" on a relation (research/19 §3b).
+          if (state.property.type !== 'relation') {
+            rows.push(panelRow({
               label: i18n.t('blockSettings.duplicate'),
               testId: 'database-form-duplicate-question',
               disabled: state.property.type === 'title',
@@ -655,7 +826,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
                 }
                 panel.close();
               },
-            }),
+            }));
+          }
+          rows.push(
             panelRow({
               label: i18n.t('blockSettings.delete'),
               testId: 'database-form-delete-question',

@@ -3686,6 +3686,36 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border-color: var(--blok-database-confirm-destructive-border);
 }
 
+/* Form auto-create prompt (research/19 §3a): a blue button over a plain text one. */
+[data-blok-database-confirm-action][data-primary] {
+  margin-top: var(--blok-space-4);
+  border-color: transparent;
+  background-color: var(--blok-accent);
+  color: var(--blok-text-on-dark);
+}
+
+[data-blok-database-confirm-action][data-quiet] {
+  border-color: transparent;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-confirm-art] {
+  display: flex;
+  justify-content: center;
+  gap: var(--blok-space-2);
+  margin-bottom: var(--blok-space-3);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-confirm-art] svg {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+[dir="rtl"] [data-blok-database-confirm-art] svg:nth-child(2) {
+  transform: scaleX(-1);
+}
+
 /* AI Autofill setup (database-autofill-setup.ts). Layout is not measured against Notion. */
 [data-blok-database-autofill-setup] {
   display: flex;
@@ -7308,6 +7338,33 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   outline: none;
 }
 
+/* A form question's page picker (research/19 §3b, 77-link-dropdown.png). */
+[data-blok-database-relation-search-bar] {
+  display: flex;
+  align-items: center;
+  padding-inline-end: var(--blok-space-2);
+  border-bottom: 1px solid var(--blok-popover-border);
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-relation-scope] {
+  flex: none;
+  color: var(--blok-text-secondary);
+  white-space: nowrap;
+}
+
+[data-blok-database-relation-scope] strong {
+  font-weight: 600;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-relation-heading] {
+  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blok-text-secondary);
+}
+
 [data-blok-database-relation-editor] [role="listbox"] {
   display: flex;
   flex-direction: column;
@@ -7811,6 +7868,28 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border-end-end-radius: 0;
 }
 
+/* A form view's "Share form" (research/19 §3d): Notion's blue toolbar button. */
+[data-blok-database-toolbar-share-form] {
+  height: 28px;
+  margin-inline-start: var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-toolbar-share-form]:hover {
+  background-color: var(--blok-database-new-hover-bg);
+}
+
+[data-blok-database-toolbar-share-form][hidden] {
+  display: none;
+}
+
 [data-blok-database-new] > button:last-child {
   width: 24px;
   border-start-end-radius: var(--blok-radius-control);
@@ -8105,7 +8184,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-form-description],
-[data-blok-database-form-selection-limit] {
+[data-blok-database-form-selection-limit],
+[data-blok-database-form-file-limit] {
   margin: 0;
   color: var(--blok-text-secondary);
   font-size: 0.875em;
@@ -8119,6 +8199,12 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-color: transparent;
   color: var(--blok-text-primary);
   font: inherit;
+}
+
+[data-blok-database-form-file-error] {
+  margin: 0;
+  color: var(--blok-color-red-text);
+  font-size: 0.875em;
 }
 
 [data-blok-database-form-question][data-invalid] :is(input, textarea, select, fieldset, [data-blok-database-form-provider-answer]) {
@@ -8153,6 +8239,100 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-text-on-dark);
   font: inherit;
   cursor: pointer;
+}
+
+/* The builder's "Only members at … can fill out this form." line (research/19 §3d, 70-share-form.png). */
+[data-blok-database-form-access] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  max-inline-size: 560px;
+  margin-block-end: var(--blok-space-4);
+  padding: var(--blok-space-2) var(--blok-space-3);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-item-hover-bg);
+  color: var(--blok-text-secondary);
+  font-size: 14px;
+}
+
+[data-blok-database-form-access] > span:first-child {
+  display: inline-flex;
+}
+
+[data-blok-database-form-access] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-form-access] > span:nth-child(2) {
+  flex: 1;
+}
+
+[data-blok-database-form-access] > button {
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-form-access] > button:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-form-share-badge] {
+  margin-inline-start: var(--blok-space-1-5);
+  padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+[data-blok-database-form-share-badge="public"] {
+  background-color: var(--blok-color-yellow-bg);
+  color: var(--blok-color-yellow-text);
+}
+
+[data-blok-database-form-share-badge="closed"] {
+  background-color: var(--blok-color-gray-bg);
+  color: var(--blok-color-gray-text);
+}
+
+[data-blok-database-form-share-link-row] {
+  display: flex;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-form-share-link-row] input {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+[data-blok-database-form-share-copy] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-form-share-copy]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-form-share-copy] svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 [data-blok-database-form-done] {

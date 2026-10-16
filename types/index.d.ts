@@ -207,6 +207,7 @@ export {
   DatabaseReminders,
   DateReminder,
   DateReminderOffset,
+  RowReactions,
   DatabaseSourceRef,
   DatabaseLinkedSources,
   DatabaseBacklink,

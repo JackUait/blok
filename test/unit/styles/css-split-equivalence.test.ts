@@ -843,6 +843,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROW_PAGE_BACKLINKS_BYTES = 2_375;
     // database.css: the date picker's Remind row and menu, and the alarm of a date with a reminder (research/17 §1).
     const DATABASE_DATE_REMINDERS_BYTES = 2_654;
+    // database.css: the feed card's reactions, Add reaction and hover React / More actions (research/19 §2).
+    const DATABASE_FEED_REACTIONS_BYTES = 3_681;
     // database.css: the form's auto-create prompt, page picker header, file limit, "Share form" button, access line and Share panel (research/19 §3).
     const DATABASE_FORM_SHARE_BYTES = 4_606;
     // database.css: an empty row page still shows its placeholder when the row holds only comment threads.
@@ -939,6 +941,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BOARD_CALCULATION_BYTES
       + DATABASE_ROW_PAGE_ACTIONS_BYTES
       + DATABASE_DATE_REMINDERS_BYTES
+      + DATABASE_FEED_REACTIONS_BYTES
       + DATABASE_FORM_SHARE_BYTES
       + DATABASE_ROW_PAGE_BACKLINKS_BYTES
       + DATABASE_ROW_COMMENTS_EMPTY_BYTES;

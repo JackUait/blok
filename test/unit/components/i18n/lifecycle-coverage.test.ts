@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1190 + 125 + 433 + 4 closure for all 1752 keys', () => {
+  it('rebuilds a disjoint 1193 + 125 + 433 + 4 closure for all 1755 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1752);
+    expect(lifecycle.size).toBe(1755);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -382,7 +382,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: it also calls tools.database.automationPageAdded and filterValue by literal (see below).
       // +4: the date picker's Remind row, its None, the alarm label and the property's Notifications row, by literal.
       // +29: the form's Select type panel, question type labels, page picker, file limit and Share panel call their tools.database.form* keys by literal.
-      'executable-literal': 1190,
+      // +3: the feed card's Add reaction, React and "reacted with" hint call their keys by literal.
+      'executable-literal': 1193,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

@@ -531,6 +531,13 @@ export interface DatabasePeople {
   me?(): string;
 }
 
+/**
+ * Reactions by user id, then emoji, to when that user reacted (epoch ms).
+ * Keyed by user, not by emoji, so each person writes only their own key and
+ * two people reacting at once both keep their reaction.
+ */
+export type RowReactions = Record<string, Record<string, number>>;
+
 /** Row block metadata the read-only properties show. */
 export interface DatabaseRowMeta {
   createdAt?: number;
@@ -563,6 +570,8 @@ export interface DatabaseRow {
   fullWidth?: boolean;
   /** Date reminders by date property id. */
   reminders?: Record<string, DateReminder>;
+  /** Feed reactions. */
+  reactions?: RowReactions;
   /** Row block metadata, for the read-only time and person properties. */
   meta?: DatabaseRowMeta;
   /**
@@ -607,6 +616,11 @@ export interface DatabaseRowData extends BlockToolData {
   repeat?: TemplateRepeat;
   /** Date reminders by date property id. A map, so reminders on two date properties merge. */
   reminders?: Record<string, DateReminder>;
+  /**
+   * Feed reactions. Kept as `{}` once it exists, so a peer's concurrent first
+   * reaction is not lost with a deleted map.
+   */
+  reactions?: RowReactions;
 }
 
 // ─── View config ───

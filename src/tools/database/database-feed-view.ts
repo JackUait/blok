@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from './types';
+import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, RowReactions } from './types';
 import { renderCellValue } from './cells';
 import { formatDateDisplay } from './cells/date-format';
 import type { BodyBlock } from './row-body';
@@ -8,9 +8,47 @@ import { resolveViewProperties } from './view-settings';
 import { pageIconElement, showsPageIcon } from './page-icon';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
+import { onHover } from '../../components/utils/tooltip';
+import { IconDotsHorizontal, IconEmojiSmile } from '../../components/icons';
 
 /** A host's footer for one card: comments, reactions (Tier 3, D6). Returns its cleanup. */
 export type FeedFooter = (context: { rowId: string; holder: HTMLElement }) => (() => void) | void;
+
+/** Built-in reactions (research/19 §2c). Without `toggle` and `pick` they show but cannot change. */
+export interface FeedReactions {
+  /** The viewer's user id. */
+  me?: string;
+  toggle?: (rowId: string, emoji: string) => void;
+  pick?: (rowId: string, anchor: HTMLElement) => void;
+}
+
+interface ReactionPill {
+  emoji: string;
+  /** User ids, in the order they reacted. */
+  users: string[];
+}
+
+/**
+ * One pill per emoji. Peers can hold the map's keys in different orders, so
+ * order comes from the reaction times, with the ids breaking ties.
+ */
+export const reactionPills = (reactions: RowReactions | undefined): ReactionPill[] => {
+  const entries = Object.entries(reactions ?? {}).flatMap(([userId, own]) => Object.entries(own)
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+    .map(([emoji, at]) => ({ userId, emoji, at })));
+  const byTime = (a: { at: number; key: string }, b: { at: number; key: string }): number => a.at - b.at || Number(a.key > b.key) - Number(a.key < b.key);
+  const first = new Map<string, number>();
+
+  entries.forEach(({ emoji, at }) => first.set(emoji, Math.min(first.get(emoji) ?? at, at)));
+
+  return Array.from(first.entries())
+    .map(([emoji, at]) => ({ emoji, at, key: emoji }))
+    .sort(byTime)
+    .map(({ emoji }) => ({
+      emoji,
+      users: entries.filter((entry) => entry.emoji === emoji).map((entry) => ({ at: entry.at, key: entry.userId })).sort(byTime).map((entry) => entry.key),
+    }));
+};
 
 export interface FeedViewOptions {
   view: DatabaseViewConfig;
@@ -29,6 +67,10 @@ export interface FeedViewOptions {
     loadMore: () => void;
   };
   footer?: FeedFooter;
+  /** Built-in reactions. Not drawn when the host owns the footer. */
+  reactions?: FeedReactions;
+  /** The card's "More actions" menu. */
+  actions?: (rowId: string, anchor: HTMLElement, card: HTMLElement) => void;
 }
 
 const field = (data: unknown, key: string): unknown =>
@@ -121,6 +163,10 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     card.setAttribute('data-row-id', row.id);
     card.setAttribute('role', 'listitem');
 
+    const toolbar = this.createToolbar(row.id, card);
+
+    if (toolbar !== null) card.appendChild(toolbar);
+
     const byline = this.createByline(row);
 
     if (byline !== null) card.appendChild(byline);
@@ -152,6 +198,9 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     const body = this.createBody(row.id);
 
     if (body.childElementCount > 0) card.appendChild(body);
+    const reactions = this.createReactions(row);
+
+    if (reactions !== null) card.appendChild(reactions);
     if (this.options.footer !== undefined) {
       const holder = document.createElement('div');
 
@@ -163,6 +212,95 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     }
 
     return card;
+  }
+
+  /** The built-in reactions, unless the host owns the footer. */
+  private ownReactions(): FeedReactions | undefined {
+    return this.options.footer === undefined ? this.options.reactions : undefined;
+  }
+
+  private iconButton(attribute: string, label: string, icon: string, onClick: (button: HTMLButtonElement) => void): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute(attribute, '');
+    button.setAttribute('aria-label', label);
+    button.innerHTML = icon;
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onClick(button);
+    });
+    onHover(button, label);
+
+    return button;
+  }
+
+  /** research/19 §2b: React and More actions, shown over the hovered card only. */
+  private createToolbar(rowId: string, card: HTMLElement): HTMLElement | null {
+    const reactions = this.ownReactions();
+    const pick = reactions?.pick;
+    const actions = this.options.actions;
+    const t = (key: string): string => this.options.i18n.t(key);
+
+    if (pick === undefined && actions === undefined) return null;
+    const toolbar = document.createElement('div');
+
+    toolbar.setAttribute('data-blok-database-feed-card-actions', '');
+    if (pick !== undefined) {
+      toolbar.appendChild(this.iconButton('data-blok-database-feed-react', t('tools.database.feedReact'), IconEmojiSmile, (button) => pick(rowId, button)));
+    }
+    if (actions !== undefined) {
+      toolbar.appendChild(this.iconButton('data-blok-database-feed-more-actions', t('tools.database.tableMoreActions'), IconDotsHorizontal, (button) => actions(rowId, button, card)));
+    }
+
+    return toolbar;
+  }
+
+  /** research/19 §2c: a pill per emoji, then Add reaction. */
+  private createReactions(row: DatabaseRow): HTMLElement | null {
+    const reactions = this.ownReactions();
+
+    if (reactions === undefined) return null;
+    const { me, toggle, pick } = reactions;
+    const list = reactionPills(row.reactions);
+
+    if (list.length === 0 && pick === undefined) return null;
+    const holder = document.createElement('div');
+
+    holder.setAttribute('data-blok-database-feed-reactions', '');
+    for (const { emoji, users } of list) {
+      const mine = me !== undefined && users.includes(me);
+      const pill = document.createElement(toggle === undefined ? 'span' : 'button');
+      const glyph = document.createElement('span');
+      const count = document.createElement('span');
+      const people = users.map((id) => this.options.personName?.(id) ?? id);
+
+      pill.setAttribute('data-blok-database-feed-reaction', '');
+      pill.setAttribute('data-emoji', emoji);
+      pill.toggleAttribute('data-mine', mine);
+      glyph.textContent = emoji;
+      count.setAttribute('data-blok-database-feed-reaction-count', '');
+      count.textContent = String(users.length);
+      pill.append(glyph, count);
+      if (pill instanceof HTMLButtonElement && toggle !== undefined) {
+        pill.type = 'button';
+        pill.setAttribute('aria-pressed', String(mine));
+        pill.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggle(row.id, emoji);
+        });
+      }
+      onHover(pill, this.options.i18n.t('tools.database.feedReactedWith', {
+        names: new Intl.ListFormat(this.options.locale, { type: 'conjunction' }).format(people),
+        emoji,
+      }));
+      holder.appendChild(pill);
+    }
+    if (pick !== undefined) {
+      holder.appendChild(this.iconButton('data-blok-database-feed-add-reaction', this.options.i18n.t('tools.database.feedAddReaction'), IconEmojiSmile, (button) => pick(row.id, button)));
+    }
+
+    return holder;
   }
 
   /** Notion shows the author and when the page was made by default (research/08). */

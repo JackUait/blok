@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import type { API, BlockAPI } from '../../../../types';
 import type { DatabaseConfig, DatabaseData, DatabaseRowData, PropertyValue } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
 
 /** A block that keeps its data, so a write shows up on the next read. */
 export interface FakeBlock {
@@ -66,6 +67,12 @@ const makeBlock = (doc: () => Doc, id: string, name: string, parentId: string | 
         const next = Object.fromEntries(Object.entries({ ...row.reminders, ...changes }).filter(([, reminder]) => reminder !== null));
 
         entry.data = { ...entry.data, reminders: Object.keys(next).length > 0 ? next : undefined };
+      }
+      if (method === 'updateReaction') {
+        const rowTool = new DatabaseRowTool({ data: row, config: {}, api: {} as API, readOnly: false, block: { id } as BlockAPI });
+
+        rowTool.updateReaction(param as { userId: string; emoji: string; at: number | null });
+        entry.data = { ...entry.data, reactions: rowTool.save(document.createElement('div')).reactions };
       }
       if (method === 'setRowData') entry.data = { ...entry.data, ...(param as Record<string, unknown>) };
 

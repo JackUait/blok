@@ -130,6 +130,8 @@
   /* Feed card, measured on Notion's feed view (research/08). */
   --blok-database-feed-card-bg: #ffffff;
   --blok-database-feed-card-shadow: rgba(0, 0, 0, 0.02) 0 12px 32px, rgba(0, 0, 0, 0.05) 0 0 0 1px;
+  /* Add reaction and other people's reactions (research/19 §2c). */
+  --blok-database-feed-reaction-bg: rgb(249, 248, 247);
   /* "New" split button: research/08's blue rgb(39,131,222) is 3.7:1 against its
      text, below AA for 14px words; a darker step of it is used, the same in dark. */
   --blok-database-new-bg: rgb(30, 110, 195);
@@ -272,6 +274,8 @@
     /* Unmeasured in dark: the calendar event card's dark surface. */
     --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
     --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+    /* Unmeasured in dark: the calendar weekend fill. */
+    --blok-database-feed-reaction-bg: var(--blok-bg-secondary);
     --blok-database-new-bg: rgb(30, 110, 195);
     --blok-database-new-hover-bg: rgb(24, 96, 172);
     --blok-database-new-text: rgb(243, 249, 253);
@@ -406,6 +410,8 @@
   /* Unmeasured in dark: the calendar event card's dark surface. */
   --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  /* Unmeasured in dark: the calendar weekend fill. */
+  --blok-database-feed-reaction-bg: var(--blok-bg-secondary);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(24, 96, 172);
   --blok-database-new-text: rgb(243, 249, 253);
@@ -7706,6 +7712,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-feed-card] {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-2);
@@ -7757,6 +7764,113 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-feed-more]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
+}
+
+/* Card hover toolbar, measured (research/19 §2b): React and More actions,
+   24px buttons, top right, shown on the hovered card only. */
+[data-blok-database-feed-card-actions] {
+  position: absolute;
+  inset-block-start: var(--blok-space-4);
+  inset-inline-end: var(--blok-space-4);
+  display: flex;
+  gap: var(--blok-space-0-25);
+}
+
+/* Each button shows itself on keyboard focus, so a tab into a resting card finds it. */
+[data-blok-database-feed-card-actions] > button {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+[data-blok-database-feed-card]:hover > [data-blok-database-feed-card-actions] > button,
+[data-blok-database-feed-card][data-popover-open] > [data-blok-database-feed-card-actions] > button,
+[data-blok-database-feed-card-actions] > button:focus-visible {
+  opacity: 1;
+}
+
+[data-blok-database-feed-react],
+[data-blok-database-feed-more-actions] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-feed-react]:hover,
+[data-blok-database-feed-more-actions]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/* Reactions, measured (research/19 §2c): pills "<emoji> <count>", 25px tall,
+   then Add reaction. Your own pill is marked gray, not Notion's blue (CLAUDE.md
+   "No blue selected states"). Other people's pills are unmeasured. */
+[data-blok-database-feed-reactions] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-feed-reaction],
+[data-blok-database-feed-add-reaction] {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  block-size: 25px;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-feed-reaction-bg);
+  font: inherit;
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+}
+
+[data-blok-database-feed-reaction] {
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-feed-reaction][data-mine] {
+  background-color: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+[data-blok-database-feed-add-reaction] {
+  justify-content: center;
+  padding: 0 var(--blok-space-2-5);
+  color: var(--blok-database-table-header-icon);
+}
+
+button[data-blok-database-feed-reaction],
+[data-blok-database-feed-add-reaction] {
+  cursor: pointer;
+}
+
+button[data-blok-database-feed-reaction]:hover,
+[data-blok-database-feed-add-reaction]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-feed-add-reaction] > svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+[data-blok-database-feed-react]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-feed-more-actions]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-feed-reaction]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-feed-add-reaction]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
 }
 
 [data-blok-database-feed-properties] {

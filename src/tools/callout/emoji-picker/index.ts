@@ -66,6 +66,10 @@ interface EmojiPickerOptions {
   curated?: boolean;
   /** How far the picker starts before the anchor's start edge, in px. Defaults to 8. */
   startInset?: number;
+  /** No Random and no Remove: the pick is the whole job, as for a reaction. */
+  pickOnly?: boolean;
+  /** The dialog's name. Defaults to "Edit icon". */
+  label?: string;
 }
 
 interface ReelRow {
@@ -168,6 +172,8 @@ export class EmojiPicker {
   private readonly _inline: boolean;
   private readonly _curated: boolean;
   private readonly _startInset: number;
+  private readonly _pickOnly: boolean;
+  private readonly _label: string | undefined;
   private _localeData: EmojiLocaleData | null = null;
   private _localeLoad: Promise<void> | null = null;
   private _hasKeywords = false;
@@ -230,6 +236,8 @@ export class EmojiPicker {
     this._inline = options.inline ?? false;
     this._curated = options.curated ?? !this._inline;
     this._startInset = options.startInset ?? 8;
+    this._pickOnly = options.pickOnly ?? false;
+    this._label = options.label;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -504,7 +512,7 @@ export class EmojiPicker {
       // a contentEditable, and the composer that owns it sets its own id/role.
       el.setAttribute('role', 'dialog');
       el.setAttribute('aria-modal', 'true');
-      el.setAttribute('aria-label', this.i18n.t(EDIT_ICON_KEY));
+      el.setAttribute('aria-label', this._label ?? this.i18n.t(EDIT_ICON_KEY));
     }
 
     el.className = [
@@ -617,7 +625,9 @@ export class EmojiPicker {
 
     header.appendChild(searchWrapper);
     header.appendChild(skinToneWrapper);
-    header.appendChild(actionGroup);
+    if (!this._pickOnly) {
+      header.appendChild(actionGroup);
+    }
     el.appendChild(header);
 
     if (this._inline) {

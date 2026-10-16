@@ -32,7 +32,8 @@ import { templateMenuItems } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
-import { calculationItems, commentMenuItem, openMenu } from './database-table-menus';
+import { calculationItems, commentMenuItem, openMenu, rowActionItems } from './database-table-menus';
+import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { DatabasePropertyMenu } from './database-property-menu';
@@ -139,6 +140,7 @@ import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
 import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
+import type { FeedReactions } from './database-feed-view';
 import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
@@ -404,6 +406,7 @@ export class DatabaseTool implements BlockTool {
   private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
+  private reactionPicker: EmojiPicker | null = null;
   private stopComments: (() => void) | undefined;
   /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
   private readonly tableStates = new Map<string, TableState>();
@@ -1206,6 +1209,9 @@ export class DatabaseTool implements BlockTool {
     this.addPropertyPopover = null;
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
+    this.reactionPicker?.close();
+    this.reactionPicker?.getElement().remove();
+    this.reactionPicker = null;
     this.stopComments?.();
     this.destroyView();
     this.groupMenuPopover?.destroy();
@@ -1390,6 +1396,7 @@ export class DatabaseTool implements BlockTool {
           ...(typeof rowData?.cover === 'string' && rowData.cover !== '' ? { cover: rowData.cover } : {}),
           ...(typeof rowData?.fullWidth === 'boolean' ? { fullWidth: rowData.fullWidth } : {}),
           ...(rowData?.reminders !== undefined ? { reminders: rowData.reminders } : {}),
+          ...(rowData?.reactions !== undefined ? { reactions: rowData.reactions } : {}),
           ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });
@@ -3511,9 +3518,82 @@ export class DatabaseTool implements BlockTool {
         },
       },
       ...(this.config.feedFooter !== undefined ? { footer: this.config.feedFooter } : {}),
+      reactions: this.feedReactions(),
+      actions: (rowId, anchor, card) => this.openFeedActions(rowId, anchor, card),
     });
 
     return this.view.createView();
+  }
+
+  /**
+   * Feed reactions (research/19 §2c). Reacting needs a user id that is one
+   * person's: a display name is not unique, so without `people.me` nobody reacts.
+   */
+  private feedReactions(): FeedReactions {
+    const me = this.config.people?.me?.();
+    const user = typeof me === 'string' && me !== '' ? me : undefined;
+
+    if (user === undefined || this.readOnly || !this.permits('comment')) return user === undefined ? {} : { me: user };
+
+    return {
+      me: user,
+      toggle: (rowId, emoji) => this.writeReaction(rowId, user, emoji, this.model.getRow(rowId)?.reactions?.[user]?.[emoji] === undefined),
+      pick: (rowId, anchor) => this.openReactionPicker(rowId, user, anchor),
+    };
+  }
+
+  /** Not an undo step: reacting is not editing the page, as comments are not (18-comments-design §4). */
+  private writeReaction(rowId: string, userId: string, emoji: string, add: boolean): void {
+    const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
+    const had = this.model.getRow(rowId)?.reactions?.[userId]?.[emoji] !== undefined;
+
+    if (this.readOnly || this.destroyed || block === undefined || had === add) return;
+    block.call('updateReaction', { userId, emoji, at: add ? Date.now() : null });
+    block.dispatchChange({ derived: true });
+    this.syncRowsFromBlocks();
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** The full picker, with no quick set (research/19 §2c). Picking an emoji you already used keeps it. */
+  private openReactionPicker(rowId: string, userId: string, anchor: HTMLElement): void {
+    const handlers = {
+      onSelect: (native: string): void => this.writeReaction(rowId, userId, native, true),
+      onRemove: (): void => undefined,
+    };
+
+    if (this.reactionPicker === null) {
+      const locale = this.api.i18n.getLocale?.() ?? 'en';
+
+      prefetchEmojiPickerData(locale);
+      this.reactionPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale, curated: false, pickOnly: true, label: this.api.i18n.t('tools.database.feedAddReaction') });
+    }
+    const element = this.reactionPicker.getElement();
+
+    if (!element.isConnected) document.body.appendChild(element);
+    void this.reactionPicker.open(anchor, undefined, handlers);
+  }
+
+  /** The card's More actions (research/19 §2e): Comment and the shared row actions. */
+  private openFeedActions(rowId: string, anchor: HTMLElement, card: HTMLElement): void {
+    const { comment } = this.commentLever();
+    const writable = (): boolean => !this.readOnly && !this.destroyed;
+    const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
+    const actions = rowActionItems(!writable() ? { i18n: this.api.i18n, onCopyLink: () => this.copyRowLink(rowId) } : {
+      i18n: this.api.i18n,
+      onCopyLink: () => this.copyRowLink(rowId),
+      onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
+      onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
+      // A getter: the targets walk every block, so they are read only when the menu opens.
+      get moveTargets() { return listTargets(); },
+      onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+    }, { trashShortcut: true });
+
+    // The card keeps its hover toolbar while the menu is up.
+    card.setAttribute('data-popover-open', '');
+    openMenu(anchor, [
+      ...(comment !== undefined ? [{ ...commentMenuItem(this.api.i18n), name: 'database-feed-comment', onActivate: () => comment(rowId, undefined, card) }] : []),
+      ...actions,
+    ], { searchable: true, searchPlaceholder: this.api.i18n.t('tools.database.searchActions'), onClose: () => card.removeAttribute('data-popover-open') });
   }
 
   /** The active view as CSV, the way this person sees it: filters, sorts, search and visible properties. */

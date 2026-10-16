@@ -88,4 +88,13 @@ describe('selected-state tokens are neutral', () => {
     expect(rule?.[1]).toContain('background: var(--blok-popover-icon-active-bg)');
     expect(rule?.[1]).toContain('color: var(--blok-icon-active-text)');
   });
+
+  it('a feed card marks your own reaction with the gray tokens, not Notion\'s blue', () => {
+    const rule = css.match(/\[data-blok-database-feed-reaction\]\[data-mine\]\s*\{([^}]*)\}/);
+
+    expect(rule?.[1]).toContain('background-color: var(--blok-icon-active-bg)');
+    expect(rule?.[1]).toContain('color: var(--blok-icon-active-text)');
+    // The same ink as someone else's pill: --blok-icon-active-text is the primary ink.
+    expect(css.match(/\[data-blok-database-feed-reaction\]\s*\{([^}]*)\}/)?.[1]).toContain('color: var(--blok-text-primary)');
+  });
 });

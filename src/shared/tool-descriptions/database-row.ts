@@ -56,6 +56,14 @@ export const DATABASE_ROW_DATA = {
         },
       },
     },
+    reactions: {
+      type: 'object',
+      description: 'Feed reactions keyed by user id, then by emoji, to when that user reacted (epoch ms). Each person writes only their own key.',
+      additionalProperties: {
+        type: 'object',
+        additionalProperties: { type: 'number' },
+      },
+    },
     convertedValues: {
       type: 'object',
       description: 'Values a property type change could not carry over, keyed by property id; restored if the type changes back.',

@@ -5,7 +5,7 @@ import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPage, IconPlus } from '../../components/icons';
 import { isAnnotationBlock, mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
-import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
+import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, RowReactions, TemplateRepeat } from '../database/types';
 
 /** What the parent database answers when an empty page asks what to offer. */
 interface RowPagePrompt {
@@ -14,7 +14,7 @@ interface RowPagePrompt {
   list: Array<{ id: string; title: string }>;
 }
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders', 'reactions']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -59,6 +59,10 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (typeof data.reminders === 'object' && data.reminders !== null && Object.keys(data.reminders).length > 0) {
     row.reminders = structuredClone(data.reminders);
+  }
+  // Kept even when empty: dropping it would delete the shared map and a peer's concurrent first reaction with it.
+  if (typeof data.reactions === 'object' && data.reactions !== null && !Array.isArray(data.reactions)) {
+    row.reactions = structuredClone(data.reactions);
   }
 
   return row;
@@ -376,6 +380,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.reminders !== undefined) {
       saved.reminders = structuredClone(this._data.reminders);
     }
+    if (this._data.reactions !== undefined) {
+      saved.reactions = structuredClone(this._data.reactions);
+    }
 
     return saved;
   }
@@ -501,6 +508,17 @@ export class DatabaseRowTool implements BlockTool {
     } else {
       this._data.reminders = next;
     }
+  }
+
+  /** Adds one person's reaction; `at: null` removes it. Writes only that person's key. */
+  public updateReaction(param: { userId: string; emoji: string; at: number | null }): void {
+    const others = Object.entries(this._data.reactions ?? {}).filter(([userId]) => userId !== param.userId);
+    const own = Object.entries(this._data.reactions?.[param.userId] ?? {}).filter(([emoji]) => emoji !== param.emoji);
+    const mine = param.at === null ? own : [...own, [param.emoji, param.at] as const];
+    const reactions: RowReactions = Object.fromEntries(structuredClone(others));
+
+    if (mine.length > 0) reactions[param.userId] = Object.fromEntries(mine);
+    this._data.reactions = reactions;
   }
 
   /** The legacy body was turned into child blocks; it must never be turned again. */

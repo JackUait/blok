@@ -327,6 +327,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-row-open-in-*': exempt('view-only', 'Opens the row page in a peek, a side panel or full page; the document does not change.'),
   'menu:database/database-row-comment': exempt('view-only', 'Hands the row to the host comment UI; the document does not change.'),
   'menu:database/database-card-comment': exempt('view-only', 'Hands the row to the host comment UI; the document does not change.'),
+  'menu:database/database-feed-comment': exempt('view-only', 'Hands the row to the host comment UI; the document does not change.'),
   'menu:database/customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/row-tab-customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/row-page-customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),

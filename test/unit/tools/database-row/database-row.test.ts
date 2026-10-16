@@ -189,6 +189,39 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('reactions', () => {
+    it('loads and saves reactions by user id', () => {
+      const reactions = { u1: { '😀': 1000 }, u2: { '🎉': 2000, '😀': 3000 } };
+      const tool = new DatabaseRowTool(createRowOptions({ reactions }));
+
+      expect(tool.save(document.createElement('div')).reactions).toEqual(reactions);
+    });
+
+    it('adds one person\'s reaction without touching another\'s, and null removes it', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ reactions: { u1: { '😀': 1000 } } }));
+
+      tool.updateReaction({ userId: 'u2', emoji: '😀', at: 2000 });
+      tool.updateReaction({ userId: 'u1', emoji: '🎉', at: 3000 });
+      expect(tool.save(document.createElement('div')).reactions).toEqual({ u1: { '😀': 1000, '🎉': 3000 }, u2: { '😀': 2000 } });
+      tool.updateReaction({ userId: 'u2', emoji: '😀', at: null });
+      expect(tool.save(document.createElement('div')).reactions).toEqual({ u1: { '😀': 1000, '🎉': 3000 } });
+    });
+
+    it('keeps an empty reactions map once the last reaction goes, so a peer\'s concurrent first reaction is not wiped', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ reactions: { u1: { '😀': 1000 } } }));
+
+      tool.updateReaction({ userId: 'u1', emoji: '😀', at: null });
+      expect(tool.save(document.createElement('div')).reactions).toEqual({});
+      expect(new DatabaseRowTool(createRowOptions({ reactions: {} })).save(document.createElement('div')).reactions).toEqual({});
+    });
+
+    it('never adds reactions to a row that has none', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      expect('reactions' in tool.save(document.createElement('div'))).toBe(false);
+    });
+  });
+
   describe('page full width', () => {
     it.each([true, false])('saves the page\'s own full width (%s)', (fullWidth) => {
       const tool = new DatabaseRowTool(createRowOptions({ fullWidth }));

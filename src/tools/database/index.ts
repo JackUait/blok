@@ -2653,7 +2653,7 @@ export class DatabaseTool implements BlockTool {
     }));
 
     // A cleared date takes its reminder along in the same write, so one undo restores both.
-    const reminders = this.model.getRow(rowId)?.reminders ?? {};
+    const reminders = this.rowOrTemplate(rowId)?.reminders ?? {};
     const dropped = Object.keys(stored).filter((propertyId) => stored[propertyId] === null && reminders[propertyId] !== undefined);
 
     if (rowBlock !== undefined && Object.keys(stored).length > 0) {
@@ -4908,8 +4908,11 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  /** A date's Remind choice. Stored on the row block only: the backend adapter has no reminders. */
-  private commitReminder(rowId: string, propertyId: string, reminder: DateReminderOffset | null): void {
+  /**
+   * A date's Remind choice. Stored on the row block only: the backend adapter has no reminders.
+   * `fromPage`: the open row page made it and already shows it; a resync would redraw under its picker.
+   */
+  private commitReminder(rowId: string, propertyId: string, reminder: DateReminderOffset | null, fromPage = false): void {
     const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
 
     if (this.readOnly || this.destroyed || block === undefined) return;
@@ -4918,6 +4921,9 @@ export class DatabaseTool implements BlockTool {
     block.call('updateReminders', { [propertyId]: reminder === null ? null : { remind: reminder, timeZone: viewerTimeZone() } });
     block.dispatchChange();
     this.syncRowsFromBlocks();
+    if (!fromPage && this.cardDrawer?.openRowId === rowId) {
+      this.cardDrawer.syncOpenRow(this.rowOrTemplate(rowId));
+    }
   }
 
   /**
@@ -6514,12 +6520,13 @@ export class DatabaseTool implements BlockTool {
           const value = this.knownOptionsOnly(propertyId, input);
 
           // Deleting an option already emptied this row through clearRemovedOptions.
-          if (JSON.stringify(this.model.getRow(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
+          // A template is no model row: read it too, or clearing its value is never saved.
+          if (JSON.stringify(this.rowOrTemplate(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
           this.updateRowBlock(rowId, { [propertyId]: value });
           this.rerenderView({ keepDrawer: true });
           this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },
-        onReminderChange: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder); },
+        onReminderChange: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder, true); },
         onOptionsChange: (propertyId, options) => {
           if (this.readOnly || this.destroyed || this.structureLocked()) return;
           this.clearRemovedOptions(propertyId, options);

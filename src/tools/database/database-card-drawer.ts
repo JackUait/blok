@@ -2777,7 +2777,14 @@ export class DatabaseCardDrawer {
         : {}),
       onCommit: (value) => {
         if (this.currentRow?.id === rowId) {
-          this.currentRow = { ...this.currentRow, properties: { ...this.currentRow.properties, [propertyId]: value } };
+          // The host drops a cleared date's reminder in the same write.
+          const { [propertyId]: _dropped, ...reminders } = this.currentRow.reminders ?? {};
+
+          this.currentRow = {
+            ...this.currentRow,
+            properties: { ...this.currentRow.properties, [propertyId]: value },
+            ...(value === null ? { reminders } : {}),
+          };
         }
         this.onPropertyValueChange?.(rowId, propertyId, value);
         const current = this.schema.find((p) => p.id === propertyId);

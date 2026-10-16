@@ -147,6 +147,59 @@ describe('date reminders outside the table', () => {
     expect(document.querySelector('[data-blok-database-date-remind-value]')?.textContent).toBe('2 days before');
   });
 
+  it('the row page: after Clear, the picker shows no reminder and a new date stores none', async () => {
+    await make(doc({ openPagesIn: 'side' }));
+    await click(q('[data-row-id="r1"] [data-blok-database-table-open]'));
+    const value = (): HTMLElement | null => q('[data-blok-database-drawer] [data-blok-database-drawer-prop-value][data-property-id="due"]');
+
+    await click(value());
+    await pick('1_day_before');
+    await click(document.querySelector('[data-blok-database-date-clear]'));
+    await quiet();
+    expect(await remindersOf('r1')).toBeUndefined();
+
+    await click(value());
+    expect(document.querySelector('[data-blok-database-date-remind-value]')?.textContent).toBe('None');
+    await click(document.querySelector('[data-blok-database-date-day]'));
+    expect(await remindersOf('r1')).toBeUndefined();
+  });
+
+  it('a template opened as a page takes a reminder, and Clear drops it', async () => {
+    const blocks = doc({ openPagesIn: 'side' });
+
+    (blocks[0].content as string[]).push('tpl');
+    blocks.push({ id: 'tpl', type: 'database-row', parent: 'db', data: { properties: { t: 'Tpl', due: '2027-06-15' }, position: 'a2', template: true } });
+    await make(blocks);
+    const tool = (editor as unknown as { blocks: { getById: (id: string) => { call: (method: string, arg: unknown) => void } | undefined } }).blocks;
+
+    tool.getById('db')?.call('openTemplate', 'tpl');
+    await quiet();
+    const value = (): HTMLElement | null => q('[data-blok-database-drawer] [data-blok-database-drawer-prop-value][data-property-id="due"]');
+
+    await click(value());
+    await pick('1_day_before');
+    expect(await remindersOf('tpl')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+
+    await click(document.querySelector('[data-blok-database-date-clear]'));
+    await quiet();
+    const saved = await editor?.save();
+
+    expect((saved?.blocks.find((block) => block.id === 'tpl')?.data as { properties: Record<string, unknown> }).properties.due).toBeNull();
+    expect(await remindersOf('tpl')).toBeUndefined();
+  });
+
+  it('the row page: a reminder set in the table shows in the open page\'s picker', async () => {
+    await make(doc({ openPagesIn: 'side' }));
+    await click(q('[data-row-id="r1"] [data-blok-database-table-open]'));
+    await click(q('[data-row-id="r1"] [role="gridcell"][data-property-id="due"]'));
+    await pick('1_week_before');
+    await closeEditor();
+    expect(await remindersOf('r1')).toEqual({ due: { remind: '1_week_before', timeZone: zone } });
+
+    await click(q('[data-blok-database-drawer] [data-blok-database-drawer-prop-value][data-property-id="due"]'));
+    expect(document.querySelector('[data-blok-database-date-remind-value]')?.textContent).toBe('1 week before');
+  });
+
   it('the row page: a first date takes the property\'s Notifications default', async () => {
     await make(doc({ openPagesIn: 'side' }, { defaultReminder: '1_week_before' }));
     await click(q('[data-row-id="r2"] [data-blok-database-table-open]'));

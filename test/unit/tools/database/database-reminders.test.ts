@@ -158,7 +158,8 @@ describe('a reminder on a date with no time zone, seen from two zones', () => {
   });
 
   afterEach(() => {
-    process.env.TZ = originalZone;
+    if (originalZone === undefined) delete process.env.TZ;
+    else process.env.TZ = originalZone;
     vi.useRealTimers();
     vi.restoreAllMocks();
     PopoverRegistry.resetForTests();

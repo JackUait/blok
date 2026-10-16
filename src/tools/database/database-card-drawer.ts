@@ -2,7 +2,7 @@ import type { I18n, OutputData } from '../../../types';
 import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
-import type { DatabaseRow, DatabaseRowPages, OpenPagesIn, PageVisibility, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import type { DatabaseRow, DatabaseRowPages, DateReminderOffset, OpenPagesIn, PageVisibility, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
@@ -217,6 +217,8 @@ export interface CardDrawerOptions {
   cellContext?: () => Partial<CellContext>;
   /** A property value edited in the drawer. Without it, values stay read-only. */
   onPropertyValueChange?: (rowId: string, propertyId: string, value: PropertyValue) => void;
+  /** A date's Remind choice, null for None. Without it the date picker has no Remind row. */
+  onReminderChange?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
   /** The whole new option list of a select property, with saved labels. */
   onOptionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /**
@@ -404,6 +406,7 @@ export class DatabaseCardDrawer {
   private readonly cellContext: () => Partial<CellContext>;
   private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
   private readonly onOptionsChange: CardDrawerOptions['onOptionsChange'];
+  private readonly onReminderChange: CardDrawerOptions['onReminderChange'];
   private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
   private readonly rowBody: CardDrawerOptions['rowBody'];
   private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
@@ -508,6 +511,7 @@ export class DatabaseCardDrawer {
     this.cellContext = options.cellContext ?? ((): Partial<CellContext> => ({}));
     this.onPropertyValueChange = options.onPropertyValueChange;
     this.onOptionsChange = options.onOptionsChange;
+    this.onReminderChange = options.onReminderChange;
     this.savedOptionsOf = options.savedOptionsOf;
     this.rowBody = options.rowBody;
     this.adjacentRow = options.adjacentRow;
@@ -2739,12 +2743,27 @@ export class DatabaseCardDrawer {
     const rowId = row.id;
     const shownOptions = { list: def.config?.options ?? [] };
     const onOptionsChange = this.onOptionsChange;
+    const onReminderChange = this.onReminderChange;
+    const reminder = row.reminders?.[propertyId]?.remind;
 
     this.cellEditor = openCellEditor(def, readPropertyValue(row, def), slot, {
       ...this.cellContext(),
       i18n: { t: (key) => this.t(key) },
       readOnly: this.readOnly,
       options: shownOptions.list,
+      ...(reminder !== undefined ? { reminder } : {}),
+      ...(def.type === 'date' && onReminderChange !== undefined
+        ? {
+          onReminderChange: (next: DateReminderOffset | null): void => {
+            if (this.currentRow?.id === rowId) {
+              const { [propertyId]: _old, ...others } = this.currentRow.reminders ?? {};
+
+              this.currentRow = { ...this.currentRow, reminders: next === null ? others : { ...others, [propertyId]: { remind: next } } };
+            }
+            onReminderChange(rowId, propertyId, next);
+          },
+        }
+        : {}),
       ...(onOptionsChange !== undefined
         ? {
           onOptionsChange: (next: SelectOption[]): void => {

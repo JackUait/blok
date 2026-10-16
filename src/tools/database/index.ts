@@ -4357,11 +4357,16 @@ export class DatabaseTool implements BlockTool {
     if (context === undefined) this.cardCellEditor?.close();
     else context.state.cellEditor?.close();
 
+    const reminder = row.reminders?.[propertyId]?.remind;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext(),
       i18n: this.api.i18n,
       readOnly: false,
       options: this.model.getProperty(propertyId)?.config?.options ?? [],
+      ...(reminder !== undefined ? { reminder } : {}),
+      ...(property.type === 'date'
+        ? { onReminderChange: (next: DateReminderOffset | null) => { if (context === undefined || context.writable()) this.commitReminder(rowId, propertyId, next); } }
+        : {}),
       onOptionsChange: (options) => { if (context === undefined || context.writable()) this.handleTableOptionsChange(propertyId, options); },
       onCommit: (value) => { if (context === undefined || context.writable()) this.commitTableCell(rowId, propertyId, value); },
       onClose: () => {
@@ -4908,7 +4913,7 @@ export class DatabaseTool implements BlockTool {
     const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
 
     if (this.readOnly || this.destroyed || block === undefined) return;
-    if ((this.model.getRow(rowId)?.reminders?.[propertyId]?.remind ?? null) === reminder) return;
+    if ((this.rowOrTemplate(rowId)?.reminders?.[propertyId]?.remind ?? null) === reminder) return;
     // The setter's zone: a date with no property zone is then due at one time on every client.
     block.call('updateReminders', { [propertyId]: reminder === null ? null : { remind: reminder, timeZone: viewerTimeZone() } });
     block.dispatchChange();
@@ -6514,6 +6519,7 @@ export class DatabaseTool implements BlockTool {
           this.rerenderView({ keepDrawer: true });
           this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },
+        onReminderChange: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder); },
         onOptionsChange: (propertyId, options) => {
           if (this.readOnly || this.destroyed || this.structureLocked()) return;
           this.clearRemovedOptions(propertyId, options);

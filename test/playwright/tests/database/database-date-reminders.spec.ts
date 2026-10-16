@@ -255,3 +255,14 @@ test('a duplicated page keeps its reminder, without the sent stamp, so the copy 
       .map((block) => (block.data as { reminders?: unknown }).reminders);
   })).toEqual([{ 'p-due': { remind: '1_day_before', timeZone: 'Europe/Berlin' } }]);
 });
+
+test('the row page date picker has Remind, and its pick is saved on the row', async ({ page }) => {
+  await mount(page);
+  await openRowPage(page, 'Alpha');
+  await page.getByRole('complementary', { name: 'Card details' }).getByLabel('Due', { exact: true }).click();
+  await page.getByRole('button', { name: /^Remind/ }).click();
+  await page.getByRole('menu', { name: 'Remind' }).getByRole('menuitemradio', { name: '2 days before (9:00 AM)' }).click();
+
+  await expect(page.getByRole('button', { name: /^Remind/ })).toHaveAccessibleName('Remind 2 days before');
+  await expect.poll(async () => (await rowData(page, 'r1'))?.reminders).toEqual({ 'p-due': await setInBrowserZone(page, '2_days_before') });
+});

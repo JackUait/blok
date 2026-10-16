@@ -46,7 +46,7 @@ export const scanBacklinkSources = (scan: BacklinkScan): BacklinkSource[] => {
     const block = blockId === null || blockId === undefined ? undefined : scan.block(blockId);
 
     if (!ids.has(anchor.getAttribute(PAGE_REFERENCE_ATTR) ?? '') || block === undefined || PROPERTY_HOSTS.has(block.name)
-      || anchor.closest(editorSelector) !== scan.root) continue;
+      || anchor.closest(editorSelector) !== scan.root || anchor.closest(`[${DATA_ATTR.annotation}]`) !== null) continue;
     const rowId = nearestRow(scan, block);
 
     if (rowId !== scan.rowId && !sources.has(rowId)) sources.set(rowId, { rowId, blockId: block.id });

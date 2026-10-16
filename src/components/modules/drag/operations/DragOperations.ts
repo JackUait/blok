@@ -75,7 +75,8 @@ export interface BlockSelectionAdapter {
  * The sources minus those under a copied block whose tool declares
  * `copiesOwnChildren` (a table). That copy rebuilds them itself, so a second
  * copy from here would land in it as extra content. A database does not
- * declare it: its rows are copied here.
+ * declare it: its rows are copied here. Annotations (comment threads) and
+ * their replies are not content, so a copy leaves them behind.
  * @param sourceBlocks - the blocks being duplicated
  */
 const withoutSelfCopiedChildren = (sourceBlocks: Block[]): Block[] => {
@@ -87,10 +88,10 @@ const withoutSelfCopiedChildren = (sourceBlocks: Block[]): Block[] => {
       return false;
     }
 
-    return parent.tool?.copiesOwnChildren || underSelfCopyingParent(parent, seen.add(parent.id));
+    return parent.tool?.copiesOwnChildren || parent.isAnnotation || underSelfCopyingParent(parent, seen.add(parent.id));
   };
 
-  return sourceBlocks.filter(block => !underSelfCopyingParent(block, new Set()));
+  return sourceBlocks.filter(block => !block.isAnnotation && !underSelfCopyingParent(block, new Set()));
 };
 
 /**

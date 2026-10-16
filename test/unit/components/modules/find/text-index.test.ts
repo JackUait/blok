@@ -108,4 +108,10 @@ describe('findRanges', () => {
 
     expect(found(root, 'parent')).toEqual(['parent', 'parent']);
   });
+
+  it('never searches a comment thread', () => {
+    const root = mount('<div data-blok-annotation hidden><div contenteditable="true">apple note</div></div><div contenteditable="true">apple</div>');
+
+    expect(found(root, 'apple')).toEqual(['apple']);
+  });
 });

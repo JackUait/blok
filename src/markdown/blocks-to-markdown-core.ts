@@ -20,6 +20,7 @@ import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
+import { withoutAnnotations } from '../shared/annotation-blocks';
 
 export interface SerializableBlock {
   /**
@@ -1551,17 +1552,18 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
 /**
  * Serialize an ordered list of blocks to a single Markdown string, collecting
  * every construct that could not be carried across.
- * @param blocks - blocks to serialize, in document order
+ * @param input - blocks to serialize, in document order; comment threads are left out
  * @param inline - reads the blocks' inline HTML
  * @returns the Markdown and the degradations recorded while producing it
  */
 export const serializeBlocksToMarkdown = (
-  blocks: SerializableBlock[],
+  input: SerializableBlock[],
   inline: InlineBackend,
   pageInfo?: (pageId: string) => PageInfo | null | undefined,
   pageHref?: (pageId: string) => string
 ): { markdown: string; warnings: MarkdownDegradation[] } => {
   const warnings: MarkdownDegradation[] = [];
+  const blocks = withoutAnnotations(input);
   const context = buildContext(blocks, inline, warnings, pageInfo, pageHref);
   const ownedIds = collectOwnedIds(blocks, context);
   const topLevel = blocks.filter((block) => block.id === undefined || !ownedIds.has(block.id));

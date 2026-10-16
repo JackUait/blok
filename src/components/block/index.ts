@@ -11,6 +11,8 @@ import type {
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { BlockTuneRenderContext } from '../../../types/block-tunes/block-tune';
 import type { SavedData } from '../../../types/data-formats';
+import { DATA_ATTR } from '../constants/data-attributes';
+import { isAnnotationType } from '../../shared/annotation-blocks';
 import { toggleEmptyMark } from '../dom';
 import type { BlokEventMap } from '../events';
 import type { API as ApiModules } from '../modules/api';
@@ -205,6 +207,13 @@ export class Block extends EventsDispatcher<BlockEvents> {
   public readonly tool: BlockToolAdapter;
 
   /**
+   * Not page content (a comment thread): its tool declares `isAnnotation`, or
+   * it is the stub standing in for a built-in annotation type this editor did
+   * not register. Core hides it and every reader of children skips it.
+   */
+  public readonly isAnnotation: boolean;
+
+  /**
    * User Tool configuration
    */
   public readonly settings: ToolConfig;
@@ -336,6 +345,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     // Set basic properties
     this.name = tool.name;
+    this.isAnnotation = tool.isAnnotation || (tool.name === 'stub' && isAnnotationType((data as { savedData?: { type?: unknown } } | undefined)?.savedData?.type));
     this.id = validatedId;
     this.parentId = parentId ?? null;
     // Copy: contentIds is mutated in place (push/splice) by hierarchy ops and
@@ -374,6 +384,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
     // Compose the block and get the holder
     this.holder = this.toolRenderer.compose();
     this.ready = this.toolRenderer.ready;
+
+    // Not page content: its owner draws it elsewhere (a row's comments).
+    if (this.isAnnotation) {
+      this.holder.hidden = true;
+      this.holder.setAttribute(DATA_ATTR.annotation, '');
+    }
 
     // Initialize StyleManager with holder and content element
     this.styleManager = new StyleManager(

@@ -34,6 +34,8 @@ export interface BlockToolManifestEntry {
     ownedByTool: boolean;
     layout: boolean;
     deletedWithParent: boolean;
+    /** Not page content (a comment thread): reads leave it and its subtree out. */
+    annotation?: boolean;
   };
   selfPlacesChildren: boolean;
   restrictedInTableCell: boolean;
@@ -84,6 +86,8 @@ export interface SnapshotBlockStatics {
   childTools?: { allow?: string[]; deny?: string[] };
   ownsChildren: boolean;
   isLayout: boolean;
+  /** Present and true only for a block that is not page content. */
+  isAnnotation?: boolean;
   deletesChildren: boolean;
   selfPlacesChildren: boolean;
   restrictedInTableCell: boolean;

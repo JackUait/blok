@@ -104,6 +104,15 @@ const restoreCaret = (snapshot: CaretSnapshot | null): void => {
 export const CHILD_SLOT_SELECTOR = '[data-blok-toggle-children], [data-blok-nested-blocks]';
 
 /**
+ * Whether core marked the block as not page content (its tool declares
+ * `isAnnotation`, like a comment thread). A container's "is it empty" and
+ * "copy the body" reads skip it.
+ * @param block - a child block
+ */
+export const isAnnotationBlock = (block: { holder: HTMLElement }): boolean =>
+  block.holder.hasAttribute(DATA_ATTR.annotation);
+
+/**
  * Parents that place their children themselves (per cell / per view). Their
  * descendants must never be pulled into an enclosing slot.
  */

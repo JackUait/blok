@@ -30,6 +30,7 @@ import { parseUntrustedHtml } from '../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../shared/page-reference';
 import { isPagePointer } from '../../shared/page-pointer';
 import type { ListItemStyle } from '../../tools/list/types';
+import { isInAnnotation } from './blockManager/new-block-placement';
 
 /**
  * A run of consecutive selected blocks for clipboard serialization: either a
@@ -192,7 +193,7 @@ export class BlockSelection extends Module {
     const { BlockManager } = this.Blok;
 
     for (const block of BlockManager.blocks) {
-      block.selected = state;
+      block.selected = state && !isInAnnotation(block, (id) => BlockManager.getBlockById(id));
     }
 
     this.clearCache();
@@ -961,7 +962,7 @@ export class BlockSelection extends Module {
    * The blocks a copy carries: the given blocks and all their descendants, once
    * each, parents first. A collapsed toggle's hidden children must travel with
    * it so paste can restore the whole subtree. Every clipboard flavor is built
-   * from this one list.
+   * from this one list. Annotations (comment threads) are not content and stay.
    * @param blocks - the blocks to copy, in document order
    */
   private collectBlocksForClipboard(blocks: Block[]): Block[] {
@@ -969,7 +970,7 @@ export class BlockSelection extends Module {
     const seen = new Set<string>();
 
     const collect = (block: Block): void => {
-      if (seen.has(block.id)) {
+      if (seen.has(block.id) || block.isAnnotation) {
         return;
       }
       seen.add(block.id);

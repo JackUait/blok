@@ -14,6 +14,27 @@ const textOf = (block: SnapBlock, ctx: ViewContext, field?: string): string | un
   return isRichText(value) ? ctx.richText.plainText(value) : undefined;
 };
 
+/** Not page content (a comment thread), or under one: reads leave it out. */
+const inAnnotation = (snap: DocSnapshot, id: string, ctx: ViewContext): boolean => {
+  const seen = new Set<string>();
+  const cursor: { id: string | null } = { id };
+
+  while (cursor.id !== null && !seen.has(cursor.id)) {
+    const type = snap.get(cursor.id)?.type;
+
+    if (type !== undefined && ctx.tools.get(type)?.entry.children.annotation === true) {
+      return true;
+    }
+    seen.add(cursor.id);
+    cursor.id = snap.parentOf(cursor.id);
+  }
+
+  return false;
+};
+
+const contentOrder = (snap: DocSnapshot, rootId: string | null, ctx: ViewContext): Array<{ id: string; depth: number }> =>
+  snap.readingOrder(rootId).filter(item => !inAnnotation(snap, item.id, ctx));
+
 const viewBlock = (
   snap: DocSnapshot,
   block: SnapBlock,
@@ -42,8 +63,10 @@ const viewBlock = (
   if (Object.keys(attrs).length > 0) {
     entry.attrs = attrs;
   }
-  if (args.depth !== undefined && depth === args.depth && block.content.length > 0) {
-    entry.childCount = block.content.length;
+  const children = block.content.filter(id => !inAnnotation(snap, id, ctx));
+
+  if (args.depth !== undefined && depth === args.depth && children.length > 0) {
+    entry.childCount = children.length;
   }
   if (tool === undefined) {
     entry.opaque = true;
@@ -81,7 +104,7 @@ export const buildDocumentView = (
   });
 
   const ids = args.ids === undefined ? undefined : new Set(args.ids);
-  const order = snap.readingOrder(rootId).filter(item =>
+  const order = contentOrder(snap, rootId, ctx).filter(item =>
     (ids === undefined || ids.has(item.id)) && (args.depth === undefined || item.depth <= args.depth));
   const start = args.cursor === undefined ? 0 : order.findIndex(item => `c:${item.id}` === args.cursor);
 
@@ -127,7 +150,7 @@ export const findBlocks = (
   const needle = args.text?.toLowerCase();
   const matches: Array<{ id: string; type: string; snippet: string }> = [];
 
-  for (const { id } of snap.readingOrder(args.rootId ?? null)) {
+  for (const { id } of contentOrder(snap, args.rootId ?? null, ctx)) {
     const block = snap.get(id);
 
     if (block === undefined) {

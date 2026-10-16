@@ -24,7 +24,7 @@ export interface PlannerToolEntry {
   richTextFields: string[];
   viewState: string[];
   guardedFields: Record<string, string>;
-  children: { accepts: boolean; allow?: string[]; deny?: string[]; ownedByTool: boolean; layout: boolean; deletedWithParent: boolean };
+  children: { accepts: boolean; allow?: string[]; deny?: string[]; ownedByTool: boolean; layout: boolean; deletedWithParent: boolean; annotation?: boolean };
   selfPlacesChildren: boolean;
   restrictedInTableCell: boolean;
   summaryFields?: string[];

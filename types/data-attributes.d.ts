@@ -342,6 +342,10 @@ export const DATA_ATTR: {
    *  child blocks or the user's text: that content would be skipped too. */
   readonly chrome: 'data-blok-chrome';
 
+  /** A block holder whose tool declares `isAnnotation` (a comment thread), or
+   *  a tool's own UI that shows one. Hidden, and find never searches it. */
+  readonly annotation: 'data-blok-annotation';
+
   // Keyboard Ownership
 
   /** Marks a subtree whose keyboard belongs to the Tool that rendered it, not to

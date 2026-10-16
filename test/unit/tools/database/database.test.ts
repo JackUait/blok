@@ -5494,7 +5494,7 @@ describe('DatabaseTool', () => {
     it('previews a row page from its child blocks', () => {
       const rows = rowsWithDates();
       const options = createDatabaseOptions({ schema: dateSchema, views: [galleryView], activeViewId: 'view-gallery' }, {}, { childBlocks: rows });
-      const body = { id: 'b1', name: 'paragraph', preservedData: { text: 'Row one body' } } as unknown as BlockAPI;
+      const body = { id: 'b1', name: 'paragraph', holder: document.createElement('div'), preservedData: { text: 'Row one body' } } as unknown as BlockAPI;
 
       vi.mocked(options.api.blocks.getChildren).mockImplementation((parentId: string) => {
         if (parentId === 'row-1') return [body];

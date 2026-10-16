@@ -722,7 +722,7 @@ export const blocksToHtml = (
   data: OutputData | LooseOutputData | null | undefined,
   options: BlocksToHtmlOptions = {}
 ): string => {
-  const rendered = createHtmlRenderer(buildDocumentModel(data), options).renderTopLevel();
+  const rendered = createHtmlRenderer(buildDocumentModel(data, { content: true }), options).renderTopLevel();
   const body = options.title === true ? titleHtml(data, options) + rendered : rendered;
 
   /**

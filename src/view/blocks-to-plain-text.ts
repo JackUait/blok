@@ -159,7 +159,7 @@ const readPlainText = (
   options: BlocksToPlainTextOptions,
   onBlock?: (visit: IndexBlockVisit) => void
 ): PlainTextResult => {
-  const model: DocumentModel = buildDocumentModel(data);
+  const model: DocumentModel = buildDocumentModel(data, { content: true });
   const sourceBlockId = (block: ViewBlock): string | null =>
     block.id !== undefined && !model.syntheticIds.has(block.id) ? block.id : null;
   const renderers = options.renderers ?? {};

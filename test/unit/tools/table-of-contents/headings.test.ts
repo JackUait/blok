@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { collectHeadings } from '../../../../src/tools/table-of-contents/headings';
 
-type Node = { tool: string; id: string; level?: number; text?: string; children?: Node[] };
+type Node = { tool: string; id: string; level?: number; text?: string; children?: Node[]; annotation?: boolean };
 
 const header = (id: string, level: number, text: string): Node => ({ tool: 'header', id, level, text });
 
@@ -19,6 +19,7 @@ const mount = (nodes: Node[]): HTMLElement => {
     holder.setAttribute('data-blok-element', '');
     holder.setAttribute('data-blok-component', node.tool);
     holder.setAttribute('data-blok-id', node.id);
+    if (node.annotation === true) holder.setAttribute('data-blok-annotation', '');
     content.setAttribute('data-blok-element-content', '');
     holder.appendChild(content);
 
@@ -128,4 +129,14 @@ describe('collectHeadings', () => {
     root.remove();
     other.remove();
   });
+
+  it('leaves out a heading under a comment thread', () => {
+    const root = mount([
+      header('a', 1, 'Intro'),
+      { tool: 'database-comment', id: 'k', annotation: true, children: [header('b', 2, 'Reply')] },
+    ]);
+
+    expect(collectHeadings(root)).toEqual([{ id: 'a', level: 1, text: 'Intro' }]);
+  });
 });
+

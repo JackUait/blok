@@ -74,7 +74,7 @@ export const pageIndex = (data: OutputData | LooseOutputData | null | undefined)
   const owners: PageOwnerEdge[] = [];
   const text: PageTextEntry[] = [];
   const references: PageReference[] = [];
-  const model = buildDocumentModel(data);
+  const model = buildDocumentModel(data, { content: true });
   const sourceId = (block: ViewBlock): string | null =>
     block.id !== undefined && !model.syntheticIds.has(block.id) ? block.id : null;
   const addHtml = (value: unknown, blockId: string | null, order: number): void => {

@@ -200,7 +200,8 @@ const blockEntry = (
     summary: description?.summary ?? statics.toolbox[0]?.previewCaption ?? `Custom block ${block.name}`,
     ...(guidance.length > 0 ? { guidance: guidance.join('\n\n') } : {}),
     level: description === null ? 'structural' : 'described',
-    insertable: block.insertable,
+    // An annotation (a comment thread) is written by people in the editor, never inserted by an agent.
+    insertable: block.insertable && statics.isAnnotation !== true,
     variants: statics.toolbox.map(entry => ({ name: entry.name, title: entry.title, data: entry.data ?? {} })),
     data: description?.data ?? structuralDataSchema(statics.richTextFields),
     ...(description?.defaultData === undefined ? {} : { defaultData: description.defaultData }),
@@ -215,6 +216,7 @@ const blockEntry = (
       ownedByTool: statics.ownsChildren,
       layout: statics.isLayout,
       deletedWithParent: statics.deletesChildren,
+      ...(statics.isAnnotation === true ? { annotation: true } : {}),
     },
     selfPlacesChildren: statics.selfPlacesChildren,
     restrictedInTableCell: statics.restrictedInTableCell,

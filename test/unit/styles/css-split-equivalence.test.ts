@@ -845,6 +845,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DATE_REMINDERS_BYTES = 2_654;
     // database.css: the form's auto-create prompt, page picker header, file limit, "Share form" button, access line and Share panel (research/19 §3).
     const DATABASE_FORM_SHARE_BYTES = 4_606;
+    // database.css: an empty row page still shows its placeholder when the row holds only comment threads.
+    const DATABASE_ROW_COMMENTS_EMPTY_BYTES = 54;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -938,7 +940,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROW_PAGE_ACTIONS_BYTES
       + DATABASE_DATE_REMINDERS_BYTES
       + DATABASE_FORM_SHARE_BYTES
-      + DATABASE_ROW_PAGE_BACKLINKS_BYTES;
+      + DATABASE_ROW_PAGE_BACKLINKS_BYTES
+      + DATABASE_ROW_COMMENTS_EMPTY_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

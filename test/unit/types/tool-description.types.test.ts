@@ -155,6 +155,7 @@ describe('published tool description types', () => {
         ownedByTool: boolean;
         layout: boolean;
         deletedWithParent: boolean;
+        annotation?: boolean;
       };
       selfPlacesChildren: boolean;
       restrictedInTableCell: boolean;
@@ -196,6 +197,7 @@ describe('published tool description types', () => {
       childTools?: { allow?: string[]; deny?: string[] };
       ownsChildren: boolean;
       isLayout: boolean;
+      isAnnotation?: boolean;
       deletesChildren: boolean;
       selfPlacesChildren: boolean;
       restrictedInTableCell: boolean;

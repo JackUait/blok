@@ -144,6 +144,11 @@ export enum InternalBlockToolSettings {
    */
   IsLayout = 'isLayout',
   /**
+   * The block is not page content (a comment thread): hidden, and skipped by
+   * keyboard moves, select-all, copy, Duplicate, find and every export
+   */
+  IsAnnotation = 'isAnnotation',
+  /**
    * Tool stores a host-uploaded asset URL at `data.url` (image, video, audio,
    * file). Lets consumers discover the media-bearing tool set for orphaned-CDN
    * cleanup without hardcoding each tool's data shape.

@@ -401,6 +401,17 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   isLayout?: boolean;
 
   /**
+   * Set to true when the block is not page content, like a comment thread on
+   * a database row. It still lives in the block tree and is saved.
+   *
+   * Core hides its holder and marks it `data-blok-annotation`. Keyboard moves,
+   * select-all, copy, Duplicate, find and the table of contents skip it and
+   * everything under it. The HTML view and the exports skip the built-in
+   * annotation types.
+   */
+  isAnnotation?: boolean;
+
+  /**
    * Declares that this Tool stores a host-uploaded asset URL at `data.url`.
    *
    * Set it on media tools (image, video, audio, file) so consumers can discover

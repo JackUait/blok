@@ -13,6 +13,7 @@ interface Spec {
   name: string;
   parentId?: string;
   html?: string;
+  annotation?: boolean;
 }
 
 const build = (specs: Spec[]): { root: HTMLElement; block: (id: string) => BacklinkBlock | undefined } => {
@@ -28,6 +29,7 @@ const build = (specs: Spec[]): { root: HTMLElement; block: (id: string) => Backl
     holder.setAttribute('data-blok-element', '');
     holder.setAttribute('data-blok-id', spec.id);
     holder.innerHTML = spec.html ?? '';
+    if (spec.annotation === true) holder.setAttribute('data-blok-annotation', '');
     holders.set(spec.id, holder);
   }
   for (const spec of specs) {
@@ -123,4 +125,16 @@ describe('scanBacklinkSources', () => {
 
     expect(scanBacklinkSources({ root, rowId: 'r1', ids: ['r1'], block })).toEqual([{ rowId: 'q1', blockId: 'c2' }]);
   });
+
+  it('does not count a mention inside a comment thread', () => {
+    const { root, block } = build([
+      { id: 'db', name: 'database' },
+      { id: 'r1', name: 'database-row', parentId: 'db' },
+      { id: 'r2', name: 'database-row', parentId: 'db' },
+      { id: 'k', name: 'database-comment', parentId: 'r2', annotation: true, html: mention('r1') },
+    ]);
+
+    expect(scanBacklinkSources({ root, rowId: 'r1', ids: ['r1'], block })).toEqual([]);
+  });
 });
+

@@ -5098,7 +5098,7 @@ span[data-blok-slash-search] {
   margin-inline-start: 0;
 }
 
-[data-blok-database-row-body]:not(:empty) ~ [data-blok-database-row-empty] {
+[data-blok-database-row-body]:has(> :not([data-blok-annotation])) ~ [data-blok-database-row-empty] {
   display: none;
 }
 

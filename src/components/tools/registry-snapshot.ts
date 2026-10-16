@@ -73,6 +73,7 @@ export const snapshotFromTools = (
         ...(tool.childTools === undefined ? {} : { childTools: tool.childTools }),
         ownsChildren: tool.ownsChildren,
         isLayout: tool.isLayout,
+        ...(tool.isAnnotation ? { isAnnotation: true } : {}),
         deletesChildren: tool.deletesChildren,
         selfPlacesChildren: SELF_PLACING_PARENTS.has(tool.name),
         restrictedInTableCell: isRestrictedInTableCell(tool.name),

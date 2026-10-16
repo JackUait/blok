@@ -379,6 +379,19 @@ describe('browser tool registry snapshot', () => {
     expect(block.statics.conversion).toEqual({ export: 'text' });
   });
 
+  it('reports isAnnotation only for a tool that declares it', async () => {
+    class Note extends Paragraph {
+      public static get isAnnotation(): boolean {
+        return true;
+      }
+    }
+    const instance = await boot({ tools: { paragraph: Paragraph, note: Note } });
+    const snapshot = snapshotOf(instance);
+
+    expect(blockNamed(snapshot, 'note').statics.isAnnotation).toBe(true);
+    expect('isAnnotation' in blockNamed(snapshot, 'paragraph').statics).toBe(false);
+  });
+
   it('keeps core placement and table-cell restrictions keyed by registration name', async () => {
     const instance = await boot({ tools: { paragraph: Paragraph, table: Table, grid: Table } });
     const snapshot = snapshotOf(instance);

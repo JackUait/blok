@@ -10,6 +10,7 @@
  */
 import type { LooseOutputData, OutputBlockData, OutputData } from '../../types';
 import { orderByContent } from '../shared/content-order';
+import { isAnnotationType } from '../shared/annotation-blocks';
 import { viewBlocksToHtml } from './rich-text-input';
 import {
   CALLOUT_DEFAULT_EMOJI,
@@ -384,10 +385,42 @@ const hoistTabsStrays = (topLevel: ViewBlock[], children: Map<string, ViewBlock[
 };
 
 /**
+ * Removes comment threads and everything under them. Runs after parents are
+ * resolved, so a reply leaves with its thread instead of being promoted.
+ * @param topLevel - root blocks
+ * @param children - children by parent id
+ * @param byId - blocks by id
+ */
+const dropAnnotations = (topLevel: ViewBlock[], children: Map<string, ViewBlock[]>, byId: Map<string, ViewBlock>): void => {
+  const drop = (block: ViewBlock): void => {
+    if (block.id === undefined) return;
+    const below = children.get(block.id) ?? [];
+
+    children.delete(block.id);
+    byId.delete(block.id);
+    below.forEach(drop);
+  };
+  const keep = (list: ViewBlock[]): ViewBlock[] => list.filter((block) => {
+    if (!isAnnotationType(block.type)) return true;
+    drop(block);
+
+    return false;
+  });
+
+  topLevel.splice(0, topLevel.length, ...keep(topLevel));
+  for (const [parentId, list] of [...children]) {
+    if (children.has(parentId)) children.set(parentId, keep(list));
+  }
+};
+
+/**
  * Build the document model for one render run.
  * @param input - saved document, tolerant of the loose wire shape and nullish input
  */
-export const buildDocumentModel = (input: OutputData | LooseOutputData | null | undefined): DocumentModel => {
+export const buildDocumentModel = (
+  input: OutputData | LooseOutputData | null | undefined,
+  options: { content?: boolean } = {}
+): DocumentModel => {
   const rawBlocks: unknown[] = Array.isArray(input?.blocks) ? viewBlocksToHtml(input.blocks as OutputBlockData[]) : [];
 
   const entries: Array<{ block: ViewBlock; parentId: string | null }> = [];
@@ -590,6 +623,10 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
   }
 
   hoistTabsStrays(topLevel, children);
+
+  if (options.content === true) {
+    dropAnnotations(topLevel, children, byId);
+  }
 
   return {
     topLevel,

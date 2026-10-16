@@ -194,7 +194,7 @@ const parse5InlineBackend = (pages: PageOptions): InlineBackend => ({
  * @param data - saved document
  */
 const flattenDocument = (data: OutputData | LooseOutputData | null | undefined): SerializableBlock[] => {
-  const model = buildDocumentModel(data);
+  const model = buildDocumentModel(data, { content: true });
   const out: SerializableBlock[] = [];
   const seen = new Set<string>();
 

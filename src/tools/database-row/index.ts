@@ -4,7 +4,7 @@ import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tool
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPage, IconPlus } from '../../components/icons';
-import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
+import { isAnnotationBlock, mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
 
 /** What the parent database answers when an empty page asks what to offer. */
@@ -262,7 +262,7 @@ export class DatabaseRowTool implements BlockTool {
   private hasBody(): boolean {
     const id = this.block?.id;
 
-    return id !== undefined && (this.api?.blocks.getChildren(id).length ?? 0) > 0;
+    return id !== undefined && (this.api?.blocks.getChildren(id).some((child) => !isAnnotationBlock(child)) ?? false);
   }
 
   private highlight(index: number): void {
@@ -304,7 +304,7 @@ export class DatabaseRowTool implements BlockTool {
     if (this.readOnly || api === undefined || id === undefined) {
       return;
     }
-    const first = api.blocks.getChildren(id)[0];
+    const first = api.blocks.getChildren(id).find((child) => !isAnnotationBlock(child));
 
     if (first !== undefined) {
       api.caret.setToBlock(first.id, 'start');

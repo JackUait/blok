@@ -51,7 +51,7 @@ const clampLevel = (value: unknown): number => {
 export const outlineFromOutputData = (
   data: OutputData | LooseOutputData | null | undefined
 ): OutlineItem[] => {
-  const model: DocumentModel = buildDocumentModel(data);
+  const model: DocumentModel = buildDocumentModel(data, { content: true });
   const outline: OutlineItem[] = [];
 
   /** Ids currently on the walk stack — breaks parent-reference cycles. */

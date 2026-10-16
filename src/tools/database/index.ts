@@ -111,7 +111,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { mountChildBlocks } from '../nested-blocks';
+import { isAnnotationBlock, mountChildBlocks } from '../nested-blocks';
 import { moveElementToEnd } from '../../components/utils/html';
 import { showsPageIcon } from './page-icon';
 import {
@@ -3337,7 +3337,7 @@ export class DatabaseTool implements BlockTool {
 
   /** A row page's body: its child blocks, else the legacy body column. A host `rowPages` body is not readable here. */
   private rowBodyBlocks(rowId: string, descriptionId: string | undefined): Array<{ type: string; data: unknown }> {
-    const children = this.api.blocks.getChildren(rowId).filter((child) => child.name !== 'database-row');
+    const children = this.api.blocks.getChildren(rowId).filter((child) => child.name !== 'database-row' && !isAnnotationBlock(child));
 
     if (children.length > 0) {
       return children.map((child) => ({ type: child.name, data: child.preservedData }));
@@ -5094,7 +5094,7 @@ export class DatabaseTool implements BlockTool {
     const title = row.properties[this.titlePropertyId()];
     const untouched = JSON.stringify(row.properties) === fresh.properties;
 
-    if ((typeof title === 'string' && title !== '') || !untouched || this.api.blocks.getChildren(rowId).length > 0) {
+    if ((typeof title === 'string' && title !== '') || !untouched || this.api.blocks.getChildren(rowId).some((child) => !isAnnotationBlock(child))) {
       return false;
     }
     this.deleteRowBlock(rowId);
@@ -5344,7 +5344,8 @@ export class DatabaseTool implements BlockTool {
    * copied.
    */
   private copyChildBlocks(fromId: string, toId: string): void {
-    for (const child of this.api.blocks.getChildren(fromId)) {
+    // Comment threads stay with the page they were written on.
+    for (const child of this.api.blocks.getChildren(fromId).filter((block) => !isAnnotationBlock(block))) {
       const copy = this.api.blocks.insertAt(child.name, structuredClone(child.preservedData), { parentId: toId, position: 'end' });
 
       this.copyChildBlocks(child.id, copy.id);
@@ -5490,7 +5491,7 @@ export class DatabaseTool implements BlockTool {
     const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === param.rowId);
 
     if (this.readOnly || this.destroyed || template === undefined || row === undefined || block === undefined
-      || this.api.blocks.getChildren(param.rowId).length > 0) return;
+      || this.api.blocks.getChildren(param.rowId).some((child) => !isAnnotationBlock(child))) return;
     const titlePropId = this.titlePropertyId();
     const blank = (value: PropertyValue | undefined): boolean => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
     const filled = resolveDynamicProperties(structuredClone(template.properties), { me: this.config.people?.me?.() ?? null, now: new Date() });

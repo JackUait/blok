@@ -622,7 +622,7 @@ describe('DatabaseRowTool', () => {
       const api = (tool as unknown as { api: { blocks: { getChildren: ReturnType<typeof vi.fn> }; caret: { setToBlock: ReturnType<typeof vi.fn> } } }).api;
       const handled: boolean[] = [];
 
-      api.blocks.getChildren.mockReturnValue([{ id: 'b1' }]);
+      api.blocks.getChildren.mockReturnValue([{ id: 'b1', holder: document.createElement('div') }]);
       tool.movePick({ step: -1, receive: (h) => handled.push(h) });
       tool.enter();
 

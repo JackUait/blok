@@ -91,6 +91,7 @@ const FILE_SCHEMA: BlokSchema = {
               },
               ownsChildren: BOOLEAN_SCHEMA,
               isLayout: BOOLEAN_SCHEMA,
+              isAnnotation: BOOLEAN_SCHEMA,
               deletesChildren: BOOLEAN_SCHEMA,
               selfPlacesChildren: BOOLEAN_SCHEMA,
               restrictedInTableCell: BOOLEAN_SCHEMA,

@@ -22,7 +22,7 @@ export const UNIT_SELECTOR = [
 ].join(', ');
 
 const SKIPPED_SELECTOR = [
-  `[${DATA_ATTR.chrome}]`, `[${DATA_ATTR.toolbar}]`,
+  `[${DATA_ATTR.chrome}]`, `[${DATA_ATTR.toolbar}]`, `[${DATA_ATTR.annotation}]`,
   '[data-blok-interface]:not([data-blok-interface="blok"]):not([data-blok-interface="view"]):not([data-blok-interface="page-title"])', '[data-blok-popover]',
   'script', 'style', 'template', 'noscript', 'textarea', 'input', 'select', 'svg',
 ].join(', ');

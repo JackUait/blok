@@ -35,8 +35,9 @@ export const isHiddenByCollapsedParent = (child: Block): boolean =>
 
 /**
  * Whether the block is invisible: its own holder or any ancestor block's
- * holder has the `hidden` class. A hidden ancestor (an inactive tab) does not
- * flag its descendants, so the walk must go up the tree. Cycle-safe.
+ * holder has the `hidden` class, or it is or sits under an annotation (a
+ * comment thread). A hidden ancestor (an inactive tab) does not flag its
+ * descendants, so the walk must go up the tree. Cycle-safe.
  * @param block - the block to test
  * @param getBlock - block lookup by id
  */
@@ -44,6 +45,22 @@ export const isHiddenInTree = (block: Block, getBlock: GetBlock): boolean => {
   const walk = (cursor: Block | undefined, seen: Set<string>): boolean =>
     cursor !== undefined && !seen.has(cursor.id) && (
       cursor.holder.classList.contains('hidden')
+      || walk(cursor.parentId === null ? undefined : getBlock(cursor.parentId), seen.add(cursor.id))
+    );
+
+  return walk(block, new Set<string>()) || isInAnnotation(block, getBlock);
+};
+
+/**
+ * Whether the block is an annotation (`isAnnotation`, a comment thread) or
+ * sits under one. Cycle-safe.
+ * @param block - the block to test
+ * @param getBlock - block lookup by id
+ */
+export const isInAnnotation = (block: Block, getBlock: GetBlock): boolean => {
+  const walk = (cursor: Block | undefined, seen: Set<string>): boolean =>
+    cursor !== undefined && !seen.has(cursor.id) && (
+      cursor.isAnnotation
       || walk(cursor.parentId === null ? undefined : getBlock(cursor.parentId), seen.add(cursor.id))
     );
 

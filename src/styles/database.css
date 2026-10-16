@@ -1377,8 +1377,8 @@
   margin-inline-start: 0;
 }
 
-/* An empty page body: a click starts its first paragraph. */
-[data-blok-database-row-body]:not(:empty) ~ [data-blok-database-row-empty] {
+/* An empty page body: a click starts its first paragraph. A comment thread is not body. */
+[data-blok-database-row-body]:has(> :not([data-blok-annotation])) ~ [data-blok-database-row-empty] {
   display: none;
 }
 

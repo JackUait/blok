@@ -281,6 +281,14 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * True when the block is not page content (a comment thread): core hides
+   * it, and readers of a block's children leave it out.
+   */
+  public get isAnnotation(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.IsAnnotation] === true;
+  }
+
+  /**
    * A declared lever wins. Undeclared, the names `column` and `column_list`
    * keep the rules core applied to them by name before these levers existed,
    * so a host tool registered under those names behaves as it did.

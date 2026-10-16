@@ -357,6 +357,18 @@ describe('buildToolManifest', () => {
     });
   });
 
+  it('marks an annotation only when its static is true', () => {
+    const manifest = buildToolManifest(snapshot([
+      block('note', { statics: statics({ isAnnotation: true }) }),
+      block('plain'),
+    ]));
+
+    expect(entryFor(manifest, 'note').children.annotation).toBe(true);
+    expect(entryFor(manifest, 'note').insertable).toBe(false);
+    expect(entryFor(manifest, 'plain').insertable).toBe(true);
+    expect('annotation' in entryFor(manifest, 'plain').children).toBe(false);
+  });
+
   it('reads insertable, variants and prepareInsert requirements', () => {
     const manifest = buildToolManifest(snapshot([
       block('page', { insertable: false, description: { summary: 'Page.', data: {} }, statics: statics({ hasPrepareInsert: true, toolbox: [{ name: 'page', title: 'Page', data: { pageId: '' } }] }) }),

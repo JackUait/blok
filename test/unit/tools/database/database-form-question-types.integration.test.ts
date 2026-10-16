@@ -138,6 +138,17 @@ describe('form question types (research/19 §3b)', () => {
     ]);
   });
 
+  it('choosing the checked "Multiple choice" on a Select question keeps the Select property', async () => {
+    await mount(['title', 'pick']);
+    openMenu('pick');
+    need(byTestId('database-form-question-type')).click();
+    need(byTestId('database-form-question-type-multiSelect')).click();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    const data = (await save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData;
+
+    expect(data.schema.find((property) => property.id === 'pick')?.type).toBe('select');
+  });
+
   it('options differ per type as measured: Relation has no Duplicate, Select and Files have no Max selection', async () => {
     await mount(['title', 'pick', 'who', 'doc', 'link']);
     const rows = (id: string): string[] => {

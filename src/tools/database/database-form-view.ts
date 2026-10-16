@@ -723,10 +723,13 @@ export class DatabaseFormView implements DatabaseViewRenderer {
                     label: this.typeLabel(type),
                     testId: `database-form-question-type-${type}`,
                     icon: propertyTypeMeta(type).icon,
-                    checked: type === state.property.type || (type === 'multiSelect' && state.property.type === 'select'),
+                    checked: this.typeLabel(type) === this.typeLabel(state.property.type),
                     onClick: () => {
-                      this.options.changePropertyType?.(state.property.id, type);
-                      state.property = { ...state.property, type };
+                      // A Select already reads "Multiple choice": the checked row must not convert it.
+                      if (this.typeLabel(type) !== this.typeLabel(state.property.type)) {
+                        this.options.changePropertyType?.(state.property.id, type);
+                        state.property = { ...state.property, type };
+                      }
                       panel.back();
                     },
                   })),

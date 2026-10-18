@@ -21,4 +21,4 @@ export const oneOf = <T extends string>(key: string, allowed: readonly T[]): T =
 };
 
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
-export const SCHEMAS = ['envelope', 'full'] as const;
+export const SCHEMAS = ['envelope', 'full', 'shipped'] as const;

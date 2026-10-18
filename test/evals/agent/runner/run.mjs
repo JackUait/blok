@@ -12,7 +12,7 @@ const { values } = parseArgs({
   options: {
     tasks: { type: 'string', default: 'all' },
     trials: { type: 'string', default: '3' },
-    schema: { type: 'string', default: 'envelope' },
+    schema: { type: 'string', default: 'shipped' },
     model: { type: 'string', default: 'claude-opus-5-5' },
     effort: { type: 'string', default: 'high' },
     'max-total-tokens': { type: 'string', default: '3000000' },
@@ -27,7 +27,7 @@ mkdirSync(out, { recursive: true });
 
 const commit = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim();
 const readRecords = (file) => (existsSync(file) ? readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []);
-const spent = (records) => records.reduce((s, r) => s + r.inputTokens + r.outputTokens, 0);
+const spent = (records) => records.reduce((s, r) => s + r.inputTokens + r.outputTokens + r.cacheReadTokens + r.cacheWriteTokens, 0);
 
 const runMode = (schema, budgetLeft) => {
   const file = join(out, `trials-${schema}.jsonl`);

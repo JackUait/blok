@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { compareToBaseline, missingRecords, pickSchema, summarize, tooManyInfraErrors } from '../../evals/agent/runner/report.mjs';
 
 const rec = (taskId: string, outcome: 'pass' | 'fail' | 'error', inputTokens = 100) =>
-  ({ taskId, surface: 'in-app', trial: 0, outcome, graders: {}, turns: 1, inputTokens, outputTokens: 10 });
+  ({
+    taskId, surface: 'in-app', trial: 0, outcome, graders: {}, turns: 1, inputTokens, outputTokens: 10,
+    cacheReadTokens: 40, cacheWriteTokens: 20, toolCalls: ['blok_read', 'blok_execute'], wallMs: 1500, steps: [],
+  });
 const meta = { model: 'claude-opus-5-5', effort: 'high', commit: 'abc', schema: 'envelope' };
 
 describe('eval report', () => {
@@ -19,6 +22,14 @@ describe('eval report', () => {
     const results = summarize([rec('a', 'pass'), rec('a', 'fail'), rec('a', 'error')], meta);
 
     expect(results.tasks[0]).toMatchObject({ id: 'a', passAt1: 0.5, passAll: false });
+  });
+
+  it('adds up cache tokens, tool calls and wall time per task, with the median turns', () => {
+    const results = summarize([rec('a', 'pass'), { ...rec('a', 'fail'), turns: 3 }, { ...rec('a', 'pass'), turns: 5 }], meta);
+
+    expect(results.tasks[0]).toMatchObject({ cacheReadTokens: 120, cacheWriteTokens: 60, toolCalls: 6, wallMs: 4500, medianTurns: 3 });
+    expect(compareToBaseline(results, { model: meta.model, tasks: {} }, 3).lines[0])
+      .toContain('median turns 3, 1500 ms per trial, cache read 120 of 480 input tokens');
   });
 
   it('fails when a task drops more than one trial below its baseline', () => {

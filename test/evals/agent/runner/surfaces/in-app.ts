@@ -1,3 +1,4 @@
+import { composeGuidance } from '../../../../../src/agent/guidance';
 import { renderAgentTools } from '../../../../../src/agent/render-tools';
 import { nodeContract, openJsonSession } from '../../../../unit/agent/harness';
 import type { AgentResult, DocumentView } from '../../../../../types/agent';
@@ -22,7 +23,8 @@ export const openInApp: OpenSurface = async (task, schema) => {
   const session = openJsonSession(task.seed, EVAL_ACTOR);
   const unchecked: UncheckedSession = session;
   const results: ExecuteResult[] = [];
-  const tools = renderAgentTools(nodeContract('node'), { format: 'anthropic', schema })
+  const contract = nodeContract('node');
+  const tools = renderAgentTools(contract, { format: 'anthropic', schema: schema === 'shipped' ? 'mixed' : schema })
     .map((tool) => asAnthropicTool({
       name: tool.name,
       description: tool.description,
@@ -31,6 +33,7 @@ export const openInApp: OpenSurface = async (task, schema) => {
 
   return {
     tools,
+    system: composeGuidance(contract),
     execute: async (name, input) => {
       if (name === 'blok_read') {
         return { content: JSON.stringify(await unchecked.read(input)), isError: false };

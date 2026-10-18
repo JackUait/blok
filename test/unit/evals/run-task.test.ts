@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TokenBudget } from '../../evals/agent/runner/model-loop';
 import { assertMeasured, logFromExecuteCalls, runTrial } from '../../evals/agent/runner/run-task';
+import type { MessagesClient } from '../../evals/agent/runner/model-loop';
 import type { OpenSurface } from '../../evals/agent/runner/run-task';
 import type { EvalTask, Grader } from '../../evals/agent/types';
 
@@ -51,6 +52,24 @@ describe('runTrial', () => {
     expect(record.errorDetail).toContain('boom');
   });
 
+  it('sends the system prompt a surface ships with', async () => {
+    const create = vi.fn<MessagesClient['create']>(async () => reply('done'));
+
+    await runTrial({
+      task: task([]), surface: 'in-app', open: async (t, schema) => ({ ...(await open(t, schema)), system: 'shipped guidance' }), trial: 0,
+      client: { create }, model: 'm', effort: 'high', schema: 'shipped', dispatch: new TokenBudget(1000),
+    });
+
+    expect(create.mock.calls[0]?.[0].system).toBe('shipped guidance');
+  });
+
+  it('keeps the cache, tool-call and timing numbers in the record', async () => {
+    const record = await run([]);
+
+    expect(record).toMatchObject({ cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [expect.objectContaining({ toolCalls: 0 })] });
+    expect(record.wallMs).toBeGreaterThanOrEqual(0);
+  });
+
   it('turns a surface that fails to open into an error', async () => {
     const record = await runTrial({
       task: task([]), surface: 'in-app', open: async () => { throw new Error('server did not start'); }, trial: 0,
@@ -95,7 +114,8 @@ describe('assertMeasured', () => {
   });
 
   const record = (outcome: 'pass' | 'fail' | 'error', errorDetail?: string) => ({
-    taskId: 't', surface: 'mcp-live' as const, trial: 0, outcome, graders: {}, turns: 0, inputTokens: 0, outputTokens: 0, errorDetail,
+    taskId: 't', surface: 'mcp-live' as const, trial: 0, outcome, graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
+    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [], wallMs: 0, errorDetail,
   });
 
   it('fails the run on an error trial, naming its detail, so it cannot pass silently', () => {

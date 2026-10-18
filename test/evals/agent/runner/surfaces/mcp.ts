@@ -8,7 +8,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import type { OutputData } from '../../../../../types';
 import { isSeed } from '../../../../unit/agent/parity/corpus';
 import type { ExecuteResult } from '../../types';
-import type { OpenSurface } from '../run-task';
+import type { EvalSchema, OpenSurface } from '../run-task';
 import { asAnthropicTool, logFromExecuteCalls } from '../run-task';
 
 const REPO_ROOT = resolve(__dirname, '../../../../..');
@@ -86,6 +86,9 @@ const savedDocument = (path: string): OutputData => {
   return value;
 };
 
+export const mcpArgs = (bin: string, dir: string, schema: EvalSchema, extraArgs: string[]): string[] =>
+  [bin, '--source', `files:${dir}`, ...(schema === 'shipped' ? [] : ['--schema', schema]), ...extraArgs];
+
 export const openMcpStored = (extraArgs: string[] = [], extraEnv: Record<string, string> = {}): OpenSurface => async (task, schema) => {
   const dir = mkdtempSync(join(tmpdir(), 'blok-evals-'));
   const docId = task.docId ?? task.id;
@@ -95,7 +98,7 @@ export const openMcpStored = (extraArgs: string[] = [], extraEnv: Record<string,
   const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined));
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [mcpBin(), '--source', `files:${dir}`, '--schema', schema, ...extraArgs],
+    args: mcpArgs(mcpBin(), dir, schema, extraArgs),
     env: { ...env, ...extraEnv },
   });
   // 04 has no identity flag: the actor id is `agent:local:<client name>` (04 Task 9), so this name fixes it.

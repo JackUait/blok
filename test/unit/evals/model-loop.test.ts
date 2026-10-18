@@ -108,6 +108,46 @@ describe('runModelLoop', () => {
     expect(params?.output_config?.effort).toBe('high');
   });
 
+  it('marks every request for prompt caching, so later steps read the earlier ones from cache', async () => {
+    const create = vi.fn<MessagesClient['create']>(async () => message([textBlock('ok')], 'end_turn'));
+
+    await runModelLoop(options({ create }));
+
+    expect(create.mock.calls[0]?.[0].cache_control).toEqual({ type: 'ephemeral' });
+  });
+
+  it('adds up cache reads and writes, and spends them from the dispatch budget', async () => {
+    const cached = (content: Anthropic.ContentBlock[], stop: Anthropic.StopReason, read: number, write: number): Anthropic.Message => ({
+      ...message(content, stop),
+      usage: { ...usage(10, 5), cache_read_input_tokens: read, cache_creation_input_tokens: write },
+    });
+    const create = vi.fn<MessagesClient['create']>()
+      .mockResolvedValueOnce(cached([toolUse('a')], 'tool_use', 0, 2000))
+      .mockResolvedValueOnce(cached([textBlock('done')], 'end_turn', 2000, 300));
+    const dispatch = new TokenBudget(1_000_000);
+    const result = await runModelLoop(options({ create }, dispatch));
+
+    expect(result).toMatchObject({ cacheReadTokens: 2000, cacheWriteTokens: 2300, inputTokens: 20, outputTokens: 10 });
+    expect(dispatch.spent).toBe(20 + 10 + 2000 + 2300);
+  });
+
+  it('records each step: model time, tool time and how many tools it called', async () => {
+    const clock = { now: 0 };
+    const create = vi.fn<MessagesClient['create']>()
+      .mockImplementationOnce(async () => { clock.now += 1000; return message([toolUse('a'), toolUse('b')], 'tool_use'); })
+      .mockImplementationOnce(async () => { clock.now += 400; return message([textBlock('done')], 'end_turn'); });
+    const opts = { ...options({ create }), now: () => clock.now };
+
+    opts.execute.mockImplementation(async () => { clock.now += 5; return { content: '{"ok":true}', isError: false }; });
+
+    const result = await runModelLoop(opts);
+
+    expect(result.steps).toEqual([
+      { modelMs: 1000, toolMs: 10, toolCalls: 2, inputTokens: 100, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      { modelMs: 400, toolMs: 0, toolCalls: 0, inputTokens: 100, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    ]);
+  });
+
   it('records a refusal as an error', async () => {
     const create = vi.fn(async () => message([], 'refusal', { type: 'refusal', category: 'cyber', explanation: 'x' }));
     const result = await runModelLoop(options({ create }));
@@ -118,7 +158,9 @@ describe('runModelLoop', () => {
   });
 
   it('a grader that throws is an error, a failing grader is a fail', () => {
-    const done = { stop: 'done' as const, answer: '', turns: 1, inputTokens: 0, outputTokens: 0, toolCalls: [] };
+    const done = {
+      stop: 'done' as const, answer: '', turns: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [],
+    };
 
     expect(classifyTrial(done, [{ pass: true }], true)).toBe('error');
     expect(classifyTrial(done, [{ pass: false }], false)).toBe('fail');

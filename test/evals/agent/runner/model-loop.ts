@@ -29,13 +29,26 @@ export class TokenBudget {
   }
 }
 
-export interface LoopResult {
+export interface StepUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
+/** One model call and the tool calls it asked for. */
+export interface LoopStep extends StepUsage {
+  modelMs: number;
+  toolMs: number;
+  toolCalls: number;
+}
+
+export interface LoopResult extends StepUsage {
   stop: 'done' | 'turn-cap' | 'run-token-cap' | 'dispatch-token-cap' | 'refusal' | 'max-tokens';
   answer: string;
   turns: number;
-  inputTokens: number;
-  outputTokens: number;
   toolCalls: string[];
+  steps: LoopStep[];
   detail?: string;
 }
 
@@ -54,9 +67,13 @@ export const runModelLoop = async (o: {
   execute: Execute;
   budget: { maxTurns: number; maxOutputTokens: number };
   dispatch: TokenBudget;
+  now?: () => number;
 }): Promise<LoopResult> => {
+  const now = o.now ?? (() => performance.now());
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: o.prompt }];
-  const result: LoopResult = { stop: 'turn-cap', answer: '', turns: 0, inputTokens: 0, outputTokens: 0, toolCalls: [] };
+  const result: LoopResult = {
+    stop: 'turn-cap', answer: '', turns: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [],
+  };
 
   while (result.turns < o.budget.maxTurns) {
     if (o.dispatch.remaining <= 0) {
@@ -71,13 +88,28 @@ export const runModelLoop = async (o: {
       // A copy: the array grows after this call, and a recorded request must not change.
       messages: [...messages],
       output_config: { effort: o.effort },
+      // Tools and system stay the same for a whole trial, so each step reads the earlier ones from cache.
+      cache_control: { type: 'ephemeral' },
     };
+    const started = now();
     const response = await o.client.create(params);
+    const step: LoopStep = {
+      modelMs: now() - started,
+      toolMs: 0,
+      toolCalls: 0,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+    };
 
+    result.steps.push(step);
     result.turns += 1;
-    result.inputTokens += response.usage.input_tokens;
-    result.outputTokens += response.usage.output_tokens;
-    o.dispatch.spend(response.usage.input_tokens + response.usage.output_tokens);
+    result.inputTokens += step.inputTokens;
+    result.outputTokens += step.outputTokens;
+    result.cacheReadTokens += step.cacheReadTokens;
+    result.cacheWriteTokens += step.cacheWriteTokens;
+    o.dispatch.spend(step.inputTokens + step.outputTokens + step.cacheReadTokens + step.cacheWriteTokens);
 
     if (response.stop_reason === 'refusal') {
       return { ...result, stop: 'refusal', detail: JSON.stringify(response.stop_details) };
@@ -99,6 +131,8 @@ export const runModelLoop = async (o: {
 
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
+    const toolsStarted = now();
+
     for (const use of uses) {
       result.toolCalls.push(use.name);
 
@@ -107,6 +141,8 @@ export const runModelLoop = async (o: {
       toolResults.push({ type: 'tool_result', tool_use_id: use.id, content: outcome.content, is_error: outcome.isError });
     }
 
+    step.toolMs = now() - toolsStarted;
+    step.toolCalls = uses.length;
     messages.push({ role: 'user', content: toolResults });
 
     if (result.outputTokens >= o.budget.maxOutputTokens) {

@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { composeGuidance } from '../../../src/agent/guidance';
+import { renderAgentTools } from '../../../src/agent/render-tools';
+import { nodeContract } from '../agent/harness';
 import { TokenBudget } from '../../evals/agent/runner/model-loop';
 import { replayClient } from '../../evals/agent/runner/replay-client';
 import { runTrial } from '../../evals/agent/runner/run-task';
@@ -16,7 +19,7 @@ describe.each(ALL_TASKS.filter((t) => t.surfaces.includes('in-app')))('in-app su
     vi.restoreAllMocks();
   });
 
-  it.each(['envelope', 'full'] as const)('passes every grader with the reference as tool calls (%s)', async (schema) => {
+  it.each(['envelope', 'full', 'shipped'] as const)('passes every grader with the reference as tool calls (%s)', async (schema) => {
     const record = await runTrial({
       task, surface: 'in-app', open: openInApp, trial: 0, client: replayClient(task, 'session'),
       model: 'replay', effort: 'high', schema, dispatch: new TokenBudget(1),
@@ -24,5 +27,35 @@ describe.each(ALL_TASKS.filter((t) => t.surfaces.includes('in-app')))('in-app su
 
     expect(record.errorDetail).toBeUndefined();
     expect(record.outcome).toBe('pass');
+  });
+});
+
+describe('in-app surface, shipped setup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the mixed schema and the guidance the assistant sends (agent.ts ask)', async () => {
+    const task = ALL_TASKS.find((t) => t.surfaces.includes('in-app'));
+
+    if (task === undefined) {
+      throw new Error('no in-app task');
+    }
+
+    const surface = await openInApp(task, 'shipped');
+    const contract = nodeContract('node');
+
+    try {
+      expect(surface.system).toBe(composeGuidance(contract));
+      expect(surface.tools.map((t) => t.description)).toEqual(
+        renderAgentTools(contract, { format: 'anthropic', schema: 'mixed' }).map((t) => t.description)
+      );
+    } finally {
+      await surface.close();
+    }
   });
 });

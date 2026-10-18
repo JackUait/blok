@@ -4,6 +4,12 @@
  */
 
 const mean = (values) => (values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length);
+const sum = (trials, pick) => trials.reduce((s, t) => s + pick(t), 0);
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b);
+
+  return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)];
+};
 
 export function summarize(records, meta) {
   const byTask = new Map();
@@ -26,8 +32,13 @@ export function summarize(records, meta) {
         trials,
         passAt1: mean(scored.map((t) => (t.outcome === 'pass' ? 1 : 0))),
         passAll: scored.length > 0 && scored.length === trials.length && scored.every((t) => t.outcome === 'pass'),
-        inputTokens: trials.reduce((s, t) => s + t.inputTokens, 0),
-        outputTokens: trials.reduce((s, t) => s + t.outputTokens, 0),
+        inputTokens: sum(trials, (t) => t.inputTokens),
+        outputTokens: sum(trials, (t) => t.outputTokens),
+        cacheReadTokens: sum(trials, (t) => t.cacheReadTokens),
+        cacheWriteTokens: sum(trials, (t) => t.cacheWriteTokens),
+        toolCalls: sum(trials, (t) => t.toolCalls.length),
+        wallMs: sum(trials, (t) => t.wallMs),
+        medianTurns: median(trials.map((t) => t.turns)),
       };
     }),
   };
@@ -45,7 +56,9 @@ export function compareToBaseline(results, baseline, trials) {
     const before = baseline.tasks?.[task.id]?.passAt1;
     const failing = Object.entries(task.trials.flatMap((t) => Object.entries(t.graders)).reduce((acc, [name, v]) => (v.pass ? acc : { ...acc, [name]: true }), {})).map(([n]) => n);
 
-    lines.push(`${task.id}: baseline ${before ?? '-'}, now ${task.passAt1.toFixed(2)}${failing.length ? `, failing: ${failing.join(', ')}` : ''}`);
+    const speed = `median turns ${task.medianTurns}, ${Math.round(task.wallMs / task.trials.length)} ms per trial, cache read ${task.cacheReadTokens} of ${task.inputTokens + task.cacheReadTokens + task.cacheWriteTokens} input tokens`;
+
+    lines.push(`${task.id}: baseline ${before ?? '-'}, now ${task.passAt1.toFixed(2)}, ${speed}${failing.length ? `, failing: ${failing.join(', ')}` : ''}`);
 
     if (task.id === 'markdown-regression' && task.trials.some((t) => t.outcome === 'fail')) {
       failed = true;

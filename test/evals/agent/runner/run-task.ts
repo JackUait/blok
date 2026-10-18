@@ -2,7 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 
 import type { OutputData } from '../../../../types';
 import type { EvalTask, ExecuteResult, Grader, GraderInput, LogEntry, Observed, Surface, Verdict } from '../types';
-import type { Execute, MessagesClient, TokenBudget } from './model-loop';
+import type { Execute, LoopStep, MessagesClient, TokenBudget } from './model-loop';
 import { classifyTrial, runModelLoop } from './model-loop';
 
 type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
@@ -13,12 +13,17 @@ export const SYSTEM_PROMPT =
 
 export interface SurfaceRun {
   tools: Anthropic.Tool[];
+  /** The system prompt the surface ships with; without one the trial sends SYSTEM_PROMPT. */
+  system?: string;
   execute: Execute;
   finish(): Promise<{ final: OutputData; log: LogEntry[]; results: ExecuteResult[]; observed?: Observed; actorId?: string }>;
   close(): Promise<void>;
 }
 
-export type OpenSurface = (task: EvalTask, schema: 'envelope' | 'full') => Promise<SurfaceRun>;
+/** 'shipped' is what each surface ships with: mixed in the editor (agent.ts ask), the server default for MCP. */
+export type EvalSchema = 'envelope' | 'full' | 'shipped';
+
+export type OpenSurface = (task: EvalTask, schema: EvalSchema) => Promise<SurfaceRun>;
 
 export interface TrialRecord {
   taskId: string;
@@ -29,11 +34,17 @@ export interface TrialRecord {
   turns: number;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  toolCalls: string[];
+  steps: LoopStep[];
+  wallMs: number;
   errorDetail?: string;
 }
 
 const errorRecord = (o: { task: EvalTask; surface: Surface; trial: number }, error: unknown): TrialRecord => ({
   taskId: o.task.id, surface: o.surface, trial: o.trial, outcome: 'error', graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
+  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [], wallMs: 0,
   errorDetail: error instanceof Error ? (error.stack ?? error.message) : String(error),
 });
 
@@ -55,7 +66,7 @@ const grade = (list: Grader[], input: GraderInput): { graders: Record<string, Ve
 
 export const runTrial = async (o: {
   task: EvalTask; surface: Surface; open: OpenSurface; trial: number; client: MessagesClient;
-  model: string; effort: Effort; schema: 'envelope' | 'full'; dispatch: TokenBudget;
+  model: string; effort: Effort; schema: EvalSchema; dispatch: TokenBudget;
 }): Promise<TrialRecord> => {
   let surface: SurfaceRun;
 
@@ -67,10 +78,12 @@ export const runTrial = async (o: {
 
   try {
     const prompt = o.task.docId === undefined ? o.task.prompt : `The document id is "${o.task.docId}". ${o.task.prompt}`;
+    const started = performance.now();
     const loop = await runModelLoop({
-      client: o.client, model: o.model, effort: o.effort, system: SYSTEM_PROMPT, prompt,
+      client: o.client, model: o.model, effort: o.effort, system: surface.system ?? SYSTEM_PROMPT, prompt,
       tools: surface.tools, execute: surface.execute, budget: o.task.budget, dispatch: o.dispatch,
     });
+    const wallMs = performance.now() - started;
     const end = await surface.finish();
     const { graders, threw } = grade(o.task.graders, {
       seed: o.task.seed, final: end.final, actorId: end.actorId ?? 'agent-eval', log: end.log, results: end.results,
@@ -81,6 +94,7 @@ export const runTrial = async (o: {
       taskId: o.task.id, surface: o.surface, trial: o.trial,
       outcome: classifyTrial(loop, Object.values(graders), threw !== null),
       graders, turns: loop.turns, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens,
+      cacheReadTokens: loop.cacheReadTokens, cacheWriteTokens: loop.cacheWriteTokens, toolCalls: loop.toolCalls, steps: loop.steps, wallMs,
       errorDetail: threw instanceof Error ? (threw.stack ?? threw.message) : (loop.detail ?? (loop.stop === 'done' ? undefined : loop.stop)),
     };
   } catch (error) {

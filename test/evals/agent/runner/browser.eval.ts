@@ -53,6 +53,7 @@ for (const task of tasks) {
           await page.addScriptTag({ content: RATING_TOOL_SOURCE });
         }
 
+        // 'mixed' is private to the assistant (agent.ts ToolsOptions), so 'shipped' takes the public default here.
         const rendered = await page.evaluate(async ({ seed, mode }) => {
           document.getElementById('blok')?.remove();
           const holder = document.createElement('div');
@@ -69,13 +70,14 @@ for (const task of tasks) {
           // Never attributeTo: 'user' (05 §3.3.6), so `attributed` can pass.
           window.evalTurn = blok.agent.begin({ agent: { id: 'agent-eval', name: 'Eval agent' } });
 
-          return blok.agent.tools({ format: 'anthropic', schema: mode });
-        }, { seed: t.seed, mode: schema });
+          return { tools: await blok.agent.tools({ format: 'anthropic', schema: mode }), system: await blok.agent.guidance() };
+        }, { seed: t.seed, mode: schema === 'shipped' ? 'envelope' : schema });
 
         const results: ExecuteResult[] = [];
 
         return {
-          tools: rendered.map((tool) => asAnthropicTool({ name: tool.name, description: tool.description, schema: tool.input_schema })),
+          system: rendered.system,
+          tools: rendered.tools.map((tool) => asAnthropicTool({ name: tool.name, description: tool.description, schema: tool.input_schema })),
           execute: async (name, input) => {
             const out = await page.evaluate(async ({ n, i }) => {
               if (window.evalTurn === undefined) {

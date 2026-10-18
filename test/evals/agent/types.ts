@@ -55,7 +55,7 @@ export interface EvalTask {
   budget: { maxTurns: number; maxOutputTokens: number };
 }
 export interface EvalResults {
-  model: string; effort: string; commit: string; schema: 'envelope' | 'full';
+  model: string; effort: string; commit: string; schema: 'envelope' | 'full' | 'shipped';
   tasks: Array<{
     id: string; surface: Surface;
     trials: Array<{ outcome: 'pass' | 'fail' | 'error'; graders: Record<string, Verdict>; turns: number; inputTokens: number; outputTokens: number; errorDetail?: string }>;

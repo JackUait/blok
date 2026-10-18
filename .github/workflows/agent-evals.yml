@@ -13,10 +13,10 @@ on:
         type: number
         default: 3
       schema:
-        description: "envelope, full, or both (the one-off comparison)"
+        description: "shipped (what each surface ships with), envelope, full, or both (the one-off comparison)"
         type: choice
-        options: [envelope, full, both]
-        default: envelope
+        options: [shipped, envelope, full, both]
+        default: shipped
       model:
         description: "Model id"
         type: string

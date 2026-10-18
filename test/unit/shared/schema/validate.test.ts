@@ -170,6 +170,32 @@ describe('validateAgainst', () => {
     ok({ oneOf: [{ type: 'number' }, { type: 'integer' }] }, 1.5);
   });
 
+  describe('when no oneOf or anyOf branch matches', () => {
+    const cell = {
+      oneOf: [
+        { type: 'array', items: { anyOf: [{ type: 'object', required: ['text'], additionalProperties: false, properties: { text: { type: 'string' } } }] } },
+        { type: 'string' },
+      ],
+    };
+
+    it('names the allowed types when the value has none of them', () => {
+      expect(validateAgainst(cell, { text: 'a' })).toEqual([{ path: '', message: 'expected array or string, got object' }]);
+    });
+
+    it('reports the problem inside the one branch whose type matches', () => {
+      expect(validateAgainst(cell, [{ text: 'a', bold: true }])).toEqual([{ path: '/0/bold', message: 'unknown field "bold"' }]);
+    });
+
+    it('lists what each untyped branch misses', () => {
+      const schema = { type: 'object', oneOf: [{ required: ['count'] }, { required: ['from'] }] };
+
+      expect(validateAgainst(schema, {})).toEqual([{
+        path: '',
+        message: 'matches none of the allowed shapes: missing required field "count", or missing required field "from"',
+      }]);
+    });
+  });
+
   it('requires at least one matching anyOf branch', () => {
     ok({ anyOf: [{ type: 'number' }, { type: 'integer' }] }, 1);
     bad({ anyOf: [{ type: 'string' }] }, 1);

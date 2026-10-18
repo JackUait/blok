@@ -52,8 +52,14 @@ export class AgentToolsTooLargeError extends Error {
   }
 }
 
-/** The commands most edits use. 'full' for all of them is too big to send on every call. */
-export const COMMON_COMMANDS: readonly string[] = ['block.insert', 'text.replace', 'block.delete', 'markdown.insert'];
+/**
+ * The commands most edits use. 'full' for all of them is too big to send on every call.
+ * The last four are the ones models looked up most with blok_describe in the MCP eval.
+ */
+export const COMMON_COMMANDS: readonly string[] = [
+  'block.insert', 'text.replace', 'block.delete', 'markdown.insert',
+  'text.format', 'block.convert', 'doc.setTitle', 'doc.setIcon',
+];
 
 const DESCRIPTIONS: Record<AgentToolName, string> = {
   blok_read: 'Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.',

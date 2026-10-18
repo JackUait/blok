@@ -6,6 +6,7 @@ import { renderAgentTools, TOOL_NAME_PATTERN, type RenderedTool, type RenderOpti
 import { validateAgainst } from '../../../src/shared/schema/validate';
 import { isClosedSchema } from '../../../src/agent/schema-walk';
 import { command, deepFreeze, makeContract } from './fixtures/contract';
+import { createHeadlessAgentSetup } from '../../../src/view/agent-runtime';
 
 type Schema = Record<string, unknown>;
 const PROVIDERS: Array<RenderOptions['format']> = ['anthropic', 'openai'];
@@ -524,6 +525,13 @@ describe('renderAgentTools mixed', () => {
     expect(validateAgainst(root, { commands: [{ name: 'poll.addOption', args: { label: 'x' } }] })).toEqual([]);
     expect(validateAgainst(root, { commands: [{ name: 'block.insert', args: { nope: 1 } }] })).not.toEqual([]);
     expect(validateAgainst(root, { commands: [{ name: 'page.rename', args: {} }] })).not.toEqual([]);
+  });
+
+  it('covers the commands models looked up most in the MCP eval (describeQueries)', () => {
+    const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
+    const full = branchesOf(mixedInput(contract)).map(branch => nameOf(branch).const).filter(name => name !== undefined);
+
+    expect(full).toEqual(expect.arrayContaining(['text.format', 'block.convert', 'doc.setTitle', 'doc.setIcon']));
   });
 
   it('tells the model which commands still need blok_describe', () => {

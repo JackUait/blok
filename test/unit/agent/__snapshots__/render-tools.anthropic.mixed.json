@@ -70,7 +70,7 @@
   },
   {
     "name": "blok_execute",
-    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for block.delete, block.insert, markdown.insert, text.replace. Call blok_describe for any other command's arguments.",
+    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -79,6 +79,44 @@
           "minItems": 1,
           "items": {
             "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.convert"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "type": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "data": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
               {
                 "type": "object",
                 "properties": {
@@ -212,6 +250,98 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "doc.setIcon"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "icon": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "const": "emoji"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "const": "image"
+                              },
+                              "url": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "url"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "icon"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "doc.setTitle"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "markdown.insert"
                   },
                   "args": {
@@ -274,6 +404,94 @@
                     },
                     "required": [
                       "markdown"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "text.format"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "range": {
+                        "oneOf": [
+                          {
+                            "const": "all"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "expectText": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "find": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "occurrence": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "required": [
+                              "find"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "set": {
+                        "type": "object"
+                      },
+                      "unset": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "range"
                     ],
                     "additionalProperties": false
                   },
@@ -388,7 +606,6 @@
                     "enum": [
                       "audio.setCover",
                       "audio.setSource",
-                      "block.convert",
                       "block.duplicate",
                       "block.move",
                       "block.update",
@@ -420,8 +637,6 @@
                       "database.updateProperty",
                       "doc.find",
                       "doc.read",
-                      "doc.setIcon",
-                      "doc.setTitle",
                       "embed.setUrl",
                       "file.setSource",
                       "history.redo",
@@ -454,7 +669,6 @@
                       "tabs.create",
                       "tabs.deleteTab",
                       "text.delete",
-                      "text.format",
                       "text.insert",
                       "video.setSource"
                     ]

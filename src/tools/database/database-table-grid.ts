@@ -615,8 +615,9 @@ export class DatabaseTableGrid {
       }
       const current = rowId === undefined ? undefined : this.valueAt(rowId, property);
 
-      // Text carries no name or point: the text a place already shows keeps it whole.
-      if (property.type === 'place' && isPlaceValue(current) && text.trim() !== '' && text.trim() === placeText(current)) {
+      // Text carries no name or point: the place's own name or address keeps it whole.
+      if (property.type === 'place' && isPlaceValue(current) && text.trim() !== ''
+        && (text.trim() === placeText(current) || text.trim() === current.address?.trim())) {
         return null;
       }
       const value = valueFromText(property, text, this.cellContext);

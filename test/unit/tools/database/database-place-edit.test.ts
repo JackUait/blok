@@ -123,6 +123,17 @@ describe('editing a Place keeps what the user did not change', () => {
       expect(doc.rows.get('a')?.data.properties.where).toStrictEqual(EIFFEL);
     });
 
+    it('pasting the stored address keeps the place whole too', () => {
+      const { doc, el } = setup();
+
+      openPlaceCell(el);
+      press(field(), 'Escape');
+      paste(grid(el), ` ${EIFFEL.address ?? ''} `);
+
+      expect(writesTo(doc, 'a')).toEqual([]);
+      expect(doc.rows.get('a')?.data.properties.where).toStrictEqual(EIFFEL);
+    });
+
     it('pasting other text replaces the place with that address', () => {
       const { doc, el } = setup();
 

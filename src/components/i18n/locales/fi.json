@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Peruuta",
   "tools.database.commentAnonymous": "Nimetön",
   "tools.database.commentsSection": "Kommentit",
+  "tools.database.feedCommentReplyOne": "1 vastaus",
+  "tools.database.feedCommentReplies": "{count} vastausta",
   "tools.database.tableMoveTo": "Siirrä kohteeseen",
   "tools.database.searchActions": "Etsi toimintoja…",
   "tools.database.rowLastEditedBy": "Viimeksi muokannut {name}",

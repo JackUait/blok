@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Цуцлах",
   "tools.database.commentAnonymous": "Нэргүй",
   "tools.database.commentsSection": "Сэтгэгдлүүд",
+  "tools.database.feedCommentReplyOne": "1 хариу",
+  "tools.database.feedCommentReplies": "Хариу: {count}",
   "tools.database.tableMoveTo": "Зөөх",
   "tools.database.searchActions": "Үйлдэл хайх…",
   "tools.database.rowLastEditedBy": "{name} сүүлд засварласан",

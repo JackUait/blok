@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Ghairi",
   "tools.database.commentAnonymous": "Asiyejulikana",
   "tools.database.commentsSection": "Maoni",
+  "tools.database.feedCommentReplyOne": "Jibu 1",
+  "tools.database.feedCommentReplies": "Majibu: {count}",
   "tools.database.tableMoveTo": "Hamishia",
   "tools.database.searchActions": "Tafuta vitendo…",
   "tools.database.rowLastEditedBy": "Kimehaririwa mara ya mwisho na {name}",

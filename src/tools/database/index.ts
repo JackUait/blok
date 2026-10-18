@@ -3566,6 +3566,7 @@ export class DatabaseTool implements BlockTool {
       },
       ...(this.config.feedFooter !== undefined ? { footer: this.config.feedFooter } : {}),
       reactions: this.feedReactions(),
+      comments: (rowId) => (this.config.comments === undefined && this.builtInComments.enabled() ? this.builtInComments.feedBox(rowId) : null),
       actions: (rowId, anchor, card) => this.openFeedActions(rowId, anchor, card),
     });
 

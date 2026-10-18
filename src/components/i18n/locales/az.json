@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Ləğv et",
   "tools.database.commentAnonymous": "Anonim",
   "tools.database.commentsSection": "Şərhlər",
+  "tools.database.feedCommentReplyOne": "1 cavab",
+  "tools.database.feedCommentReplies": "{count} cavab",
   "tools.database.tableMoveTo": "Bura köçür",
   "tools.database.searchActions": "Əməliyyatları axtar…",
   "tools.database.rowLastEditedBy": "{name} tərəfindən son redaktə",

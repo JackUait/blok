@@ -69,6 +69,8 @@ export interface FeedViewOptions {
   footer?: FeedFooter;
   /** Built-in reactions. Not drawn when the host owns the footer. */
   reactions?: FeedReactions;
+  /** Built-in comments: a card's comment box, or null for none. Not drawn when the host owns the footer. */
+  comments?: (rowId: string) => HTMLElement | null;
   /** The card's "More actions" menu. */
   actions?: (rowId: string, anchor: HTMLElement, card: HTMLElement) => void;
 }
@@ -201,6 +203,9 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     const reactions = this.createReactions(row);
 
     if (reactions !== null) card.appendChild(reactions);
+    const comments = this.options.footer === undefined ? this.options.comments?.(row.id) ?? null : null;
+
+    if (comments !== null) card.appendChild(comments);
     if (this.options.footer !== undefined) {
       const holder = document.createElement('div');
 

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ਰੱਦ ਕਰੋ",
   "tools.database.commentAnonymous": "ਗੁਮਨਾਮ",
   "tools.database.commentsSection": "ਟਿੱਪਣੀਆਂ",
+  "tools.database.feedCommentReplyOne": "1 ਜਵਾਬ",
+  "tools.database.feedCommentReplies": "{count} ਜਵਾਬ",
   "tools.database.tableMoveTo": "ਇਸ ਵਿੱਚ ਲਿਜਾਓ",
   "tools.database.searchActions": "ਕਾਰਵਾਈਆਂ ਲੱਭੋ…",
   "tools.database.rowLastEditedBy": "{name} ਦੁਆਰਾ ਆਖਰੀ ਸੋਧ",

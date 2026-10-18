@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Hủy",
   "tools.database.commentAnonymous": "Ẩn danh",
   "tools.database.commentsSection": "Bình luận",
+  "tools.database.feedCommentReplyOne": "1 phản hồi",
+  "tools.database.feedCommentReplies": "{count} phản hồi",
   "tools.database.tableMoveTo": "Chuyển đến",
   "tools.database.searchActions": "Tìm thao tác…",
   "tools.database.rowLastEditedBy": "Chỉnh sửa lần cuối bởi {name}",

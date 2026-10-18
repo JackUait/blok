@@ -35,6 +35,8 @@ export class BuiltInCommentsUi {
   private readonly store: BuiltInComments;
   private popover: PopoverDesktop | null = null;
   private readonly panels = new Set<CommentsPanel>();
+  /** Feed card boxes: redrawn when a comment changes; release drops the box's composer. */
+  private readonly boxes = new Map<HTMLElement, { draw: () => void; release: () => void }>();
   private redraw: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: BuiltInCommentsUiOptions) {
@@ -96,6 +98,47 @@ export class BuiltInCommentsUi {
     return section;
   }
 
+  /**
+   * A feed card's comment box (research/19 §2d): "Add a comment…" until the
+   * row has an open comment, then "N reply · <time>", which opens the thread.
+   */
+  public feedBox(rowId: string): HTMLElement {
+    const box = document.createElement('div');
+    const state = { release: (): void => undefined };
+    const draw = (): void => {
+      state.release();
+      state.release = () => undefined;
+      const comments = this.store.threads(rowId)
+        .filter((thread) => thread.data.resolved !== true)
+        .flatMap((thread) => [thread, ...thread.replies]);
+
+      if (comments.length > 0) {
+        box.replaceChildren(this.feedSummary(rowId, comments));
+
+        return;
+      }
+      if (this.options.readOnly()) {
+        box.replaceChildren();
+
+        return;
+      }
+      // Shows no thread, so the composer always starts a new one.
+      const panel = this.panel(rowId, undefined, () => []);
+
+      box.replaceChildren(panel.element);
+      state.release = () => {
+        this.panels.delete(panel);
+        panel.destroy();
+      };
+    };
+
+    box.setAttribute('data-blok-database-feed-comments', '');
+    draw();
+    this.boxes.set(box, { draw, release: () => state.release() });
+
+    return box;
+  }
+
   public close(): void {
     this.popover?.hide();
   }
@@ -106,6 +149,8 @@ export class BuiltInCommentsUi {
     this.close();
     this.panels.forEach((panel) => panel.destroy());
     this.panels.clear();
+    this.boxes.forEach((box) => box.release());
+    this.boxes.clear();
   }
 
   private readonly handleChange = (payload: unknown): void => {
@@ -122,15 +167,58 @@ export class BuiltInCommentsUi {
         this.panels.delete(panel);
       });
       this.panels.forEach((panel) => panel.refresh());
+      // A feed redraw replaced its cards, and their boxes with them.
+      [...this.boxes].forEach(([element, box]) => {
+        if (element.isConnected) {
+          box.draw();
+
+          return;
+        }
+        box.release();
+        this.boxes.delete(element);
+      });
       this.options.onChange();
     }, 0);
   };
 
-  private panel(rowId: string, propertyId: string | undefined): CommentsPanel {
+  /** "1 reply" or "N replies", then the latest comment's time; opens the thread. */
+  private feedSummary(rowId: string, comments: StoredComment[]): HTMLElement {
+    const { t } = this.options.api.i18n;
+    const locale = this.options.locale();
+    const latest = comments.reduce((last, comment) => (comment.data.createdAt > last.data.createdAt ? comment : last));
+    const button = document.createElement('button');
+    const initial = document.createElement('span');
+    const count = document.createElement('span');
+    const time = document.createElement('span');
+    const at = new Date(latest.data.createdAt);
+    const today = at.toDateString() === new Date().toDateString();
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-feed-comments-summary', '');
+    initial.setAttribute('data-blok-database-comment-avatar', '');
+    initial.setAttribute('aria-hidden', 'true');
+    initial.textContent = Array.from(this.nameOf(latest).trim())[0]?.toUpperCase() ?? '';
+    count.setAttribute('data-blok-database-feed-comments-count', '');
+    count.textContent = comments.length === 1
+      ? t('tools.database.feedCommentReplyOne')
+      : t('tools.database.feedCommentReplies', { count: comments.length });
+    time.setAttribute('data-blok-database-feed-comments-time', '');
+    // Notion shows the clock time (research/19 §2d); an older day shows its date.
+    time.textContent = new Intl.DateTimeFormat(locale, today ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric' }).format(at);
+    button.append(initial, count, time);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.open(rowId, undefined, button);
+    });
+
+    return button;
+  }
+
+  private panel(rowId: string, propertyId: string | undefined, shown?: () => StoredThread[]): CommentsPanel {
     const { api } = this.options;
     const canComment = !this.options.readOnly();
-    const threads = (): StoredThread[] => this.store.threads(rowId)
-      .filter((thread) => thread.data.resolved !== true && (propertyId === undefined || thread.data.propertyId === propertyId));
+    const threads = shown ?? ((): StoredThread[] => this.store.threads(rowId)
+      .filter((thread) => thread.data.resolved !== true && (propertyId === undefined || thread.data.propertyId === propertyId)));
     const panel = createCommentsPanel({
       i18n: api.i18n,
       locale: this.options.locale(),

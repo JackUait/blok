@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "रद्द करा",
   "tools.database.commentAnonymous": "अनामिक",
   "tools.database.commentsSection": "टिप्पण्या",
+  "tools.database.feedCommentReplyOne": "1 उत्तर",
+  "tools.database.feedCommentReplies": "{count} उत्तरे",
   "tools.database.tableMoveTo": "येथे हलवा",
   "tools.database.searchActions": "क्रिया शोधा…",
   "tools.database.rowLastEditedBy": "{name} ने शेवटचे संपादन केले",

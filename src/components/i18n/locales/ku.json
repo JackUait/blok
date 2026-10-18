@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "پاشگەزبوونەوە",
   "tools.database.commentAnonymous": "نەناسراو",
   "tools.database.commentsSection": "لێدوانەکان",
+  "tools.database.feedCommentReplyOne": "١ وەڵام",
+  "tools.database.feedCommentReplies": "وەڵامەکان: {count}",
   "tools.database.tableMoveTo": "گواستنەوە بۆ",
   "tools.database.searchActions": "گەڕان لە کردارەکان…",
   "tools.database.rowLastEditedBy": "دوایین دەستکاری لەلایەن {name}",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "إلغاء",
   "tools.database.commentAnonymous": "مجهول",
   "tools.database.commentsSection": "التعليقات",
+  "tools.database.feedCommentReplyOne": "ردّ واحد",
+  "tools.database.feedCommentReplies": "الردود: {count}",
   "tools.database.tableMoveTo": "نقل إلى",
   "tools.database.searchActions": "البحث في الإجراءات…",
   "tools.database.rowLastEditedBy": "آخر تعديل بواسطة {name}",

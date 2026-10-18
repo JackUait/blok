@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ರದ್ದುಮಾಡಿ",
   "tools.database.commentAnonymous": "ಅನಾಮಧೇಯ",
   "tools.database.commentsSection": "ಕಾಮೆಂಟ್‌ಗಳು",
+  "tools.database.feedCommentReplyOne": "1 ಪ್ರತ್ಯುತ್ತರ",
+  "tools.database.feedCommentReplies": "{count} ಪ್ರತ್ಯುತ್ತರಗಳು",
   "tools.database.tableMoveTo": "ಇಲ್ಲಿಗೆ ಸರಿಸಿ",
   "tools.database.searchActions": "ಕ್ರಿಯೆಗಳನ್ನು ಹುಡುಕಿ…",
   "tools.database.rowLastEditedBy": "{name} ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಿದ್ದಾರೆ",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Скасувати",
   "tools.database.commentAnonymous": "Анонім",
   "tools.database.commentsSection": "Коментарі",
+  "tools.database.feedCommentReplyOne": "1 відповідь",
+  "tools.database.feedCommentReplies": "Відповіді: {count}",
   "tools.database.tableMoveTo": "Перемістити в",
   "tools.database.searchActions": "Шукати дії…",
   "tools.database.rowLastEditedBy": "Останнє редагування: {name}",

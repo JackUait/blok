@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "منسوخ کریں",
   "tools.database.commentAnonymous": "گمنام",
   "tools.database.commentsSection": "تبصرے",
+  "tools.database.feedCommentReplyOne": "1 جواب",
+  "tools.database.feedCommentReplies": "جوابات: {count}",
   "tools.database.tableMoveTo": "منتقل کریں",
   "tools.database.searchActions": "کارروائیاں تلاش کریں…",
   "tools.database.rowLastEditedBy": "{name} نے آخری ترمیم کی",

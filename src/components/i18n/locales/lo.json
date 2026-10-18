@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ຍົກເລີກ",
   "tools.database.commentAnonymous": "ນິລະນາມ",
   "tools.database.commentsSection": "ຄຳເຫັນ",
+  "tools.database.feedCommentReplyOne": "ຕອບກັບ 1 ລາຍການ",
+  "tools.database.feedCommentReplies": "ຕອບກັບ {count} ລາຍການ",
   "tools.database.tableMoveTo": "ຍ້າຍໄປ",
   "tools.database.searchActions": "ຄົ້ນຫາການດຳເນີນການ…",
   "tools.database.rowLastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",

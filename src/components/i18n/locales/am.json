@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ይቅር",
   "tools.database.commentAnonymous": "ስም አልባ",
   "tools.database.commentsSection": "አስተያየቶች",
+  "tools.database.feedCommentReplyOne": "1 ምላሽ",
+  "tools.database.feedCommentReplies": "ምላሾች፦ {count}",
   "tools.database.tableMoveTo": "አንቀሳቅስ ወደ",
   "tools.database.searchActions": "እርምጃዎችን ፈልግ…",
   "tools.database.rowLastEditedBy": "የመጨረሻው አርትዖት በ{name}",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "రద్దు",
   "tools.database.commentAnonymous": "అనామకుడు",
   "tools.database.commentsSection": "వ్యాఖ్యలు",
+  "tools.database.feedCommentReplyOne": "1 ప్రత్యుత్తరం",
+  "tools.database.feedCommentReplies": "{count} ప్రత్యుత్తరాలు",
   "tools.database.tableMoveTo": "ఇక్కడికి తరలించు",
   "tools.database.searchActions": "చర్యలను వెతకండి…",
   "tools.database.rowLastEditedBy": "{name} చివరిగా సవరించారు",

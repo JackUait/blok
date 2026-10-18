@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ยกเลิก",
   "tools.database.commentAnonymous": "นิรนาม",
   "tools.database.commentsSection": "ความคิดเห็น",
+  "tools.database.feedCommentReplyOne": "ตอบกลับ 1 รายการ",
+  "tools.database.feedCommentReplies": "ตอบกลับ {count} รายการ",
   "tools.database.tableMoveTo": "ย้ายไปที่",
   "tools.database.searchActions": "ค้นหาการดำเนินการ…",
   "tools.database.rowLastEditedBy": "แก้ไขล่าสุดโดย {name}",

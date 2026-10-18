@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "İptal",
   "tools.database.commentAnonymous": "Anonim",
   "tools.database.commentsSection": "Yorumlar",
+  "tools.database.feedCommentReplyOne": "1 yanıt",
+  "tools.database.feedCommentReplies": "{count} yanıt",
   "tools.database.tableMoveTo": "Şuraya taşı",
   "tools.database.searchActions": "Eylem arayın…",
   "tools.database.rowLastEditedBy": "Son düzenleyen: {name}",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Anulo",
   "tools.database.commentAnonymous": "Anonim",
   "tools.database.commentsSection": "Komentet",
+  "tools.database.feedCommentReplyOne": "1 përgjigje",
+  "tools.database.feedCommentReplies": "{count} përgjigje",
   "tools.database.tableMoveTo": "Zhvendos te",
   "tools.database.searchActions": "Kërko veprime…",
   "tools.database.rowLastEditedBy": "Ndryshuar për herë të fundit nga {name}",

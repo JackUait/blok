@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Atcelt",
   "tools.database.commentAnonymous": "Anonīms",
   "tools.database.commentsSection": "Komentāri",
+  "tools.database.feedCommentReplyOne": "1 atbilde",
+  "tools.database.feedCommentReplies": "Atbildes: {count}",
   "tools.database.tableMoveTo": "Pārvietot uz",
   "tools.database.searchActions": "Meklēt darbības…",
   "tools.database.rowLastEditedBy": "Pēdējo reizi rediģēja {name}",

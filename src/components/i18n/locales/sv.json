@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Avbryt",
   "tools.database.commentAnonymous": "Anonym",
   "tools.database.commentsSection": "Kommentarer",
+  "tools.database.feedCommentReplyOne": "1 svar",
+  "tools.database.feedCommentReplies": "{count} svar",
   "tools.database.tableMoveTo": "Flytta till",
   "tools.database.searchActions": "Sök efter åtgärder…",
   "tools.database.rowLastEditedBy": "Senast redigerad av {name}",

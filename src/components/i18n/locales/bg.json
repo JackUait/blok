@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Отказ",
   "tools.database.commentAnonymous": "Анонимен",
   "tools.database.commentsSection": "Коментари",
+  "tools.database.feedCommentReplyOne": "1 отговор",
+  "tools.database.feedCommentReplies": "Отговори: {count}",
   "tools.database.tableMoveTo": "Премести в",
   "tools.database.searchActions": "Търсене на действия…",
   "tools.database.rowLastEditedBy": "Последна редакция от {name}",

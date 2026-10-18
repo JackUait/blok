@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "අවලංගු කරන්න",
   "tools.database.commentAnonymous": "නාඳුනන",
   "tools.database.commentsSection": "අදහස්",
+  "tools.database.feedCommentReplyOne": "පිළිතුරු 1",
+  "tools.database.feedCommentReplies": "පිළිතුරු {count}",
   "tools.database.tableMoveTo": "වෙත ගෙන යන්න",
   "tools.database.searchActions": "ක්‍රියා සොයන්න…",
   "tools.database.rowLastEditedBy": "{name} විසින් අවසන් සංස්කරණය",

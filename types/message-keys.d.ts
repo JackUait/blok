@@ -640,6 +640,8 @@ export type BlokMessageKey =
   | 'tools.database.commentResolve'
   | 'tools.database.commentSend'
   | 'tools.database.commentsSection'
+  | 'tools.database.feedCommentReplyOne'
+  | 'tools.database.feedCommentReplies'
   | 'tools.database.coverInvalid'
   | 'tools.database.coverNoUpload'
   | 'tools.database.csvEmpty'

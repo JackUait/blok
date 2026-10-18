@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "റദ്ദാക്കുക",
   "tools.database.commentAnonymous": "അജ്ഞാതൻ",
   "tools.database.commentsSection": "കമന്റുകൾ",
+  "tools.database.feedCommentReplyOne": "1 മറുപടി",
+  "tools.database.feedCommentReplies": "{count} മറുപടികൾ",
   "tools.database.tableMoveTo": "ഇതിലേക്ക് നീക്കുക",
   "tools.database.searchActions": "പ്രവർത്തനങ്ങൾ തിരയുക…",
   "tools.database.rowLastEditedBy": "അവസാനം തിരുത്തിയത്: {name}",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "رد ڪريو",
   "tools.database.commentAnonymous": "گمنام",
   "tools.database.commentsSection": "تبصرا",
+  "tools.database.feedCommentReplyOne": "1 جواب",
+  "tools.database.feedCommentReplies": "جواب: {count}",
   "tools.database.tableMoveTo": "منتقل ڪريو",
   "tools.database.searchActions": "عمل ڳوليو…",
   "tools.database.rowLastEditedBy": "آخري ترميم ڪندڙ: {name}",

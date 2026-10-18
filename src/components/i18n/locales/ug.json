@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "بىكار قىلىش",
   "tools.database.commentAnonymous": "نامسىز",
   "tools.database.commentsSection": "ئىنكاسلار",
+  "tools.database.feedCommentReplyOne": "1 جاۋاب",
+  "tools.database.feedCommentReplies": "جاۋابلار: {count}",
   "tools.database.tableMoveTo": "يۆتكەش",
   "tools.database.searchActions": "مەشغۇلات ئىزدەش…",
   "tools.database.rowLastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Ακύρωση",
   "tools.database.commentAnonymous": "Ανώνυμος",
   "tools.database.commentsSection": "Σχόλια",
+  "tools.database.feedCommentReplyOne": "1 απάντηση",
+  "tools.database.feedCommentReplies": "{count} απαντήσεις",
   "tools.database.tableMoveTo": "Μετακίνηση σε",
   "tools.database.searchActions": "Αναζήτηση ενεργειών…",
   "tools.database.rowLastEditedBy": "Τελευταία επεξεργασία από {name}",

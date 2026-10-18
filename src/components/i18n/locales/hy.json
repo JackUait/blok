@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Չեղարկել",
   "tools.database.commentAnonymous": "Անանուն",
   "tools.database.commentsSection": "Մեկնաբանություններ",
+  "tools.database.feedCommentReplyOne": "1 պատասխան",
+  "tools.database.feedCommentReplies": "Պատասխաններ՝ {count}",
   "tools.database.tableMoveTo": "Տեղափոխել",
   "tools.database.searchActions": "Որոնել գործողություններ…",
   "tools.database.rowLastEditedBy": "Վերջին անգամ խմբագրել է {name}",

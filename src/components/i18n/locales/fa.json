@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "لغو",
   "tools.database.commentAnonymous": "ناشناس",
   "tools.database.commentsSection": "نظرها",
+  "tools.database.feedCommentReplyOne": "۱ پاسخ",
+  "tools.database.feedCommentReplies": "{count} پاسخ",
   "tools.database.tableMoveTo": "انتقال به",
   "tools.database.searchActions": "جستجوی اقدامات…",
   "tools.database.rowLastEditedBy": "آخرین ویرایش توسط {name}",

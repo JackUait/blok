@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "取消",
   "tools.database.commentAnonymous": "匿名",
   "tools.database.commentsSection": "留言",
+  "tools.database.feedCommentReplyOne": "1 則回覆",
+  "tools.database.feedCommentReplies": "{count} 則回覆",
   "tools.database.tableMoveTo": "移至",
   "tools.database.searchActions": "搜尋動作…",
   "tools.database.rowLastEditedBy": "上次由 {name} 編輯",

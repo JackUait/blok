@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Anuluj",
   "tools.database.commentAnonymous": "Anonim",
   "tools.database.commentsSection": "Komentarze",
+  "tools.database.feedCommentReplyOne": "1 odpowiedź",
+  "tools.database.feedCommentReplies": "Odpowiedzi: {count}",
   "tools.database.tableMoveTo": "Przenieś do",
   "tools.database.searchActions": "Wyszukaj działania…",
   "tools.database.rowLastEditedBy": "Ostatnia edycja: {name}",

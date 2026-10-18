@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ביטול",
   "tools.database.commentAnonymous": "אנונימי",
   "tools.database.commentsSection": "תגובות",
+  "tools.database.feedCommentReplyOne": "תשובה אחת",
+  "tools.database.feedCommentReplies": "תשובות: {count}",
   "tools.database.tableMoveTo": "העבר אל",
   "tools.database.searchActions": "חיפוש פעולות…",
   "tools.database.rowLastEditedBy": "נערך לאחרונה על ידי {name}",

@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Откажи",
   "tools.database.commentAnonymous": "Анонимен",
   "tools.database.commentsSection": "Коментари",
+  "tools.database.feedCommentReplyOne": "1 одговор",
+  "tools.database.feedCommentReplies": "Одговори: {count}",
   "tools.database.tableMoveTo": "Премести во",
   "tools.database.searchActions": "Пребарајте дејства…",
   "tools.database.rowLastEditedBy": "Последно уредено од {name}",

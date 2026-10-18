@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "বাতিল",
   "tools.database.commentAnonymous": "নামহীন",
   "tools.database.commentsSection": "মন্তব্য",
+  "tools.database.feedCommentReplyOne": "১টি উত্তর",
+  "tools.database.feedCommentReplies": "{count}টি উত্তর",
   "tools.database.tableMoveTo": "এতে সরান",
   "tools.database.searchActions": "অ্যাকশন খুঁজুন…",
   "tools.database.rowLastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",

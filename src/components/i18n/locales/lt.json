@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Atšaukti",
   "tools.database.commentAnonymous": "Anonimas",
   "tools.database.commentsSection": "Komentarai",
+  "tools.database.feedCommentReplyOne": "1 atsakymas",
+  "tools.database.feedCommentReplies": "Atsakymai: {count}",
   "tools.database.tableMoveTo": "Perkelti į",
   "tools.database.searchActions": "Ieškoti veiksmų…",
   "tools.database.rowLastEditedBy": "Paskutinį kartą redagavo {name}",

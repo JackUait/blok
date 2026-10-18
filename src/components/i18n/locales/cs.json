@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Zrušit",
   "tools.database.commentAnonymous": "Anonym",
   "tools.database.commentsSection": "Komentáře",
+  "tools.database.feedCommentReplyOne": "1 odpověď",
+  "tools.database.feedCommentReplies": "Odpovědi: {count}",
   "tools.database.tableMoveTo": "Přesunout do",
   "tools.database.searchActions": "Hledat akce…",
   "tools.database.rowLastEditedBy": "Naposledy upraveno uživatelem {name}",

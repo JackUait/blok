@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "रद्द गर्नुहोस्",
   "tools.database.commentAnonymous": "अज्ञात",
   "tools.database.commentsSection": "टिप्पणीहरू",
+  "tools.database.feedCommentReplyOne": "१ जवाफ",
+  "tools.database.feedCommentReplies": "{count} जवाफ",
   "tools.database.tableMoveTo": "यसमा सार्नुहोस्",
   "tools.database.searchActions": "कार्यहरू खोज्नुहोस्…",
   "tools.database.rowLastEditedBy": "{name} द्वारा अन्तिम सम्पादन",

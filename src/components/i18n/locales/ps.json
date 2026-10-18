@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "لغوه کړئ",
   "tools.database.commentAnonymous": "ناشناخته",
   "tools.database.commentsSection": "تبصرې",
+  "tools.database.feedCommentReplyOne": "۱ ځواب",
+  "tools.database.feedCommentReplies": "ځوابونه: {count}",
   "tools.database.tableMoveTo": "ولېږدوئ",
   "tools.database.searchActions": "کړنې ولټوئ…",
   "tools.database.rowLastEditedBy": "د {name} لخوا وروستی سمون",

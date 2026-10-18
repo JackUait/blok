@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Anulează",
   "tools.database.commentAnonymous": "Anonim",
   "tools.database.commentsSection": "Comentarii",
+  "tools.database.feedCommentReplyOne": "1 răspuns",
+  "tools.database.feedCommentReplies": "Răspunsuri: {count}",
   "tools.database.tableMoveTo": "Mută în",
   "tools.database.searchActions": "Căutați acțiuni…",
   "tools.database.rowLastEditedBy": "Ultima editare de {name}",

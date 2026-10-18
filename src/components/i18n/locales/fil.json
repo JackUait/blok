@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Kanselahin",
   "tools.database.commentAnonymous": "Di-kilala",
   "tools.database.commentsSection": "Mga komento",
+  "tools.database.feedCommentReplyOne": "1 tugon",
+  "tools.database.feedCommentReplies": "{count} na tugon",
   "tools.database.tableMoveTo": "Ilipat sa",
   "tools.database.searchActions": "Maghanap ng aksyon…",
   "tools.database.rowLastEditedBy": "Huling na-edit ni {name}",

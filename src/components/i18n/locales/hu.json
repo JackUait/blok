@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Mégse",
   "tools.database.commentAnonymous": "Névtelen",
   "tools.database.commentsSection": "Megjegyzések",
+  "tools.database.feedCommentReplyOne": "1 válasz",
+  "tools.database.feedCommentReplies": "{count} válasz",
   "tools.database.tableMoveTo": "Áthelyezés ide",
   "tools.database.searchActions": "Műveletek keresése…",
   "tools.database.rowLastEditedBy": "Utoljára szerkesztette: {name}",

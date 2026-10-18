@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Batal",
   "tools.database.commentAnonymous": "Anonim",
   "tools.database.commentsSection": "Komentar",
+  "tools.database.feedCommentReplyOne": "1 balasan",
+  "tools.database.feedCommentReplies": "{count} balasan",
   "tools.database.tableMoveTo": "Pindahkan ke",
   "tools.database.searchActions": "Cari tindakan…",
   "tools.database.rowLastEditedBy": "Terakhir diedit oleh {name}",

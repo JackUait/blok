@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ပယ်ဖျက်",
   "tools.database.commentAnonymous": "အမည်မသိ",
   "tools.database.commentsSection": "မှတ်ချက်များ",
+  "tools.database.feedCommentReplyOne": "အကြောင်းပြန်ချက် ၁ ခု",
+  "tools.database.feedCommentReplies": "အကြောင်းပြန်ချက် {count} ခု",
   "tools.database.tableMoveTo": "သို့ ရွှေ့ရန်",
   "tools.database.searchActions": "လုပ်ဆောင်ချက်များ ရှာပါ…",
   "tools.database.rowLastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",

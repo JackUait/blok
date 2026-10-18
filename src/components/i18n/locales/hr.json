@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "Odustani",
   "tools.database.commentAnonymous": "Anonimac",
   "tools.database.commentsSection": "Komentari",
+  "tools.database.feedCommentReplyOne": "1 odgovor",
+  "tools.database.feedCommentReplies": "Odgovori: {count}",
   "tools.database.tableMoveTo": "Premjesti u",
   "tools.database.searchActions": "Pretraži radnje…",
   "tools.database.rowLastEditedBy": "Posljednja izmjena: {name}",

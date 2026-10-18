@@ -989,6 +989,8 @@
   "tools.database.commentCancel": "ரத்துசெய்",
   "tools.database.commentAnonymous": "அநாமதேயர்",
   "tools.database.commentsSection": "கருத்துகள்",
+  "tools.database.feedCommentReplyOne": "1 பதில்",
+  "tools.database.feedCommentReplies": "{count} பதில்கள்",
   "tools.database.tableMoveTo": "இதற்கு நகர்த்து",
   "tools.database.searchActions": "செயல்களைத் தேடு…",
   "tools.database.rowLastEditedBy": "கடைசியாகத் திருத்தியவர்: {name}",

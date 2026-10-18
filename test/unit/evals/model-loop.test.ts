@@ -148,6 +148,16 @@ describe('runModelLoop', () => {
     ]);
   });
 
+  it('records what each blok_describe call asked for', async () => {
+    const describe = (id: string, input: unknown): Anthropic.ToolUseBlock => ({ type: 'tool_use', id, name: 'blok_describe', input, caller: { type: 'direct' } });
+    const create = vi.fn<MessagesClient['create']>()
+      .mockResolvedValueOnce(message([describe('a', { command: 'text.format' }), toolUse('b')], 'tool_use'))
+      .mockResolvedValueOnce(message([textBlock('done')], 'end_turn'));
+    const result = await runModelLoop(options({ create }));
+
+    expect(result.describeQueries).toEqual([{ command: 'text.format' }]);
+  });
+
   it('records a refusal as an error', async () => {
     const create = vi.fn(async () => message([], 'refusal', { type: 'refusal', category: 'cyber', explanation: 'x' }));
     const result = await runModelLoop(options({ create }));
@@ -159,7 +169,7 @@ describe('runModelLoop', () => {
 
   it('a grader that throws is an error, a failing grader is a fail', () => {
     const done = {
-      stop: 'done' as const, answer: '', turns: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [],
+      stop: 'done' as const, answer: '', turns: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], steps: [],
     };
 
     expect(classifyTrial(done, [{ pass: true }], true)).toBe('error');

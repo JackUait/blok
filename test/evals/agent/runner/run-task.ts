@@ -7,9 +7,8 @@ import { classifyTrial, runModelLoop } from './model-loop';
 
 type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
-export const SYSTEM_PROMPT =
-  'You edit a Blok document through the provided tools. Read the document first, then change it with blok_execute. ' +
-  'When you are done, reply with a short summary.';
+// Names no tool: a real MCP client's prompt does not choose the call path for the model.
+export const SYSTEM_PROMPT = 'You edit a Blok document through the provided tools. When you are done, reply with a short summary.';
 
 export interface SurfaceRun {
   tools: Anthropic.Tool[];
@@ -37,6 +36,7 @@ export interface TrialRecord {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   toolCalls: string[];
+  describeQueries: unknown[];
   steps: LoopStep[];
   wallMs: number;
   errorDetail?: string;
@@ -44,7 +44,7 @@ export interface TrialRecord {
 
 const errorRecord = (o: { task: EvalTask; surface: Surface; trial: number }, error: unknown): TrialRecord => ({
   taskId: o.task.id, surface: o.surface, trial: o.trial, outcome: 'error', graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], steps: [], wallMs: 0,
+  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], steps: [], wallMs: 0,
   errorDetail: error instanceof Error ? (error.stack ?? error.message) : String(error),
 });
 
@@ -94,7 +94,7 @@ export const runTrial = async (o: {
       taskId: o.task.id, surface: o.surface, trial: o.trial,
       outcome: classifyTrial(loop, Object.values(graders), threw !== null),
       graders, turns: loop.turns, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens,
-      cacheReadTokens: loop.cacheReadTokens, cacheWriteTokens: loop.cacheWriteTokens, toolCalls: loop.toolCalls, steps: loop.steps, wallMs,
+      cacheReadTokens: loop.cacheReadTokens, cacheWriteTokens: loop.cacheWriteTokens, toolCalls: loop.toolCalls, describeQueries: loop.describeQueries, steps: loop.steps, wallMs,
       errorDetail: threw instanceof Error ? (threw.stack ?? threw.message) : (loop.detail ?? (loop.stop === 'done' ? undefined : loop.stop)),
     };
   } catch (error) {

@@ -63,6 +63,16 @@ export const checkEnvelope = (
     }
 
     const problems = validate(entry.args, raw.args);
+    const misplacedRef = raw.ref === undefined
+      ? problems.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
+      : undefined;
+
+    if (misplacedRef !== undefined) {
+      throw failure('INVALID_ARGS', `${name}: "ref" goes next to name and args, not inside args: `
+        + `{ "name": "${name}", "args": { ... }, "ref": ${JSON.stringify(raw.args.ref)} }.`, {
+        commandIndex: index, path: `${path}/args/ref`, details: { problems },
+      });
+    }
     const first = problems[0];
 
     if (first !== undefined) {

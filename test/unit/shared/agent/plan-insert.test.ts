@@ -440,6 +440,31 @@ describe('block.insert planning', () => {
     expect(error.message).toMatch(/"ref": "intro"/);
   });
 
+  it('names the plain id when "$" is put on an id this batch gave a block', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'toggle', id: 'colA', children: [{ type: 'toggle', id: 'colB' }] }, ref: 'cols' },
+      { name: 'block.insert', args: { type: 'paragraph', parentId: '$colB' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 1, path: '/commands/1/args/parentId', details: { ref: 'colB' } });
+    expect(error.message).toBe('"$colB" is not a ref, but block "colB" exists. Use "colB" without the "$".');
+  });
+
+  it('names the plain id when "$" is put on an id from the document', () => {
+    const error = failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]));
+
+    expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
+  });
+
+  it('gives no plain-id hint for an id a later command reserves', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'paragraph', parentId: '$later' } },
+      { name: 'block.insert', args: { type: 'toggle', id: 'later' } },
+    ]));
+
+    expect(error.message).toMatch(/^Ref "later" was not set by an earlier command/);
+  });
+
   it('refuses forward refs even though future explicit IDs are reserved', () => {
     expect(failOf(() => planOn(doc, [
       { name: 'block.insert', args: { type: 'paragraph', parentId: '$a' } },
@@ -898,5 +923,53 @@ describe('T8-R1 batch-wide effective ID reservation', () => {
     ], { tools });
 
     expect(plan.results).toEqual([{ id: 'n2', childIds: [] }, { id: 'n3', childIds: ['n1'] }]);
+  });
+});
+
+describe('a default child seed for a container the batch fills', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const seeded = (over: { ownedByTool?: boolean } = {}): typeof TOOLS => {
+    const tools = new Map(TOOLS);
+
+    tools.set('column', tool('column', {
+      children: { accepts: true, ownedByTool: over.ownedByTool ?? false, layout: true, deletedWithParent: true },
+    }, { defaultChildren: [{ type: 'paragraph', data: { text: [] } }] }));
+
+    return tools;
+  };
+
+  it('is left out when a later command puts a block in it by id', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column_list', children: [{ type: 'column', id: 'colA' }, { type: 'column', id: 'colB' }] } },
+      { name: 'block.insert', args: { type: 'header', data: { text: 'Plan A', level: 2 }, parentId: 'colA' } },
+    ], { tools: seeded() });
+
+    expect(draft.childrenOf('colA').map(id => draft.get(id)?.type)).toEqual(['header']);
+    expect(draft.childrenOf('colB').map(id => draft.get(id)?.type)).toEqual(['paragraph']);
+  });
+
+  it('stays when the batch does not fill the container', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column_list', children: [{ type: 'column', id: 'colA' }, { type: 'column' }] } },
+      { name: 'block.insert', args: { type: 'paragraph', position: 'end' } },
+    ], { tools: seeded() });
+
+    expect(draft.childrenOf('colA').map(id => draft.get(id)?.type)).toEqual(['paragraph']);
+  });
+
+  it('stays for a container whose tool owns its children', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column', id: 'colA' } },
+      { name: 'block.insert', args: { type: 'paragraph', parentId: 'colA' } },
+    ], { tools: seeded({ ownedByTool: true }) });
+
+    expect(draft.childrenOf('colA')).toHaveLength(2);
   });
 });

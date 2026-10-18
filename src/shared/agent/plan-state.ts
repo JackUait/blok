@@ -31,6 +31,8 @@ export class PlanState {
   public readonly refs: Record<string, string> = {};
   public readonly changed: ChangedSet = { created: [], updated: [], moved: [], removed: [] };
   public readonly touched = new Set<string>();
+  /** Plain ids that some command in the batch names as parentId. */
+  public readonly filledParents = new Set<string>();
   public lastRange?: TextRangeRef;
 
   private readonly reserved = new Map<string, string>();
@@ -142,6 +144,10 @@ export class PlanState {
   }
 
   private unresolvedRefMessage(ref: string): string {
+    if (this.draft.has(ref) && !this.inAnnotation(ref)) {
+      return `"$${ref}" is not a ref, but block "${ref}" exists. Use "${ref}" without the "$".`;
+    }
+
     const known = Object.keys(this.refs);
     const example = /^[A-Za-z][\w-]*$/.test(ref) ? ref : (known[0] ?? 'intro');
     const listed = known.length === 0 ? '' : ` Refs so far: ${known.map(name => `"$${name}"`).join(', ')}.`;

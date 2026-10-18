@@ -41,3 +41,23 @@ export const variantSentence = (name: string, matches: readonly VariantMatch[]):
   matches.length === 0
     ? ''
     : ` "${name}" is a variant: use ${matches.map(match => `type "${match.tool}" with data ${JSON.stringify(match.data)}`).join(', or ')}.`;
+
+/**
+ * " Did you mean …?" for a name that is a tool's menu title without its number
+ * ("heading" for "Heading 1", "columns" for "2 columns"), or '' when none is.
+ */
+export const titleSentence = (name: string, entries: Iterable<VariantSource & { title?: string }>): string => {
+  const wanted = squash(name);
+  const found: string[] = [];
+
+  for (const entry of entries) {
+    const title = [entry.title, ...(entry.variants ?? []).map(variant => variant.title)]
+      .find(candidate => candidate !== undefined && wanted !== '' && squash(candidate).replace(/[0-9]/g, '') === wanted);
+
+    if (title !== undefined) {
+      found.push(`"${entry.name}" (${title})`);
+    }
+  }
+
+  return found.length === 0 ? '' : ` Did you mean ${found.join(', or ')}?`;
+};

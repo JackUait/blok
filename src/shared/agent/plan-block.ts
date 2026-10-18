@@ -3,7 +3,7 @@ import { cleanupEmptiedColumnList } from '../tool-actions/columns';
 import { checkChildType, checkMove, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
-import { matchVariants, variantSentence } from './variant-hint';
+import { matchVariants, titleSentence, variantSentence } from './variant-hint';
 import { cloneRecord } from './snapshot';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
@@ -285,9 +285,11 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
 
 const failUnknownTool = (state: PlanState, type: string, path: string): never => {
   const known = [...state.ctx.tools.keys()];
-  const variants = matchVariants(type, [...state.ctx.tools.values()].map(tool => tool.entry), state.ctx.validate);
+  const entries = [...state.ctx.tools.values()].map(tool => tool.entry);
+  const variants = matchVariants(type, entries, state.ctx.validate);
+  const hint = variantSentence(type, variants) || titleSentence(type, entries);
 
-  return state.fail('UNKNOWN_TOOL', `No block tool "${type}" is registered.${variantSentence(type, variants)} Known: ${known.join(', ')}.`, path, {
+  return state.fail('UNKNOWN_TOOL', `No block tool "${type}" is registered.${hint} Known: ${known.join(', ')}.`, path, {
     known, ...(variants.length > 0 && { variants }),
   });
 };
@@ -336,7 +338,10 @@ const buildBlock = (
   const id = state.newBlockId(spec.id, `${path}/id`);
   const data = state.prepareData(type, { ...(spec.data ?? tool.entry.defaultData ?? {}), ...(extra ?? {}) }, `${path}/data`, id, { normalize: !pending });
   const inCell = 'type' in parent ? parent.inCell : parent.id !== null && state.draft.cellOf(parent.id) !== null;
-  const childSpecs = spec.children ?? (tool.runtime.defaultChildren ?? []).map((child, index) =>
+  // A seed only keeps a free container from being empty. Skip it when a command in the batch names the
+  // container as parentId: an earlier one cannot (the id does not exist yet), so that command fills it.
+  const unseeded = !tool.entry.children.ownedByTool && spec.id !== undefined && state.filledParents.has(spec.id);
+  const childSpecs = spec.children ?? (unseeded ? [] : tool.runtime.defaultChildren ?? []).map((child, index) =>
     readInsertSpec(state, child, `${path}/children/${index}`));
   const childParent: Parent = {
     type, inCell,

@@ -84,6 +84,9 @@ export const planBatch = (input: {
     if (command.name === 'block.insert') {
       reserveInsertIds(state, command.args, '');
     }
+    if (typeof command.args.parentId === 'string' && !command.args.parentId.startsWith('$')) {
+      state.filledParents.add(command.args.parentId);
+    }
   });
   reserveBatchInsertIds(state, input.batch);
 

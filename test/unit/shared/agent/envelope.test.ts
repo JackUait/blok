@@ -225,6 +225,13 @@ describe('COMMANDS', () => {
       .toContainEqual({ path: '/parentId', message: expect.stringMatching(/^unknown field "parentId"; accepted fields: .*\btype\b/) });
   });
 
+  it('says a child id is used as is, not as a "$" ref', () => {
+    const definitions = record(COMMANDS['block.insert'].argsSchema.$defs);
+    const child = record(record(Object.values(definitions)[0]).properties);
+
+    expect(record(child.id).description).toBe('Later commands use this id as is, no "$".');
+  });
+
   it.each(['block.insert', 'block.move', 'block.duplicate', 'markdown.insert'] satisfies CoreCommandName[])(
     '%s accepts each BlockPosition shape and refuses ambiguous placements', name => {
       const blockArgs = name === 'block.insert' ? { type: 'paragraph' } : { id: 'a' };
@@ -382,6 +389,19 @@ describe('checkEnvelope', () => {
       { path: '/id', message: 'expected string, got integer' },
       { path: '/extra', message: expect.stringMatching(/^unknown field "extra"; accepted fields: .*\bid\b/) },
     ] });
+  });
+
+  it('says a ref put inside args goes next to name and args', () => {
+    const error = fails({ commands: [{ name: 'block.insert', args: { type: 'column_list', ref: 'cols' } }] });
+
+    expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/ref' });
+    expect(error.message).toBe('block.insert: "ref" goes next to name and args, not inside args: { "name": "block.insert", "args": { ... }, "ref": "cols" }.');
+  });
+
+  it('keeps the plain unknown-field message when the command already has a ref', () => {
+    const error = fails({ commands: [{ name: 'block.insert', ref: 'a', args: { type: 'paragraph', ref: 'b' } }] });
+
+    expect(error.message).toMatch(/^block\.insert: unknown field "ref"; accepted fields: /);
   });
 
   it('retains escaped JSON pointers from a tool action schema', () => {

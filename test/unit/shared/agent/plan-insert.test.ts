@@ -419,6 +419,27 @@ describe('block.insert planning', () => {
     expect(draft.childrenOf(null)).toEqual(['n1', 'n2', 'p', 'tg', 'tbl']);
   });
 
+  it('names the refs set so far and how to write one when a ref does not resolve', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'paragraph' }, ref: 'h' },
+      { name: 'block.insert', args: { type: 'paragraph', position: { after: '$ref:h' } } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 1, details: { ref: 'ref:h' } });
+    expect(error.message).toContain('"$h"');
+    expect(error.message).toMatch(/"ref": "\w+"/);
+    expect(error.message).toMatch(/batch/);
+  });
+
+  it('says how to set a ref when no command in the batch set one', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'paragraph', position: { after: '$intro' } } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', details: { ref: 'intro' } });
+    expect(error.message).toMatch(/"ref": "intro"/);
+  });
+
   it('refuses forward refs even though future explicit IDs are reserved', () => {
     expect(failOf(() => planOn(doc, [
       { name: 'block.insert', args: { type: 'paragraph', parentId: '$a' } },

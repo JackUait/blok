@@ -18,10 +18,21 @@ export const LIFECYCLE_TOOL_NAMES: readonly ['blok_list_documents', 'blok_open',
   'blok_list_documents', 'blok_open', 'blok_close',
 ];
 
+/** blok_read's input without the handle: what blok_open's view passes to the read. */
+const readArguments = (core: McpTool[]): Record<string, unknown> => {
+  const read = core.find(tool => tool.name === 'blok_read')?.inputSchema ?? {};
+  const all: Record<string, unknown> = typeof read.properties === 'object' && read.properties !== null ? { ...read.properties } : {};
+  const properties = Object.fromEntries(Object.entries(all).filter(([key]) => key !== 'handle'));
+  const required: unknown[] = Array.isArray(read.required) ? read.required : [];
+
+  return { ...read, properties, required: required.filter(key => key !== 'handle') };
+};
+
 export const listMcpTools = (
   contract: AgentContract,
   options: { schema: 'envelope' | 'full' | 'mixed'; handleIdleMs: number },
 ): McpTool[] => {
+  const core = renderAgentTools(contract, { format: 'mcp', handle: true, schema: options.schema }) as McpTool[];
   const idleMinutes = options.handleIdleMs / 60_000;
   const idleDuration = Number.isInteger(idleMinutes)
     ? `${idleMinutes} minutes`
@@ -62,6 +73,7 @@ export const listMcpTools = (
       description: [
         'Opens a Blok document and returns a handle for blok_read, blok_describe, blok_execute and blok_close.',
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
+        'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
         `A handle expires after ${idleDuration} without a call; then open again.`,
         'Write rich text with commands such as text.format or markdown.insert. Never put Markdown or HTML into block data.',
       ].join(' '),
@@ -73,7 +85,7 @@ export const listMcpTools = (
           documentId: { type: 'string', minLength: 1, maxLength: 512 },
           mode: { enum: ['auto', 'live', 'stored'], default: 'auto' },
           write: { type: 'boolean', default: false },
-          view: { type: 'object' },
+          view: readArguments(core),
         },
       },
       outputSchema: orError({
@@ -105,6 +117,6 @@ export const listMcpTools = (
         properties: { closed: { type: 'boolean' }, unsavedBatches: { type: 'integer' }, hostRecordLags: { type: 'boolean' } },
       }),
     },
-    ...(renderAgentTools(contract, { format: 'mcp', handle: true, schema: options.schema }) as McpTool[]),
+    ...core,
   ];
 };

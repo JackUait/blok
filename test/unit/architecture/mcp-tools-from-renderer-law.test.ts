@@ -170,6 +170,20 @@ describe('MCP tools come from the shared renderer', () => {
     expect(full.slice(0, 3)).toEqual(envelope.slice(0, 3));
   });
 
+  it('lets blok_open read in the same call: view takes blok_read arguments and the description says so', () => {
+    const tools = listMcpTools(stored, { schema: 'mixed', handleIdleMs: 600_000 });
+    const open = byName(tools, 'blok_open');
+    const read = byName(tools, 'blok_read').inputSchema;
+    const { handle: _handle, ...readProperties } = record(read.properties);
+
+    expect(record(open.inputSchema.properties).view).toEqual({
+      ...read,
+      properties: readProperties,
+      required: (Array.isArray(read.required) ? read.required : []).filter(key => key !== 'handle'),
+    });
+    expect(open.description).toMatch(/view.*blok_read/);
+  });
+
   it('declares optional list filters with bounded query and limit', () => {
     const input = byName(listMcpTools(stored, { schema: 'envelope', handleIdleMs: 600_000 }), 'blok_list_documents').inputSchema;
 
@@ -201,7 +215,7 @@ describe('MCP tools come from the shared renderer', () => {
         documentId: { type: 'string', minLength: 1, maxLength: 512 },
         mode: { enum: ['auto', 'live', 'stored'], default: 'auto' },
         write: { type: 'boolean', default: false },
-        view: { type: 'object' },
+        view: expect.objectContaining({ type: 'object' }),
       },
     });
     expect(validateAgainst(input, { documentId: 'd'.repeat(512) })).toEqual([]);

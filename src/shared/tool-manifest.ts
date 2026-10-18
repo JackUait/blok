@@ -364,7 +364,7 @@ const variantData = (blocks: BlokToolManifest['blocks']): string[] => blocks.fla
 const typeDescription = (blocks: BlokToolManifest['blocks']): string => {
   const variants = variantData(blocks);
 
-  return `A block tool: ${blocks.map(block => block.name).join(', ')}.${variants.length === 0 ? '' : ` A variant is its tool plus data: ${variants.join(', ')}.`}`;
+  return `A block tool: ${blocks.map(block => block.name).join(', ')}.${variants.length === 0 ? '' : ` A variant sets these data fields; the tool's other required fields still go in data: ${variants.join(', ')}.`}`;
 };
 
 const withTypeDescription = (args: BlokSchema, blocks: BlokToolManifest['blocks']): BlokSchema => {

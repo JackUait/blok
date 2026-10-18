@@ -981,7 +981,7 @@
   "tools.database.commentSend": "Отправить комментарий",
   "tools.database.commentJustNow": "Только что",
   "tools.database.commentEdited": "(изменено)",
-  "tools.database.commentResolve": "Решить",
+  "tools.database.commentResolve": "Отметить как решённое",
   "tools.database.commentMoreActions": "Другие действия",
   "tools.database.commentEdit": "Изменить",
   "tools.database.commentDelete": "Удалить",

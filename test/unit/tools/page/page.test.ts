@@ -880,6 +880,90 @@ describe('Page tool', () => {
       expect(titleOf(root).textContent).toBe('tools.page.missing');
     });
 
+    it('shows a busy creating state while create runs, and keeps its saved id', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: { create: () => new Promise<void>(() => undefined) },
+        origin: 'api',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('creating');
+      expect(anchorOf(root).getAttribute('aria-busy')).toBe('true');
+      expect(anchorOf(root).getAttribute('aria-disabled')).toBe('true');
+      expect(titleOf(root).textContent).toBe('tools.page.creating');
+      expect(tool.validate(tool.save())).toBe(true);
+    });
+
+    it('leaves the creating state once create answers', async () => {
+      let answer: () => void = () => undefined;
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: {
+          create: () => new Promise<void>((resolve) => {
+            answer = resolve;
+          }),
+          resolve: () => ({ title: 'Plans' }),
+        },
+        origin: 'api',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      answer();
+      await flush();
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('normal');
+      expect(anchorOf(root).hasAttribute('aria-busy')).toBe(false);
+      expect(titleOf(root).textContent).toBe('Plans');
+    });
+
+    it('leaves the creating state when create fails', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: { create: () => Promise.reject(new Error('no')) },
+        origin: 'api',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('missing');
+      expect(anchorOf(root).hasAttribute('aria-busy')).toBe(false);
+    });
+
+    it('never shows the creating state when the host has no create', async () => {
+      const tool = new PageTool(createOptions({ data: { pageId: '' }, config: {}, origin: 'api' }));
+      const root = tool.render();
+
+      tool.rendered();
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).not.toBe('creating');
+      await flush();
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).not.toBe('creating');
+    });
+
+    it('drops the creating state when undo or a peer points the block at another page', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: { create: () => new Promise<void>(() => undefined) },
+        origin: 'api',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      tool.setData({ pageId: 'other' });
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).not.toBe('creating');
+      expect(anchorOf(root).hasAttribute('aria-busy')).toBe(false);
+    });
+
     it('does not open a page whose block was removed while it was being created', async () => {
       const open = vi.fn();
       const tool = new PageTool(createOptions({
@@ -1114,6 +1198,52 @@ describe('Page tool', () => {
       expect(resolve).toHaveBeenCalledTimes(1);
       expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('normal');
       expect(titleOf(root).textContent).toBe('Made anyway');
+    });
+  });
+
+  describe('draft status', () => {
+    const badgeOf = (root: HTMLElement): HTMLElement | null =>
+      root.querySelector<HTMLElement>('[data-blok-testid="page-draft-badge"]');
+
+    it('shows a draft badge for a page the host marks as a draft', async () => {
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({ title: 'Plans', status: 'draft' }) },
+      })));
+
+      expect(anchorOf(root).getAttribute('data-blok-page-status')).toBe('draft');
+      expect(badgeOf(root)?.textContent).toBe('tools.page.draft');
+      expect(titleOf(root).textContent).toBe('Plans');
+    });
+
+    it.each([
+      ['a published page', { title: 'Plans', status: 'published' as const }],
+      ['a page with no status', { title: 'Plans' }],
+      ['a denied draft', { access: 'none' as const, status: 'draft' as const }],
+    ])('shows no badge for %s', async (_name, info) => {
+      const root = await renderResolved(new PageTool(createOptions({ config: { resolve: () => info } })));
+
+      expect(anchorOf(root).hasAttribute('data-blok-page-status')).toBe(false);
+      expect(badgeOf(root)).toBeNull();
+    });
+
+    it('drops the badge when the host publishes the page', async () => {
+      const state = { status: 'draft' as 'draft' | 'published' };
+      const listeners: Array<() => void> = [];
+      const root = await renderResolved(new PageTool(createOptions({
+        config: {
+          resolve: () => ({ title: 'Plans', status: state.status }),
+          subscribe: (_id, onChange) => {
+            listeners.push(onChange);
+          },
+        },
+      })));
+
+      expect(badgeOf(root)).not.toBeNull();
+      state.status = 'published';
+      listeners.forEach((notify) => notify());
+      await flush();
+
+      expect(badgeOf(root)).toBeNull();
     });
   });
 

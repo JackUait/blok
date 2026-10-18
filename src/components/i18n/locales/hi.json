@@ -203,6 +203,8 @@
   "tools.page.editIcon": "आइकन संपादित करें",
   "tools.page.rename": "नाम बदलें",
   "tools.page.openInSidePeek": "साइड पैनल में खोलें",
+  "tools.page.creating": "पेज बनाया जा रहा है…",
+  "tools.page.draft": "ड्राफ़्ट",
   "tools.columns.col2": "2 कॉलम",
   "tools.columns.col3": "3 कॉलम",
   "tools.columns.col4": "4 कॉलम",

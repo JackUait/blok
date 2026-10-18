@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Редактирай иконата",
   "tools.page.rename": "Преименувай",
   "tools.page.openInSidePeek": "Отвори в страничния панел",
+  "tools.page.creating": "Създаване на страница…",
+  "tools.page.draft": "Чернова",
   "tools.columns.col2": "2 колони",
   "tools.columns.col3": "3 колони",
   "tools.columns.col4": "4 колони",

@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Symbol bearbeiten",
   "tools.page.rename": "Umbenennen",
   "tools.page.openInSidePeek": "In Seitenvorschau öffnen",
+  "tools.page.creating": "Seite wird erstellt…",
+  "tools.page.draft": "Entwurf",
   "tools.columns.col2": "2 Spalten",
   "tools.columns.col3": "3 Spalten",
   "tools.columns.col4": "4 Spalten",

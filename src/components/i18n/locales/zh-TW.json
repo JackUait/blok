@@ -224,6 +224,8 @@
   "tools.page.editIcon": "編輯圖示",
   "tools.page.rename": "重新命名",
   "tools.page.openInSidePeek": "在側邊預覽中開啟",
+  "tools.page.creating": "正在建立頁面…",
+  "tools.page.draft": "草稿",
   "tools.columns.col2": "2 欄",
   "tools.columns.col3": "3 欄",
   "tools.columns.col4": "4 欄",

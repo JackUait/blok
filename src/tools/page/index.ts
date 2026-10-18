@@ -35,6 +35,7 @@ import { generateBlockId } from '../../components/utils/id-generator';
 import { log } from '../../components/utils/logger';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
+  PAGE_DRAFT_BADGE_CLASSES,
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
   PAGE_LINK_DENIED_CLASSES,
@@ -57,7 +58,7 @@ const isOutputBlock = (value: unknown): value is OutputBlockData =>
 
 export type { PageCache, PageConfig, PageCreateResult, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
 
-type PageState = 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-access';
+type PageState = 'creating' | 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-access';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -120,6 +121,8 @@ export class PageTool implements BlockTool {
   private readonly isPrepared: boolean;
   private readonly opensWhenCreated: boolean;
   private readonly isProbe: boolean;
+  /** The host's `create` is still running for this new page. */
+  private creating = false;
   private root: HTMLElement | null = null;
   private info: PageInfo | null | undefined;
   private requestVersion = 0;
@@ -272,6 +275,7 @@ export class PageTool implements BlockTool {
     if (moved) {
       ++this.requestVersion;
       this.info = undefined;
+      this.creating = false;
     }
     this.data = { pageId, ...readColors(data) };
     if (moved && this.started) {
@@ -534,6 +538,10 @@ export class PageTool implements BlockTool {
     // Core's post-insert normalise fills only keys the insert lacked, so an
     // insert carrying `pageId: ''` would keep the empty id without this write.
     this.block.dispatchChange({ derived: true });
+    if (this.config.create !== undefined) {
+      this.creating = true;
+      this.renderView();
+    }
 
     try {
       const answered = createdId(await this.config.create?.({ pageId }));
@@ -545,6 +553,7 @@ export class PageTool implements BlockTool {
       if (this.detached || pageId !== this.data.pageId) {
         return;
       }
+      this.creating = false;
       this.info = null;
       this.renderView();
       if (this.config.resolve !== undefined) {
@@ -557,6 +566,7 @@ export class PageTool implements BlockTool {
     if (this.detached || pageId !== this.data.pageId) {
       return;
     }
+    this.creating = false;
     if (this.opensWhenCreated) {
       this.config.open?.(pageId, {});
     }
@@ -620,6 +630,9 @@ export class PageTool implements BlockTool {
   }
 
   private get state(): PageState {
+    if (this.creating) {
+      return 'creating';
+    }
     if (this.info === undefined) {
       return 'unresolved';
     }
@@ -731,11 +744,19 @@ export class PageTool implements BlockTool {
     } else {
       link.setAttribute('aria-disabled', 'true');
     }
+    if (state === 'creating') {
+      link.setAttribute('aria-busy', 'true');
+    }
 
     this.paintColor(link);
     link.addEventListener('mousedown', this.handleMouseDown);
     link.addEventListener('click', this.handleClick);
     link.append(this.buildIcon(), this.buildTitle(state));
+    // A denied or missing page must not reveal its status.
+    if (this.isNavigable && this.info?.status === 'draft') {
+      link.setAttribute('data-blok-page-status', 'draft');
+      link.append(this.buildDraftBadge());
+    }
     this.preview.attach(link);
 
     return link;
@@ -780,8 +801,20 @@ export class PageTool implements BlockTool {
     return title;
   }
 
+  private buildDraftBadge(): HTMLElement {
+    const badge = document.createElement('span');
+
+    badge.className = PAGE_DRAFT_BADGE_CLASSES;
+    badge.setAttribute(DATA_ATTR.testid, 'page-draft-badge');
+    badge.textContent = this.api.i18n.t('tools.page.draft');
+
+    return badge;
+  }
+
   private titleText(state: PageState): string {
     switch (state) {
+      case 'creating':
+        return this.api.i18n.t('tools.page.creating');
       case 'unresolved':
         return this.api.i18n.t('tools.page.unresolved');
       case 'missing':

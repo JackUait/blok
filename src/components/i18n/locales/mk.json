@@ -214,6 +214,8 @@
   "tools.page.editIcon": "Уреди икона",
   "tools.page.rename": "Преименувај",
   "tools.page.openInSidePeek": "Отвори во страничен панел",
+  "tools.page.creating": "Се создава страница…",
+  "tools.page.draft": "Нацрт",
   "tools.columns.col2": "2 колони",
   "tools.columns.col3": "3 колони",
   "tools.columns.col4": "4 колони",

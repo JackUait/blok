@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Simgeyi düzenle",
   "tools.page.rename": "Yeniden adlandır",
   "tools.page.openInSidePeek": "Yan panelde aç",
+  "tools.page.creating": "Sayfa oluşturuluyor…",
+  "tools.page.draft": "Taslak",
   "tools.columns.col2": "2 sütun",
   "tools.columns.col3": "3 sütun",
   "tools.columns.col4": "4 sütun",

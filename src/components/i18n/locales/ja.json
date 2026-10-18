@@ -203,6 +203,8 @@
   "tools.page.editIcon": "アイコンを編集",
   "tools.page.rename": "名前を変更",
   "tools.page.openInSidePeek": "サイドピークで開く",
+  "tools.page.creating": "ページを作成中…",
+  "tools.page.draft": "下書き",
   "tools.columns.col2": "2列",
   "tools.columns.col3": "3列",
   "tools.columns.col4": "4列",

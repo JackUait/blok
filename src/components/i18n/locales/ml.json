@@ -214,6 +214,8 @@
   "tools.page.editIcon": "ഐക്കൺ തിരുത്തുക",
   "tools.page.rename": "പേരുമാറ്റുക",
   "tools.page.openInSidePeek": "സൈഡ് പാനലിൽ തുറക്കുക",
+  "tools.page.creating": "പേജ് സൃഷ്ടിക്കുന്നു…",
+  "tools.page.draft": "ഡ്രാഫ്റ്റ്",
   "tools.columns.col2": "2 കോളങ്ങൾ",
   "tools.columns.col3": "3 കോളങ്ങൾ",
   "tools.columns.col4": "4 കോളങ്ങൾ",

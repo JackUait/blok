@@ -203,6 +203,8 @@
   "tools.page.editIcon": "แก้ไขไอคอน",
   "tools.page.rename": "เปลี่ยนชื่อ",
   "tools.page.openInSidePeek": "เปิดในมุมมองด้านข้าง",
+  "tools.page.creating": "กำลังสร้างหน้า…",
+  "tools.page.draft": "ฉบับร่าง",
   "tools.columns.col2": "2 คอลัมน์",
   "tools.columns.col3": "3 คอลัมน์",
   "tools.columns.col4": "4 คอลัมน์",

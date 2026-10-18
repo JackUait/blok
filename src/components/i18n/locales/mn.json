@@ -214,6 +214,8 @@
   "tools.page.editIcon": "Дүрсийг засах",
   "tools.page.rename": "Нэр өөрчлөх",
   "tools.page.openInSidePeek": "Хажуугийн самбарт нээх",
+  "tools.page.creating": "Хуудас үүсгэж байна…",
+  "tools.page.draft": "Ноорог",
   "tools.columns.col2": "2 багана",
   "tools.columns.col3": "3 багана",
   "tools.columns.col4": "4 багана",

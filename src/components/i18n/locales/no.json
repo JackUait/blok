@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Rediger ikon",
   "tools.page.rename": "Gi nytt navn",
   "tools.page.openInSidePeek": "Åpne i sidepanel",
+  "tools.page.creating": "Oppretter side…",
+  "tools.page.draft": "Utkast",
   "tools.columns.col2": "2 kolonner",
   "tools.columns.col3": "3 kolonner",
   "tools.columns.col4": "4 kolonner",

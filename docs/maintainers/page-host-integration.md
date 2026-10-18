@@ -4,6 +4,12 @@ A `page` block is an owning pointer. Save only its opaque `pageId` in the parent
 
 Configure the page tool with a stable, title-free `href(pageId)`, an access-filtered `resolve(pageId)`, and `subscribe(pageId, notify)`. Return `null` for a missing page, `{ access: 'none' }` for a denied page, and `undefined` while unresolved. Call each subscriber when the page's title, icon, path, or access changes. Fan out local writes in the same tab as well as server events in other tabs and devices. A title change must redraw the open header and tree and invalidate the page pointers.
 
+## Creating state and drafts
+
+**Creating.** `blocks.insert('page')` with no `pageId` inserts the block at once and saves Blok's id, then calls `create`. While `create` runs, the block shows "Creating page…" with `data-blok-page-state="creating"` and `aria-busy="true"`. When `create` answers, the block calls `resolve`. If it throws, the block shows "Page not found" until `resolve` finds the page. The toolbox does not show this state: it waits for `create` before it inserts.
+
+**Drafts.** Return `status: 'draft'` from `resolve` for an unpublished page. The block shows a small "Draft" badge after the title (`data-blok-testid="page-draft-badge"`), and its link carries `data-blok-page-status="draft"`. `'published'` or no status shows nothing. A denied or missing page never shows it. Call the page's `subscribe` callback when it is published, so the badge goes away.
+
 ## Canonical title writes
 
 The open page shows its title through Blok's built-in title. Pass `pageTitle: { onChange: (title, change) => wired?.change(title, change) }` in the config, where `wired` is what `wireTitle` returned. `paint` shows a title wherever the page's title appears, the editor included. Write the editor with `title.set(value, { record: false })`. Blok ignores a set to the value it already has, so a save's echo never cuts the user's undo step. The host API below uses a compare-and-swap write. `loadPage` must enforce access and reject when it is lost. `saveTitle` must atomically reject an `expectedVersion` that is no longer current and return the accepted title and new version only after a durable write. The host broadcasts that accepted change to other tabs. `notify` invalidates this tab's page-pointer subscribers, including during an optimistic edit or rollback.

@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Уреди икону",
   "tools.page.rename": "Преименуј",
   "tools.page.openInSidePeek": "Отвори у бочном панелу",
+  "tools.page.creating": "Креирање странице…",
+  "tools.page.draft": "Нацрт",
   "tools.columns.col2": "2 колоне",
   "tools.columns.col3": "3 колоне",
   "tools.columns.col4": "4 колоне",

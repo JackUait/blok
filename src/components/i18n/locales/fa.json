@@ -203,6 +203,8 @@
   "tools.page.editIcon": "ویرایش نماد",
   "tools.page.rename": "تغییر نام",
   "tools.page.openInSidePeek": "باز کردن در پنل کناری",
+  "tools.page.creating": "در حال ایجاد صفحه…",
+  "tools.page.draft": "پیش‌نویس",
   "tools.columns.col2": "۲ ستون",
   "tools.columns.col3": "۳ ستون",
   "tools.columns.col4": "۴ ستون",

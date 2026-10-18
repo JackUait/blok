@@ -203,6 +203,8 @@
   "tools.page.editIcon": "تعديل الأيقونة",
   "tools.page.rename": "إعادة تسمية",
   "tools.page.openInSidePeek": "فتح في اللوحة الجانبية",
+  "tools.page.creating": "جارٍ إنشاء الصفحة…",
+  "tools.page.draft": "مسودة",
   "tools.columns.col2": "عمودان",
   "tools.columns.col3": "3 أعمدة",
   "tools.columns.col4": "4 أعمدة",

@@ -214,6 +214,8 @@
   "tools.page.editIcon": "ແກ້ໄຂໄອຄອນ",
   "tools.page.rename": "ປ່ຽນຊື່",
   "tools.page.openInSidePeek": "ເປີດໃນແຜງດ້ານຂ້າງ",
+  "tools.page.creating": "ກຳລັງສ້າງໜ້າ…",
+  "tools.page.draft": "ສະບັບຮ່າງ",
   "tools.columns.col2": "2 ຖັນ",
   "tools.columns.col3": "3 ຖັນ",
   "tools.columns.col4": "4 ຖັນ",

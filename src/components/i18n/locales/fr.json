@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Modifier l’icône",
   "tools.page.rename": "Renommer",
   "tools.page.openInSidePeek": "Ouvrir en aperçu latéral",
+  "tools.page.creating": "Création de la page…",
+  "tools.page.draft": "Brouillon",
   "tools.columns.col2": "2 colonnes",
   "tools.columns.col3": "3 colonnes",
   "tools.columns.col4": "4 colonnes",

@@ -203,6 +203,8 @@
   "tools.page.editIcon": "编辑图标",
   "tools.page.rename": "重命名",
   "tools.page.openInSidePeek": "在侧边预览中打开",
+  "tools.page.creating": "正在创建页面…",
+  "tools.page.draft": "草稿",
   "tools.columns.col2": "2 栏",
   "tools.columns.col3": "3 栏",
   "tools.columns.col4": "4 栏",

@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Muokkaa kuvaketta",
   "tools.page.rename": "Nimeä uudelleen",
   "tools.page.openInSidePeek": "Avaa sivupaneelissa",
+  "tools.page.creating": "Luodaan sivua…",
+  "tools.page.draft": "Luonnos",
   "tools.columns.col2": "2 saraketta",
   "tools.columns.col3": "3 saraketta",
   "tools.columns.col4": "4 saraketta",

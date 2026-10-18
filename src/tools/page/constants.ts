@@ -44,6 +44,18 @@ export const PAGE_TITLE_CLASSES = SHARED_TITLE_CLASSES.join(' ');
 
 export const PAGE_TITLE_MUTED_CLASSES = SHARED_TITLE_MUTED_CLASSES.join(' ');
 
+/** The neutral gray preset, so it reads as a label, never as a link or a selection. */
+export const PAGE_DRAFT_BADGE_CLASSES = [
+  'flex-none',
+  'px-1.5',
+  'rounded-(--blok-radius-mark)',
+  'text-xs',
+  'leading-5',
+  'font-normal',
+  'bg-(--blok-color-gray-bg)',
+  'text-(--blok-color-gray-text)',
+].join(' ');
+
 /**
  * Edit-only hover fill for an inline page reference. The anchor stays inline,
  * so the fill hugs the icon and title instead of the whole line.

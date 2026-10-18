@@ -214,6 +214,8 @@
   "tools.page.editIcon": "아이콘 편집",
   "tools.page.rename": "이름 바꾸기",
   "tools.page.openInSidePeek": "사이드 보기로 열기",
+  "tools.page.creating": "페이지 만드는 중…",
+  "tools.page.draft": "초안",
   "tools.columns.col2": "2단",
   "tools.columns.col3": "3단",
   "tools.columns.col4": "4단",

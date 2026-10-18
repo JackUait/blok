@@ -41,6 +41,12 @@ export interface PageInfo {
    * The hover preview shows them as a path above the title. Never saved.
    */
   path?: string[];
+  /**
+   * Publication state. `'draft'` shows a small "Draft" badge after the title
+   * (`data-blok-page-status="draft"` on the link). `'published'` or no value
+   * shows nothing. A denied or missing page never shows it. Never saved.
+   */
+  status?: 'draft' | 'published';
 }
 
 /** A page the host offers for an inline reference. */
@@ -96,8 +102,10 @@ export interface PageConfig {
    *
    * From `blocks.insert('page')` without a `pageId`, the block is inserted
    * first, so it keeps Blok's id and a returned id is ignored with a warning.
-   * Pass your own `pageId` to `insert` instead. If it throws, the block shows
-   * "Page not found" until `resolve` finds the page.
+   * Pass your own `pageId` to `insert` instead. While it runs, the block shows
+   * a busy "creating" state (`data-blok-page-state="creating"`,
+   * `aria-busy="true"`). If it throws, the block shows "Page not found" until
+   * `resolve` finds the page.
    */
   create?(init: { pageId: string }): PageCreateResult | Promise<PageCreateResult>;
   /**

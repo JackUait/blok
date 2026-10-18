@@ -203,6 +203,8 @@
   "tools.page.editIcon": "آئیکن میں ترمیم کریں",
   "tools.page.rename": "نام تبدیل کریں",
   "tools.page.openInSidePeek": "سائیڈ پینل میں کھولیں",
+  "tools.page.creating": "صفحہ بنایا جا رہا ہے…",
+  "tools.page.draft": "مسودہ",
   "tools.columns.col2": "2 کالم",
   "tools.columns.col3": "3 کالم",
   "tools.columns.col4": "4 کالم",

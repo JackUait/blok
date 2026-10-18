@@ -203,6 +203,8 @@
   "tools.page.editIcon": "আইকন সম্পাদনা করুন",
   "tools.page.rename": "নাম পরিবর্তন",
   "tools.page.openInSidePeek": "পার্শ্ব প্যানেলে খুলুন",
+  "tools.page.creating": "পৃষ্ঠা তৈরি হচ্ছে…",
+  "tools.page.draft": "খসড়া",
   "tools.columns.col2": "২ কলাম",
   "tools.columns.col3": "৩ কলাম",
   "tools.columns.col4": "৪ কলাম",

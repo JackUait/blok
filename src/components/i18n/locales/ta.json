@@ -203,6 +203,8 @@
   "tools.page.editIcon": "ஐகானைத் திருத்து",
   "tools.page.rename": "மறுபெயரிடு",
   "tools.page.openInSidePeek": "பக்கப் பலகத்தில் திற",
+  "tools.page.creating": "பக்கம் உருவாக்கப்படுகிறது…",
+  "tools.page.draft": "வரைவு",
   "tools.columns.col2": "2 நெடுவரிசைகள்",
   "tools.columns.col3": "3 நெடுவரிசைகள்",
   "tools.columns.col4": "4 நெடுவரிசைகள்",

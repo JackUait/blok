@@ -214,6 +214,8 @@
   "tools.page.editIcon": "आइकन सम्पादन गर्नुहोस्",
   "tools.page.rename": "नाम बदल्नुहोस्",
   "tools.page.openInSidePeek": "साइड प्यानलमा खोल्नुहोस्",
+  "tools.page.creating": "पृष्ठ बनाउँदै…",
+  "tools.page.draft": "मस्यौदा",
   "tools.columns.col2": "२ स्तम्भ",
   "tools.columns.col3": "३ स्तम्भ",
   "tools.columns.col4": "४ स्तम्भ",

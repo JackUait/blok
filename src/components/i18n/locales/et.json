@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Muuda ikooni",
   "tools.page.rename": "Nimeta ümber",
   "tools.page.openInSidePeek": "Ava külgpaneelis",
+  "tools.page.creating": "Lehe loomine…",
+  "tools.page.draft": "Mustand",
   "tools.columns.col2": "2 veergu",
   "tools.columns.col3": "3 veergu",
   "tools.columns.col4": "4 veergu",

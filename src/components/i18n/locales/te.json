@@ -203,6 +203,8 @@
   "tools.page.editIcon": "చిహ్నాన్ని సవరించండి",
   "tools.page.rename": "పేరు మార్చు",
   "tools.page.openInSidePeek": "సైడ్ ప్యానెల్‌లో తెరవండి",
+  "tools.page.creating": "పేజీని సృష్టిస్తోంది…",
+  "tools.page.draft": "డ్రాఫ్ట్",
   "tools.columns.col2": "2 నిలువు వరుసలు",
   "tools.columns.col3": "3 నిలువు వరుసలు",
   "tools.columns.col4": "4 నిలువు వరుసలు",

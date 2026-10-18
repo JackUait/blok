@@ -36,6 +36,8 @@ export interface PageInfo {
   access?: 'none';
   /** Titles of the pages above this one, top first. Shown in the hover preview. */
   path?: string[];
+  /** `'draft'` shows a "Draft" badge on the block. */
+  status?: 'draft' | 'published';
 }
 
 /** A page the host offers for an inline reference. */

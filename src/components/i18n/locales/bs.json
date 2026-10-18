@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Uredi ikonu",
   "tools.page.rename": "Preimenuj",
   "tools.page.openInSidePeek": "Otvori u bočnom panelu",
+  "tools.page.creating": "Kreiranje stranice…",
+  "tools.page.draft": "Nacrt",
   "tools.columns.col2": "2 kolone",
   "tools.columns.col3": "3 kolone",
   "tools.columns.col4": "4 kolone",

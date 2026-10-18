@@ -203,6 +203,8 @@
   "tools.page.editIcon": "آیکون سم کړئ",
   "tools.page.rename": "نوم بدل کړئ",
   "tools.page.openInSidePeek": "په څنګ پینل کې پرانیزئ",
+  "tools.page.creating": "پاڼه جوړېږي…",
+  "tools.page.draft": "مسوده",
   "tools.columns.col2": "۲ کالمونه",
   "tools.columns.col3": "۳ کالمونه",
   "tools.columns.col4": "۴ کالمونه",

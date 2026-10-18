@@ -203,6 +203,8 @@
   "tools.page.editIcon": "سىنبەلگە تەھرىرلەش",
   "tools.page.rename": "قايتا ئاتاش",
   "tools.page.openInSidePeek": "يان تاختىدا ئېچىش",
+  "tools.page.creating": "بەت قۇرۇلۇۋاتىدۇ…",
+  "tools.page.draft": "لايىھە",
   "tools.columns.col2": "2 ئىستون",
   "tools.columns.col3": "3 ئىستون",
   "tools.columns.col4": "4 ئىستون",

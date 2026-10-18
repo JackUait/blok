@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Editar icono",
   "tools.page.rename": "Cambiar nombre",
   "tools.page.openInSidePeek": "Abrir en vista lateral",
+  "tools.page.creating": "Creando página…",
+  "tools.page.draft": "Borrador",
   "tools.columns.col2": "2 columnas",
   "tools.columns.col3": "3 columnas",
   "tools.columns.col4": "4 columnas",

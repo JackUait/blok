@@ -224,6 +224,8 @@
   "tools.page.editIcon": "Edit icon",
   "tools.page.rename": "Rename",
   "tools.page.openInSidePeek": "Open in side peek",
+  "tools.page.creating": "Creating page…",
+  "tools.page.draft": "Draft",
   "tools.columns.col2": "2 columns",
   "tools.columns.col3": "3 columns",
   "tools.columns.col4": "4 columns",

@@ -214,6 +214,8 @@
   "tools.page.editIcon": "အိုင်ကွန် တည်းဖြတ်",
   "tools.page.rename": "အမည်ပြောင်း",
   "tools.page.openInSidePeek": "ဘေးဘောင်တွင် ဖွင့်ရန်",
+  "tools.page.creating": "စာမျက်နှာ ဖန်တီးနေသည်…",
+  "tools.page.draft": "မူကြမ်း",
   "tools.columns.col2": "ကော်လံ ၂ ခု",
   "tools.columns.col3": "ကော်လံ ၃ ခု",
   "tools.columns.col4": "ကော်လံ ၄ ခု",

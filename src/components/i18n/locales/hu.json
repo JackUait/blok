@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Ikon szerkesztése",
   "tools.page.rename": "Átnevezés",
   "tools.page.openInSidePeek": "Megnyitás oldalsó panelen",
+  "tools.page.creating": "Oldal létrehozása…",
+  "tools.page.draft": "Piszkozat",
   "tools.columns.col2": "2 oszlop",
   "tools.columns.col3": "3 oszlop",
   "tools.columns.col4": "4 oszlop",

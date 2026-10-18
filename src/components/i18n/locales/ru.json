@@ -203,6 +203,8 @@
   "tools.page.editIcon": "Изменить значок",
   "tools.page.rename": "Переименовать",
   "tools.page.openInSidePeek": "Открыть в боковой панели",
+  "tools.page.creating": "Создание страницы…",
+  "tools.page.draft": "Черновик",
   "tools.columns.col2": "2 колонки",
   "tools.columns.col3": "3 колонки",
   "tools.columns.col4": "4 колонки",

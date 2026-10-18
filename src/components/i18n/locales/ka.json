@@ -203,6 +203,8 @@
   "tools.page.editIcon": "ხატულის რედაქტირება",
   "tools.page.rename": "გადარქმევა",
   "tools.page.openInSidePeek": "გვერდით პანელში გახსნა",
+  "tools.page.creating": "გვერდი იქმნება…",
+  "tools.page.draft": "მონახაზი",
   "tools.columns.col2": "2 სვეტი",
   "tools.columns.col3": "3 სვეტი",
   "tools.columns.col4": "4 სვეტი",

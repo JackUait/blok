@@ -574,7 +574,6 @@ describe('renderAgentTools ref wording', () => {
     const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
     const execute = byName(renderAgentTools(contract, { format: 'anthropic', schema: schemaName }), 'blok_execute');
 
-    // Models read "$ref" as the JSON Schema keyword and wrote "$ref:h" for a ref named "h".
     expect(descriptionsIn(inputOf(execute)).filter(text => text.includes('"$ref"'))).toEqual([]);
   });
 
@@ -582,7 +581,6 @@ describe('renderAgentTools ref wording', () => {
     const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
     const execute = byName(renderAgentTools(contract, { format: 'anthropic', schema: schemaName }), 'blok_execute');
 
-    // Without it MCP models built a heading, lists and code from block.insert calls and guessed each data shape.
     expect(execute.description).toMatch(/several .*blocks.*markdown\.insert/);
   });
 
@@ -593,7 +591,6 @@ describe('renderAgentTools ref wording', () => {
     const withRef = branches.filter(branch => schema(branch.properties).ref !== undefined)
       .map(branch => schema(schema(branch.properties).name).const ?? 'envelope');
 
-    // MCP models put a ref on markdown.insert, which the planner refuses, and lost a turn.
     expect(withRef).toEqual(['block.insert', 'envelope']);
   });
 });

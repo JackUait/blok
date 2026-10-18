@@ -665,10 +665,11 @@ describe('dist weight (consumer parse cost)', () => {
     // ~12 MB; minified it lands around 7 MB. Raising the budget needs a reason.
     // 11.5 MiB: mermaid 12 adds ~1.7 MB of lazy diagram chunks (elkjs is 1.46 MB).
     // 12 MiB: database Notion parity adds ~215 KB of tool code; the budget counts lazy chunks, so splitting does not help.
+    // 12.1 MiB (USER, 2026-10-18): built-in database comments add ~16 KB of code and CSS with no duplication.
     const codeBytes = esFiles
       .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    expect(codeBytes).toBeLessThan(12 * 1024 * 1024)
+    expect(codeBytes).toBeLessThan(12.1 * 1024 * 1024)
   })
 
   it('emits minified chunks (no indented multi-line output)', () => {

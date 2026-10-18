@@ -49,8 +49,8 @@ const blocks = (): OutputBlockData[] => [
   ...ROWS.map((row, i) => ({ id: row.id, type: 'database-row', parent: 'db-1', data: { position: `a${i}`, properties: row.properties } })),
 ];
 
-const mount = async (page: Page, options: { comments: boolean; readOnly?: boolean }): Promise<void> => {
-  await page.evaluate(async ({ input, comments, readOnly }) => {
+const mount = async (page: Page, options: { comments: boolean; readOnly?: boolean; denyComments?: boolean }): Promise<void> => {
+  await page.evaluate(async ({ input, comments, readOnly, denyComments }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -86,12 +86,18 @@ const mount = async (page: Page, options: { comments: boolean; readOnly?: boolea
       readOnly,
       data: { blocks: input },
       tools: {
-        database: { class: window.BlokDatabase, config: comments ? { comments: { open: (target: unknown) => log.comments.push(target) } } : {} },
+        database: {
+          class: window.BlokDatabase,
+          config: {
+            ...(comments ? { comments: { open: (target: unknown) => log.comments.push(target) } } : {}),
+            ...(denyComments ? { permissions: { can: (action: string) => action !== 'comment' } } : {}),
+          },
+        },
         'database-row': { class: window.BlokDatabaseRow },
       },
     });
     await window.blokInstance.isReady;
-  }, { input: blocks(), comments: options.comments, readOnly: options.readOnly ?? false });
+  }, { input: blocks(), comments: options.comments, readOnly: options.readOnly ?? false, denyComments: options.denyComments ?? false });
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
@@ -245,8 +251,16 @@ test.describe('editable table', () => {
   });
 });
 
-test('without host comments the pill has Copy only', async ({ page }) => {
+test('without host comments the pill\'s Comment opens the built-in thread for that cell', async ({ page }) => {
   await mount(page, { comments: false });
+  await cell(page, 'r1', 'p-mail').hover();
+  await cell(page, 'r1', 'p-mail').getByRole('button', { name: 'Comment' }).click();
+
+  await expect(page.getByRole('textbox', { name: 'Add a comment…' })).toBeFocused();
+});
+
+test('with comments denied the pill has Copy only', async ({ page }) => {
+  await mount(page, { comments: false, denyComments: true });
   await cell(page, 'r1', 'p-link').hover();
 
   await expect(cell(page, 'r1', 'p-link').getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();

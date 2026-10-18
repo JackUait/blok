@@ -46,7 +46,7 @@ export interface CommentsPanel {
   /** Draws the threads again; a draft in the composer survives. */
   refresh(): void;
   focusComposer(): void;
-  /** Drops an open edit's window listener. The panel draws nothing after it. */
+  /** Drops the window Escape listener of an open edit or actions menu. */
   destroy(): void;
 }
 
@@ -145,6 +145,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
   const list = document.createElement('div');
   const editing: { id: string | null } = { id: null };
   const stopEditKeys: { current: (() => void) | null } = { current: null };
+  const stopMenuKeys: { current: (() => void) | null } = { current: null };
 
   panel.setAttribute(ATTR.panel, '');
   panel.setAttribute(DATA_ATTR.keyboardOwner, '');
@@ -227,11 +228,27 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
         button.setAttribute('data-blok-database-comment-action', name);
         button.textContent = label;
         button.addEventListener('click', () => {
-          menu.hidden = true;
+          closeMenu();
           run();
         });
 
         return button;
+      };
+
+      const closeMenu = (): void => {
+        menu.hidden = true;
+        more.setAttribute('aria-expanded', 'false');
+        stopMenuKeys.current?.();
+        stopMenuKeys.current = null;
+      };
+      // One Escape closes this menu, not the popover (same window capture as the edit).
+      const onEscape = (event: KeyboardEvent): void => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        markEscapeConsumed(event);
+        closeMenu();
+        more.focus();
       };
 
       menu.setAttribute('role', 'menu');
@@ -248,8 +265,16 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
       );
       more.setAttribute('aria-haspopup', 'menu');
       more.addEventListener('click', () => {
-        menu.hidden = !menu.hidden;
-        more.setAttribute('aria-expanded', String(!menu.hidden));
+        if (!menu.hidden) {
+          closeMenu();
+
+          return;
+        }
+        stopMenuKeys.current?.();
+        menu.hidden = false;
+        more.setAttribute('aria-expanded', 'true');
+        window.addEventListener('keydown', onEscape, true);
+        stopMenuKeys.current = (): void => window.removeEventListener('keydown', onEscape, true);
       });
       tools.appendChild(more);
       row.appendChild(menu);
@@ -267,13 +292,15 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     draw();
   });
 
-  const stopEdit = (): void => {
+  const stopKeys = (): void => {
     stopEditKeys.current?.();
     stopEditKeys.current = null;
+    stopMenuKeys.current?.();
+    stopMenuKeys.current = null;
   };
 
   const draw = (): void => {
-    stopEdit();
+    stopKeys();
     const threads = options.threads();
 
     list.replaceChildren(...threads.map((thread) => {
@@ -295,6 +322,6 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     element: panel,
     refresh: draw,
     focusComposer: () => box.input.focus(),
-    destroy: stopEdit,
+    destroy: stopKeys,
   };
 };

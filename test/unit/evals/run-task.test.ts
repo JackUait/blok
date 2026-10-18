@@ -66,7 +66,7 @@ describe('runTrial', () => {
   it('keeps the cache, tool-call and timing numbers in the record', async () => {
     const record = await run([]);
 
-    expect(record).toMatchObject({ cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], steps: [expect.objectContaining({ toolCalls: 0 })] });
+    expect(record).toMatchObject({ cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], toolInputs: [], describeQueries: [], steps: [expect.objectContaining({ toolCalls: 0 })] });
     expect(record.wallMs).toBeGreaterThanOrEqual(0);
   });
 
@@ -145,7 +145,7 @@ describe('assertMeasured', () => {
 
   const record = (outcome: 'pass' | 'fail' | 'error', errorDetail?: string) => ({
     taskId: 't', surface: 'mcp-live' as const, trial: 0, outcome, graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], answer: '', steps: [], wallMs: 0, errorDetail,
+    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], toolInputs: [], describeQueries: [], executeErrors: [], log: [], answer: '', steps: [], wallMs: 0, errorDetail,
   });
 
   it('fails the run on an error trial, naming its detail, so it cannot pass silently', () => {

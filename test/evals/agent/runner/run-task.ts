@@ -36,6 +36,8 @@ export interface TrialRecord {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   toolCalls: string[];
+  /** The input of each tool call, index-aligned with toolCalls. */
+  toolInputs: unknown[];
   describeQueries: unknown[];
   /** The error of each failed blok_execute: why the model had to try again. */
   executeErrors: Array<NonNullable<ExecuteResult['error']>>;
@@ -50,7 +52,7 @@ export interface TrialRecord {
 
 const errorRecord = (o: { task: EvalTask; surface: Surface; trial: number }, error: unknown): TrialRecord => ({
   taskId: o.task.id, surface: o.surface, trial: o.trial, outcome: 'error', graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], answer: '', steps: [], wallMs: 0,
+  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], toolInputs: [], describeQueries: [], executeErrors: [], log: [], answer: '', steps: [], wallMs: 0,
   errorDetail: error instanceof Error ? (error.stack ?? error.message) : String(error),
 });
 
@@ -100,7 +102,7 @@ export const runTrial = async (o: {
       taskId: o.task.id, surface: o.surface, trial: o.trial,
       outcome: classifyTrial(loop, Object.values(graders), threw !== null),
       graders, turns: loop.turns, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens,
-      cacheReadTokens: loop.cacheReadTokens, cacheWriteTokens: loop.cacheWriteTokens, toolCalls: loop.toolCalls, describeQueries: loop.describeQueries, steps: loop.steps, wallMs,
+      cacheReadTokens: loop.cacheReadTokens, cacheWriteTokens: loop.cacheWriteTokens, toolCalls: loop.toolCalls, toolInputs: loop.toolInputs, describeQueries: loop.describeQueries, steps: loop.steps, wallMs,
       log: end.log,
       answer: loop.answer,
       executeErrors: end.results.flatMap((r) => (r.ok || r.error === undefined ? [] : [r.error])),

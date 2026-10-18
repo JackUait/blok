@@ -1,5 +1,5 @@
 import {
-  Audio, Bold, Bookmark, Callout, ClearFormat, Code, Column, ColumnList, Database, DatabaseRow, Divider, Embed, Equation,
+  Audio, Bold, Bookmark, Callout, ClearFormat, Code, Column, ColumnList, Database, DatabaseComment, DatabaseRow, Divider, Embed, Equation,
   File as FileTool, Header, Image as ImageTool, InlineCode, Italic, Link, List, Marker, Page, PageLink, Paragraph, Quote,
   Spacer, Strikethrough, SupSub, Table, TableOfContents, TabTool, TabsTool, Toggle, Underline, Video, defaultBlockTools,
 } from '../../../../src/tools';
@@ -15,6 +15,7 @@ export const BLOCK_CLASSES = {
   callout: Callout,
   database: Database,
   'database-row': DatabaseRow,
+  'database-comment': DatabaseComment,
   divider: Divider,
   spacer: Spacer,
   table_of_contents: TableOfContents,

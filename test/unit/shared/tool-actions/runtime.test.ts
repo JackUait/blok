@@ -23,7 +23,7 @@ import type { InsertSpec } from '../../../../types/agent';
 import type { ToolActionImpl } from '../../../../types/tools/tool-description';
 
 const BLOCK_KEYS = [
-  'paragraph', 'header', 'list', 'table', 'toggle', 'callout', 'database', 'database-row',
+  'paragraph', 'header', 'list', 'table', 'toggle', 'callout', 'database', 'database-row', 'database-comment',
   'divider', 'spacer', 'table_of_contents', 'quote', 'code', 'image', 'file', 'audio', 'video',
   'column_list', 'column', 'tabs', 'tab', 'embed', 'bookmark', 'page', 'page-link',
 ];
@@ -261,11 +261,11 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     }
   });
 
-  it('registers exactly all 25 built-in block keys, including both page tools', () => {
+  it('registers exactly all 26 built-in block keys, including both page tools', () => {
     expect([...BUILT_IN_TOOL_RUNTIMES.keys()].sort()).toEqual([...BLOCK_KEYS].sort());
     expect(Object.keys(BUILT_IN_BLOCK_SANITIZE).sort()).toEqual([...BLOCK_KEYS].sort());
     expect(Object.keys(BLOCK_CLASSES).sort()).toEqual([...BLOCK_KEYS].sort());
-    expect(BUILT_IN_TOOL_RUNTIMES.size).toBe(25);
+    expect(BUILT_IN_TOOL_RUNTIMES.size).toBe(26);
   });
 
   it('uses the ten default inline tools in the current registration order', () => {

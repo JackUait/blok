@@ -29,6 +29,7 @@ const SOURCE_PATH = resolve(__dirname, '../../../src/markdown/blocks-to-markdown
  * by being exempt, it does not belong here.
  */
 const EXEMPT_TOOLS: Record<string, string> = {
+  'database-comment': 'A comment thread is not page content: serializeBlocksToMarkdown drops it and its replies before any case runs.',
   paragraph: 'A paragraph IS plain Markdown text: the default branch emits its inline text (bold/italic/links included). A dedicated case would be a no-op.',
 };
 

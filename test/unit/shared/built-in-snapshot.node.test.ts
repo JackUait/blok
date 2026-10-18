@@ -8,7 +8,7 @@ import type { HostService, ToolActionImpl } from '../../../types';
 
 // Keep the Node test independent of the DOM-loading builtInEditorTools helper.
 const BLOCK_NAMES = [
-  'paragraph', 'header', 'list', 'table', 'toggle', 'callout', 'database', 'database-row',
+  'paragraph', 'header', 'list', 'table', 'toggle', 'callout', 'database', 'database-row', 'database-comment',
   'divider', 'spacer', 'table_of_contents', 'quote', 'code', 'image', 'file', 'audio', 'video',
   'column_list', 'column', 'tabs', 'tab', 'embed', 'bookmark', 'page', 'page-link',
 ];
@@ -34,7 +34,7 @@ describe('buildBuiltInSnapshot in Node', () => {
     const snapshot = buildBuiltInSnapshot({ blokVersion: '1.0.0' });
     const manifest = buildToolManifest(snapshot);
 
-    expect(snapshot.blocks).toHaveLength(25);
+    expect(snapshot.blocks).toHaveLength(26);
     expect(snapshot.blocks.map(block => block.name)).toEqual(BLOCK_NAMES);
     expect(snapshot.inlineTools.map(tool => tool.name)).toEqual(INLINE_NAMES);
     expect(snapshot.tunes.map(tune => tune.name)).toEqual(TUNE_NAMES);

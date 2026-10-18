@@ -6,7 +6,6 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { DatabaseData, DatabaseRowData } from '../../../../src/tools/database/types';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
-import { rowReactions } from '../../../../src/tools/database/row-reactions';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -39,7 +38,7 @@ const data: DatabaseData = {
 
 const doc = (): OutputBlockData[] => [
   { id: 'db', type: 'database', data, content: ['r1'] },
-  { id: 'r1', type: 'database-row', parent: 'db', data: { title: 'Alpha', properties: { t: 'Alpha' }, position: 'a0', 'reactions:ada': { '👍': 1 } } },
+  { id: 'r1', type: 'database-row', parent: 'db', data: { title: 'Alpha', properties: { t: 'Alpha' }, position: 'a0', reactions: { ada: { '👍': 1 } } } },
 ];
 
 let editor: TestEditor | undefined;
@@ -91,14 +90,14 @@ describe('feed reactions and undo', () => {
     await quiet();
     pill('👍')?.click();
     await quiet();
-    expect(rowReactions(await row())?.me?.['👍']).toEqual(expect.any(Number));
+    expect((await row()).reactions?.me?.['👍']).toEqual(expect.any(Number));
 
     editor?.history.undo();
     await quiet();
 
     const undone = await row();
 
-    expect(rowReactions(undone)?.me?.['👍']).toEqual(expect.any(Number));
+    expect(undone.reactions?.me?.['👍']).toEqual(expect.any(Number));
     expect(undone.properties.t).toBe('Alpha');
 
     editor?.history.redo();
@@ -107,22 +106,7 @@ describe('feed reactions and undo', () => {
     const redone = await row();
 
     expect(redone.properties.t).toBe('Beta');
-    expect(rowReactions(redone)?.me?.['👍']).toEqual(expect.any(Number));
-  });
-
-  it('taking back your only reaction leaves no key of yours in the saved row', async () => {
-    await make();
-
-    pill('👍')?.click();
-    await quiet();
-    expect('reactions:me' in (await row())).toBe(true);
-    pill('👍')?.click();
-    await quiet();
-
-    const saved = await row();
-
-    expect('reactions:me' in saved).toBe(false);
-    expect(rowReactions(saved)).toEqual({ ada: { '👍': 1 } });
+    expect(redone.reactions?.me?.['👍']).toEqual(expect.any(Number));
   });
 
   it('a reaction is not an undo step of its own, nor an edit of the page', async () => {
@@ -134,7 +118,7 @@ describe('feed reactions and undo', () => {
     editor?.history.undo();
     await quiet();
 
-    expect(rowReactions(await row())).toEqual({ ada: { '👍': 1 }, me: { '👍': expect.any(Number) } });
+    expect((await row()).reactions).toEqual({ ada: { '👍': 1 }, me: { '👍': expect.any(Number) } });
     expect(pill('👍')?.textContent).toBe('👍2');
   });
 });

@@ -135,9 +135,26 @@ export class PlanState {
         : this.fail('BLOCK_NOT_FOUND', `Ref "${ref}" has no existing block from an earlier command.`, path, { ref });
     }
 
-    return this.draft.has(value)
+    // Agents skip comment threads (user decision 2026-10-16): one is a block they cannot see.
+    return this.draft.has(value) && !this.inAnnotation(value)
       ? value
       : this.fail('BLOCK_NOT_FOUND', `Block "${value}" does not exist. Read the document for current ids.`, path, { id: value });
+  }
+
+  /** The block is not page content (a comment thread) or sits under one. */
+  private inAnnotation(id: string): boolean {
+    const seen = new Set<string>();
+    const cursor: { id: string | null } = { id };
+
+    while (cursor.id !== null && !seen.has(cursor.id)) {
+      const type = this.draft.get(cursor.id)?.type;
+
+      if (type !== undefined && this.tool(type)?.entry.children.annotation === true) return true;
+      seen.add(cursor.id);
+      cursor.id = this.draft.parentOf(cursor.id);
+    }
+
+    return false;
   }
 
   public requireBlock(value: unknown, path: string): SnapBlock {

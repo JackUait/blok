@@ -185,6 +185,12 @@
     "pageId": "plaintext",
     "convertedValues": "plaintext"
   },
+  "database-comment": {
+    "text": "plaintext",
+    "authorId": "plaintext",
+    "authorName": "plaintext",
+    "propertyId": "plaintext"
+  },
   "tab": {
     "title": false,
     "icon": false

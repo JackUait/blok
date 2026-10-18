@@ -184,6 +184,26 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
     inlineTools,
     tunes,
   },
+  'database-comment': {
+    title: 'Database-comment',
+    statics: {
+      toolbox: [],
+      richTextFields: [],
+      acceptsChildren: true,
+      childTools: { allow: ['database-comment'] },
+      ownsChildren: false,
+      isLayout: false,
+      isAnnotation: true,
+      deletesChildren: true,
+      selfPlacesChildren: false,
+      restrictedInTableCell: false,
+      conversion: {},
+      convertible: { export: false, import: false },
+      hasPrepareInsert: false,
+    },
+    inlineTools,
+    tunes,
+  },
   divider: {
     title: 'Divider',
     statics: {

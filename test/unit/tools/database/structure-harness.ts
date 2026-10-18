@@ -72,7 +72,7 @@ const makeBlock = (doc: () => Doc, id: string, name: string, parentId: string | 
         const rowTool = new DatabaseRowTool({ data: row, config: {}, api: {} as API, readOnly: false, block: { id } as BlockAPI });
 
         rowTool.updateReaction(param as { userId: string; emoji: string; at: number | null });
-        entry.data = { ...rowTool.save(document.createElement('div')) };
+        entry.data = { ...entry.data, reactions: rowTool.save(document.createElement('div')).reactions };
       }
       if (method === 'setRowData') entry.data = { ...entry.data, ...(param as Record<string, unknown>) };
 

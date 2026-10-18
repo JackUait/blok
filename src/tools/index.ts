@@ -28,6 +28,7 @@ export { ToggleItem as Toggle } from './toggle';
 export { CalloutTool as Callout } from './callout';
 export { DatabaseTool as Database } from './database';
 export { DatabaseRowTool as DatabaseRow } from './database-row';
+export { DatabaseCommentTool as DatabaseComment } from './database-comment';
 export { DividerTool as Divider } from './divider';
 export { SpacerTool as Spacer } from './spacer';
 export { TableOfContentsTool as TableOfContents } from './table-of-contents';
@@ -87,6 +88,7 @@ export const defaultBlockTools = {
   callout: {},
   database: {},
   'database-row': {},
+  'database-comment': {},
   divider: {},
   spacer: {},
   table_of_contents: {},

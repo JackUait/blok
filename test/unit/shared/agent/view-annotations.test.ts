@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AgentFailure } from '../../../../src/shared/agent/errors';
 import { DocSnapshot } from '../../../../src/shared/agent/snapshot';
 import { planOn, TOOLS, tool } from './fixtures';
 
@@ -55,5 +56,26 @@ describe('agent reads skip annotations', () => {
     const ids = DocSnapshot.fromOutput(doc).toOutput().blocks.map((block) => block.id);
 
     expect(ids).toEqual(['t1', 'b1', 'n1', 'n2']);
+  });
+
+  it.each([
+    ['block.update', { id: 'n1', data: { text: [{ text: 'x' }] } }],
+    ['block.delete', { id: 'n2' }],
+    ['block.move', { id: 'n1', position: 'end' }],
+    ['block.insert', { type: 'paragraph', parentId: 'n1' }],
+    ['text.replace', { id: 'n2', field: 'text', with: 'x' }],
+  ])('refuses %s on a thread or a reply as a block it cannot see', (name, args) => {
+    const code = ((): string | undefined => {
+      try {
+        run(name as `${string}.${string}`, args);
+      } catch (error: unknown) {
+        if (error instanceof AgentFailure) return error.error.code;
+        throw error;
+      }
+
+      return undefined;
+    })();
+
+    expect(code).toBe('BLOCK_NOT_FOUND');
   });
 });

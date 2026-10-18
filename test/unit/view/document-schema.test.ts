@@ -20,6 +20,7 @@ import {
   Column,
   ColumnList,
   Database,
+  DatabaseComment,
   DatabaseRow,
   Divider,
   Embed,
@@ -53,7 +54,6 @@ import type { ImageMarkup } from '../../../types/tools/image';
 type JsonSchema = {
   description?: string;
   properties?: Record<string, unknown>;
-  patternProperties?: Record<string, unknown>;
   required?: string[];
   additionalProperties?: boolean;
   items?: JsonSchema;
@@ -185,8 +185,10 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   // A row as the tool writes one today: a top-level `title` beside the
   // properties mirror. A row saved before that key existed still omits it.
-  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page', convertedValues: { p2: { type: 'text', value: '007' } }, bodyBlocks: true, icon: '🚀', cover: 'https://example.com/c.png', fullWidth: false, template: true, repeat: { frequency: 'weekly', start: '2026-10-12T09:00:00.000Z' }, reminders: { p3: { remind: '1_day_before' } }, 'reactions:u1': { '😀': 1000 } }))
+  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page', convertedValues: { p2: { type: 'text', value: '007' } }, bodyBlocks: true, icon: '🚀', cover: 'https://example.com/c.png', fullWidth: false, template: true, repeat: { frequency: 'weekly', start: '2026-10-12T09:00:00.000Z' }, reminders: { p3: { remind: '1_day_before' } }, reactions: { u1: { '😀': 1000 } } }))
     .save(contentElement('')),
+
+  'database-comment': new DatabaseComment(options({ text: 'Looks good', createdAt: 1000, authorId: 'u1', authorName: 'Ann', propertyId: 'p1', editedAt: 2000, resolved: true })).save(),
 
   page: new Page(options({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
   'page-link': new PageLink(options({ pageId: 'p1' })).save(),
@@ -555,12 +557,7 @@ describe('blokDocumentSchema', () => {
 
       expect(sample, `no save() sample for "${name}"`).toBeDefined();
 
-      // A key a pattern declares (a person's `reactions:<id>`) is checked by the pattern, not by name.
-      const patterns = Object.keys(def.patternProperties ?? {}).map(pattern => new RegExp(pattern, 'u'));
-      const patterned = Object.keys(sample).filter(key => patterns.some(pattern => pattern.test(key)));
-
-      expect(patterned.length, 'every schema pattern needs a sample key').toBeGreaterThanOrEqual(patterns.length);
-      const savedKeys = Object.keys(sample).filter(key => !patterned.includes(key)).sort();
+      const savedKeys = Object.keys(sample).sort();
       const schemaKeys = Object.keys(def.properties ?? {})
         .filter(key => !(LEGACY_KEYS[name] ?? []).includes(key))
         .sort();

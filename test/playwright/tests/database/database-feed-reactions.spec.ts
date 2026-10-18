@@ -27,7 +27,7 @@ const blocks = (): OutputBlockData[] => [
     },
     content: ['r1'],
   },
-  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Launch' }, 'reactions:ada': { '👍': 1 } } },
+  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Launch' }, reactions: { ada: { '👍': 1 } } } },
 ];
 
 const mount = async (page: Page): Promise<void> => {
@@ -55,14 +55,10 @@ const mount = async (page: Page): Promise<void> => {
   }, blocks());
 };
 
-/** Saved reactions by user id, read from each person's `reactions:<id>` key. */
-const reactions = async (page: Page): Promise<Record<string, Record<string, number>>> => page.evaluate(async () => {
+const reactions = async (page: Page): Promise<Record<string, Record<string, number>> | undefined> => page.evaluate(async () => {
   const saved = await window.blokInstance?.save();
-  const data = saved?.blocks.find((block) => block.id === 'r1')?.data ?? {};
 
-  return Object.fromEntries(Object.entries(data)
-    .filter(([key]) => key.startsWith('reactions:'))
-    .map(([key, value]) => [key.slice('reactions:'.length), value as Record<string, number>]));
+  return (saved?.blocks.find((block) => block.id === 'r1')?.data as { reactions?: Record<string, Record<string, number>> }).reactions;
 });
 
 const card = (page: Page) => page.getByRole('listitem').filter({ hasText: 'Launch' });
@@ -84,7 +80,7 @@ test('a pill adds your reaction, your pill is gray, and clicking it again takes 
   await pill.click();
   await expect(pill).toHaveText('👍2');
   await expect(pill).toHaveAttribute('aria-pressed', 'true');
-  expect((await reactions(page)).me?.['👍']).toEqual(expect.any(Number));
+  expect((await reactions(page))?.me?.['👍']).toEqual(expect.any(Number));
 
   const [fill, ink] = await pill.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]);
   const channels = (color: string): number[] => (color.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
@@ -112,7 +108,7 @@ test('Add reaction opens the full picker with no Random or Remove; a pick adds a
   await picker.getByRole('button', { name: /party popper/i }).first().click();
   await expect(picker).toBeHidden();
   await expect(card(page).getByRole('button', { name: '🎉' })).toHaveAttribute('aria-pressed', 'true');
-  expect(Object.keys((await reactions(page)).me ?? {})).toEqual(['🎉']);
+  expect(Object.keys((await reactions(page))?.me ?? {})).toEqual(['🎉']);
 
   await card(page).getByRole('button', { name: 'Add reaction' }).click();
   await expect(picker).toBeVisible();

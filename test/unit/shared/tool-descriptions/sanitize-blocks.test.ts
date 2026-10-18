@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clean } from '../../../../src/components/utils/sanitizer';
 import { BUILT_IN_BLOCK_SANITIZE } from '../../../../src/shared/tool-descriptions/sanitize/blocks';
 import {
-  Audio, Bookmark, Callout, Code, Column, ColumnList, Database, DatabaseRow, Divider, Embed, File as FileTool,
+  Audio, Bookmark, Callout, Code, Column, ColumnList, Database, DatabaseComment, DatabaseRow, Divider, Embed, File as FileTool,
   Header, Image as ImageTool, List, Page, PageLink, Paragraph, Quote, Spacer, Table, TableOfContents,
   TabTool, TabsTool, Toggle, Video,
 } from '../../../../src/tools';
@@ -31,6 +31,7 @@ const GET_CONFIG: Record<string, () => ToolSanitizerConfig> = {
   'page-link': () => PageLink.sanitize,
   database: () => Database.sanitize,
   'database-row': () => DatabaseRow.sanitize,
+  'database-comment': () => DatabaseComment.sanitize,
   tab: () => TabTool.sanitize,
   column_list: () => ({}),
   column: () => ({}),

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { DatabaseConfig, DatabaseData, PropertyDefinition } from '../../../../src/tools/database/types';
 import { buildDatabase, makeDoc, rowSeed } from './structure-harness';
-import { rowReactions } from '../../../../src/tools/database/row-reactions';
 import type { Doc } from './structure-harness';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 
@@ -61,7 +60,7 @@ const me = (): DatabaseConfig => ({ people: { list: () => Promise.resolve([]), m
 const build = (reactions: Record<string, Record<string, number>> | undefined, config: DatabaseConfig = me()): { doc: Doc; el: HTMLElement } => {
   const doc = makeDoc([
     { id: 'db', name: 'database', parentId: null, data: {} },
-    rowSeed('r1', 'db', { properties: { title: 'Post' }, ...Object.fromEntries(Object.entries(reactions ?? {}).map(([userId, own]) => [`reactions:${userId}`, own])) }),
+    rowSeed('r1', 'db', { properties: { title: 'Post' }, ...(reactions !== undefined ? { reactions } : {}) }),
   ]);
   const { el } = buildDatabase(doc, 'db', data(), config);
 
@@ -95,7 +94,7 @@ describe('feed reactions in the database', () => {
 
     pill(el, '👍')?.click();
 
-    expect(rowReactions(doc.row('r1'))).toEqual({ ada: { '👍': 1 }, me: { '👍': Date.parse('2026-10-16T10:00:00.000Z') } });
+    expect(doc.row('r1').reactions).toEqual({ ada: { '👍': 1 }, me: { '👍': Date.parse('2026-10-16T10:00:00.000Z') } });
     expect(doc.blocks.get('r1')?.block.dispatchChange).toHaveBeenCalledWith({ derived: true });
     expect(pill(el, '👍')?.textContent).toBe('👍2');
     expect(pill(el, '👍')?.hasAttribute('data-mine')).toBe(true);
@@ -106,7 +105,7 @@ describe('feed reactions in the database', () => {
 
     pill(el, '👍')?.click();
 
-    expect(rowReactions(doc.row('r1'))).toEqual({});
+    expect(doc.row('r1').reactions).toEqual({});
     expect(pill(el, '👍')).toBeNull();
   });
 
@@ -119,7 +118,7 @@ describe('feed reactions in the database', () => {
     expect(lastPicker().options).toMatchObject({ pickOnly: true, curated: false, label: 'tools.database.feedAddReaction' });
     lastPicker().handlers.onSelect('🎉');
 
-    expect(rowReactions(doc.row('r1'))).toEqual({ me: { '🎉': Date.parse('2026-10-16T10:00:00.000Z') } });
+    expect(doc.row('r1').reactions).toEqual({ me: { '🎉': Date.parse('2026-10-16T10:00:00.000Z') } });
     expect(pill(el, '🎉')?.hasAttribute('data-mine')).toBe(true);
   });
 
@@ -129,7 +128,7 @@ describe('feed reactions in the database', () => {
     el.querySelector<HTMLElement>('[data-blok-database-feed-react]')?.click();
     lastPicker().handlers.onSelect('🎉');
 
-    expect(rowReactions(doc.row('r1'))).toEqual({ me: { '🎉': 5 } });
+    expect(doc.row('r1').reactions).toEqual({ me: { '🎉': 5 } });
   });
 
   it.each([
@@ -155,7 +154,7 @@ describe('feed reactions in the database', () => {
     const entry = doc.blocks.get('r1');
 
     if (entry === undefined) throw new Error('no row');
-    entry.data = { ...entry.data, 'reactions:bo': { '🎉': 2 } };
+    entry.data = { ...entry.data, reactions: { ada: { '👍': 1 }, bo: { '🎉': 2 } } };
     doc.api.events.emit('block changed', { event: { detail: { target: entry.block } } });
     await new Promise((resolve) => setTimeout(resolve, 0));
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -184,6 +183,6 @@ describe('feed reactions in the database', () => {
     const copy = doc.childrenOf('db').find((id) => id !== 'r1');
 
     expect(copy).toBeDefined();
-    expect(rowReactions(doc.row(copy ?? ''))).toEqual({});
+    expect(doc.row(copy ?? '').reactions).toBeUndefined();
   });
 });

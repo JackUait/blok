@@ -269,6 +269,25 @@
               ],
               "properties": {
                 "type": {
+                  "const": "database-comment"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "$ref": "#/$defs/database-comment"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
                   "const": "divider"
                 }
               }
@@ -3802,15 +3821,6 @@
         "position"
       ],
       "additionalProperties": false,
-      "patternProperties": {
-        "^reactions:": {
-          "type": "object",
-          "description": "One person's feed reactions; the key is \"reactions:\" plus their user id. Emoji to when they reacted (epoch ms).",
-          "additionalProperties": {
-            "type": "number"
-          }
-        }
-      },
       "properties": {
         "properties": {
           "type": "object",
@@ -3923,6 +3933,16 @@
             }
           }
         },
+        "reactions": {
+          "type": "object",
+          "description": "Feed reactions keyed by user id, then by emoji, to when that user reacted (epoch ms). Each person writes only their own key.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
         "convertedValues": {
           "type": "object",
           "description": "Values a property type change could not carry over, keyed by property id; restored if the type changes back.",
@@ -3942,6 +3962,45 @@
               }
             }
           }
+        }
+      }
+    },
+    "database-comment": {
+      "type": "object",
+      "description": "One comment on a database row. A thread is a comment under the row; its replies are its children. Not page content: views and exports skip it.",
+      "required": [
+        "text",
+        "createdAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Plain text, not HTML."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Epoch ms when it was written."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "The writer, as the host knows people. Absent without a host directory."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "The writer's display name when it was written. Absent for an anonymous writer."
+        },
+        "propertyId": {
+          "type": "string",
+          "description": "Set on a thread about one cell: that property's id."
+        },
+        "editedAt": {
+          "type": "number",
+          "description": "Epoch ms of the last edit."
+        },
+        "resolved": {
+          "type": "boolean",
+          "description": "Set on a resolved thread."
         }
       }
     },

@@ -190,31 +190,35 @@ describe('DatabaseRowTool', () => {
   });
 
   describe('reactions', () => {
-    const save = (tool: DatabaseRowTool): Record<string, unknown> => tool.save(document.createElement('div'));
+    it('loads and saves reactions by user id', () => {
+      const reactions = { u1: { '😀': 1000 }, u2: { '🎉': 2000, '😀': 3000 } };
+      const tool = new DatabaseRowTool(createRowOptions({ reactions }));
 
-    it('loads and saves each person\'s reactions under their own top-level key', () => {
-      const data = { 'reactions:u1': { '😀': 1000 }, 'reactions:u2': { '🎉': 2000, '😀': 3000 } };
-      const tool = new DatabaseRowTool(createRowOptions(data));
-
-      expect(save(tool)).toMatchObject(data);
-      expect('reactions' in save(tool)).toBe(false);
+      expect(tool.save(document.createElement('div')).reactions).toEqual(reactions);
     });
 
-    it('adds one person\'s reaction without touching another\'s, and removing the last one drops that person\'s key', () => {
-      const tool = new DatabaseRowTool(createRowOptions({ 'reactions:u1': { '😀': 1000 } }));
+    it('adds one person\'s reaction without touching another\'s, and null removes it', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ reactions: { u1: { '😀': 1000 } } }));
 
       tool.updateReaction({ userId: 'u2', emoji: '😀', at: 2000 });
       tool.updateReaction({ userId: 'u1', emoji: '🎉', at: 3000 });
-      expect(save(tool)).toMatchObject({ 'reactions:u1': { '😀': 1000, '🎉': 3000 }, 'reactions:u2': { '😀': 2000 } });
+      expect(tool.save(document.createElement('div')).reactions).toEqual({ u1: { '😀': 1000, '🎉': 3000 }, u2: { '😀': 2000 } });
       tool.updateReaction({ userId: 'u2', emoji: '😀', at: null });
-      expect('reactions:u2' in save(tool)).toBe(false);
-      expect(save(tool)['reactions:u1']).toEqual({ '😀': 1000, '🎉': 3000 });
+      expect(tool.save(document.createElement('div')).reactions).toEqual({ u1: { '😀': 1000, '🎉': 3000 } });
     });
 
-    it('never adds a reaction key to a row that has none', () => {
-      const keys = Object.keys(save(new DatabaseRowTool(createRowOptions())));
+    it('keeps an empty reactions map once the last reaction goes, so a peer\'s concurrent first reaction is not wiped', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ reactions: { u1: { '😀': 1000 } } }));
 
-      expect(keys.filter((key) => key.startsWith('reactions'))).toEqual([]);
+      tool.updateReaction({ userId: 'u1', emoji: '😀', at: null });
+      expect(tool.save(document.createElement('div')).reactions).toEqual({});
+      expect(new DatabaseRowTool(createRowOptions({ reactions: {} })).save(document.createElement('div')).reactions).toEqual({});
+    });
+
+    it('never adds reactions to a row that has none', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      expect('reactions' in tool.save(document.createElement('div'))).toBe(false);
     });
   });
 

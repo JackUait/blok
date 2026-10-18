@@ -989,6 +989,17 @@ export class UndoHistory {
   }
 
   /**
+   * A comment thread (an `isAnnotation` block) this undo did not create. Its
+   * writes are never captured, so undo could not bring it back: it counts as
+   * content the undo must not take, the way a peer's does.
+   * @param blockId - a child id from a `contentIds` array
+   */
+  private isUncapturedAnnotation(blockId: string): boolean {
+    return !this.blocksBornInPoppedEntry.has(blockId)
+      && this.blok?.BlockManager?.getBlockById(blockId)?.isAnnotation === true;
+  }
+
+  /**
    * Every item a shared type holds: its sequence chain (array elements, text
    * characters) plus its map entries, deleted ones included.
    */
@@ -1045,7 +1056,8 @@ export class UndoHistory {
       if (namesChildBlocks) {
         return node.content
           .getContent()
-          .some((childId) => typeof childId === 'string' && this.blockHoldsPeerContent(childId, visited));
+          .some((childId) => typeof childId === 'string'
+            && (this.isUncapturedAnnotation(childId) || this.blockHoldsPeerContent(childId, visited)));
       }
 
       return false;

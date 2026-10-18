@@ -5,8 +5,7 @@ import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPage, IconPlus } from '../../components/icons';
 import { isAnnotationBlock, mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
-import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
-import { isReactionKey, reactionKey } from '../database/row-reactions';
+import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, RowReactions, TemplateRepeat } from '../database/types';
 
 /** What the parent database answers when an empty page asks what to offer. */
 interface RowPagePrompt {
@@ -15,7 +14,7 @@ interface RowPagePrompt {
   list: Array<{ id: string; title: string }>;
 }
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders', 'reactions']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -23,7 +22,7 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'titl
  * newer version's key here would delete it for every client.
  */
 const unknownKeys = (data: DatabaseRowData): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(data).filter(([key]) => !KNOWN_KEYS.has(key) && !isReactionKey(key)));
+  Object.fromEntries(Object.entries(data).filter(([key]) => !KNOWN_KEYS.has(key)));
 
 const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   const row: DatabaseRowData = {
@@ -61,11 +60,10 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   if (typeof data.reminders === 'object' && data.reminders !== null && Object.keys(data.reminders).length > 0) {
     row.reminders = structuredClone(data.reminders);
   }
-  Object.entries(data).forEach(([key, value]) => {
-    if (isReactionKey(key) && typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      Object.assign(row, { [key]: structuredClone(value) });
-    }
-  });
+  // Kept even when empty: dropping it would delete the shared map and a peer's concurrent first reaction with it.
+  if (typeof data.reactions === 'object' && data.reactions !== null && !Array.isArray(data.reactions)) {
+    row.reactions = structuredClone(data.reactions);
+  }
 
   return row;
 };
@@ -382,9 +380,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.reminders !== undefined) {
       saved.reminders = structuredClone(this._data.reminders);
     }
-    Object.entries(this._data).filter(([key]) => isReactionKey(key)).forEach(([key, value]) => {
-      Object.assign(saved, { [key]: structuredClone(value) });
-    });
+    if (this._data.reactions !== undefined) {
+      saved.reactions = structuredClone(this._data.reactions);
+    }
 
     return saved;
   }
@@ -512,15 +510,15 @@ export class DatabaseRowTool implements BlockTool {
     }
   }
 
-  /** Adds one person's reaction; `at: null` removes it. Writes only that person's key; their last removal drops it. */
+  /** Adds one person's reaction; `at: null` removes it. Writes only that person's key. */
   public updateReaction(param: { userId: string; emoji: string; at: number | null }): void {
-    const key = reactionKey(param.userId);
-    const current: unknown = (this._data as Record<string, unknown>)[key];
-    const own = Object.entries(typeof current === 'object' && current !== null ? current : {}).filter(([emoji]) => emoji !== param.emoji);
+    const others = Object.entries(this._data.reactions ?? {}).filter(([userId]) => userId !== param.userId);
+    const own = Object.entries(this._data.reactions?.[param.userId] ?? {}).filter(([emoji]) => emoji !== param.emoji);
     const mine = param.at === null ? own : [...own, [param.emoji, param.at] as const];
-    const { [key]: _old, ...rest } = this._data as Record<string, unknown>;
+    const reactions: RowReactions = Object.fromEntries(structuredClone(others));
 
-    this._data = (mine.length === 0 ? rest : { ...rest, [key]: Object.fromEntries(mine) }) as DatabaseRowData;
+    if (mine.length > 0) reactions[param.userId] = Object.fromEntries(mine);
+    this._data.reactions = reactions;
   }
 
   /** The legacy body was turned into child blocks; it must never be turned again. */

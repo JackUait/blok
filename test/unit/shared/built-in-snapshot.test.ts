@@ -89,7 +89,7 @@ describe('buildBuiltInSnapshot', () => {
     const inlineNames = ['convertTo', ...Object.keys(INLINE_CLASSES)];
     const tuneNames = ['delete', 'copyLink'];
 
-    expect(blockNames).toHaveLength(25);
+    expect(blockNames).toHaveLength(26);
     expect(inlineNames).toHaveLength(11);
     expect(Object.keys(builtInEditorTools())).toEqual([
       ...blockNames,

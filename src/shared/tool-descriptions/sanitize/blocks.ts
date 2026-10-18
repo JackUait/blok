@@ -188,6 +188,15 @@ export const databaseRowSanitize = (): SanitizerConfig => {
   };
 };
 
+export const databaseCommentSanitize = (): SanitizerConfig => {
+  return {
+    text: PLAINTEXT,
+    authorId: PLAINTEXT,
+    authorName: PLAINTEXT,
+    propertyId: PLAINTEXT,
+  };
+};
+
 export const tabSanitize = (): SanitizerConfig => {
   return { title: false, icon: false };
 };
@@ -251,6 +260,7 @@ export const BUILT_IN_BLOCK_SANITIZE: Readonly<Record<string, () => SanitizerCon
   'page-link': pageLinkSanitize,
   database: databaseSanitize,
   'database-row': databaseRowSanitize,
+  'database-comment': databaseCommentSanitize,
   tab: tabSanitize,
   column_list: none,
   column: none,

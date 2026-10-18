@@ -23,6 +23,7 @@ import { describeColumnList } from '../shared/tool-descriptions/column-list';
 import { describeColumn } from '../shared/tool-descriptions/column';
 import { describeDatabase } from '../shared/tool-descriptions/database';
 import { describeDatabaseRow } from '../shared/tool-descriptions/database-row';
+import { describeDatabaseComment } from '../shared/tool-descriptions/database-comment';
 import { describeDivider } from '../shared/tool-descriptions/divider';
 import { describeEmbed } from '../shared/tool-descriptions/embed';
 import { describeFile } from '../shared/tool-descriptions/file';
@@ -121,6 +122,7 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'callout' } } }, then: { properties: { data: { $ref: '#/$defs/callout' } } } },
           { if: { required: ['type'], properties: { type: { const: 'database' } } }, then: { properties: { data: { $ref: '#/$defs/database' } } } },
           { if: { required: ['type'], properties: { type: { const: 'database-row' } } }, then: { properties: { data: { $ref: '#/$defs/database-row' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'database-comment' } } }, then: { properties: { data: { $ref: '#/$defs/database-comment' } } } },
           { if: { required: ['type'], properties: { type: { const: 'divider' } } }, then: { properties: { data: { $ref: '#/$defs/divider' } } } },
           { if: { required: ['type'], properties: { type: { const: 'spacer' } } }, then: { properties: { data: { $ref: '#/$defs/spacer' } } } },
           { if: { required: ['type'], properties: { type: { const: 'table_of_contents' } } }, then: { properties: { data: { $ref: '#/$defs/table_of_contents' } } } },
@@ -159,6 +161,8 @@ export const blokDocumentSchema = {
     database: describeDatabase().data,
 
     'database-row': describeDatabaseRow().data,
+
+    'database-comment': describeDatabaseComment().data,
 
     divider: describeDivider().data,
 

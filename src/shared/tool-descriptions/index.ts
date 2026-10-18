@@ -6,6 +6,7 @@ import { describeCode } from './code';
 import { describeColumnList } from './column-list';
 import { describeColumn } from './column';
 import { describeDatabase } from './database';
+import { describeDatabaseComment } from './database-comment';
 import { describeDatabaseRow } from './database-row';
 import { describeDivider } from './divider';
 import { describeEmbed } from './embed';
@@ -53,4 +54,5 @@ export const BUILT_IN_BLOCK_DESCRIPTIONS: Readonly<Record<string, (config?: Reco
   table: describeTable,
   database: describeDatabase,
   'database-row': describeDatabaseRow,
+  'database-comment': describeDatabaseComment,
 };

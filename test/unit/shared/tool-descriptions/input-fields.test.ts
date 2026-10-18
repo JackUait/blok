@@ -172,6 +172,7 @@ const samples: Record<keyof typeof BLOCK_CLASSES, Sample[]> = {
     },
   ],
   'database-row': [{ state: 'metadata only', data: { properties: { name: 'Row' }, position: 'a0' }, inputs: [] }],
+  'database-comment': [{ state: 'drawn by its database, not the editor', data: { text: 'Looks good', createdAt: 1 }, inputs: [] }],
   divider: [{ state: 'rule', data: {}, inputs: [] }],
   spacer: [{ state: 'gap', data: { height: 32 }, inputs: [] }],
   table_of_contents: [{ state: 'empty outline', data: {}, inputs: [] }],
@@ -473,9 +474,9 @@ describe('Task02/28 inputFields scratch candidate', () => {
     return { instance, block, pageHost };
   };
 
-  it('covers all 25 registered built-in block tools', () => {
+  it('covers all 26 registered built-in block tools', () => {
     expect(Object.keys(samples).sort()).toEqual(Object.keys(BLOCK_CLASSES).sort());
-    expect(Object.keys(BLOCK_CLASSES)).toHaveLength(25);
+    expect(Object.keys(BLOCK_CLASSES)).toHaveLength(26);
   });
 
   it.each(Object.entries(samples))('%s: checks raw caret slots and stable own-text mapping across states', async (name, states) => {

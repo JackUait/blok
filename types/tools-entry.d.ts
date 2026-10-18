@@ -87,6 +87,7 @@ export { TabTool, TabConstructorOptions } from './tools/tab';
 export { Database, DatabaseConstructorOptions } from './tools/database';
 // DatabaseRow is the block tool class, distinct from the DatabaseRow row-shape interface in types/tools/database.d.ts
 export { DatabaseRow, DatabaseRowConstructorOptions } from './tools/database-row';
+export { DatabaseComment, DatabaseCommentConstructorOptions, DatabaseCommentData } from './tools/database-comment';
 export { Image, ImageConstructorOptions } from './tools/image';
 export { File, FileConstructorOptions } from './tools/file';
 export { Audio, AudioConstructorOptions } from './tools/audio';
@@ -158,6 +159,7 @@ import { SpacerData as _SpacerData } from './tools/spacer';
 import { TableOfContentsData as _TableOfContentsData } from './tools/table-of-contents';
 import { CodeData as _CodeData } from './tools/code';
 import { DatabaseData as _DatabaseData, DatabaseRowData as _DatabaseRowData } from './tools/database';
+import { DatabaseCommentData as _DatabaseCommentData } from './tools/database-comment';
 import { ImageData as _ImageData } from './tools/image';
 import { FileData as _FileData } from './tools/file';
 import { AudioData as _AudioData } from './tools/audio';
@@ -207,6 +209,7 @@ export interface BlokBlockDataMap {
   code: _CodeData;
   database: _DatabaseData;
   'database-row': _DatabaseRowData;
+  'database-comment': _DatabaseCommentData;
   image: _ImageData;
   file: _FileData;
   audio: _AudioData;

@@ -145,7 +145,8 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
   const list = document.createElement('div');
   const editing: { id: string | null } = { id: null };
   const stopEditKeys: { current: (() => void) | null } = { current: null };
-  const stopMenuKeys: { current: (() => void) | null } = { current: null };
+  /** Closes the one open actions menu and drops its Escape listener. */
+  const openMenu: { close: (() => void) | null } = { close: null };
 
   panel.setAttribute(ATTR.panel, '');
   panel.setAttribute(DATA_ATTR.keyboardOwner, '');
@@ -238,8 +239,8 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
       const closeMenu = (): void => {
         menu.hidden = true;
         more.setAttribute('aria-expanded', 'false');
-        stopMenuKeys.current?.();
-        stopMenuKeys.current = null;
+        window.removeEventListener('keydown', onEscape, true);
+        if (openMenu.close === closeMenu) openMenu.close = null;
       };
       // One Escape closes this menu, not the popover (same window capture as the edit).
       const onEscape = (event: KeyboardEvent): void => {
@@ -270,11 +271,11 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
 
           return;
         }
-        stopMenuKeys.current?.();
+        openMenu.close?.();
         menu.hidden = false;
         more.setAttribute('aria-expanded', 'true');
         window.addEventListener('keydown', onEscape, true);
-        stopMenuKeys.current = (): void => window.removeEventListener('keydown', onEscape, true);
+        openMenu.close = closeMenu;
       });
       tools.appendChild(more);
       row.appendChild(menu);
@@ -295,8 +296,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
   const stopKeys = (): void => {
     stopEditKeys.current?.();
     stopEditKeys.current = null;
-    stopMenuKeys.current?.();
-    stopMenuKeys.current = null;
+    openMenu.close?.();
   };
 
   const draw = (): void => {

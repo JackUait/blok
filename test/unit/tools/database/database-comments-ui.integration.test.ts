@@ -268,15 +268,33 @@ describe('built-in database comments', () => {
     expect(document.querySelector('[data-blok-database-comment-time]')?.textContent).toBe('Just now (edited)');
   });
 
+  it('opening one comment\'s actions menu closes another\'s, so one Escape closes the open one', async () => {
+    await make();
+    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await quiet();
+    await send('First');
+    await send('Second');
+    const [moreA, moreB] = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-comment-actions]'));
+    const [menuA, menuB] = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-comment-menu]'));
+
+    moreA?.click();
+    moreB?.click();
+
+    expect(menuA?.hidden).toBe(true);
+    expect(menuB?.hidden).toBe(false);
+    expect(moreA?.getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('closing the popover mid-edit removes the edit\'s window Escape listener', async () => {
     await make();
     titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     await quiet();
     await send('Draft');
+    document.querySelector<HTMLElement>('[data-blok-database-comment-actions]')?.click();
+    // Spy after the menu opens: the menu adds an Escape listener of its own.
     const added = vi.spyOn(window, 'addEventListener');
     const removed = vi.spyOn(window, 'removeEventListener');
 
-    document.querySelector<HTMLElement>('[data-blok-database-comment-actions]')?.click();
     document.querySelector<HTMLElement>('[data-blok-database-comment-action="edit"]')?.click();
     await quiet();
     const listener = added.mock.calls.find(([type, , capture]) => type === 'keydown' && capture === true)?.[1];

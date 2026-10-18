@@ -107,6 +107,14 @@ const ok = (structuredContent: Record<string, unknown>): ToolOutcome => ({
 export const createToolDispatcher = (
   deps: DispatcherDeps,
 ): ((name: string, args: Record<string, unknown>, caller: Caller, options?: CallOptions) => Promise<ToolOutcome>) => {
+  // A miss on the first page lists everything, so the model does not call again without query.
+  const listDocuments = async (request: ListRequest, caller: Caller): Promise<Record<string, unknown>> => {
+    const listing = await deps.list(request, caller);
+    const missed = request.query !== undefined && request.cursor === undefined && listing.supported && listing.documents.length === 0;
+
+    return missed ? { ...await deps.list({ limit: request.limit }, caller), queryMatched: false } : { ...listing };
+  };
+
   const onHandle = <T>(
     caller: Caller,
     handle: string,
@@ -194,7 +202,7 @@ export const createToolDispatcher = (
         case 'blok_list_documents': {
           requireScope(caller, 'blok.read');
 
-          return ok({ ...await deps.list(listRequestOf(args), caller) });
+          return ok(await listDocuments(listRequestOf(args), caller));
         }
         case 'blok_open':
           return await openDocument(args, caller, options.signal);

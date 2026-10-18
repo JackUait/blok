@@ -744,6 +744,29 @@ describe('createToolDispatcher', () => {
     expect(deps.list).toHaveBeenCalledExactlyOnceWith({ query: 'Notes', cursor: 'next-doc', limit: 7 }, stdio);
   });
 
+  it('lists every document when a query matches none, so the model need not list again', async () => {
+    const { deps, dispatch } = fixture();
+    vi.mocked(deps.list).mockResolvedValueOnce({ documents: [], nextCursor: null, supported: true });
+    const outcome = await invoke(dispatch, 'blok_list_documents', { query: 'budget', limit: 7 });
+
+    expect(outcome).toEqual({
+      isError: false,
+      structuredContent: {
+        documents: [{ id: 'doc-1', title: null, live: false }], nextCursor: 'next-doc', supported: true, queryMatched: false,
+      },
+    });
+    expect(deps.list).toHaveBeenNthCalledWith(2, { limit: 7 }, stdio);
+  });
+
+  it('keeps an empty page of a query listing it is paging through', async () => {
+    const { deps, dispatch } = fixture();
+    vi.mocked(deps.list).mockResolvedValueOnce({ documents: [], nextCursor: null, supported: true });
+    const outcome = await invoke(dispatch, 'blok_list_documents', { query: 'budget', cursor: 'next-doc' });
+
+    expect(outcome).toEqual({ isError: false, structuredContent: { documents: [], nextCursor: null, supported: true } });
+    expect(deps.list).toHaveBeenCalledOnce();
+  });
+
   const stages: Array<'open' | 'list' | 'read' | 'describe' | 'execute' | 'close' | 'authorize'> = [
     'open', 'list', 'read', 'describe', 'execute', 'close', 'authorize',
   ];

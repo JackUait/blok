@@ -1,4 +1,5 @@
 import { isRichText } from '../rich-text/guards';
+import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { AgentFailure, failure } from './errors';
 import { splitCommandName } from './names';
@@ -261,16 +262,33 @@ const pendingPlan = (
   return { plan, snapshot, stamp };
 };
 
+// Enough rows to check a section; a bulk edit reads the rest with blok_read.
+const CHANGED_ROWS_LIMIT = 50;
+
+/** How the changed blocks read after the batch, so the model need not read again to check. */
+const changedRows = (input: BatchInput, plan: Plan): Pick<Extract<AgentResult, { ok: true }>, 'blocks' | 'moreBlocks'> => {
+  const { created, updated, moved } = plan.changed;
+  const ids = new Set([...created, ...updated, ...moved]);
+
+  if (ids.size === 0) {
+    return {};
+  }
+  const { rows, more } = viewRows(input.applier.snapshot(), ids, input.ctx, CHANGED_ROWS_LIMIT);
+
+  return { blocks: rows, ...(more > 0 && { moreBlocks: more }) };
+};
+
 const planResult = (
   batch: AgentBatch,
   plan: Plan,
   revision: string,
-  warnings: AgentWarning[]
+  warnings: AgentWarning[],
+  rows: Pick<Extract<AgentResult, { ok: true }>, 'blocks' | 'moreBlocks'> = {}
 ): Extract<AgentResult, { ok: true }> => ({
   ok: true, revision,
   results: plan.results.map((result, index) =>
     batch.commands[index]?.name === 'doc.read' && isRecord(result) ? { ...result, revision } : result),
-  refs: plan.refs, changed: plan.changed,
+  refs: plan.refs, changed: plan.changed, ...rows,
   ...(plan.lastRange !== undefined && { lastRange: plan.lastRange }), warnings,
 });
 
@@ -384,7 +402,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       await input.applier.apply(plan, draft);
     }
 
-    const result = planResult(batch, plan, input.applier.revision(), warnings);
+    const result = planResult(batch, plan, input.applier.revision(), warnings, changedRows(input, plan));
 
     record(result.results, null);
 

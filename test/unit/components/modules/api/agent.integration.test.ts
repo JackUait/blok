@@ -68,6 +68,24 @@ describe('editor.agent on a real editor', () => {
     expect((await editor.save()).blocks).toHaveLength(2);
   });
 
+  it('blok_execute shows the changed blocks as blok_read of their ids does, so the model need not read to check', async () => {
+    const editor = await createRealEditor();
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = JSON.parse((await turn.call('blok_execute', {
+      commands: [
+        { name: 'block.insert', args: { type: 'paragraph', data: { text: 'From agent' }, position: 'end' } },
+        { name: 'text.replace', args: { id: 'p1', range: 'all', with: 'Edited' } },
+      ],
+    })).content) as { changed: { created: string[]; updated: string[] }; blocks?: unknown[] };
+    const ids = [...result.changed.updated, ...result.changed.created];
+    const read = JSON.parse((await turn.call('blok_read', { ids })).content) as { blocks: unknown[] };
+
+    turn.end();
+
+    expect(result.blocks).toEqual(read.blocks);
+    expect(result.blocks).toHaveLength(2);
+  });
+
   it('test 2: read-only refuses blok_execute with READ_ONLY and still reads', async () => {
     const editor = await createRealEditor({ readOnly: true });
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });

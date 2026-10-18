@@ -55,6 +55,8 @@ const SUCCESS = {
     results: { type: 'array' },
     refs: { type: 'object', additionalProperties: STRING },
     changed: CHANGED,
+    blocks: { type: 'array', items: { type: 'object' } },
+    moreBlocks: INTEGER,
     lastRange: RANGE,
     warnings: { type: 'array', items: WARNING },
   },

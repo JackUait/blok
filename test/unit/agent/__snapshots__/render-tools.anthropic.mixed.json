@@ -70,7 +70,7 @@
   },
   {
     "name": "blok_execute",
-    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments.",
+    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments. Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.",
     "input_schema": {
       "type": "object",
       "properties": {

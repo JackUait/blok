@@ -169,6 +169,26 @@ describe('runModelLoop', () => {
     expect(result.toolInputs).toEqual([{ query: 'budget' }, {}]);
   });
 
+  it('records what each blok_list_documents call asked for', async () => {
+    const list = (id: string, input: unknown): Anthropic.ToolUseBlock => ({ type: 'tool_use', id, name: 'blok_list_documents', input, caller: { type: 'direct' } });
+    const create = vi.fn<MessagesClient['create']>()
+      .mockResolvedValueOnce(message([list('a', { query: 'budget' }), toolUse('b'), list('c', {})], 'tool_use'))
+      .mockResolvedValueOnce(message([textBlock('done')], 'end_turn'));
+    const result = await runModelLoop(options({ create }));
+
+    expect(result.listQueries).toEqual([{ query: 'budget' }, {}]);
+  });
+
+  it('records what each blok_read call asked for', async () => {
+    const read = (id: string, input: unknown): Anthropic.ToolUseBlock => ({ type: 'tool_use', id, name: 'blok_read', input, caller: { type: 'direct' } });
+    const create = vi.fn<MessagesClient['create']>()
+      .mockResolvedValueOnce(message([read('a', { ids: ['p'] }), toolUse('b')], 'tool_use'))
+      .mockResolvedValueOnce(message([textBlock('done')], 'end_turn'));
+    const result = await runModelLoop(options({ create }));
+
+    expect(result.readQueries).toEqual([{ ids: ['p'] }]);
+  });
+
   it('records a refusal as an error', async () => {
     const create = vi.fn(async () => message([], 'refusal', { type: 'refusal', category: 'cyber', explanation: 'x' }));
     const result = await runModelLoop(options({ create }));
@@ -180,7 +200,7 @@ describe('runModelLoop', () => {
 
   it('a grader that throws is an error, a failing grader is a fail', () => {
     const done = {
-      stop: 'done' as const, answer: '', turns: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], toolInputs: [], describeQueries: [], steps: [],
+      stop: 'done' as const, answer: '', turns: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], toolInputs: [], describeQueries: [], listQueries: [], readQueries: [], steps: [],
     };
 
     expect(classifyTrial(done, [{ pass: true }], true)).toBe('error');

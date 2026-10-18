@@ -73,6 +73,7 @@ export const listMcpTools = (
       description: [
         'Opens a Blok document and returns a handle for blok_read, blok_describe, blok_execute and blok_close.',
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
+        'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
         'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
         `A handle expires after ${idleDuration} without a call; then open again.`,
         'Write rich text with commands such as text.format or markdown.insert. Never put Markdown or HTML into block data.',

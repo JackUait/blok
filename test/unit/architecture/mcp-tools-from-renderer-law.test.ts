@@ -184,6 +184,12 @@ describe('MCP tools come from the shared renderer', () => {
     expect(open.description).toMatch(/view.*blok_read/);
   });
 
+  it('tells the model to open with write: true before it edits, so its first blok_execute is not READ_ONLY', () => {
+    const open = byName(listMcpTools(stored, { schema: 'mixed', handleIdleMs: 600_000 }), 'blok_open');
+
+    expect(open.description).toMatch(/write: true/);
+  });
+
   it('declares optional list filters with bounded query and limit', () => {
     const input = byName(listMcpTools(stored, { schema: 'envelope', handleIdleMs: 600_000 }), 'blok_list_documents').inputSchema;
 

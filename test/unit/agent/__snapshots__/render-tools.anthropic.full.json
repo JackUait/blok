@@ -5516,7 +5516,8 @@
             },
             "id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Later commands use this id as is, no \"$\"."
             },
             "children": {
               "type": "array",

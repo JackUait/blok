@@ -45,7 +45,8 @@ const insertProperties: Record<string, JsonSchema> = {
   type: { type: 'string', minLength: 1 }, data: { type: 'object' }, tunes: { type: 'object' },
   id: { type: 'string', minLength: 1 }, children: { type: 'array', items: { $ref: '#/$defs/insertSpec' } },
 };
-const insertSpec = obj(insertProperties, ['type']);
+// Child specs only: a child id (a column's) is what later commands name as parentId. Kept off the top level to save mixed-schema room.
+const insertSpec = obj({ ...insertProperties, id: { ...insertProperties.id, description: 'Later commands use this id as is, no "$".' } }, ['type']);
 const write = (summary: string, argsSchema: JsonSchema, guidance?: string): CoreCommandSpec =>
   ({ argsSchema, readOnly: false, runtime: 'any', summary, ...(guidance === undefined ? {} : { guidance }) });
 const read = (summary: string, argsSchema: JsonSchema): CoreCommandSpec =>

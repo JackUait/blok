@@ -225,6 +225,13 @@ describe('COMMANDS', () => {
       .toContainEqual({ path: '/parentId', message: expect.stringMatching(/^unknown field "parentId"; accepted fields: .*\btype\b/) });
   });
 
+  it('says a child id is used as is, not as a "$" ref', () => {
+    const definitions = record(COMMANDS['block.insert'].argsSchema.$defs);
+    const child = record(record(Object.values(definitions)[0]).properties);
+
+    expect(record(child.id).description).toBe('Later commands use this id as is, no "$".');
+  });
+
   it.each(['block.insert', 'block.move', 'block.duplicate', 'markdown.insert'] satisfies CoreCommandName[])(
     '%s accepts each BlockPosition shape and refuses ambiguous placements', name => {
       const blockArgs = name === 'block.insert' ? { type: 'paragraph' } : { id: 'a' };

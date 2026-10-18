@@ -604,7 +604,12 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
     state.fail('INVALID_ARGS', 'Expected a non-empty block type.', '/type');
   }
 
-  const target = state.tool(targetType) ?? state.fail('UNKNOWN_TOOL', `No block tool "${targetType}" is registered.`, '/type');
+  const target = state.tool(targetType) ?? state.fail(
+    'UNKNOWN_TOOL',
+    `No block tool "${targetType}" is registered. Known: ${[...state.ctx.tools.keys()].join(', ')}.`,
+    '/type',
+    { known: [...state.ctx.tools.keys()] },
+  );
   // The runtime copy covers tools whose own conversionConfig is functions (list), which the manifest cannot carry.
   const from = source.entry.conversion.export ?? source.runtime.conversion?.export;
   const to = target.entry.conversion.import ?? target.runtime.conversion?.import;

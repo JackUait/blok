@@ -88,8 +88,9 @@ describe('WhyBlok', () => {
     renderTable();
     const blocksRow = screen.getByText(/built-in blocks/i).closest('tr');
     expect(blocksRow).not.toBeNull();
-    // Counts the out-of-the-box block set, not the docs reference: Page and
-    // PageLink need a host and are not in `defaultBlockTools`.
+    // Every `defaultBlockTools` key counts, including blocks with no toolbox
+    // entry (database-row, database-comment, column, tab). Page and PageLink
+    // need a host and are not in that list.
     const count = Object.keys(defaultBlockTools).length;
     expect(within(blocksRow as HTMLElement).getByText(`${count} built-in`)).toBeInTheDocument();
   });

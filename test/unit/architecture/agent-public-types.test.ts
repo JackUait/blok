@@ -29,7 +29,7 @@ export type IdentityOmitsKind = Assert<Equal<Extract<'kind', keyof AgentIdentity
 export type ToolNames = Assert<Equal<AgentToolName, 'blok_read' | 'blok_describe' | 'blok_execute'>>;
 export type ToolsOptions = Assert<Equal<AgentToolsOptions, {
   format: 'anthropic' | 'openai';
-  schema?: 'envelope' | 'full';
+  schema?: 'mixed' | 'envelope' | 'full';
   strict?: boolean;
 }>>;
 export type AnthropicShape = Assert<Equal<AgentAnthropicTool, {

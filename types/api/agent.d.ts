@@ -6,8 +6,11 @@ export type AgentToolName = 'blok_read' | 'blok_describe' | 'blok_execute';
 export interface AgentToolsOptions {
   /** 'openai' means the OpenAI Responses API function tool. */
   format: 'anthropic' | 'openai';
-  /** Default 'envelope'. 'full' includes every command's argument schema and may throw AgentToolsTooLargeError. */
-  schema?: 'envelope' | 'full';
+  /**
+   * Default 'mixed': full arguments for the common commands, the envelope for the rest.
+   * 'envelope' names commands only. 'full' includes every command's argument schema and may throw AgentToolsTooLargeError.
+   */
+  schema?: 'mixed' | 'envelope' | 'full';
   /** Emit strict only when provider requirements are provable; otherwise throw AgentToolsStrictError. Default false. */
   strict?: boolean;
 }

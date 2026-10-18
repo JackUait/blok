@@ -383,7 +383,8 @@ describe('AgentAPI tools and guidance', () => {
     const tools = await api.methods.tools({ format: 'anthropic' });
 
     expect(tools.map(tool => tool.name)).toEqual(['blok_read', 'blok_describe', 'blok_execute']);
-    expect(tools).toEqual(renderAgentTools(makeContract(), { format: 'anthropic' }));
+    // Default 'mixed', like Ask AI and @bloklabs/mcp: common commands carry their arguments, so no describe call.
+    expect(tools).toEqual(renderAgentTools(makeContract(), { format: 'anthropic', schema: 'mixed' }));
     tools.forEach(tool => {
       expect(Object.keys(tool).sort()).toEqual(['description', 'input_schema', 'name']);
     });
@@ -394,7 +395,7 @@ describe('AgentAPI tools and guidance', () => {
     const tools = await api.methods.tools({ format: 'openai' });
 
     expect(tools.map(tool => tool.name)).toEqual(['blok_read', 'blok_describe', 'blok_execute']);
-    expect(tools).toEqual(renderAgentTools(makeContract(), { format: 'openai' }));
+    expect(tools).toEqual(renderAgentTools(makeContract(), { format: 'openai', schema: 'mixed' }));
     tools.forEach(tool => {
       expect(tool).toMatchObject({ type: 'function', strict: false });
       expect(Object.keys(tool).sort()).toEqual(['description', 'name', 'parameters', 'strict', 'type']);

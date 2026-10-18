@@ -1557,7 +1557,7 @@
       "methods": {
         "agent": {
           "tools": {
-            "description": "Описания инструментов `blok_read`, `blok_describe` и `blok_execute`. Передайте их модели как есть.\n\n- `format`: `'anthropic'` или `'openai'` (Responses API).\n- `schema`: `'envelope'` (по умолчанию) или `'full'`. `'full'` перечисляет аргументы каждой команды и бросает `AgentToolsTooLargeError`, если результат слишком большой.\n- `strict`: добавляет `strict: true` к `blok_read` и `blok_describe`. Бросает `AgentToolsStrictError`, если схему нельзя сделать строгой. `blok_execute` его никогда не получает."
+            "description": "Описания инструментов `blok_read`, `blok_describe` и `blok_execute`. Передайте их модели как есть.\n\n- `format`: `'anthropic'` или `'openai'` (Responses API).\n- `schema`: `'mixed'` (по умолчанию), `'envelope'` или `'full'`. `'mixed'` даёт частым командам полные аргументы, а остальные только называет. `'envelope'` называет все команды. `'full'` перечисляет аргументы каждой команды и бросает `AgentToolsTooLargeError`, если результат слишком большой.\n- `strict`: добавляет `strict: true` к `blok_read` и `blok_describe`. Бросает `AgentToolsStrictError`, если схему нельзя сделать строгой. `blok_execute` его никогда не получает."
           },
           "guidance": {
             "description": "Текст для системного промпта. Он объясняет модели, как обращаться к блокам, как добавлять Markdown и как исправлять ошибки."

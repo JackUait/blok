@@ -24,7 +24,6 @@ import { createAgentPresence, type AgentPresence } from './agent-presence';
 import { createEditorServices } from './agent-services';
 import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
-import type { RenderOptions } from '../../../agent/render-tools';
 
 export class AgentTurnOpenError extends Error {
   public constructor() {
@@ -37,8 +36,7 @@ const IDLE: AgentState = { status: 'idle' };
 
 const DEFAULT_MAX_STEPS = 30;
 
-/** The public options, plus the assistant's own 'mixed' schema. */
-type ToolsOptions = Omit<AgentToolsOptions, 'schema'> & { schema?: RenderOptions['schema'] };
+type ToolsOptions = AgentToolsOptions;
 
 const readIdentity = (agent: AgentIdentity | undefined): AgentIdentity => {
   if (typeof agent?.id !== 'string' || agent.id === '' || typeof agent.name !== 'string' || agent.name.trim() === '') {
@@ -245,7 +243,7 @@ export class AgentAPI extends Module {
   private tools(options: ToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
   private async tools(options: ToolsOptions): Promise<AgentAnthropicTool[] | AgentOpenAITool[]> {
     const { renderAgentTools } = await import('../../../agent/render-tools');
-    const tools = renderAgentTools(this.source().contract(), options);
+    const tools = renderAgentTools(this.source().contract(), { ...options, schema: options.schema ?? 'mixed' });
 
     return options.format === 'anthropic'
       ? tools.filter((tool): tool is AgentAnthropicTool => 'input_schema' in tool)

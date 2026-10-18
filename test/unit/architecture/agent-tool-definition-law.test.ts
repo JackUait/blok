@@ -107,7 +107,7 @@ describe('agent tool definition law', () => {
   });
 
   it('every command the enum offers is described as available', async () => {
-    const tools = asSchemas(await editor().agent.tools({ format: 'anthropic' }));
+    const tools = asSchemas(await editor().agent.tools({ format: 'anthropic', schema: 'envelope' }));
     const nameSchema = field(field(field(field(inputOf(tools[2]), 'properties'), 'commands'), 'items'), 'properties');
     const enumValues: unknown = field(nameSchema, 'name').enum;
     const names = Array.isArray(enumValues) ? enumValues.filter((name): name is string => typeof name === 'string') : [];

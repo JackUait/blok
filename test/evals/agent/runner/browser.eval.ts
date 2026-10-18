@@ -53,7 +53,6 @@ for (const task of tasks) {
           await page.addScriptTag({ content: RATING_TOOL_SOURCE });
         }
 
-        // 'mixed' is private to the assistant (agent.ts ToolsOptions), so 'shipped' takes the public default here.
         const rendered = await page.evaluate(async ({ seed, mode }) => {
           document.getElementById('blok')?.remove();
           const holder = document.createElement('div');
@@ -71,7 +70,7 @@ for (const task of tasks) {
           window.evalTurn = blok.agent.begin({ agent: { id: 'agent-eval', name: 'Eval agent' } });
 
           return { tools: await blok.agent.tools({ format: 'anthropic', schema: mode }), system: await blok.agent.guidance() };
-        }, { seed: t.seed, mode: schema === 'shipped' ? 'envelope' : schema });
+        }, { seed: t.seed, mode: schema === 'shipped' ? 'mixed' : schema });
 
         const results: ExecuteResult[] = [];
 

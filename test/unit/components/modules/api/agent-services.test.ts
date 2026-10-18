@@ -499,7 +499,7 @@ describe('editor.agent service wiring through its public API', () => {
         blocks: [{ id: 'fixture-note', type: 'servicefixture', data: { text: [{ text: 'Seed' }] } }],
       },
     });
-    const tools = await api.agent.tools({ format: 'openai' });
+    const tools = await api.agent.tools({ format: 'openai', schema: 'envelope' });
     const execute = tools.find(tool => tool.name === 'blok_execute');
 
     if (execute === undefined) {
@@ -540,7 +540,7 @@ describe('editor.agent service wiring through its public API', () => {
         { id: 'fixture-note', type: 'servicefixture', data: { text: [{ text: 'Seed' }] } },
       ] },
     });
-    const tools = await api.agent.tools({ format: 'openai' });
+    const tools = await api.agent.tools({ format: 'openai', schema: 'envelope' });
     const execute = tools.find(tool => tool.name === 'blok_execute');
 
     if (execute === undefined) {

@@ -357,7 +357,7 @@ describe('files source', () => {
       expect(readdirSync(dir)).toEqual(['secret.json']);
     } else {
       // A case-sensitive disk holds two documents; SECRET is a new, empty one.
-      expect(await source.load('SECRET')).toEqual({ raw: { blocks: [] }, version: null });
+      expect(await source.load('SECRET')).toEqual({ raw: { blocks: [] }, version: null, missing: true });
       await source.save('SECRET', { blocks: [] }, { ifVersion: null });
       expect(readdirSync(dir).sort()).toEqual(['SECRET.json', 'secret.json']);
     }

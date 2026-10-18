@@ -3436,7 +3436,7 @@ app.post('/api/ai', async (req, res) => {
         name: "agent.tools(options)",
         returnType: "Promise<AgentAnthropicTool[] | AgentOpenAITool[]>",
         description:
-          "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: `'mixed'` (default), `'envelope'` or `'full'`. `'mixed'` gives the common commands their full arguments and names the rest. `'envelope'` names every command. `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it.",
+          "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: how `blok_execute` describes its commands.\n  - `'mixed'` (default) gives the common commands their full arguments and names the rest.\n  - `'envelope'` names every command.\n  - `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it.",
         example: `const tools = await editor.agent.tools({ format: 'anthropic' });`,
       },
       {

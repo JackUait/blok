@@ -1106,7 +1106,7 @@
       "methods": {
         "agent": {
           "tools": {
-            "description": "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: `'mixed'` (default), `'envelope'` or `'full'`. `'mixed'` gives the common commands their full arguments and names the rest. `'envelope'` names every command. `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it."
+            "description": "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: how `blok_execute` describes its commands.\n  - `'mixed'` (default) gives the common commands their full arguments and names the rest.\n  - `'envelope'` names every command.\n  - `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it."
           },
           "guidance": {
             "description": "Text for your system prompt. It tells the model how to address blocks, how to add Markdown and how to recover from errors."

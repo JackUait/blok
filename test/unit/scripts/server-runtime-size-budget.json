@@ -1,6 +1,6 @@
 {
-  "measuredBytes": 924996,
-  "maxBytes": 976500,
-  "measuredAt": "92dfd581 plus the uncommitted 01 Task 37 / 02 Task 50 working tree (src/view/server-runtime.ts)",
-  "reason": "First build with the agent planner, contract and ports (06 §7.1). 930,000 (next 10,000) plus 5%; the margin absorbs small fixes, anything larger is a reviewed raise. Pre-agent size was 689,655 bytes."
+  "measuredBytes": 977406,
+  "maxBytes": 1029000,
+  "measuredAt": "be1cb666 (CI Unit Tests 3/5)",
+  "reason": "Agent speed work (2026-10-18): richer agent errors (accepted fields, variant hints, ref hints), execute results with changed blocks, block-type descriptions. Same rule as before: 980,000 (next 10,000) plus 5%; anything larger is a reviewed raise. Previous budget 976,500 at 924,996 measured."
 }

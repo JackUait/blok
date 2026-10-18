@@ -245,27 +245,97 @@ const getSlideOutClass = (position: NotifierPosition): string => {
   return position.startsWith('top') ? 'animate-notify-slide-out-top' : 'animate-notify-slide-out';
 };
 
-/**
- * Applies the exit animation and removes the element after it finishes.
- */
-const dismissWithAnimation = (element: HTMLElement, position: NotifierPosition): void => {
-  element.classList.add(getSlideOutClass(position));
+/** Slack for the fallback timer, so a running animation's own end usually wins. */
+const ANIMATION_END_MARGIN_MS = 50;
 
-  element.addEventListener('animationend', () => {
-    element.remove();
-  }, { once: true });
+/**
+ * @param list - a computed time list such as "0.14s, 250ms"
+ * @returns each entry in ms; 'auto' and anything unparsable count as 0
+ */
+const toMs = (list: string): number[] => list.split(',').map((entry) => {
+  const value = parseFloat(entry);
+
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+
+  return entry.trim().endsWith('ms') ? value : value * 1000;
+});
+
+/**
+ * Longest delay + duration of the element's computed animations, in ms.
+ */
+const animationLength = (element: HTMLElement): number => {
+  const style = window.getComputedStyle(element);
+
+  if (style.animationName === '' || style.animationName === 'none') {
+    return 0;
+  }
+  const durations = toMs(style.animationDuration);
+  const delays = toMs(style.animationDelay);
+
+  return Math.max(0, ...durations.map((duration, i) => duration + (delays[i % delays.length] ?? 0)));
 };
 
 /**
- * Fades and scales the element out quickly (replacement case), then calls onDone.
+ * Calls onDone once: on `animationend`, or after the computed animation length when
+ * the event never comes (a host sets `animation: none`, the element is hidden, jsdom).
+ * @returns cancels the wait without calling onDone
  */
-const swapOut = (element: HTMLElement, onDone: () => void): void => {
-  element.classList.add('animate-notify-swap-out');
+const afterAnimation = (element: HTMLElement, onDone: () => void): (() => void) => {
+  const length = animationLength(element);
 
-  element.addEventListener('animationend', () => {
+  if (length === 0) {
+    onDone();
+
+    return () => undefined;
+  }
+  const state = { settled: false, timer: 0 };
+  const stop = (): void => {
+    state.settled = true;
+    window.clearTimeout(state.timer);
+    element.removeEventListener('animationend', finish);
+  };
+  const finish = (): void => {
+    if (state.settled) {
+      return;
+    }
+    stop();
+    onDone();
+  };
+
+  element.addEventListener('animationend', finish, { once: true });
+  state.timer = window.setTimeout(finish, length + ANIMATION_END_MARGIN_MS);
+
+  return stop;
+};
+
+/**
+ * Applies the exit animation, removes the element after it finishes, then calls onDone.
+ */
+const dismissWithAnimation = (element: HTMLElement, position: NotifierPosition, onDone: () => void): void => {
+  element.classList.add(getSlideOutClass(position));
+
+  afterAnimation(element, () => {
     element.remove();
     onDone();
-  }, { once: true });
+  });
+};
+
+// The swap each leaving toast is waiting on, so a newer show replaces the pending toast instead of adding a second one.
+const pendingSwaps = new WeakMap<HTMLElement, () => void>();
+
+/**
+ * Fades and scales the element out quickly (replacement case), then calls onDone.
+ * @returns cancels the swap before onDone runs
+ */
+const swapOut = (element: HTMLElement, onDone: () => void): (() => void) => {
+  element.classList.add('animate-notify-swap-out');
+
+  return afterAnimation(element, () => {
+    element.remove();
+    onDone();
+  });
 };
 
 /**
@@ -360,9 +430,7 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     if (notify.getAttribute('data-blok-toast') === 'card' && dissolve(notify, release, syncBehind)) {
       return;
     }
-    dismissWithAnimation(notify, position);
-    // Registered after dismissWithAnimation so it runs *after* that handler removes the node.
-    notify.addEventListener('animationend', release, { once: true });
+    dismissWithAnimation(notify, position, release);
   };
 
   // A toast with actions waits for the user. Never pass Infinity instead:
@@ -497,7 +565,8 @@ export const show = (
   const existing = wrapper.querySelector<HTMLElement>('[data-blok-testid]');
 
   if (existing) {
-    // Cancel any in-progress swap-out on the existing element so we don't double-fire
+    // A swap already under way would mount its own toast too: drop that toast.
+    pendingSwaps.get(existing)?.();
     existing.classList.remove('animate-notify-swap-out');
 
     // Tear down the superseded toast's timer + dismissal layer before it is
@@ -516,10 +585,16 @@ export const show = (
       return;
     }
 
-    swapOut(existing, () => {
+    const cancel = swapOut(existing, () => {
       const notify = buildNotify();
 
       appendNotify(wrapper, notify, position, time, autoDismiss, sticky);
+    });
+
+    // Never shown, so `isClosed` must report it closed.
+    pendingSwaps.set(existing, () => {
+      cancel();
+      dropped.add(options);
     });
   } else {
     const notify = buildNotify();

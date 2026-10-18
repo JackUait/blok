@@ -82,6 +82,12 @@ export class DatabaseCommentTool implements BlockTool {
     return true;
   }
 
+  /**
+   * Nothing to wire: the holder is hidden and the database draws the thread.
+   * Must exist, or every read-only toggle re-renders the whole document.
+   */
+  public setReadOnly(_state: boolean): void {}
+
   /** A thread is drawn by its database, never as page content. */
   public static get isAnnotation(): boolean {
     return true;

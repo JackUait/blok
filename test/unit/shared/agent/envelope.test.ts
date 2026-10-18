@@ -187,7 +187,7 @@ describe('COMMANDS', () => {
 
   it.each(registryCases)('$name refuses undeclared top-level args', ({ name, valid }) => {
     expect(validateAgainst(COMMANDS[name].argsSchema, { ...valid[0], unexpected: true }))
-      .toContainEqual({ path: '/unexpected', message: 'unknown field "unexpected"' });
+      .toContainEqual({ path: '/unexpected', message: expect.stringMatching(/^unknown field "unexpected"; (accepted fields: \w|this object takes no fields$)/) });
   });
 
   it('guides plain block insertion toward markdown.insert for Markdown', () => {
@@ -222,7 +222,7 @@ describe('COMMANDS', () => {
     expect(validateAgainst(definition, { type: 'paragraph', id: 'chosen', data: {}, tunes: {} })).toStrictEqual([]);
     expect(validateAgainst(definition, {})).toContainEqual({ path: '', message: 'missing required field "type"' });
     expect(validateAgainst(definition, { type: 'paragraph', parentId: 'foreign' }))
-      .toContainEqual({ path: '/parentId', message: 'unknown field "parentId"' });
+      .toContainEqual({ path: '/parentId', message: expect.stringMatching(/^unknown field "parentId"; accepted fields: .*\btype\b/) });
   });
 
   it.each(['block.insert', 'block.move', 'block.duplicate', 'markdown.insert'] satisfies CoreCommandName[])(
@@ -380,7 +380,7 @@ describe('checkEnvelope', () => {
     expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/id' });
     expect(error.details).toStrictEqual({ problems: [
       { path: '/id', message: 'expected string, got integer' },
-      { path: '/extra', message: 'unknown field "extra"' },
+      { path: '/extra', message: expect.stringMatching(/^unknown field "extra"; accepted fields: .*\bid\b/) },
     ] });
   });
 

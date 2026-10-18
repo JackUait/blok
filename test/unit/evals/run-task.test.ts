@@ -136,7 +136,7 @@ describe('assertMeasured', () => {
 
   const record = (outcome: 'pass' | 'fail' | 'error', errorDetail?: string) => ({
     taskId: 't', surface: 'mcp-live' as const, trial: 0, outcome, graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], steps: [], wallMs: 0, errorDetail,
+    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], listQueries: [], executeErrors: [], log: [], steps: [], wallMs: 0, errorDetail,
   });
 
   it('fails the run on an error trial, naming its detail, so it cannot pass silently', () => {

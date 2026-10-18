@@ -64,10 +64,12 @@ describe('behaviour graders', () => {
     };
     const grade = (answer: string): boolean => answerIds(['h1', 'h3']).check({ ...base(seed), seed, answer }).pass;
 
-    // Real deepseek-flash answers (eval-tools/runs/answer/1): correct, with an aside ruling the other ids out.
+    // Real deepseek-flash answers (eval-tools/runs/answer/1 and /2): correct, with an aside ruling the other ids out.
     it.each([
       'Two headings mention "budget":\n\n- **`h1`** — "Budget 2026"\n- **`h3`** — "Marketing budget"\n\n(`p` — "The budget is tight." — also contains the word but is a paragraph, not a heading; `h2` "Hiring" has no mention.)',
       'Two headings mention "budget":\n\n- `h1` — "Budget 2026"\n- `h3` — "Marketing budget"\n\n(The paragraph `p`, "The budget is tight.", also contains the word but isn\'t a heading.)',
+      'Two headings in `read-and-answer` mention "budget":\n\n- **h1** — "Budget 2026"\n- **h3** — "Marketing budget"\n\nNot included: **h2** ("Hiring") and **p** ("The budget is tight."), since that one is a paragraph, not a heading.',
+      'Two headings mention "budget":\n\n- **h1** — "Budget 2026"\n- **h3** — "Marketing budget"\n\nThe other heading, h2 ("Hiring"), doesn\'t mention it, and the paragraph "The budget is tight." is body text, not a heading.',
     ])('does not count an id the answer rules out: %s', (answer) => {
       expect(grade(answer)).toBe(true);
     });

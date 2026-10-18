@@ -59,9 +59,10 @@ export const usedAction = (command: string): Grader => ({
 });
 
 // An aside ("p is a paragraph, not a heading") names an id only to rule it out, so a clause with a negation
-// names no answer. Clauses end at a line, ; ( ) or a sentence end. Quoted block text is dropped first so
-// a heading that reads "No budget" is not a negation.
-const CLAUSE_CUT = /\n|;|\(|\)|[.!?](?=\s+[A-Z(`*"-]|\s*$)/;
+// names no answer. Clauses end at a line, ; or a sentence end. Parentheses must not cut: in
+// 'h2 ("Hiring") doesn't' the cut would split h2 from its negation. Quoted block text is dropped first,
+// so a heading that reads "No budget" is not a negation.
+const CLAUSE_CUT = /\n|;|[.!?](?=\s+[A-Z(`*"-]|\s*$)/;
 const NEGATION = /\b(?:not|no|none|neither|nor|never|without|except)\b|n't\b/i;
 
 const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

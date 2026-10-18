@@ -22,6 +22,7 @@ describe('filling new columns in one batch', () => {
 
     expect(guidance).toContain('block.insert a column_list');
     expect(guidance).toContain('parentId');
+    expect(guidance).toContain('{ type: "column", id: "c1", children: [');
   });
 
   it('places a header and a table in each column with one execute', async () => {

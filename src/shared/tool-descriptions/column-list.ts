@@ -5,7 +5,7 @@ export const COLUMN_LIST_ACTIONS: ToolActionDeclaration[] = [
     name: 'create',
     target: 'create',
     summary: 'Create a row of columns, or wrap existing blocks in columns.',
-    guidance: 'Pass count for paragraph-seeded columns, or from for one column per selected root. Selected descendants stay with their ancestor. The row replaces the first selected root. To fill new columns in the same call, block.insert a column_list whose children are columns holding their blocks, and give each column a new id: later commands in the batch, like table.create, can use it as parentId.',
+    guidance: 'Pass count for paragraph-seeded columns, or from for one column per selected root. Selected descendants stay with their ancestor. The row replaces the first selected root. To fill new columns in the same call, block.insert a column_list with children [{ type: "column", id: "c1", children: [...blocks] }, ...]. A column takes no data. Later commands in the batch, like table.create, can use a column id as parentId.',
     args: {
       type: 'object',
       additionalProperties: false,

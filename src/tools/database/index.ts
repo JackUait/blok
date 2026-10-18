@@ -3,13 +3,13 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
-import { isOutputData } from './tier3-values';
+import { isOutputData, isPlaceValue } from './tier3-values';
 import { DatabaseHostLevers } from './database-host-levers';
 import { DatabaseFormView, isAutoQuestion } from './database-form-view';
-import { DatabaseMapView } from './database-map-view';
+import { DatabaseMapView, resolveMapBy } from './database-map-view';
 import { DatabaseDashboardView } from './database-dashboard-view';
 import type { DashboardMount } from './database-dashboard-view';
 import { planTypeChange } from './property-conversion';
@@ -2921,12 +2921,19 @@ export class DatabaseTool implements BlockTool {
       form: DATABASE_DEFAULT_TEXT.viewTypeForm,
       map: DATABASE_DEFAULT_TEXT.viewTypeMap,
     };
+    if (type === 'map') this.ensurePlaceProperty();
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
       groupBy: type === 'board' || type === 'chart' ? statusProp?.id : undefined,
     });
     void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);
     if (type === 'form') this.askFormAutoCreate(newView.id);
+  }
+
+  /** A map needs a place: Notion adds one named "Place" when there is none (research/20 §1a). */
+  private ensurePlaceProperty(): void {
+    if (this.model.getSchema().some((p) => p.type === 'place')) return;
+    this.addProperty({ name: '', type: 'place' });
   }
 
   /**
@@ -3249,14 +3256,21 @@ export class DatabaseTool implements BlockTool {
           }),
       });
     } else if (viewConfig.type === 'map') {
+      const rows = this.model.queryRows({ view: viewConfig }).rows;
+      const colors = new Map([...resolveRowColors(rows, viewConfig, this.model.getValueSchema(), new Date(), this.config.people?.me?.() ?? null)]
+        .flatMap(([rowId, color]) => (color.row === undefined ? [] : [[rowId, color.row] as const])));
+
       this.view = new DatabaseMapView({
         i18n: this.api.i18n,
         view: viewConfig,
         schema,
-        rows: this.model.queryRows({ view: viewConfig }).rows,
+        rows,
+        colors,
         titlePropertyId: titlePropId,
         ...(this.config.map !== undefined ? { render: this.config.map.render.bind(this.config.map) } : {}),
         open: (rowId) => this.handleRowClick(rowId),
+        writable: !this.readOnly,
+        addPin: (lngLat) => this.addMapPin(viewConfig.id, lngLat),
       });
     } else if (viewConfig.type === 'dashboard') {
       this.dashboardSources.clear();
@@ -3269,6 +3283,32 @@ export class DatabaseTool implements BlockTool {
     }
 
     return this.view.createView();
+  }
+
+  /**
+   * Add-pin mode: a row at the clicked point, titled by the host's reverse
+   * geocoder, then opened (research/20 §1e). A failing geocoder keeps the point only.
+   */
+  private addMapPin(viewId: string, lngLat: DatabaseMapLngLat): void {
+    const map = this.config.map;
+    const lookup = async (): Promise<PlaceValue | null | undefined> => map?.reverseGeocode?.(lngLat);
+
+    void lookup().catch(() => undefined).then((found) => {
+      const view = this.model.getView(viewId);
+      const placeBy = view === undefined ? undefined : resolveMapBy(view, this.model.getSchema());
+
+      if (this.destroyed || this.readOnly || placeBy === undefined) return;
+      const text = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined);
+      const name = isPlaceValue(found ?? undefined) ? text(found?.name) : undefined;
+      const address = isPlaceValue(found ?? undefined) ? text(found?.address) : undefined;
+      const place: PlaceValue = { ...(name !== undefined ? { name } : {}), ...(address !== undefined ? { address } : {}), lat: lngLat.lat, lon: lngLat.lng };
+      const title = name ?? address;
+      const rowId = this.insertRow({ [placeBy.id]: place, ...(title !== undefined ? { [this.titlePropertyId()]: title } : {}) }, { rerender: false });
+
+      if (rowId === undefined) return;
+      if (this.activeViewId === viewId) this.rerenderView({ keepDrawer: true });
+      this.handleRowClick(rowId);
+    });
   }
 
   /** The host's link for a form, for the Share panel. A throwing host gives none. */
@@ -4395,6 +4435,7 @@ export class DatabaseTool implements BlockTool {
       : undefined;
 
     if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return;
+    if (type === 'map') this.ensurePlaceProperty();
     // Born empty with the switch: two peers adding the first column would race to create the key.
     const tableProperties = type === 'timeline' && !Array.isArray(view.tableProperties) ? { tableProperties: [] } : {};
 
@@ -8141,6 +8182,7 @@ export class DatabaseTool implements BlockTool {
       relationTitle: (property, rowId) => this.relatedTitle(property, rowId),
       relationCandidates: (property) => this.relationCandidates(property),
       openRelated: (property, rowId) => this.openRelated(property, rowId),
+      ...(this.config.map?.renderPlace !== undefined ? { renderPlace: this.config.map.renderPlace.bind(this.config.map) } : {}),
       ...(this.people !== undefined ? { people: this.people } : {}),
       ...(typeof me === 'string' ? { me } : {}),
       ...(canUpload

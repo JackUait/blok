@@ -31,7 +31,8 @@ export const openTextEditor = (
   property: PropertyDefinition,
   value: PropertyValue | undefined,
   anchor: HTMLElement,
-  ctx: CellEditorContext
+  ctx: CellEditorContext,
+  footer?: HTMLElement
 ): CellEditorHandle => {
   const multiline = property.type === 'text' || property.type === 'richText';
   const field = document.createElement(multiline ? 'textarea' : 'input');
@@ -54,6 +55,7 @@ export const openTextEditor = (
 
   field.value = ctx.initialText ?? shown;
   content.appendChild(field);
+  if (footer !== undefined) content.appendChild(footer);
 
   const resolve = (): Outcome | null => {
     if (property.type === 'number') {

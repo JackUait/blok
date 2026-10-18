@@ -352,6 +352,7 @@ const TIER3_VIEW_FIELDS = {
     },
   },
   mapBy: { type: 'string', description: 'Map: the place property id. Default the first place property.' },
+  mapHeight: { type: 'string', enum: ['small', 'medium', 'large', 'extraLarge'], description: 'Map height: 300, 400, 600 or 800 px. Default medium.' },
   dashboard: {
     type: 'object',
     description: 'Dashboard slot. Blok draws no dashboard yet.',

@@ -853,6 +853,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BUILT_IN_COMMENTS_BYTES = 3_906;
     // database.css: the feed card's comment composer and "N replies" row (research/19 §2d).
     const DATABASE_FEED_COMMENTS_BYTES = 1_164;
+    // database.css: the map's Add pin button, "No place" chip and list, and the Place hover card (research/20 §1).
+    const DATABASE_MAP_PLACE_BYTES = 2_541;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -950,7 +952,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROW_PAGE_BACKLINKS_BYTES
       + DATABASE_ROW_COMMENTS_EMPTY_BYTES
       + DATABASE_BUILT_IN_COMMENTS_BYTES
-      + DATABASE_FEED_COMMENTS_BYTES;
+      + DATABASE_FEED_COMMENTS_BYTES
+      + DATABASE_MAP_PLACE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

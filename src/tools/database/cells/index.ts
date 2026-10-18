@@ -6,7 +6,8 @@ import { openRelationEditor } from './relation-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
-import { placeText, verificationStatus } from '../tier3-values';
+import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
+import { safeHref } from '../../../components/utils/sanitize-url';
 
 export { renderCellValue, createOptionPill } from './display';
 export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer } from './types';
@@ -14,6 +15,26 @@ export { DATE_VALUE_FORMAT, formatDateValue, parseDateValue } from './date-value
 export type { ParsedDateValue } from './date-value';
 export { OPTION_COLORS, optionColorOf, pickOptionColor } from './option-colors';
 export type { OptionColor } from './option-colors';
+
+/** Measured: a plain link to a Google Maps search for "<name>,<address>" (research/20 §1c). */
+const googleMapsLink = (value: PropertyValue | undefined, ctx: CellEditorContext): HTMLElement | undefined => {
+  if (!isPlaceValue(value)) return undefined;
+  const parts = [value.name, value.address].filter((part): part is string => typeof part === 'string' && part.trim() !== '');
+  const point = value.lat !== undefined && value.lon !== undefined ? `${value.lat},${value.lon}` : '';
+  const query = parts.length > 0 ? parts.join(',') : point;
+  const href = query === '' ? null : safeHref(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
+
+  if (href === null) return undefined;
+  const link = document.createElement('a');
+
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = ctx.i18n.t('tools.database.placeOpenInGoogleMaps');
+  link.setAttribute('data-blok-database-place-google-maps', '');
+
+  return link;
+};
 
 const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined, cancel: () => undefined };
 
@@ -61,7 +82,7 @@ export const openCellEditor = (
       return openTextEditor({ ...property, type: 'text' }, placeText(value), anchor, {
         ...ctx,
         onCommit: (text) => ctx.onCommit(typeof text === 'string' && text.trim() !== '' ? { address: text.trim() } : null),
-      });
+      }, googleMapsLink(value, ctx));
     case 'verification':
       // Expired verifies again, as Notion's "Verify" does.
       ctx.onCommit(verificationStatus(value) === 'verified'

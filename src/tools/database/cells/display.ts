@@ -1,7 +1,8 @@
 import { IconAlarm, IconCheck } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
+import { onHover } from '../../../components/utils/tooltip';
 import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
-import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
+import type { PlaceValue, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
 import { relationIdsOf } from '../relation-values';
 import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
@@ -234,6 +235,42 @@ const VERIFICATION_LABEL_KEYS = {
   unverified: 'tools.database.verificationUnverified',
 } as const;
 
+/** Hovering a place shows its name, address and, if the host can draw one, a small map (research/20 §1d). */
+const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext): void => {
+  const card = document.createElement('div');
+  const name = document.createElement('div');
+  const title = placeText(place);
+
+  card.setAttribute('data-blok-database-place-card', '');
+  name.setAttribute('data-blok-database-place-card-name', '');
+  name.textContent = title;
+  card.appendChild(name);
+  if (place.address !== undefined && place.address !== '' && place.address !== title) {
+    const address = document.createElement('div');
+
+    address.setAttribute('data-blok-database-place-card-address', '');
+    address.textContent = place.address;
+    card.appendChild(address);
+  }
+  const renderPlace = ctx.renderPlace;
+
+  if (renderPlace !== undefined) {
+    const map = document.createElement('div');
+
+    map.setAttribute('data-blok-database-place-card-map', '');
+    card.appendChild(map);
+    // Drawn on the first hover: most cells are never hovered.
+    cell.addEventListener('mouseenter', () => {
+      try {
+        renderPlace(map, place);
+      } catch {
+        map.remove();
+      }
+    }, { once: true });
+  }
+  onHover(cell, card);
+};
+
 /**
  * Read-only display of one cell value. Never parses the value as HTML. The
  * element carries `data-blok-database-cell="<type>"`, and `data-empty` when
@@ -339,6 +376,7 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
     }
     case 'place':
       cell.textContent = placeText(value);
+      if (isPlaceValue(value) && placeText(value) !== '') attachPlaceCard(cell, value, ctx);
       break;
     case 'verification': {
       const status = verificationStatus(value, ctx.now);

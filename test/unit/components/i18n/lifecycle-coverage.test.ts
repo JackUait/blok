@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1212 + 125 + 431 + 4 closure for all 1772 keys', () => {
+  it('rebuilds a disjoint 1217 + 125 + 433 + 4 closure for all 1779 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1772);
+    expect(lifecycle.size).toBe(1779);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -389,7 +389,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the row menu's "Page" heading calls tools.database.rowMenuPage by literal.
       // +2: the row menu's Layout and Property visibility call tools.database.settingsLayout and
       // settingsPropertyVisibility by literal (they left registered-namespace-compatible).
-      'executable-literal': 1212,
+      // +5: the map's "No place (N)" chip, Add pin button (label, on/off names) and the Place editor's
+      // "Open in Google Maps" call their tools.database.* keys by literal.
+      'executable-literal': 1217,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -426,7 +428,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +11: the date reminder choices, built from tools.database.dateRemind.<offset>.
       // +6: the form auto-create prompt's five keys and the toolbar's "Share form", called through a namespaced t().
       // -2: settingsLayout and settingsPropertyVisibility, now also called by literal (see above).
-      'registered-namespace-compatible': 431,
+      // +2: the map settings' Style section and Map by row, called through the panel's namespaced t().
+      'registered-namespace-compatible': 433,
       'catalog-only': 4,
     });
     expect(

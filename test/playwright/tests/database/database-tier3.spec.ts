@@ -79,16 +79,34 @@ const mount = async (page: Page, data: OutputBlockData[], lever: Lever): Promise
       };
     }
     if (which === 'map') {
+      // A stub host map: pins as buttons, a "Click map" button standing in for a click on the canvas.
       config.map = {
-        render: (container: HTMLElement, items: Array<{ rowId: string; title: string }>, ctx: { open(rowId: string): void }) => {
+        render: (container: HTMLElement, items: Array<{ rowId: string; title: string; color?: string }>, ctx: {
+          open(rowId: string): void;
+          height: number;
+          addingPin(): boolean;
+          onAddPin(lngLat: { lng: number; lat: number }): void;
+        }) => {
+          log.push({ height: ctx.height });
           items.forEach((item) => {
             const pin = document.createElement('button');
 
             pin.type = 'button';
             pin.textContent = `Pin ${item.title}`;
+            pin.dataset.color = item.color ?? '';
             pin.addEventListener('click', () => ctx.open(item.rowId));
             container.appendChild(pin);
           });
+          const point = document.createElement('button');
+
+          point.type = 'button';
+          point.textContent = 'Click map';
+          point.addEventListener('click', () => ctx.onAddPin({ lng: 2.29, lat: 48.85 }));
+          container.appendChild(point);
+        },
+        reverseGeocode: () => Promise.resolve({ name: '5 Avenue Anatole France', address: '5 Avenue Anatole France, 75007 Paris, France' }),
+        renderPlace: (container: HTMLElement) => {
+          container.append('Mini map');
         },
       };
     }
@@ -212,12 +230,77 @@ test.describe('map view', () => {
     await expect(page.locator('[data-blok-database-map-empty="no-provider"]')).toBeVisible();
   });
 
-  test('the host draws the pins, and a pin opens its page', async ({ page }) => {
+  test('the host draws the pins, and a pin opens its page in a center peek', async ({ page }) => {
     await mount(page, blocks({ type: 'map' }), 'map');
 
     await page.getByRole('button', { name: 'Pin HQ' }).click();
 
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveAttribute('data-peek-mode', 'center');
+  });
+
+  test('conditional color reaches the pins, and Height sizes the map', async ({ page }) => {
+    await mount(page, blocks({
+      type: 'map',
+      mapHeight: 'large',
+      colorRules: [{ id: 'c1', propertyId: 'p-title', operator: 'contains', value: 'HQ', color: 'red' }],
+    }), 'map');
+
+    await expect(page.getByRole('button', { name: 'Pin HQ' })).toHaveAttribute('data-color', 'red');
+    expect((await page.locator('[data-blok-database-map-canvas]').boundingBox())?.height).toBe(600);
+    expect(await page.evaluate(() => window.tier3Log)).toEqual([{ height: 600 }]);
+  });
+
+  test('Add pin mode adds a row named by the host geocoder, opens it and switches itself off', async ({ page }) => {
+    await mount(page, blocks({ type: 'map' }), 'map');
+    const addPin = page.getByRole('button', { name: 'Enable add pin mode' });
+
+    await addPin.hover();
+    await expect(page.getByTestId('tooltip')).toHaveText('Add pin');
+    await addPin.click();
+    await expect(page.getByRole('button', { name: 'Cancel add pin mode' })).toBeVisible();
+    await page.getByRole('button', { name: 'Click map' }).click();
+
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveAttribute('data-peek-mode', 'center');
+    await expect(page.getByRole('button', { name: 'Enable add pin mode' })).toBeVisible();
+    await expect.poll(async () => (await savedRows(page)).map((row) => row.properties['p-title'])).toEqual(['HQ', '5 Avenue Anatole France']);
+    expect((await savedRows(page))[1].properties['p-where']).toEqual({
+      name: '5 Avenue Anatole France', address: '5 Avenue Anatole France, 75007 Paris, France', lat: 48.85, lon: 2.29,
+    });
+  });
+
+  test('"No place (1)" lists the row without a place and opens it', async ({ page }) => {
+    const data = blocks({ type: 'map' });
+
+    data[0].content = ['r1', 'r2'];
+    data.push({ id: 'r2', type: 'database-row', data: { position: 'a1', properties: { 'p-title': 'Nowhere' } } });
+    await mount(page, data, 'map');
+
+    await page.getByRole('button', { name: 'No place (1)' }).click();
+    await expect(page.getByPlaceholder('Search for a page…')).toBeFocused();
+    await page.getByRole('button', { name: 'Nowhere' }).click();
+
     await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
+  });
+
+  test('a Place cell shows the name and hovers into a card with the address and the host mini-map', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }), 'map');
+    const place = cell(page, 'r1', 'p-where');
+
+    await expect(place).toHaveText('Head office');
+    await place.hover();
+
+    await expect(page.getByTestId('tooltip-content')).toContainText('Head office');
+    await expect(page.getByTestId('tooltip-content')).toContainText('Mini map');
+  });
+
+  test('the Place editor links to a Google Maps search in a new tab', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }), 'map');
+    await cell(page, 'r1', 'p-where').click();
+    const link = page.getByRole('link', { name: 'Open in Google Maps' });
+
+    await expect(link).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Head%20office');
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', /noopener/);
   });
 });
 

@@ -1056,6 +1056,8 @@ export interface DatabaseViewConfig {
   form?: FormSettings;
   /** Map: the place property. Default the first place property. */
   mapBy?: string;
+  /** Map: the map's height, 300 / 400 / 600 / 800 px. Default 'medium'. */
+  mapHeight?: MapHeight;
   /** Dashboard slot. Blok draws no dashboard yet. */
   dashboard?: { rows: DashboardRow[] };
   /** Calendar sync slot, for the host. */
@@ -1064,7 +1066,9 @@ export interface DatabaseViewConfig {
   dataSourceId?: string;
 }
 
-export type Tier3ViewSettingKey = 'form' | 'mapBy' | 'dashboard' | 'calendarSync' | 'dataSourceId';
+export type MapHeight = 'small' | 'medium' | 'large' | 'extraLarge';
+
+export type Tier3ViewSettingKey = 'form' | 'mapBy' | 'mapHeight' | 'dashboard' | 'calendarSync' | 'dataSourceId';
 
 export type DatabaseSavedAutomationTrigger =
   | { id: string; type: 'pageAdded' }
@@ -1150,11 +1154,45 @@ export interface DatabaseMapItem {
   rowId: string;
   title: string;
   place: PlaceValue;
+  /** The row's conditional color, an option color name such as `red`. Absent when no rule paints the row. */
+  color?: string;
+}
+
+/** A point on the map. */
+export interface DatabaseMapLngLat {
+  lng: number;
+  lat: number;
+}
+
+/** What Blok hands `render` beside the items. */
+export interface DatabaseMapContext {
+  /** Opens the row, as the view's "Open pages in" says (Center peek by default). Call it on a pin click. */
+  open(rowId: string): void;
+  /** The canvas height in px (the view's Height: 300, 400, 600 or 800). The container already has it. */
+  height: number;
+  /**
+   * True while add-pin mode is on. Blok draws the "Add pin" button and also sets
+   * `data-blok-database-map-adding-pin` on the container; a map that sets its own
+   * cursor reads this to show a crosshair.
+   */
+  addingPin(): boolean;
+  /**
+   * Call on every map click. Outside add-pin mode it does nothing. In it, Blok adds a
+   * row at that point (named by `reverseGeocode` when given), opens it and ends the mode.
+   */
+  onAddPin(lngLat: DatabaseMapLngLat): void;
 }
 
 export interface DatabaseMap {
   /** Draws the map into `container`. Called again on every redraw, after `destroy`. */
-  render(container: HTMLElement, items: DatabaseMapItem[], ctx: { open(rowId: string): void }): { destroy(): void } | void;
+  render(container: HTMLElement, items: DatabaseMapItem[], ctx: DatabaseMapContext): { destroy(): void } | void;
+  /**
+   * The place at a point, for the row add-pin mode makes: its name or address becomes the
+   * row title. Without it, or when it fails, the row keeps the point only and no title.
+   */
+  reverseGeocode?(lngLat: DatabaseMapLngLat): Promise<PlaceValue | null | undefined> | PlaceValue | null | undefined;
+  /** Draws one place as a small map, in the Place cell's hover card. Without it the card shows the name and address only. */
+  renderPlace?(container: HTMLElement, place: PlaceValue): { destroy(): void } | void;
 }
 
 export interface DatabaseAutofillRequest {

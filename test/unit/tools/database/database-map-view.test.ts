@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DatabaseMapView } from '../../../../src/tools/database/database-map-view';
 import type { DatabaseMapViewOptions } from '../../../../src/tools/database/database-map-view';
-import type { DatabaseMapItem, DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseMapContext, DatabaseMapItem, DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -84,6 +84,130 @@ describe('DatabaseMapView', () => {
 
     expect(render.mock.calls[0][1]).toEqual([{ rowId: 'r1', title: 'Ada', place: { address: 'Paris' } }]);
     expect(open).toHaveBeenCalledWith('r1');
+  });
+
+  it('hands each pin its conditional color', async () => {
+    const render = vi.fn();
+
+    mount({ render, colors: new Map([['r1', 'purple']]) });
+    await flush();
+
+    expect(render.mock.calls[0][1]).toEqual([{ rowId: 'r1', title: 'Ada', place: { name: 'London', lat: 51.5, lon: -0.12 }, color: 'purple' }]);
+  });
+
+  it('sizes the map by its Height, Medium (400px) by default, and tells the host', async () => {
+    const render = vi.fn();
+    const medium = mount({ render });
+
+    await flush();
+    expect(medium.root.querySelector<HTMLElement>('[data-blok-database-map-canvas]')?.style.height).toBe('400px');
+    expect(render.mock.calls[0][2]).toMatchObject({ height: 400 });
+
+    const large = mount({ render, view: view({ mapHeight: 'extraLarge' }) });
+
+    await flush();
+    expect(large.root.querySelector<HTMLElement>('[data-blok-database-map-canvas]')?.style.height).toBe('800px');
+    expect(render.mock.calls[1][2]).toMatchObject({ height: 800 });
+  });
+
+  it('hands the host at most the view\'s load limit of pins', async () => {
+    const render = vi.fn();
+    const many: DatabaseRow[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `m${i}`, position: `a${i}`, properties: { title: `P${i}`, home: { address: `${i} Main St` } },
+    }));
+
+    mount({ render, rows: many, view: view({ loadLimit: 10 }) });
+    await flush();
+
+    expect(render.mock.calls[0][1]).toHaveLength(10);
+  });
+
+  it('shows a "No place (N)" chip whose list searches and opens the rows without a place (research/20 §1e)', async () => {
+    const extra: DatabaseRow[] = [...rows, { id: 'r3', position: 'a2', properties: { title: 'Cid' } }];
+    const { root, open } = mount({
+      render: vi.fn(),
+      rows: extra,
+      writable: true,
+      i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${Object.values(vars).join(',')}`) },
+    });
+
+    await flush();
+    const chip = root.querySelector<HTMLButtonElement>('[data-blok-database-map-no-place]');
+
+    expect(chip?.textContent).toBe('tools.database.mapNoPlaceCount:2');
+    expect(chip?.getAttribute('aria-haspopup')).toBe('dialog');
+    chip?.click();
+
+    const search = document.querySelector<HTMLInputElement>('[data-blok-database-map-no-place-search]');
+
+    expect(search?.placeholder).toBe('tools.database.relationSearchPlaceholder');
+    const listed = (): string[] => [...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent ?? '');
+
+    expect(listed()).toEqual(['Bob', 'Cid']);
+    if (search === null) throw new Error('no search');
+    search.value = 'ci';
+    search.dispatchEvent(new Event('input'));
+    expect(listed()).toEqual(['Cid']);
+
+    document.querySelector<HTMLElement>('[data-blok-database-map-no-place-row]')?.click();
+    expect(open).toHaveBeenCalledWith('r3');
+  });
+
+  it('every row placed: no chip', async () => {
+    const { root } = mount({ render: vi.fn(), rows: [rows[0]], writable: true });
+
+    await flush();
+    expect(root.querySelector('[data-blok-database-map-no-place]')).toBeNull();
+  });
+
+  it('read-only shows no "No place" chip and no Add pin button', async () => {
+    const { root } = mount({ render: vi.fn(), writable: false, addPin: vi.fn() });
+
+    await flush();
+    expect(root.querySelector('[data-blok-database-map-no-place]')).toBeNull();
+    expect(root.querySelector('[data-blok-database-map-add-pin]')).toBeNull();
+  });
+
+  it('Add pin mode: the button toggles it, and a map click in it adds a pin once', async () => {
+    const addPin = vi.fn();
+    const render = vi.fn();
+    const { root } = mount({ render, writable: true, addPin });
+
+    await flush();
+    const ctx = render.mock.calls[0][2] as DatabaseMapContext;
+    const button = root.querySelector<HTMLButtonElement>('[data-blok-database-map-add-pin]');
+    const canvas = root.querySelector<HTMLElement>('[data-blok-database-map-canvas]');
+
+    expect(button?.getAttribute('aria-label')).toBe('tools.database.mapEnableAddPin');
+    ctx.onAddPin({ lng: 2.29, lat: 48.85 });
+    expect(addPin).not.toHaveBeenCalled();
+
+    button?.click();
+    expect(ctx.addingPin()).toBe(true);
+    expect(button?.getAttribute('aria-label')).toBe('tools.database.mapCancelAddPin');
+    expect(canvas?.hasAttribute('data-blok-database-map-adding-pin')).toBe(true);
+
+    ctx.onAddPin({ lng: 2.29, lat: 48.85 });
+    ctx.onAddPin({ lng: 3, lat: 49 });
+
+    expect(addPin).toHaveBeenCalledTimes(1);
+    expect(addPin).toHaveBeenCalledWith({ lng: 2.29, lat: 48.85 });
+    expect(ctx.addingPin()).toBe(false);
+    expect(button?.getAttribute('aria-label')).toBe('tools.database.mapEnableAddPin');
+    expect(canvas?.hasAttribute('data-blok-database-map-adding-pin')).toBe(false);
+  });
+
+  it('pressing the button again cancels Add pin mode', async () => {
+    const render = vi.fn();
+    const { root } = mount({ render, writable: true, addPin: vi.fn() });
+
+    await flush();
+    const ctx = render.mock.calls[0][2] as DatabaseMapContext;
+    const button = root.querySelector<HTMLButtonElement>('[data-blok-database-map-add-pin]');
+
+    button?.click();
+    button?.click();
+    expect(ctx.addingPin()).toBe(false);
   });
 
   it('destroy drops the host map', async () => {

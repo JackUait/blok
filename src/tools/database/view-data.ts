@@ -15,8 +15,8 @@ export const COLOR_RULE_TYPES: readonly PropertyType[] = [
   'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'checkbox', 'formula', 'relation', 'rollup',
 ];
 
-/** Layouts Notion colors (research/05 §6.2). */
-export const COLOR_RULE_LAYOUTS: readonly ViewType[] = ['table', 'list', 'board', 'calendar', 'timeline', 'feed'];
+/** Layouts Notion colors (research/05 §6.2; map measured in research/20 §1f). */
+export const COLOR_RULE_LAYOUTS: readonly ViewType[] = ['table', 'list', 'board', 'calendar', 'timeline', 'feed', 'map'];
 
 export interface RowColor {
   row?: string;

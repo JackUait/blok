@@ -110,9 +110,9 @@ export const resolveLoadLimit = (view: DatabaseViewConfig): LoadLimit =>
 
 const OPEN_PAGES_IN: readonly OpenPagesIn[] = ['side', 'center', 'full'];
 
-/** Notion's per-layout defaults: gallery, calendar and feed open in a center peek, the rest in a side peek. */
+/** Notion's per-layout defaults: gallery, calendar, feed and map open in a center peek, the rest in a side peek. */
 export const defaultOpenPagesIn = (type: DatabaseViewConfig['type']): OpenPagesIn =>
-  type === 'gallery' || type === 'calendar' || type === 'feed' ? 'center' : 'side';
+  type === 'gallery' || type === 'calendar' || type === 'feed' || type === 'map' ? 'center' : 'side';
 
 export const resolveOpenPagesIn = (view: DatabaseViewConfig): OpenPagesIn =>
   OPEN_PAGES_IN.find((mode) => mode === view.openPagesIn) ?? defaultOpenPagesIn(view.type);

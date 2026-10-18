@@ -77,6 +77,7 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
+import { MAP_HEIGHTS, resolveMapBy, resolveMapHeight } from './database-map-view';
 
 export interface ViewGroupEntry {
   key: string;
@@ -227,14 +228,35 @@ export class ViewSettingsPages {
       build: (panel) => {
         const view = this.ctx.view();
         const group = this.property(view.groupBy);
-        const rows: HTMLElement[] = [
+        const isMap = view.type === 'map';
+        const layoutRow = panelRow({
+          label: this.t('settingsLayout'),
+          testId: 'database-settings-layout',
+          value: this.t(`viewType${capital(view.type)}`),
+          opensPage: true,
+          onClick: () => panel.push(this.layout()),
+        });
+        const filterRow = panelRow({
+          label: this.t('settingsFilter'),
+          testId: 'database-settings-filter',
+          value: String(view.filters.length + countFilterRules(view.filterTree)),
+          opensPage: true,
+          onClick: () => panel.push(this.filters()),
+        });
+        // A map has no Sort, Group or Property visibility (research/20 §1f).
+        const rows: HTMLElement[] = isMap ? [
+          layoutRow,
+          panelLabel(this.t('settingsStyle')),
           panelRow({
-            label: this.t('settingsLayout'),
-            testId: 'database-settings-layout',
-            value: this.t(`viewType${capital(view.type)}`),
+            label: this.t('chartHeight'),
+            testId: 'database-settings-map-height',
+            value: this.t(`chartHeight${capital(resolveMapHeight(view))}`),
             opensPage: true,
-            onClick: () => panel.push(this.layout()),
+            onClick: () => panel.push(this.mapHeight()),
           }),
+          filterRow,
+        ] : [
+          layoutRow,
           panelRow({
             label: this.t('settingsPropertyVisibility'),
             testId: 'database-settings-properties',
@@ -242,13 +264,7 @@ export class ViewSettingsPages {
             opensPage: true,
             onClick: () => panel.push(this.properties()),
           }),
-          panelRow({
-            label: this.t('settingsFilter'),
-            testId: 'database-settings-filter',
-            value: String(view.filters.length + countFilterRules(view.filterTree)),
-            opensPage: true,
-            onClick: () => panel.push(this.filters()),
-          }),
+          filterRow,
           panelRow({
             label: this.t('settingsSort'),
             testId: 'database-settings-sort',
@@ -577,6 +593,55 @@ export class ViewSettingsPages {
       title: this.t('settingsLayout'),
       build: (panel) => {
         const view = this.ctx.view();
+        const tiles = this.ctx.layouts.map((type) => panelRow({
+          label: this.t(`viewType${capital(type)}`),
+          testId: `database-layout-${type}`,
+          checked: view.type === type,
+          disabled: !this.shared,
+          onClick: () => {
+            this.ctx.setLayout(type);
+            panel.refresh();
+          },
+        }));
+        const pageIcon = panelSwitch({
+          label: this.t('settingsShowPageIcon'),
+          testId: 'database-settings-page-icon',
+          checked: view.showPageIcon !== false,
+          disabled: !this.shared,
+          onToggle: (next) => this.ctx.updateView({ showPageIcon: next }),
+        });
+        const openPages = panelRow({
+          label: this.t('settingsOpenPagesIn'),
+          testId: 'database-settings-open-pages',
+          value: this.t(`openPages${capital(resolveOpenPagesIn(view))}`),
+          opensPage: true,
+          onClick: () => panel.push(this.openPagesIn()),
+        });
+        const loadLimit = panelRow({
+          label: this.t('settingsLoadLimit'),
+          testId: 'database-settings-load-limit',
+          value: String(resolveLoadLimit(view)),
+          opensPage: true,
+          onClick: () => panel.push(this.loadLimit()),
+        });
+
+        if (view.type === 'map') {
+          // Measured order, no Wrap (research/20 §1f).
+          return [
+            ...tiles,
+            panelSeparator(),
+            pageIcon,
+            panelRow({
+              label: this.t('settingsMapBy'),
+              testId: 'database-settings-map-by',
+              value: resolveMapBy(view, this.ctx.schema())?.name ?? this.t('settingsNone'),
+              opensPage: true,
+              onClick: () => panel.push(this.mapBy()),
+            }),
+            openPages,
+            loadLimit,
+          ];
+        }
         const switches: HTMLElement[] = [
           panelSwitch({
             label: this.t('settingsWrapAll'),
@@ -596,40 +661,13 @@ export class ViewSettingsPages {
             onToggle: (next) => this.ctx.updateView({ showVerticalLines: next }),
           }));
         }
-        switches.push(panelSwitch({
-          label: this.t('settingsShowPageIcon'),
-          testId: 'database-settings-page-icon',
-          checked: view.showPageIcon !== false,
-          disabled: !this.shared,
-          onToggle: (next) => this.ctx.updateView({ showPageIcon: next }),
-        }));
+        switches.push(pageIcon);
 
         return [
-          ...this.ctx.layouts.map((type) => panelRow({
-            label: this.t(`viewType${capital(type)}`),
-            testId: `database-layout-${type}`,
-            checked: view.type === type,
-            disabled: !this.shared,
-            onClick: () => {
-              this.ctx.setLayout(type);
-              panel.refresh();
-            },
-          })),
+          ...tiles,
           panelSeparator(),
-          panelRow({
-            label: this.t('settingsOpenPagesIn'),
-            testId: 'database-settings-open-pages',
-            value: this.t(`openPages${capital(resolveOpenPagesIn(view))}`),
-            opensPage: true,
-            onClick: () => panel.push(this.openPagesIn()),
-          }),
-          panelRow({
-            label: this.t('settingsLoadLimit'),
-            testId: 'database-settings-load-limit',
-            value: String(resolveLoadLimit(view)),
-            opensPage: true,
-            onClick: () => panel.push(this.loadLimit()),
-          }),
+          openPages,
+          loadLimit,
           ...switches,
           ...this.layoutRows(panel),
         ];
@@ -712,6 +750,38 @@ export class ViewSettingsPages {
         panelText(this.t(`openPages${capital(mode)}Description`)),
         ...(mode === defaultMode ? [panelText(this.t('openPagesDefaultFor', { layout: this.t(`viewType${capital(type)}`) }))] : []),
       ]),
+    };
+  }
+
+  private mapHeight(): PanelPage {
+    return {
+      title: this.t('chartHeight'),
+      build: (panel) => MAP_HEIGHTS.map((height) => panelRow({
+        label: this.t(`chartHeight${capital(height)}`),
+        testId: `database-map-height-${height}`,
+        checked: resolveMapHeight(this.ctx.view()) === height,
+        disabled: !this.shared,
+        onClick: () => {
+          this.ctx.updateView({ mapHeight: height });
+          panel.refresh();
+        },
+      })),
+    };
+  }
+
+  private mapBy(): PanelPage {
+    return {
+      title: this.t('settingsMapBy'),
+      build: (panel) => this.ctx.schema().filter((p) => p.type === 'place').map((property) => panelRow({
+        label: property.name,
+        testId: `database-map-by-${property.id}`,
+        checked: resolveMapBy(this.ctx.view(), this.ctx.schema())?.id === property.id,
+        disabled: !this.shared,
+        onClick: () => {
+          this.ctx.updateView({ mapBy: property.id });
+          panel.refresh();
+        },
+      })),
     };
   }
 

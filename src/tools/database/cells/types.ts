@@ -1,5 +1,5 @@
 import type { I18n } from '../../../../types';
-import type { DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
+import type { DatabaseMap, DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
 /**
  * What every cell renderer and editor needs from its host: the table, a board
@@ -67,6 +67,8 @@ export interface CellContext {
   followLinks?: boolean;
   /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */
   reminder?: DateReminderOffset;
+  /** The host's small map (`config.map.renderPlace`) for a place's hover card. Without it the card has no map. */
+  renderPlace?: DatabaseMap['renderPlace'];
 }
 
 /**

@@ -8668,10 +8668,111 @@ button[data-blok-database-feed-reaction]:hover,
   gap: var(--blok-space-3);
 }
 
+/* The block sets the canvas height inline: the view's Height, 300 to 800px (research/20 §1f). */
+[data-blok-database-map-frame] {
+  position: relative;
+}
+
 [data-blok-database-map-canvas] {
-  min-block-size: 360px;
   border-radius: var(--blok-radius-block);
   overflow: hidden;
+}
+
+[data-blok-database-map-canvas][data-blok-database-map-adding-pin] {
+  cursor: crosshair;
+}
+
+/* Measured (research/20 §1b): 24x24, 4px radius, muted glyph, top right of the map. */
+[data-blok-database-map-add-pin] {
+  position: absolute;
+  inset-block-start: var(--blok-space-2);
+  inset-inline-end: var(--blok-space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-bg-primary);
+  box-shadow: var(--blok-database-popover-shadow);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-map-add-pin]:hover,
+[data-blok-database-map-add-pin][data-active] {
+  background-color: var(--blok-bg-hover);
+}
+
+[data-blok-database-map-add-pin] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+/* Measured (research/20 §1e): 14px, muted ink, gray fill. */
+[data-blok-database-map-no-place] {
+  display: inline-flex;
+  align-items: center;
+  margin-block-end: var(--blok-space-2);
+  padding: var(--blok-space-1) var(--blok-space-1-5);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-bg-hover);
+  color: var(--blok-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-map-no-place-list] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1-5);
+}
+
+[data-blok-database-map-no-place-row] {
+  padding: var(--blok-space-1-5);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-map-no-place-row]:hover {
+  background-color: var(--blok-bg-hover);
+}
+
+/* Measured (research/20 §1d): a 284px card, the name in bold over the address. */
+[data-blok-database-place-card] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+  inline-size: 284px;
+  max-inline-size: 100%;
+  text-align: start;
+}
+
+[data-blok-database-place-card-name] {
+  font-weight: 600;
+}
+
+[data-blok-database-place-card-map] {
+  block-size: 150px;
+  border-radius: var(--blok-radius-control);
+  overflow: hidden;
+}
+
+[data-blok-database-place-google-maps] {
+  display: block;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  color: var(--blok-text-secondary);
+  font-size: 13px;
 }
 
 [data-blok-database-map-empty],

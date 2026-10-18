@@ -85,6 +85,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-form-view.ts': cmds(['database.addRow'], 'Submitting the form adds a row. Question settings are view config, cut from v1 by D6.'),
   'ui-file:src/tools/database/database-form-share.ts': exempt('cut-v1', 'Writes the form view\'s Share settings (who can fill out, anonymous, access to submission) or copies the host\'s link. Form settings are view config, cut from v1 by D6.'),
   'ui-file:src/tools/database/database-formula-editor.ts': cmds(['database.updateProperty'], 'Edits a formula property: writes its formula settings.'),
+  'ui-file:src/tools/database/database-map-view.ts': cmds(['database.addRow'], 'Add pin mode adds a row at a map point; the "No place" list only opens rows.'),
   'ui-file:src/tools/database/database-gallery-view.ts': cmds(['database.addRow', 'database.moveRow'], 'Add a card; drag a card to reorder.'),
   'ui-file:src/tools/database/database-group-toggle.ts': exempt('cut-v1', 'Opens and closes a group. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/database/database-panel.ts': exempt('chrome', 'Shell of the settings panels: back, rows and toggles call the handlers of the menu that opened it.'),

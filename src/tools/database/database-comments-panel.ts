@@ -46,6 +46,8 @@ export interface CommentsPanel {
   /** Draws the threads again; a draft in the composer survives. */
   refresh(): void;
   focusComposer(): void;
+  /** Drops an open edit's window listener. The panel draws nothing after it. */
+  destroy(): void;
 }
 
 const SECOND = 1000;
@@ -265,9 +267,13 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     draw();
   });
 
-  const draw = (): void => {
+  const stopEdit = (): void => {
     stopEditKeys.current?.();
     stopEditKeys.current = null;
+  };
+
+  const draw = (): void => {
+    stopEdit();
     const threads = options.threads();
 
     list.replaceChildren(...threads.map((thread) => {
@@ -289,5 +295,6 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     element: panel,
     refresh: draw,
     focusComposer: () => box.input.focus(),
+    destroy: stopEdit,
   };
 };

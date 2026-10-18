@@ -74,6 +74,7 @@ export class BuiltInCommentsUi {
       if (this.popover !== popover) return;
       this.popover = null;
       this.panels.delete(panel);
+      panel.destroy();
       queueMicrotask(() => popover.destroy());
     });
     popover.show();
@@ -103,6 +104,7 @@ export class BuiltInCommentsUi {
     this.options.api.events.off('block changed', this.handleChange);
     if (this.redraw !== null) clearTimeout(this.redraw);
     this.close();
+    this.panels.forEach((panel) => panel.destroy());
     this.panels.clear();
   }
 
@@ -115,7 +117,10 @@ export class BuiltInCommentsUi {
     this.redraw = setTimeout(() => {
       this.redraw = null;
       // A row page that closed took its section out of the page.
-      [...this.panels].filter((panel) => !panel.element.isConnected).forEach((panel) => this.panels.delete(panel));
+      [...this.panels].filter((panel) => !panel.element.isConnected).forEach((panel) => {
+        panel.destroy();
+        this.panels.delete(panel);
+      });
       this.panels.forEach((panel) => panel.refresh());
       this.options.onChange();
     }, 0);

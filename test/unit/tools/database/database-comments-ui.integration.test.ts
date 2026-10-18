@@ -267,5 +267,26 @@ describe('built-in database comments', () => {
     expect((await savedComments())[0]?.data).toMatchObject({ text: 'Fixed', editedAt: expect.any(Number) });
     expect(document.querySelector('[data-blok-database-comment-time]')?.textContent).toBe('Just now (edited)');
   });
+
+  it('closing the popover mid-edit removes the edit\'s window Escape listener', async () => {
+    await make();
+    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await quiet();
+    await send('Draft');
+    const added = vi.spyOn(window, 'addEventListener');
+    const removed = vi.spyOn(window, 'removeEventListener');
+
+    document.querySelector<HTMLElement>('[data-blok-database-comment-actions]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-database-comment-action="edit"]')?.click();
+    await quiet();
+    const listener = added.mock.calls.find(([type, , capture]) => type === 'keydown' && capture === true)?.[1];
+
+    if (listener === undefined) throw new Error('no edit Escape listener');
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-comments]')?.isConnected ?? false).toBe(false);
+    expect(removed).toHaveBeenCalledWith('keydown', listener, true);
+  });
 });
 

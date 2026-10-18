@@ -80,6 +80,40 @@ describe('a block type that is really a variant of a tool', () => {
   });
 });
 
+describe('describe({ tool }) given a command name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('answers with that command, so the lookup is not wasted', () => {
+    const session = openJsonSession(seed);
+
+    try {
+      expect(session.describe({ tool: 'block.convert' })).toMatchObject({ command: { name: 'block.convert' } });
+    } finally {
+      session.close();
+    }
+  });
+
+  it('block.convert says the text carries over and how to reach a variant', () => {
+    const session = openJsonSession(seed);
+
+    try {
+      const slice = session.describe({ command: 'block.convert' });
+      const summary = 'command' in slice ? slice.command.summary : '';
+
+      expect(summary).toContain('text carries over');
+      expect(summary).toMatch(/variant.*data/);
+    } finally {
+      session.close();
+    }
+  });
+});
+
 describe('data a tool does not take', () => {
   beforeEach(() => {
     vi.clearAllMocks();

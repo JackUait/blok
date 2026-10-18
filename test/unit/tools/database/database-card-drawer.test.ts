@@ -5,15 +5,19 @@ import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../
 import type { I18n, OutputData } from '../../../../types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
-vi.mock('../../../../src/blok', () => ({
-  Blok: vi.fn(function stubBlok() {
-    return {
-      isReady: Promise.resolve(),
-      save: vi.fn().mockResolvedValue({ blocks: [] }),
-      destroy: vi.fn(),
-    };
+const { stubBlokModule } = vi.hoisted(() => ({
+  stubBlokModule: () => ({
+    Blok: vi.fn(function stubBlok() {
+      return {
+        isReady: Promise.resolve(),
+        save: vi.fn().mockResolvedValue({ blocks: [] }),
+        destroy: vi.fn(),
+      };
+    }),
   }),
 }));
+
+vi.mock('../../../../src/blok', stubBlokModule);
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1',
@@ -54,8 +58,15 @@ describe('DatabaseCardDrawer', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
+
+    // Tests that swap the editor module must put the stub back. Most drawers are
+    // never destroyed, so a real editor would outlive jsdom and its debounced
+    // selectionchange timer would throw "window is not defined".
+    const { Blok } = await import('../../../../src/blok');
+
+    expect(vi.isMockFunction(Blok)).toBe(true);
   });
 
   // drawer.open() boots the nested editor through a dynamic import no test awaits,
@@ -1313,7 +1324,7 @@ describe('DatabaseCardDrawer', () => {
       expect(blokConfig.inlineToolbar).toEqual(['bold', 'italic']);
 
       drawer.destroy();
-      vi.doUnmock('../../../../src/blok');
+      vi.doMock('../../../../src/blok', stubBlokModule);
     });
 
     it('creates nested Blok without tools when toolsConfig is not provided', async () => {
@@ -1358,7 +1369,7 @@ describe('DatabaseCardDrawer', () => {
       expect(blokConfig.tools).toBeUndefined();
 
       drawer.destroy();
-      vi.doUnmock('../../../../src/blok');
+      vi.doMock('../../../../src/blok', stubBlokModule);
     });
   });
 
@@ -1415,7 +1426,7 @@ describe('DatabaseCardDrawer', () => {
       gate.release();
       await vi.dynamicImportSettled();
       drawer.destroy();
-      vi.doUnmock('../../../../src/blok');
+      vi.doMock('../../../../src/blok', stubBlokModule);
     }
   }, 20000);
 
@@ -1454,7 +1465,7 @@ describe('DatabaseCardDrawer', () => {
     } finally {
       await vi.dynamicImportSettled();
       drawer.destroy();
-      vi.doUnmock('../../../../src/blok');
+      vi.doMock('../../../../src/blok', stubBlokModule);
     }
   }, 20000);
 
@@ -1537,7 +1548,7 @@ describe('DatabaseCardDrawer', () => {
       await pendingSave;
       drawer.destroy();
       options.wrapper.remove();
-      vi.doUnmock('../../../../src/blok');
+      vi.doMock('../../../../src/blok', stubBlokModule);
     }
   }, 20000);
 
@@ -1585,7 +1596,7 @@ describe('DatabaseCardDrawer', () => {
         throw new Error('nested editor was not constructed');
       }
 
-      vi.doUnmock('../../../../src/blok');
+      vi.doMock('../../../../src/blok', stubBlokModule);
 
       return { drawer, options, config };
     };
@@ -1774,6 +1785,9 @@ describe('DatabaseCardDrawer', () => {
       const drawers = options.wrapper.querySelectorAll('[data-blok-database-drawer]');
 
       expect(drawers).toHaveLength(1);
+
+      // Its editor import resolves late, after the last test swaps in the real editor.
+      drawer.destroy();
     });
   });
 
@@ -2039,6 +2053,7 @@ describe('DatabaseCardDrawer', () => {
 
     const { Paragraph } = await import('../../../../src/tools/paragraph');
     const { DatabaseCardDrawer: DrawerWithRealBlok } = await import('../../../../src/tools/database/database-card-drawer');
+    const { readyState } = await import('../../../../src/components/utils/ready-registry');
     const options = createOptions({
       toolsConfig: { tools: { paragraph: { class: Paragraph } } },
     });
@@ -2072,6 +2087,10 @@ describe('DatabaseCardDrawer', () => {
       // The drawer destroys the editor only after its last save settles. A live
       // editor's debounced selectionchange timer fires after jsdom is gone.
       await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).toBeNull(); }, { timeout: 10000 });
+      vi.doMock('../../../../src/blok', stubBlokModule);
     }
+
+    // Catches a drawer from an earlier test whose late import booted a real editor here.
+    expect(readyState().total).toBe(0);
   }, 20000);
 });

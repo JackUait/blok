@@ -46,7 +46,7 @@ export const listMcpTools = (
         type: 'object',
         additionalProperties: false,
         properties: {
-          query: { type: 'string', maxLength: 200 },
+          query: { type: 'string', maxLength: 200, description: 'Matches part of a document id or title. It does not search the text inside documents.' },
           cursor: { type: 'string' },
           limit: { type: 'integer', minimum: 1, maximum: 100, default: 25 },
         },

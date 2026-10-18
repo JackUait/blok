@@ -311,7 +311,12 @@ const checkObject = (schema: Schema, value: Record<string, unknown>, path: strin
     }
 
     if (schema.additionalProperties === false) {
-      out.push({ path: at, message: `unknown field "${key}"` });
+      const accepted = Object.keys(properties);
+
+      out.push({
+        path: at,
+        message: `unknown field "${key}"; ${accepted.length > 0 ? `accepted fields: ${accepted.join(', ')}` : 'this object takes no fields'}`,
+      });
     } else {
       const additional = isRecord(schema.additionalProperties) ? schema.additionalProperties : {};
 

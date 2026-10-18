@@ -143,6 +143,13 @@ describe('validateAgainst', () => {
     ok({ required: ['text'] }, 'not an object');
   });
 
+  it('names the accepted fields beside an unknown one, so a caller can fix the call without looking it up', () => {
+    expect(validateAgainst({ properties: { text: {}, type: {} }, additionalProperties: false }, { query: 'budget' }))
+      .toEqual([{ path: '/query', message: 'unknown field "query"; accepted fields: text, type' }]);
+    expect(validateAgainst({ properties: {}, additionalProperties: false }, { query: 'budget' }))
+      .toEqual([{ path: '/query', message: 'unknown field "query"; this object takes no fields' }]);
+  });
+
   it('requires own properties rather than inherited properties', () => {
     bad({ required: ['toString'] }, {});
     bad({ properties: {}, additionalProperties: false }, { toString: 'x' }, '/toString');

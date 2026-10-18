@@ -58,11 +58,21 @@ export const usedAction = (command: string): Grader => ({
   check: ({ log }) => (log.some((e) => e.name === command && e.error === undefined) ? ok(`${command} used`) : no(`${command} never succeeded`)),
 });
 
+// An aside ("p is a paragraph, not a heading") names an id only to rule it out, so a clause with a negation
+// names no answer. Clauses end at a line, ; or a sentence end. Parentheses must not cut: in
+// 'h2 ("Hiring") doesn't' the cut would split h2 from its negation. Quoted block text is dropped first,
+// so a heading that reads "No budget" is not a negation.
+const CLAUSE_CUT = /\n|;|[.!?](?=\s+[A-Z(`*"-]|\s*$)/;
+const NEGATION = /\b(?:not|no|none|neither|nor|never|without|except)\b|n't\b/i;
+
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const answerIds = (expected: string[]): Grader => ({
   name: 'answerIds',
   check: ({ seed, answer }) => {
     const ids = seed.blocks.map((b) => b.id).filter((id): id is string => id !== undefined);
-    const named = ids.filter((id) => new RegExp(`\\b${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(answer ?? '')).sort();
+    const given = (answer ?? '').split(CLAUSE_CUT).filter((clause) => !NEGATION.test(clause.replace(/"[^"]*"|“[^”]*”/g, '')));
+    const named = ids.filter((id) => given.some((clause) => new RegExp(`\\b${escapeRe(id)}\\b`).test(clause))).sort();
     const want = [...expected].sort();
 
     return JSON.stringify(named) === JSON.stringify(want) ? ok(named.join(', ')) : no(`named ${named.join(', ') || 'nothing'}, expected ${want.join(', ')}`);

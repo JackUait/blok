@@ -63,7 +63,6 @@ export const checkEnvelope = (
     }
 
     const problems = validate(entry.args, raw.args);
-    // ref is a command field. Inside args, say where it goes instead of only "unknown field".
     const misplacedRef = raw.ref === undefined
       ? problems.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
       : undefined;

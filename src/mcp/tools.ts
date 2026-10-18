@@ -41,7 +41,7 @@ export const listMcpTools = (
   return [
     {
       name: 'blok_list_documents',
-      description: 'Lists Blok documents you may open. query matches document ids and titles, not their content; leave it out to list them all. Returns supported: false when the document source cannot list.',
+      description: 'Lists Blok documents you may open. query matches document ids and titles, not their content; when nothing matches, it lists every document and sets queryMatched: false. Returns supported: false when the document source cannot list.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -65,6 +65,7 @@ export const listMcpTools = (
           },
           nextCursor: { type: ['string', 'null'] },
           supported: { type: 'boolean' },
+          queryMatched: { type: 'boolean' },
         },
       }),
     },

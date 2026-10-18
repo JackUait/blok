@@ -193,7 +193,15 @@ export const createToolDispatcher = (
         case 'blok_list_documents': {
           requireScope(caller, 'blok.read');
 
-          return ok({ ...await deps.list(listRequestOf(args), caller) });
+          const request = listRequestOf(args);
+          const listing = await deps.list(request, caller);
+
+          // A miss on the first page lists everything, so the model does not call again without query.
+          if (request.query !== undefined && request.cursor === undefined && listing.supported !== false && listing.documents.length === 0) {
+            return ok({ ...await deps.list({ limit: request.limit }, caller), queryMatched: false });
+          }
+
+          return ok({ ...listing });
         }
         case 'blok_open':
           return await openDocument(args, caller, options.signal);

@@ -70,7 +70,7 @@
   },
   {
     "name": "blok_execute",
-    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments.",
+    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -106,9 +106,6 @@
                       "type"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -136,9 +133,6 @@
                       "id"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -299,9 +293,6 @@
                       "icon"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -327,9 +318,6 @@
                       "title"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -406,9 +394,6 @@
                       "markdown"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -556,9 +541,6 @@
                       "range"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -649,9 +631,6 @@
                       "with"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [

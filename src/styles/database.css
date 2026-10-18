@@ -5205,6 +5205,175 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   height: 16px;
 }
 
+/* ─── Built-in comments: thread and composer (research/12 §3, research/19 §2d) ─── */
+
+[data-blok-database-comments] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  width: min(470px, calc(100vw - 32px));
+  padding: var(--blok-space-1);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-comments] [role="list"][hidden] {
+  display: none;
+}
+
+[data-blok-database-comment] {
+  position: relative;
+  padding: var(--blok-space-1) var(--blok-space-1) var(--blok-space-1) 32px;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-comment] > div:first-of-type {
+  display: flex;
+  align-items: baseline;
+  gap: var(--blok-space-2);
+}
+
+[data-blok-database-comment-avatar] {
+  position: absolute;
+  inset-inline-start: var(--blok-space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--blok-item-hover-bg);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+[data-blok-database-comment-author] {
+  font-weight: 500;
+}
+
+[data-blok-database-comment-time] {
+  color: var(--blok-text-tertiary);
+  font-size: 12px;
+}
+
+[data-blok-database-comment-text] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Resolve and More actions show on hover (research/12 §3), and stay reachable from the keyboard. */
+[data-blok-database-comment-tools] {
+  position: absolute;
+  inset-inline-end: var(--blok-space-1);
+  top: var(--blok-space-1);
+  display: flex;
+  gap: var(--blok-space-0-5);
+  opacity: 0;
+}
+
+[data-blok-database-comment]:hover > [data-blok-database-comment-tools],
+[data-blok-database-comment-tools]:has(:focus-visible),
+[data-blok-database-comment-tools]:has([aria-expanded="true"]) {
+  opacity: 1;
+}
+
+[data-blok-database-comment-tools] button,
+[data-blok-database-comment-send] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-comment-tools] button:hover,
+[data-blok-database-comment-send]:hover:not(:disabled) {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-comment-tools] svg,
+[data-blok-database-comment-send] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-comment-composer] {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-comment-input] {
+  flex: 1;
+  min-height: 24px;
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  resize: none;
+  field-sizing: content;
+}
+
+[data-blok-database-comment-input]::placeholder {
+  color: var(--blok-text-tertiary);
+}
+
+[data-blok-database-comment-send]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+[data-blok-database-comment-menu] {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--blok-space-1);
+}
+
+[data-blok-database-comment-menu][hidden] {
+  display: none;
+}
+
+[data-blok-database-comment-menu] button {
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-comment-menu] button:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/* The row page section sits under the properties. */
+[data-blok-database-comments-section] {
+  margin-block: var(--blok-space-2);
+}
+
+[data-blok-database-comments-label] {
+  margin-bottom: var(--blok-space-1);
+  color: var(--blok-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+[data-blok-database-comments-section] [data-blok-database-comments] {
+  width: auto;
+  padding: 0;
+}
+
 /* The gallery card has no padding of its own; the title pads itself. */
 [data-blok-database-gallery-title] + [data-blok-database-comment-badge] {
   margin: 0 var(--blok-space-2) var(--blok-space-1);

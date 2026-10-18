@@ -292,6 +292,8 @@ export interface CardDrawerOptions {
   databaseId?: string;
   /** The pages that mention the row, asked each time its page head is drawn. */
   backlinks?: (rowId: string) => readonly DrawerBacklink[];
+  /** The row's built-in "Comments" section under the properties, or null when comments are the host's or off. */
+  comments?: (rowId: string) => HTMLElement | null;
 }
 
 /** A page that mentions the open row (research/17 §2). */
@@ -417,6 +419,7 @@ export class DatabaseCardDrawer {
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
   private readonly backlinks: CardDrawerOptions['backlinks'];
+  private readonly comments: CardDrawerOptions['comments'];
   /** The open "Linked to this page" list; it shares the mode menu's slot. */
   private backlinksMenu: PopoverDesktop | null = null;
   /** What the drawn "N backlinks" lists, to skip a redraw that changes nothing. */
@@ -520,6 +523,7 @@ export class DatabaseCardDrawer {
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
     this.backlinks = options.backlinks;
+    this.comments = options.comments;
     this.rowActions = options.rowActions;
     this.onFullWidthChange = options.onFullWidthChange;
     this.onEscapeClose = options.onEscapeClose;
@@ -664,6 +668,10 @@ export class DatabaseCardDrawer {
       }
     });
     content.appendChild(titleInput);
+
+    const comments = this.comments?.(row.id) ?? null;
+
+    if (comments !== null) content.appendChild(comments);
 
     // --- Divider ---
     const divider = document.createElement('hr');
@@ -2037,6 +2045,13 @@ export class DatabaseCardDrawer {
       this.fillBuilder(builder, layout, row, regions);
     } else if (content !== null && divider !== null) {
       for (const region of regions) content.insertBefore(region, divider);
+    }
+    // Comments sit under the properties, on the content tab (research/10 §128, §168).
+    const comments = content?.querySelector<HTMLElement>(':scope > [data-blok-database-comments-section]');
+
+    if (comments !== null && comments !== undefined && divider !== null) {
+      content?.insertBefore(comments, divider);
+      comments.hidden = !onContent;
     }
     // Once the panel is in the page: the tab's database renders where it is shown.
     if (panel !== null) {

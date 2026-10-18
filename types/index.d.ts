@@ -341,8 +341,8 @@ export interface API {
   agent?: Agent;
   /** Runtime setter for the live callback config (see {@link Handlers}). */
   handlers: Handlers;
-  /** Read-only view of selected editor configuration. */
-  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link' | 'media'>>;
+  /** Read-only view of selected editor configuration. `collaboration` names the writer of a built-in database comment. */
+  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link' | 'media' | 'collaboration'>>;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;

@@ -113,6 +113,8 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isAnnotationBlock, mountChildBlocks } from '../nested-blocks';
+import { BuiltInCommentsUi } from './database-comments';
+import { isAnnotationType } from '../../shared/annotation-blocks';
 import { moveElementToEnd } from '../../components/utils/html';
 import { showsPageIcon } from './page-icon';
 import {
@@ -409,6 +411,8 @@ export class DatabaseTool implements BlockTool {
   private cardMenuPopover: PopoverDesktop | null = null;
   private reactionPicker: EmojiPicker | null = null;
   private stopComments: (() => void) | undefined;
+  /** Comments in the document, used only when the host gives no `comments` hook. */
+  private readonly builtInComments: BuiltInCommentsUi;
   /** Per table view: selection, loaded rows, collapsed groups. Session only, never saved. */
   private readonly tableStates = new Map<string, TableState>();
   private readonly dashboardStates = new Map<string, DashboardWidgetState>();
@@ -474,6 +478,19 @@ export class DatabaseTool implements BlockTool {
     this.activeViewId = consumeViewLink((viewId) => this.model.getView(viewId) !== undefined)
       ?? (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
+    this.builtInComments = new BuiltInCommentsUi({
+      api: this.api,
+      locale: () => resolveLocale(undefined),
+      me: () => this.config.people?.me?.() ?? null,
+      personName: (id) => this.people?.find((person) => person.id === id)?.name,
+      permitted: () => this.config.comments === undefined && this.permits('comment'),
+      readOnly: () => this.editorReadOnly,
+      onChange: () => {
+        const lever = this.commentBadgeLever().commentBadges;
+
+        if (!this.destroyed && lever !== undefined && this.element !== null) refreshCommentBadges(this.element, lever, this.api.i18n);
+      },
+    });
     this.hostLevers = new DatabaseHostLevers({
       databaseId: block.id,
       isDestroyed: () => this.destroyed,
@@ -497,6 +514,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
     this.api.events.on('block changed', this.scheduleBacklinks);
+    this.builtInComments.listen();
     this.api.events.on('block replayed', this.scheduleBacklinks);
     this.api.events.on('collaboration:status', this.handleCollaborationStatus);
   }
@@ -514,6 +532,8 @@ export class DatabaseTool implements BlockTool {
     if (this.linked || this.destroyed || this.config.ai === undefined || event?.type !== 'block-changed'
       || event.detail?.origin !== 'local' || event.detail.replaySource !== undefined
       || !this.model.getSchema().some((property) => property.autofill?.onEditContent === true)) return;
+    // A comment is not page content (18-comments-design §4).
+    if (isAnnotationType(event.detail.target?.name)) return;
     const row = this.nearestRow(event.detail.target?.parentId, new Set());
 
     // Another database's row or a template reads no values, so it fills nothing.
@@ -839,10 +859,16 @@ export class DatabaseTool implements BlockTool {
     this.structureDenied = !this.permits('editStructure');
   }
 
-  /** The host's comments for a row or a cell, unless permissions deny `comment`. */
+  /** The host's comments for a row or a cell, else the built-in ones, unless permissions deny `comment`. */
   private commentLever(): { comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void; commentBadges?: CommentBadges } {
     const comments = this.config.comments;
 
+    if (comments === undefined && this.builtInComments.enabled()) {
+      return {
+        comment: (rowId, propertyId, anchor) => this.builtInComments.open(rowId, propertyId, anchor),
+        ...this.commentBadgeLever(),
+      };
+    }
     if (comments === undefined || !this.permits('comment')) return {};
 
     return {
@@ -851,9 +877,19 @@ export class DatabaseTool implements BlockTool {
     };
   }
 
-  /** Row comment counts, when the host gives `count`. A throw counts as zero. */
+  /** Row comment counts, when the host gives `count` or comments are built in. A throw counts as zero. */
   private commentBadgeLever(): { commentBadges?: CommentBadges } {
     const comments = this.config.comments;
+
+    if (comments === undefined && this.builtInComments.enabled()) {
+      return {
+        commentBadges: {
+          databaseId: this.block.id,
+          count: (rowId) => this.builtInComments.count(rowId),
+          open: (rowId, anchor) => this.builtInComments.open(rowId, undefined, anchor),
+        },
+      };
+    }
 
     if (comments?.count === undefined || !this.permits('comment')) return {};
 
@@ -1214,6 +1250,7 @@ export class DatabaseTool implements BlockTool {
     this.reactionPicker?.getElement().remove();
     this.reactionPicker = null;
     this.stopComments?.();
+    this.builtInComments.destroy();
     this.destroyView();
     this.groupMenuPopover?.destroy();
     this.cardCellEditor?.cancel();
@@ -6589,6 +6626,7 @@ export class DatabaseTool implements BlockTool {
         readOnly: session.readOnly,
         databaseId: this.block.id,
         backlinks: (rowId) => this.backlinksFor(rowId),
+        comments: (rowId) => (this.config.comments === undefined && this.builtInComments.enabled() ? this.builtInComments.section(rowId) : null),
         i18n: this.api.i18n,
         events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),

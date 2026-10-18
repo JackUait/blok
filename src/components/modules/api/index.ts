@@ -83,6 +83,9 @@ export class API extends Module {
         get media() {
           return apiConfig.media;
         },
+        get collaboration() {
+          return apiConfig.collaboration;
+        },
       },
       /**
        * Curated facade exposing exactly the publicly-typed RectangleSelection

@@ -10,6 +10,7 @@ import { YBlockSerializer } from '../../../../src/components/modules/yjs/seriali
 import { DatabaseTool } from '../../../../src/tools/database';
 import type { AutofillSettings, DatabaseAutofillRequest, DatabaseConfig, PropertyValue } from '../../../../src/tools/database/types';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { DatabaseCommentTool } from '../../../../src/tools/database-comment';
 import { Bookmark } from '../../../../src/tools/link/bookmark';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
@@ -84,7 +85,7 @@ const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
-    tools: { paragraph: Paragraph, database: { class: DatabaseTool, config }, 'database-row': DatabaseRowTool },
+    tools: { paragraph: Paragraph, database: { class: DatabaseTool, config }, 'database-row': DatabaseRowTool, 'database-comment': DatabaseCommentTool },
     data: { blocks },
   } as never) as unknown as TestEditor;
   await editor.isReady;
@@ -218,6 +219,19 @@ describe('AI Autofill — when page content is edited', { timeout: 30000 }, () =
 
     await openRow('r1');
     await typeInto(instance, 'c1', 'Body text');
+    await pastSettle();
+    expect(calls()).toEqual([]);
+  });
+
+  it('a comment on the row is not page content: writing one fills nothing', async () => {
+    const instance = await make(doc(CONTENT));
+
+    const note = instance.blocks.insertAt('database-comment', { text: 'A note', createdAt: 1 }, { parentId: 'r1', position: 'end' });
+
+    await quiet();
+    note.call('updateComment', { text: 'An edited note', editedAt: 2 });
+    note.dispatchChange({ derived: true });
+    await quiet();
     await pastSettle();
     expect(calls()).toEqual([]);
   });

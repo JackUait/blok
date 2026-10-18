@@ -863,7 +863,8 @@ describe('row page layout through the database tool', () => {
 
       expect(names(builderRoot())).toEqual(['Content']);
       expect(selected(builderRoot())).toBe('Content');
-      expect(document.body.textContent).toContain('Deleted Roadmap view');
+      // The toast mounts only after the notifier module's lazy import resolves.
+      await vi.waitFor(() => expect(document.body.textContent).toContain('Deleted Roadmap view'), { timeout: 2000 });
       expect((await savedBlocks()).some((block) => block.id === 'tv')).toBe(true);
       await click(b('[data-blok-database-layout-apply]'));
 

@@ -1,5 +1,6 @@
 import { composeGuidance } from '../../../../../src/agent/guidance';
 import { renderAgentTools } from '../../../../../src/agent/render-tools';
+import { AgentFailure } from '../../../../../src/shared/agent/errors';
 import { nodeContract, openJsonSession } from '../../../../unit/agent/harness';
 import type { AgentResult, DocumentView } from '../../../../../types/agent';
 import type { ExecuteResult } from '../../types';
@@ -34,24 +35,33 @@ export const openInApp: OpenSurface = async (task, schema) => {
   return {
     tools,
     system: composeGuidance(contract),
+    // Same contract as agent-turn.ts call(): a failure goes back to the model, it does not end the trial.
     execute: async (name, input) => {
-      if (name === 'blok_read') {
-        return { content: JSON.stringify(await unchecked.read(input)), isError: false };
+      try {
+        if (name === 'blok_read') {
+          return { content: JSON.stringify(await unchecked.read(input)), isError: false };
+        }
+
+        if (name === 'blok_describe') {
+          return { content: JSON.stringify(unchecked.describe(input)), isError: false };
+        }
+
+        if (name === 'blok_execute') {
+          const result = await unchecked.execute(input);
+
+          results.push(result);
+
+          return { content: JSON.stringify(result), isError: !result.ok };
+        }
+
+        return { content: `Unknown tool ${name}`, isError: true };
+      } catch (error) {
+        if (error instanceof AgentFailure) {
+          return { content: JSON.stringify({ ok: false, error: error.error, warnings: [] }), isError: true };
+        }
+
+        throw error;
       }
-
-      if (name === 'blok_describe') {
-        return { content: JSON.stringify(unchecked.describe(input)), isError: false };
-      }
-
-      if (name === 'blok_execute') {
-        const result = await unchecked.execute(input);
-
-        results.push(result);
-
-        return { content: JSON.stringify(result), isError: false };
-      }
-
-      return { content: `Unknown tool ${name}`, isError: true };
     },
     finish: async () => ({ final: session.output(), log: [...session.log()], results, actorId: EVAL_ACTOR.id }),
     close: async () => session.close(),

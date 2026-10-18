@@ -58,4 +58,25 @@ describe('in-app surface, shipped setup', () => {
       await surface.close();
     }
   });
+
+  it('hands a failed call back to the model as a tool error, like agent-turn.ts call()', async () => {
+    const task = ALL_TASKS.find((t) => t.surfaces.includes('in-app'));
+
+    if (task === undefined) {
+      throw new Error('no in-app task');
+    }
+
+    const surface = await openInApp(task, 'shipped');
+
+    try {
+      const described = await surface.execute('blok_describe', { tool: 'heading' });
+      const executed = await surface.execute('blok_execute', { commands: [{ name: 'block.delete', args: { id: 'missing' } }] });
+
+      expect(described.isError).toBe(true);
+      expect(JSON.parse(described.content)).toMatchObject({ ok: false, error: { message: expect.stringContaining('heading') } });
+      expect(executed.isError).toBe(true);
+    } finally {
+      await surface.close();
+    }
+  });
 });

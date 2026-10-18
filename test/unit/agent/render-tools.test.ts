@@ -125,7 +125,10 @@ describe('renderAgentTools envelope', () => {
     });
     expect(inputOf(byName(tools, 'blok_describe'))).toEqual({
       type: 'object',
-      properties: { tool: { type: 'string' }, command: { type: 'string' } },
+      properties: {
+        tool: { type: 'string', description: 'A block type, e.g. "header".' },
+        command: { type: 'string', description: 'A command name, e.g. "block.update".' },
+      },
       additionalProperties: false,
     });
   });
@@ -539,6 +542,45 @@ describe('renderAgentTools mixed', () => {
 
     expect(execute.description).toContain('block.insert');
     expect(execute.description).toContain('blok_describe');
+  });
+});
+
+describe('renderAgentTools ref wording', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const descriptionsIn = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value.flatMap(descriptionsIn);
+    }
+    if (!isSchema(value)) {
+      return [];
+    }
+
+    return Object.entries(value).flatMap(([key, child]) => (key === 'description' && typeof child === 'string' ? [child] : descriptionsIn(child)));
+  };
+
+  it.each(['envelope', 'full', 'mixed'] as const)('%s: blok_execute shows how a ref names a block for later commands', (schemaName) => {
+    const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
+    const execute = byName(renderAgentTools(contract, { format: 'anthropic', schema: schemaName }), 'blok_execute');
+
+    // Models read "$ref" as the JSON Schema keyword and wrote "$ref:h" for a ref named "h".
+    expect(execute.description).toMatch(/"ref": "(\w+)".*"\$\1"/);
+    expect(descriptionsIn(inputOf(execute)).filter(text => text.includes('"$ref"'))).toEqual([]);
+  });
+
+  it('says blok_describe takes a block type as tool and a command name as command', () => {
+    const tool = byName(renderAgentTools(makeContract(), { format: 'anthropic' }), 'blok_describe');
+    const properties = schema(inputOf(tool).properties);
+
+    expect(tool.description).toMatch(/block type/);
+    expect(schema(properties.tool).description).toMatch(/block type/);
+    expect(schema(properties.command).description).toMatch(/command/);
   });
 });
 

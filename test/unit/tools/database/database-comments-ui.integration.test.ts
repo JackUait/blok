@@ -55,15 +55,14 @@ if (typeof document.elementFromPoint !== 'function') {
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const make = async (config: Record<string, unknown> = {}, withTool = true): Promise<TestEditor> => {
+const make = async (config: Record<string, unknown> = {}, companions = true): Promise<TestEditor> => {
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
     tools: {
       paragraph: Paragraph,
       database: { class: DatabaseTool, config },
-      'database-row': DatabaseRowTool,
-      ...(withTool ? { 'database-comment': DatabaseCommentTool } : {}),
+      ...(companions ? { 'database-row': DatabaseRowTool, 'database-comment': DatabaseCommentTool } : {}),
     },
     data: { blocks: doc() },
   } as never) as unknown as TestEditor;
@@ -174,11 +173,18 @@ describe('built-in database comments', () => {
     expect(composerInput()).toBeNull();
   });
 
-  it('offers nothing where the comment tool is not registered', async () => {
+  it('works with only `database` registered: it brings its rows and comments', async () => {
     await make({}, false);
-    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await quiet();
+    await send('No extra entry');
 
-    titleCell().dispatchEvent(event);
+    expect((await savedComments())[0]).toMatchObject({ parent: 'r1', data: { text: 'No extra entry' } });
+  });
+
+  it('offers nothing where the host denies comments', async () => {
+    await make({ permissions: { can: (action: string) => action !== 'comment' } });
+    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     await quiet();
 
     expect(composerInput()).toBeNull();

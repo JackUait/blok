@@ -70,6 +70,15 @@ export interface BaseToolConstructable {
   provides?: { [blockType: string]: BaseToolConstructable };
 
   /**
+   * Block tools this tool cannot work without, as `{ blockType: ToolClass }`.
+   * Registering the tool registers each one next to it, unless the tools
+   * config already names that block type (an explicit entry always wins).
+   * Unlike `provides`, the tool keeps its own key. The Database tool brings
+   * `database-row` and `database-comment` this way.
+   */
+  companionTools?: { [blockType: string]: BaseToolConstructable };
+
+  /**
    * Tool`s prepare method. Can be async
    * @param data
    */

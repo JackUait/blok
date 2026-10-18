@@ -2277,6 +2277,7 @@
       "callout": "Callout",
       "database": "Database",
       "database-row": "Database Row",
+      "database-comment": "Database Comment",
       "divider": "Divider",
       "spacer": "Spacer",
       "table_of_contents": "Table of contents",
@@ -2421,6 +2422,9 @@
       },
       "database-row": {
         "description": "An internal block tool that stores a single database row. It is not user-insertable: rows are created and managed by the parent Database block. Each row stores property values that conform to the parent database schema, plus a position string for ordering."
+      },
+      "database-comment": {
+        "description": "An internal block tool that stores one comment on a database row. It is not user-insertable and has no toolbox entry. A thread is a `database-comment` child of the row. Its replies are `database-comment` children of the thread.\n\nIt is an annotation, not page content. Blok hides its holder. Views, find, copy, select-all and the HTML, Markdown and plain-text exports skip it. Comment writes do not add undo steps.\n\nRegistering `database` registers this tool automatically. Naming `database-comment` yourself replaces it. A host `comments` hook in the database config replaces the built-in comments."
       },
       "divider": {
         "description": "A horizontal line separator. Renders a semantic `<hr>` element. It has no editable content or settings. You can insert it from the toolbox, or by typing `---` in an empty paragraph."

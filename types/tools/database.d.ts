@@ -1,5 +1,6 @@
 import { SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
+import { BaseToolConstructable } from './tool';
 import { BlockToolData } from './block-tool-data';
 import { OutputData } from '../data-formats/output-data';
 import { ToolboxConfig } from './tool-settings';
@@ -1352,6 +1353,12 @@ export declare class Database implements BlockTool {
    * Plain-text and URL fields, declared PLAINTEXT so load and save never parse them as HTML
    */
   static sanitize?: SanitizerConfig;
+
+  /**
+   * `database-row` and `database-comment`. Registering `database` registers
+   * both, unless the tools config names them itself.
+   */
+  static companionTools?: { [blockType: string]: BaseToolConstructable };
 
   constructor(options: DatabaseConstructorOptions);
 

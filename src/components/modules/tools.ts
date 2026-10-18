@@ -403,6 +403,31 @@ export class Tools extends Module {
       // The group handle key (`name`) is intentionally dropped: not a block type.
     }
 
+    return this.addCompanionTools(out);
+  }
+
+  /**
+   * A tool class may expose a static `companionTools` map of `{ blockType: ToolClass }`:
+   * block tools it cannot work without (the database's rows and comments).
+   * Each one is registered next to the tool unless the host already gave that
+   * block type. Unlike `provides`, the tool keeps its own key.
+   */
+  private addCompanionTools(
+    tools: Record<string, ToolConstructable | ToolSettings>
+  ): Record<string, ToolConstructable | ToolSettings> {
+    const out = { ...tools };
+
+    Object.values(tools).forEach((entry) => {
+      const toolClass = isObject(entry) ? (entry).class : entry;
+      const companions = (toolClass as { companionTools?: Record<string, ToolConstructable> } | undefined)?.companionTools;
+
+      Object.entries(companions ?? {}).forEach(([blockType, companionClass]) => {
+        if (!(blockType in out)) {
+          out[blockType] = companionClass;
+        }
+      });
+    });
+
     return out;
   }
 

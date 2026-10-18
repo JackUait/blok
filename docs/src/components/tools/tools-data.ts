@@ -475,17 +475,15 @@ const editor = new Blok({
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
-import { Database, DatabaseRow } from '@bloklabs/core/tools';
+import { Database } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
   tools: {
+    // Also registers \`database-row\` (its rows) and \`database-comment\`
+    // (comments on rows). Name either one yourself to replace it.
     database: {
       class: Database,
-    },
-    // Required: the Database tool inserts \`database-row\` blocks for its rows.
-    'database-row': {
-      class: DatabaseRow,
     },
   },
 });`,
@@ -515,15 +513,56 @@ const editor = new Blok({
     "position": "a0"
   }
 }`,
-    usageExample: `// DatabaseRow is not inserted directly — it is created by the Database tool.
-// Access row data via the saved output:
-import { Database, DatabaseRow } from '@bloklabs/core/tools';
+    usageExample: `// DatabaseRow is not inserted directly — it is created by the Database tool,
+// and registering Database registers it too.
+import { Database } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
   tools: {
     database: { class: Database },
-    'database-row': { class: DatabaseRow },
+  },
+});`,
+  },
+  {
+    id: 'database-comment',
+    exportName: 'DatabaseComment',
+    type: 'block',
+    title: 'Database Comment',
+    description:
+      'An internal block tool that stores one comment on a database row. It is not user-insertable and has no toolbox entry. A thread is a `database-comment` child of the row. Its replies are `database-comment` children of the thread.\n\nIt is an annotation, not page content. Blok hides its holder. Views, find, copy, select-all and the HTML, Markdown and plain-text exports skip it. Comment writes do not add undo steps.\n\nRegistering `database` registers this tool automatically. Naming `database-comment` yourself replaces it. A host `comments` hook in the database config replaces the built-in comments.',
+    importExample: `import { DatabaseComment } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface DatabaseCommentData {
+  text: string;          // Plain text, not HTML
+  createdAt: number;     // Epoch ms when it was written
+  authorId?: string;     // The writer, as the host's people directory knows them
+  authorName?: string;   // The writer's display name when it was written
+  propertyId?: string;   // Set on a thread about one cell: that property's id
+  editedAt?: number;     // Epoch ms of the last edit
+  resolved?: boolean;    // Set on a resolved thread
+}
+// A thread is a child of the row; its replies are children of the thread.`,
+    saveDataExample: `{
+  "id": "cmt001",
+  "type": "database-comment",
+  "parent": "row001",
+  "data": {
+    "text": "Can we ship this on Friday?",
+    "createdAt": 1760745600000,
+    "authorId": "u1",
+    "authorName": "Ada",
+    "propertyId": "prop2"
+  }
+}`,
+    usageExample: `// DatabaseComment is not inserted directly. Registering Database
+// registers it too, as \`database-comment\`.
+import { Database } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    database: { class: Database },
   },
 });`,
   },

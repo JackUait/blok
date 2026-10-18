@@ -411,6 +411,12 @@ const TOOL_COPY: Record<string, Copy> = {
       "Each row is a block whose data.properties conforms to the parent database's schema, with child blocks as its page body.",
     h1: 'Database row block: properties and page body',
   },
+  'database-comment': {
+    title: 'Database Comment Block — Row Comment Threads',
+    description:
+      'One comment on a database row, saved as a child block of the row. Replies are children of their thread.',
+    h1: 'Database comment block: comments on rows',
+  },
   divider: {
     title: 'Divider Block — Horizontal Rule in Blok',
     description:

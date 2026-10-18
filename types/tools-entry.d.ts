@@ -294,6 +294,7 @@ export const defaultBlockTools: {
   readonly callout: {};
   readonly database: {};
   readonly 'database-row': {};
+  readonly 'database-comment': {};
   readonly divider: {};
   readonly spacer: {};
   readonly table_of_contents: {};

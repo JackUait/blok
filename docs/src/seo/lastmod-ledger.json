@@ -16,8 +16,8 @@
     "date": "2026-10-07"
   },
   "/docs": {
-    "hash": "b9e5e1afb42eeb00",
-    "date": "2026-10-12"
+    "hash": "37a4bdd8f010e04a",
+    "date": "2026-10-18"
   },
   "/docs/agent-api": {
     "hash": "c10e91e92cf3500d",
@@ -92,12 +92,16 @@
     "date": "2026-09-08"
   },
   "/docs/database": {
-    "hash": "10fc82e10fc728d1",
-    "date": "2026-09-08"
+    "hash": "59b570f7604a0396",
+    "date": "2026-10-18"
+  },
+  "/docs/database-comment": {
+    "hash": "477f7b5d1545fcb4",
+    "date": "2026-10-18"
   },
   "/docs/database-row": {
-    "hash": "14918cf2bc9359ad",
-    "date": "2026-09-08"
+    "hash": "7fc022df42c87c7b",
+    "date": "2026-10-18"
   },
   "/docs/dev-override-seam": {
     "hash": "bf95aeb17bd158ef",
@@ -344,8 +348,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs": {
-    "hash": "7d20d3df969517d5",
-    "date": "2026-10-12"
+    "hash": "f513305bc66be2fd",
+    "date": "2026-10-18"
   },
   "/ru/docs/agent-api": {
     "hash": "6c7fb5cb6699d199",
@@ -420,12 +424,16 @@
     "date": "2026-09-08"
   },
   "/ru/docs/database": {
-    "hash": "97af6e5b612cc8fd",
-    "date": "2026-09-08"
+    "hash": "5304e223614ba21d",
+    "date": "2026-10-18"
+  },
+  "/ru/docs/database-comment": {
+    "hash": "b2202e88a335bb34",
+    "date": "2026-10-18"
   },
   "/ru/docs/database-row": {
-    "hash": "a203f306b04de348",
-    "date": "2026-09-08"
+    "hash": "edd0143c2698378d",
+    "date": "2026-10-18"
   },
   "/ru/docs/dev-override-seam": {
     "hash": "c786545b13fa80a4",

@@ -52,13 +52,18 @@ if (typeof document.elementFromPoint !== 'function') {
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
+/** A database that does not bring the comment tool along. */
+class DatabaseWithoutComments extends DatabaseTool {
+  public static companionTools = { 'database-row': DatabaseRowTool };
+}
+
 const make = async (withComments = true): Promise<TestEditor> => {
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
     tools: {
       paragraph: Paragraph,
-      database: DatabaseTool,
+      database: withComments ? DatabaseTool : DatabaseWithoutComments,
       'database-row': DatabaseRowTool,
       ...(withComments ? { 'database-comment': DatabaseCommentTool } : {}),
     },

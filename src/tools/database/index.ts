@@ -152,6 +152,9 @@ import { LAYOUT_MAKER_ABSENCE_MS, layoutDraftSession, type LayoutDraftSession } 
 import { layoutDraftOf } from '../tabs/draft';
 import { scanBacklinkSources } from './backlinks';
 import type { BacklinkSource } from './backlinks';
+import { DatabaseRowTool } from '../database-row';
+import { DatabaseCommentTool } from '../database-comment';
+import type { BaseToolConstructable } from '../../../types/tools';
 
 interface DrawerAuthority {
   writable(): boolean;
@@ -322,6 +325,11 @@ const consumeViewLink = (owns: (viewId: string) => boolean): string | null => {
 export class DatabaseTool implements BlockTool {
   public static describe = describeDatabase;
   public static actionHandlers = DATABASE_ACTION_HANDLERS;
+  /** Rows and comments are blocks of their own; registering `database` brings both. */
+  public static companionTools: Record<string, BaseToolConstructable> = {
+    'database-row': DatabaseRowTool,
+    'database-comment': DatabaseCommentTool,
+  };
 
   private readonly api: API;
   private readonly block: BlockAPI;

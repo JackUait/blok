@@ -643,6 +643,67 @@ describe('tools module', () => {
 
   });
 
+  describe('companion tools', () => {
+    class Child {
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+    }
+
+    class Host {
+      public static get companionTools(): Record<string, unknown> {
+        return { child: Child };
+      }
+
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+    }
+
+    it('registers a companion next to the tool and keeps the tool under its own key', async () => {
+      const module = createModule({ tools: { custom: Host as unknown as ToolConstructable } });
+
+      await module.prepare();
+
+      expect(module.blockTools.has('custom')).toBe(true);
+      expect(module.blockTools.has('child')).toBe(true);
+    });
+
+    it('lets an explicit entry win over a companion, before or after the tool', async () => {
+      class CustomChild {
+        public static marker = 'custom';
+
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+      }
+
+      for (const tools of [
+        { host: Host, child: CustomChild },
+        { child: CustomChild, host: Host },
+      ]) {
+        const module = createModule({ tools: tools as unknown as Record<string, ToolConstructable> });
+
+        await module.prepare();
+
+        expect((module.blockTools.get('child') as unknown as { constructable: typeof CustomChild }).constructable.marker).toBe('custom');
+      }
+    });
+
+    it('brings database-row and database-comment with the database tool', async () => {
+      const { DatabaseTool } = await import('../../../../src/tools/database');
+      const { DatabaseRowTool } = await import('../../../../src/tools/database-row');
+      const { DatabaseCommentTool } = await import('../../../../src/tools/database-comment');
+
+      const module = createModule({ tools: { database: DatabaseTool as unknown as ToolConstructable } });
+
+      await module.prepare();
+
+      expect((module.blockTools.get('database-comment') as unknown as { constructable: unknown } | undefined)?.constructable).toBe(DatabaseCommentTool);
+      expect((module.blockTools.get('database-row') as unknown as { constructable: unknown } | undefined)?.constructable).toBe(DatabaseRowTool);
+    });
+  });
+
   describe('flat config normalization', () => {
     it('extracts tool-specific options from flat config into nested config', async () => {
       class HeaderTool {

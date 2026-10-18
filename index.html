@@ -1804,7 +1804,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, TabsTool, TabTool, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, DatabaseComment, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, TabsTool, TabTool, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -1957,6 +1957,7 @@
       if (state.tools.database) {
         tools.database = Database;
         tools['database-row'] = DatabaseRow;
+        tools['database-comment'] = DatabaseComment;
       }
       if (state.tools.divider) tools.divider = Divider;
       if (state.tools.spacer) tools.spacer = Spacer;
@@ -4049,6 +4050,7 @@
           callout: Callout,
           database: Database,
           'database-row': DatabaseRow,
+          'database-comment': DatabaseComment,
           divider: Divider,
           spacer: Spacer,
           table_of_contents: TableOfContents,

@@ -28,10 +28,10 @@ export type DatabaseCommentConstructorOptions = BlockToolConstructorOptions<Data
 /**
  * DatabaseComment Tool for the Blok Editor.
  *
- * Register it as `database-comment` next to `database` and `database-row` to
- * get built-in comments on rows. It is not page content: Blok hides it, and
- * the views and exports skip it. Without it, and without `comments` in the
- * database config, rows have no comments.
+ * Registering `database` registers it as `database-comment` (see
+ * `Database.companionTools`), so built-in comments work with no extra entry.
+ * It is not page content: Blok hides it, and the views and exports skip it.
+ * A host `comments` hook in the database config replaces it.
  */
 export declare class DatabaseComment implements BlockTool {
   static isReadOnlySupported?: boolean;

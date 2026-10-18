@@ -9,6 +9,8 @@ export interface ShapeQuery {
   id?: string;
   data?: Record<string, unknown>;
   children?: ShapeQuery[];
+  /** The children appear in this order, with any other children between them. */
+  loose?: boolean;
   count?: number;
 }
 
@@ -38,6 +40,12 @@ const matches = (doc: OutputData, block: OutputBlockData, q: ShapeQuery): boolea
   const kids = childrenOf(doc, block);
   // `count` repeats one query over a run of consecutive children.
   const wanted = q.children.flatMap((child) => new Array<ShapeQuery>(child.count ?? 1).fill({ ...child, count: 1 }));
+
+  if (q.loose === true) {
+    const found = kids.reduce((n, kid) => (n < wanted.length && matches(doc, kid, wanted[n]) ? n + 1 : n), 0);
+
+    return found === wanted.length;
+  }
 
   return wanted.length === kids.length && wanted.every((child, i) => matches(doc, kids[i], child));
 };

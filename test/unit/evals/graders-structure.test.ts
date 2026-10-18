@@ -36,6 +36,15 @@ describe('structural graders', () => {
     expect(shape('three paras', { type: 'toggle', children: [{ type: 'paragraph', count: 3 }] }).check(input(toggle)).pass).toBe(false);
   });
 
+  it('shape with loose children allows other children between, in order', () => {
+    const loose = (ids: string[]) => shape('loose', { type: 'toggle', loose: true, children: ids.map(id => ({ type: 'paragraph', id })) });
+
+    expect(loose(['b']).check(input(toggle)).pass).toBe(true);
+    expect(loose(['a', 'b']).check(input(toggle)).pass).toBe(true);
+    expect(loose(['b', 'a']).check(input(toggle)).pass).toBe(false);
+    expect(loose(['a', 'a']).check(input(toggle)).pass).toBe(false);
+  });
+
   it('sequence finds consecutive root types', () => {
     const final = doc([
       { id: 'h', type: 'header', data: { text: 'Plan', level: 2 } },

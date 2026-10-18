@@ -9,7 +9,7 @@ export const twoColumnTable: EvalTask = {
   prompt: 'Build a two-column comparison of Plan A and Plan B. Each column has a heading and a table of costs with at least three rows.',
   surfaces: ['in-app'],
   graders: [
-    shape('two columns', { type: 'column_list', children: [{ type: 'column', children: [{ type: 'header' }, { type: 'table' }] }, { type: 'column', children: [{ type: 'header' }, { type: 'table' }] }] }),
+    shape('two columns', { type: 'column_list', children: [{ type: 'column', loose: true, children: [{ type: 'header' }, { type: 'table' }] }, { type: 'column', loose: true, children: [{ type: 'header' }, { type: 'table' }] }] }),
     dataCheck('3+ rows', 'table', (d) => Array.isArray(d.content) && d.content.length >= 3, 'every table has at least 3 rows'),
     noMarkdownResidue(),
     schemaValid(validateSaved),

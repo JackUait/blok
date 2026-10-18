@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openJsonSession } from '../../agent/harness';
+import { describeContract } from '../../../../src/shared/agent/describe';
+import { nodeContract, openJsonSession } from '../../agent/harness';
 
 const seed = { blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: 'call Ana' }] } }] };
 
@@ -97,6 +98,14 @@ describe('describe({ tool }) given a command name', () => {
     } finally {
       session.close();
     }
+  });
+
+  it('a registered tool with that name still wins', () => {
+    const contract = nodeContract();
+    const tool = { ...contract.manifest.blocks[0], name: 'block.convert' };
+    const clash = { ...contract, manifest: { ...contract.manifest, blocks: [...contract.manifest.blocks, tool] } };
+
+    expect(describeContract(clash, { tool: 'block.convert' })).toMatchObject({ tool: { name: 'block.convert' } });
   });
 
   it('block.convert says the text carries over and how to reach a variant', () => {

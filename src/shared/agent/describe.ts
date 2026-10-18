@@ -10,7 +10,9 @@ export const describeContract = (
 ): AgentContract | ContractSlice => {
   // Models often pass a command name as tool; answer it rather than spend another call.
   const commandName = query.command
-    ?? (query.tool !== undefined && contract.commands.some(entry => entry.name === query.tool) ? query.tool : undefined);
+    ?? (query.tool !== undefined
+      && !contract.manifest.blocks.some(entry => entry.name === query.tool)
+      && contract.commands.some(entry => entry.name === query.tool) ? query.tool : undefined);
 
   if (commandName !== undefined) {
     const command = contract.commands.find(entry => entry.name === commandName);

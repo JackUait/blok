@@ -135,6 +135,23 @@ export const buildDocumentView = (
   };
 };
 
+/** Outline rows for the given ids, in reading order; at most `limit` of them. */
+export const viewRows = (
+  snap: DocSnapshot,
+  ids: ReadonlySet<string>,
+  ctx: ViewContext,
+  limit: number
+): { rows: ViewBlock[]; more: number } => {
+  const order = contentOrder(snap, null, ctx).filter(item => ids.has(item.id));
+  const rows = order.slice(0, limit).flatMap(({ id, depth }) => {
+    const block = snap.get(id);
+
+    return block === undefined ? [] : [viewBlock(snap, block, depth, {}, ctx)];
+  });
+
+  return { rows, more: Math.max(0, order.length - limit) };
+};
+
 export const findBlocks = (
   snap: DocSnapshot,
   args: { text?: string; type?: string; rootId?: string; limit?: number },

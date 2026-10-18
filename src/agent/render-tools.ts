@@ -61,10 +61,12 @@ export const COMMON_COMMANDS: readonly string[] = [
   'text.format', 'block.convert', 'doc.setTitle', 'doc.setIcon',
 ];
 
+const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks as they now read, so you can check your work without blok_read.';
+
 const DESCRIPTIONS: Record<AgentToolName, string> = {
   blok_read: 'Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.',
   blok_describe: 'Look up what you can do. With no arguments it lists tools and commands. Pass { tool } or { command } to get the argument schema.',
-  blok_execute: 'Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. Call blok_describe for a command\'s arguments.',
+  blok_execute: `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. Call blok_describe for a command's arguments. ${RESULT_SHOWS_BLOCKS}`,
 };
 
 const readInput = (contract: AgentContract): Schema => {
@@ -152,7 +154,7 @@ const mixedExecuteInput = (contract: AgentContract): Schema => {
 const mixedExecuteDescription = (contract: AgentContract): string => {
   const common = contract.commands.filter(entry => entry.available && isCommon(entry)).map(entry => entry.name);
 
-  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments.`;
+  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments. ${RESULT_SHOWS_BLOCKS}`;
 };
 
 const assertWithinLimits = (input: Schema): void => {

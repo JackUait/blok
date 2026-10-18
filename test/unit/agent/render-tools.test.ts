@@ -540,6 +540,14 @@ describe('renderAgentTools mixed', () => {
     expect(execute.description).toContain('block.insert');
     expect(execute.description).toContain('blok_describe');
   });
+
+  it('tells the model the result already shows the changed blocks, so it need not read to check', () => {
+    for (const schema of ['envelope', 'mixed'] as const) {
+      const execute = byName(renderAgentTools(makeContract(), { format: 'anthropic', schema }), 'blok_execute');
+
+      expect(execute.description, schema).toMatch(/result.*blocks.*without blok_read|no need to call blok_read/i);
+    }
+  });
 });
 
 describe('renderAgentTools MCP', () => {

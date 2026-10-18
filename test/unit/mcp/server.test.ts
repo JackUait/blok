@@ -150,6 +150,18 @@ describe('assembleMcp', () => {
     expect(server.tools).toEqual(listMcpTools(contracts.stored, { schema: 'mixed', handleIdleMs: 600_000 }));
   });
 
+  it('says blok_list_documents query matches ids and titles, so a model does not search text with it and list again', () => {
+    const list = listMcpTools(buildMcpContracts({ pageTitles: 'off' }).stored, { schema: 'mixed', handleIdleMs: 600_000 })
+      .find((tool) => tool.name === 'blok_list_documents');
+    const field = (value: unknown, key: string): unknown =>
+      typeof value === 'object' && value !== null && key in value ? (value as Record<string, unknown>)[key] : undefined;
+    const found = field(field(field(list?.inputSchema, 'properties'), 'query'), 'description');
+    const description = typeof found === 'string' ? found : '';
+
+    expect(description).toMatch(/id or title/i);
+    expect(description).toMatch(/not .*text/i);
+  });
+
   it('wires the host authorizer with the principal, document and write intent', async () => {
     const authorize = vi.fn<NonNullable<BlokMcpOptions['authorize']>>(async () => true);
     const server = assemble({ authorize });

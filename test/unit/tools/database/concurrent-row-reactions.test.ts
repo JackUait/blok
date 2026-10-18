@@ -4,6 +4,7 @@ import { DocumentStore } from '../../../../src/components/modules/yjs/document-s
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { DatabaseRowData, RowReactions } from '../../../../src/tools/database/types';
+import { rowReactions } from '../../../../src/tools/database/row-reactions';
 import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
 
 /**
@@ -34,10 +35,15 @@ const sync = (a: DocumentStore, b: DocumentStore): void => {
 const rowData = (store: DocumentStore): DatabaseRowData =>
   (store.toJSON().find((block) => block.id === 'row1')?.data ?? {}) as DatabaseRowData;
 
-/** The row tool as each peer has it, loaded from that peer's document. */
+/**
+ * The row tool as each peer has it, loaded from that peer's document. Writes
+ * what flushBlockDataWrites writes: every top-level key the save emits, one
+ * key at a time, and deletes a reaction key the save dropped.
+ */
 const react = (store: DocumentStore, userId: string, emoji: string, at: number | null): void => {
+  const before = rowData(store);
   const tool = new DatabaseRowTool({
-    data: rowData(store),
+    data: before,
     config: {},
     api: {} as API,
     readOnly: false,
@@ -45,17 +51,22 @@ const react = (store: DocumentStore, userId: string, emoji: string, at: number |
   } as BlockToolConstructorOptions<DatabaseRowData>);
 
   tool.updateReaction({ userId, emoji, at });
-  store.updateBlockData('row1', 'reactions', tool.save(document.createElement('div')).reactions);
+  const saved = tool.save(document.createElement('div')) as Record<string, unknown>;
+
+  Object.entries(saved).forEach(([key, value]) => store.updateBlockData('row1', key, value));
+  Object.keys(before).filter((key) => !(key in saved)).forEach((key) => store.updateBlockData('row1', key, undefined));
 };
 
-const reactionsOf = (store: DocumentStore): RowReactions | undefined => rowData(store).reactions;
+const reactionsOf = (store: DocumentStore): RowReactions => rowReactions(rowData(store));
 
 describe('database-row — two peers reacting to one card', () => {
   let storeA: DocumentStore;
   let storeB: DocumentStore;
 
-  const start = (reactions?: RowReactions): void => {
-    storeA.fromJSON([{ id: 'row1', type: 'database-row', data: { position: 'a0', properties: { title: 'Post' }, ...(reactions !== undefined ? { reactions } : {}) } }]);
+  const start = (reactions: RowReactions = {}): void => {
+    const keys = Object.fromEntries(Object.entries(reactions).map(([userId, own]) => [`reactions:${userId}`, own]));
+
+    storeA.fromJSON([{ id: 'row1', type: 'database-row', data: { position: 'a0', properties: { title: 'Post' }, ...keys } }]);
     storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
   };
 
@@ -88,6 +99,17 @@ describe('database-row — two peers reacting to one card', () => {
     sync(storeA, storeB);
 
     expect(reactionsOf(storeA)).toEqual({ u0: { '👍': 1 }, u1: { '🎉': 2 }, u2: { '🎉': 3 } });
+    expect(reactionsOf(storeB)).toEqual(reactionsOf(storeA));
+  });
+
+  it('keeps both reactions when two people give a row its very first reaction at once', () => {
+    start();
+
+    react(storeA, 'u1', '👍', 1);
+    react(storeB, 'u2', '🎉', 2);
+    sync(storeA, storeB);
+
+    expect(reactionsOf(storeA)).toEqual({ u1: { '👍': 1 }, u2: { '🎉': 2 } });
     expect(reactionsOf(storeB)).toEqual(reactionsOf(storeA));
   });
 

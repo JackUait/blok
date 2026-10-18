@@ -538,8 +538,7 @@ export interface DatabasePeople {
 
 /**
  * Reactions by user id, then emoji, to when that user reacted (epoch ms).
- * Keyed by user, not by emoji, so each person writes only their own key and
- * two people reacting at once both keep their reaction.
+ * Saved on the row as one `reactions:<user id>` key per person.
  */
 export type RowReactions = Record<string, Record<string, number>>;
 
@@ -625,10 +624,10 @@ export interface DatabaseRowData extends BlockToolData {
   /** Date reminders by date property id. A map, so reminders on two date properties merge. */
   reminders?: Record<string, DateReminder>;
   /**
-   * Feed reactions. Kept as `{}` once it exists, so a peer's concurrent first
-   * reaction is not lost with a deleted map.
+   * Feed reactions, one key per person: `reactions:<user id>` to that
+   * person's emoji and reaction times. Absent for someone with no reaction.
    */
-  reactions?: RowReactions;
+  [reactionKey: `reactions:${string}`]: Record<string, number>;
 }
 
 // ─── View config ───

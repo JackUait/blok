@@ -409,4 +409,35 @@ describe('buildAgentContract', () => {
 
     expect(second.revision).toBe(first.revision);
   });
+
+  it("names the convert targets' variant data on block.convert's type", () => {
+    const statics = block().statics;
+    const convertCore: CoreCommandTable = {
+      'block.convert': {
+        argsSchema: { type: 'object', properties: { id: { type: 'string' }, type: { type: 'string' }, data: { type: 'object' } } },
+        readOnly: false, runtime: 'any', summary: 'Convert.',
+      },
+    };
+    const contract = buildAgentContract(buildToolManifest(snapshot({
+      blocks: [
+        block({ name: 'paragraph', title: 'Text', statics: { ...statics, convertible: { import: true, export: true }, toolbox: [{ name: 'paragraph', title: 'Text' }] } }),
+        block({
+          name: 'todo', title: 'To-do', statics: {
+            ...statics, convertible: { import: true, export: true },
+            toolbox: [{ name: 'open', title: 'Open', data: { state: 'open' } }, { name: 'done', title: 'Done', data: { state: 'done', size: 2 } }],
+          },
+        }),
+        block({ name: 'grid', title: 'Grid', statics: { ...statics, toolbox: [{ name: 'wide', title: 'Wide', data: { columns: 4 } }] } }),
+      ],
+    })), convertCore, where);
+    const args = commandFor(contract, 'block.convert').args;
+    const properties = isRecordLike(args.properties) ? args.properties : {};
+    const type = isRecordLike(properties.type) ? properties.type : {};
+
+    expect(type.description).toBe('A block tool. A variant is its tool plus data: todo {state: "open"|"done", size: 2}.');
+    expect(contract.manifest.blocks.find(entry => entry.name === 'todo')?.variants).toHaveLength(2);
+  });
 });
+
+const isRecordLike = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -91,6 +91,15 @@ describe('runTrial', () => {
     expect(record.log).toEqual([]);
   });
 
+  it('keeps the final answer text, so a failed answer grader can be read back', async () => {
+    const record = await runTrial({
+      task: task([]), surface: 'in-app', open, trial: 0, client: { create: vi.fn(async () => reply('h1 and h3')) },
+      model: 'm', effort: 'high', schema: 'shipped', dispatch: new TokenBudget(1000),
+    });
+
+    expect(record.answer).toBe('h1 and h3');
+  });
+
   it('turns a surface that fails to open into an error', async () => {
     const record = await runTrial({
       task: task([]), surface: 'in-app', open: async () => { throw new Error('server did not start'); }, trial: 0,
@@ -136,7 +145,7 @@ describe('assertMeasured', () => {
 
   const record = (outcome: 'pass' | 'fail' | 'error', errorDetail?: string) => ({
     taskId: 't', surface: 'mcp-live' as const, trial: 0, outcome, graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], steps: [], wallMs: 0, errorDetail,
+    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], answer: '', steps: [], wallMs: 0, errorDetail,
   });
 
   it('fails the run on an error trial, naming its detail, so it cannot pass silently', () => {

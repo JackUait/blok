@@ -41,6 +41,8 @@ export interface TrialRecord {
   executeErrors: Array<NonNullable<ExecuteResult['error']>>;
   /** The commands the model ran, with their arguments. */
   log: LogEntry[];
+  /** The model's final text. */
+  answer: string;
   steps: LoopStep[];
   wallMs: number;
   errorDetail?: string;
@@ -48,7 +50,7 @@ export interface TrialRecord {
 
 const errorRecord = (o: { task: EvalTask; surface: Surface; trial: number }, error: unknown): TrialRecord => ({
   taskId: o.task.id, surface: o.surface, trial: o.trial, outcome: 'error', graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], steps: [], wallMs: 0,
+  cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], log: [], answer: '', steps: [], wallMs: 0,
   errorDetail: error instanceof Error ? (error.stack ?? error.message) : String(error),
 });
 
@@ -100,6 +102,7 @@ export const runTrial = async (o: {
       graders, turns: loop.turns, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens,
       cacheReadTokens: loop.cacheReadTokens, cacheWriteTokens: loop.cacheWriteTokens, toolCalls: loop.toolCalls, describeQueries: loop.describeQueries, steps: loop.steps, wallMs,
       log: end.log,
+      answer: loop.answer,
       executeErrors: end.results.flatMap((r) => (r.ok || r.error === undefined ? [] : [r.error])),
       errorDetail: threw instanceof Error ? (threw.stack ?? threw.message) : (loop.detail ?? (loop.stop === 'done' ? undefined : loop.stop)),
     };

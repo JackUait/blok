@@ -61,13 +61,10 @@ export const COMMON_COMMANDS: readonly string[] = [
   'text.format', 'block.convert', 'doc.setTitle', 'doc.setIcon',
 ];
 
-// Shown once here: the per-id schema text stays short to fit the mixed budget.
-const REF_HINT = 'Give a command "ref": "intro" to name the block it creates; later commands in the same batch use "$intro" as its id.';
-
 const DESCRIPTIONS: Record<AgentToolName, string> = {
   blok_read: 'Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.',
-  blok_describe: 'Look up what you can do. With no arguments it lists block types and commands. Pass { tool } with a block type, e.g. "header", for its data, or { command } with a command name, e.g. "block.update", for its arguments.',
-  blok_execute: `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. ${REF_HINT} Call blok_describe for a command's arguments.`,
+  blok_describe: 'Look up what you can do. With no arguments it lists tools and commands. Pass { tool } or { command } to get the argument schema.',
+  blok_execute: 'Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. Call blok_describe for a command\'s arguments.',
 };
 
 const readInput = (contract: AgentContract): Schema => {
@@ -80,10 +77,7 @@ const readInput = (contract: AgentContract): Schema => {
 
 const describeInput = (): Schema => ({
   type: 'object',
-  properties: {
-    tool: { type: 'string', description: 'A block type, e.g. "header".' },
-    command: { type: 'string', description: 'A command name, e.g. "block.update".' },
-  },
+  properties: { tool: { type: 'string' }, command: { type: 'string' } },
   additionalProperties: false,
 });
 
@@ -158,7 +152,7 @@ const mixedExecuteInput = (contract: AgentContract): Schema => {
 const mixedExecuteDescription = (contract: AgentContract): string => {
   const common = contract.commands.filter(entry => entry.available && isCommon(entry)).map(entry => entry.name);
 
-  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. ${REF_HINT} The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments.`;
+  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments.`;
 };
 
 const assertWithinLimits = (input: Schema): void => {

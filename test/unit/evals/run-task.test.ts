@@ -74,6 +74,22 @@ describe('runTrial', () => {
     expect(SYSTEM_PROMPT).not.toMatch(/blok_|read the document first/i);
   });
 
+  it('keeps the error of every failed blok_execute, so a run shows why the model retried', async () => {
+    const failing: OpenSurface = async (t, schema) => ({
+      ...(await open(t, schema)),
+      finish: async () => ({
+        final: { blocks: [] }, log: [],
+        results: [{ ok: true }, { ok: false, error: { code: 'INVALID_ARGS', message: 'marks.link must be an object', commandIndex: 0 } }],
+      }),
+    });
+    const record = await runTrial({
+      task: task([]), surface: 'in-app', open: failing, trial: 0, client: { create: vi.fn(async () => reply('done')) },
+      model: 'm', effort: 'high', schema: 'shipped', dispatch: new TokenBudget(1000),
+    });
+
+    expect(record.executeErrors).toEqual([{ code: 'INVALID_ARGS', message: 'marks.link must be an object', commandIndex: 0 }]);
+  });
+
   it('turns a surface that fails to open into an error', async () => {
     const record = await runTrial({
       task: task([]), surface: 'in-app', open: async () => { throw new Error('server did not start'); }, trial: 0,
@@ -119,7 +135,7 @@ describe('assertMeasured', () => {
 
   const record = (outcome: 'pass' | 'fail' | 'error', errorDetail?: string) => ({
     taskId: 't', surface: 'mcp-live' as const, trial: 0, outcome, graders: {}, turns: 0, inputTokens: 0, outputTokens: 0,
-    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], steps: [], wallMs: 0, errorDetail,
+    cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], executeErrors: [], steps: [], wallMs: 0, errorDetail,
   });
 
   it('fails the run on an error trial, naming its detail, so it cannot pass silently', () => {

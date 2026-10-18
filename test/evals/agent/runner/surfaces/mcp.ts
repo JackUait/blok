@@ -63,7 +63,11 @@ const executeResultOf = (text: string): ExecuteResult => {
         : []),
     }),
     ...(isRecord(error) && typeof error.code === 'string' && {
-      error: { code: error.code, ...(typeof error.commandIndex === 'number' && { commandIndex: error.commandIndex }) },
+      error: {
+        code: error.code,
+        ...(typeof error.message === 'string' && { message: error.message }),
+        ...(typeof error.commandIndex === 'number' && { commandIndex: error.commandIndex }),
+      },
     }),
     ...(isRecord(delivery) && typeof delivery.durable === 'boolean' && typeof delivery.pending === 'boolean' && {
       delivery: {

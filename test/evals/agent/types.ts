@@ -7,7 +7,7 @@ export interface ExecuteResult {
   ok: boolean;
   changed?: ChangedSet;
   warnings?: Array<{ code: string; blockId?: string }>;
-  error?: { code: string; commandIndex?: number };
+  error?: { code: string; message?: string; commandIndex?: number };
   delivery?: { durable: boolean; pending: boolean; serverSequence: string | null; savedVersion: string | null };
 }
 export interface Observed {

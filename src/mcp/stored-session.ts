@@ -25,12 +25,17 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
   // Unknown names do not count as writes; 01 answers them with UNKNOWN_COMMAND.
   const writes = (batch: AgentBatch): boolean => batch.commands.some((command) => readOnlyByName.get(command.name) === false);
 
-  const load = async (): Promise<{ agent: StoredAgent; version: string | null }> => {
+  const load = async (): Promise<{ agent: StoredAgent; version: string | null; missing: boolean }> => {
     const loaded = await input.source.load(input.documentId);
 
-    return { agent: input.createAgentSession(input.loadDocument(loaded.raw)), version: loaded.version };
+    return {
+      agent: input.createAgentSession(input.loadDocument(loaded.raw)),
+      version: loaded.version,
+      missing: loaded.missing === true,
+    };
   };
-  const state: { agent: StoredAgent; version: string | null; stale: boolean } = { ...(await load()), stale: false };
+  const first = await load();
+  const state: { agent: StoredAgent; version: string | null; stale: boolean } = { agent: first.agent, version: first.version, stale: false };
 
   const reload = async (): Promise<void> => {
     const loaded = await load();
@@ -45,6 +50,7 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
     write: input.write,
     durability: 'saved-on-execute',
     contractRevision: input.contract.revision,
+    exists: !first.missing,
     read: async (args) => {
       if (state.stale) {
         await reload();

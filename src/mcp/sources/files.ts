@@ -262,7 +262,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
         // Throws for a link to a missing file, which a save would refuse.
         await writeTargetOf(documentId, path);
 
-        return { raw: { blocks: [] }, version: null };
+        return { raw: { blocks: [] }, version: null, missing: true };
       }
       await assertExactName(documentId, path);
       const raw: unknown = (() => {

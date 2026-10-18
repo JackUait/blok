@@ -74,6 +74,7 @@ Pick a source with `--source`.
 **`--source endpoint:<url>`** reuses the document endpoint contract the sync service already uses.
 
 - Load: `GET <url>/<doc>`. Save: `PUT <url>/<doc>` with `Blok-Doc-Version`.
+- A document the host never saved (`null`, or `{"data": null}`) opens empty, and `blok_open` reports `exists: false`. So does a missing file under `files:`. The first save creates it.
 - `BLOK_DOC_ENDPOINT_AUTH` is sent as the `Authorization` header. It opens every document, so run this source only from a trusted backend.
 - Answer a stale `PUT` with `409`. Without it, saves are last-writer-wins.
 - `--source-list <url>` turns on `blok_list_documents`. The route contract:

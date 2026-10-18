@@ -73,13 +73,13 @@ export const createEndpointSource = (
       const body = parseJson(await textOf(response), `for ${documentId}`);
 
       if (body === null) {
-        return { raw: { blocks: [] }, version: null };
+        return { raw: { blocks: [] }, version: null, missing: true };
       }
       if (isRecord(body) && 'data' in body && !('blocks' in body)) {
         const version = typeof body.version === 'string' ? body.version : null;
 
         if (body.data === null) {
-          return { raw: { blocks: [] }, version };
+          return { raw: { blocks: [] }, version, missing: true };
         }
         assertDocumentShape(body.data, documentId);
 

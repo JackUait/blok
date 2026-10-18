@@ -22,6 +22,8 @@ export interface HandleSession {
   readonly write: boolean;
   readonly durability: Durability;
   readonly contractRevision: string;
+  /** Stored mode only: false when the open found no document and started an empty one. */
+  readonly exists?: boolean;
   read(args: ViewArgs): Promise<DocumentView>;
   describe(query: { tool?: string; command?: string }): AgentContract | ContractSlice;
   execute(batch: AgentBatch): Promise<McpExecuteResult>;

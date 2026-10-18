@@ -158,6 +158,7 @@ export const createToolDispatcher = (
         durability: session.durability,
         expiresAfterIdleMs: deps.handleIdleMs,
         contractRevision: session.contractRevision,
+        ...(session.exists !== undefined && { exists: session.exists }),
         ...(view !== undefined && { view }),
       });
     } catch (thrown) {

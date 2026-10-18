@@ -68,6 +68,24 @@ describe('stored mode through the MCP dispatcher', () => {
     expect((file('doc') as { blocks: Array<{ id: string }> }).blocks.map((block) => block.id).sort()).toEqual(['a', 'b']);
   });
 
+  it('says whether blok_open found the document or opened a new empty one', async () => {
+    writeFileSync(join(dir, 'saved.json'), JSON.stringify({ blocks: [] }));
+    const found = await mcp.dispatch('blok_open', { documentId: 'saved' }, caller);
+    const fresh = await mcp.dispatch('blok_open', { documentId: 'current' }, caller);
+
+    expect(found.structuredContent).toMatchObject({ exists: true });
+    expect(fresh.structuredContent).toMatchObject({ exists: false });
+  });
+
+  it('describes exists on blok_open and sends a model without an id to blok_list_documents', () => {
+    const open = mcp.tools.find((tool) => tool.name === 'blok_open');
+    const success = (open?.outputSchema.oneOf as Array<{ allOf?: Array<{ properties?: Record<string, unknown> }> }> | undefined)?.[0];
+    const properties = success?.allOf?.[0]?.properties;
+
+    expect(properties?.exists).toEqual({ type: 'boolean' });
+    expect(open?.description).toMatch(/new, empty document.*blok_list_documents/);
+  });
+
   it('writes the page title into OutputData.title (01 D-1)', async () => {
     const handle = await openWrite('doc');
 

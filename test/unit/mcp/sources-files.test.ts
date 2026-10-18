@@ -93,8 +93,8 @@ describe('files source', () => {
     }
   });
 
-  it('loads a missing document as empty with no version', async () => {
-    expect(await createFilesSource(dir).load('fresh')).toEqual({ raw: { blocks: [] }, version: null });
+  it('loads a missing document as empty with no version, marked missing', async () => {
+    expect(await createFilesSource(dir).load('fresh')).toEqual({ raw: { blocks: [] }, version: null, missing: true });
   });
 
   it('loads stored data unchanged with the SHA-256 of its file bytes', async () => {

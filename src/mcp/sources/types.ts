@@ -3,6 +3,8 @@ import { surfaceError } from '../errors';
 export interface LoadedDocument {
   raw: unknown;
   version: string | null;
+  /** No document has this id yet: raw is the empty document a first save creates. */
+  missing?: true;
 }
 
 export interface SourceListing {

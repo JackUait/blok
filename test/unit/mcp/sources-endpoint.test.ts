@@ -187,9 +187,9 @@ describe('endpoint source', () => {
     expect(observed(0).headers.authorization).toBe(AUTH);
   });
 
-  const loadBodies: Array<{ label: string; body: unknown; raw: unknown; version: string | null }> = [
-    { label: 'null', body: null, raw: { blocks: [] }, version: null },
-    { label: 'an empty envelope', body: { data: null, version: '0' }, raw: { blocks: [] }, version: '0' },
+  const loadBodies: Array<{ label: string; body: unknown; raw: unknown; version: string | null; missing?: true }> = [
+    { label: 'null', body: null, raw: { blocks: [] }, version: null, missing: true },
+    { label: 'an empty envelope', body: { data: null, version: '0' }, raw: { blocks: [] }, version: '0', missing: true },
     {
       label: 'a bare document',
       body: { blocks: [{ id: 'a', type: 'paragraph', data: { text: 'x' } }] },
@@ -198,10 +198,10 @@ describe('endpoint source', () => {
     },
   ];
 
-  it.each(loadBodies)('loads $label', async ({ body, raw, version }) => {
+  it.each(loadBodies)('loads $label', async ({ body, raw, version, missing }) => {
     answer = (_request, response) => json(response, 200, body);
 
-    expect(await createEndpointSource({ url: base, endpointAuth: AUTH }).load('d')).toEqual({ raw, version });
+    expect(await createEndpointSource({ url: base, endpointAuth: AUTH }).load('d')).toEqual({ raw, version, ...(missing && { missing }) });
   });
 
   it('percent-encodes the GET document id', async () => {

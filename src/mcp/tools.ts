@@ -41,7 +41,7 @@ export const listMcpTools = (
   return [
     {
       name: 'blok_list_documents',
-      description: 'Lists Blok documents you may open. Returns supported: false when the document source cannot list.',
+      description: 'Lists Blok documents you may open. Call it first when you were not given a document id. Returns supported: false when the document source cannot list.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -72,6 +72,7 @@ export const listMcpTools = (
       name: 'blok_open',
       description: [
         'Opens a Blok document and returns a handle for blok_read, blok_describe, blok_execute and blok_close.',
+        'In stored mode an unknown documentId opens a new, empty document (exists: false), so take the id of an existing document from blok_list_documents.',
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
         'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
@@ -99,6 +100,7 @@ export const listMcpTools = (
           durability: { enum: ['acknowledged', 'best-effort', 'saved-on-execute'] },
           expiresAfterIdleMs: { type: 'integer' },
           contractRevision: { type: 'string' },
+          exists: { type: 'boolean' },
           view: { type: 'object' },
         },
       }),

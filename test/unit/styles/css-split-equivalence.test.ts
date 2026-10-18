@@ -857,6 +857,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_MAP_PLACE_BYTES = 3_031;
     // database.css: the Place editor's name chip and its × (research/20 §1d).
     const DATABASE_PLACE_CHIP_BYTES = 138;
+    // database.css: the linked view's deleted-source banner, "Link a data source" button and "↗ <source>" title (research 20 §2).
+    const DATABASE_LINKED_VIEW_BYTES = 904;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -956,7 +958,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BUILT_IN_COMMENTS_BYTES
       + DATABASE_FEED_COMMENTS_BYTES
       + DATABASE_MAP_PLACE_BYTES
-      + DATABASE_PLACE_CHIP_BYTES;
+      + DATABASE_PLACE_CHIP_BYTES
+      + DATABASE_LINKED_VIEW_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

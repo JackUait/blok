@@ -39,6 +39,8 @@ import type { CommentBadges } from './database-comment-badge';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
+import { openLinkedPicker } from './database-linked-picker';
+import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, sortRows } from './database-query';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { openAutofillSetup } from './database-autofill-setup';
@@ -106,7 +108,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconUpload } from '../../components/icons';
+import { IconArrowDiagonal, IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconUpload } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -245,7 +247,7 @@ const ROW_CONTROL_SELECTOR = [
 ].join(', ');
 
 /**
- * Insert-time hint from the "Linked view of database" toolbox entry: show
+ * Insert-time hint from the "Linked view of data source" toolbox entry: show
  * the source picker. Never saved: a linked view left unpicked saves as an
  * ordinary empty database.
  */
@@ -361,8 +363,12 @@ export class DatabaseTool implements BlockTool {
   private source: DatabaseSourceRef | undefined;
   /** Linked database: the schema it saves, a stand-in older clients can read. */
   private stubSchema: PropertyDefinition[];
-  /** A new "Linked view of database" that has not picked its source yet. */
+  /** A new "Linked view of data source" that has not picked its source yet. */
   private linkPicker: boolean;
+  /** The open "New database" / "New view" panel of a linked view. */
+  private sourcePicker: DatabasePanel | null = null;
+  /** The source's name as last read: a deleted source still shows it. */
+  private lastSourceTitle = '';
   /** Rows whose sub-item toggle is open. This person's, for this session. */
   private readonly expandedSubItems = new Set<string>();
   /** Template rows, by position. Kept out of the model's rows. */
@@ -678,42 +684,160 @@ export class DatabaseTool implements BlockTool {
 
     if (this.destroyed || this.source === undefined || databaseId !== this.source.databaseId) return;
     queueMicrotask(() => {
-      if (!this.destroyed && this.sourceMissing()) this.rerenderView();
+      if (this.destroyed || !this.sourceMissing()) return;
+      this.rebuildTabBar();
+      this.rerenderView();
     });
   };
 
-  /** "Linked view of database": the databases of this document to show. */
+  /** A linked view with no source yet: the button that opens the source panel. */
   private renderSourcePicker(): HTMLDivElement {
     const picker = document.createElement('div');
-    const label = document.createElement('div');
+    const button = document.createElement('button');
 
     picker.setAttribute('data-blok-database-source-picker', '');
-    picker.setAttribute('role', 'group');
-    label.setAttribute('data-blok-database-source-picker-label', '');
-    label.textContent = this.api.i18n.t('tools.database.linkedPickSource');
-    picker.appendChild(label);
-    const sources = this.documentDatabases().filter((database) => database.id !== this.block.id && !this.isLinkedBlock(database.id));
-
-    for (const database of sources) {
-      const option = document.createElement('button');
-
-      option.type = 'button';
-      option.setAttribute('data-database-id', database.id);
-      option.innerHTML = IconDatabase;
-      option.append(database.title === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : database.title);
-      option.disabled = this.readOnly;
-      option.addEventListener('click', () => this.linkTo(database.id));
-      picker.appendChild(option);
-    }
-    if (sources.length === 0) {
-      const empty = document.createElement('div');
-
-      empty.setAttribute('data-blok-database-source-picker-empty', '');
-      empty.textContent = this.api.i18n.t('tools.database.linkedNoSources');
-      picker.appendChild(empty);
-    }
+    button.type = 'button';
+    button.textContent = this.api.i18n.t('tools.database.linkedLinkSource');
+    button.disabled = this.readOnly;
+    button.addEventListener('click', () => this.openSourcePicker());
+    picker.appendChild(button);
 
     return picker;
+  }
+
+  /** "Linked view of data source" (research 20 §2a): pick a source, then the first view. */
+  private openSourcePicker(): void {
+    const anchor = this.titleRowElement ?? this.element;
+
+    if (this.readOnly || this.sourcePicker !== null || anchor === null) return;
+
+    this.sourcePicker = openLinkedPicker({
+      anchor,
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      sources: () => this.pickerSources(),
+      views: (sourceId) => this.sourceViews(sourceId).filter((view) => view.type !== 'form' && view.type !== 'dashboard'),
+      newEmpty: (title) => this.unlinkPicker(title),
+      pickSource: (databaseId) => this.linkTo(databaseId),
+      newTableView: () => {
+        const view = this.model.addView(DATABASE_DEFAULT_TEXT.viewTypeTable, 'table');
+
+        this.replaceLinkedView({ ...view, position: 'a0' });
+      },
+      copyView: (view) => this.replaceLinkedView({ ...structuredClone(view), id: nanoid(), position: 'a0' }),
+      onClose: () => {
+        this.sourcePicker = null;
+      },
+    });
+  }
+
+  /** The databases a linked view can show, each with the page it sits on. */
+  private pickerSources(): LinkedPickerSource[] {
+    const root = this.element?.closest<HTMLElement>(`[${DATA_ATTR.editor}]`) ?? null;
+    // The title may be mounted outside the editor; then the page reads "Untitled".
+    const pageTitle = root?.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent?.trim() ?? '';
+    const untitled = this.api.i18n.t('tools.database.relationUntitled');
+
+    return this.documentDatabases()
+      .filter((database) => database.id !== this.block.id && !this.isLinkedBlock(database.id))
+      .map((database) => {
+        const rowId = this.nearestRow(this.api.blocks.getById(database.id)?.parentId, new Set());
+        const live: DatabaseRowData[] = [];
+
+        if (rowId !== undefined) this.api.blocks.getById(rowId)?.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+        const parent = rowId === undefined ? pageTitle : live[0]?.title?.trim() ?? '';
+
+        return { id: database.id, title: this.databaseTitleOf(database.id) ?? database.title, parent: parent === '' ? untitled : parent };
+      });
+  }
+
+  /** Another database's name as typed now, else as saved. */
+  private databaseTitleOf(databaseId: string): string | undefined {
+    const block = this.api.blocks.getById(databaseId);
+    const titles: string[] = [];
+
+    block?.call('readTitle', { receive: (title: string) => titles.push(title) });
+    const title: unknown = titles[0] ?? block?.preservedData.title;
+
+    return typeof title === 'string' ? title : undefined;
+  }
+
+  /** "New empty data source": this block stays an ordinary database, named after the search. */
+  private unlinkPicker(title: string): void {
+    if (this.readOnly || !this.linkPicker) return;
+    this.linkPicker = false;
+    if (title !== '') {
+      this.title = title;
+      if (this.titleElement !== null) {
+        this.titleElement.textContent = title;
+        DatabaseTool.syncTitleDirection(this.titleElement);
+      }
+      this.block.dispatchChange();
+    }
+    this.rerenderView();
+  }
+
+  /** The linked view's one view, picked on the "New view" page. */
+  private replaceLinkedView(view: DatabaseViewConfig): void {
+    if (this.readOnly || !this.linked) return;
+    this.model.replaceDefinition({ schema: this.model.getSchema(), views: [view] });
+    this.activeViewId = view.id;
+    this.block.dispatchChange();
+    this.rebuildTabBar();
+    this.rerenderView();
+  }
+
+  /**
+   * A linked view's title (research 20 §2b): "↗ <source name>", a link to
+   * the source, never editable. A deleted source keeps its last name, unlinked.
+   */
+  private paintLinkedTitle(): void {
+    const titleEl = this.titleElement;
+
+    if (titleEl === null || !this.linked || this.source === undefined) return;
+    const missing = this.sourceMissing();
+    const live = missing || this.source.documentId !== undefined ? undefined : this.databaseTitleOf(this.source.databaseId);
+
+    if (live !== undefined) this.lastSourceTitle = live;
+    const name = this.lastSourceTitle.trim() !== '' ? this.lastSourceTitle : this.api.i18n.t('tools.database.relationUntitledDatabase');
+    const target = this.source.databaseId;
+    const tag = missing || this.source.documentId !== undefined ? 'span' : 'a';
+    const shown = titleEl.querySelector('[data-blok-database-linked-title]');
+
+    // Same name, same target: keep the DOM, so a redraw makes no title mutation.
+    if (shown?.localName === tag && shown.textContent?.trim() === name && shown.getAttribute('data-database-id') === target) return;
+    const label = document.createElement(tag);
+    const arrow = document.createElement('span');
+
+    titleEl.removeAttribute('contenteditable');
+    titleEl.style.cursor = 'default';
+    label.setAttribute('data-blok-database-linked-title', '');
+    label.setAttribute('data-database-id', target);
+    arrow.setAttribute('data-blok-database-linked-arrow', '');
+    arrow.innerHTML = IconArrowDiagonal;
+    label.append(arrow, name);
+    if (label instanceof HTMLAnchorElement) {
+      // No href: the source is a block of this page, reached by scrolling.
+      label.setAttribute('role', 'link');
+      label.tabIndex = 0;
+      const go = (): void => {
+        this.api.blocks.scrollToBlock?.(target, { select: false });
+        // WebKit does not focus a clicked link.
+        label.focus({ preventScroll: true });
+      };
+
+      label.addEventListener('click', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        go();
+      });
+      label.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        go();
+      });
+    }
+    titleEl.replaceChildren(label);
+    DatabaseTool.syncTitleDirection(titleEl);
   }
 
   private isLinkedBlock(blockId: string): boolean {
@@ -743,16 +867,27 @@ export class DatabaseTool implements BlockTool {
     this.rerenderView();
   }
 
-  private linkedFirstView(databaseId: string): DatabaseViewConfig {
+  /** The source's views: live from its tool, else from its saved data. */
+  private sourceViews(databaseId: string): DatabaseViewConfig[] {
     const live: DatabaseViewConfig[][] = [];
 
     this.api.blocks.getById(databaseId)?.call('readViews', { receive: (views: DatabaseViewConfig[]) => live.push(views) });
-    const sourceViews = live[0] ?? (this.api.blocks.getById(databaseId)?.preservedData)?.views ?? [];
+
+    return live[0] ?? (this.api.blocks.getById(databaseId)?.preservedData)?.views ?? [];
+  }
+
+  private linkedFirstView(databaseId: string): DatabaseViewConfig {
+    const sourceViews = this.sourceViews(databaseId);
     const first = sourceViews.find((view) => view.type === 'table') ?? sourceViews[0];
 
     return first === undefined
       ? { id: nanoid(), name: this.api.i18n.t('tools.database.viewTypeTable'), type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }
       : { ...structuredClone(first), id: nanoid(), position: 'a0' };
+  }
+
+  /** Read by a linked view: this database's name as typed now. */
+  readTitle(param: { receive: (title: string) => void }): void {
+    if (!this.destroyed) param.receive(this.linked ? this.title : this.titleElement?.textContent ?? this.title);
   }
 
   /** Read by a linked view being made: this database's views, to copy the first table view. */
@@ -938,13 +1073,18 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  /** Locked by the document, or by the host's permissions. */
+  /** Locked by the document, or by the host's permissions. A linked view also by its own "Lock views". */
   private structureLocked(): boolean {
-    return this.structureDenied || this.model.isDatabaseLocked();
+    return this.structureDenied || this.model.isDatabaseLocked() || this.viewsLocked();
+  }
+
+  /** A linked view's own lock, kept on its stand-in title property. Never the source's. */
+  private viewsLocked(): boolean {
+    return this.linked && this.stubSchema.some((property) => property.type === 'title' && property.databaseLocked === true);
   }
 
   private titleEditable(): boolean {
-    return !this.readOnly && !this.structureDenied;
+    return !this.readOnly && !this.structureDenied && !this.linked;
   }
 
   static get toolbox(): ToolboxConfig {
@@ -1143,6 +1283,7 @@ export class DatabaseTool implements BlockTool {
     this.offerDueTemplates();
     this.offerDueReminders();
     this.openLinkedRow();
+    if (this.linkPicker) this.openSourcePicker();
 
     if ((initialProjection || !hadRows) && this.model.getOrderedRows().length > 0) {
       this.rerenderView();
@@ -1196,7 +1337,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   save(_blockContent: HTMLElement): DatabaseData {
-    const currentTitle = this.titleElement?.textContent ?? this.title;
+    // A linked view's title element shows the source's name, not its own.
+    const currentTitle = this.linked ? this.title : this.titleElement?.textContent ?? this.title;
 
     return {
       ...structuredClone(this.unknown),
@@ -1224,6 +1366,7 @@ export class DatabaseTool implements BlockTool {
 
   destroy(): void {
     this.destroyed = true;
+    this.sourcePicker?.close();
     this.formPromptAbort?.abort();
     this.api.events.off(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.emit(DATABASE_GONE_EVENT, { databaseId: this.block.id });
@@ -1343,7 +1486,7 @@ export class DatabaseTool implements BlockTool {
     this.savedAutomations = structuredClone(data.automations);
     this.title = typeof data.title === 'string' ? data.title : '';
 
-    if (this.titleElement !== null && this.titleElement.textContent !== this.title) {
+    if (this.titleElement !== null && sourceRefOf(data) === undefined && this.titleElement.textContent !== this.title) {
       this.titleElement.textContent = this.title;
       DatabaseTool.syncTitleDirection(this.titleElement);
     }
@@ -2371,6 +2514,8 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     if (this.source?.databaseId === databaseId) {
+      // A source back from undo makes the view writable again.
+      this.rebuildTabBar();
       this.rerenderView({ keepDrawer: true });
 
       return;
@@ -2399,6 +2544,8 @@ export class DatabaseTool implements BlockTool {
     if (this.boardContainer === null) {
       return;
     }
+    // The source may have been renamed.
+    this.paintLinkedTitle();
 
     this.mountRows();
 
@@ -3103,6 +3250,8 @@ export class DatabaseTool implements BlockTool {
       api: this.api,
       // A locked database keeps its views: no add, rename, delete or reorder.
       readOnly: this.readOnly || this.structureLocked(),
+      // A linked view has no form (research 20 §2b).
+      ...(this.linked ? { hiddenViewTypes: ['form'] as ViewType[] } : {}),
     });
   }
 
@@ -3111,15 +3260,22 @@ export class DatabaseTool implements BlockTool {
   // ---------------------------------------------------------------------------
 
   private renderActiveView(): HTMLDivElement {
+    this.paintLinkedTitle();
     if (this.linkPicker) {
       return this.renderSourcePicker();
     }
     if (this.sourceMissing()) {
+      // Blok has no Trash: the source's rows went with it, so only the banner shows (research 20 §2e).
       const missing = document.createElement('div');
+      const icon = document.createElement('span');
+      const text = document.createElement('span');
 
       missing.setAttribute('data-blok-database-source-missing', '');
       missing.setAttribute('role', 'status');
-      missing.textContent = this.api.i18n.t('tools.database.linkedSourceMissing');
+      icon.setAttribute('data-blok-database-source-missing-icon', '');
+      icon.innerHTML = IconTrash;
+      text.textContent = this.api.i18n.t('tools.database.linkedSourceMissing');
+      missing.append(icon, text);
 
       return missing;
     }
@@ -4323,6 +4479,7 @@ export class DatabaseTool implements BlockTool {
       updateView: (changes) => this.updateActiveView(changes, context),
       setLayout: (type) => this.setActiveLayout(type),
       setLocked: (locked) => this.setDatabaseLocked(locked),
+      linked: () => owner.linked,
       duplicateView: () => this.duplicateView(this.activeViewId),
       deleteView: () => this.deleteView(this.activeViewId),
       copyViewLink: () => this.copyViewLink(),
@@ -4452,9 +4609,31 @@ export class DatabaseTool implements BlockTool {
   }
 
   private setDatabaseLocked(locked: boolean): void {
+    if (this.linked) {
+      this.setViewsLocked(locked);
+
+      return;
+    }
     if (this.readOnly || this.structureDenied || this.model.isDatabaseLocked() === locked) return;
     this.model.setDatabaseLocked(locked);
     this.writeSchema();
+    this.rebuildTabBar();
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** "Lock views" on a linked view (research 20 §2b): the source stays unlocked. */
+  private setViewsLocked(locked: boolean): void {
+    if (this.readOnly || this.structureDenied || this.viewsLocked() === locked) return;
+    const title: PropertyDefinition = this.stubSchema.find((property) => property.type === 'title')
+      ?? { id: nanoid(), name: DATABASE_DEFAULT_TEXT.titleProperty, type: 'title', position: 'a0' };
+
+    if (!this.stubSchema.includes(title)) this.stubSchema.unshift(title);
+    if (locked) {
+      title.databaseLocked = true;
+    } else {
+      delete title.databaseLocked;
+    }
+    this.block.dispatchChange();
     this.rebuildTabBar();
     this.rerenderView({ keepDrawer: true });
   }
@@ -6901,7 +7080,7 @@ export class DatabaseTool implements BlockTool {
           if (!this.readOnly && this.model.bearPageLayout()) this.block.dispatchChange({ derived: true });
         },
         databaseLocked: () => this.structureLocked(),
-        databaseTitle: () => this.titleElement?.textContent ?? this.title,
+        databaseTitle: () => (this.linked ? this.title : this.titleElement?.textContent ?? this.title),
       });
     }
 

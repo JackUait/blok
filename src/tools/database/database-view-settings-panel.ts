@@ -102,6 +102,8 @@ export interface ViewSettingsContext {
   updatePersonal: (patch: PersonalViewPatch) => void;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
+  /** A linked view: its lock reads "Lock views" (research 20 §2b). */
+  linked?: () => boolean;
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
@@ -360,7 +362,7 @@ export class ViewSettingsPages {
           panelRow({ label: this.t('settingsCopyLink'), testId: 'database-settings-copy-link', icon: IconLink, onClick: () => this.ctx.copyViewLink() }),
           panelSeparator(),
           panelSwitch({
-            label: this.t('settingsLockDatabase'),
+            label: this.t(this.ctx.linked?.() === true ? 'settingsLockViews' : 'settingsLockDatabase'),
             testId: 'database-settings-lock',
             checked: this.ctx.locked(),
             onToggle: (next) => {

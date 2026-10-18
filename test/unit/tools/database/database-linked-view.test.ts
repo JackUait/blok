@@ -196,17 +196,6 @@ describe('DatabaseTool — linked database', () => {
     expect(source.tool.save(document.createElement('div')).schema.find((p) => p.id === 'status')?.name).toBe('State');
   });
 
-  it('locks the source database, never only itself', () => {
-    const doc = docWithSource();
-    const source = buildDatabase(doc, 'db', sourceData());
-    const { tool } = buildDatabase(doc, 'linked', linkedData());
-
-    (tool as unknown as { setDatabaseLocked: (l: boolean) => void }).setDatabaseLocked(true);
-
-    expect(source.tool.save(document.createElement('div')).schema.find((p) => p.type === 'title')?.databaseLocked).toBe(true);
-    expect(tool.save(document.createElement('div')).schema).toEqual(stub);
-  });
-
   it('saves its reference and the stand-in schema, not a copy of the source', () => {
     const doc = docWithSource();
 
@@ -257,9 +246,11 @@ describe('DatabaseTool — linked database', () => {
 
     buildDatabase(doc, 'db', sourceData());
     const { tool, el } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
-    const pick = el.querySelector<HTMLButtonElement>('[data-blok-database-source-picker] [data-database-id="db"]');
+    const pick = (popovers.items as Array<Array<{ element?: HTMLElement }>>).flat()
+      .map((item) => item.element?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-db"]'))
+      .find((row) => row !== null && row !== undefined);
 
-    expect(pick).not.toBeNull();
+    expect(pick).toBeDefined();
     pick?.click();
 
     const saved = tool.save(document.createElement('div'));
@@ -279,5 +270,211 @@ describe('DatabaseTool — linked database', () => {
     await vi.waitFor(() => expect(rowIds(el)).toEqual(['far']));
     expect(resolve).toHaveBeenCalledWith({ documentId: 'doc-2', databaseId: 'remote-db' });
     expect(el.querySelector('[data-blok-database-table-grid]')?.getAttribute('aria-readonly')).toBe('true');
+  });
+});
+
+type HtmlItem = { element?: HTMLElement };
+
+/** The newest panel the popover mock was handed, by its test id. */
+const panelById = (testId: string): HTMLElement | undefined => (popovers.items as HtmlItem[][])
+  .flat()
+  .map((item) => item.element)
+  .filter((element): element is HTMLElement => element instanceof HTMLElement && element.getAttribute('data-blok-testid') === testId)
+  .at(-1);
+
+const rowLabels = (panel: HTMLElement | undefined): string[] =>
+  [...(panel?.querySelectorAll('[data-blok-database-panel-row]:not([hidden])') ?? [])].map((row) => row.querySelector('[data-blok-database-panel-label]')?.textContent ?? '');
+
+const manySources = (): ReturnType<typeof makeDoc> => makeDoc([
+  { id: 'db', name: 'database', parentId: null, data: { title: 'Tasks' } },
+  rowSeed('r1', 'db', { properties: { title: 'One' }, position: 'a0', title: 'One' }),
+  { id: 'db2', name: 'database', parentId: null, data: { title: 'Notes' } },
+  { id: 'db3', name: 'database', parentId: null, data: { title: 'People' } },
+  { id: 'db4', name: 'database', parentId: 'r1', data: { title: 'Inner' } },
+  { id: 'linked', name: 'database', parentId: null, data: {} },
+]);
+
+describe('DatabaseTool — linked view, research 20 §2', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    popovers.items.length = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('a new linked view opens the "New database" panel: search, new empty source, three sources with their parent page, Show more', () => {
+    const doc = manySources();
+
+    buildDatabase(doc, 'db', sourceData());
+    buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
+    const panel = panelById('database-linked-picker');
+
+    expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    expect(panel?.querySelector('input')?.placeholder).toBe('tools.database.linkedSearch');
+    expect(panel?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.layoutExistingDataSources');
+    expect(rowLabels(panel)).toEqual(['tools.database.linkedNewEmpty', 'Tasks', 'Notes', 'People', 'tools.database.linkedShowMore']);
+    expect(panel?.querySelector('[data-blok-testid="database-linked-source-db4"]')).toBeNull();
+
+    panel?.querySelector<HTMLElement>('[data-blok-testid="database-linked-show-more"]')?.click();
+
+    expect(rowLabels(panel)).toEqual(['tools.database.linkedNewEmpty', 'Tasks', 'Notes', 'People', 'Inner']);
+    expect(panel?.querySelector('[data-blok-testid="database-linked-source-db4"] [data-blok-database-panel-description]')?.textContent).toBe('One');
+  });
+
+  it('typing narrows the sources and offers a new named source; picking it makes an ordinary database with that title', () => {
+    const doc = manySources();
+
+    buildDatabase(doc, 'db', sourceData());
+    const { tool } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
+    const panel = panelById('database-linked-picker');
+    const input = panel?.querySelector('input');
+
+    if (input === null || input === undefined) throw new Error('no search field');
+    input.value = 'not';
+    input.dispatchEvent(new Event('input'));
+
+    expect(rowLabels(panel)).toEqual(['Notes', 'tools.database.linkedNewNamed {"name":"not"}']);
+    panel?.querySelector<HTMLElement>('[data-blok-testid="database-linked-new-named"]')?.click();
+
+    const saved = tool.save(document.createElement('div'));
+
+    expect(saved.source).toBeUndefined();
+    expect(saved.title).toBe('not');
+  });
+
+  it('picking a source shows its rows and the "New view" page: New table view, then the source\'s views to copy', () => {
+    const doc = docWithSource();
+    const data = sourceData();
+
+    data.views.push({ id: 'sb', name: 'Board', type: 'board', position: 'a1', sorts: [], filters: [], visibleProperties: [] });
+    data.views.push({ id: 'sf', name: 'Signup', type: 'form', position: 'a2', sorts: [], filters: [], visibleProperties: [] });
+    buildDatabase(doc, 'db', data);
+    const { tool, el } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
+
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-db"]')?.click();
+
+    expect(rowIds(el)).toEqual(['r1', 'r2']);
+    const panel = panelById('database-linked-picker');
+
+    expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.newView');
+    expect(panel?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.linkedViewsOn {"name":"Tasks"}');
+    expect(rowLabels(panel)).toEqual(['tools.database.linkedNewTableView', 'All', 'Board']);
+
+    panel?.querySelector<HTMLElement>('[data-blok-testid="database-linked-view-sb"]')?.click();
+    const saved = tool.save(document.createElement('div'));
+
+    expect(saved.views).toHaveLength(1);
+    expect(saved.views[0]).toMatchObject({ type: 'board', name: 'Board' });
+    expect(saved.views[0].id).not.toBe('sb');
+    expect(saved.activeViewId).toBe(saved.views[0].id);
+  });
+
+  it('"New table view" gives the linked view a fresh table that shows every property', () => {
+    const doc = docWithSource();
+
+    buildDatabase(doc, 'db', sourceData());
+    const { tool } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
+
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-db"]')?.click();
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-new-table-view"]')?.click();
+    const saved = tool.save(document.createElement('div'));
+
+    expect(saved.views).toHaveLength(1);
+    expect(saved.views[0]).toMatchObject({ type: 'table', sorts: [], filters: [] });
+    expect(saved.views[0].id).not.toBe('sv');
+    expect(saved.source).toEqual({ databaseId: 'db' });
+  });
+
+  it('the title is a link to the source with an arrow, never editable', () => {
+    const doc = docWithSource();
+    const scrollToBlock = vi.fn();
+
+    (doc.api.blocks as unknown as Record<string, unknown>).scrollToBlock = scrollToBlock;
+    const source = buildDatabase(doc, 'db', sourceData());
+    const { el } = buildDatabase(doc, 'linked', linkedData());
+    const title = el.querySelector<HTMLElement>('[data-blok-database-title]');
+    const link = title?.querySelector('a');
+
+    expect(link?.textContent?.trim()).toBe('Tasks');
+    expect(link?.querySelector('svg')).not.toBeNull();
+    expect(title?.getAttribute('contenteditable')).toBeNull();
+    expect(link?.hasAttribute('href')).toBe(false);
+    expect(source.el.querySelector('[data-blok-database-title]')?.getAttribute('contenteditable')).toBe('true');
+
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+
+    expect(scrollToBlock).toHaveBeenCalledWith('db', { select: false });
+  });
+
+  it('reads "Lock views" and locks only itself, never the source', () => {
+    const doc = docWithSource();
+    const source = buildDatabase(doc, 'db', sourceData());
+    const { tool, el } = buildDatabase(doc, 'linked', linkedData());
+
+    (tool as unknown as { controls: { openSettings: (a: HTMLElement, p: string) => void } }).controls.openSettings(el, 'root');
+    const lock = panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-lock"]');
+
+    expect(lock?.textContent).toContain('tools.database.settingsLockViews');
+    lock?.click();
+
+    expect(source.tool.save(document.createElement('div')).schema.find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
+    expect(tool.save(document.createElement('div')).schema[0].databaseLocked).toBe(true);
+    expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
+  });
+
+  it('the source keeps "Lock database"', () => {
+    const doc = docWithSource();
+    const { tool, el } = buildDatabase(doc, 'db', sourceData());
+
+    (tool as unknown as { controls: { openSettings: (a: HTMLElement, p: string) => void } }).controls.openSettings(el, 'root');
+
+    expect(panelById('database-view-settings')?.querySelector('[data-blok-testid="database-settings-lock"]')?.textContent).toContain('tools.database.settingsLockDatabase');
+  });
+
+  it('its add-view menu has no Form', () => {
+    const doc = docWithSource();
+    const source = buildDatabase(doc, 'db', sourceData());
+    const { el } = buildDatabase(doc, 'linked', linkedData());
+    const options = (): string[] => (popovers.items.at(-1) as HtmlItem[]).map((item) => item.element?.getAttribute('data-blok-database-view-option') ?? '').filter((type) => type !== '');
+
+    el.querySelector<HTMLElement>('[data-blok-database-add-view]')?.click();
+    expect(options()).not.toContain('form');
+    expect(options()).toContain('table');
+
+    source.el.querySelector<HTMLElement>('[data-blok-database-add-view]')?.click();
+    expect(options()).toContain('form');
+  });
+
+  it('a deleted source leaves a read-only banner, and the view comes back with its own sorts when the source returns', async () => {
+    const doc = docWithSource();
+    const source = buildDatabase(doc, 'db', sourceData());
+    const linked = linkedData();
+
+    linked.views[0].sorts = [{ id: 's1', propertyId: 'title', direction: 'desc' }];
+    const { tool, el } = buildDatabase(doc, 'linked', linked);
+
+    expect(rowIds(el)).toEqual(['r2', 'r1']);
+    doc.deleted.push('db', 'r1', 'r2');
+    source.tool.destroy();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const banner = el.querySelector('[data-blok-database-source-missing]');
+
+    expect(banner?.textContent).toContain('tools.database.linkedSourceMissing');
+    expect(banner?.querySelector('svg')).not.toBeNull();
+    expect(el.querySelector('[data-blok-database-title] a')).toBeNull();
+    expect(el.querySelector('[data-blok-database-title]')?.textContent?.trim()).toBe('Tasks');
+    expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
+
+    doc.deleted.length = 0;
+    buildDatabase(doc, 'db', sourceData());
+
+    expect(el.querySelector('[data-blok-database-source-missing]')).toBeNull();
+    expect(rowIds(el)).toEqual(['r2', 'r1']);
+    expect(tool.save(document.createElement('div')).views[0].sorts).toHaveLength(1);
   });
 });

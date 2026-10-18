@@ -312,3 +312,115 @@ test.describe('linked view', () => {
     await expect(tableRow(page.locator('[data-blok-database-table]').first(), 'r1').locator('[data-property-id="p-status"]')).toHaveText('done');
   });
 });
+
+/** research 20 §2: the linked view as Notion measured it. */
+test.describe('linked view, research 20', () => {
+  const source = (): OutputBlockData[] => [
+    {
+      id: 'db-1',
+      type: 'database',
+      data: { title: 'Tasks', schema: [TITLE, { id: 'p-status', name: 'Status', type: 'text', position: 'a1' }], views: [view('v1', 'table', { name: 'All tasks', visibleProperties: ['p-status'] }), view('v2', 'board', { name: 'Kanban', position: 'a1', groupBy: 'p-status' })], activeViewId: 'v1' },
+      content: ['r1', 'r2'],
+    },
+    row('r1', 'db-1', 0, { 'p-title': 'Alpha', 'p-status': 'open' }),
+    row('r2', 'db-1', 1, { 'p-title': 'Beta', 'p-status': 'done' }),
+  ];
+  const linkedBlock = (extra: Record<string, unknown> = {}): OutputBlockData => ({
+    id: 'linked-1',
+    type: 'database',
+    data: { source: { databaseId: 'db-1' }, schema: [{ id: 'stub', name: 'Name', type: 'title', position: 'a0' }], views: [view('lv', 'table', { visibleProperties: ['p-status'], ...extra })], activeViewId: 'lv' },
+  });
+  const linkedTable = (page: Page): Locator => page.locator('[data-blok-database-table]').nth(1);
+
+  test('"/linked" picks a source on the "New database" panel, then a view to copy on "New view"', async ({ page }) => {
+    await mount(page, [...source(), { id: 'p0', type: 'paragraph', data: { text: '' } }]);
+    await page.locator('[data-blok-id="p0"] [contenteditable]').focus();
+    await page.keyboard.type('/linked');
+
+    const toolbox = page.getByTestId('toolbox-popover');
+
+    await expect(toolbox.locator('[data-blok-item-name]:visible').first()).toContainText('Linked view of data source');
+    await toolbox.locator('[data-blok-item-name]:visible').first().click();
+
+    const picker = page.getByTestId('database-linked-picker');
+
+    await expect(picker).toBeVisible();
+    await expect(picker).toHaveCSS('width', '290px');
+    await expect(picker.getByText('New database', { exact: true })).toBeVisible();
+    await expect(picker.getByPlaceholder('Add or link data source…')).toBeVisible();
+    await expect(picker.getByText('New empty data source')).toBeVisible();
+    await expect(picker.getByText('Existing data sources')).toBeVisible();
+    await expect(picker.getByTestId('database-linked-source-db-1')).toContainText('Tasks');
+
+    await picker.getByTestId('database-linked-source-db-1').click();
+    await expect(picker.getByText('New view', { exact: true })).toBeVisible();
+    await expect(picker.getByText('Views on Tasks')).toBeVisible();
+    await expect(picker.getByRole('button', { name: 'Kanban' })).toBeVisible();
+
+    // Escape steps back one page, then closes.
+    await page.keyboard.press('Escape');
+    await expect(picker.getByText('Existing data sources')).toBeVisible();
+    await picker.getByTestId('database-linked-source-db-1').click();
+    await picker.getByRole('button', { name: 'Kanban' }).click();
+    await expect(picker).toBeHidden();
+
+    const linked = (await saved(page)).find((block) => block.type === 'database' && block.id !== 'db-1');
+
+    expect(linked?.data).toMatchObject({ source: { databaseId: 'db-1' }, views: [{ type: 'board', name: 'Kanban' }] });
+    expect((linked?.data as { views: Array<{ id: string }> }).views[0].id).not.toBe('v2');
+    await expect(page.locator('[data-blok-database-title] a[role="link"]').filter({ hasText: 'Tasks' })).toBeVisible();
+  });
+
+  test('the title links to the source and is not editable; "Lock views" locks only the linked view', async ({ page }) => {
+    await mount(page, [...source(), linkedBlock()]);
+    const link = page.getByRole('link', { name: 'Tasks' });
+
+    await expect(link).toBeVisible();
+    await expect(page.locator('[data-blok-database-title][contenteditable="true"]')).toHaveCount(1);
+
+    await page.getByTestId('database-toolbar-settings').nth(1).click();
+    const lock = page.getByTestId('database-view-settings').getByTestId('database-settings-lock');
+
+    await expect(lock).toHaveText('Lock views');
+    await lock.click();
+    await expect.poll(async () => ((await savedRow(page, 'linked-1')).schema as Array<{ databaseLocked?: boolean }>)[0].databaseLocked).toBe(true);
+    expect(((await savedRow(page, 'db-1')).schema as Array<{ type: string; databaseLocked?: boolean }>).find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
+  });
+
+  test('the add-view menu of a linked view has no Form', async ({ page }) => {
+    await mount(page, [...source(), linkedBlock()]);
+    await page.locator('[data-blok-database-add-view]').nth(1).click({ force: true });
+
+    await expect(page.getByText('Table', { exact: true }).last()).toBeVisible();
+    await expect(page.locator('[data-blok-database-view-option="form"]')).toHaveCount(0);
+  });
+
+  test('a deleted source leaves a read-only banner; undo brings it back with the linked view\'s own sort', async ({ page }) => {
+    await mount(page, [...source(), linkedBlock({ sorts: [{ id: 's1', propertyId: 'p-title', direction: 'desc' }] })]);
+    await expect(tableRow(linkedTable(page), 'r2')).toBeVisible();
+
+    await page.evaluate(() => {
+      const index = window.blokInstance?.blocks.getBlockIndex('db-1');
+
+      if (index !== undefined) void window.blokInstance?.blocks.delete(index);
+    });
+
+    const banner = page.getByRole('status').filter({ hasText: 'The original database was deleted and can’t be edited' });
+
+    await expect(banner).toBeVisible();
+    await expect(page.getByText('Tasks', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Tasks' })).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-add-view]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-table-row]')).toHaveCount(0);
+
+    await undo(page);
+
+    await expect(banner).toBeHidden();
+    const rows = page.locator('[data-blok-database-table]').nth(1).locator('[data-blok-database-table-row]');
+
+    await expect(rows).toHaveCount(2);
+    expect(await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-row-id')))).toEqual(['r2', 'r1']);
+    await expect(page.getByRole('link', { name: 'Tasks' })).toBeVisible();
+    expect((await savedRow(page, 'linked-1')).views).toMatchObject([{ id: 'lv', sorts: [{ id: 's1' }] }]);
+  });
+});

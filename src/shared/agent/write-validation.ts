@@ -38,7 +38,10 @@ const check = (
   if (first !== undefined) {
     const carried = options.converted === true ? ' block.convert carries the text over: data only needs the fields that change.' : '';
 
-    throw failure('DATA_REJECTED', `Block "${block.id}": ${first.message}.${fieldList(block.type, full)}${carried} Full schema: describe({ tool: "${block.type}" }).`, {
+    // fieldList names the same fields with the required ones marked, so drop the validator's plain list.
+    const message = first.message.replace(/; accepted fields: .*$/, '');
+
+    throw failure('DATA_REJECTED', `Block "${block.id}": ${message}.${fieldList(block.type, full)}${carried} Full schema: describe({ tool: "${block.type}" }).`, {
       commandIndex, path: `/commands/${commandIndex}`, details: { blockId: block.id, problems },
     });
   }

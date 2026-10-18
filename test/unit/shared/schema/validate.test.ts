@@ -190,7 +190,7 @@ describe('validateAgainst', () => {
     });
 
     it('reports the problem inside the one branch whose type matches', () => {
-      expect(validateAgainst(cell, [{ text: 'a', bold: true }])).toEqual([{ path: '/0/bold', message: 'unknown field "bold"' }]);
+      expect(validateAgainst(cell, [{ text: 'a', bold: true }])).toEqual([{ path: '/0/bold', message: 'unknown field "bold"; accepted fields: text' }]);
     });
 
     it('lists what each untyped branch misses', () => {

@@ -32,18 +32,22 @@ export interface ViewPopoverOptions {
   onSelect: (type: ViewType) => void;
   onClose?: () => void;
   api?: API;
+  /** Layouts to leave out. */
+  hidden?: readonly ViewType[];
 }
 
 export class DatabaseViewPopover {
   private readonly onSelect: (type: ViewType) => void;
   private readonly onClose: (() => void) | undefined;
   private readonly api: API | undefined;
+  private readonly hidden: readonly ViewType[];
   private popover: PopoverDesktop | null = null;
 
   constructor(options: ViewPopoverOptions) {
     this.onSelect = options.onSelect;
     this.onClose = options.onClose;
     this.api = options.api;
+    this.hidden = options.hidden ?? [];
   }
 
   private translate(key: string, fallback: string): string {
@@ -65,7 +69,7 @@ export class DatabaseViewPopover {
 
     const items = [
       headingItem,
-      ...VIEW_TYPES.map((option) => {
+      ...VIEW_TYPES.filter((option) => !this.hidden.includes(option.type)).map((option) => {
         const el = this.createViewItem(option);
 
         return {

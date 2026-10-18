@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1218 + 125 + 433 + 4 closure for all 1780 keys', () => {
+  it('rebuilds a disjoint 1224 + 125 + 434 + 4 closure for all 1787 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1780);
+    expect(lifecycle.size).toBe(1787);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -392,13 +392,15 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the map's "No place (N)" chip, Add pin button (label, on/off names) and the Place editor's
       // "Open in Google Maps" call their tools.database.* keys by literal.
       // +1: the Place editor's name chip × calls tools.database.placeClear by literal.
-      'executable-literal': 1218,
+      // +6: the linked view's source panel calls its eight tools.database.linked* keys by literal;
+      // the old inline picker's linkedPickSource and linkedNoSources are gone.
+      'executable-literal': 1224,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.
       // +3: toolNames.tabs (titleKey), searchTerms.tabs, toolNames.tab (block name).
-      // +1: the "Linked view of database" toolbox entry's toolNames.linkedDatabase.
+      // +1: the "Linked view of data source" toolbox entry's toolNames.linkedDatabase.
       // +1: toolNames.askAi, the Ask AI inline tool's titleKey.
       // +6: the thinking menu's assistant.thinking.<level> labels.
       'finite-dynamic': 125,
@@ -430,7 +432,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +6: the form auto-create prompt's five keys and the toolbar's "Share form", called through a namespaced t().
       // -2: settingsLayout and settingsPropertyVisibility, now also called by literal (see above).
       // +2: the map settings' Style section and Map by row, called through the panel's namespaced t().
-      'registered-namespace-compatible': 433,
+      // +1: the view settings panel builds tools.database.settingsLockViews from a short name.
+      'registered-namespace-compatible': 434,
       'catalog-only': 4,
     });
     expect(

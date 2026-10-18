@@ -48,6 +48,8 @@ export interface ViewControlsHost {
   updateView: (changes: ViewChanges) => void;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
+  /** A linked view: its lock reads "Lock views". */
+  linked?: () => boolean;
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
@@ -360,6 +362,7 @@ export class DatabaseViewControls {
         this.host.setLocked(locked);
         this.refresh();
       },
+      ...(this.host.linked !== undefined ? { linked: this.host.linked } : {}),
       duplicateView: () => this.host.duplicateView(),
       deleteView: () => this.host.deleteView(),
       copyViewLink: () => this.host.copyViewLink(),

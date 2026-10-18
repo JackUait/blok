@@ -42,7 +42,7 @@ function activateOnEnterOrSpace(element: HTMLElement, action: () => void): void 
   });
 }
 
-const VIEW_ICONS: Record<string, string> = {
+export const VIEW_ICONS: Record<string, string> = {
   board: IconBoard,
   list: IconList,
   table: IconTable,
@@ -73,6 +73,8 @@ export interface TabBarOptions {
   onDisplayChange?: (display: DatabaseTabDisplay) => void;
   api?: API;
   readOnly?: boolean;
+  /** Layouts the add-view menu leaves out. */
+  hiddenViewTypes?: readonly ViewType[];
 }
 
 export class DatabaseTabBar {
@@ -495,6 +497,7 @@ export class DatabaseTabBar {
         this.barEl?.removeAttribute('data-popover-open');
       },
       api: this.options.api,
+      ...(this.options.hiddenViewTypes !== undefined ? { hidden: this.options.hiddenViewTypes } : {}),
     });
     this.viewPopover.open(anchor);
   }

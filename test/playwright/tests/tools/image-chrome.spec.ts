@@ -18,8 +18,18 @@ test.beforeAll(() => {
   ensureBlokBundleBuilt();
 });
 
+// Tests share one page, and Chromium reuses an image already loaded at a URL without asking
+// the route. So each test gets its own path, or it can get the last test's picture.
+let pictureCount = 0;
+let sameUrl = '';
+let crossUrl = '';
+
 test.beforeEach(async ({ page }) => {
   await gotoTestPage(page);
+  pictureCount += 1;
+  // The test page is on localhost:4444, so 127.0.0.1:4444 is another origin.
+  sameUrl = `http://localhost:4444/tone-fixture/${pictureCount}/picture.png`;
+  crossUrl = `http://127.0.0.1:4444/tone-fixture/${pictureCount}/picture.png`;
 });
 
 const createBlok = async (page: Page, data: OutputData): Promise<void> => {
@@ -96,9 +106,6 @@ const servePicture = async (page: Page, url: string, fill: Fill, cors: boolean):
   }));
 };
 
-// The test page is on localhost:4444, so 127.0.0.1:4444 is another origin.
-const SAME = 'http://localhost:4444/tone-fixture/picture.png';
-const CROSS = 'http://127.0.0.1:4444/tone-fixture/picture.png';
 const NO_CORS = 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png';
 const DARK: Fill = { top: '#111111', bottom: '#111111' };
 const LIGHT: Fill = { top: '#fafafa', bottom: '#fafafa' };
@@ -268,8 +275,8 @@ test('reduced motion shows the toolbar with no fade', async ({ page }) => {
 });
 
 test('a dark picture gets graphite chrome and light handles, before any hover', async ({ page }) => {
-  await servePicture(page, SAME, DARK, false);
-  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Night' })] });
+  await servePicture(page, sameUrl, DARK, false);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(sameUrl, { alt: 'Night' })] });
 
   await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
   await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');
@@ -280,8 +287,8 @@ test('a dark picture gets graphite chrome and light handles, before any hover', 
 });
 
 test('a bright picture gets paper chrome', async ({ page }) => {
-  await servePicture(page, SAME, LIGHT, false);
-  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME)] });
+  await servePicture(page, sameUrl, LIGHT, false);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(sameUrl)] });
 
   await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'paper');
   await hoverLoadedFigure(page);
@@ -289,16 +296,16 @@ test('a bright picture gets paper chrome', async ({ page }) => {
 });
 
 test('sky over ground: the toolbar is paper and the alt tag graphite', async ({ page }) => {
-  await servePicture(page, SAME, SKY, false);
-  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Dusk' })] });
+  await servePicture(page, sameUrl, SKY, false);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(sameUrl, { alt: 'Dusk' })] });
 
   await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'paper');
   await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');
 });
 
 test('a cross-origin picture whose host sends CORS is still read', async ({ page }) => {
-  await servePicture(page, CROSS, DARK, true);
-  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(CROSS)] });
+  await servePicture(page, crossUrl, DARK, true);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(crossUrl)] });
 
   await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
   await expect(imageBlock(page).locator('[data-blok-block-context-menu]')).not.toHaveAttribute('crossorigin');
@@ -333,7 +340,7 @@ const serveClearPicture = async (page: Page): Promise<void> => {
   });
   const body = Buffer.from(base64, 'base64');
 
-  await page.route(SAME, (route) => route.fulfill({ status: 200, contentType: 'image/png', body }));
+  await page.route(sameUrl, (route) => route.fulfill({ status: 200, contentType: 'image/png', body }));
 };
 
 const DARK_PAGES: Array<{ name: string; html: string; body: string }> = [
@@ -350,7 +357,7 @@ for (const dark of DARK_PAGES) {
       document.body.setAttribute('style', s.body);
     }, dark);
     try {
-      await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Logo' })] });
+      await createBlok(page, { blocks: [...ROOM_ABOVE, picture(sameUrl, { alt: 'Logo' })] });
 
       await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
       await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');

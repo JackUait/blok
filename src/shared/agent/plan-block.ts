@@ -338,7 +338,9 @@ const buildBlock = (
   const id = state.newBlockId(spec.id, `${path}/id`);
   const data = state.prepareData(type, { ...(spec.data ?? tool.entry.defaultData ?? {}), ...(extra ?? {}) }, `${path}/data`, id, { normalize: !pending });
   const inCell = 'type' in parent ? parent.inCell : parent.id !== null && state.draft.cellOf(parent.id) !== null;
-  const childSpecs = spec.children ?? (tool.runtime.defaultChildren ?? []).map((child, index) =>
+  // A seed only keeps a free container from being empty. Skip it when a later command fills the container.
+  const unseeded = !tool.entry.children.ownedByTool && spec.id !== undefined && state.filledParents.has(spec.id);
+  const childSpecs = spec.children ?? (unseeded ? [] : tool.runtime.defaultChildren ?? []).map((child, index) =>
     readInsertSpec(state, child, `${path}/children/${index}`));
   const childParent: Parent = {
     type, inCell,

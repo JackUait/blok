@@ -31,6 +31,8 @@ export class PlanState {
   public readonly refs: Record<string, string> = {};
   public readonly changed: ChangedSet = { created: [], updated: [], moved: [], removed: [] };
   public readonly touched = new Set<string>();
+  /** Plain ids that some command in the batch names as parentId. */
+  public readonly filledParents = new Set<string>();
   public lastRange?: TextRangeRef;
 
   private readonly reserved = new Map<string, string>();

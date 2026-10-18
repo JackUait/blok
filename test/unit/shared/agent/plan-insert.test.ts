@@ -925,3 +925,51 @@ describe('T8-R1 batch-wide effective ID reservation', () => {
     expect(plan.results).toEqual([{ id: 'n2', childIds: [] }, { id: 'n3', childIds: ['n1'] }]);
   });
 });
+
+describe('a default child seed for a container the batch fills', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const seeded = (over: { ownedByTool?: boolean } = {}): typeof TOOLS => {
+    const tools = new Map(TOOLS);
+
+    tools.set('column', tool('column', {
+      children: { accepts: true, ownedByTool: over.ownedByTool ?? false, layout: true, deletedWithParent: true },
+    }, { defaultChildren: [{ type: 'paragraph', data: { text: [] } }] }));
+
+    return tools;
+  };
+
+  it('is left out when a later command puts a block in it by id', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column_list', children: [{ type: 'column', id: 'colA' }, { type: 'column', id: 'colB' }] } },
+      { name: 'block.insert', args: { type: 'header', data: { text: 'Plan A', level: 2 }, parentId: 'colA' } },
+    ], { tools: seeded() });
+
+    expect(draft.childrenOf('colA').map(id => draft.get(id)?.type)).toEqual(['header']);
+    expect(draft.childrenOf('colB').map(id => draft.get(id)?.type)).toEqual(['paragraph']);
+  });
+
+  it('stays when the batch does not fill the container', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column_list', children: [{ type: 'column', id: 'colA' }, { type: 'column' }] } },
+      { name: 'block.insert', args: { type: 'paragraph', position: 'end' } },
+    ], { tools: seeded() });
+
+    expect(draft.childrenOf('colA').map(id => draft.get(id)?.type)).toEqual(['paragraph']);
+  });
+
+  it('stays for a container whose tool owns its children', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column', id: 'colA' } },
+      { name: 'block.insert', args: { type: 'paragraph', parentId: 'colA' } },
+    ], { tools: seeded({ ownedByTool: true }) });
+
+    expect(draft.childrenOf('colA')).toHaveLength(2);
+  });
+});

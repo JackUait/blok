@@ -95,7 +95,8 @@
                       },
                       "type": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "A block tool. A variant is its tool plus data: header {level: 1|2|3|4|5|6, isToggleable: true}, list {style: \"unordered\"|\"ordered\"|\"checklist\"}."
                       },
                       "data": {
                         "type": "object"

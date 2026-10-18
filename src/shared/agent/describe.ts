@@ -17,9 +17,13 @@ export const describeContract = (
   }
   if (query.tool !== undefined) {
     const tool = contract.manifest.blocks.find(entry => entry.name === query.tool);
+    const command = tool === undefined ? contract.commands.find(entry => entry.name === query.tool) : undefined;
 
+    if (command !== undefined) {
+      return { command };
+    }
     if (tool === undefined) {
-      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}". Call describe() for the list.`);
+      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}". Known: ${contract.manifest.blocks.map(entry => entry.name).join(', ')}.`);
     }
 
     return { tool, commands: contract.commands.filter(entry => typeof entry.source === 'object' && entry.source.tool === query.tool) };

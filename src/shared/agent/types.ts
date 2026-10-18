@@ -32,6 +32,7 @@ export interface PlannerToolEntry {
   data: JsonSchema;
   defaultData?: Record<string, unknown>;
   insertRequires?: string[];
+  variants?: Array<{ name: string; title: string; data: Record<string, unknown> }>;
 }
 
 export type PlannerActionImpl = ToolActionImpl;

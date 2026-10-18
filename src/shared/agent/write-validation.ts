@@ -1,28 +1,45 @@
 import { failure } from './errors';
 import { applyEdits } from './json-applier';
 import { PREPARE_PENDING } from './plan-state';
+import { fieldRules } from './variant-hint';
 
 import type { PlannedBlock } from '../../../types/agent';
 import type { PlanState } from './plan-state';
 import type { DocSnapshot } from './snapshot';
 import type { JsonSchema } from './types';
 
+const fieldList = (tool: string, schema: JsonSchema): string => {
+  const properties = schema.properties;
+
+  if (typeof properties !== 'object' || properties === null) {
+    return '';
+  }
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  const fields = Object.keys(properties).map(field => required.includes(field) ? `${field} (required)` : field);
+
+  return fields.length === 0 ? '' : ` "${tool}" takes: ${fields.join(', ')}.`;
+};
+
 const check = (
   state: PlanState,
   commandIndex: number,
-  blockId: string,
-  schema: JsonSchema | undefined,
-  data: unknown
+  block: { id: string; type: string },
+  data: unknown,
+  options: { partial?: boolean; converted?: boolean } = {}
 ): void => {
-  if (schema === undefined) {
+  const full = state.tool(block.type)?.entry.data;
+
+  if (full === undefined) {
     return;
   }
-  const problems = state.ctx.validate(schema, data);
+  const problems = state.ctx.validate(options.partial === true ? fieldRules(full) : full, data);
   const first = problems[0];
 
   if (first !== undefined) {
-    throw failure('DATA_REJECTED', `Block "${blockId}": ${first.message}. Read the tool's data schema with describe({ tool }).`, {
-      commandIndex, path: `/commands/${commandIndex}`, details: { blockId, problems },
+    const carried = options.converted === true ? ' block.convert carries the text over: data only needs the fields that change.' : '';
+
+    throw failure('DATA_REJECTED', `Block "${block.id}": ${first.message}.${fieldList(block.type, full)}${carried} Full schema: describe({ tool: "${block.type}" }).`, {
+      commandIndex, path: `/commands/${commandIndex}`, details: { blockId: block.id, problems },
     });
   }
 };
@@ -30,27 +47,20 @@ const check = (
 const checkKeys = (
   state: PlanState,
   commandIndex: number,
-  blockId: string,
-  schema: JsonSchema | undefined,
+  id: string,
+  type: string | undefined,
   patch: Record<string, unknown>
 ): void => {
-  if (schema === undefined) {
-    return;
-  }
   const written = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null));
 
-  if (Object.keys(written).length === 0) {
+  if (type === undefined || Object.keys(written).length === 0) {
     return;
   }
-  // Root cross-field rules do not apply to partial writes.
-  const scoped = Object.fromEntries(Object.entries(schema).filter(([key]) =>
-    key === 'properties' || key === 'patternProperties' || key === 'additionalProperties'));
-
-  check(state, commandIndex, blockId, scoped, written);
+  check(state, commandIndex, { id, type }, written, { partial: true });
 };
 
 const checkTree = (state: PlanState, commandIndex: number, block: PlannedBlock): void => {
-  check(state, commandIndex, block.id, state.tool(block.type)?.entry.data, block.data);
+  check(state, commandIndex, block, block.data);
   block.children.forEach(child => checkTree(state, commandIndex, child));
 };
 
@@ -74,15 +84,14 @@ export const validateWrites = (state: PlanState, snapshot: DocSnapshot): void =>
         checkTree(state, commandIndex, edit.block);
         break;
       case 'replaceType':
-        check(state, commandIndex, edit.id, state.tool(edit.type)?.entry.data, edit.data);
+        check(state, commandIndex, { id: edit.id, type: edit.type }, edit.data, { converted: true });
         break;
       case 'setData':
       case 'setRichText': {
         const block = replay.get(edit.id);
-        const schema = block === undefined ? undefined : state.tool(block.type)?.entry.data;
         const patch = edit.op === 'setData' ? edit.patch : { [edit.field]: edit.value };
 
-        checkKeys(state, commandIndex, edit.id, schema, patch);
+        checkKeys(state, commandIndex, edit.id, block?.type, patch);
         break;
       }
       case 'move':

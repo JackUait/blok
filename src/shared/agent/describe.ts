@@ -1,16 +1,24 @@
 import type { ContractSlice } from '../../../types/agent';
 import type { AgentContract } from '../../../types/tool-manifest';
+import { validateAgainst } from '../schema/validate';
 import { failure } from './errors';
+import { matchVariants, variantSentence } from './variant-hint';
 
 export const describeContract = (
   contract: AgentContract,
   query: { tool?: string; command?: string } = {}
 ): AgentContract | ContractSlice => {
-  if (query.command !== undefined) {
-    const command = contract.commands.find(entry => entry.name === query.command);
+  // Models often pass a command name as tool; answer it rather than spend another call.
+  const commandName = query.command
+    ?? (query.tool !== undefined
+      && !contract.manifest.blocks.some(entry => entry.name === query.tool)
+      && contract.commands.some(entry => entry.name === query.tool) ? query.tool : undefined);
+
+  if (commandName !== undefined) {
+    const command = contract.commands.find(entry => entry.name === commandName);
 
     if (command === undefined) {
-      throw failure('UNKNOWN_COMMAND', `No command "${query.command}". Call describe() for the list.`);
+      throw failure('UNKNOWN_COMMAND', `No command "${commandName}". Call describe() for the list.`);
     }
 
     return { command };
@@ -19,7 +27,9 @@ export const describeContract = (
     const tool = contract.manifest.blocks.find(entry => entry.name === query.tool);
 
     if (tool === undefined) {
-      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}". Call describe() for the list.`);
+      const hint = variantSentence(query.tool, matchVariants(query.tool, contract.manifest.blocks, validateAgainst));
+
+      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}".${hint} Call describe() for the list.`);
     }
 
     return { tool, commands: contract.commands.filter(entry => typeof entry.source === 'object' && entry.source.tool === query.tool) };

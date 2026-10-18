@@ -3,6 +3,7 @@ import { cleanupEmptiedColumnList } from '../tool-actions/columns';
 import { checkChildType, checkMove, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
+import { matchVariants, variantSentence } from './variant-hint';
 import { cloneRecord } from './snapshot';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
@@ -282,6 +283,15 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
   });
 };
 
+const failUnknownTool = (state: PlanState, type: string, path: string): never => {
+  const known = [...state.ctx.tools.keys()];
+  const variants = matchVariants(type, [...state.ctx.tools.values()].map(tool => tool.entry), state.ctx.validate);
+
+  return state.fail('UNKNOWN_TOOL', `No block tool "${type}" is registered.${variantSentence(type, variants)} Known: ${known.join(', ')}.`, path, {
+    known, ...(variants.length > 0 && { variants }),
+  });
+};
+
 const buildBlock = (
   state: PlanState,
   spec: InsertSpec,
@@ -313,13 +323,7 @@ const buildBlock = (
     return refusePlacement(state, type, path);
   }
 
-  const tool = state.tool(type);
-
-  if (tool === undefined) {
-    state.fail('UNKNOWN_TOOL', `No block tool "${type}" is registered. Known: ${[...state.ctx.tools.keys()].join(', ')}.`, `${path}/type`, {
-      known: [...state.ctx.tools.keys()],
-    });
-  }
+  const tool = state.tool(type) ?? failUnknownTool(state, type, `${path}/type`);
 
   for (const field of options === undefined ? [] : tool.entry.viewState) {
     if (Object.hasOwn(spec.data ?? {}, field)) {
@@ -604,12 +608,7 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
     state.fail('INVALID_ARGS', 'Expected a non-empty block type.', '/type');
   }
 
-  const target = state.tool(targetType) ?? state.fail(
-    'UNKNOWN_TOOL',
-    `No block tool "${targetType}" is registered. Known: ${[...state.ctx.tools.keys()].join(', ')}.`,
-    '/type',
-    { known: [...state.ctx.tools.keys()] },
-  );
+  const target = state.tool(targetType) ?? failUnknownTool(state, targetType, '/type');
   // The runtime copy covers tools whose own conversionConfig is functions (list), which the manifest cannot carry.
   const from = source.entry.conversion.export ?? source.runtime.conversion?.export;
   const to = target.entry.conversion.import ?? target.runtime.conversion?.import;

@@ -52,6 +52,8 @@ export interface LoopResult extends StepUsage {
   describeQueries: unknown[];
   /** The inputs of blok_list_documents calls: what the model searched for. */
   listQueries: unknown[];
+  /** The inputs of blok_read calls: what the model checked. */
+  readQueries: unknown[];
   steps: LoopStep[];
   detail?: string;
 }
@@ -76,7 +78,7 @@ export const runModelLoop = async (o: {
   const now = o.now ?? (() => performance.now());
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: o.prompt }];
   const result: LoopResult = {
-    stop: 'turn-cap', answer: '', turns: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], listQueries: [], steps: [],
+    stop: 'turn-cap', answer: '', turns: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCalls: [], describeQueries: [], listQueries: [], readQueries: [], steps: [],
   };
 
   while (result.turns < o.budget.maxTurns) {
@@ -141,6 +143,7 @@ export const runModelLoop = async (o: {
       result.toolCalls.push(use.name);
       result.describeQueries.push(...(use.name === 'blok_describe' ? [use.input] : []));
       result.listQueries.push(...(use.name === 'blok_list_documents' ? [use.input] : []));
+      result.readQueries.push(...(use.name === 'blok_read' ? [use.input] : []));
 
       const outcome = await o.execute(use.name, use.input);
 

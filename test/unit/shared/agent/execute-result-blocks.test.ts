@@ -52,6 +52,23 @@ describe.each(sessions)('blok_execute result on a %s', (_name, open) => {
     }
   });
 
+  it('shows the first 50 changed blocks and counts the rest, so a bulk edit does not flood the result', async () => {
+    const session = open(seed);
+
+    try {
+      const commands = Array.from({ length: 52 }, (_, index) => (
+        { name: 'block.insert' as const, args: { type: 'paragraph', data: { text: `Row ${index}` }, position: 'end' } }
+      ));
+      const result = await session.execute({ commands });
+
+      expect(result.ok, JSON.stringify(result).slice(0, 300)).toBe(true);
+      expect(blocksOf(result)?.map((block) => block.text)).toEqual(Array.from({ length: 50 }, (_, index) => `Row ${index}`));
+      expect(result.ok && result.moreBlocks).toBe(2);
+    } finally {
+      await session.close();
+    }
+  });
+
   it('leaves blocks out when nothing in the document changed', async () => {
     const session = open(seed);
 

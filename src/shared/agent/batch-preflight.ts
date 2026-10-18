@@ -13,16 +13,27 @@ const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 const SPEC_KEYS = new Set(['type', 'data', 'tunes', 'id', 'children']);
 
 /**
- * The id fields every planner resolves, so an undeclared "$ref" in one always fails.
- * Pinned per command by batch-all-problems.test.ts; other fields (table cells) may hold "$" text.
+ * The id fields the planner always resolves, so an undeclared "$ref" in one always fails.
+ * Pinned per command by batch-all-problems.test.ts. Other fields (table cells) may hold "$" text,
+ * block.insert's id names the new block, and a tool action reads its own args as it likes
+ * (column_list.create ignores parentId when given from): only a block action's id is certain.
  */
-const idFields = (args: Record<string, unknown>): Array<[string, unknown]> => {
+const idFields = (name: unknown, args: Record<string, unknown>, commands: PlannerContext['commands']): Array<[string, unknown]> => {
+  const source = typeof name === 'string' ? commands.get(name)?.source : undefined;
+
+  if (source === undefined) {
+    return [];
+  }
+  if (typeof source === 'object') {
+    return source.target === 'block' ? [['/id', args.id]] : [];
+  }
   const position = args.position;
   // place() reads only "before" when both are given.
   const key = isRecord(position) && 'before' in position ? 'before' : 'after';
 
   return [
-    ['/id', args.id], ['/parentId', args.parentId], ['/rootId', args.rootId],
+    ...(name === 'block.insert' ? [] : [['/id', args.id] as [string, unknown]]),
+    ['/parentId', args.parentId], ['/rootId', args.rootId],
     ...(isArray(args.ids) ? args.ids.map((id, index): [string, unknown] => [`/ids/${index}`, id]) : []),
     ...(isRecord(position) ? [[`/position/${key}`, position[key]] as [string, unknown]] : []),
   ];
@@ -33,7 +44,11 @@ const specIds = (spec: unknown): string[] => !isRecord(spec) ? [] : [
   ...(isArray(spec.children) ? spec.children.flatMap(specIds) : []),
 ];
 
-const refProblems = (commands: unknown[], isBlock: (id: string) => boolean): AgentProblem[] => {
+const refProblems = (
+  commands: unknown[],
+  registry: PlannerContext['commands'],
+  isBlock: (id: string) => boolean
+): AgentProblem[] => {
   const declared: string[] = [];
   const created = new Set<string>();
   const problems: AgentProblem[] = [];
@@ -44,7 +59,7 @@ const refProblems = (commands: unknown[], isBlock: (id: string) => boolean): Age
     }
     const args = raw.args;
 
-    idFields(args).forEach(([path, value]) => {
+    idFields(raw.name, args, registry).forEach(([path, value]) => {
       if (typeof value !== 'string' || !value.startsWith('$') || declared.includes(value.slice(1))) {
         return;
       }
@@ -149,5 +164,5 @@ export const preflightProblems = (
   // prepareData and the unknown-tool hint read only the context, never the draft.
   const state = new PlanState(DocSnapshot.fromOutput({ blocks: [] }), { ...ctx, prepared: new Map() }, [], { actorId: '', at: 0 });
 
-  return [...refProblems(batch.commands, isBlock), ...insertProblems(batch.commands, state)];
+  return [...refProblems(batch.commands, ctx.commands, isBlock), ...insertProblems(batch.commands, state)];
 };

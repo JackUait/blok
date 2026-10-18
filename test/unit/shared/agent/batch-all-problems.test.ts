@@ -81,8 +81,9 @@ describe('a failed batch reports every problem it can find', () => {
     expect(error.message).toMatch(/^"\$hA" is not a ref, but block "hA" exists\. Use "hA" without the "\$"\./);
     const others = error.others ?? [];
 
+    // A tool action's parentId is its own to read, so only text.replace's id is certain to fail.
     expect(others.filter(other => other.code === 'BLOCK_NOT_FOUND').map(other => [other.commandIndex, other.path])).toEqual([
-      [3, '/commands/3/args/id'], [4, '/commands/4/args/parentId'], [5, '/commands/5/args/parentId'],
+      [3, '/commands/3/args/id'],
     ]);
     const rejected = others.filter(other => other.code === 'DATA_REJECTED');
 
@@ -177,6 +178,8 @@ const REF_FIELDS: Array<[string, Record<string, unknown>, string]> = [
   ['text.delete', { id: '$zz', range: 'all' }, '/id'],
   ['text.replace', { id: '$zz', with: 'x' }, '/id'],
   ['text.format', { id: '$zz', range: 'all', set: { bold: true } }, '/id'],
+  ['table.insertRows', { id: '$zz', at: 0 }, '/id'],
+  ['column_list.addColumn', { id: '$zz', at: 0 }, '/id'],
 ];
 
 describe('an undeclared ref fails at planning time in every field the pre-flight scans', () => {
@@ -184,5 +187,17 @@ describe('an undeclared ref fails at planning time in every field the pre-flight
     const error = errorOf(await run([{ name, args }]));
 
     expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0, path: `/commands/0/args${path}` });
+  });
+});
+
+describe('an id field that names a new block is not read as a ref', () => {
+  it('leaves block.insert\'s own id alone', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: 'missing', with: 'x' } },
+      { name: 'block.insert', args: { type: 'paragraph', id: '$h' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0 });
+    expect(error.others).toBeUndefined();
   });
 });

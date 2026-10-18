@@ -5,6 +5,13 @@ export const DATABASE_ROW_DATA = {
   description: 'One row of a database block. Optional pageId points to a separate body document.',
   required: ['properties', 'position'],
   additionalProperties: false,
+  patternProperties: {
+    '^reactions:': {
+      type: 'object',
+      description: 'One person\'s feed reactions; the key is "reactions:" plus their user id. Emoji to when they reacted (epoch ms).',
+      additionalProperties: { type: 'number' },
+    },
+  },
   properties: {
     properties: {
       type: 'object',
@@ -54,14 +61,6 @@ export const DATABASE_ROW_DATA = {
           timeZone: { type: 'string', description: 'IANA zone of whoever set the reminder. A date with no property time zone is due in it, so every client agrees. Absent: each viewer\'s zone.' },
           sentFor: { type: 'string', description: 'The due time (ISO) the host last sent. Not offered again while it equals the current due time.' },
         },
-      },
-    },
-    reactions: {
-      type: 'object',
-      description: 'Feed reactions keyed by user id, then by emoji, to when that user reacted (epoch ms). Each person writes only their own key.',
-      additionalProperties: {
-        type: 'object',
-        additionalProperties: { type: 'number' },
       },
     },
     convertedValues: {

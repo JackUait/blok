@@ -141,6 +141,7 @@ import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
+import { rowReactions } from './row-reactions';
 import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
@@ -1382,6 +1383,7 @@ export class DatabaseTool implements BlockTool {
         }
 
         const meta = rowMetaOf(child);
+        const reactions = rowReactions(rowData);
 
         if (isTemplateData(rowData)) {
           templateIds.add(child.id);
@@ -1396,7 +1398,7 @@ export class DatabaseTool implements BlockTool {
           ...(typeof rowData?.cover === 'string' && rowData.cover !== '' ? { cover: rowData.cover } : {}),
           ...(typeof rowData?.fullWidth === 'boolean' ? { fullWidth: rowData.fullWidth } : {}),
           ...(rowData?.reminders !== undefined ? { reminders: rowData.reminders } : {}),
-          ...(rowData?.reactions !== undefined ? { reactions: rowData.reactions } : {}),
+          ...(Object.keys(reactions).length > 0 ? { reactions } : {}),
           ...(Object.keys(meta).length > 0 ? { meta } : {}),
         };
       });

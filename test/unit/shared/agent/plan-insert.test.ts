@@ -440,6 +440,31 @@ describe('block.insert planning', () => {
     expect(error.message).toMatch(/"ref": "intro"/);
   });
 
+  it('names the plain id when "$" is put on an id this batch gave a block', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'toggle', id: 'colA', children: [{ type: 'toggle', id: 'colB' }] }, ref: 'cols' },
+      { name: 'block.insert', args: { type: 'paragraph', parentId: '$colB' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 1, path: '/commands/1/args/parentId', details: { ref: 'colB' } });
+    expect(error.message).toBe('"$colB" is not a ref, but block "colB" exists. Use "colB" without the "$".');
+  });
+
+  it('names the plain id when "$" is put on an id from the document', () => {
+    const error = failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]));
+
+    expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
+  });
+
+  it('gives no plain-id hint for an id a later command reserves', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'paragraph', parentId: '$later' } },
+      { name: 'block.insert', args: { type: 'toggle', id: 'later' } },
+    ]));
+
+    expect(error.message).toMatch(/^Ref "later" was not set by an earlier command/);
+  });
+
   it('refuses forward refs even though future explicit IDs are reserved', () => {
     expect(failOf(() => planOn(doc, [
       { name: 'block.insert', args: { type: 'paragraph', parentId: '$a' } },

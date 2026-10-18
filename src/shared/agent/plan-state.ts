@@ -142,6 +142,10 @@ export class PlanState {
   }
 
   private unresolvedRefMessage(ref: string): string {
+    if (this.draft.has(ref) && !this.inAnnotation(ref)) {
+      return `"$${ref}" is not a ref, but block "${ref}" exists. Use "${ref}" without the "$".`;
+    }
+
     const known = Object.keys(this.refs);
     const example = /^[A-Za-z][\w-]*$/.test(ref) ? ref : (known[0] ?? 'intro');
     const listed = known.length === 0 ? '' : ` Refs so far: ${known.map(name => `"$${name}"`).join(', ')}.`;

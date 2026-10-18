@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "ޕިން އިތުރުކުރާ މޯޑް ޖައްސާ",
   "tools.database.mapCancelAddPin": "ޕިން އިތުރުކުރާ މޯޑް ކެންސަލްކުރޭ",
   "tools.database.placeOpenInGoogleMaps": "Google Maps ގައި ހުޅުވާ",
+  "tools.database.placeClear": "ސާފުކުރޭ",
   "tools.database.dashboardUnavailable": "ޑޭޝްބޯޑުތައް މިތާނގައި އަދި ނުލިބޭ.",
   "tools.database.timelineLabel": "ޓައިމްލައިން",
   "tools.database.timelineNoDateProperty": "މި ވިއު ޓައިމްލައިނެއްގެ ގޮތުގައި ބެލުމަށް ތާރީޚުގެ ޕްރޮޕަރޓީއެއް އިތުރުކުރޭ",

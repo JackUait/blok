@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Включи режима за добавяне на маркер",
   "tools.database.mapCancelAddPin": "Изключи режима за добавяне на маркер",
   "tools.database.placeOpenInGoogleMaps": "Отвори в Google Maps",
+  "tools.database.placeClear": "Изчисти",
   "tools.database.dashboardUnavailable": "Таблата за управление все още не са налични тук.",
   "tools.database.timelineLabel": "Времева линия",
   "tools.database.timelineNoDateProperty": "Добавете свойство за дата, за да видите този изглед като времева линия",

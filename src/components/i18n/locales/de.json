@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Modus „Markierung hinzufügen“ aktivieren",
   "tools.database.mapCancelAddPin": "Modus „Markierung hinzufügen“ beenden",
   "tools.database.placeOpenInGoogleMaps": "In Google Maps öffnen",
+  "tools.database.placeClear": "Löschen",
   "tools.database.dashboardUnavailable": "Dashboards sind hier noch nicht verfügbar.",
   "tools.database.timelineLabel": "Zeitleiste",
   "tools.database.timelineNoDateProperty": "Fügen Sie eine Datumseigenschaft hinzu, um diese Ansicht als Zeitleiste anzuzeigen",

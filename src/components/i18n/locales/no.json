@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Slå på modus for å legge til nål",
   "tools.database.mapCancelAddPin": "Avbryt modus for å legge til nål",
   "tools.database.placeOpenInGoogleMaps": "Åpne i Google Maps",
+  "tools.database.placeClear": "Fjern",
   "tools.database.dashboardUnavailable": "Instrumentbord er ikke tilgjengelige her ennå.",
   "tools.database.timelineLabel": "Tidslinje",
   "tools.database.timelineNoDateProperty": "Legg til en datoegenskap for å se visningen som en tidslinje",

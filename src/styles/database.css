@@ -4192,7 +4192,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 /* Chips and search: tinted, 4px, inset bottom line (research/08:306). */
-[data-blok-database-select-chips] {
+[data-blok-database-select-chips],
+[data-blok-database-place-head] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -4202,12 +4203,14 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   box-shadow: var(--blok-database-table-control-border) 0 -1px 0 0 inset;
 }
 
-[data-blok-database-select-chip] {
+[data-blok-database-select-chip],
+[data-blok-database-place-chip] {
   gap: var(--blok-space-1);
   padding-inline-end: 2px;
 }
 
 [data-blok-database-select-chip-remove],
+[data-blok-database-place-clear],
 [data-blok-database-person-remove],
 [data-blok-database-file-remove],
 [data-blok-database-select-option-handle],
@@ -4225,6 +4228,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-select-chip-remove] svg,
+[data-blok-database-place-clear] svg,
 [data-blok-database-person-remove] svg,
 [data-blok-database-file-remove] svg {
   width: 12px;

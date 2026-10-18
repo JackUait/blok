@@ -7662,7 +7662,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   color: var(--blok-color-red-text);
 }
 
-[data-blok-database-select-chips] {
+[data-blok-database-select-chips], [data-blok-database-place-head] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -7672,12 +7672,12 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-shadow: var(--blok-database-table-control-border) 0 -1px 0 0 inset;
 }
 
-[data-blok-database-select-chip] {
+[data-blok-database-select-chip], [data-blok-database-place-chip] {
   gap: var(--blok-space-1);
   padding-inline-end: 2px;
 }
 
-[data-blok-database-select-chip-remove], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
+[data-blok-database-select-chip-remove], [data-blok-database-place-clear], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7690,7 +7690,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border-radius: var(--blok-radius-control-sm);
 }
 
-[data-blok-database-select-chip-remove] svg, [data-blok-database-person-remove] svg, [data-blok-database-file-remove] svg {
+[data-blok-database-select-chip-remove] svg, [data-blok-database-place-clear] svg, [data-blok-database-person-remove] svg, [data-blok-database-file-remove] svg {
   width: 12px;
   height: 12px;
 }

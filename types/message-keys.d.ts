@@ -1131,6 +1131,7 @@ export type BlokMessageKey =
   | 'tools.database.personSearchPlaceholder'
   | 'tools.database.personUnknown'
   | 'tools.database.personYou'
+  | 'tools.database.placeClear'
   | 'tools.database.placeOpenInGoogleMaps'
   | 'tools.database.propertiesSection'
   | 'tools.database.propertyDescription'

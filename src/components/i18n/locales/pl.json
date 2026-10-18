@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Włącz tryb dodawania pinezek",
   "tools.database.mapCancelAddPin": "Anuluj tryb dodawania pinezek",
   "tools.database.placeOpenInGoogleMaps": "Otwórz w Mapach Google",
+  "tools.database.placeClear": "Wyczyść",
   "tools.database.dashboardUnavailable": "Pulpity nawigacyjne nie są tu jeszcze dostępne.",
   "tools.database.timelineLabel": "Oś czasu",
   "tools.database.timelineNoDateProperty": "Dodaj właściwość daty, aby wyświetlić ten widok jako oś czasu",

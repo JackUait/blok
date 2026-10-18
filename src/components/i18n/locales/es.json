@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Activar modo de añadir chincheta",
   "tools.database.mapCancelAddPin": "Cancelar modo de añadir chincheta",
   "tools.database.placeOpenInGoogleMaps": "Abrir en Google Maps",
+  "tools.database.placeClear": "Borrar",
   "tools.database.dashboardUnavailable": "Los paneles aún no están disponibles aquí.",
   "tools.database.timelineLabel": "Cronograma",
   "tools.database.timelineNoDateProperty": "Añade una propiedad de fecha para ver esta vista como cronograma",

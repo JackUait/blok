@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Тэмдэг нэмэх горимыг идэвхжүүлэх",
   "tools.database.mapCancelAddPin": "Тэмдэг нэмэх горимыг цуцлах",
   "tools.database.placeOpenInGoogleMaps": "Google Maps-д нээх",
+  "tools.database.placeClear": "Цэвэрлэх",
   "tools.database.dashboardUnavailable": "Хяналтын самбарууд энд одоогоор боломжгүй байна.",
   "tools.database.timelineLabel": "Цагийн хэлхээс",
   "tools.database.timelineNoDateProperty": "Энэ харагдацыг цагийн хэлхээсээр харахын тулд огнооны шинж нэмнэ үү",

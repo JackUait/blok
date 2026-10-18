@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "पिन जोडण्याचा मोड सुरू करा",
   "tools.database.mapCancelAddPin": "पिन जोडण्याचा मोड रद्द करा",
   "tools.database.placeOpenInGoogleMaps": "Google Maps मध्ये उघडा",
+  "tools.database.placeClear": "साफ करा",
   "tools.database.dashboardUnavailable": "डॅशबोर्ड अद्याप येथे उपलब्ध नाहीत.",
   "tools.database.timelineLabel": "टाइमलाइन",
   "tools.database.timelineNoDateProperty": "हे दृश्य टाइमलाइन म्हणून पाहण्यासाठी तारीख गुणधर्म जोडा",

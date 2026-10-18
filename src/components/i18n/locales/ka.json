@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "ნიშნულის დამატების რეჟიმის ჩართვა",
   "tools.database.mapCancelAddPin": "ნიშნულის დამატების რეჟიმის გაუქმება",
   "tools.database.placeOpenInGoogleMaps": "Google Maps-ში გახსნა",
+  "tools.database.placeClear": "გასუფთავება",
   "tools.database.dashboardUnavailable": "დაფები აქ ჯერ ხელმისაწვდომი არ არის.",
   "tools.database.timelineLabel": "დროის ხაზი",
   "tools.database.timelineNoDateProperty": "დაამატეთ თარიღის თვისება, რომ ეს ხედი დროის ხაზად ნახოთ",

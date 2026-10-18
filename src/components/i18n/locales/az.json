@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Nişan əlavə etmə rejimini aktivləşdir",
   "tools.database.mapCancelAddPin": "Nişan əlavə etmə rejimini ləğv et",
   "tools.database.placeOpenInGoogleMaps": "Google Maps-də aç",
+  "tools.database.placeClear": "Təmizlə",
   "tools.database.dashboardUnavailable": "İdarə panelləri hələ burada mövcud deyil.",
   "tools.database.timelineLabel": "Zaman xətti",
   "tools.database.timelineNoDateProperty": "Bu görünüşü zaman xətti kimi görmək üçün tarix xüsusiyyəti əlavə et",

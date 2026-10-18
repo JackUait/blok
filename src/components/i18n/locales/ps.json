@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "د نښې اضافه کولو حالت فعال کړئ",
   "tools.database.mapCancelAddPin": "د نښې اضافه کولو حالت لغوه کړئ",
   "tools.database.placeOpenInGoogleMaps": "په Google Maps کې پرانیزئ",
+  "tools.database.placeClear": "پاک کړئ",
   "tools.database.dashboardUnavailable": "ډشبورډونه لا تر اوسه دلته شتون نه لري.",
   "tools.database.timelineLabel": "مهالکرښه",
   "tools.database.timelineNoDateProperty": "د دې لید د مهالکرښې په توګه لیدو لپاره د نېټې ځانګړتیا اضافه کړئ",

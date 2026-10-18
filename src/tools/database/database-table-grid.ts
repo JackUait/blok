@@ -4,6 +4,7 @@ import type { CellContext, CellEditorHandle } from './cells';
 import type { DatabaseRow, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import { cellText, gridToClipboard, parseClipboard, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';
+import { isPlaceValue, placeText } from './tier3-values';
 
 /** One cell write of a paste or fill. */
 export interface CellChange {
@@ -605,11 +606,17 @@ export class DatabaseTableGrid {
     const height = single ? bounds.r1 - bounds.r0 + 1 : grid.length;
     const width = single ? bounds.c1 - bounds.c0 + 1 : Math.max(...grid.map((line) => line.length));
 
-    const cellValue = (i: number, j: number): [string, PropertyValue] | null => {
+    const cellValue = (i: number, j: number, rowId: string | undefined): [string, PropertyValue] | null => {
       const property = this.columns[bounds.c0 + j];
       const text = single ? grid[0][0] : grid[i][j];
 
       if (property === undefined || text === undefined || isReadOnlyType(property.type)) {
+        return null;
+      }
+      const current = rowId === undefined ? undefined : this.valueAt(rowId, property);
+
+      // Text carries no name or point: the text a place already shows keeps it whole.
+      if (property.type === 'place' && isPlaceValue(current) && text.trim() !== '' && text.trim() === placeText(current)) {
         return null;
       }
       const value = valueFromText(property, text, this.cellContext);
@@ -619,7 +626,7 @@ export class DatabaseTableGrid {
 
     Array.from({ length: height }, (_, i) => i).forEach((i) => {
       const rowId = rowIds[bounds.r0 + i];
-      const values = Array.from({ length: width }, (_, j) => cellValue(i, j)).filter((entry): entry is [string, PropertyValue] => entry !== null);
+      const values = Array.from({ length: width }, (_, j) => cellValue(i, j, rowId)).filter((entry): entry is [string, PropertyValue] => entry !== null);
 
       if (rowId !== undefined) {
         values.forEach(([propertyId, value]) => changes.push({ rowId, propertyId, value }));

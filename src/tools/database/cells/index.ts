@@ -6,8 +6,9 @@ import { openRelationEditor } from './relation-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
-import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
+import { isPlaceValue, verificationStatus } from '../tier3-values';
 import { safeHref } from '../../../components/utils/sanitize-url';
+import { IconCross } from '../../../components/icons';
 
 export { renderCellValue, createOptionPill } from './display';
 export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer } from './types';
@@ -34,6 +35,63 @@ const googleMapsLink = (value: PropertyValue | undefined, ctx: CellEditorContext
   link.setAttribute('data-blok-database-place-google-maps', '');
 
   return link;
+};
+
+/**
+ * The field holds the stored address; a stored name shows as a chip with ×
+ * (research/20 §1d). Text equal to the stored address writes nothing, so a
+ * name and a point the user never touched stay. Other text is a new place:
+ * the old name and point no longer match it, and Blok cannot geocode it.
+ */
+const openPlaceEditor = (
+  property: PropertyDefinition,
+  value: PropertyValue | undefined,
+  anchor: HTMLElement,
+  ctx: CellEditorContext
+): CellEditorHandle => {
+  const place = isPlaceValue(value) ? value : undefined;
+  const address = place?.address ?? '';
+  const name = place?.name?.trim() ?? '';
+  const state = { cleared: false };
+  const header = name === '' ? undefined : document.createElement('div');
+  const handle = openTextEditor({ ...property, type: 'text' }, address, anchor, {
+    ...ctx,
+    onCommit: (text) => {
+      const typed = typeof text === 'string' ? text.trim() : '';
+
+      if (state.cleared) ctx.onCommit(null);
+      else if (typed === address.trim()) ctx.onCancel?.();
+      else ctx.onCommit(typed === '' ? null : { address: typed });
+    },
+    // The × leaves the text as it was, so the text editor sees no change.
+    onCancel: () => (state.cleared ? ctx.onCommit(null) : ctx.onCancel?.()),
+  }, googleMapsLink(value, ctx), header);
+
+  if (header !== undefined) {
+    const chip = document.createElement('span');
+    const label = document.createElement('span');
+    const clear = document.createElement('button');
+
+    header.setAttribute('data-blok-database-place-head', '');
+    chip.setAttribute('data-blok-database-option-pill', '');
+    chip.setAttribute('data-blok-database-place-chip', '');
+    label.setAttribute('data-blok-database-place-name', '');
+    label.textContent = name;
+    chip.appendChild(label);
+    clear.type = 'button';
+    clear.tabIndex = -1;
+    clear.setAttribute('data-blok-database-place-clear', '');
+    clear.setAttribute('aria-label', ctx.i18n.t('tools.database.placeClear'));
+    clear.innerHTML = IconCross;
+    clear.addEventListener('click', () => {
+      state.cleared = true;
+      handle.close();
+    });
+    chip.appendChild(clear);
+    header.appendChild(chip);
+  }
+
+  return handle;
 };
 
 const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined, cancel: () => undefined };
@@ -79,10 +137,7 @@ export const openCellEditor = (
     case 'relation':
       return openRelationEditor(property, value, anchor, ctx);
     case 'place':
-      return openTextEditor({ ...property, type: 'text' }, placeText(value), anchor, {
-        ...ctx,
-        onCommit: (text) => ctx.onCommit(typeof text === 'string' && text.trim() !== '' ? { address: text.trim() } : null),
-      }, googleMapsLink(value, ctx));
+      return openPlaceEditor(property, value, anchor, ctx);
     case 'verification':
       // Expired verifies again, as Notion's "Verify" does.
       ctx.onCommit(verificationStatus(value) === 'verified'

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "ピン追加モードを有効にする",
   "tools.database.mapCancelAddPin": "ピン追加モードをキャンセル",
   "tools.database.placeOpenInGoogleMaps": "Google マップで開く",
+  "tools.database.placeClear": "クリア",
   "tools.database.dashboardUnavailable": "ダッシュボードはここではまだ利用できません。",
   "tools.database.timelineLabel": "タイムライン",
   "tools.database.timelineNoDateProperty": "日付プロパティを追加すると、このビューをタイムラインで表示できます",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Lülita tähise lisamise režiim sisse",
   "tools.database.mapCancelAddPin": "Tühista tähise lisamise režiim",
   "tools.database.placeOpenInGoogleMaps": "Ava Google Mapsis",
+  "tools.database.placeClear": "Tühjenda",
   "tools.database.dashboardUnavailable": "Armatuurlauad pole siin veel saadaval.",
   "tools.database.timelineLabel": "Ajatelg",
   "tools.database.timelineNoDateProperty": "Selle vaate ajateljena kuvamiseks lisage kuupäevaomadus",

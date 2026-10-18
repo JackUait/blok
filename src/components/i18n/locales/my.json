@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "ပင်ထည့်သည့်မုဒ် ဖွင့်ရန်",
   "tools.database.mapCancelAddPin": "ပင်ထည့်သည့်မုဒ် ပယ်ဖျက်ရန်",
   "tools.database.placeOpenInGoogleMaps": "Google Maps တွင် ဖွင့်ရန်",
+  "tools.database.placeClear": "ရှင်းလင်း",
   "tools.database.dashboardUnavailable": "ဒက်ရှ်ဘုတ်များကို ဤနေရာတွင် မသုံးနိုင်သေးပါ။",
   "tools.database.timelineLabel": "အချိန်လိုင်း",
   "tools.database.timelineNoDateProperty": "ဤမြင်ကွင်းကို အချိန်လိုင်းအဖြစ် ကြည့်ရန် ရက်စွဲဂုဏ်သတ္တိ ထည့်ပါ",

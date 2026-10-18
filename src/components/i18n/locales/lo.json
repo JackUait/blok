@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "ເປີດໂໝດເພີ່ມໝຸດ",
   "tools.database.mapCancelAddPin": "ຍົກເລີກໂໝດເພີ່ມໝຸດ",
   "tools.database.placeOpenInGoogleMaps": "ເປີດໃນ Google Maps",
+  "tools.database.placeClear": "ລ້າງ",
   "tools.database.dashboardUnavailable": "ຍັງບໍ່ສາມາດໃຊ້ແດຊບອດຢູ່ບ່ອນນີ້ໄດ້.",
   "tools.database.timelineLabel": "ເສັ້ນເວລາ",
   "tools.database.timelineNoDateProperty": "ເພີ່ມຄຸນສົມບັດວັນທີເພື່ອເບິ່ງມຸມມອງນີ້ເປັນເສັ້ນເວລາ",

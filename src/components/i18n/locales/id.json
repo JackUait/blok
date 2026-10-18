@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Aktifkan mode tambah pin",
   "tools.database.mapCancelAddPin": "Batalkan mode tambah pin",
   "tools.database.placeOpenInGoogleMaps": "Buka di Google Maps",
+  "tools.database.placeClear": "Hapus",
   "tools.database.dashboardUnavailable": "Dasbor belum tersedia di sini.",
   "tools.database.timelineLabel": "Linimasa",
   "tools.database.timelineNoDateProperty": "Tambahkan properti tanggal untuk melihat tampilan ini sebagai linimasa",

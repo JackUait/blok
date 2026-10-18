@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "પિન ઉમેરવાનો મોડ ચાલુ કરો",
   "tools.database.mapCancelAddPin": "પિન ઉમેરવાનો મોડ રદ કરો",
   "tools.database.placeOpenInGoogleMaps": "Google Mapsમાં ખોલો",
+  "tools.database.placeClear": "સાફ કરો",
   "tools.database.dashboardUnavailable": "ડેશબોર્ડ હજી અહીં ઉપલબ્ધ નથી.",
   "tools.database.timelineLabel": "સમયરેખા",
   "tools.database.timelineNoDateProperty": "આ દૃશ્યને સમયરેખા તરીકે જોવા માટે તારીખ ગુણધર્મ ઉમેરો",

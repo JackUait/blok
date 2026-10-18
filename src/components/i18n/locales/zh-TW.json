@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "啟用新增圖釘模式",
   "tools.database.mapCancelAddPin": "取消新增圖釘模式",
   "tools.database.placeOpenInGoogleMaps": "在 Google 地圖中開啟",
+  "tools.database.placeClear": "清除",
   "tools.database.dashboardUnavailable": "此處尚無法使用儀表板。",
   "tools.database.timelineLabel": "時間軸",
   "tools.database.timelineNoDateProperty": "新增日期屬性，即可以時間軸顯示此檢視",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Zapnout režim přidávání špendlíků",
   "tools.database.mapCancelAddPin": "Zrušit režim přidávání špendlíků",
   "tools.database.placeOpenInGoogleMaps": "Otevřít v Mapách Google",
+  "tools.database.placeClear": "Vymazat",
   "tools.database.dashboardUnavailable": "Nástěnky zde zatím nejsou k dispozici.",
   "tools.database.timelineLabel": "Časová osa",
   "tools.database.timelineNoDateProperty": "Přidejte vlastnost data, abyste toto zobrazení viděli jako časovou osu",

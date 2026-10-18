@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "启用添加图钉模式",
   "tools.database.mapCancelAddPin": "取消添加图钉模式",
   "tools.database.placeOpenInGoogleMaps": "在 Google 地图中打开",
+  "tools.database.placeClear": "清除",
   "tools.database.dashboardUnavailable": "此处暂不支持仪表板。",
   "tools.database.timelineLabel": "时间线",
   "tools.database.timelineNoDateProperty": "添加日期属性以将此视图显示为时间线",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Ativar modo de adicionar alfinete",
   "tools.database.mapCancelAddPin": "Cancelar modo de adicionar alfinete",
   "tools.database.placeOpenInGoogleMaps": "Abrir no Google Maps",
+  "tools.database.placeClear": "Limpar",
   "tools.database.dashboardUnavailable": "Os painéis ainda não estão disponíveis aqui.",
   "tools.database.timelineLabel": "Linha do tempo",
   "tools.database.timelineNoDateProperty": "Adicione uma propriedade de data para ver esta visualização como linha do tempo",

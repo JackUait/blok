@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Attiva modalità aggiunta segnaposto",
   "tools.database.mapCancelAddPin": "Annulla modalità aggiunta segnaposto",
   "tools.database.placeOpenInGoogleMaps": "Apri in Google Maps",
+  "tools.database.placeClear": "Cancella",
   "tools.database.dashboardUnavailable": "Le dashboard non sono ancora disponibili qui.",
   "tools.database.timelineLabel": "Sequenza temporale",
   "tools.database.timelineNoDateProperty": "Aggiungi una proprietà data per vedere questa vista come sequenza temporale",

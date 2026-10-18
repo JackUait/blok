@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Raptiye ekleme modunu aç",
   "tools.database.mapCancelAddPin": "Raptiye ekleme modunu iptal et",
   "tools.database.placeOpenInGoogleMaps": "Google Haritalar'da aç",
+  "tools.database.placeClear": "Temizle",
   "tools.database.dashboardUnavailable": "Panolar henüz burada kullanılamıyor.",
   "tools.database.timelineLabel": "Zaman çizelgesi",
   "tools.database.timelineNoDateProperty": "Bu görünümü zaman çizelgesi olarak görmek için bir tarih özelliği ekleyin",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "پن شامل کرنے کا موڈ فعال کریں",
   "tools.database.mapCancelAddPin": "پن شامل کرنے کا موڈ منسوخ کریں",
   "tools.database.placeOpenInGoogleMaps": "Google Maps میں کھولیں",
+  "tools.database.placeClear": "صاف کریں",
   "tools.database.dashboardUnavailable": "ڈیش بورڈز ابھی یہاں دستیاب نہیں ہیں۔",
   "tools.database.timelineLabel": "ٹائم لائن",
   "tools.database.timelineNoDateProperty": "اس ویو کو ٹائم لائن کے طور پر دیکھنے کے لیے تاریخ کی پراپرٹی شامل کریں",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "සලකුණු එක් කිරීමේ ප්‍රකාරය සක්‍රිය කරන්න",
   "tools.database.mapCancelAddPin": "සලකුණු එක් කිරීමේ ප්‍රකාරය අවලංගු කරන්න",
   "tools.database.placeOpenInGoogleMaps": "Google Maps හි විවෘත කරන්න",
+  "tools.database.placeClear": "හිස් කරන්න",
   "tools.database.dashboardUnavailable": "උපකරණ පුවරු තවමත් මෙහි ලබා ගත නොහැක.",
   "tools.database.timelineLabel": "කාලරේඛාව",
   "tools.database.timelineNoDateProperty": "මෙම දසුන කාලරේඛාවක් ලෙස බැලීමට දින ගුණාංගයක් එක් කරන්න",

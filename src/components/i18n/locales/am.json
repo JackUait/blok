@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "ምልክት የማከል ሁነታን አንቃ",
   "tools.database.mapCancelAddPin": "ምልክት የማከል ሁነታን ሰርዝ",
   "tools.database.placeOpenInGoogleMaps": "በGoogle Maps ክፈት",
+  "tools.database.placeClear": "አጽዳ",
   "tools.database.dashboardUnavailable": "ዳሽቦርዶች እዚህ ገና አይገኙም።",
   "tools.database.timelineLabel": "የጊዜ መስመር",
   "tools.database.timelineNoDateProperty": "ይህን ዕይታ እንደ የጊዜ መስመር ለማየት የቀን ንብረት ጨምር",

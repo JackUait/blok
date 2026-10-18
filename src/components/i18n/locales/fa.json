@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "فعال کردن حالت افزودن سنجاق",
   "tools.database.mapCancelAddPin": "لغو حالت افزودن سنجاق",
   "tools.database.placeOpenInGoogleMaps": "باز کردن در Google Maps",
+  "tools.database.placeClear": "پاک کردن",
   "tools.database.dashboardUnavailable": "داشبوردها هنوز در اینجا در دسترس نیستند.",
   "tools.database.timelineLabel": "خط زمانی",
   "tools.database.timelineNoDateProperty": "برای نمایش این نما به‌صورت خط زمانی، یک ویژگی تاریخ اضافه کنید",

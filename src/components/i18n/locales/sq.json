@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Aktivizo modalitetin e shtimit të shenjave",
   "tools.database.mapCancelAddPin": "Anulo modalitetin e shtimit të shenjave",
   "tools.database.placeOpenInGoogleMaps": "Hap në Google Maps",
+  "tools.database.placeClear": "Pastro",
   "tools.database.dashboardUnavailable": "Panelet e kontrollit nuk janë ende të disponueshme këtu.",
   "tools.database.timelineLabel": "Kronologji",
   "tools.database.timelineNoDateProperty": "Shtoni një veti date për ta parë këtë pamje si kronologji",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "بەلگە قوشۇش ھالىتىنى قوزغىتىش",
   "tools.database.mapCancelAddPin": "بەلگە قوشۇش ھالىتىنى بىكار قىلىش",
   "tools.database.placeOpenInGoogleMaps": "Google Maps دا ئېچىش",
+  "tools.database.placeClear": "تازىلاش",
   "tools.database.dashboardUnavailable": "باشقۇرۇش تاختىلىرى بۇ يەردە ھازىرچە ئىشلەتكىلى بولمايدۇ.",
   "tools.database.timelineLabel": "ۋاقىت ئوقى",
   "tools.database.timelineNoDateProperty": "بۇ كۆرۈنۈشنى ۋاقىت ئوقى سۈپىتىدە كۆرۈش ئۈچۈن چېسلا خاسلىقى قوشۇڭ",

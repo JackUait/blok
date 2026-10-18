@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "പിൻ ചേർക്കൽ മോഡ് ഓണാക്കുക",
   "tools.database.mapCancelAddPin": "പിൻ ചേർക്കൽ മോഡ് റദ്ദാക്കുക",
   "tools.database.placeOpenInGoogleMaps": "Google Maps-ൽ തുറക്കുക",
+  "tools.database.placeClear": "മായ്ക്കുക",
   "tools.database.dashboardUnavailable": "ഡാഷ്ബോർഡുകൾ ഇവിടെ ഇതുവരെ ലഭ്യമല്ല.",
   "tools.database.timelineLabel": "ടൈംലൈൻ",
   "tools.database.timelineNoDateProperty": "ഈ കാഴ്ച ടൈംലൈനായി കാണാൻ ഒരു തീയതി പ്രോപ്പർട്ടി ചേർക്കുക",

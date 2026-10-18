@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Slå tilstand for tilføjelse af nål til",
   "tools.database.mapCancelAddPin": "Annuller tilstand for tilføjelse af nål",
   "tools.database.placeOpenInGoogleMaps": "Åbn i Google Maps",
+  "tools.database.placeClear": "Ryd",
   "tools.database.dashboardUnavailable": "Dashboards er ikke tilgængelige her endnu.",
   "tools.database.timelineLabel": "Tidslinje",
   "tools.database.timelineNoDateProperty": "Tilføj en datoegenskab for at se visningen som en tidslinje",

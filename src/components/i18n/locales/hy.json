@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Միացնել նշիչի ավելացման ռեժիմը",
   "tools.database.mapCancelAddPin": "Չեղարկել նշիչի ավելացման ռեժիմը",
   "tools.database.placeOpenInGoogleMaps": "Բացել Google Maps-ում",
+  "tools.database.placeClear": "Մաքրել",
   "tools.database.dashboardUnavailable": "Կառավարման վահանակներն այստեղ դեռ հասանելի չեն։",
   "tools.database.timelineLabel": "Ժամանակագիծ",
   "tools.database.timelineNoDateProperty": "Ավելացրեք ամսաթվի հատկություն՝ այս տեսքը որպես ժամանակագիծ տեսնելու համար",

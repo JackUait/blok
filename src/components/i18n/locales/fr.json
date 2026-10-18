@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Activer le mode d’ajout de repère",
   "tools.database.mapCancelAddPin": "Annuler le mode d’ajout de repère",
   "tools.database.placeOpenInGoogleMaps": "Ouvrir dans Google Maps",
+  "tools.database.placeClear": "Effacer",
   "tools.database.dashboardUnavailable": "Les tableaux de bord ne sont pas encore disponibles ici.",
   "tools.database.timelineLabel": "Chronologie",
   "tools.database.timelineNoDateProperty": "Ajoutez une propriété de date pour afficher cette vue sous forme de chronologie",

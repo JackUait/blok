@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "הפעל מצב הוספת נעץ",
   "tools.database.mapCancelAddPin": "בטל מצב הוספת נעץ",
   "tools.database.placeOpenInGoogleMaps": "פתח במפות Google",
+  "tools.database.placeClear": "נקה",
   "tools.database.dashboardUnavailable": "לוחות מחוונים עדיין אינם זמינים כאן.",
   "tools.database.timelineLabel": "ציר זמן",
   "tools.database.timelineNoDateProperty": "הוסף מאפיין תאריך כדי להציג תצוגה זו כציר זמן",

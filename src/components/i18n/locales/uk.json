@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Увімкнути режим додавання міток",
   "tools.database.mapCancelAddPin": "Скасувати режим додавання міток",
   "tools.database.placeOpenInGoogleMaps": "Відкрити в Google Картах",
+  "tools.database.placeClear": "Очистити",
   "tools.database.dashboardUnavailable": "Дашборди тут поки недоступні.",
   "tools.database.timelineLabel": "Часова шкала",
   "tools.database.timelineNoDateProperty": "Додайте властивість із датою, щоб показати це подання як часову шкалу",

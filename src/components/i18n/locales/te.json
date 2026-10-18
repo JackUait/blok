@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "పిన్ జోడించే మోడ్‌ను ప్రారంభించు",
   "tools.database.mapCancelAddPin": "పిన్ జోడించే మోడ్‌ను రద్దు చేయి",
   "tools.database.placeOpenInGoogleMaps": "Google Mapsలో తెరవండి",
+  "tools.database.placeClear": "క్లియర్ చేయి",
   "tools.database.dashboardUnavailable": "డాష్‌బోర్డ్‌లు ఇంకా ఇక్కడ అందుబాటులో లేవు.",
   "tools.database.timelineLabel": "టైమ్‌లైన్",
   "tools.database.timelineNoDateProperty": "ఈ వీక్షణను టైమ్‌లైన్‌గా చూడటానికి తేదీ ప్రాపర్టీని జోడించండి",

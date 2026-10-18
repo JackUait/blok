@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Gombostű-hozzáadási mód bekapcsolása",
   "tools.database.mapCancelAddPin": "Kilépés a gombostű-hozzáadási módból",
   "tools.database.placeOpenInGoogleMaps": "Megnyitás a Google Térképben",
+  "tools.database.placeClear": "Törlés",
   "tools.database.dashboardUnavailable": "Az irányítópultok itt még nem érhetők el.",
   "tools.database.timelineLabel": "Idővonal",
   "tools.database.timelineNoDateProperty": "Adjon hozzá egy dátum tulajdonságot, hogy ezt a nézetet idővonalként lássa",

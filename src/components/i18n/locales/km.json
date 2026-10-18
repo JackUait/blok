@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "បើករបៀបបន្ថែមម្ជុល",
   "tools.database.mapCancelAddPin": "បោះបង់របៀបបន្ថែមម្ជុល",
   "tools.database.placeOpenInGoogleMaps": "បើកក្នុង Google Maps",
+  "tools.database.placeClear": "ជម្រះ",
   "tools.database.dashboardUnavailable": "ផ្ទាំងគ្រប់គ្រងមិនទាន់អាចប្រើបាននៅទីនេះទេ។",
   "tools.database.timelineLabel": "បន្ទាត់ពេលវេលា",
   "tools.database.timelineNoDateProperty": "បន្ថែមលក្ខណៈកាលបរិច្ឆេទ ដើម្បីមើលទិដ្ឋភាពនេះជាបន្ទាត់ពេលវេលា",

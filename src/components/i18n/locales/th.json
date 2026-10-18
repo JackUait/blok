@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "เปิดโหมดเพิ่มหมุด",
   "tools.database.mapCancelAddPin": "ยกเลิกโหมดเพิ่มหมุด",
   "tools.database.placeOpenInGoogleMaps": "เปิดใน Google Maps",
+  "tools.database.placeClear": "ล้าง",
   "tools.database.dashboardUnavailable": "ยังไม่สามารถใช้แดชบอร์ดที่นี่ได้",
   "tools.database.timelineLabel": "ไทม์ไลน์",
   "tools.database.timelineNoDateProperty": "เพิ่มคุณสมบัติวันที่เพื่อดูมุมมองนี้เป็นไทม์ไลน์",

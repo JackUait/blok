@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Включить режим добавления меток",
   "tools.database.mapCancelAddPin": "Отменить режим добавления меток",
   "tools.database.placeOpenInGoogleMaps": "Открыть в Google Картах",
+  "tools.database.placeClear": "Очистить",
   "tools.database.dashboardUnavailable": "Дашборды здесь пока недоступны.",
   "tools.database.timelineLabel": "Хронология",
   "tools.database.timelineNoDateProperty": "Добавьте свойство с датой, чтобы показать это представление как хронологию",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Enable add pin mode",
   "tools.database.mapCancelAddPin": "Cancel add pin mode",
   "tools.database.placeOpenInGoogleMaps": "Open in Google Maps",
+  "tools.database.placeClear": "Clear",
   "tools.database.dashboardUnavailable": "Dashboards are not available here yet.",
   "tools.database.timelineLabel": "Timeline",
   "tools.database.timelineNoDateProperty": "Add a date property to see this view as a timeline",

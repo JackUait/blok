@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "குறி சேர்க்கும் பயன்முறையை இயக்கு",
   "tools.database.mapCancelAddPin": "குறி சேர்க்கும் பயன்முறையை ரத்துசெய்",
   "tools.database.placeOpenInGoogleMaps": "Google Maps-இல் திற",
+  "tools.database.placeClear": "அழி",
   "tools.database.dashboardUnavailable": "டாஷ்போர்டுகள் இன்னும் இங்கே கிடைக்கவில்லை.",
   "tools.database.timelineLabel": "காலவரிசை",
   "tools.database.timelineNoDateProperty": "இந்தக் காட்சியைக் காலவரிசையாகக் காண தேதி பண்பைச் சேர்",

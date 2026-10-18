@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Ieslēgt atzīmes pievienošanas režīmu",
   "tools.database.mapCancelAddPin": "Atcelt atzīmes pievienošanas režīmu",
   "tools.database.placeOpenInGoogleMaps": "Atvērt Google Maps",
+  "tools.database.placeClear": "Notīrīt",
   "tools.database.dashboardUnavailable": "Informācijas paneļi šeit vēl nav pieejami.",
   "tools.database.timelineLabel": "Laika skala",
   "tools.database.timelineNoDateProperty": "Pievienojiet datuma rekvizītu, lai šo skatu redzētu kā laika skalu",

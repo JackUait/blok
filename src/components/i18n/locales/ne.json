@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "पिन थप्ने मोड सक्रिय गर्नुहोस्",
   "tools.database.mapCancelAddPin": "पिन थप्ने मोड रद्द गर्नुहोस्",
   "tools.database.placeOpenInGoogleMaps": "Google Maps मा खोल्नुहोस्",
+  "tools.database.placeClear": "खाली गर्नुहोस्",
   "tools.database.dashboardUnavailable": "ड्यासबोर्डहरू अझै यहाँ उपलब्ध छैनन्।",
   "tools.database.timelineLabel": "समयरेखा",
   "tools.database.timelineNoDateProperty": "यो दृश्य समयरेखाको रूपमा हेर्न मिति गुण थप्नुहोस्",

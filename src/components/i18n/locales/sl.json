@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Vklopi način dodajanja oznak",
   "tools.database.mapCancelAddPin": "Prekliči način dodajanja oznak",
   "tools.database.placeOpenInGoogleMaps": "Odpri v Google Maps",
+  "tools.database.placeClear": "Počisti",
   "tools.database.dashboardUnavailable": "Nadzorne plošče tukaj še niso na voljo.",
   "tools.database.timelineLabel": "Časovnica",
   "tools.database.timelineNoDateProperty": "Dodaj lastnost datuma, da bo ta pogled prikazan kot časovnica",

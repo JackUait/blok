@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Uključi način dodavanja oznake",
   "tools.database.mapCancelAddPin": "Otkaži način dodavanja oznake",
   "tools.database.placeOpenInGoogleMaps": "Otvori u Google Maps",
+  "tools.database.placeClear": "Očisti",
   "tools.database.dashboardUnavailable": "Kontrolne table ovdje još nisu dostupne.",
   "tools.database.timelineLabel": "Vremenska linija",
   "tools.database.timelineNoDateProperty": "Dodajte svojstvo datuma da biste ovaj prikaz vidjeli kao vremensku liniju",

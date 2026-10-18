@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Ενεργοποίηση λειτουργίας προσθήκης καρφίτσας",
   "tools.database.mapCancelAddPin": "Ακύρωση λειτουργίας προσθήκης καρφίτσας",
   "tools.database.placeOpenInGoogleMaps": "Άνοιγμα στο Google Maps",
+  "tools.database.placeClear": "Απαλοιφή",
   "tools.database.dashboardUnavailable": "Οι πίνακες ελέγχου δεν είναι ακόμη διαθέσιμοι εδώ.",
   "tools.database.timelineLabel": "Χρονολόγιο",
   "tools.database.timelineNoDateProperty": "Προσθέστε μια ιδιότητα ημερομηνίας για να βλέπετε αυτήν την προβολή ως χρονολόγιο",

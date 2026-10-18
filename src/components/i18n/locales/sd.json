@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "پن شامل ڪرڻ وارو موڊ چالو ڪريو",
   "tools.database.mapCancelAddPin": "پن شامل ڪرڻ وارو موڊ رد ڪريو",
   "tools.database.placeOpenInGoogleMaps": "Google Maps ۾ کوليو",
+  "tools.database.placeClear": "صاف ڪريو",
   "tools.database.dashboardUnavailable": "ڊيش بورڊ اڃا هتي دستياب ناهن.",
   "tools.database.timelineLabel": "ٽائيم لائن",
   "tools.database.timelineNoDateProperty": "هن ويو کي ٽائيم لائن طور ڏسڻ لاءِ تاريخ جي پراپرٽي شامل ڪريو",

@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "পিন যোগ করার মোড চালু করুন",
   "tools.database.mapCancelAddPin": "পিন যোগ করার মোড বাতিল করুন",
   "tools.database.placeOpenInGoogleMaps": "Google Maps-এ খুলুন",
+  "tools.database.placeClear": "সাফ করুন",
   "tools.database.dashboardUnavailable": "ড্যাশবোর্ড এখনও এখানে উপলভ্য নয়।",
   "tools.database.timelineLabel": "টাইমলাইন",
   "tools.database.timelineNoDateProperty": "এই ভিউটি টাইমলাইন হিসেবে দেখতে একটি তারিখ বৈশিষ্ট্য যোগ করুন",

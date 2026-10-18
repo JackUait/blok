@@ -70,6 +70,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/cells/date-editor.ts': cmds(['database.setRowValues'], CELL_EDIT),
   'ui-file:src/tools/database/cells/display.ts': exempt('view-only', 'Follows a link or opens a related row from a cell; the document does not change.'),
   'ui-file:src/tools/database/cells/files-editor.ts': cmds(['database.setRowValues'], CELL_EDIT),
+  'ui-file:src/tools/database/cells/index.ts': cmds(['database.setRowValues'], 'Clear a place with the × on its name chip.'),
   'ui-file:src/tools/database/cells/option-editing.ts': cmds(['database.renameOption', 'database.deleteOption', 'database.recolorOption'], 'Rename, delete or recolor a select option.'),
   'ui-file:src/tools/database/cells/options-editor.ts': cmds(['database.addOption', 'database.moveOption'], 'Add and reorder select options in property settings.'),
   'ui-file:src/tools/database/cells/person-editor.ts': cmds(['database.setRowValues'], CELL_EDIT),

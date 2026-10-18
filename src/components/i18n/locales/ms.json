@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Dayakan mod tambah pin",
   "tools.database.mapCancelAddPin": "Batalkan mod tambah pin",
   "tools.database.placeOpenInGoogleMaps": "Buka dalam Google Maps",
+  "tools.database.placeClear": "Kosongkan",
   "tools.database.dashboardUnavailable": "Papan pemuka belum tersedia di sini.",
   "tools.database.timelineLabel": "Garis masa",
   "tools.database.timelineNoDateProperty": "Tambah sifat tarikh untuk melihat paparan ini sebagai garis masa",

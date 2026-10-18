@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "دۆخی زیادکردنی نیشانە چالاک بکە",
   "tools.database.mapCancelAddPin": "دۆخی زیادکردنی نیشانە هەڵبوەشێنەوە",
   "tools.database.placeOpenInGoogleMaps": "کردنەوە لە Google Maps",
+  "tools.database.placeClear": "پاککردنەوە",
   "tools.database.dashboardUnavailable": "داشبۆردەکان هێشتا لێرە بەردەست نین.",
   "tools.database.timelineLabel": "هێڵی کات",
   "tools.database.timelineNoDateProperty": "تایبەتمەندییەکی بەروار زیاد بکە بۆ ئەوەی ئەم بینینە وەک هێڵی کات ببینیت",

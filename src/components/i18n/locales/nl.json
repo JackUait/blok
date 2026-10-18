@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Modus voor markering toevoegen inschakelen",
   "tools.database.mapCancelAddPin": "Modus voor markering toevoegen annuleren",
   "tools.database.placeOpenInGoogleMaps": "Openen in Google Maps",
+  "tools.database.placeClear": "Wissen",
   "tools.database.dashboardUnavailable": "Dashboards zijn hier nog niet beschikbaar.",
   "tools.database.timelineLabel": "Tijdlijn",
   "tools.database.timelineNoDateProperty": "Voeg een datumeigenschap toe om deze weergave als tijdlijn te zien",

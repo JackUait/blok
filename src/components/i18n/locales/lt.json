@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Įjungti smeigtuko pridėjimo režimą",
   "tools.database.mapCancelAddPin": "Atšaukti smeigtuko pridėjimo režimą",
   "tools.database.placeOpenInGoogleMaps": "Atidaryti „Google Maps“",
+  "tools.database.placeClear": "Išvalyti",
   "tools.database.dashboardUnavailable": "Prietaisų skydeliai čia dar nepasiekiami.",
   "tools.database.timelineLabel": "Laiko juosta",
   "tools.database.timelineNoDateProperty": "Pridėkite datos savybę, kad šį rodinį matytumėte kaip laiko juostą",

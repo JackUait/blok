@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Activează modul de adăugare a marcajelor",
   "tools.database.mapCancelAddPin": "Anulează modul de adăugare a marcajelor",
   "tools.database.placeOpenInGoogleMaps": "Deschide în Google Maps",
+  "tools.database.placeClear": "Golește",
   "tools.database.dashboardUnavailable": "Panourile de bord nu sunt încă disponibile aici.",
   "tools.database.timelineLabel": "Cronologie",
   "tools.database.timelineNoDateProperty": "Adăugați o proprietate de tip dată pentru a vedea această vizualizare ca o cronologie",

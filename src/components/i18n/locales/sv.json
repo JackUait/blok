@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Aktivera läget för att lägga till nål",
   "tools.database.mapCancelAddPin": "Avbryt läget för att lägga till nål",
   "tools.database.placeOpenInGoogleMaps": "Öppna i Google Maps",
+  "tools.database.placeClear": "Rensa",
   "tools.database.dashboardUnavailable": "Instrumentpaneler är inte tillgängliga här än.",
   "tools.database.timelineLabel": "Tidslinje",
   "tools.database.timelineNoDateProperty": "Lägg till en datumegenskap för att visa vyn som en tidslinje",

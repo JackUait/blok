@@ -1301,6 +1301,7 @@
   "tools.database.mapEnableAddPin": "Washa hali ya kuongeza pini",
   "tools.database.mapCancelAddPin": "Ghairi hali ya kuongeza pini",
   "tools.database.placeOpenInGoogleMaps": "Fungua kwenye Google Maps",
+  "tools.database.placeClear": "Futa",
   "tools.database.dashboardUnavailable": "Dashibodi bado hazipatikani hapa.",
   "tools.database.timelineLabel": "Rekodi ya matukio",
   "tools.database.timelineNoDateProperty": "Ongeza sifa ya tarehe ili kuona mwonekano huu kama rekodi ya matukio",

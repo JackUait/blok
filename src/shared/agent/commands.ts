@@ -1,4 +1,5 @@
 import type { CoreCommandName } from '../../../types/agent';
+import { RICH_TEXT_MARKS } from '../tool-descriptions/rich-text';
 import type { JsonSchema } from './types';
 
 export interface CoreCommandSpec {
@@ -87,7 +88,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   'text.delete': write('Delete a range of text.', obj({ id, field: { type: 'string' }, range }, ['id', 'range'])),
   'text.replace': write('Replace a range, or the whole field.', obj({ id, field: { type: 'string' }, range, with: richOrString }, ['id', 'with'])),
   'text.format': write('Set or clear marks on a range.', obj({
-    id, field: { type: 'string' }, range, set: { type: 'object' }, unset: { type: 'array', items: { type: 'string' } },
+    id, field: { type: 'string' }, range, set: RICH_TEXT_MARKS, unset: { type: 'array', items: { type: 'string' } },
   }, ['id', 'range'])),
   'markdown.insert': write('Convert Markdown into blocks and insert them. Additive.', obj({
     markdown: { type: 'string' }, parentId, position,

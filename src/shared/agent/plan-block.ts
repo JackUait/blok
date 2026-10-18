@@ -3,7 +3,7 @@ import { cleanupEmptiedColumnList } from '../tool-actions/columns';
 import { checkChildType, checkMove, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
-import { matchVariants, variantSentence } from './variant-hint';
+import { matchVariants, titleSentence, variantSentence } from './variant-hint';
 import { cloneRecord } from './snapshot';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
@@ -285,9 +285,11 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
 
 const failUnknownTool = (state: PlanState, type: string, path: string): never => {
   const known = [...state.ctx.tools.keys()];
-  const variants = matchVariants(type, [...state.ctx.tools.values()].map(tool => tool.entry), state.ctx.validate);
+  const entries = [...state.ctx.tools.values()].map(tool => tool.entry);
+  const variants = matchVariants(type, entries, state.ctx.validate);
+  const hint = variantSentence(type, variants) || titleSentence(type, entries);
 
-  return state.fail('UNKNOWN_TOOL', `No block tool "${type}" is registered.${variantSentence(type, variants)} Known: ${known.join(', ')}.`, path, {
+  return state.fail('UNKNOWN_TOOL', `No block tool "${type}" is registered.${hint} Known: ${known.join(', ')}.`, path, {
     known, ...(variants.length > 0 && { variants }),
   });
 };

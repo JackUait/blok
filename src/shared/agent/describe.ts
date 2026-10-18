@@ -2,7 +2,7 @@ import type { ContractSlice } from '../../../types/agent';
 import type { AgentContract } from '../../../types/tool-manifest';
 import { validateAgainst } from '../schema/validate';
 import { failure } from './errors';
-import { matchVariants, variantSentence } from './variant-hint';
+import { matchVariants, titleSentence, variantSentence } from './variant-hint';
 
 export const describeContract = (
   contract: AgentContract,
@@ -27,7 +27,8 @@ export const describeContract = (
     const tool = contract.manifest.blocks.find(entry => entry.name === query.tool);
 
     if (tool === undefined) {
-      const hint = variantSentence(query.tool, matchVariants(query.tool, contract.manifest.blocks, validateAgainst));
+      const hint = variantSentence(query.tool, matchVariants(query.tool, contract.manifest.blocks, validateAgainst))
+        || titleSentence(query.tool, contract.manifest.blocks);
       const known = contract.manifest.blocks.map(entry => entry.name).join(', ');
 
       throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}".${hint} Known: ${known}.`);

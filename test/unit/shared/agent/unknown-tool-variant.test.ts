@@ -81,6 +81,48 @@ describe('a block type that is really a variant of a tool', () => {
   });
 });
 
+describe('a block type named by its menu title', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('block.insert names the tool whose title it is', async () => {
+    const session = openJsonSession(seed);
+
+    try {
+      const error = errorOf(await session.execute({ commands: [{ name: 'block.insert', args: { type: 'heading', data: { text: 'x', level: 2 } } }] }));
+
+      expect(error.message).toMatch(/^No block tool "heading" is registered\. Did you mean "header" \(Heading 1\)\? Known: /);
+    } finally {
+      session.close();
+    }
+  });
+
+  it('describe({ tool }) gives the same hint', () => {
+    const session = openJsonSession(seed);
+
+    try {
+      expect(() => session.describe({ tool: 'Columns' })).toThrow('Did you mean "column_list" (2 columns)?');
+    } finally {
+      session.close();
+    }
+  });
+
+  it('an exact variant match keeps its own hint only', () => {
+    const session = openJsonSession(seed);
+
+    try {
+      expect(() => session.describe({ tool: 'checklist' })).toThrow(/^(?!.*Did you mean).*type "list" with data/);
+    } finally {
+      session.close();
+    }
+  });
+});
+
 describe('describe({ tool }) given a command name', () => {
   beforeEach(() => {
     vi.clearAllMocks();

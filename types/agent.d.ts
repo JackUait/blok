@@ -79,7 +79,7 @@ export type AgentResult =
     results: unknown[];
     refs: Record<string, string>;
     changed: ChangedSet;
-    /** The created, updated and moved blocks as blok_read shows them now, in reading order. */
+    /** The created, updated and moved blocks, with their data, as blok_read shows them now, in reading order. */
     blocks?: ViewBlock[];
     /** How many more changed blocks `blocks` left out. */
     moreBlocks?: number;

@@ -135,7 +135,7 @@ export const buildDocumentView = (
   };
 };
 
-/** Outline rows for the given ids, in reading order; at most `limit` of them. */
+/** Rows for the given ids with their data, as a read of those ids gives them; at most `limit` of them. */
 export const viewRows = (
   snap: DocSnapshot,
   ids: ReadonlySet<string>,
@@ -146,7 +146,7 @@ export const viewRows = (
   const rows = order.slice(0, limit).flatMap(({ id, depth }) => {
     const block = snap.get(id);
 
-    return block === undefined ? [] : [viewBlock(snap, block, depth, {}, ctx)];
+    return block === undefined ? [] : [viewBlock(snap, block, depth, { detail: 'full' }, ctx)];
   });
 
   return { rows, more: Math.max(0, order.length - limit) };

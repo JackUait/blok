@@ -29,7 +29,7 @@ describe.each(sessions)('blok_execute result on a %s', (_name, open) => {
     vi.restoreAllMocks();
   });
 
-  it('shows each created, updated and moved block as a read right after would show it', async () => {
+  it('shows each created, updated and moved block, with its data, as reading those ids right after would', async () => {
     const session = open(seed);
 
     try {
@@ -42,10 +42,10 @@ describe.each(sessions)('blok_execute result on a %s', (_name, open) => {
       });
 
       expect(result.ok, JSON.stringify(result)).toBe(true);
-      const read = await session.read();
-      const changed = result.ok ? new Set([...result.changed.created, ...result.changed.updated, ...result.changed.moved]) : new Set();
+      const changed = result.ok ? [...result.changed.created, ...result.changed.updated, ...result.changed.moved] : [];
+      const full = await session.read({ ids: changed });
 
-      expect(blocksOf(result)).toEqual(read.blocks.filter((block) => changed.has(block.id)));
+      expect(blocksOf(result)).toEqual(full.blocks);
       expect(blocksOf(result)?.map((block) => block.text)).toEqual(['Plan', 'One', 'Two', 'New']);
     } finally {
       await session.close();

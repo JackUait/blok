@@ -61,7 +61,7 @@ export const COMMON_COMMANDS: readonly string[] = [
   'text.format', 'block.convert', 'doc.setTitle', 'doc.setIcon',
 ];
 
-const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks as they now read, so you can check your work without blok_read.';
+const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.';
 
 const DESCRIPTIONS: Record<AgentToolName, string> = {
   blok_read: 'Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.',

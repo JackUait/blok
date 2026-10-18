@@ -103,6 +103,10 @@ export const test = base.extend<NonNullable<unknown>, { __sharedPage: () => Prom
         forcedColors: null,
         contrast: null,
       });
+      // A route outlives its file. It keeps interception on, so Chromium keeps serving
+      // images it already loaded, and later routes for that URL never run.
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      await page.context().unrouteAll({ behavior: 'ignoreErrors' });
     }
     await use(page);
   },

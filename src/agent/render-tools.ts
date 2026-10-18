@@ -63,10 +63,17 @@ export const COMMON_COMMANDS: readonly string[] = [
 
 const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.';
 
+// The core commands whose result can name a new block. The planner refuses a ref on any other core command.
+const REF_CORE_COMMANDS: ReadonlySet<string> = new Set(['block.insert', 'block.duplicate']);
+
+const carriesRef = (entry: CommandEntry): boolean => entry.source !== 'core' || REF_CORE_COMMANDS.has(entry.name);
+
+const SEVERAL_BLOCKS = 'To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert.';
+
 const DESCRIPTIONS: Record<AgentToolName, string> = {
   blok_read: 'Read the document as a tree of blocks with ids, types and text. Read before you edit, and again after a STALE error.',
   blok_describe: 'Look up what you can do. With no arguments it lists tools and commands. Pass { tool } or { command } to get the argument schema.',
-  blok_execute: `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. Call blok_describe for a command's arguments. ${RESULT_SHOWS_BLOCKS}`,
+  blok_execute: `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. ${SEVERAL_BLOCKS} Call blok_describe for a command's arguments. ${RESULT_SHOWS_BLOCKS}`,
 };
 
 const readInput = (contract: AgentContract): Schema => {
@@ -122,7 +129,7 @@ const fullBranches = (commands: CommandEntry[], defs: Schema): Schema[] => {
       properties: {
         name: { const: entry.name },
         args: hoistDefs(candidate.prefix, entry.args, defs),
-        ref: { type: 'string' },
+        ...(carriesRef(entry) && { ref: { type: 'string' } }),
       },
       required: ['name', 'args'],
       additionalProperties: false,
@@ -154,7 +161,7 @@ const mixedExecuteInput = (contract: AgentContract): Schema => {
 const mixedExecuteDescription = (contract: AgentContract): string => {
   const common = contract.commands.filter(entry => entry.available && isCommon(entry)).map(entry => entry.name);
 
-  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments. ${RESULT_SHOWS_BLOCKS}`;
+  return `Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. ${SEVERAL_BLOCKS} The schema has the full arguments for ${common.join(', ')}. Call blok_describe for any other command's arguments. ${RESULT_SHOWS_BLOCKS}`;
 };
 
 const assertWithinLimits = (input: Schema): void => {

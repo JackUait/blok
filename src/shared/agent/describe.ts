@@ -28,8 +28,9 @@ export const describeContract = (
 
     if (tool === undefined) {
       const hint = variantSentence(query.tool, matchVariants(query.tool, contract.manifest.blocks, validateAgainst));
+      const known = contract.manifest.blocks.map(entry => entry.name).join(', ');
 
-      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}".${hint} Call describe() for the list.`);
+      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}".${hint} Known: ${known}.`);
     }
 
     return { tool, commands: contract.commands.filter(entry => typeof entry.source === 'object' && entry.source.tool === query.tool) };

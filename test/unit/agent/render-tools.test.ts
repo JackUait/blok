@@ -10,6 +10,8 @@ import { createHeadlessAgentSetup } from '../../../src/view/agent-runtime';
 
 type Schema = Record<string, unknown>;
 const PROVIDERS: Array<RenderOptions['format']> = ['anthropic', 'openai'];
+// A tool command keeps "ref" in its branch, so the wrapper overhead below stays the same.
+const WITH_REF = { source: { tool: 'wide', target: 'block' } } as const;
 
 const isSchema = (value: unknown): value is Schema =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -305,8 +307,14 @@ describe('renderAgentTools full', () => {
     branches.forEach(branch => {
       expect(branch.additionalProperties).toBe(false);
       expect(branch.required).toEqual(['name', 'args']);
-      expect(propertiesOf(branch).ref).toEqual({ type: 'string' });
     });
+  });
+
+  it('offers ref only on commands that can create a block', () => {
+    const branches = branchesOf(fullInput());
+
+    expect(branches.filter(branch => propertiesOf(branch).ref !== undefined).map(branch => schema(propertiesOf(branch).name).const))
+      .toEqual(['block.insert', 'poll.addOption', 'table.insertRows']);
   });
 
   it('hoists recursive definitions using the established command prefix', () => {
@@ -386,8 +394,8 @@ describe('renderAgentTools full', () => {
       type: 'object',
       properties: Object.fromEntries(Array.from({ length: count }, (_, index) => [`p${index}`, { type: 'string' }])),
     });
-    const at = makeContract([command('wide.run', args(4995))]);
-    const over = makeContract([command('wide.run', args(4996))]);
+    const at = makeContract([command('wide.run', args(4995), WITH_REF)]);
+    const over = makeContract([command('wide.run', args(4996), WITH_REF)]);
 
     expect(() => fullInput(at, format)).not.toThrow();
     expect(() => fullInput(over, format))
@@ -422,7 +430,7 @@ describe('renderAgentTools full', () => {
     };
     const args = { type: 'object', properties: { left: shared, right: shared } };
 
-    expect(() => fullInput(makeContract([command('shared.run', args)])))
+    expect(() => fullInput(makeContract([command('shared.run', args, WITH_REF)])))
       .toThrowError(expect.objectContaining({ name: 'AgentToolsTooLargeError', limit: 'properties', actual: 5001 }));
   });
 
@@ -550,6 +558,51 @@ describe('renderAgentTools mixed', () => {
   });
 });
 
+describe('renderAgentTools ref wording', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const descriptionsIn = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value.flatMap(descriptionsIn);
+    }
+    if (!isSchema(value)) {
+      return [];
+    }
+
+    return Object.entries(value).flatMap(([key, child]) => (key === 'description' && typeof child === 'string' ? [child] : descriptionsIn(child)));
+  };
+
+  it.each(['envelope', 'full', 'mixed'] as const)('%s: no id description carries the bare "$ref" token', (schemaName) => {
+    const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
+    const execute = byName(renderAgentTools(contract, { format: 'anthropic', schema: schemaName }), 'blok_execute');
+
+    expect(descriptionsIn(inputOf(execute)).filter(text => text.includes('"$ref"'))).toEqual([]);
+  });
+
+  it.each(['envelope', 'full', 'mixed'] as const)('%s: blok_execute points several text blocks at markdown.insert', (schemaName) => {
+    const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
+    const execute = byName(renderAgentTools(contract, { format: 'anthropic', schema: schemaName }), 'blok_execute');
+
+    expect(execute.description).toMatch(/several .*blocks.*markdown\.insert/);
+  });
+
+  it('leaves ref off the common commands that never create a block', () => {
+    const { contract } = createHeadlessAgentSetup({ runtime: 'node' });
+    const execute = byName(renderAgentTools(contract, { format: 'anthropic', schema: 'mixed' }), 'blok_execute');
+    const branches = schemaList(schema(schema(schema(inputOf(execute).properties).commands).items).oneOf);
+    const withRef = branches.filter(branch => schema(branch.properties).ref !== undefined)
+      .map(branch => schema(schema(branch.properties).name).const ?? 'envelope');
+
+    expect(withRef).toEqual(['block.insert', 'envelope']);
+  });
+});
+
 describe('renderAgentTools MCP', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -671,7 +724,7 @@ describe('renderAgentTools MCP', () => {
 
   it('counts MCP handle overhead against full-mode limits', () => {
     const properties = Object.fromEntries(Array.from({ length: 4995 }, (_, index) => [`p${index}`, { type: 'string' }]));
-    const contract = makeContract([command('wide.run', { type: 'object', properties })]);
+    const contract = makeContract([command('wide.run', { type: 'object', properties }, WITH_REF)]);
 
     expect(() => renderAgentTools(contract, { format: 'mcp', schema: 'full', handle: true }))
       .toThrowError(expect.objectContaining({ name: 'AgentToolsTooLargeError', limit: 'properties', actual: 5001 }));

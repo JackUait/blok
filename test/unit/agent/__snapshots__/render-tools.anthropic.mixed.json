@@ -10,7 +10,7 @@
             {
               "type": "string",
               "minLength": 1,
-              "description": "A block id, or \"$ref\" of a block an earlier command created."
+              "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
             },
             {
               "type": "null"
@@ -26,7 +26,7 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "description": "A block id, or \"$ref\" of a block an earlier command created."
+            "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
           }
         },
         "detail": {
@@ -70,7 +70,7 @@
   },
   {
     "name": "blok_execute",
-    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments. Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.",
+    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments. Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -91,7 +91,7 @@
                       "id": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                       },
                       "type": {
                         "type": "string",
@@ -106,9 +106,6 @@
                       "type"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -129,16 +126,13 @@
                       "id": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                       }
                     },
                     "required": [
                       "id"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -181,7 +175,7 @@
                           {
                             "type": "string",
                             "minLength": 1,
-                            "description": "A block id, or \"$ref\" of a block an earlier command created."
+                            "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                           },
                           {
                             "type": "null"
@@ -203,7 +197,7 @@
                               "before": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                               }
                             },
                             "required": [
@@ -217,7 +211,7 @@
                               "after": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                               }
                             },
                             "required": [
@@ -299,9 +293,6 @@
                       "icon"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -327,9 +318,6 @@
                       "title"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -355,7 +343,7 @@
                           {
                             "type": "string",
                             "minLength": 1,
-                            "description": "A block id, or \"$ref\" of a block an earlier command created."
+                            "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                           },
                           {
                             "type": "null"
@@ -377,7 +365,7 @@
                               "before": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                               }
                             },
                             "required": [
@@ -391,7 +379,7 @@
                               "after": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "A block id, or \"$ref\" of a block an earlier command created."
+                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                               }
                             },
                             "required": [
@@ -406,9 +394,6 @@
                       "markdown"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -429,7 +414,7 @@
                       "id": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                       },
                       "field": {
                         "type": "string"
@@ -556,9 +541,6 @@
                       "range"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -579,7 +561,7 @@
                       "id": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A block id, or \"$ref\" of a block an earlier command created."
+                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
                       },
                       "field": {
                         "type": "string"
@@ -649,9 +631,6 @@
                       "with"
                     ],
                     "additionalProperties": false
-                  },
-                  "ref": {
-                    "type": "string"
                   }
                 },
                 "required": [

@@ -124,7 +124,7 @@ export class PlanState {
 
   public resolveId(value: unknown, path: string): string {
     if (typeof value !== 'string' || value === '') {
-      return this.fail('INVALID_ARGS', 'Expected a block id or "$ref".', path);
+      return this.fail('INVALID_ARGS', 'Expected a block id, or "$" plus a ref an earlier command set.', path);
     }
     if (value.startsWith('$')) {
       const ref = value.slice(1);
@@ -132,13 +132,23 @@ export class PlanState {
 
       return id !== undefined && this.draft.has(id)
         ? id
-        : this.fail('BLOCK_NOT_FOUND', `Ref "${ref}" has no existing block from an earlier command.`, path, { ref });
+        : this.fail('BLOCK_NOT_FOUND', this.unresolvedRefMessage(ref), path, { ref });
     }
 
     // Agents skip comment threads (user decision 2026-10-16): one is a block they cannot see.
     return this.draft.has(value) && !this.inAnnotation(value)
       ? value
       : this.fail('BLOCK_NOT_FOUND', `Block "${value}" does not exist. Read the document for current ids.`, path, { id: value });
+  }
+
+  private unresolvedRefMessage(ref: string): string {
+    const known = Object.keys(this.refs);
+    const example = /^[A-Za-z][\w-]*$/.test(ref) ? ref : (known[0] ?? 'intro');
+    const listed = known.length === 0 ? '' : ` Refs so far: ${known.map(name => `"$${name}"`).join(', ')}.`;
+
+    return `Ref "${ref}" was not set by an earlier command in this batch.${listed}`
+      + ` Give the command that creates a block "ref": "${example}", then later commands use "$${example}".`
+      + ' A ref lasts one batch; a later batch uses the ids in the result\'s refs.';
   }
 
   /** The block is not page content (a comment thread) or sits under one. */

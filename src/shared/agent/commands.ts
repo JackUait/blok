@@ -11,7 +11,7 @@ export interface CoreCommandSpec {
   guidance?: string;
 }
 
-const id: JsonSchema = { type: 'string', minLength: 1, description: 'A block id, or "$ref" of a block an earlier command created.' };
+const id: JsonSchema = { type: 'string', minLength: 1, description: 'A block id, or "$" plus the ref of a block an earlier command created.' };
 const position: JsonSchema = {
   description: "'start' | 'end' | { before: id } | { after: id }",
   oneOf: [

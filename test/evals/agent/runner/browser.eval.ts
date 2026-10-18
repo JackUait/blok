@@ -70,7 +70,7 @@ for (const task of tasks) {
           window.evalTurn = blok.agent.begin({ agent: { id: 'agent-eval', name: 'Eval agent' } });
 
           return { tools: await blok.agent.tools({ format: 'anthropic', schema: mode }), system: await blok.agent.guidance() };
-        }, { seed: t.seed, mode: schema === 'shipped' ? 'mixed' : schema });
+        }, { seed: t.seed, mode: schema === 'shipped' ? 'mixed' as const : schema });
 
         const results: ExecuteResult[] = [];
 

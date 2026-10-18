@@ -328,6 +328,35 @@ const passes = (schema: Schema, value: unknown): boolean => {
   return problems.length === 0;
 };
 
+// Report the branches the value came close to, so the caller learns what to change.
+const noBranchMatches = (candidates: Schema[], value: unknown, path: string): SchemaProblem[] => {
+  const results = candidates.map(branch => {
+    const problems: SchemaProblem[] = [];
+
+    check(branch, value, path, problems);
+
+    return problems;
+  });
+  const wrongType = ([only, ...rest]: SchemaProblem[]): boolean =>
+    only !== undefined && rest.length === 0 && only.path === path && only.message.startsWith('expected ');
+  const close = results.filter(problems => problems.length > 0 && !wrongType(problems));
+
+  if (close.length === 0) {
+    const types = [...new Set(candidates.flatMap(branch => (isArray(branch.type) ? branch.type : [branch.type])))]
+      .filter((name): name is string => typeof name === 'string');
+
+    return [{ path, message: types.length === 0 ? 'matches none of the allowed shapes' : `expected ${types.join(' or ')}, got ${typeOf(value)}` }];
+  }
+
+  if (close.length === 1) {
+    return close[0];
+  }
+
+  const hints = close.slice(0, 4).map(([first]) => (first.path === path ? first.message : `${first.path.slice(path.length)}: ${first.message}`));
+
+  return [{ path, message: `matches none of the allowed shapes: ${hints.join(', or ')}` }];
+};
+
 const check = (schema: Schema, value: unknown, path: string, out: SchemaProblem[]): void => {
   if (typeof value === 'number' && !Number.isFinite(value)) {
     out.push({ path, message: 'must be a finite number' });
@@ -373,13 +402,15 @@ const check = (schema: Schema, value: unknown, path: string, out: SchemaProblem[
   if (isArray(schema.oneOf)) {
     const matching = branches('oneOf').filter(branch => passes(branch, value)).length;
 
-    if (matching !== 1) {
-      out.push({ path, message: matching === 0 ? 'matches none of the allowed shapes' : 'matches more than one allowed shape' });
+    if (matching > 1) {
+      out.push({ path, message: 'matches more than one allowed shape' });
+    } else if (matching === 0) {
+      out.push(...noBranchMatches(branches('oneOf'), value, path));
     }
   }
 
   if (isArray(schema.anyOf) && !branches('anyOf').some(branch => passes(branch, value))) {
-    out.push({ path, message: 'matches none of the allowed shapes' });
+    out.push(...noBranchMatches(branches('anyOf'), value, path));
   }
 
   branches('allOf').forEach(branch => check(branch, value, path, out));

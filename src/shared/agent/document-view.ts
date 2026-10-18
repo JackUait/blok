@@ -8,10 +8,20 @@ import type { PlannerContext } from './types';
 type ViewContext = Pick<PlannerContext, 'tools' | 'richText'>;
 
 const textOf = (block: SnapBlock, ctx: ViewContext, field?: string): string | undefined => {
-  const name = field ?? ctx.tools.get(block.type)?.entry.richTextFields[0];
+  const entry = ctx.tools.get(block.type)?.entry;
+  const name = field ?? entry?.richTextFields[0];
   const value = name === undefined ? undefined : block.data[name];
 
-  return isRichText(value) ? ctx.richText.plainText(value) : undefined;
+  if (isRichText(value)) {
+    return ctx.richText.plainText(value);
+  }
+
+  // A tool with no rich text (code) still declares its text field for conversion.
+  const exported = field === undefined && entry?.richTextFields.length === 0 && entry.conversion.export !== undefined
+    ? block.data[entry.conversion.export]
+    : undefined;
+
+  return typeof exported === 'string' ? exported : undefined;
 };
 
 /** Not page content (a comment thread), or under one: reads leave it out. */

@@ -181,6 +181,36 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowWordCount');
   });
 
+  it.each(['board', 'gallery', 'list', 'feed'] as const)('the %s menu footer names who edited the row last, as the table menu does', async (type) => {
+    const edited = (): Doc => {
+      const doc = oneRow();
+      const row = doc.rows.get('a');
+
+      if (row === undefined) throw new Error('no row');
+      Object.assign(row.block, { lastEditedBy: 'u1', lastEditedAt: Date.now() - 60_000 });
+
+      return doc;
+    };
+    const people = { list: () => Promise.resolve([{ id: 'u1', name: 'Jack Uait' }]) };
+    const footerOf = async (view: ViewType): Promise<string> => {
+      const { el, tool } = buildTool(edited(), { people }, viewData(view));
+
+      // The people lever loads once, then the view redraws with the names.
+      await vi.waitFor(() => {
+        openMenu(el, view);
+        expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowLastEditedBy');
+      });
+      const text = document.querySelector('[data-blok-database-row-menu-footer]')?.textContent ?? '';
+
+      document.querySelectorAll('[data-blok-popover]').forEach((popover) => popover.remove());
+      tool.destroy();
+
+      return text;
+    };
+
+    expect(await footerOf(type)).toBe(await footerOf('table'));
+  });
+
   it('Edit property › lists the card\'s properties, and one opens that value\'s editor on the row page', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));
 

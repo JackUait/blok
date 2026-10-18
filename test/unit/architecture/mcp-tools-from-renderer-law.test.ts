@@ -190,6 +190,12 @@ describe('MCP tools come from the shared renderer', () => {
     expect(open.description).toMatch(/write: true/);
   });
 
+  it('says query matches ids and titles, not content, so the model does not search for words in the text', () => {
+    const list = byName(listMcpTools(stored, { schema: 'mixed', handleIdleMs: 600_000 }), 'blok_list_documents');
+
+    expect(list.description).toMatch(/query matches .*ids? and titles?.*not .*content/i);
+  });
+
   it('declares optional list filters with bounded query and limit', () => {
     const input = byName(listMcpTools(stored, { schema: 'envelope', handleIdleMs: 600_000 }), 'blok_list_documents').inputSchema;
 

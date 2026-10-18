@@ -41,7 +41,7 @@ export const listMcpTools = (
   return [
     {
       name: 'blok_list_documents',
-      description: 'Lists Blok documents you may open. Returns supported: false when the document source cannot list.',
+      description: 'Lists Blok documents you may open. query matches document ids and titles, not their content; leave it out to list them all. Returns supported: false when the document source cannot list.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,

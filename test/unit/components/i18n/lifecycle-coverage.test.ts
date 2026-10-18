@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1209 + 125 + 433 + 4 closure for all 1771 keys', () => {
+  it('rebuilds a disjoint 1212 + 125 + 431 + 4 closure for all 1772 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1771);
+    expect(lifecycle.size).toBe(1772);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -386,7 +386,10 @@ describe('current English catalog lifecycle coverage', () => {
       // +12: the built-in comments thread, composer and row page section call their tools.database.comment* keys by literal.
       // +2: the feed card's comment summary row calls tools.database.feedCommentReplyOne/feedCommentReplies by literal.
       // +2: the page block's creating title and Draft badge call tools.page.creating/draft by literal.
-      'executable-literal': 1209,
+      // +1: the row menu's "Page" heading calls tools.database.rowMenuPage by literal.
+      // +2: the row menu's Layout and Property visibility call tools.database.settingsLayout and
+      // settingsPropertyVisibility by literal (they left registered-namespace-compatible).
+      'executable-literal': 1212,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -422,7 +425,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: tools.database.automationPageAdded and filterValue gained literal callers in the button editor.
       // +11: the date reminder choices, built from tools.database.dateRemind.<offset>.
       // +6: the form auto-create prompt's five keys and the toolbar's "Share form", called through a namespaced t().
-      'registered-namespace-compatible': 433,
+      // -2: settingsLayout and settingsPropertyVisibility, now also called by literal (see above).
+      'registered-namespace-compatible': 431,
       'catalog-only': 4,
     });
     expect(

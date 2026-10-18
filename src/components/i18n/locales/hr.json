@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Pretraži radnje…",
   "tools.database.rowLastEditedBy": "Posljednja izmjena: {name}",
   "tools.database.rowWordCount": "Riječi: {words}, znakova: {characters}",
+  "tools.database.rowMenuPage": "Stranica",
   "tools.database.rowLastEdited": "Zadnje uređivanje",
   "tools.database.tableLinkCopied": "Poveznica kopirana",
   "tools.database.tableDuplicate": "Dupliciraj",

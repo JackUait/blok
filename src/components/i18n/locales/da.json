@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Søg efter handlinger…",
   "tools.database.rowLastEditedBy": "Sidst redigeret af {name}",
   "tools.database.rowWordCount": "Ord: {words}, tegn: {characters}",
+  "tools.database.rowMenuPage": "Side",
   "tools.database.rowLastEdited": "Sidst redigeret",
   "tools.database.tableLinkCopied": "Link kopieret",
   "tools.database.tableDuplicate": "Dupliker",

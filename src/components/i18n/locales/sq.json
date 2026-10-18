@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Kërko veprime…",
   "tools.database.rowLastEditedBy": "Ndryshuar për herë të fundit nga {name}",
   "tools.database.rowWordCount": "Fjalë: {words}, karaktere: {characters}",
+  "tools.database.rowMenuPage": "Faqe",
   "tools.database.rowLastEdited": "Ndryshuar për herë të fundit",
   "tools.database.tableLinkCopied": "Lidhja u kopjua",
   "tools.database.tableDuplicate": "Dyfisho",

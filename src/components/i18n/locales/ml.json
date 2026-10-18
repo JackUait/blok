@@ -997,6 +997,7 @@
   "tools.database.searchActions": "പ്രവർത്തനങ്ങൾ തിരയുക…",
   "tools.database.rowLastEditedBy": "അവസാനം തിരുത്തിയത്: {name}",
   "tools.database.rowWordCount": "വാക്കുകൾ: {words}, പ്രതീകങ്ങൾ: {characters}",
+  "tools.database.rowMenuPage": "പേജ്",
   "tools.database.rowLastEdited": "അവസാനം തിരുത്തിയത്",
   "tools.database.tableLinkCopied": "ലിങ്ക് പകർത്തി",
   "tools.database.tableDuplicate": "പകർപ്പുണ്ടാക്കുക",

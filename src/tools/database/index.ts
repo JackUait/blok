@@ -32,7 +32,7 @@ import { templateMenuItems } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
-import { calculationItems, commentMenuItem, openMenu, rowActionItems } from './database-table-menus';
+import { calculationItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -3621,27 +3621,9 @@ export class DatabaseTool implements BlockTool {
     void this.reactionPicker.open(anchor, undefined, handlers);
   }
 
-  /** The card's More actions (research/19 §2e): Comment and the shared row actions. */
+  /** The card's More actions (research/19 §2e): the shared row menu, without the view settings rows. */
   private openFeedActions(rowId: string, anchor: HTMLElement, card: HTMLElement): void {
-    const { comment } = this.commentLever();
-    const writable = (): boolean => !this.readOnly && !this.destroyed;
-    const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
-    const actions = rowActionItems(!writable() ? { i18n: this.api.i18n, onCopyLink: () => this.copyRowLink(rowId) } : {
-      i18n: this.api.i18n,
-      onCopyLink: () => this.copyRowLink(rowId),
-      onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
-      onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
-      // A getter: the targets walk every block, so they are read only when the menu opens.
-      get moveTargets() { return listTargets(); },
-      onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
-    }, { trashShortcut: true });
-
-    // The card keeps its hover toolbar while the menu is up.
-    card.setAttribute('data-popover-open', '');
-    openMenu(anchor, [
-      ...(comment !== undefined ? [{ ...commentMenuItem(this.api.i18n), name: 'database-feed-comment', onActivate: () => comment(rowId, undefined, card) }] : []),
-      ...actions,
-    ], { searchable: true, searchPlaceholder: this.api.i18n.t('tools.database.searchActions'), onClose: () => card.removeAttribute('data-popover-open') });
+    this.openRowMenu(rowId, anchor, card, { viewSettings: false });
   }
 
   /** The active view as CSV, the way this person sees it: filters, sorts, search and visible properties. */
@@ -5039,12 +5021,7 @@ export class DatabaseTool implements BlockTool {
         if (header !== null && header !== undefined && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
       moveRowTo: (rowId, databaseId) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
-      editRowIcon: (rowId) => {
-        if (!writable()) return;
-        if (context === undefined) this.handleRowClick(rowId);
-        else context.openRow(rowId);
-        this.cardDrawer?.editIcon();
-      },
+      editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
       openPropertyMenu: (propertyId, anchor) => { if (writable()) this.openPropertyMenu(propertyId, anchor, table?.(), context); },
       addProperty: (anchor, placement) => { if (writable()) this.openAddProperty(anchor, placement, undefined, context); },
@@ -6106,7 +6083,7 @@ export class DatabaseTool implements BlockTool {
 
         if (rowId !== null && cardEl instanceof HTMLElement) {
           event.stopPropagation();
-          this.openCardMenu(cardMenuBtn, cardEl, rowId, boardEl);
+          this.openCardMenu(cardMenuBtn, cardEl, rowId);
         }
 
         return;
@@ -6159,7 +6136,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private attachReadListeners(boardEl: HTMLDivElement): void {
-    // Notion: a right-click on a card or list row opens its menu, with Comment.
+    // Notion: a right-click on a card or list row opens its row menu.
     boardEl.addEventListener('contextmenu', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const rowEl = target?.closest<HTMLElement>('[data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-list-row]');
@@ -6167,11 +6144,11 @@ export class DatabaseTool implements BlockTool {
 
       // A field being edited keeps the native menu, for copy and paste.
       if ((target?.closest('input, textarea, [contenteditable="true"]') ?? null) !== null) return;
-      if (rowEl === null || rowEl === undefined || rowId === null || rowId === undefined || this.commentLever().comment === undefined) return;
+      if (rowEl === null || rowEl === undefined || rowId === null || rowId === undefined) return;
       event.preventDefault();
       // Core opens its block menu on a right-click; this menu replaces it.
       event.stopPropagation();
-      this.openCardMenu(rowEl, rowEl, rowId, boardEl);
+      this.openCardMenu(rowEl, rowEl, rowId);
     });
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
@@ -6223,45 +6200,80 @@ export class DatabaseTool implements BlockTool {
     return keyboard;
   }
 
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, boardEl: HTMLElement): void {
+  /** Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3). */
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string): void {
+    const type = this.model.getView(this.activeViewId)?.type;
+
+    this.openRowMenu(rowId, anchor, cardEl, { viewSettings: type === 'board' || type === 'gallery' });
+  }
+
+  /**
+   * The row menu of a card, a list row or a feed card, built by the same
+   * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
+   * hover buttons while the menu is up.
+   */
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean }): void {
     const { comment } = this.commentLever();
+    const writable = (): boolean => !this.readOnly && !this.destroyed;
+    const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
+    const view = this.model.getView(this.activeViewId);
+    const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
+    const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => p.type !== 'title' && visible.includes(p.id));
+    const edits = !writable() ? {} : {
+      onEditIcon: () => this.editRowIcon(rowId),
+      onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId),
+      ...(options.viewSettings
+        ? {
+          onLayout: () => this.controls.openSettingsPage('layout', card),
+          onPropertyVisibility: () => this.controls.openSettingsPage('properties', card),
+        }
+        : {}),
+      onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
+      onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
+      // A getter: the targets walk every block, so they are read only when the menu opens.
+      get moveTargets() { return listTargets(); },
+      onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+    };
 
-    cardEl.setAttribute('data-popover-open', '');
-
-    this.cardMenuPopover = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
-      animateClose: true,
-      trigger: anchor,
-      width: 'auto',
-      minWidth: '140px',
-      autoFocusFirstItem: false,
-      items: [
-        // The ••• button hides once the menu closes; the composer sits under the card, as in Notion.
-        ...(comment !== undefined ? [{ ...commentMenuItem(this.api.i18n), name: 'database-card-comment', onActivate: () => comment(rowId, undefined, cardEl) }] : []),
-        ...(this.readOnly ? [] : [{
-          type: PopoverItemType.Default as const,
-          name: 'database-card-delete',
-          title: this.api.i18n.t('tools.database.deleteCard'),
-          icon: IconTrash,
-          onActivate: () => {
-            this.deleteRowBlock(rowId);
-            this.view.removeRow(boardEl, rowId);
-            void this.sync.syncDeleteRow({ rowId });
-          },
-        }]),
-      ],
+    this.cardMenuPopover?.destroy();
+    card.setAttribute('data-popover-open', '');
+    const popover = openMenu(anchor, rowMenuItems({
+      i18n: this.api.i18n,
+      properties,
+      ...edits,
+      onOpenIn: (mode) => this.handleRowClick(rowId, mode),
+      onCopyLink: () => this.copyRowLink(rowId),
+      // The ••• button hides once the menu closes; the composer sits under the card, as in Notion.
+      ...(comment !== undefined ? { onComment: () => comment(rowId, undefined, card) } : {}),
+      ...rowMenuFooter({
+        row: this.model.getRow(rowId),
+        titlePropertyId: this.titlePropertyId(),
+        locale: resolveLocale(undefined),
+        ...(this.people !== undefined ? { people: this.people } : {}),
+      }),
+    }), {
+      searchable: true,
+      searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
+      onClose: () => {
+        card.removeAttribute('data-popover-open');
+        if (this.cardMenuPopover === popover) this.cardMenuPopover = null;
+      },
     });
 
-    this.cardMenuPopover.on(PopoverEvent.Closed, () => {
-      cardEl.removeAttribute('data-popover-open');
-      if (this.cardMenuPopover !== null) {
-        const p = this.cardMenuPopover;
-        this.cardMenuPopover = null;
-        p.destroy();
-      }
-    });
+    this.cardMenuPopover = popover;
+  }
 
-    this.cardMenuPopover.show();
+  /** The row menu's Edit icon: the row page opens, then its icon picker. */
+  private editRowIcon(rowId: string, context?: NativeWidgetContext): void {
+    if (context === undefined) this.handleRowClick(rowId);
+    else context.openRow(rowId);
+    this.cardDrawer?.editIcon();
+  }
+
+  /** A card's Edit property ›: the row page opens, then that value's editor. */
+  private editRowProperty(rowId: string, propertyId: string): void {
+    this.handleRowClick(rowId);
+    this.cardDrawer?.editProperty(propertyId);
   }
 
   /** Every group of the active board, hidden ones included, in board order. */
@@ -7587,6 +7599,24 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
+  /** ⌘⇧M and ⌘⇧P on one picked card or list row: its Comment and its Move to, as the row menu shows. */
+  private rowShortcut(rowId: string, command: 'comment' | 'moveTo', act: (run: () => void) => void): void {
+    const rowEl = this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-card][data-row-id="${CSS.escape(rowId)}"], [data-blok-database-list-row][data-row-id="${CSS.escape(rowId)}"]`);
+    const { comment } = this.commentLever();
+
+    if (rowEl === null || rowEl === undefined) return;
+    if (command === 'comment') {
+      if (comment !== undefined) act(() => comment(rowId, undefined, rowEl));
+
+      return;
+    }
+    const targets = this.moveTargets();
+
+    if (targets.length > 0) {
+      act(() => openMenu(rowEl, moveTargetItems(this.api.i18n, targets, (databaseId) => this.moveRowTo({ rowId, databaseId })), { searchable: true }));
+    }
+  }
+
   private duplicateSelection(): void {
     [...this.rowSelection].forEach((rowId) => this.duplicateTableRow(rowId));
     this.paintRowSelection();
@@ -7621,6 +7651,8 @@ export class DatabaseTool implements BlockTool {
 
     if (key === 'escape') {
       act(() => this.clearRowSelection());
+    } else if (mod && event.shiftKey && (key === 'm' || key === 'p') && this.rowSelection.size === 1) {
+      this.rowShortcut([...this.rowSelection][0], key === 'm' ? 'comment' : 'moveTo', act);
     } else if (mod && key === 'd') {
       act(() => this.duplicateSelection());
     } else if (!mod && (key === 'backspace' || key === 'delete')) {

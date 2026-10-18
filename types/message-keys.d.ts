@@ -1209,6 +1209,7 @@ export type BlokMessageKey =
   | 'tools.database.rowBodyPickTemplate'
   | 'tools.database.rowLastEdited'
   | 'tools.database.rowLastEditedBy'
+  | 'tools.database.rowMenuPage'
   | 'tools.database.rowTitlePlaceholder'
   | 'tools.database.rowWordCount'
   | 'tools.database.searchActions'

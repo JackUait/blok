@@ -1207,6 +1207,22 @@ export class DatabaseCardDrawer {
     }
   }
 
+  /** The row menu's "Edit property ›": that value's editor on the open page, hidden properties shown first. */
+  editProperty(propertyId: string): void {
+    const slot = (): HTMLElement | null => this.drawer?.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-value][data-property-id="${CSS.escape(propertyId)}"]`) ?? null;
+
+    if (slot() === null && this.draft === null) {
+      this.showHiddenProps = true;
+      this.propsCollapsed = false;
+      this.refreshSchema(this.schema);
+    }
+    const found = slot();
+
+    if (found !== null) {
+      this.openValueEditor(found, propertyId);
+    }
+  }
+
   private openIconPicker(rowId: string, anchor: HTMLElement): void {
     const onIconChange = this.onIconChange;
     const i18n = this.i18n;

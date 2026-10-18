@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Пребарајте дејства…",
   "tools.database.rowLastEditedBy": "Последно уредено од {name}",
   "tools.database.rowWordCount": "Зборови: {words}, знаци: {characters}",
+  "tools.database.rowMenuPage": "Страница",
   "tools.database.rowLastEdited": "Последно уредено",
   "tools.database.tableLinkCopied": "Врската е копирана",
   "tools.database.tableDuplicate": "Дуплирај",

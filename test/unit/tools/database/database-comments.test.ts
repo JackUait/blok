@@ -99,14 +99,14 @@ describe('DatabaseTool — config.comments', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('the row menu offers Comment before Copy link only when the host gives comments', () => {
+  it('the row menu offers Comment right after Open in only when the host gives comments', () => {
     const onComment = vi.fn();
 
     expect(titles(rowMenuItems(menuContext()))).not.toContain('tools.database.tableComment');
     const items = rowMenuItems(menuContext(onComment));
     const order = titles(items);
 
-    expect(order.indexOf('tools.database.tableComment')).toBe(order.indexOf('tools.database.tableCopyLink') - 1);
+    expect(order.indexOf('tools.database.tableComment')).toBe(order.indexOf('tools.database.tableOpenIn') + 1);
     const comment = items.find((item) => 'title' in item && item.title === 'tools.database.tableComment');
 
     if (comment === undefined || !('onActivate' in comment) || comment.onActivate === undefined) throw new Error('no Comment item');
@@ -155,19 +155,19 @@ describe('DatabaseTool — comments on cards and list rows', () => {
     document.body.innerHTML = '';
   });
 
-  it('the board card ••• menu offers Comment ⌘⇧M before Delete, and it opens the row\'s comments', () => {
+  it('the board card ••• menu offers Comment ⌘⇧M before Move to Trash, and it opens the row\'s comments', () => {
     const open = vi.fn();
     const { el } = buildTool(oneRow(), { comments: { open } }, viewData('board'));
     const card = rowEl(el, 'board');
     const more = card.querySelector<HTMLElement>('[data-blok-database-card-menu]');
 
     more?.click();
-    const comment = menuItem('database-card-comment');
+    const comment = menuItem('database-row-comment');
 
     expect(comment).not.toBeNull();
     expect(comment?.textContent).toContain('tools.database.tableComment');
     expect(comment?.textContent).toContain('M');
-    expect(comment?.compareDocumentPosition(menuItem('database-card-delete') as Node) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(comment?.compareDocumentPosition(menuItem('database-row-delete') as Node) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     comment?.click();
     // The ••• button hides once the menu closes; the composer sits under the card, as in Notion.
     expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, card);
@@ -178,8 +178,8 @@ describe('DatabaseTool — comments on cards and list rows', () => {
 
     rowEl(el, 'board').querySelector<HTMLElement>('[data-blok-database-card-menu]')?.click();
 
-    expect(menuItem('database-card-delete')).not.toBeNull();
-    expect(menuItem('database-card-comment')).toBeNull();
+    expect(menuItem('database-row-delete')).not.toBeNull();
+    expect(menuItem('database-row-comment')).toBeNull();
   });
 
   it.each(['board', 'gallery', 'list'] as const)('a right-click on a %s row opens the menu with Comment, instead of the block menu', (type) => {
@@ -189,19 +189,19 @@ describe('DatabaseTool — comments on cards and list rows', () => {
     const event = rightClick(row.firstElementChild ?? row);
 
     expect(event.defaultPrevented).toBe(true);
-    expect(menuItem('database-card-delete')).not.toBeNull();
-    menuItem('database-card-comment')?.click();
+    expect(menuItem('database-row-delete')).not.toBeNull();
+    menuItem('database-row-comment')?.click();
     expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, row);
   });
 
-  it.each(['board', 'gallery', 'list'] as const)('read-only: a right-click on a %s row offers Comment without Delete', (type) => {
+  it.each(['board', 'gallery', 'list'] as const)('read-only: a right-click on a %s row offers Comment without Move to Trash', (type) => {
     const open = vi.fn();
     const { el } = buildTool(oneRow(), { comments: { open } }, viewData(type), true);
 
     rightClick(rowEl(el, type));
 
-    expect(menuItem('database-card-delete')).toBeNull();
-    menuItem('database-card-comment')?.click();
+    expect(menuItem('database-row-delete')).toBeNull();
+    menuItem('database-row-comment')?.click();
     expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, expect.any(HTMLElement));
   });
 
@@ -212,17 +212,20 @@ describe('DatabaseTool — comments on cards and list rows', () => {
     rowEl(el, 'list').appendChild(input);
 
     expect(rightClick(input).defaultPrevented).toBe(false);
-    expect(menuItem('database-card-comment')).toBeNull();
+    expect(menuItem('database-row-comment')).toBeNull();
   });
 
-  it.each(['board', 'gallery', 'list'] as const)('a right-click on a %s row is left to core without the lever or when comment is denied', (type) => {
+  it.each(['board', 'gallery', 'list'] as const)('a right-click on a %s row offers no Comment without the lever or when comment is denied', (type) => {
     const open = vi.fn();
     const plain = buildTool(oneRow(), {}, viewData(type)).el;
     const denied = buildTool(oneRow(), { comments: { open }, permissions: { can: (action) => action !== 'comment' } }, viewData(type)).el;
 
-    expect(rightClick(rowEl(plain, type)).defaultPrevented).toBe(false);
-    expect(rightClick(rowEl(denied, type)).defaultPrevented).toBe(false);
-    expect(menuItem('database-card-comment')).toBeNull();
+    rightClick(rowEl(plain, type));
+    expect(menuItem('database-row-comment')).toBeNull();
+    document.body.querySelectorAll('[data-blok-popover]').forEach((popover) => popover.remove());
+    rightClick(rowEl(denied, type));
+    expect(menuItem('database-row-copy-link')).not.toBeNull();
+    expect(menuItem('database-row-comment')).toBeNull();
   });
 
   it.each(['board', 'gallery', 'list', 'table'] as const)('a %s row with comments shows an "Open comments" badge with the count, which opens the thread', (type) => {

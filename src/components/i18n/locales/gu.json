@@ -997,6 +997,7 @@
   "tools.database.searchActions": "ક્રિયાઓ શોધો…",
   "tools.database.rowLastEditedBy": "{name} દ્વારા છેલ્લે સંપાદિત",
   "tools.database.rowWordCount": "શબ્દો: {words}, અક્ષરો: {characters}",
+  "tools.database.rowMenuPage": "પૃષ્ઠ",
   "tools.database.rowLastEdited": "છેલ્લે સંપાદિત",
   "tools.database.tableLinkCopied": "લિંક કૉપિ થઈ",
   "tools.database.tableDuplicate": "નકલ બનાવો",

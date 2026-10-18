@@ -997,6 +997,7 @@
   "tools.database.searchActions": "ქმედებების ძიება…",
   "tools.database.rowLastEditedBy": "ბოლო რედაქტორი: {name}",
   "tools.database.rowWordCount": "სიტყვები: {words}, სიმბოლოები: {characters}",
+  "tools.database.rowMenuPage": "გვერდი",
   "tools.database.rowLastEdited": "ბოლოს რედაქტირდა",
   "tools.database.tableLinkCopied": "ბმული დაკოპირდა",
   "tools.database.tableDuplicate": "დუბლირება",

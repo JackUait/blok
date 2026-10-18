@@ -997,6 +997,7 @@
   "tools.database.searchActions": "செயல்களைத் தேடு…",
   "tools.database.rowLastEditedBy": "கடைசியாகத் திருத்தியவர்: {name}",
   "tools.database.rowWordCount": "சொற்கள்: {words}, எழுத்துகள்: {characters}",
+  "tools.database.rowMenuPage": "பக்கம்",
   "tools.database.rowLastEdited": "கடைசியாகத் திருத்தியது",
   "tools.database.tableLinkCopied": "இணைப்பு நகலெடுக்கப்பட்டது",
   "tools.database.tableDuplicate": "நகலெடு",

@@ -101,7 +101,7 @@ describe('row ⋮⋮ menu (research/08)', () => {
     expect(footer.type).toBe('html');
     expect(footer.element?.textContent).toContain('tools.database.rowLastEditedBy:Jack');
     expect(footer.element?.textContent).toContain('today 3:02 AM');
-    expect(items(context()).some((i) => i.type === 'html')).toBe(false);
+    expect(items(context()).some((i) => i.element?.hasAttribute('data-blok-database-row-menu-footer') === true)).toBe(false);
   });
 });
 

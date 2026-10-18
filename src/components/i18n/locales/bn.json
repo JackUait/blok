@@ -997,6 +997,7 @@
   "tools.database.searchActions": "অ্যাকশন খুঁজুন…",
   "tools.database.rowLastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",
   "tools.database.rowWordCount": "শব্দ: {words}, অক্ষর: {characters}",
+  "tools.database.rowMenuPage": "পৃষ্ঠা",
   "tools.database.rowLastEdited": "সর্বশেষ সম্পাদনা",
   "tools.database.tableLinkCopied": "লিঙ্ক কপি হয়েছে",
   "tools.database.tableDuplicate": "প্রতিলিপি",

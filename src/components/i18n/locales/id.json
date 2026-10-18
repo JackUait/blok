@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Cari tindakan…",
   "tools.database.rowLastEditedBy": "Terakhir diedit oleh {name}",
   "tools.database.rowWordCount": "Kata: {words}, karakter: {characters}",
+  "tools.database.rowMenuPage": "Halaman",
   "tools.database.rowLastEdited": "Terakhir diedit",
   "tools.database.tableLinkCopied": "Tautan disalin",
   "tools.database.tableDuplicate": "Gandakan",

@@ -69,6 +69,8 @@ export interface GridCallbacks {
   commitCells?: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>) => void;
   /** Cmd/Ctrl+/ on selected rows: edit them all at once. */
   bulkEdit?: (rowIds: string[]) => void;
+  /** Cmd/Ctrl+Shift+M or P on one selected row: its Comment or Move to. True when it acted. */
+  rowCommand?: (rowId: string, command: 'comment' | 'moveTo') => boolean;
 }
 
 export interface GridOptions {
@@ -812,6 +814,14 @@ export class DatabaseTableGrid {
       return;
     }
     if (mod && selection?.kind === 'cell' && !this.readOnly && this.fillKey(event)) {
+      return;
+    }
+    const command = { m: 'comment', p: 'moveTo' } as const;
+    const key = event.key.toLowerCase();
+
+    if (selection?.kind === 'rows' && selection.rowIds.length === 1 && mod && event.shiftKey && (key === 'm' || key === 'p')) {
+      if (this.callbacks.rowCommand?.(selection.rowIds[0], command[key]) === true) event.preventDefault();
+
       return;
     }
     if (selection?.kind === 'rows' && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd' && !this.readOnly) {

@@ -291,6 +291,11 @@ export class DatabaseViewControls {
     this.openSettings(anchor, 'group');
   }
 
+  /** A row menu's Layout or Property visibility: that page, under the settings button while it is on screen. */
+  openSettingsPage(start: ViewSettingsStart, fallback: HTMLElement): void {
+    this.openSettings(this.settingsButton.isConnected ? this.settingsButton : fallback, start);
+  }
+
   openSettings(anchor: HTMLElement, start: ViewSettingsStart): void {
     this.panel?.close();
     this.panel = openViewSettings(anchor, this.settingsContext(), start, () => this.panelClosed(anchor));

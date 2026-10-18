@@ -997,6 +997,7 @@
   "tools.database.searchActions": "क्रिया शोधा…",
   "tools.database.rowLastEditedBy": "{name} ने शेवटचे संपादन केले",
   "tools.database.rowWordCount": "शब्द: {words}, वर्ण: {characters}",
+  "tools.database.rowMenuPage": "पृष्ठ",
   "tools.database.rowLastEdited": "शेवटचे संपादन",
   "tools.database.tableLinkCopied": "दुवा कॉपी केला",
   "tools.database.tableDuplicate": "प्रत बनवा",

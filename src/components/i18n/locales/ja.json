@@ -997,6 +997,7 @@
   "tools.database.searchActions": "アクションを検索…",
   "tools.database.rowLastEditedBy": "最終編集者：{name}",
   "tools.database.rowWordCount": "単語数：{words}、文字数：{characters}",
+  "tools.database.rowMenuPage": "ページ",
   "tools.database.rowLastEdited": "最終編集",
   "tools.database.tableLinkCopied": "リンクをコピーしました",
   "tools.database.tableDuplicate": "複製",

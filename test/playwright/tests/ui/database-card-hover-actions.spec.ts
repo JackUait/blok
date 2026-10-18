@@ -137,23 +137,23 @@ test.describe('Database board — card hover actions', () => {
     await expect(card.locator('[data-blok-database-card-title]')).toHaveText('My Card');
   });
 
-  test('dots button opens a menu with Delete card option', async ({ page }) => {
+  test('dots button opens the row menu with Move to Trash', async ({ page }) => {
     const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).filter({ hasText: 'My Card' });
 
     await card.hover();
     await card.locator('[data-blok-database-card-menu]').click();
 
-    const deleteOption = page.getByText('Delete card');
+    const deleteOption = page.getByRole('menuitem', { name: 'Move to Trash' });
     await expect(deleteOption).toBeVisible();
   });
 
-  test('clicking Delete in the menu removes the card', async ({ page }) => {
+  test('clicking Move to Trash in the menu removes the card', async ({ page }) => {
     const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).filter({ hasText: 'My Card' });
 
     await card.hover();
     await card.locator('[data-blok-database-card-menu]').click();
 
-    await page.getByText('Delete card').click();
+    await page.getByRole('menuitem', { name: 'Move to Trash' }).click();
 
     await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`)).toHaveCount(0);
   });

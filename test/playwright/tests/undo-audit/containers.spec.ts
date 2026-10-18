@@ -537,7 +537,7 @@ test.describe('CON database', () => {
 
     await card.hover();
     await card.locator('[data-blok-database-card-menu]').click();
-    await page.getByText('Delete card').click();
+    await page.getByRole('menuitem', { name: 'Move to Trash' }).click();
     await expect(card).toHaveCount(0);
     await gap(page);
 

@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Poiščite dejanja…",
   "tools.database.rowLastEditedBy": "Nazadnje urejeno: {name}",
   "tools.database.rowWordCount": "Besede: {words}, znaki: {characters}",
+  "tools.database.rowMenuPage": "Stran",
   "tools.database.rowLastEdited": "Nazadnje urejeno",
   "tools.database.tableLinkCopied": "Povezava kopirana",
   "tools.database.tableDuplicate": "Podvoji",

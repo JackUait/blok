@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Претражите радње…",
   "tools.database.rowLastEditedBy": "Последња измена: {name}",
   "tools.database.rowWordCount": "Речи: {words}, знакова: {characters}",
+  "tools.database.rowMenuPage": "Страница",
   "tools.database.rowLastEdited": "Последња измена",
   "tools.database.tableLinkCopied": "Веза копирана",
   "tools.database.tableDuplicate": "Дуплирај",

@@ -997,6 +997,7 @@
   "tools.database.searchActions": "کارروائیاں تلاش کریں…",
   "tools.database.rowLastEditedBy": "{name} نے آخری ترمیم کی",
   "tools.database.rowWordCount": "الفاظ: {words}، حروف: {characters}",
+  "tools.database.rowMenuPage": "صفحہ",
   "tools.database.rowLastEdited": "آخری ترمیم",
   "tools.database.tableLinkCopied": "لنک کاپی ہو گیا",
   "tools.database.tableDuplicate": "نقل بنائیں",

@@ -997,6 +997,7 @@
   "tools.database.searchActions": "مەشغۇلات ئىزدەش…",
   "tools.database.rowLastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",
   "tools.database.rowWordCount": "سۆز: {words}، ھەرپ: {characters}",
+  "tools.database.rowMenuPage": "بەت",
   "tools.database.rowLastEdited": "ئاخىرقى تەھرىرلەش",
   "tools.database.tableLinkCopied": "ئۇلانما كۆچۈرۈلدى",
   "tools.database.tableDuplicate": "كۆپەيتىش",

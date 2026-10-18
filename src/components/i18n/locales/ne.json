@@ -997,6 +997,7 @@
   "tools.database.searchActions": "कार्यहरू खोज्नुहोस्…",
   "tools.database.rowLastEditedBy": "{name} द्वारा अन्तिम सम्पादन",
   "tools.database.rowWordCount": "शब्द: {words}, वर्ण: {characters}",
+  "tools.database.rowMenuPage": "पृष्ठ",
   "tools.database.rowLastEdited": "अन्तिम सम्पादन",
   "tools.database.tableLinkCopied": "लिङ्क प्रतिलिपि भयो",
   "tools.database.tableDuplicate": "नक्कल बनाउनुहोस्",

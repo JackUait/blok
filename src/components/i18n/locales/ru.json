@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Поиск действий…",
   "tools.database.rowLastEditedBy": "Автор последнего изменения: {name}",
   "tools.database.rowWordCount": "Слов: {words}, символов: {characters}",
+  "tools.database.rowMenuPage": "Страница",
   "tools.database.rowLastEdited": "Последнее изменение",
   "tools.database.tableLinkCopied": "Ссылка скопирована",
   "tools.database.tableDuplicate": "Дублировать",

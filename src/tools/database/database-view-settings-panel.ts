@@ -572,7 +572,7 @@ export class ViewSettingsPages {
 
   // ─── Layout ───
 
-  private layout(): PanelPage {
+  layout(): PanelPage {
     return {
       title: this.t('settingsLayout'),
       build: (panel) => {
@@ -733,7 +733,7 @@ export class ViewSettingsPages {
 
   // ─── Property visibility ───
 
-  private properties(): PanelPage {
+  properties(): PanelPage {
     return {
       title: this.t('settingsPropertyVisibility'),
       build: (panel) => {
@@ -1781,7 +1781,7 @@ const idList = (value: FilterConfig['value']): string[] => {
   return typeof value === 'string' && value !== '' ? [value] : [];
 };
 
-export type ViewSettingsStart = 'root' | 'filter' | 'sort' | 'group';
+export type ViewSettingsStart = 'root' | 'filter' | 'sort' | 'group' | 'layout' | 'properties';
 
 /** Opens the view settings panel under `anchor`, at `start`. */
 export const openViewSettings = (
@@ -1796,6 +1796,8 @@ export const openViewSettings = (
     filter: (): PanelPage => pages.filters(),
     sort: (): PanelPage => pages.sorts(),
     group: (): PanelPage => pages.group(false),
+    layout: (): PanelPage => pages.layout(),
+    properties: (): PanelPage => pages.properties(),
   }[start]();
   const panel = new DatabasePanel({
     anchor,

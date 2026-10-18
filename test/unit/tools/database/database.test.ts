@@ -165,6 +165,7 @@ const createMockAPI = (childBlocks: BlockAPI[] = []): API => ({
   blocks: {
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
     getBlocksCount: vi.fn().mockReturnValue(1),
+    getBlockByIndex: vi.fn(),
     getChildren: vi.fn().mockReturnValue(childBlocks),
     insert: vi.fn().mockReturnValue({ id: 'new-row-id' }),
     insertAt: vi.fn().mockReturnValue({ id: 'new-row-id' }),
@@ -921,7 +922,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('delete row via click', () => {
-    it('clicking card-menu button and selecting delete calls api.blocks.delete', () => {
+    it('clicking card-menu button and selecting Move to Trash calls api.blocks.delete', () => {
       const childBlocks = [
         createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
       ];
@@ -941,7 +942,7 @@ describe('DatabaseTool', () => {
       cardMenuBtn.click();
 
       // The mock popover appends action items to document.body
-      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /.*/)!;
+      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /movetotrash/)!;
 
       expect(deleteAction).not.toBeNull();
 
@@ -1000,6 +1001,7 @@ describe('DatabaseTool', () => {
         blocks: {
           getCurrentBlockIndex: vi.fn().mockReturnValue(0),
           getBlocksCount: vi.fn().mockReturnValue(1),
+          getBlockByIndex: vi.fn(),
           getChildren: vi.fn().mockReturnValue([]),
           insert: vi.fn(),
           insertAt: vi.fn(),
@@ -1292,7 +1294,7 @@ describe('DatabaseTool', () => {
       if (closeButton === null || cardMenu === null) throw new Error('drawer or card menu was not rendered');
       closeButton.click();
       cardMenu.click();
-      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /delete/);
+      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /movetotrash/);
 
       if (deleteAction === null) throw new Error('delete action was not rendered');
       deleteAction.click();
@@ -1490,7 +1492,7 @@ describe('DatabaseTool', () => {
 
       if (cardMenu === null) throw new Error('card menu was not rendered');
       cardMenu.click();
-      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /delete/);
+      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /movetotrash/);
 
       if (deleteAction === null) throw new Error('delete action was not rendered');
       deleteAction.click();

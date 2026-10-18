@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Aktionen suchen…",
   "tools.database.rowLastEditedBy": "Zuletzt bearbeitet von {name}",
   "tools.database.rowWordCount": "Wörter: {words}, Zeichen: {characters}",
+  "tools.database.rowMenuPage": "Seite",
   "tools.database.rowLastEdited": "Zuletzt bearbeitet",
   "tools.database.tableLinkCopied": "Link kopiert",
   "tools.database.tableDuplicate": "Duplizieren",

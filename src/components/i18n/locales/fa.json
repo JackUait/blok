@@ -997,6 +997,7 @@
   "tools.database.searchActions": "جستجوی اقدامات…",
   "tools.database.rowLastEditedBy": "آخرین ویرایش توسط {name}",
   "tools.database.rowWordCount": "کلمه‌ها: {words}، نویسه‌ها: {characters}",
+  "tools.database.rowMenuPage": "صفحه",
   "tools.database.rowLastEdited": "آخرین ویرایش",
   "tools.database.tableLinkCopied": "پیوند کپی شد",
   "tools.database.tableDuplicate": "تکثیر",

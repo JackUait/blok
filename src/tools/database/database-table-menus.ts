@@ -10,10 +10,12 @@ import {
   IconCopy,
   IconExpandFullscreen,
   IconEmojiSmile,
+  IconEyeSlash,
   IconInsertLeft,
   IconInsertRight,
   IconLink,
   IconMessage,
+  IconPageLayout,
   IconPencil,
   IconPreview,
   IconSplitView,
@@ -21,7 +23,8 @@ import {
 } from '../../components/icons';
 import { beautifyShortcut } from '../../components/utils/string';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
-import type { CalculationFn, OpenPagesIn, PropertyDefinition } from './types';
+import type { CalculationFn, DatabaseRow, OpenPagesIn, PropertyDefinition } from './types';
+import { formatDateDisplay } from './cells/date-format';
 
 type T = Pick<I18n, 't'>;
 
@@ -261,12 +264,20 @@ export interface RowMenuContext {
   i18n: T;
   /** Columns the row can edit from "Edit property ›". */
   properties: PropertyDefinition[];
-  onEditIcon: () => void;
-  onEditProperty: (propertyId: string) => void;
+  /** Without it there is no Edit icon row. */
+  onEditIcon?: () => void;
+  /** Without it there is no Edit property row. */
+  onEditProperty?: (propertyId: string) => void;
+  /** Board and gallery only (research/12 §3). Without it there is no Layout row. */
+  onLayout?: () => void;
+  /** Board and gallery only (research/12 §3). Without it there is no Property visibility row. */
+  onPropertyVisibility?: () => void;
   onOpenIn: (mode: OpenPagesIn) => void;
   onCopyLink: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
+  /** Without it there is no Duplicate row. */
+  onDuplicate?: () => void;
+  /** Without it there is no Move to Trash row. */
+  onDelete?: () => void;
   /** The host's comments lever. Without it there is no Comment row. */
   onComment?: () => void;
   /** Other databases of this document. Without any there is no Move to row. */
@@ -277,6 +288,37 @@ export interface RowMenuContext {
   /** Words and characters of the row. Without it or lastEdited there is no footer. */
   counts?: { words: number; characters: number };
 }
+
+export interface RowMenuFooterSource {
+  row: Pick<DatabaseRow, 'properties' | 'meta'> | undefined;
+  titlePropertyId: string;
+  locale: string;
+  people?: ReadonlyArray<{ id: string; name: string }>;
+  now?: Date;
+  hourCycle?: 'h12' | 'h23';
+}
+
+/**
+ * The row menu footer's facts: who edited the row last and when, and the
+ * title's words and characters. research/08 does not say what Notion counts;
+ * this counts the title only.
+ */
+export const rowMenuFooter = (source: RowMenuFooterSource): Pick<RowMenuContext, 'lastEdited' | 'counts'> => {
+  const value = source.row?.properties[source.titlePropertyId];
+  const title = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+  const trimmed = title.trim();
+  const counts = { words: trimmed === '' ? 0 : trimmed.split(/\s+/).length, characters: Array.from(title).length };
+  const meta = source.row?.meta;
+  const at = meta?.lastEditedAt;
+
+  if (at === undefined) {
+    return { counts };
+  }
+  const time = formatDateDisplay(new Date(at).toISOString(), source.locale, { dateFormat: 'relative' }, source.now, source.hourCycle) ?? '';
+  const name = meta?.lastEditedBy === undefined ? undefined : source.people?.find((person) => person.id === meta.lastEditedBy)?.name;
+
+  return { lastEdited: { ...(name !== undefined ? { name } : {}), time }, counts };
+};
 
 const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> = [
   { mode: 'side', icon: IconSplitView, key: 'tools.database.openPagesSide' },
@@ -319,6 +361,15 @@ export const commentMenuItem = (i18n: T): { type: PopoverItemType.Default; title
   secondaryLabel: beautifyShortcut('CMD+SHIFT+M'),
 });
 
+/** The databases "Move to" offers. Also the list ⌘⇧P opens on one selected row. */
+export const moveTargetItems = (i18n: T, targets: ReadonlyArray<{ id: string; title: string }>, onMoveTo: (databaseId: string) => void): PopoverItemParams[] =>
+  targets.map((target) => ({
+    type: PopoverItemType.Default as const,
+    name: `database-row-move-to-${target.id}`,
+    title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
+    onActivate: () => onMoveTo(target.id),
+  }));
+
 /** What the row menu and the row page's "•••" menu can do to the row itself. */
 export interface RowActionContext {
   i18n: T;
@@ -351,15 +402,7 @@ export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: 
         title: i18n.t('tools.database.tableMoveTo'),
         icon: IconArrowDiagonal,
         secondaryLabel: beautifyShortcut('CMD+SHIFT+P'),
-        children: {
-          searchable: true,
-          items: targets.map((target) => ({
-            type: PopoverItemType.Default as const,
-            name: `database-row-move-to-${target.id}`,
-            title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
-            onActivate: () => onMoveTo(target.id),
-          })),
-        },
+        children: { searchable: true, items: moveTargetItems(i18n, targets, onMoveTo) },
       }]
       : []),
     ...(onDelete !== undefined
@@ -375,25 +418,56 @@ export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: 
   ];
 };
 
-/** The row ⋮⋮ menu (research/08), without Add to Favorites. Comment needs the host's lever. */
-export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
-  const { i18n } = ctx;
+/** The "Page" label over the menu (research/08, shots-08/65-row-handle-menu.png). */
+const rowMenuHeading = (i18n: T): PopoverItemParams => {
+  const element = document.createElement('div');
 
-  return [
-    { type: PopoverItemType.Default, name: 'database-row-edit-icon', title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: ctx.onEditIcon },
-    {
-      type: PopoverItemType.Default,
-      title: i18n.t('tools.database.tableEditProperty'),
-      icon: IconPencil,
-      children: {
-        items: ctx.properties.map((property) => ({
-          type: PopoverItemType.Default,
-          name: `database-row-edit-property-${property.id}`,
-          title: property.name,
-          onActivate: () => ctx.onEditProperty(property.id),
-        })),
-      },
-    },
+  // Same look as the block menu's title. Presentation: the menu's list may only own items.
+  element.className = 'pl-2 pr-3 pt-0.5 pb-1 text-xs font-medium text-menu-section-label cursor-default select-none';
+  element.setAttribute('role', 'presentation');
+  element.setAttribute('data-blok-database-row-menu-heading', '');
+  element.textContent = i18n.t('tools.database.rowMenuPage');
+
+  return { type: PopoverItemType.Html, element };
+};
+
+/**
+ * The one row menu of every view: the table's ⋮⋮, the board's •••, a right-click
+ * on a card or list row, and the feed's More actions (research/08, research/12 §3,
+ * research/19 §2e). Measured order: "Page", then Edit icon, Edit property ›
+ * (Layout, Property visibility on board and gallery); Open in ›, Comment; Copy
+ * link, Duplicate, Move to, Move to Trash; footer. No Add to Favorites: Blok has
+ * no favorites.
+ */
+export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
+  const { i18n, onEditIcon, onEditProperty, onLayout, onPropertyVisibility } = ctx;
+  const page: PopoverItemParams[] = [
+    ...(onEditIcon !== undefined
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-edit-icon', title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: onEditIcon }]
+      : []),
+    ...(onEditProperty !== undefined
+      ? [{
+        type: PopoverItemType.Default as const,
+        title: i18n.t('tools.database.tableEditProperty'),
+        icon: IconPencil,
+        children: {
+          items: ctx.properties.map((property) => ({
+            type: PopoverItemType.Default as const,
+            name: `database-row-edit-property-${property.id}`,
+            title: property.name,
+            onActivate: () => onEditProperty(property.id),
+          })),
+        },
+      }]
+      : []),
+    ...(onLayout !== undefined
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-view-layout', title: i18n.t('tools.database.settingsLayout'), icon: IconPageLayout, onActivate: onLayout }]
+      : []),
+    ...(onPropertyVisibility !== undefined
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-view-properties', title: i18n.t('tools.database.settingsPropertyVisibility'), icon: IconEyeSlash, onActivate: onPropertyVisibility }]
+      : []),
+  ];
+  const open: PopoverItemParams[] = [
     {
       type: PopoverItemType.Default,
       title: i18n.t('tools.database.tableOpenIn'),
@@ -402,9 +476,17 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
         items: OPEN_IN.map(({ mode, icon, key }) => ({ type: PopoverItemType.Default, name: `database-row-open-in-${mode}`, title: i18n.t(key), icon, onActivate: () => ctx.onOpenIn(mode) })),
       },
     },
-    { type: PopoverItemType.Separator },
     ...(ctx.onComment !== undefined ? [{ ...commentMenuItem(i18n), name: 'database-row-comment', onActivate: ctx.onComment }] : []),
+  ];
+  const line: PopoverItemParams = { type: PopoverItemType.Separator };
+
+  return [
+    rowMenuHeading(i18n),
+    ...page,
+    ...(page.length > 0 ? [line] : []),
+    ...open,
+    line,
     ...rowActionItems(ctx, { trashShortcut: true }),
-    ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [{ type: PopoverItemType.Separator } as const, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
+    ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [line, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
   ];
 };

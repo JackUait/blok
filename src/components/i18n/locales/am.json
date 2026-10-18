@@ -997,6 +997,7 @@
   "tools.database.searchActions": "እርምጃዎችን ፈልግ…",
   "tools.database.rowLastEditedBy": "የመጨረሻው አርትዖት በ{name}",
   "tools.database.rowWordCount": "ቃላት፦ {words}፣ ቁምፊዎች፦ {characters}",
+  "tools.database.rowMenuPage": "ገጽ",
   "tools.database.rowLastEdited": "የመጨረሻ አርትዖት",
   "tools.database.tableLinkCopied": "አገናኝ ተቀድቷል",
   "tools.database.tableDuplicate": "አባዛ",

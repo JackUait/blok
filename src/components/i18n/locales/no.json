@@ -997,6 +997,7 @@
   "tools.database.searchActions": "Søk etter handlinger…",
   "tools.database.rowLastEditedBy": "Sist redigert av {name}",
   "tools.database.rowWordCount": "Ord: {words}, tegn: {characters}",
+  "tools.database.rowMenuPage": "Side",
   "tools.database.rowLastEdited": "Sist redigert",
   "tools.database.tableLinkCopied": "Lenke kopiert",
   "tools.database.tableDuplicate": "Dupliser",

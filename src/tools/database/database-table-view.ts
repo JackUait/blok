@@ -6,7 +6,7 @@ import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill, openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { formatDateDisplay, formatDateText, resolveLocale } from './cells/date-format';
+import { formatDateText, resolveLocale } from './cells/date-format';
 import { formatNumberValue } from './cells/number-format';
 import { computeCalculation } from './database-calculations';
 import type { CalculationResult } from './database-calculations';
@@ -26,7 +26,7 @@ import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import type { CellChange, TableState } from './database-table-grid';
 import { pageIconElement, showsPageIcon } from './page-icon';
 
-import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, openMenu, rowMenuItems } from './database-table-menus';
+import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize } from './database-table-resize';
@@ -392,6 +392,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         selectionChanged: () => this.syncSelectionChrome(),
         commitCells: (changes, newRows) => this.handlers?.commitCells(changes, newRows),
         bulkEdit: (rowIds) => this.openBulkPicker(rowIds),
+        rowCommand: (rowId, command) => this.rowCommand(rowId, command),
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
           : {}),
@@ -1543,6 +1544,27 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     };
   }
 
+  /** ⌘⇧M and ⌘⇧P on one selected row: what the row menu's Comment and Move to do. */
+  private rowCommand(rowId: string, command: 'comment' | 'moveTo'): boolean {
+    const handlers = this.handlers;
+    const anchor = this.root?.querySelector<HTMLElement>(`[data-blok-database-table-row][data-row-id="${CSS.escape(rowId)}"]`);
+    const comment = this.options.comment;
+
+    if (anchor === null || anchor === undefined || handlers === undefined) return false;
+    if (command === 'comment') {
+      if (comment === undefined) return false;
+      comment(rowId, undefined, anchor);
+
+      return true;
+    }
+    const targets = handlers.moveRowTo === undefined || this.options.readOnly ? [] : handlers.moveTargets?.() ?? [];
+
+    if (targets.length === 0) return false;
+    this.showMenu(anchor, moveTargetItems(this.options.i18n, targets, (databaseId) => handlers.moveRowTo?.(rowId, databaseId)), { searchable: true });
+
+    return true;
+  }
+
   private openRowMenu(anchor: HTMLElement, rowId: string): void {
     const handlers = this.handlers;
 
@@ -1565,38 +1587,20 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
       ...(handlers.moveRowTo !== undefined ? { moveTargets: handlers.moveTargets?.() ?? [], onMoveTo: (databaseId: string) => handlers.moveRowTo?.(rowId, databaseId) } : {}),
-      ...this.lastEdited(rowId),
-      counts: this.titleCounts(rowId),
+      ...rowMenuFooter({
+        row: this.allRows().find((row) => row.id === rowId),
+        titlePropertyId: this.options.titlePropertyId,
+        locale: resolveLocale(this.options.locale),
+        ...(this.options.cellContext?.people !== undefined ? { people: this.options.cellContext.people } : {}),
+        ...(this.options.cellContext?.now !== undefined ? { now: this.options.cellContext.now } : {}),
+        ...(this.options.cellContext?.hourCycle !== undefined ? { hourCycle: this.options.cellContext.hourCycle } : {}),
+      }),
       ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, anchor) } : {}),
       onDelete: () => {
         this.state.selection = null;
         handlers.deleteRows([rowId]);
       },
     }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions') });
-  }
-
-  /** research/08 does not say what Notion counts; this counts the title only. */
-  private titleCounts(rowId: string): { words: number; characters: number } {
-    const value = this.allRows().find((row) => row.id === rowId)?.properties[this.options.titlePropertyId];
-    const title = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
-    const trimmed = title.trim();
-
-    return { words: trimmed === '' ? 0 : trimmed.split(/\s+/).length, characters: Array.from(title).length };
-  }
-
-  /** The row menu footer: who edited the row last, by the host's people, and when. */
-  private lastEdited(rowId: string): { lastEdited?: { name?: string; time: string } } {
-    const meta = this.allRows().find((row) => row.id === rowId)?.meta;
-    const at = meta?.lastEditedAt;
-
-    if (at === undefined) {
-      return {};
-    }
-    const ctx = this.options.cellContext;
-    const time = formatDateDisplay(new Date(at).toISOString(), resolveLocale(this.options.locale), { dateFormat: 'relative' }, ctx?.now, ctx?.hourCycle) ?? '';
-    const name = meta?.lastEditedBy === undefined ? undefined : ctx?.people?.find((person) => person.id === meta.lastEditedBy)?.name;
-
-    return { lastEdited: { ...(name !== undefined ? { name } : {}), time } };
   }
 
   // ─── Columns ───

@@ -384,6 +384,19 @@ describe('checkEnvelope', () => {
     ] });
   });
 
+  it('says a ref put inside args goes next to name and args', () => {
+    const error = fails({ commands: [{ name: 'block.insert', args: { type: 'column_list', ref: 'cols' } }] });
+
+    expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/ref' });
+    expect(error.message).toBe('block.insert: "ref" goes next to name and args, not inside args: { "name": "block.insert", "args": { ... }, "ref": "cols" }.');
+  });
+
+  it('keeps the plain unknown-field message when the command already has a ref', () => {
+    const error = fails({ commands: [{ name: 'block.insert', ref: 'a', args: { type: 'paragraph', ref: 'b' } }] });
+
+    expect(error.message).toMatch(/^block\.insert: unknown field "ref"; accepted fields: /);
+  });
+
   it('retains escaped JSON pointers from a tool action schema', () => {
     const commands = coreCommandMap();
 

@@ -60,6 +60,16 @@ export interface AgentError {
   path?: string;
   retryable: boolean;
   details?: Record<string, unknown>;
+  /** Further problems found in the same batch, so one retry can fix them all. */
+  others?: AgentProblem[];
+}
+
+/** One more problem in a failed batch, without the details. */
+export interface AgentProblem {
+  code: AgentErrorCode;
+  message: string;
+  commandIndex?: number;
+  path?: string;
 }
 
 export type AgentWarningCode = 'SANITIZED' | 'DEMOTED' | 'LOOKS_LIKE_MARKDOWN' | 'MARKDOWN_DEGRADED' | 'UNKNOWN_MARK_DROPPED';

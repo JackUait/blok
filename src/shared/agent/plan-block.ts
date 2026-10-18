@@ -283,7 +283,7 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
   });
 };
 
-const failUnknownTool = (state: PlanState, type: string, path: string): never => {
+export const failUnknownTool = (state: PlanState, type: string, path: string): never => {
   const known = [...state.ctx.tools.keys()];
   const entries = [...state.ctx.tools.values()].map(tool => tool.entry);
   const variants = matchVariants(type, entries, state.ctx.validate);

@@ -679,6 +679,14 @@ describe('renderAgentTools MCP', () => {
     expect(schemaList(output.oneOf)).toHaveLength(2);
   });
 
+  it('execute failure carries the other problems of the batch', () => {
+    const output = outputOf(byName(mcp(), 'blok_execute'));
+    const others = [{ code: 'DATA_REJECTED', message: 'Block "h": missing "text".', commandIndex: 1, path: '/commands/1' }];
+
+    expect(validateAgainst(output, { ok: false, error: { ...error, others }, warnings: [], delivery })).toEqual([]);
+    expect(validateAgainst(output, { ok: false, error: { ...error, others: [{ message: 'no code' }] }, warnings: [], delivery })).not.toEqual([]);
+  });
+
   it('execute failure revision is optional but must be a string when present', () => {
     const output = outputOf(byName(mcp(), 'blok_execute'));
 

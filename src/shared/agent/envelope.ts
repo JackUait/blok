@@ -1,4 +1,4 @@
-import { failure } from './errors';
+import { AgentFailure, failure, problemOf } from './errors';
 import { splitCommandName } from './names';
 
 import type { AgentBatch, AgentCommand } from '../../../types/agent';
@@ -14,6 +14,77 @@ const toolActions = (commands: ReadonlyMap<string, PlannerCommand>, tool: string
     .filter(entry => typeof entry.source === 'object' && entry.source.tool === tool)
     .map(entry => entry.name).sort();
 
+const checkCommand = (
+  raw: unknown,
+  index: number,
+  commands: ReadonlyMap<string, PlannerCommand>,
+  validate: SchemaValidator
+): { command: AgentCommand; entry: PlannerCommand } => {
+  const path = `/commands/${index}`;
+
+  if (!isRecord(raw) || typeof raw.name !== 'string' || !isRecord(raw.args)
+    || (raw.ref !== undefined && typeof raw.ref !== 'string')) {
+    throw failure('INVALID_ARGS', 'Each command is { name: string, args: object, ref?: string }.', { commandIndex: index, path });
+  }
+
+  const name = raw.name;
+  const entry = commands.get(name);
+
+  if (entry === undefined || !isCommandName(name)) {
+    const split = splitCommandName(name);
+    const actions = split === null ? [] : toolActions(commands, split.namespace);
+
+    throw failure('UNKNOWN_COMMAND', actions.length > 0 && split !== null
+      ? `"${name}" is not an action of "${split.namespace}". Its actions: ${actions.join(', ')}.`
+      : `"${name}" is not a command here. Call describe() for the list.`, {
+      commandIndex: index, path: `${path}/name`,
+      ...(actions.length > 0 && split !== null ? { details: { tool: split.namespace, actions } } : {}),
+    });
+  }
+  if (!entry.available) {
+    throw failure('COMMAND_UNAVAILABLE', `"${name}" is not available here${entry.unavailableReason === 'service'
+      ? ': the host has not provided a service it needs' : ''}.`, {
+      commandIndex: index, path: `${path}/name`,
+      details: {
+        ...(entry.unavailableReason === undefined ? {} : { reason: entry.unavailableReason }),
+        ...(entry.requires === undefined ? {} : { requires: entry.requires }),
+      },
+    });
+  }
+
+  const problems = validate(entry.args, raw.args);
+  const misplacedRef = raw.ref === undefined
+    ? problems.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
+    : undefined;
+
+  if (misplacedRef !== undefined) {
+    throw failure('INVALID_ARGS', `${name}: "ref" goes next to name and args, not inside args: `
+      + `{ "name": "${name}", "args": { ... }, "ref": ${JSON.stringify(raw.args.ref)} }.`, {
+      commandIndex: index, path: `${path}/args/ref`, details: { problems },
+    });
+  }
+  const first = problems[0];
+
+  if (first !== undefined) {
+    throw failure('INVALID_ARGS', `${name}: ${first.message}`, {
+      commandIndex: index, path: `${path}/args${first.path}`, details: { problems },
+    });
+  }
+
+  return { command: { name, args: raw.args, ...(typeof raw.ref === 'string' ? { ref: raw.ref } : {}) }, entry };
+};
+
+const attempt = <T>(run: () => T): T | AgentFailure => {
+  try {
+    return run();
+  } catch (error) {
+    if (error instanceof AgentFailure) {
+      return error;
+    }
+    throw error;
+  }
+};
+
 export const checkEnvelope = (
   batch: unknown,
   commands: ReadonlyMap<string, PlannerCommand>,
@@ -27,73 +98,34 @@ export const checkEnvelope = (
   }
 
   const list = batch.commands;
-  const entries: Array<{ command: AgentCommand; entry: PlannerCommand }> = [];
+  const entries: Array<{ index: number; command: AgentCommand; entry: PlannerCommand }> = [];
+  const problems: AgentFailure[] = [];
 
+  // Check every command, so one failed batch names every mistake. entries() also visits holes.
   for (const [index, raw] of list.entries()) {
-    const path = `/commands/${index}`;
+    const checked = attempt(() => checkCommand(raw, index, commands, validate));
 
-    if (!isRecord(raw) || typeof raw.name !== 'string' || !isRecord(raw.args)
-      || (raw.ref !== undefined && typeof raw.ref !== 'string')) {
-      throw failure('INVALID_ARGS', 'Each command is { name: string, args: object, ref?: string }.', { commandIndex: index, path });
+    if (checked instanceof AgentFailure) {
+      problems.push(checked);
+    } else {
+      entries.push({ index, ...checked });
     }
-
-    const name = raw.name;
-    const entry = commands.get(name);
-
-    if (entry === undefined || !isCommandName(name)) {
-      const split = splitCommandName(name);
-      const actions = split === null ? [] : toolActions(commands, split.namespace);
-
-      throw failure('UNKNOWN_COMMAND', actions.length > 0 && split !== null
-        ? `"${name}" is not an action of "${split.namespace}". Its actions: ${actions.join(', ')}.`
-        : `"${name}" is not a command here. Call describe() for the list.`, {
-        commandIndex: index, path: `${path}/name`,
-        ...(actions.length > 0 && split !== null ? { details: { tool: split.namespace, actions } } : {}),
-      });
-    }
-    if (!entry.available) {
-      throw failure('COMMAND_UNAVAILABLE', `"${name}" is not available here${entry.unavailableReason === 'service'
-        ? ': the host has not provided a service it needs' : ''}.`, {
-        commandIndex: index, path: `${path}/name`,
-        details: {
-          ...(entry.unavailableReason === undefined ? {} : { reason: entry.unavailableReason }),
-          ...(entry.requires === undefined ? {} : { requires: entry.requires }),
-        },
-      });
-    }
-
-    const problems = validate(entry.args, raw.args);
-    const misplacedRef = raw.ref === undefined
-      ? problems.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
-      : undefined;
-
-    if (misplacedRef !== undefined) {
-      throw failure('INVALID_ARGS', `${name}: "ref" goes next to name and args, not inside args: `
-        + `{ "name": "${name}", "args": { ... }, "ref": ${JSON.stringify(raw.args.ref)} }.`, {
-        commandIndex: index, path: `${path}/args/ref`, details: { problems },
-      });
-    }
-    const first = problems[0];
-
-    if (first !== undefined) {
-      throw failure('INVALID_ARGS', `${name}: ${first.message}`, {
-        commandIndex: index, path: `${path}/args${first.path}`, details: { problems },
-      });
-    }
-
-    entries.push({
-      command: { name, args: raw.args, ...(typeof raw.ref === 'string' ? { ref: raw.ref } : {}) },
-      entry,
-    });
   }
 
-  entries.forEach(({ command, entry }, index) => {
-    if ((entry.effects === 'host' || command.name === 'history.undo' || command.name === 'history.redo') && entries.length > 1) {
-      throw failure('INVALID_ARGS', `"${command.name}" must be the only command in its batch. Send the other commands in a separate execute call.`, {
+  entries.forEach(({ command, entry, index }) => {
+    if ((entry.effects === 'host' || command.name === 'history.undo' || command.name === 'history.redo') && list.length > 1) {
+      problems.push(failure('INVALID_ARGS', `"${command.name}" must be the only command in its batch. Send the other commands in a separate execute call.`, {
         commandIndex: index, path: `/commands/${index}/name`,
-      });
+      }));
     }
   });
+
+  // Command problems lead, so the first error is the one a stop-at-first check would throw.
+  const [first, ...rest] = problems;
+
+  if (first !== undefined) {
+    throw rest.length === 0 ? first : new AgentFailure({ ...first.error, others: rest.map(problem => problemOf(problem.error)) });
+  }
 
   return {
     batch: {

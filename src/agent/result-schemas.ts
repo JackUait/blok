@@ -14,6 +14,14 @@ export const AGENT_ERROR_SCHEMA = {
     path: STRING,
     retryable: { type: 'boolean' },
     details: { type: 'object' },
+    others: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { code: STRING, message: STRING, commandIndex: INTEGER, path: STRING },
+        required: ['code', 'message'],
+      },
+    },
   },
   required: ['code', 'message', 'retryable'],
 };

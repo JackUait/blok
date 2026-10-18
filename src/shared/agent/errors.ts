@@ -1,4 +1,4 @@
-import type { AgentError, AgentErrorCode, AgentWarning, AgentWarningCode } from '../../../types/agent';
+import type { AgentError, AgentErrorCode, AgentProblem, AgentWarning, AgentWarningCode } from '../../../types/agent';
 
 export const RETRYABLE_CODES: ReadonlySet<AgentErrorCode> = new Set<AgentErrorCode>(['STALE', 'CONFLICT', 'CANCELLED']);
 
@@ -36,3 +36,40 @@ export const warning = (
   ...(extra.blockId !== undefined && { blockId: extra.blockId }),
   ...(extra.field !== undefined && { field: extra.field }),
 });
+
+// Each extra problem costs the model tokens on every retry.
+const MAX_OTHERS = 8;
+
+export const problemOf = (error: AgentError | AgentProblem): AgentProblem => ({
+  code: error.code,
+  message: error.message,
+  ...(error.commandIndex !== undefined && { commandIndex: error.commandIndex }),
+  ...(error.path !== undefined && { path: error.path }),
+});
+
+// Data rejections share one path per command, so their message tells them apart.
+const keyOf = (problem: AgentProblem): string => JSON.stringify([
+  problem.code, problem.commandIndex, problem.path, problem.code === 'DATA_REJECTED' ? problem.message : '',
+]);
+
+/** Adds the other problems of a failed batch to its first error, once each, capped. */
+export const withOthers = (primary: AgentError, others: readonly AgentProblem[]): AgentError => {
+  const error: AgentError = { ...primary };
+
+  Reflect.deleteProperty(error, 'others');
+  const seen = new Set([keyOf(error)]);
+  const unique = others.map(problemOf).filter(problem => {
+    const key = keyOf(problem);
+
+    return seen.has(key) ? false : (seen.add(key), true);
+  });
+
+  if (unique.length === 0) {
+    return error;
+  }
+  const listed = unique.slice(0, MAX_OTHERS);
+  const count = `${unique.length} more problem${unique.length === 1 ? '' : 's'}`;
+  const where = listed.length < unique.length ? `; the first ${listed.length} are in error.others` : ' in error.others';
+
+  return { ...error, message: `${error.message} ${count}${where}. Fix them all, then retry.`, others: listed };
+};

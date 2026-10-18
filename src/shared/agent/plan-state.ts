@@ -23,6 +23,20 @@ const nameOf = (parentId: string | null): string => parentId === null ? 'the roo
 const subtreeIds = (block: PlannedBlock): string[] =>
   [block.id, ...block.children.flatMap(subtreeIds)];
 
+/** Why "$ref" resolves to nothing: `isBlock` when a block has that id, `known` the refs set so far. */
+export const unresolvedRefMessage = (ref: string, isBlock: boolean, known: readonly string[]): string => {
+  if (isBlock) {
+    return `"$${ref}" is not a ref, but block "${ref}" exists. Use "${ref}" without the "$".`;
+  }
+
+  const example = /^[A-Za-z][\w-]*$/.test(ref) ? ref : (known[0] ?? 'intro');
+  const listed = known.length === 0 ? '' : ` Refs so far: ${known.map(name => `"$${name}"`).join(', ')}.`;
+
+  return `Ref "${ref}" was not set by an earlier command in this batch.${listed}`
+    + ` Give the command that creates a block "ref": "${example}", then later commands use "$${example}".`
+    + ' A ref lasts one batch; a later batch uses the ids in the result\'s refs.';
+};
+
 export class PlanState {
   public index = 0;
   public readonly edits: Edit[] = [];
@@ -144,17 +158,7 @@ export class PlanState {
   }
 
   private unresolvedRefMessage(ref: string): string {
-    if (this.draft.has(ref) && !this.inAnnotation(ref)) {
-      return `"$${ref}" is not a ref, but block "${ref}" exists. Use "${ref}" without the "$".`;
-    }
-
-    const known = Object.keys(this.refs);
-    const example = /^[A-Za-z][\w-]*$/.test(ref) ? ref : (known[0] ?? 'intro');
-    const listed = known.length === 0 ? '' : ` Refs so far: ${known.map(name => `"$${name}"`).join(', ')}.`;
-
-    return `Ref "${ref}" was not set by an earlier command in this batch.${listed}`
-      + ` Give the command that creates a block "ref": "${example}", then later commands use "$${example}".`
-      + ' A ref lasts one batch; a later batch uses the ids in the result\'s refs.';
+    return unresolvedRefMessage(ref, this.draft.has(ref) && !this.inAnnotation(ref), Object.keys(this.refs));
   }
 
   /** The block is not page content (a comment thread) or sits under one. */

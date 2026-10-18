@@ -1,12 +1,13 @@
 import { isRichText } from '../rich-text/guards';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
-import { AgentFailure, failure } from './errors';
+import { preflightProblems } from './batch-preflight';
+import { AgentFailure, failure, withOthers } from './errors';
 import { splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
 
-import type { AgentActor, AgentBatch, AgentError, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
+import type { AgentActor, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
 import type { DocSnapshot } from './snapshot';
 import type { Plan, PlannerActionImpl, PlannerContext } from './types';
@@ -292,6 +293,31 @@ const planResult = (
   ...(plan.lastRange !== undefined && { lastRange: plan.lastRange }), warnings,
 });
 
+// Problems in the batch itself. A stale, read-only or runtime failure says nothing about the other commands.
+const BATCH_PROBLEM_CODES: ReadonlySet<AgentErrorCode> = new Set<AgentErrorCode>([
+  'INVALID_ARGS', 'UNKNOWN_COMMAND', 'COMMAND_UNAVAILABLE', 'BLOCK_NOT_FOUND', 'UNKNOWN_TOOL',
+  'PLACEMENT_REFUSED', 'FIELD_NOT_WRITABLE', 'CONVERSION_UNSUPPORTED', 'DATA_REJECTED',
+]);
+
+/** The first error plus every other problem the batch is known to have, so one retry can fix them all. */
+const withBatchProblems = (cause: AgentError, input: PlanningInput): AgentError => {
+  if (!BATCH_PROBLEM_CODES.has(cause.code)) {
+    return cause;
+  }
+  const others = [...cause.others ?? []];
+
+  // DATA_REJECTED means every command planned and every write was checked, so nothing is left to find.
+  if (cause.code !== 'DATA_REJECTED') {
+    try {
+      others.push(...preflightProblems(input.batch, input.ctx, () => input.applier.snapshot()));
+    } catch {
+      // The extra problems are a courtesy: never let them replace the real error.
+    }
+  }
+
+  return withOthers(cause, others.sort((left, right) => (left.commandIndex ?? 0) - (right.commandIndex ?? 0)));
+};
+
 const batchFailure = (
   error: unknown,
   input: PlanningInput,
@@ -305,7 +331,7 @@ const batchFailure = (
       ...(cause.commandIndex !== undefined && { commandIndex: cause.commandIndex }),
       details: { orphaned, cause },
     }).error
-    : cause;
+    : withBatchProblems(cause, input);
   const revision = failureRevision(input.applier);
 
   return { ok: false, ...(revision !== undefined && { revision }), error: failed, warnings };

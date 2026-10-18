@@ -37,6 +37,11 @@ describe('database filter labels', () => {
     expect(operatorChoices('number')[0].labelKey).toBe('tools.database.filterOperator.numberEquals');
   });
 
+  it('offers only "Is empty" and "Is not empty" on a place, starting at "Is not empty" (research/20 §1d)', () => {
+    expect(operatorChoices('place').map((c) => c.operator)).toEqual(['is_empty', 'is_not_empty']);
+    expect(defaultFilterFor(prop('place'))).toMatchObject({ operator: 'is_not_empty', value: null });
+  });
+
   it('starts a date filter at "This week", as Notion\'s default pill reads', () => {
     expect(defaultFilterFor(prop('date'))).toMatchObject({ propertyId: 'p', operator: 'this_week', value: null });
     expect(defaultFilterFor(prop('text'))).toMatchObject({ operator: 'contains', value: '' });

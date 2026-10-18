@@ -76,7 +76,8 @@ const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
   formula: TEXT,
   rollup: TEXT,
   button: [],
-  place: TEXT,
+  // Measured: only the two emptiness checks (research/20 §1d). Saved text filters still match.
+  place: EMPTY,
   verification: EMPTY,
 };
 
@@ -181,13 +182,13 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
     case 'rollup':
     case 'button':
     case 'verification':
+    case 'place':
       return { ...base, operator: 'is_not_empty', value: null };
     case 'title':
     case 'text':
     case 'url':
     case 'email':
     case 'phone':
-    case 'place':
       return { ...base, operator: 'contains', value: '' };
   }
 };

@@ -180,7 +180,7 @@ describe('renderAgentTools mixed size', () => {
     const size = (schema: 'full' | 'mixed'): number =>
       JSON.stringify(executeTool(renderAgentTools(editor, { format: 'anthropic', schema }))).length;
 
-    expect(size('mixed')).toBeLessThan(9_000);
+    expect(size('mixed')).toBeLessThan(10_000);
     expect(size('mixed') * 5).toBeLessThan(size('full'));
   });
 });

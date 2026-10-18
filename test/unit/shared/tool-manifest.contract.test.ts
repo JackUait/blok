@@ -434,8 +434,30 @@ describe('buildAgentContract', () => {
     const properties = isRecordLike(args.properties) ? args.properties : {};
     const type = isRecordLike(properties.type) ? properties.type : {};
 
-    expect(type.description).toBe('A block tool. A variant is its tool plus data: todo {state: "open"|"done", size: 2}.');
+    // The tools a block can convert into, so a model sees "todo" is a tool and not a variant of another one.
+    expect(type.description).toBe('A block tool: paragraph, todo. A variant is its tool plus data: todo {state: "open"|"done", size: 2}.');
     expect(contract.manifest.blocks.find(entry => entry.name === 'todo')?.variants).toHaveLength(2);
+  });
+
+  it("names every block tool and its variants on block.insert's type", () => {
+    const statics = block().statics;
+    const insertCore: CoreCommandTable = {
+      'block.insert': {
+        argsSchema: { type: 'object', properties: { type: { type: 'string' }, data: { type: 'object' } } },
+        readOnly: false, runtime: 'any', summary: 'Insert.',
+      },
+    };
+    const contract = buildAgentContract(buildToolManifest(snapshot({
+      blocks: [
+        block({ name: 'paragraph', title: 'Text', statics: { ...statics, toolbox: [{ name: 'paragraph', title: 'Text' }] } }),
+        block({ name: 'grid', title: 'Grid', statics: { ...statics, toolbox: [{ name: 'wide', title: 'Wide', data: { columns: 4 } }] } }),
+      ],
+    })), insertCore, where);
+    const args = commandFor(contract, 'block.insert').args;
+    const properties = isRecordLike(args.properties) ? args.properties : {};
+    const type = isRecordLike(properties.type) ? properties.type : {};
+
+    expect(type.description).toBe('A block tool: paragraph, grid. A variant is its tool plus data: grid {columns: 4}.');
   });
 });
 

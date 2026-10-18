@@ -349,29 +349,44 @@ const toolAvailability = (
   return { available: true };
 };
 
-/** Variant data of every tool a block can convert into, grouped by key: `list {style: "unordered"|"checklist"}`. */
-const convertVariants = (manifest: BlokToolManifest): string => {
-  const targets = new Set(manifest.blocks.flatMap(block => block.convertsTo));
+/** `list {style: "unordered"|"checklist"}` for each of these tools that has variants. */
+const variantData = (blocks: BlokToolManifest['blocks']): string[] => blocks.flatMap(block => {
+  const values = new Map<string, Set<string>>();
 
-  return manifest.blocks.filter(block => targets.has(block.name)).flatMap(block => {
-    const values = new Map<string, Set<string>>();
+  block.variants.forEach(variant => Object.entries(variant.data).forEach(([key, value]) => {
+    values.set(key, (values.get(key) ?? new Set()).add(JSON.stringify(value)));
+  }));
 
-    block.variants.forEach(variant => Object.entries(variant.data).forEach(([key, value]) => {
-      values.set(key, (values.get(key) ?? new Set()).add(JSON.stringify(value)));
-    }));
+  return values.size === 0 ? [] : [`${block.name} {${[...values].map(([key, set]) => `${key}: ${[...set].join('|')}`).join(', ')}}`];
+});
 
-    return values.size === 0 ? [] : [`${block.name} {${[...values].map(([key, set]) => `${key}: ${[...set].join('|')}`).join(', ')}}`];
-  }).join(', ');
+/** The tools a command can produce, named first, so a model does not take a tool (toggle) for a variant of another. */
+const typeDescription = (blocks: BlokToolManifest['blocks']): string => {
+  const variants = variantData(blocks);
+
+  return `A block tool: ${blocks.map(block => block.name).join(', ')}.${variants.length === 0 ? '' : ` A variant is its tool plus data: ${variants.join(', ')}.`}`;
 };
 
-const withConvertVariants = (args: BlokSchema, manifest: BlokToolManifest): BlokSchema => {
-  const variants = convertVariants(manifest);
+const withTypeDescription = (args: BlokSchema, blocks: BlokToolManifest['blocks']): BlokSchema => {
   const properties = isRecord(args.properties) ? args.properties : {};
   const type = properties.type;
 
-  return variants === '' || !isRecord(type)
+  return blocks.length === 0 || !isRecord(type)
     ? args
-    : { ...args, properties: { ...properties, type: { ...type, description: `A block tool. A variant is its tool plus data: ${variants}.` } } };
+    : { ...args, properties: { ...properties, type: { ...type, description: typeDescription(blocks) } } };
+};
+
+const typedArgs = (name: string, args: BlokSchema, manifest: BlokToolManifest): BlokSchema => {
+  if (name === 'block.insert') {
+    return withTypeDescription(args, manifest.blocks);
+  }
+  if (name === 'block.convert') {
+    const targets = new Set(manifest.blocks.flatMap(block => block.convertsTo));
+
+    return withTypeDescription(args, manifest.blocks.filter(block => targets.has(block.name)));
+  }
+
+  return args;
 };
 
 export const buildAgentContract = (
@@ -392,7 +407,7 @@ export const buildAgentContract = (
       name,
       summary: command.summary,
       ...(command.guidance === undefined ? {} : { guidance: command.guidance }),
-      args: name === 'block.convert' ? withConvertVariants(command.argsSchema, manifest) : command.argsSchema,
+      args: typedArgs(name, command.argsSchema, manifest),
       ...(command.resultSchema === undefined ? {} : { result: command.resultSchema }),
       readOnly: command.readOnly,
       runtime: command.runtime,

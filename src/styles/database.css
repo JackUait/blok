@@ -8748,6 +8748,18 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-bg-hover);
 }
 
+[data-blok-database-map-add-pin],
+[data-blok-database-map-no-place],
+[data-blok-database-map-no-place-row] {
+  outline: none;
+}
+
+[data-blok-database-map-add-pin]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-map-no-place]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-map-no-place-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: inset 0 0 0 2px var(--blok-focus-ring);
+}
+
 /* Measured (research/20 §1d): a 284px card, the name in bold over the address. */
 [data-blok-database-place-card] {
   display: flex;

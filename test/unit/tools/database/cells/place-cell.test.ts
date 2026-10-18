@@ -41,17 +41,48 @@ describe('place cell (research/20 §1d)', () => {
     expect(card?.querySelector('[data-blok-database-place-card-map]')).toBeNull();
   });
 
-  it('the card draws the host mini-map once, on the first hover, when the host can draw one', () => {
-    const renderPlace = vi.fn();
+  it('the card draws the host mini-map only once it is on screen, and drops it when the card closes', () => {
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout'] });
+    const destroy = vi.fn();
+    const attached: boolean[] = [];
+    const renderPlace = vi.fn((container: HTMLElement) => {
+      attached.push(container.isConnected);
+
+      return { destroy };
+    });
     const cell = renderCellValue(makeProperty('place'), EIFFEL, makeEditorContext({ renderPlace }));
-    const map = hoverCard(cell)?.querySelector<HTMLElement>('[data-blok-database-place-card-map]');
+    const card = hoverCard(cell);
+    const map = card?.querySelector<HTMLElement>('[data-blok-database-place-card-map]');
+    const bubble = document.createElement('div');
 
+    if (card === undefined) throw new Error('no card');
+    document.body.appendChild(cell);
+    cell.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(100);
     expect(renderPlace).not.toHaveBeenCalled();
-    cell.dispatchEvent(new MouseEvent('mouseenter'));
-    cell.dispatchEvent(new MouseEvent('mouseenter'));
 
+    // The hint shows its content after its delay.
+    bubble.setAttribute('data-state', 'open');
+    bubble.appendChild(card);
+    document.body.appendChild(bubble);
+    vi.advanceTimersByTime(50);
     expect(renderPlace).toHaveBeenCalledTimes(1);
     expect(renderPlace).toHaveBeenCalledWith(map, EIFFEL);
+    expect(attached).toEqual([true]);
+
+    cell.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(50);
+    expect(renderPlace).toHaveBeenCalledTimes(1);
+
+    bubble.setAttribute('data-state', 'closed');
+    vi.advanceTimersByTime(50);
+    expect(destroy).toHaveBeenCalledTimes(1);
+
+    bubble.setAttribute('data-state', 'open');
+    cell.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(50);
+    expect(renderPlace).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 
   it('an empty place has no hover card', () => {

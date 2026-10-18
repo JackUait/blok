@@ -1164,7 +1164,11 @@ export interface DatabaseMap {
    * row title. Without it, or when it fails, the row keeps the point only and no title.
    */
   reverseGeocode?(lngLat: DatabaseMapLngLat): Promise<PlaceValue | null | undefined> | PlaceValue | null | undefined;
-  /** Draws one place as a small map, in the Place cell's hover card. Without it the card shows the name and address only. */
+  /**
+   * Draws one place as a small map in the Place cell's hover card. Called each time the
+   * card shows, into an attached 150px-high box; `destroy` runs when the card closes.
+   * Without it the card shows the name and address only.
+   */
   renderPlace?(container: HTMLElement, place: PlaceValue): { destroy(): void } | void;
 }
 

@@ -301,6 +301,13 @@ test.describe('map view', () => {
     await expect(link).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Head%20office');
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', /noopener/);
+
+    await page.context().route('https://www.google.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>maps</p>' }));
+    const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()]);
+
+    await popup.waitForLoadState();
+    expect(popup.url()).toBe('https://www.google.com/maps/search/?api=1&query=Head%20office');
+    expect(await popup.evaluate(() => window.opener === null)).toBe(true);
   });
 });
 

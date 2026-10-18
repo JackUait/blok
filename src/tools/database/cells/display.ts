@@ -256,17 +256,44 @@ const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext)
 
   if (renderPlace !== undefined) {
     const map = document.createElement('div');
+    const state: { handle: { destroy(): void } | null; drawn: boolean; frame: number | null; hovered: boolean } = { handle: null, drawn: false, frame: null, hovered: false };
+    // The hint attaches the card after its delay and marks it closed on hide.
+    const shown = (): boolean => card.isConnected && card.closest('[data-state="closed"]') === null;
+    const watch = (): void => {
+      state.frame = null;
+      if (!state.drawn && shown()) {
+        state.drawn = true;
+        try {
+          state.handle = renderPlace(map, place) ?? null;
+        } catch {
+          map.remove();
+
+          return;
+        }
+      }
+      if (state.drawn && !shown()) {
+        // One live map at a time: a WebGL map per hovered cell would run out of contexts.
+        state.handle?.destroy();
+        state.handle = null;
+        state.drawn = false;
+        map.replaceChildren();
+
+        return;
+      }
+      // Waiting for a card that will not come: the pointer left before the hint showed.
+      if (!state.drawn && !state.hovered) return;
+      state.frame = requestAnimationFrame(watch);
+    };
 
     map.setAttribute('data-blok-database-place-card-map', '');
     card.appendChild(map);
-    // Drawn on the first hover: most cells are never hovered.
     cell.addEventListener('mouseenter', () => {
-      try {
-        renderPlace(map, place);
-      } catch {
-        map.remove();
-      }
-    }, { once: true });
+      state.hovered = true;
+      if (state.frame === null) state.frame = requestAnimationFrame(watch);
+    });
+    cell.addEventListener('mouseleave', () => {
+      state.hovered = false;
+    });
   }
   onHover(cell, card);
 };

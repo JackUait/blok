@@ -12,7 +12,7 @@ import { validateAgainst } from '../../../src/shared/schema/validate';
 import { createHeadlessAgentSetup } from '../../../src/view/agent-runtime';
 import type { HostService } from '../../../types/tools/tool-description';
 
-type SchemaMode = 'envelope' | 'full';
+type SchemaMode = 'envelope' | 'full' | 'mixed';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -47,8 +47,16 @@ const executeNames = (input: Record<string, unknown>, schema: SchemaMode): unkno
   }
 
   const branches: unknown[] = items.oneOf;
+  // mixed: one branch per common command, then an envelope branch whose enum holds the rest.
+  const names = branches.flatMap(branch => {
+    const name = record(record(record(branch).properties).name);
 
-  return branches.map(branch => record(record(record(branch).properties).name).const);
+    const values: unknown[] = Array.isArray(name.enum) ? name.enum : [name.const];
+
+    return values;
+  });
+
+  return schema === 'mixed' ? [...names].sort() : names;
 };
 
 const commandFixtures: Array<{
@@ -92,7 +100,7 @@ afterEach(() => {
 describe('MCP tools come from the shared renderer', () => {
   const { contract: stored } = createHeadlessAgentSetup({ runtime: 'node' });
 
-  for (const schema of ['envelope', 'full'] as const) {
+  for (const schema of ['envelope', 'full', 'mixed'] as const) {
     describe(schema, () => {
       it('keeps the three core tools equal to the real renderer output', () => {
         const tools = listMcpTools(stored, { schema, handleIdleMs: 600_000 });
@@ -120,7 +128,7 @@ describe('MCP tools come from the shared renderer', () => {
         const names = executeNames(execute.inputSchema, schema);
         const available = contract.commands.filter(entry => entry.available).map(entry => entry.name);
 
-        expect(names).toEqual(available);
+        expect(names).toEqual(schema === 'mixed' ? [...available].sort() : available);
         for (const name of fixture.available) {
           expect(names, name).toContain(name);
           expect(contract.commands.find(entry => entry.name === name), name).toMatchObject({ available: true });

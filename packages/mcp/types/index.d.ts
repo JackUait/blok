@@ -48,8 +48,8 @@ export interface BlokMcpOptions {
   overrides?: ManifestOverrides;
   /** Only for block types missing from the manifest. */
   richTextFields?: Record<string, string[]>;
-  /** Default 'envelope'. */
-  schema?: 'envelope' | 'full';
+  /** Default 'mixed': full arguments for the common commands, the envelope for the rest. */
+  schema?: 'envelope' | 'full' | 'mixed';
   /** Default 600000 (10 minutes). */
   handleIdleMs?: number;
   /** Default 8. */

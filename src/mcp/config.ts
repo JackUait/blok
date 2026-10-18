@@ -200,7 +200,7 @@ export const parseMcpArgs = (
     source: parseSource(flag(argv, '--source'), env, flag(argv, '--source-list')),
     pageTitles: oneOf('--page-titles', flag(argv, '--page-titles'), ['off', 'page-map'] as const),
     richTextFields: parseRichTextFields(flag(argv, '--rich-text-fields') ?? env.BLOK_RICH_TEXT_FIELDS),
-    schema: oneOf('--schema', flag(argv, '--schema'), ['envelope', 'full'] as const),
+    schema: oneOf('--schema', flag(argv, '--schema'), ['envelope', 'full', 'mixed'] as const),
     handleIdleMs: positiveInt('--handle-idle-ms', flag(argv, '--handle-idle-ms')),
     maxHandlesPerPrincipal: positiveInt('--max-handles', flag(argv, '--max-handles')),
     principal: flag(argv, '--principal'),

@@ -160,7 +160,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--manifest-overrides <file>` | | none | Tool and action overrides. |
 | `--rich-text-fields <json>` | `BLOK_RICH_TEXT_FIELDS` | none | Rich text fields for unknown block types. |
 | `--page-titles off\|page-map` | | `off` | Headless page rename and icon. |
-| `--schema envelope\|full` | | `envelope` | How `blok_execute` describes its commands. |
+| `--schema mixed\|envelope\|full` | | `mixed` | How `blok_execute` describes its commands. `mixed` gives the full arguments of the common commands, so the model needs no `blok_describe` call for them. |
 | `--handle-idle-ms <ms>` | | `600000` | Idle time before a handle expires. |
 | `--max-handles <n>` | | `8` | Open handles per principal. |
 

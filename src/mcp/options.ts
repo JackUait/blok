@@ -13,7 +13,7 @@ export interface BlokMcpOptions {
   pageTitles?: 'off' | 'page-map';
   overrides?: ManifestOverrides;
   richTextFields?: Record<string, string[]>;
-  schema?: 'envelope' | 'full';
+  schema?: 'envelope' | 'full' | 'mixed';
   handleIdleMs?: number;
   maxHandlesPerPrincipal?: number;
   principal?: string;
@@ -22,13 +22,13 @@ export interface BlokMcpOptions {
 export const DEFAULTS: {
   handleIdleMs: 600_000;
   maxHandlesPerPrincipal: 8;
-  schema: 'envelope';
+  schema: 'mixed';
   pageTitles: 'off';
   principal: 'local';
 } = {
   handleIdleMs: 600_000,
   maxHandlesPerPrincipal: 8,
-  schema: 'envelope',
+  schema: 'mixed',
   pageTitles: 'off',
   principal: 'local',
 };

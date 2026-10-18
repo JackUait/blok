@@ -20,7 +20,7 @@ export const LIFECYCLE_TOOL_NAMES: readonly ['blok_list_documents', 'blok_open',
 
 export const listMcpTools = (
   contract: AgentContract,
-  options: { schema: 'envelope' | 'full'; handleIdleMs: number },
+  options: { schema: 'envelope' | 'full' | 'mixed'; handleIdleMs: number },
 ): McpTool[] => {
   const idleMinutes = options.handleIdleMs / 60_000;
   const idleDuration = Number.isInteger(idleMinutes)

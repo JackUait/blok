@@ -212,6 +212,10 @@ describe('parseMcpArgs', () => {
     });
   });
 
+  it('reads --schema mixed', () => {
+    expect(parseMcpArgs(['--schema', 'mixed'], {}).options).toMatchObject({ schema: 'mixed' });
+  });
+
   it('accepts the minimum positive handle limits', () => {
     const { options } = parseMcpArgs(['--handle-idle-ms', '1', '--max-handles', '1'], {});
 

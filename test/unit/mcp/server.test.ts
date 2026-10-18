@@ -143,6 +143,13 @@ describe('assembleMcp', () => {
     expect(server.tools).toEqual(listMcpTools(contracts.stored, { schema: 'full', handleIdleMs: 123_456 }));
   });
 
+  it('sends the mixed schema when the deployment names none, so common commands need no describe call', () => {
+    const server = assemble();
+    const contracts = buildMcpContracts({ pageTitles: 'off' });
+
+    expect(server.tools).toEqual(listMcpTools(contracts.stored, { schema: 'mixed', handleIdleMs: 600_000 }));
+  });
+
   it('wires the host authorizer with the principal, document and write intent', async () => {
     const authorize = vi.fn<NonNullable<BlokMcpOptions['authorize']>>(async () => true);
     const server = assemble({ authorize });

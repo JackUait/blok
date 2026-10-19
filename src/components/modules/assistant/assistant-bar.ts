@@ -51,6 +51,26 @@ const build = <K extends keyof HTMLElementTagNameMap>(tag: K, attributes: Record
   return element;
 };
 
+/**
+ * Parse reply HTML with every image swapped for its alt text.
+ * A reply image would load its URL with no click, so a prompt-injected
+ * document could make the model leak text through the query string.
+ * A template is inert: nothing in it loads before the swap.
+ * @param html - the rendered reply
+ */
+const withoutImages = (html: string): DocumentFragment => {
+  const template = document.createElement('template');
+
+  template.innerHTML = html;
+  template.content.querySelectorAll('picture, img').forEach((image) => {
+    const img = image instanceof HTMLImageElement ? image : image.querySelector('img');
+
+    image.replaceWith(img?.alt ?? '');
+  });
+
+  return template.content;
+};
+
 /** Widest the bar grows, so a long line of prompt stays readable. */
 const MAX_WIDTH = 720;
 
@@ -303,7 +323,7 @@ export class AssistantBar {
       .then((html) => {
         // A later render (a new prompt, close) owns the reply now.
         if (this.replyToken === token) {
-          this.reply.innerHTML = html;
+          this.reply.replaceChildren(withoutImages(html));
         }
       })
       .catch(() => undefined);

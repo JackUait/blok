@@ -74,6 +74,27 @@ describe('database.updateProperty', () => {
     lock(doc, id, schema());
     expect(() => run(doc, id, 'updateProperty', { propertyId: schema()[1].id, name: 'x' })).toThrow(/locked/);
   });
+
+  it('refuses a name another property has, exact and case-sensitive, as the property menu does', () => {
+    const { doc, id, schema } = make();
+    const [title, status] = schema();
+    const before = JSON.stringify(schema());
+
+    expect(() => run(doc, id, 'updateProperty', { propertyId: status.id, name: ` ${title.name} ` }))
+      .toThrow(`A property named ${title.name} already exists in this database.`);
+    expect(JSON.stringify(schema())).toBe(before);
+
+    run(doc, id, 'updateProperty', { propertyId: status.id, name: title.name.toUpperCase() });
+    expect(schema()[1].name).toBe(title.name.toUpperCase());
+  });
+
+  it('keeps its own current name', () => {
+    const { doc, id, schema } = make();
+    const status = schema()[1];
+
+    run(doc, id, 'updateProperty', { propertyId: status.id, name: status.name, settings: { icon: '🚦' } });
+    expect(schema()[1]).toMatchObject({ name: status.name, icon: '🚦' });
+  });
 });
 
 describe('database.duplicateProperty / deleteProperty', () => {

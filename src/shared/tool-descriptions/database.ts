@@ -905,6 +905,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, ID, formula, relation, rollup, button, dependency, autofill).',
     guidance: 'settings keys follow schema; null removes one. The type cannot change here.',
     target: 'block',
+    preconditions: ['The new name is not the name of another property (exact match, case-sensitive).'],
     args: closed({
       propertyId: PROPERTY_ID,
       name: { type: 'string', minLength: 1 },

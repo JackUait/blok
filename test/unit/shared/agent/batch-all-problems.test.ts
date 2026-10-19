@@ -237,6 +237,15 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
     expect(result.ok && result.refs.h).toEqual(expect.any(String));
   });
 
+  it('leaves a ref inside args alone on a command that cannot carry one', async () => {
+    const result = await run([{ name: 'block.delete', args: { id: 'p1', ref: 'gone' } }]);
+    const error = errorOf(result);
+
+    expect(result.warnings).toEqual([]);
+    expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/ref' });
+    expect(error.message).toMatch(/^block\.delete: unknown field "ref"/);
+  });
+
   it('never reads "$id" as a block the batch did not make: a ref slip must not land on an old block', async () => {
     const session = openJsonSession({ blocks: [
       { id: 'h1', type: 'header', data: { text: [{ text: 'Intro' }], level: 2 } },

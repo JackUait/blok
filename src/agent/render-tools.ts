@@ -1,5 +1,6 @@
 import type { AgentContract, CommandEntry } from '../../types/tool-manifest';
 
+import { carriesRef } from '../shared/agent/names';
 import { EXECUTE_OUTPUT_SCHEMA, orError } from './result-schemas';
 import { cloneSchema, hoistDefs, isClosedSchema, measureSchema, shareRepeatedSchemas } from './schema-walk';
 
@@ -67,10 +68,6 @@ const SHARED_SCHEMA_MIN_LENGTH = 100;
 
 const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.';
 
-// The core commands whose result can name a new block. The planner refuses a ref on any other core command.
-const REF_CORE_COMMANDS: ReadonlySet<string> = new Set(['block.insert', 'block.duplicate']);
-
-const carriesRef = (entry: CommandEntry): boolean => entry.source !== 'core' || REF_CORE_COMMANDS.has(entry.name);
 
 const SEVERAL_BLOCKS = 'To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert.';
 

@@ -1,5 +1,5 @@
 import { AgentFailure, failure, problemOf, warning } from './errors';
-import { splitCommandName } from './names';
+import { carriesRef, splitCommandName } from './names';
 
 import type { AgentBatch, AgentCommand, AgentWarning } from '../../../types/agent';
 import type { PlannerCommand, SchemaValidator } from './types';
@@ -53,7 +53,8 @@ const checkCommand = (
   }
 
   const sent = validate(entry.args, raw.args);
-  const misplacedRef = raw.ref === undefined
+  // A command that cannot carry a ref keeps the plain unknown-field error.
+  const misplacedRef = raw.ref === undefined && carriesRef(entry)
     ? sent.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
     : undefined;
   const hoisted = misplacedRef !== undefined && typeof raw.args.ref === 'string' ? raw.args.ref : undefined;

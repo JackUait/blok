@@ -191,6 +191,14 @@ describe('buildToolManifest', () => {
     expect(onWarning).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/Tool "broken".*describe\(\).*JSON.*structural/));
   });
 
+  it('carries a description\'s fillMissing into the manifest entry', () => {
+    const description: BlockToolDescription = { ...tableDescription, defaultData: { language: 'plain text' }, fillMissing: ['language'] };
+    const manifest = buildToolManifest(snapshot([block('described', { description }), block('plain')]));
+
+    expect(entryFor(manifest, 'described').fillMissing).toEqual(['language']);
+    expect(entryFor(manifest, 'plain')).not.toHaveProperty('fillMissing');
+  });
+
   it('builds the manifest when a custom tool\'s patternProperties key is not a valid pattern', () => {
     const description: BlockToolDescription = {
       summary: 'Bad pattern.',

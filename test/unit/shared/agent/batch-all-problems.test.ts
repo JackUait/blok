@@ -305,22 +305,34 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
     expect(await children('$t1')).toEqual(['paragraph']);
   });
 
-  it('fills a missing required setting from the tool default', async () => {
+  it('fills a missing required setting from the tool default when the tool allows it', async () => {
     const result = await run([
       { name: 'block.insert', args: { type: 'code', id: 'c1', data: { code: 'npm run build' } } },
-      { name: 'block.insert', args: { type: 'header', id: 'h1', data: { text: 'Plan' } } },
+      { name: 'block.insert', args: { type: 'callout', id: 'k1', data: {} } },
     ]);
 
-    expect(result).toMatchObject({ ok: true, blocks: [
+    expect(result).toMatchObject({ ok: true, blocks: expect.arrayContaining([
       expect.objectContaining({ id: 'c1', data: expect.objectContaining({ code: 'npm run build', language: 'plain text' }) }),
-      expect.objectContaining({ id: 'h1', data: expect.objectContaining({ level: 2 }) }),
-    ] });
+      expect.objectContaining({ id: 'k1', data: expect.objectContaining({ emoji: expect.any(String) }) }),
+    ]) });
     expect(result.warnings).toEqual([
       {
         code: 'CORRECTED', commandIndex: 0, blockId: 'c1', field: 'language',
         message: 'Required field "language" was missing, so it got its default "plain text".',
       },
-      expect.objectContaining({ code: 'CORRECTED', commandIndex: 1, blockId: 'h1', field: 'level' }),
+      expect.objectContaining({ code: 'CORRECTED', commandIndex: 1, blockId: 'k1', field: 'emoji' }),
+    ]);
+  });
+
+  it('never fills a setting that changes meaning: a heading level and a list style still fail', async () => {
+    const error = errorOf(await run([
+      { name: 'block.insert', args: { type: 'header', data: { text: 'Plan' } } },
+      { name: 'block.insert', args: { type: 'list', data: { text: 'Step' } } },
+    ]));
+
+    expect([error, ...error.others ?? []].map(problem => [problem.code, problem.commandIndex, problem.message.match(/missing required field "\w+"/)?.[0]])).toEqual([
+      ['DATA_REJECTED', 0, 'missing required field "level"'],
+      ['DATA_REJECTED', 1, 'missing required field "style"'],
     ]);
   });
 

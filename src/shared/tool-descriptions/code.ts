@@ -19,6 +19,7 @@ export const describeCode = (_config: Record<string, unknown> = {}): BlockToolDe
   data: CODE_DATA,
   inputFields: [],
   defaultData: { code: '', language: 'plain text' },
+  fillMissing: ['language'],
   examples: [{ code: 'const a = 1;', language: 'javascript', filename: 'a.js' }],
   summaryFields: ['language', 'filename'],
 });

@@ -127,7 +127,7 @@ const isBlockDescription = (value: unknown): value is BlockToolDescription =>
   && (value.guidance === undefined || typeof value.guidance === 'string')
   && (value.defaultData === undefined || isPlainRecord(value.defaultData))
   && (value.examples === undefined || (Array.isArray(value.examples) && value.examples.every(isPlainRecord)))
-  && ['summaryFields', 'inputFields', 'viewState'].every(key => value[key] === undefined || isStringArray(value[key]))
+  && ['summaryFields', 'fillMissing', 'inputFields', 'viewState'].every(key => value[key] === undefined || isStringArray(value[key]))
   && (value.guardedFields === undefined || (isPlainRecord(value.guardedFields) && Object.values(value.guardedFields).every(command => typeof command === 'string')))
   && (value.actions === undefined || (Array.isArray(value.actions) && value.actions.every(isAction)));
 
@@ -235,6 +235,7 @@ const blockEntry = (
     selfPlacesChildren: statics.selfPlacesChildren,
     restrictedInTableCell: statics.restrictedInTableCell,
     ...(description?.summaryFields === undefined ? {} : { summaryFields: description.summaryFields }),
+    ...(description?.fillMissing === undefined ? {} : { fillMissing: description.fillMissing }),
     ...(description?.inputFields === undefined ? {} : { inputFields: description.inputFields }),
     convertsTo: statics.convertible.export
       ? visibleBlocks

@@ -286,11 +286,7 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
   });
 };
 
-/**
- * The spec's data plus each required field it left out whose default is a setting (a code language,
- * a heading level). Never content: rich text, the field the tool converts by, and empty defaults
- * ('' code, '' tab title) stay missing, so an empty block is still refused.
- */
+/** The spec's data plus each required field it left out that the tool lists in fillMissing, from defaultData. */
 export const withRequiredDefaults = (
   tool: PlannerTool,
   data: Record<string, unknown>,
@@ -298,18 +294,14 @@ export const withRequiredDefaults = (
 ): Record<string, unknown> => {
   const defaults = tool.entry.defaultData ?? {};
   const required = isArray(tool.entry.data.required) ? tool.entry.data.required : [];
-  const content = [...tool.entry.richTextFields, tool.entry.conversion.import, tool.entry.conversion.export];
-  const filled = required.filter((field): field is string => typeof field === 'string'
-    && !Object.hasOwn(data, field) && Object.hasOwn(defaults, field)
-    && !content.includes(field) && isSetting(defaults[field]));
+  // Opt-in per field: some defaults change meaning (a heading level, a list style).
+  const filled = (tool.entry.fillMissing ?? []).filter(field => required.includes(field)
+    && !Object.hasOwn(data, field) && Object.hasOwn(defaults, field));
 
   filled.forEach(field => onFill(field, defaults[field]));
 
   return filled.length === 0 ? data : { ...Object.fromEntries(filled.map(field => [field, defaults[field]])), ...data };
 };
-
-const isSetting = (value: unknown): boolean => value !== null && value !== '' &&
-  !(isArray(value) && value.length === 0) && !(isRecord(value) && Object.keys(value).length === 0);
 
 export const failUnknownTool = (state: PlanState, type: string, path: string): never => {
   const known = [...state.ctx.tools.keys()];

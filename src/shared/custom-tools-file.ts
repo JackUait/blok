@@ -36,6 +36,7 @@ const FILE_SCHEMA: BlokSchema = {
               defaultData: OBJECT_SCHEMA,
               examples: { type: 'array', items: OBJECT_SCHEMA },
               summaryFields: STRING_LIST_SCHEMA,
+              fillMissing: STRING_LIST_SCHEMA,
               inputFields: STRING_LIST_SCHEMA,
               viewState: STRING_LIST_SCHEMA,
               guardedFields: { type: 'object', additionalProperties: STRING_SCHEMA },

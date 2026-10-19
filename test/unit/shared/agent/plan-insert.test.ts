@@ -460,21 +460,21 @@ describe('block.insert planning', () => {
     expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
   });
 
-  it('never fills a default into the field a tool converts by, even a plain string', () => {
-    const tools = new Map(TOOLS);
-
-    tools.set('note', tool('note', {
-      conversion: { import: 'title', export: 'title' },
+  it('fills a missing required field from its default only when the tool lists it in fillMissing', () => {
+    const note = (fillMissing?: string[]): typeof TOOLS => new Map(TOOLS).set('note', tool('note', {
       data: {
         type: 'object', required: ['title', 'tone'], additionalProperties: false,
         properties: { title: { type: 'string' }, tone: { type: 'string' } },
       },
       defaultData: { title: 'Untitled', tone: 'calm' },
+      ...(fillMissing !== undefined && { fillMissing }),
     }));
 
-    expect(failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: {} } }], { tools })))
+    expect(failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: { title: 'Plan' } } }], { tools: note() })))
+      .toMatchObject({ code: 'DATA_REJECTED', message: expect.stringMatching(/missing required field "tone"/) });
+    expect(failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: {} } }], { tools: note(['tone']) })))
       .toMatchObject({ code: 'DATA_REJECTED', message: expect.stringMatching(/missing required field "title"/) });
-    expect(planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: { title: 'Plan' } } }], { tools }).warnings)
+    expect(planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: { title: 'Plan' } } }], { tools: note(['tone']) }).warnings)
       .toEqual([expect.objectContaining({ code: 'CORRECTED', field: 'tone' })]);
   });
 

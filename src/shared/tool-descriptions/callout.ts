@@ -19,5 +19,6 @@ export const describeCallout = (_config: Record<string, unknown> = {}): BlockToo
   data: CALLOUT_DATA,
   inputFields: [],
   defaultData: { emoji: '💡' },
+  fillMissing: ['emoji'],
   summaryFields: ['emoji'],
 });

@@ -28,6 +28,7 @@ export interface PlannerToolEntry {
   selfPlacesChildren: boolean;
   restrictedInTableCell: boolean;
   summaryFields?: string[];
+  fillMissing?: string[];
   conversion: { import?: string; export?: string };
   data: JsonSchema;
   defaultData?: Record<string, unknown>;

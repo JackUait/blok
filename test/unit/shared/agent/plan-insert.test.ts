@@ -440,18 +440,48 @@ describe('block.insert planning', () => {
     expect(error.message).toMatch(/"ref": "intro"/);
   });
 
-  it('names the plain id when "$" is put on an id this batch gave a block', () => {
-    const error = failOf(() => planOn(doc, [
+  it('reads "$id" as the block this batch gave that id, and warns', () => {
+    const { plan, warnings } = planOn(doc, [
       { name: 'block.insert', args: { type: 'toggle', id: 'colA', children: [{ type: 'toggle', id: 'colB' }] }, ref: 'cols' },
       { name: 'block.insert', args: { type: 'paragraph', parentId: '$colB' } },
-    ]));
+    ]);
 
-    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 1, path: '/commands/1/args/parentId', details: { ref: 'colB' } });
-    expect(error.message).toBe('"$colB" is not a ref, but block "colB" exists. Use "colB" without the "$".');
+    expect(plan.edits).toContainEqual(expect.objectContaining({ op: 'insert', parentId: 'colB' }));
+    expect(warnings).toEqual([{
+      code: 'CORRECTED', commandIndex: 1,
+      message: '"$colB" is not a ref, but block "colB" exists, so it was used. Write "colB" without the "$".',
+    }]);
   });
 
-  it('names the plain id when "$" is put on an id from the document', () => {
-    const error = failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]));
+  it('reads "$id" as a block from the document, and warns', () => {
+    const { warnings } = planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]);
+
+    expect(warnings).toEqual([expect.objectContaining({ code: 'CORRECTED', commandIndex: 0 })]);
+  });
+
+  it('never fills a default into the field a tool converts by, even a plain string', () => {
+    const tools = new Map(TOOLS);
+
+    tools.set('note', tool('note', {
+      conversion: { import: 'title', export: 'title' },
+      data: {
+        type: 'object', required: ['title', 'tone'], additionalProperties: false,
+        properties: { title: { type: 'string' }, tone: { type: 'string' } },
+      },
+      defaultData: { title: 'Untitled', tone: 'calm' },
+    }));
+
+    expect(failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: {} } }], { tools })))
+      .toMatchObject({ code: 'DATA_REJECTED', message: expect.stringMatching(/missing required field "title"/) });
+    expect(planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: { title: 'Plan' } } }], { tools }).warnings)
+      .toEqual([expect.objectContaining({ code: 'CORRECTED', field: 'tone' })]);
+  });
+
+  it('keeps the plain-id hint when a later command sets a ref of that name', () => {
+    const error = failOf(() => planOn(doc, [
+      { name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } },
+      { name: 'block.insert', args: { type: 'paragraph' }, ref: 'tg' },
+    ]));
 
     expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
   });

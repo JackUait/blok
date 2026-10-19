@@ -364,7 +364,9 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
   try {
     checkCancel(input.signal);
     const checked = checkEnvelope(input.batch, input.ctx.commands, input.ctx.validate);
+    const corrected = checked.warnings ?? [];
 
+    warnings.push(...corrected);
     state.batch = checked.batch;
     const batch = checkSource(input, checked);
 
@@ -404,7 +406,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     checkRevision(batch, current, () => snapshot, input.ctx);
 
     // Only concrete warnings refer to the IDs that will be applied.
-    warnings.length = 0;
+    warnings.splice(0, warnings.length, ...corrected);
     const { plan, draft } = planBatch({
       snapshot, batch, ctx: { ...input.ctx, prepared }, stamp, warnings,
     });
@@ -448,6 +450,8 @@ export const planHostBatch = async (input: PlanningInput): Promise<HostBatchPlan
   try {
     checkCancel(input.signal);
     const checked = checkEnvelope(input.batch, input.ctx.commands, input.ctx.validate);
+
+    warnings.push(...checked.warnings ?? []);
     const batch = checkSource(input, checked);
     const command = batch.commands[0];
     const entry = command === undefined ? undefined : input.ctx.commands.get(command.name);

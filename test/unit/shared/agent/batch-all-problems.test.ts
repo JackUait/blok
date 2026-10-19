@@ -56,16 +56,18 @@ describe('a failed batch reports every problem it can find', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists the same misplaced ref in every command, and the code block missing its language', async () => {
-    const error = errorOf(await run(markdownBatch));
+  it('lists the same bad arg in every command, and the code block missing its code', async () => {
+    const error = errorOf(await run(markdownBatch.map(command => command.name !== 'block.insert' ? command : {
+      ...command, args: { ...command.args, colour: 'red', ...(command.args.type === 'code' && { data: { language: 'bash' } }) },
+    })));
 
     expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0 });
-    expect(error.message).toMatch(/"ref" goes next to name and args/);
+    expect(error.message).toMatch(/unknown field "colour"/);
     const others = error.others ?? [];
 
     expect(others.filter(other => other.code === 'INVALID_ARGS').map(other => other.commandIndex)).toEqual([1, 2, 3, 4, 5]);
     expect(others).toContainEqual(expect.objectContaining({
-      code: 'DATA_REJECTED', commandIndex: 5, message: expect.stringMatching(/missing required field "language"/),
+      code: 'DATA_REJECTED', commandIndex: 5, message: expect.stringMatching(/missing required field "code"/),
     }));
     // A ref placed inside args still counts as declared: no "$h was not set" noise.
     expect(others.some(other => other.code === 'BLOCK_NOT_FOUND')).toBe(false);
@@ -73,12 +75,14 @@ describe('a failed batch reports every problem it can find', () => {
   });
 
   it('keeps the first planning error and adds the later ref mistakes and every bad block data', async () => {
-    const error = errorOf(await run(columnsBatch));
+    const error = errorOf(await run(columnsBatch.map(command => command.name === 'text.replace'
+      ? { ...command, args: { ...command.args, id: String(command.args.id).replace('$h', '$head') } }
+      : command)));
 
     expect(error).toMatchObject({
       code: 'BLOCK_NOT_FOUND', commandIndex: 2, path: '/commands/2/args/id',
     });
-    expect(error.message).toMatch(/^"\$hA" is not a ref, but block "hA" exists\. Use "hA" without the "\$"\./);
+    expect(error.message).toMatch(/^Ref "headA" was not set by an earlier command in this batch\./);
     const others = error.others ?? [];
 
     // A tool action's parentId is its own to read, so only text.replace's id is certain to fail.
@@ -93,6 +97,18 @@ describe('a failed batch reports every problem it can find', () => {
       expect.stringMatching(/^Block "hB": missing required field "text"/),
     ]);
     expect(rejected.every(other => other.commandIndex === 1)).toBe(true);
+  });
+
+  it('reads the "$id" slips as blocks, so only the bad block data is left', async () => {
+    const error = errorOf(await run(columnsBatch));
+
+    expect(error).toMatchObject({ code: 'DATA_REJECTED', commandIndex: 1, path: '/commands/1' });
+    expect(error.message).toMatch(/unknown field "columnCount".*"column_list"/);
+    // No BLOCK_NOT_FOUND for "$hA", "$hB", "$colA" or "$colB".
+    expect((error.others ?? []).map(other => other.message)).toEqual([
+      expect.stringMatching(/^Block "hA": missing required field "text"/),
+      expect.stringMatching(/^Block "hB": missing required field "text"/),
+    ]);
   });
 
   it('collects every data rejection when planning succeeds', async () => {
@@ -114,12 +130,12 @@ describe('a failed batch reports every problem it can find', () => {
   it('never names a minted block id for a spec that gave none', async () => {
     const error = errorOf(await run([
       { name: 'text.replace', args: { id: '$nope', with: 'x' } },
-      { name: 'block.insert', args: { type: 'code', data: { code: 'x' } } },
+      { name: 'block.insert', args: { type: 'code', data: { language: 'bash' } } },
     ]));
 
     const other = (error.others ?? []).find(item => item.code === 'DATA_REJECTED');
 
-    expect(other?.message).toMatch(/^The new "code" block: missing required field "language"/);
+    expect(other?.message).toMatch(/^The new "code" block: missing required field "code"/);
     expect(other?.path).toBe('/commands/1/args/data');
   });
 
@@ -145,7 +161,7 @@ describe('a failed batch reports every problem it can find', () => {
 
   it('strips details from the extra problems and caps the list', async () => {
     const commands = Array.from({ length: 12 }, (_, index) => ({
-      name: 'block.insert', args: { ref: `r${index}`, type: 'paragraph' },
+      name: 'block.insert', args: { colour: `r${index}`, type: 'paragraph' },
     }));
     const error = errorOf(await run(commands));
     const others = error.others ?? [];
@@ -201,3 +217,123 @@ describe('an id field that names a new block is not read as a ref', () => {
     expect(error.others).toBeUndefined();
   });
 });
+
+describe('a slip with one sure meaning runs as meant and warns', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('moves a ref written inside args next to name and args', async () => {
+    const result = await run([
+      { name: 'block.insert', args: { ref: 'h', type: 'header', data: { level: 2, text: 'Plan' }, position: { after: 'p1' } } },
+      { name: 'text.format', args: { id: '$h', range: 'all', set: { bold: true } } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', commandIndex: 0, field: 'ref' }] });
+    expect(result.ok && result.refs.h).toEqual(expect.any(String));
+  });
+
+  it('reads "$id" as block id when no ref has that name and the block exists', async () => {
+    const result = await run([
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+      { name: 'text.format', args: { id: '$p1', range: 'all', set: { bold: true } } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, changed: { updated: ['p1'] } });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: 'CORRECTED', commandIndex: 0, message: '"$p1" is not a ref, but block "p1" exists, so it was used. Write "p1" without the "$".' }),
+      expect.objectContaining({ code: 'CORRECTED', commandIndex: 1 }),
+    ]);
+  });
+
+  it('reads "$id" as a block an earlier command made with that id', async () => {
+    const result = await run([
+      { name: 'block.insert', args: { type: 'paragraph', id: 'n1', data: { text: 'New' } } },
+      { name: 'text.replace', args: { id: '$n1', with: 'Newer' } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', commandIndex: 1 }] });
+  });
+
+  it('fills a missing required setting from the tool default', async () => {
+    const result = await run([
+      { name: 'block.insert', args: { type: 'code', id: 'c1', data: { code: 'npm run build' } } },
+      { name: 'block.insert', args: { type: 'header', id: 'h1', data: { text: 'Plan' } } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, blocks: [
+      expect.objectContaining({ id: 'c1', data: expect.objectContaining({ code: 'npm run build', language: 'plain text' }) }),
+      expect.objectContaining({ id: 'h1', data: expect.objectContaining({ level: 2 }) }),
+    ] });
+    expect(result.warnings).toEqual([
+      {
+        code: 'CORRECTED', commandIndex: 0, blockId: 'c1', field: 'language',
+        message: 'Required field "language" was missing, so it got its default "plain text".',
+      },
+      expect.objectContaining({ code: 'CORRECTED', commandIndex: 1, blockId: 'h1', field: 'level' }),
+    ]);
+  });
+
+  it('fills defaults in nested children too', async () => {
+    const result = await run([{ name: 'block.insert', args: { type: 'toggle', data: { text: 'More' }, children: [
+      { type: 'code', id: 'c1', data: { code: 'x' } },
+    ] } }]);
+
+    expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', blockId: 'c1', field: 'language' }] });
+  });
+
+  it('leaves a default it would fill out of the extra problems', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: 'missing', with: 'x' } },
+      { name: 'block.insert', args: { type: 'code', data: { code: 'x' } } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0 });
+    expect(error.others).toBeUndefined();
+  });
+
+  it('never fills content: a heading without text and code without code still fail', async () => {
+    const error = errorOf(await run([
+      { name: 'block.insert', args: { type: 'header', data: { level: 2 } } },
+      { name: 'block.insert', args: { type: 'code', data: { language: 'bash' } } },
+    ]));
+
+    expect([error, ...error.others ?? []].map(problem => [problem.code, problem.commandIndex, problem.message.match(/missing required field "\w+"/)?.[0]])).toEqual([
+      ['DATA_REJECTED', 0, 'missing required field "text"'],
+      ['DATA_REJECTED', 1, 'missing required field "code"'],
+    ]);
+  });
+
+  it('runs a batch whose only slips are refs inside args and a missing code language', async () => {
+    const result = await run(markdownBatch);
+
+    expect(result.ok).toBe(true);
+    expect(result.warnings.map(item => [item.commandIndex, item.field])).toEqual([
+      [0, 'ref'], [1, 'ref'], [2, 'ref'], [3, 'ref'], [4, 'ref'], [5, 'ref'], [5, 'language'],
+    ]);
+  });
+
+  it('still fails "$id" when a later command sets a ref of that name', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+      { name: 'block.insert', ref: 'p1', args: { type: 'paragraph' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0, path: '/commands/0/args/id' });
+  });
+
+  it('leaves a "$id" it can read as a block out of the extra problems', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: 'missing', with: 'x' } },
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0 });
+    expect(error.others).toBeUndefined();
+  });
+});
+

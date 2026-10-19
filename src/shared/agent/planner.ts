@@ -79,6 +79,12 @@ export const planBatch = (input: {
 }): { plan: Plan; draft: DocSnapshot } => {
   const state = new PlanState(input.snapshot.clone(), input.ctx, input.warnings, input.stamp);
 
+  input.batch.commands.forEach(command => {
+    if (command.ref !== undefined) {
+      state.batchRefs.add(command.ref);
+    }
+  });
+
   input.batch.commands.forEach((command, index) => {
     state.index = index;
     if (command.name === 'block.insert') {

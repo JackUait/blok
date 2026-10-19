@@ -1,5 +1,5 @@
 import { AgentFailure } from './errors';
-import { failUnknownTool } from './plan-block';
+import { failUnknownTool, withRequiredDefaults } from './plan-block';
 import { PlanState, unresolvedRefMessage } from './plan-state';
 import { DocSnapshot } from './snapshot';
 import { dataProblem } from './write-validation';
@@ -52,6 +52,7 @@ const refProblems = (
   const declared: string[] = [];
   const created = new Set<string>();
   const problems: AgentProblem[] = [];
+  const everyRef = new Set(commands.flatMap(raw => !isRecord(raw) ? [] : [raw.ref, isRecord(raw.args) ? raw.args.ref : undefined]));
 
   commands.forEach((raw, index) => {
     if (!isRecord(raw) || !isRecord(raw.args)) {
@@ -65,6 +66,10 @@ const refProblems = (
       }
       const ref = value.slice(1);
 
+      // The planner reads it as block ref (PlanState.isBlockNotRef).
+      if (!everyRef.has(ref) && (created.has(ref) || isBlock(ref))) {
+        return;
+      }
       problems.push({
         code: 'BLOCK_NOT_FOUND',
         message: unresolvedRefMessage(ref, created.has(ref) || isBlock(ref), declared),
@@ -72,7 +77,7 @@ const refProblems = (
         path: `/commands/${index}/args${path}`,
       });
     });
-    // A ref misplaced inside args is reported by the envelope; count it as set to avoid echoes.
+    // The envelope moves a ref written inside args next to name, so it counts as set.
     [raw.ref, args.ref].forEach(ref => {
       if (typeof ref === 'string' && !declared.includes(ref)) {
         declared.push(ref);
@@ -120,7 +125,7 @@ const specProblems = (state: PlanState, index: number, spec: unknown, path: stri
     const problem = dataProblem(state, index, {
       subject: id === undefined ? `The new "${type}" block` : `Block "${id}"`,
       type, path: `/commands/${index}/args${path}/data`, ...(id !== undefined && { blockId: id }),
-    }, state.prepareData(type, data, `${path}/data`, id ?? ''));
+    }, state.prepareData(type, withRequiredDefaults(tool, data), `${path}/data`, id ?? ''));
 
     return problem === undefined ? [] : [problem];
   });

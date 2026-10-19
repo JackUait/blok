@@ -72,7 +72,8 @@ export interface AgentProblem {
   path?: string;
 }
 
-export type AgentWarningCode = 'SANITIZED' | 'DEMOTED' | 'LOOKS_LIKE_MARKDOWN' | 'MARKDOWN_DEGRADED' | 'UNKNOWN_MARK_DROPPED';
+/** CORRECTED: the batch had a slip with one sure meaning; it ran as meant and the message says what was changed. */
+export type AgentWarningCode = 'SANITIZED' | 'DEMOTED' | 'LOOKS_LIKE_MARKDOWN' | 'MARKDOWN_DEGRADED' | 'UNKNOWN_MARK_DROPPED' | 'CORRECTED';
 
 export interface AgentWarning {
   code: AgentWarningCode;

@@ -47,6 +47,8 @@ export class PlanState {
   public readonly touched = new Set<string>();
   /** Plain ids that some command in the batch names as parentId. */
   public readonly filledParents = new Set<string>();
+  /** Every ref the batch sets, later commands included. */
+  public readonly batchRefs = new Set<string>();
   public lastRange?: TextRangeRef;
 
   private readonly reserved = new Map<string, string>();
@@ -146,15 +148,37 @@ export class PlanState {
       const ref = value.slice(1);
       const id = Object.prototype.hasOwnProperty.call(this.refs, ref) ? this.refs[ref] : undefined;
 
-      return id !== undefined && this.draft.has(id)
-        ? id
-        : this.fail('BLOCK_NOT_FOUND', this.unresolvedRefMessage(ref), path, { ref });
+      if (id !== undefined && this.draft.has(id)) {
+        return id;
+      }
+      if (this.isBlockNotRef(ref)) {
+        this.correctRef(ref);
+
+        return ref;
+      }
+
+      return this.fail('BLOCK_NOT_FOUND', this.unresolvedRefMessage(ref), path, { ref });
     }
 
     // Agents skip comment threads (user decision 2026-10-16): one is a block they cannot see.
     return this.draft.has(value) && !this.inAnnotation(value)
       ? value
       : this.fail('BLOCK_NOT_FOUND', `Block "${value}" does not exist. Read the document for current ids.`, path, { id: value });
+  }
+
+  /** "$x" with no ref x anywhere in the batch, while block x exists: the "$" is a slip. */
+  public isBlockNotRef(ref: string): boolean {
+    return !Object.prototype.hasOwnProperty.call(this.refs, ref) && !this.batchRefs.has(ref)
+      && this.draft.has(ref) && !this.inAnnotation(ref);
+  }
+
+  private correctRef(ref: string): void {
+    const message = `"$${ref}" is not a ref, but block "${ref}" exists, so it was used. Write "${ref}" without the "$".`;
+
+    // Reservation passes resolve the same value again.
+    if (!this.warnings.some(item => item.commandIndex === this.index && item.message === message)) {
+      this.warn('CORRECTED', message);
+    }
   }
 
   private unresolvedRefMessage(ref: string): string {

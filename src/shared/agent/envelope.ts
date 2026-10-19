@@ -1,7 +1,7 @@
-import { AgentFailure, failure, problemOf } from './errors';
+import { AgentFailure, failure, problemOf, warning } from './errors';
 import { splitCommandName } from './names';
 
-import type { AgentBatch, AgentCommand } from '../../../types/agent';
+import type { AgentBatch, AgentCommand, AgentWarning } from '../../../types/agent';
 import type { PlannerCommand, SchemaValidator } from './types';
 
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
@@ -19,7 +19,7 @@ const checkCommand = (
   index: number,
   commands: ReadonlyMap<string, PlannerCommand>,
   validate: SchemaValidator
-): { command: AgentCommand; entry: PlannerCommand } => {
+): { command: AgentCommand; entry: PlannerCommand; corrected?: AgentWarning } => {
   const path = `/commands/${index}`;
 
   if (!isRecord(raw) || typeof raw.name !== 'string' || !isRecord(raw.args)
@@ -52,12 +52,16 @@ const checkCommand = (
     });
   }
 
-  const problems = validate(entry.args, raw.args);
+  const sent = validate(entry.args, raw.args);
   const misplacedRef = raw.ref === undefined
-    ? problems.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
+    ? sent.find(problem => problem.path === '/ref' && problem.message.startsWith('unknown field'))
     : undefined;
+  const hoisted = misplacedRef !== undefined && typeof raw.args.ref === 'string' ? raw.args.ref : undefined;
+  // A copy: the pre-flight reads the raw batch again and counts args.ref as declared.
+  const args = hoisted === undefined ? raw.args : Object.fromEntries(Object.entries(raw.args).filter(([key]) => key !== 'ref'));
+  const problems = hoisted === undefined ? sent : validate(entry.args, args);
 
-  if (misplacedRef !== undefined) {
+  if (misplacedRef !== undefined && hoisted === undefined) {
     throw failure('INVALID_ARGS', `${name}: "ref" goes next to name and args, not inside args: `
       + `{ "name": "${name}", "args": { ... }, "ref": ${JSON.stringify(raw.args.ref)} }.`, {
       commandIndex: index, path: `${path}/args/ref`, details: { problems },
@@ -71,7 +75,17 @@ const checkCommand = (
     });
   }
 
-  return { command: { name, args: raw.args, ...(typeof raw.ref === 'string' ? { ref: raw.ref } : {}) }, entry };
+  const ref = hoisted ?? (typeof raw.ref === 'string' ? raw.ref : undefined);
+
+  return {
+    command: { name, args, ...(ref === undefined ? {} : { ref }) },
+    entry,
+    ...(hoisted !== undefined && {
+      corrected: warning('CORRECTED', '"ref" goes next to name and args, not inside args. It was moved there this time.', {
+        commandIndex: index, field: 'ref',
+      }),
+    }),
+  };
 };
 
 const attempt = <T>(run: () => T): T | AgentFailure => {
@@ -89,7 +103,7 @@ export const checkEnvelope = (
   batch: unknown,
   commands: ReadonlyMap<string, PlannerCommand>,
   validate: SchemaValidator
-): { batch: AgentBatch; writes: boolean } => {
+): { batch: AgentBatch; writes: boolean; warnings?: AgentWarning[] } => {
   if (!isRecord(batch) || !isArray(batch.commands) || batch.commands.length === 0) {
     throw failure('INVALID_ARGS', 'A batch is { commands: [ { name, args } ... ] } with at least one command.', { path: '/commands' });
   }
@@ -98,7 +112,7 @@ export const checkEnvelope = (
   }
 
   const list = batch.commands;
-  const entries: Array<{ index: number; command: AgentCommand; entry: PlannerCommand }> = [];
+  const entries: Array<{ index: number; command: AgentCommand; entry: PlannerCommand; corrected?: AgentWarning }> = [];
   const problems: AgentFailure[] = [];
 
   // Check every command, so one failed batch names every mistake. entries() also visits holes.
@@ -127,11 +141,14 @@ export const checkEnvelope = (
     throw rest.length === 0 ? first : new AgentFailure({ ...first.error, others: rest.map(problem => problemOf(problem.error)) });
   }
 
+  const warnings = entries.flatMap(({ corrected }) => corrected === undefined ? [] : [corrected]);
+
   return {
     batch: {
       commands: entries.map(({ command }) => command),
       ...(typeof batch.expectRevision === 'string' ? { expectRevision: batch.expectRevision } : {}),
     },
     writes: entries.some(({ entry }) => !entry.readOnly),
+    ...(warnings.length > 0 && { warnings }),
   };
 };

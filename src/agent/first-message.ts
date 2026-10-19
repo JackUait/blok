@@ -1,7 +1,9 @@
 import type { DocumentView, ViewArgs } from '../../types/agent';
 
 /** The read the first message carries. A plain blok_read, capped so a big document stays cheap. */
-export const OUTLINE_READ: ViewArgs = { limit: 50 };
+export const OUTLINE_READ = { limit: 50, textLimit: 120 } as const satisfies ViewArgs;
+
+const LEFT_OUT = `Text is cut at ${OUTLINE_READ.textLimit} characters and has no formatting. For full text, formatting, table cells or other block data, call blok_read with ids.`;
 
 /**
  * The assistant's first user message: the request, the document as blok_read
@@ -9,23 +11,34 @@ export const OUTLINE_READ: ViewArgs = { limit: 50 };
  * @param prompt - the user's request
  * @param context - the caret or selection line; it names block ids, so it goes after the document
  * @param read - the turn's blok_read
+ * @param focus - the blocks the context names; read by id when the outline does not reach them
  */
 export async function composeFirstMessage(
   prompt: string,
   context: string,
-  read: (args: ViewArgs) => Promise<DocumentView>
+  read: (args: ViewArgs) => Promise<DocumentView>,
+  focus: readonly string[] = []
 ): Promise<string> {
-  const outline = await read(OUTLINE_READ).then(
-    (view) => {
-      const more = view.next === undefined
-        ? ''
-        : `\nMore blocks follow: call blok_read with ${JSON.stringify({ cursor: view.next })}.`;
+  // The run must not fail over a read: the model can still read.
+  const view = await read(OUTLINE_READ).catch(() => null);
 
-      return `The document, already read for you with blok_read ${JSON.stringify(OUTLINE_READ)}. Do not read it again unless you need more than this:\n${JSON.stringify(view)}${more}`;
-    },
-    // The run must not fail over the outline: the model can still read.
-    () => ''
-  );
+  if (view === null) {
+    return [prompt, context].filter((part) => part !== '').join('\n\n');
+  }
 
-  return [prompt, outline, context].filter((part) => part !== '').join('\n\n');
+  const more = view.next === undefined
+    ? ''
+    : `\nMore blocks follow: call blok_read with ${JSON.stringify({ cursor: view.next })}.`;
+  const outline = `The document, read for you with blok_read ${JSON.stringify(OUTLINE_READ)}. ${LEFT_OUT}\n${JSON.stringify(view)}${more}`;
+  // Paging only goes forward, so a caret past the outline is read on its own.
+  const missing = focus.filter((id) => !view.blocks.some((block) => block.id === id));
+  const args: ViewArgs = { ids: missing };
+  const focused = missing.length === 0
+    ? ''
+    : await read(args).then(
+      (found) => `The blocks the user is in, read with blok_read ${JSON.stringify(args)}:\n${JSON.stringify(found)}`,
+      () => ''
+    );
+
+  return [prompt, outline, focused, context].filter((part) => part !== '').join('\n\n');
 }

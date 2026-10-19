@@ -37,6 +37,14 @@ const IDLE: AgentState = { status: 'idle' };
 
 const DEFAULT_MAX_STEPS = 30;
 
+/** Where the user is: the text for the model and the blocks it names. */
+export interface UserPlace {
+  text: string;
+  blockIds: string[];
+}
+
+const NOWHERE: UserPlace = { text: '', blockIds: [] };
+
 type ToolsOptions = AgentToolsOptions;
 
 const readIdentity = (agent: AgentIdentity | undefined): AgentIdentity => {
@@ -105,30 +113,30 @@ export class AgentAPI extends Module {
   /**
    * Where the user is, as text for the model. Read before focus leaves the document.
    */
-  public describeUserPlace(): string {
+  public describeUserPlace(): UserPlace {
     return this.editorContext();
   }
 
   /**
    * Start an assistant run with editor context captured earlier.
    * @param prompt - the user's request
-   * @param context - from describeUserPlace()
+   * @param place - from describeUserPlace()
    * @param thinking - the bar's current pick, read at each prompt
    * @param onActivity - 'thinking', or the tool the model calls and its input
    */
   public startRun(
     prompt: string,
-    context: string,
+    place: UserPlace,
     thinking: () => AgentThinkingLevel | undefined,
     onActivity?: (activity: string, input?: unknown) => void
   ): AgentRun {
-    return this.ask(prompt, { context: false }, context, thinking, onActivity);
+    return this.ask(prompt, { context: false }, place, thinking, onActivity);
   }
 
   private ask(
     prompt: string,
     options: AgentAskOptions = {},
-    captured = '',
+    captured: UserPlace = NOWHERE,
     picked: () => AgentThinkingLevel | undefined = () => undefined,
     onActivity?: (activity: string, input?: unknown) => void
   ): AgentRun {
@@ -147,11 +155,11 @@ export class AgentAPI extends Module {
     const choice = this.thinkingChoice();
     const thinking = (): AgentThinkingLevel | undefined => options.thinking ?? picked() ?? choice?.initial;
 
-    const context = options.context === false ? captured : this.editorContext();
+    const place = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
     const turn = this.begin({ agent: { id: 'blok-assistant', name } });
 
-    return createAgentRun(composeFirstMessage(prompt, context, turn.read), {
+    return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
       turn,
       model: assistant.model,
       maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,
@@ -170,25 +178,26 @@ export class AgentAPI extends Module {
    * Where the user is, for the first message. The document view never carries
    * the selection, so it travels as text.
    */
-  private editorContext(): string {
+  private editorContext(): UserPlace {
     const selection = document.getSelection();
     const anchor = selection?.anchorNode ?? null;
 
     if (selection === null || anchor === null || !this.Blok.UI.nodes.wrapper.contains(anchor)) {
-      return '';
+      return NOWHERE;
     }
 
     const block = this.Blok.BlockManager.getBlockByChildNode(anchor);
 
     if (block === undefined) {
-      return '';
+      return NOWHERE;
     }
 
     const selected = selection.isCollapsed ? '' : selection.toString();
-
-    return selected === ''
+    const text = selected === ''
       ? `(Editor context: the user's caret is in block ${block.id}.)`
       : `(Editor context: the user selected this text in block ${block.id}: ${JSON.stringify(selected)}. "This" in the request means that text.)`;
+
+    return { text, blockIds: [block.id] };
   }
 
   public destroy(): void {

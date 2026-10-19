@@ -108,8 +108,9 @@ export const createDocumentAgentSession = (input: {
     runtime: input.runtime ?? 'node',
     isReadOnly: () => state.closed,
     snapshot: () => state.current,
-    // A snapshot is never changed once it is state.current (planning and views work on clones),
-    // so its hash holds until state.current is replaced.
+    // Planning, validation and document views edit clones, so state.current never changes in place
+    // and its hash holds until it is replaced. Execute result rows share block data by reference:
+    // callers must not change them.
     revision: () => {
       if (hashed.snapshot !== state.current) {
         hashed.revision = contentRevision(state.current.toOutput());

@@ -36,7 +36,7 @@ const readReply = (reply: unknown): AgentModelResponse => {
 };
 
 /**
- * The Messages API. The request is already in its shape, so this mostly adds model and effort.
+ * The Messages API. The request is already in its shape, so this mostly adds model, effort and cache marks.
  * @param options - model id, the host's send, and optional level overrides
  */
 export function anthropicModel(options: AdapterOptions): AgentModel {
@@ -44,9 +44,12 @@ export function anthropicModel(options: AdapterOptions): AgentModel {
     const body = withLevel({
       model: options.model,
       max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-      system: request.system,
+      // Tools render before system, so this mark caches both for every prompt. An empty text block is a 400.
+      system: request.system === '' ? '' : [{ type: 'text', text: request.system, cache_control: { type: 'ephemeral' } }],
       messages: request.messages.map(withoutProviderBlocks),
       tools: request.tools,
+      // Moves to the last block on each call, so a step reads the steps before it.
+      cache_control: { type: 'ephemeral' },
     }, request, LEVELS, options);
 
     return readReply(await post(body, request, options));

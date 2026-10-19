@@ -25,10 +25,14 @@ export interface AgentModelAdapterOptions {
   levels?: Partial<Record<AgentThinkingLevel, Record<string, unknown>>>;
 }
 
-/** Anthropic Messages API. `off` sends the lowest effort, since some Claude models cannot turn thinking off. */
+/**
+ * Anthropic Messages API. `off` sends the lowest effort, since some Claude models cannot turn thinking off.
+ * Caches by default: a mark on the system block and top-level `cache_control`. A platform that rejects
+ * top-level `cache_control` (the legacy Bedrock integration) deletes it from the body in `send`.
+ */
 export declare function anthropicModel(options: AgentModelAdapterOptions): AgentModel;
 
-/** OpenAI Responses API, stateless (`store: false`). Levels set `reasoning.effort`. */
+/** OpenAI Responses API, stateless (`store: false`). Levels set `reasoning.effort`; `off` sends `low`, since some models reject `none`. */
 export declare function openaiModel(options: AgentModelAdapterOptions): AgentModel;
 
 /** Chat Completions: DeepSeek, Mistral, Groq, Ollama, OpenRouter and others. Levels set `reasoning_effort`. */

@@ -116,16 +116,23 @@ export const createToolDispatcher = (
     return missed ? { ...await deps.list({ limit: request.limit }, caller), queryMatched: false } : { ...listing };
   };
 
-  // blok_open without an id opens the only listed document; otherwise the model chooses from the listing.
-  const findDocument = async (query: unknown, caller: Caller): Promise<{ id: string; queryMatched?: false } | { listing: ListResult }> => {
+  // Without an id, blok_open opens only a document it cannot get wrong: the one document when no query is
+  // given, or the one whose id or title equals the query. A part-match could be the wrong document.
+  const findDocument = async (query: unknown, caller: Caller): Promise<{ id: string; title: string | null } | { listing: ListResult }> => {
     requireScope(caller, 'blok.read');
-    const listing = await listDocuments({ limit: 25, ...(typeof query === 'string' && { query }) }, caller);
+    const trimmed = typeof query === 'string' ? query.trim() : '';
+    const needle = trimmed.toLowerCase();
+    const listing = await listDocuments({ limit: 25, ...(trimmed !== '' && { query: trimmed }) }, caller);
+    const candidates = needle === ''
+      ? listing.documents
+      : listing.documents.filter(doc => doc.id.toLowerCase() === needle || doc.title?.trim().toLowerCase() === needle);
 
-    if (listing.documents.length !== 1 || listing.nextCursor !== null) {
+    // With more pages, another exact match could be on one of them.
+    if (candidates.length !== 1 || listing.nextCursor !== null) {
       return { listing };
     }
 
-    return { id: listing.documents[0].id, ...(listing.queryMatched === false && { queryMatched: false as const }) };
+    return { id: candidates[0].id, title: candidates[0].title };
   };
 
   const onHandle = <T>(
@@ -189,7 +196,7 @@ export const createToolDispatcher = (
         durability: session.durability,
         expiresAfterIdleMs: deps.handleIdleMs,
         contractRevision: session.contractRevision,
-        ...(found !== null && { documentId, ...(found.queryMatched === false && { queryMatched: false }) }),
+        ...(found !== null && { documentId, title: found.title }),
         ...(session.exists !== undefined && { exists: session.exists }),
         ...(view !== undefined && { view }),
       });

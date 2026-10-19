@@ -83,7 +83,8 @@ describe('stored mode through the MCP dispatcher', () => {
     const properties = success?.allOf?.[0]?.properties;
 
     expect(properties?.exists).toEqual({ type: 'boolean' });
-    expect(open?.description).toMatch(/without documentId.*opens that one/);
+    expect(open?.description).toMatch(/without documentId.*opens a document only when/i);
+    expect(open?.description).toMatch(/id or title equals query/);
     expect(open?.description).toMatch(/new, empty document/);
   });
 
@@ -256,6 +257,62 @@ describe('stored mode through the MCP dispatcher', () => {
       documents: [{ id: 'a', title: 'Alpha', live: false }, { id: 'b', title: 'Beta', live: false }], nextCursor: null, supported: true,
     });
     expect(one.structuredContent).toMatchObject({ documentId: 'b' });
+  });
+
+  describe('blok_open with a query and several documents', () => {
+    const seed = (id: string, title: string): void => writeFileSync(join(dir, `${id}.json`), JSON.stringify({ blocks: [], title }));
+
+    it('opens nothing when the query only matches part of a title', async () => {
+      seed('notes', 'Notes');
+      seed('roadmap-planning', 'Roadmap planning');
+      const outcome = await mcp.dispatch('blok_open', { write: true, query: 'Plan' }, caller);
+
+      expect(outcome.structuredContent).not.toHaveProperty('handle');
+      expect(outcome.structuredContent).toEqual({
+        documents: [{ id: 'roadmap-planning', title: 'Roadmap planning', live: false }], nextCursor: null, supported: true,
+      });
+    });
+
+    it('opens nothing when the query misses, even if only one document exists', async () => {
+      seed('notes', 'Notes');
+      const outcome = await mcp.dispatch('blok_open', { write: true, query: 'budget' }, caller);
+
+      expect(outcome.structuredContent).not.toHaveProperty('handle');
+      expect(outcome.structuredContent).toMatchObject({ documents: [{ id: 'notes' }], queryMatched: false });
+    });
+
+    it('opens the document whose id equals the query, ignoring case and spaces, and names its title', async () => {
+      seed('notes', 'Notes');
+      seed('roadmap-planning', 'Roadmap planning');
+      const outcome = await mcp.dispatch('blok_open', { query: ' Roadmap-Planning ' }, caller);
+
+      expect(outcome.structuredContent).toMatchObject({ handle: expect.any(String), documentId: 'roadmap-planning', title: 'Roadmap planning' });
+    });
+
+    it('opens the exact match when other documents only contain the query', async () => {
+      seed('notes', 'Notes');
+      seed('notes-archive', 'Old notes');
+      const outcome = await mcp.dispatch('blok_open', { query: 'notes' }, caller);
+
+      expect(outcome.structuredContent).toMatchObject({ handle: expect.any(String), documentId: 'notes', title: 'Notes' });
+    });
+
+    it('opens the exact title match', async () => {
+      seed('doc-1', 'Notes');
+      seed('doc-2', 'Old notes');
+      const outcome = await mcp.dispatch('blok_open', { query: 'old NOTES' }, caller);
+
+      expect(outcome.structuredContent).toMatchObject({ handle: expect.any(String), documentId: 'doc-2', title: 'Old notes' });
+    });
+
+    it('opens nothing when two documents match the query exactly', async () => {
+      seed('plan', 'Draft');
+      seed('doc-2', 'Plan');
+      const outcome = await mcp.dispatch('blok_open', { write: true, query: 'plan' }, caller);
+
+      expect(outcome.structuredContent).not.toHaveProperty('handle');
+      expect(outcome.structuredContent).toMatchObject({ documents: [{ id: 'doc-2' }, { id: 'plan' }] });
+    });
   });
 
   it('lists the directory', async () => {

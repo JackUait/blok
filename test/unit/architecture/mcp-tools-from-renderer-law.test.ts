@@ -290,7 +290,9 @@ describe('MCP tools come from the shared renderer', () => {
     for (const invalid of [{ ...opened, expiresAfterIdleMs: 1.5 }, { ...opened, durability: 'other' }, { ...opened, view: 'outline' }]) {
       expect(validateAgainst(output, invalid)).not.toEqual([]);
     }
-    expect(validateAgainst(output, { ...opened, documentId: 'doc-1', queryMatched: false })).toEqual([]);
+    expect(validateAgainst(output, { ...opened, documentId: 'doc-1', title: 'One' })).toEqual([]);
+    expect(validateAgainst(output, { ...opened, documentId: 'doc-1', title: null })).toEqual([]);
+    expect(validateAgainst(output, { ...opened, documentId: 'doc-1', title: 7 })).not.toEqual([]);
   });
 
   it('lets open without a documentId answer with the documents to choose from', () => {

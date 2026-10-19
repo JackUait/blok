@@ -50,7 +50,7 @@ export const listMcpTools = (
   return [
     {
       name: 'blok_list_documents',
-      description: 'Lists Blok documents you may open. blok_open without documentId runs this listing itself and opens the only match, so you rarely need it. query matches document ids and titles, not their content; when nothing matches, it lists every document and sets queryMatched: false. Returns supported: false when the document source cannot list.',
+      description: 'Lists Blok documents you may open. blok_open without documentId runs this listing itself, so you rarely need it. query matches part of document ids and titles, not their content; when nothing matches, it lists every document and sets queryMatched: false. Returns supported: false when the document source cannot list.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -75,7 +75,8 @@ export const listMcpTools = (
       name: 'blok_open',
       description: [
         'Opens a Blok document and returns a handle for blok_read, blok_describe, blok_execute and blok_close.',
-        'Called without documentId, it lists documents the way blok_list_documents does (query filters ids and titles): when exactly one is found it opens that one and returns its documentId; otherwise it opens nothing and returns documents to choose from.',
+        'Called without documentId, it opens a document only when exactly one fits: with no query, the only document there is; with a query, the one document whose id or title equals query (case and outer spaces ignored).',
+        'Then it returns that documentId and title. Otherwise it opens nothing and returns the documents to choose from, listed the way blok_list_documents lists them; open one by its documentId.',
         'In stored mode an unknown documentId opens a new, empty document (exists: false), so pass only ids you were given or saw listed.',
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
@@ -88,7 +89,7 @@ export const listMcpTools = (
         additionalProperties: false,
         properties: {
           documentId: { type: 'string', minLength: 1, maxLength: 512 },
-          query: { type: 'string', maxLength: 200, description: 'Without documentId: matches part of a document id or title.' },
+          query: { type: 'string', maxLength: 200, description: 'Without documentId: the exact id or title of the document to open.' },
           mode: { enum: ['auto', 'live', 'stored'], default: 'auto' },
           write: { type: 'boolean', default: false },
           view: readArguments(core),
@@ -101,6 +102,7 @@ export const listMcpTools = (
         properties: {
           handle: { type: 'string' },
           documentId: { type: 'string' },
+          title: { type: ['string', 'null'] },
           mode: { enum: ['live', 'stored'] },
           write: { type: 'boolean' },
           durability: { enum: ['acknowledged', 'best-effort', 'saved-on-execute'] },

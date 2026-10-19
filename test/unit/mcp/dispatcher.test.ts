@@ -525,14 +525,14 @@ describe('createToolDispatcher', () => {
       const outcome = await invoke(dispatch, 'blok_open', { write: true, view: {} });
       const handle = handleFrom(outcome);
 
-      expect(outcome.structuredContent).toMatchObject({ handle, documentId: 'doc-7', view: expect.any(Object) });
+      expect(outcome.structuredContent).toMatchObject({ handle, documentId: 'doc-7', title: 'Plan', view: expect.any(Object) });
       expect(deps.list).toHaveBeenCalledExactlyOnceWith({ limit: 25 }, stdio);
       expect(deps.open).toHaveBeenCalledExactlyOnceWith({ documentId: 'doc-7', mode: 'auto', write: true }, stdio);
       await invoke(dispatch, 'blok_execute', { handle, commands: [{ name: 'block.insert', args: {} }] });
       expect(deps.stillAllowed).toHaveBeenCalledWith(stdio, 'doc-7', true);
     });
 
-    it('passes query to the listing and opens its only match', async () => {
+    it('passes query to the listing and opens the match whose title equals it', async () => {
       const { deps, dispatch } = fixture();
       vi.mocked(deps.list).mockResolvedValueOnce(one);
       const outcome = await invoke(dispatch, 'blok_open', { query: 'plan' });
@@ -541,13 +541,31 @@ describe('createToolDispatcher', () => {
       expect(deps.list).toHaveBeenCalledExactlyOnceWith({ query: 'plan', limit: 25 }, stdio);
     });
 
-    it('opens the only document even when query missed, and says the query did not match', async () => {
+    it('opens nothing when the query missed, even if only one document exists', async () => {
       const { deps, dispatch } = fixture();
       vi.mocked(deps.list).mockResolvedValueOnce({ documents: [], nextCursor: null, supported: true }).mockResolvedValueOnce(one);
-      const outcome = await invoke(dispatch, 'blok_open', { query: 'budget' });
+      const outcome = await invoke(dispatch, 'blok_open', { write: true, query: 'budget' });
 
-      expect(outcome.structuredContent).toMatchObject({ documentId: 'doc-7', queryMatched: false });
-      expect(deps.open).toHaveBeenCalledOnce();
+      expect(outcome).toEqual({ isError: false, structuredContent: { ...one, queryMatched: false } });
+      expect(deps.open).not.toHaveBeenCalled();
+    });
+
+    it('opens nothing when the only match contains the query but does not equal it', async () => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValueOnce(one);
+      const outcome = await invoke(dispatch, 'blok_open', { write: true, query: 'Pla' });
+
+      expect(outcome).toEqual({ isError: false, structuredContent: one });
+      expect(deps.open).not.toHaveBeenCalled();
+    });
+
+    it('treats a blank query as no query', async () => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValueOnce(one);
+      const outcome = await invoke(dispatch, 'blok_open', { query: '  ' });
+
+      expect(outcome.structuredContent).toMatchObject({ documentId: 'doc-7', title: 'Plan' });
+      expect(deps.list).toHaveBeenCalledExactlyOnceWith({ limit: 25 }, stdio);
     });
 
     it('returns the documents to choose from and opens nothing when several match', async () => {

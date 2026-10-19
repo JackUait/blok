@@ -237,17 +237,29 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
     expect(result.ok && result.refs.h).toEqual(expect.any(String));
   });
 
-  it('reads "$id" as block id when no ref has that name and the block exists', async () => {
-    const result = await run([
-      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
-      { name: 'text.format', args: { id: '$p1', range: 'all', set: { bold: true } } },
-    ]);
+  it('never reads "$id" as a block the batch did not make: a ref slip must not land on an old block', async () => {
+    const session = openJsonSession({ blocks: [
+      { id: 'h1', type: 'header', data: { text: [{ text: 'Intro' }], level: 2 } },
+      { id: 'p1', type: 'paragraph', data: { text: [{ text: 'Body' }] } },
+    ] });
 
-    expect(result).toMatchObject({ ok: true, changed: { updated: ['p1'] } });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: 'CORRECTED', commandIndex: 0, message: '"$p1" is not a ref, but block "p1" exists, so it was used. Write "p1" without the "$".' }),
-      expect.objectContaining({ code: 'CORRECTED', commandIndex: 1 }),
-    ]);
+    try {
+      const error = errorOf(await session.execute({ commands: [
+        { name: 'block.insert', args: { type: 'header', data: { text: 'Plan', level: 2 }, position: 'end' } },
+        { name: 'block.insert', args: { type: 'paragraph', data: { text: 'Step one' }, position: { after: '$h1' } } },
+      ] }));
+
+      expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 1, path: '/commands/1/args/position/after' });
+      expect(error.message).toBe('"$h1" is not a ref, but block "h1" exists. Use "h1" without the "$".');
+    } finally {
+      session.close();
+    }
+  });
+
+  it('keeps BLOCK_NOT_FOUND for "$id" naming a block from the document', async () => {
+    const error = errorOf(await run([{ name: 'text.replace', args: { id: '$p1', with: 'Hello' } }]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0, path: '/commands/0/args/id' });
   });
 
   it('reads "$id" as a block an earlier command made with that id', async () => {
@@ -256,7 +268,32 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
       { name: 'text.replace', args: { id: '$n1', with: 'Newer' } },
     ]);
 
-    expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', commandIndex: 1 }] });
+    expect(result).toMatchObject({ ok: true, warnings: [{
+      code: 'CORRECTED', commandIndex: 1, message: '"$n1" is not a ref, but block "n1" exists, so it was used. Write "n1" without the "$".',
+    }] });
+  });
+
+  it('puts a block into a container named by "$id" without an extra empty seed child', async () => {
+    const children = async (parentId: string): Promise<string[]> => {
+      const session = openJsonSession(structuredClone(seed));
+
+      try {
+        const result = await session.execute({ commands: [
+          { name: 'block.insert', args: { type: 'callout', id: 't1', data: { emoji: '💡' } } },
+          { name: 'block.insert', args: { type: 'paragraph', data: { text: 'Inside' }, parentId } },
+        ] });
+
+        expect(result.ok).toBe(true);
+        const blocks = session.output().blocks;
+
+        return blocks.filter(block => block.parent === 't1').map(block => block.type);
+      } finally {
+        session.close();
+      }
+    };
+
+    expect(await children('$t1')).toEqual(await children('t1'));
+    expect(await children('$t1')).toEqual(['paragraph']);
   });
 
   it('fills a missing required setting from the tool default', async () => {
@@ -329,11 +366,23 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
   it('leaves a "$id" it can read as a block out of the extra problems', async () => {
     const error = errorOf(await run([
       { name: 'text.replace', args: { id: 'missing', with: 'x' } },
-      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+      { name: 'block.insert', args: { type: 'paragraph', id: 'n1', data: { text: 'New' } } },
+      { name: 'text.replace', args: { id: '$n1', with: 'Hello' } },
     ]));
 
     expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0 });
     expect(error.others).toBeUndefined();
+  });
+
+  it('lists a "$id" naming a document block among the extra problems', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: 'missing', with: 'x' } },
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+    ]));
+
+    expect(error.others).toEqual([expect.objectContaining({
+      code: 'BLOCK_NOT_FOUND', commandIndex: 1, message: '"$p1" is not a ref, but block "p1" exists. Use "p1" without the "$".',
+    })]);
   });
 });
 

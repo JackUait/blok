@@ -195,8 +195,8 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
     if (value.startsWith('$')) {
       const ref = value.slice(1);
 
-      // Mirrors resolveId, which reads "$x" as block x when the batch sets no ref x.
-      return refs.get(ref) ?? (state.batchRefs.has(ref) ? undefined : locate(ref));
+      // Mirrors PlanState.isBlockNotRef.
+      return refs.get(ref) ?? (state.batchRefs.has(ref) || !state.batchIds.has(ref) ? undefined : locate(ref));
     }
 
     const reserved = locations.get(value);

@@ -23,6 +23,12 @@ const nameOf = (parentId: string | null): string => parentId === null ? 'the roo
 const subtreeIds = (block: PlannedBlock): string[] =>
   [block.id, ...block.children.flatMap(subtreeIds)];
 
+/** The explicit ids a block.insert spec tree gives its new blocks. */
+export const insertSpecIds = (spec: unknown): string[] => !isRecord(spec) ? [] : [
+  ...(typeof spec.id === 'string' && spec.id !== '' ? [spec.id] : []),
+  ...(isArray(spec.children) ? spec.children.flatMap(insertSpecIds) : []),
+];
+
 /** Why "$ref" resolves to nothing: `isBlock` when a block has that id, `known` the refs set so far. */
 export const unresolvedRefMessage = (ref: string, isBlock: boolean, known: readonly string[]): string => {
   if (isBlock) {
@@ -49,6 +55,8 @@ export class PlanState {
   public readonly filledParents = new Set<string>();
   /** Every ref the batch sets, later commands included. */
   public readonly batchRefs = new Set<string>();
+  /** Explicit ids the batch's block.insert specs give new blocks. */
+  public readonly batchIds = new Set<string>();
   public lastRange?: TextRangeRef;
 
   private readonly reserved = new Map<string, string>();
@@ -166,10 +174,14 @@ export class PlanState {
       : this.fail('BLOCK_NOT_FOUND', `Block "${value}" does not exist. Read the document for current ids.`, path, { id: value });
   }
 
-  /** "$x" with no ref x anywhere in the batch, while block x exists: the "$" is a slip. */
+  /**
+   * "$x" with no ref x anywhere in the batch, while an earlier command made block x with that id:
+   * the "$" is a slip. Never a block the batch did not make: documents use ids like "h1", and a
+   * forgotten ref would land on the old block.
+   */
   public isBlockNotRef(ref: string): boolean {
     return !Object.prototype.hasOwnProperty.call(this.refs, ref) && !this.batchRefs.has(ref)
-      && this.draft.has(ref) && !this.inAnnotation(ref);
+      && this.batchIds.has(ref) && this.draft.has(ref) && !this.inAnnotation(ref);
   }
 
   private correctRef(ref: string): void {

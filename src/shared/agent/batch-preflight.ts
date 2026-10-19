@@ -1,6 +1,6 @@
 import { AgentFailure } from './errors';
 import { failUnknownTool, withRequiredDefaults } from './plan-block';
-import { PlanState, unresolvedRefMessage } from './plan-state';
+import { insertSpecIds, PlanState, unresolvedRefMessage } from './plan-state';
 import { DocSnapshot } from './snapshot';
 import { dataProblem } from './write-validation';
 
@@ -39,11 +39,6 @@ const idFields = (name: unknown, args: Record<string, unknown>, commands: Planne
   ];
 };
 
-const specIds = (spec: unknown): string[] => !isRecord(spec) ? [] : [
-  ...(typeof spec.id === 'string' && spec.id !== '' ? [spec.id] : []),
-  ...(isArray(spec.children) ? spec.children.flatMap(specIds) : []),
-];
-
 const refProblems = (
   commands: unknown[],
   registry: PlannerContext['commands'],
@@ -67,7 +62,7 @@ const refProblems = (
       const ref = value.slice(1);
 
       // The planner reads it as block ref (PlanState.isBlockNotRef).
-      if (!everyRef.has(ref) && (created.has(ref) || isBlock(ref))) {
+      if (!everyRef.has(ref) && created.has(ref)) {
         return;
       }
       problems.push({
@@ -84,7 +79,7 @@ const refProblems = (
       }
     });
     if (raw.name === 'block.insert') {
-      specIds(args).forEach(id => created.add(id));
+      insertSpecIds(args).forEach(id => created.add(id));
     }
   });
 

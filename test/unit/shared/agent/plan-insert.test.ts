@@ -453,10 +453,11 @@ describe('block.insert planning', () => {
     }]);
   });
 
-  it('reads "$id" as a block from the document, and warns', () => {
-    const { warnings } = planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]);
+  it('names the plain id when "$" is put on an id from the document', () => {
+    const error = failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]));
 
-    expect(warnings).toEqual([expect.objectContaining({ code: 'CORRECTED', commandIndex: 0 })]);
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', path: '/commands/0/args/position/after', details: { ref: 'tg' } });
+    expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
   });
 
   it('never fills a default into the field a tool converts by, even a plain string', () => {
@@ -992,6 +993,15 @@ describe('a default child seed for a container the batch fills', () => {
     ], { tools: seeded() });
 
     expect(draft.childrenOf('colA').map(id => draft.get(id)?.type)).toEqual(['paragraph']);
+  });
+
+  it('is left out when a later command names it by "$id" and the batch made that id', () => {
+    const { draft } = planOn(doc, [
+      { name: 'block.insert', args: { type: 'column', id: 'colA' } },
+      { name: 'block.insert', args: { type: 'header', data: { text: 'Plan A', level: 2 }, parentId: '$colA' } },
+    ], { tools: seeded() });
+
+    expect(draft.childrenOf('colA').map(id => draft.get(id)?.type)).toEqual(['header']);
   });
 
   it('stays for a container whose tool owns its children', () => {

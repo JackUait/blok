@@ -1,7 +1,7 @@
 import { AgentFailure, failure } from './errors';
 import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdate, reserveBatchInsertIds } from './plan-block';
 import { planFind, planMarkdownExport, planMarkdownInsert, planRead, planSetIcon, planSetTitle } from './plan-doc';
-import { PlanState } from './plan-state';
+import { insertSpecIds, PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
 import { planToolAction } from './tool-action-context';
 import { validateWrites } from './write-validation';
@@ -83,6 +83,9 @@ export const planBatch = (input: {
     if (command.ref !== undefined) {
       state.batchRefs.add(command.ref);
     }
+    if (command.name === 'block.insert') {
+      insertSpecIds(command.args).forEach(id => state.batchIds.add(id));
+    }
   });
 
   input.batch.commands.forEach((command, index) => {
@@ -90,8 +93,15 @@ export const planBatch = (input: {
     if (command.name === 'block.insert') {
       reserveInsertIds(state, command.args, '');
     }
-    if (typeof command.args.parentId === 'string' && !command.args.parentId.startsWith('$')) {
-      state.filledParents.add(command.args.parentId);
+    const parentId = command.args.parentId;
+
+    if (typeof parentId === 'string') {
+      // "$x" names block x when resolveId reads it as one (PlanState.isBlockNotRef).
+      const slip = parentId.startsWith('$') && !state.batchRefs.has(parentId.slice(1)) && state.batchIds.has(parentId.slice(1));
+
+      if (!parentId.startsWith('$') || slip) {
+        state.filledParents.add(slip ? parentId.slice(1) : parentId);
+      }
     }
   });
   reserveBatchInsertIds(state, input.batch);

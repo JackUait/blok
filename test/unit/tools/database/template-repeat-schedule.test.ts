@@ -126,5 +126,28 @@ describe('repeating template schedule', () => {
     it('a start 1000 years ago still gives the next run', () => {
       expect(nextRun({ frequency: 'daily', start: '1026-10-01T09:00:00.000Z' }, now)).toBe(Date.parse('2026-10-10T09:00:00.000Z'));
     });
+
+    it('a start outside years 100-9999 has no runs and does not throw', () => {
+      const repeat: TemplateRepeat = { frequency: 'daily', start: '-271000-01-01T09:00:00.000Z' };
+
+      expect(dueRun(repeat, now)).toBeNull();
+      expect(nextRun(repeat, now)).toBeNull();
+    });
+
+    it('a start in year 100 does not allocate per past run', () => {
+      const fromSpy = vi.spyOn(Array, 'from');
+      const repeat: TemplateRepeat = { frequency: 'daily', start: '0100-01-01T09:00:00.000Z', timeZone: 'UTC' };
+
+      expect(dueRun(repeat, now)).toBe('2026-10-09T09:00:00.000Z');
+      expect(nextRun(repeat, now)).toBe(Date.parse('2026-10-10T09:00:00.000Z'));
+      expect(fromSpy.mock.calls.every(([source]) => (source as ArrayLike<unknown>).length <= 16)).toBe(true);
+    });
+
+    it('a monthly schedule 1000 years old lands on the right month', () => {
+      const repeat: TemplateRepeat = { frequency: 'monthly', start: '1026-01-31T09:00:00.000Z', timeZone: 'UTC' };
+
+      expect(dueRun(repeat, now)).toBe('2026-09-30T09:00:00.000Z');
+      expect(nextRun(repeat, now)).toBe(Date.parse('2026-10-31T09:00:00.000Z'));
+    });
   });
 });

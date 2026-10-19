@@ -26,31 +26,40 @@ export const repeatZone = (repeat: Pick<TemplateRepeat, 'timeZone'>): string => 
 const occurrence = (start: Date, repeat: TemplateRepeat, k: number): Date =>
   new Date(addToDate(start.getTime(), (repeat.interval ?? 1) * k, UNITS[repeat.frequency], repeatZone(repeat)));
 
-/** How many runs fit between the start and `now`, give or take one. */
+/** How many runs fit between the start and `now`, give or take a few. */
 const roughIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {
   const interval = repeat.interval ?? 1;
   const days = (now.getTime() - start.getTime()) / DAY_MS;
-  const perRun: Record<TemplateRepeat['frequency'], number> = { daily: 1, weekly: 7, monthly: 28, yearly: 365 };
+  // Mean lengths keep the estimate within a run or two of the truth over any span.
+  const perRun: Record<TemplateRepeat['frequency'], number> = { daily: 1, weekly: 7, monthly: 30.436875, yearly: 365.2425 };
 
-  return Math.max(0, Math.floor(days / (perRun[repeat.frequency] * interval)) + 1);
+  return Math.max(0, Math.floor(days / (perRun[repeat.frequency] * interval)));
 };
 
 /**
  * The repeat comes from the document, so any client may have written it. An unknown
  * frequency adds nothing per run and a bad interval gives NaN times: both have no runs.
+ * An invalid start gives NaN for its year, so it fails the range check too.
  */
 const validRepeat = (repeat: TemplateRepeat | undefined): repeat is TemplateRepeat =>
   repeat !== undefined
   && Object.hasOwn(UNITS, repeat.frequency)
   && (repeat.interval === undefined || (Number.isInteger(repeat.interval) && repeat.interval >= 1))
-  && !Number.isNaN(new Date(repeat.start).getTime());
+  && inDateRange(new Date(repeat.start).getUTCFullYear());
 
-/** The index of the last run at or before `now`. The rough index can run ahead (a month counts as 28 days), so step back. */
+// Date math throws near the edge of the JS date range and reads years 0-99 as 19xx, so those starts have no runs.
+const inDateRange = (year: number): boolean => year >= 100 && year <= 9999;
+
+/**
+ * The index of the last run at or before `now`. Only a few runs around the
+ * estimate are tried: the start comes from the document and may be any date.
+ */
 const lastIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {
   const rough = roughIndex(start, now, repeat);
+  const span = 4;
+  const ks = Array.from({ length: span * 2 + 1 }, (_, i) => rough + span - i).filter((k) => k >= 0);
 
-  return Array.from({ length: rough + 1 }, (_, i) => rough - i)
-    .find((k) => occurrence(start, repeat, k).getTime() <= now.getTime()) ?? 0;
+  return ks.find((k) => occurrence(start, repeat, k).getTime() <= now.getTime()) ?? 0;
 };
 
 /**

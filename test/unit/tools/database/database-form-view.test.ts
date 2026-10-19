@@ -250,3 +250,94 @@ describe('DatabaseFormView', () => {
     expect(root.querySelector('[data-blok-database-form-required]')).toBeNull();
   });
 });
+
+// research/14 §3: the question name field refuses a taken name the way the property menu does.
+describe('DatabaseFormView question rename to a taken name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const open = (): { input: HTMLInputElement; renameProperty: ReturnType<typeof vi.fn>; setQuestionSetting: ReturnType<typeof vi.fn>; type: (value: string) => void } => {
+    const renameProperty = vi.fn();
+    const setQuestionSetting = vi.fn();
+    const { root } = mount({
+      i18n: { t: (key: string, params?: Record<string, string | number>) => `${key}:${String(params?.name ?? '')}` },
+      setQuestionSetting,
+      renameProperty,
+      isNameTaken: (propertyId: string, name: string) => propertyId === 'email' && name === 'Team size',
+    });
+
+    question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]')?.click();
+    const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-form-question-name"]');
+
+    if (input === null) throw new Error('no question name input');
+    const type = (value: string): void => {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    return { input, renameProperty, setQuestionSetting, type };
+  };
+  const error = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-form-question-name-error]');
+
+  it('shows "A property named <name> already exists" under the field, keeps the typed text and does not rename', () => {
+    const { input, renameProperty, type } = open();
+
+    type('Team size');
+
+    expect(error()?.hidden).toBe(false);
+    expect(error()?.textContent).toBe('tools.database.propertyNameTaken:Team size');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe(error()?.id);
+    expect(input.value).toBe('Team size');
+    expect(renameProperty).not.toHaveBeenCalled();
+  });
+
+  it('clears the error once the name is free and renames on change, not per key', () => {
+    const { input, renameProperty, type } = open();
+
+    type('Team size');
+    type('Team');
+
+    expect(error()?.hidden).toBe(true);
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+    expect(input.hasAttribute('aria-describedby')).toBe(false);
+    expect(renameProperty).not.toHaveBeenCalled();
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(renameProperty).toHaveBeenCalledWith('email', 'Team');
+  });
+
+  it('Enter on a taken name neither renames nor closes; on a free name it renames and closes', () => {
+    const { input, renameProperty, type } = open();
+    const enter = (): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+      input.dispatchEvent(event);
+
+      return event;
+    };
+
+    type('Team size');
+    expect(enter().defaultPrevented).toBe(true);
+    expect(renameProperty).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-blok-testid="database-form-question-settings"]')).not.toBeNull();
+    type('Team');
+    enter();
+    expect(renameProperty).toHaveBeenCalledWith('email', 'Team');
+    expect(document.querySelector('[data-blok-testid="database-form-question-settings"]')).toBeNull();
+  });
+
+  it('turning name sync off after a refused name keeps the real name as the label', () => {
+    const { type, setQuestionSetting } = open();
+
+    type('Team size');
+    document.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-sync-name"]')?.click();
+
+    expect(setQuestionSetting).toHaveBeenCalledWith('email', { questionName: 'Email' });
+  });
+});

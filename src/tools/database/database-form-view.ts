@@ -6,6 +6,7 @@ import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import { accessLine, openFormShare } from './database-form-share';
 import type { FormShareHost } from './database-form-share';
+import { nameTakenError } from './database-name-taken-error';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './database-panel';
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -28,6 +29,8 @@ export interface DatabaseFormViewOptions {
   /** Makes an existing property the last question. */
   showQuestion?: (propertyId: string) => void;
   renameProperty?: (propertyId: string, name: string) => void;
+  /** Another property of this database already has `name`. Such a rename is refused (research/14 §3). */
+  isNameTaken?: (propertyId: string, name: string) => boolean;
   changePropertyType?: (propertyId: string, type: PropertyType) => void;
   duplicateProperty?: (propertyId: string) => PropertyDefinition | null;
   deleteProperty?: (propertyId: string) => void;
@@ -648,7 +651,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (this.destroying) return;
     this.building = true;
     this.panel?.close();
-    const state: { property: PropertyDefinition; setting: ViewPropertySetting } = {
+    const state: { property: PropertyDefinition; setting: ViewPropertySetting; typedName?: string } = {
       property: initial,
       setting: withPropertySetting(this.options.view, this.options.schema, initial.id, {})
         .find((entry) => entry.id === initial.id) ?? { id: initial.id, visible: true },
@@ -658,6 +661,17 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       state.setting = { ...state.setting, ...patch };
       this.options.setQuestionSetting?.(state.property.id, patch);
     };
+    // Like the property menu: the rename lands on change, Enter or close, never per key,
+    // so a refused last key cannot leave a half-typed name (research/14 §3).
+    const commitName = (): void => {
+      const name = state.typedName?.trim();
+
+      state.typedName = undefined;
+      if (name === undefined || name === '' || name === state.property.name || state.setting.questionName !== undefined) return;
+      if (this.options.isNameTaken?.(state.property.id, name) === true) return;
+      this.options.renameProperty?.(state.property.id, name);
+      state.property = { ...state.property, name };
+    };
     const panel = new DatabasePanel({
       anchor,
       testId: 'database-form-question-settings',
@@ -665,7 +679,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       backLabel: i18n.t('tools.database.peekBack'),
       onClose: () => {
         this.panel = null;
-        if (!this.destroying) this.options.onInteractionEnd?.();
+        if (this.destroying) return;
+        commitName();
+        this.options.onInteractionEnd?.();
       },
       root: {
         build: () => {
@@ -675,14 +691,26 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             label: i18n.t('tools.database.formQuestionName'),
             testId: 'database-form-question-name',
             onInput: (value) => {
-              if (value.trim() === '') return;
-              if (state.setting.questionName === undefined) {
-                this.options.renameProperty?.(state.property.id, value);
-                state.property = { ...state.property, name: value.trim() };
-              } else {
-                change({ questionName: value });
+              if (state.setting.questionName !== undefined) {
+                if (value.trim() !== '') change({ questionName: value });
+
+                return;
               }
+              const typed = value.trim();
+
+              state.typedName = value;
+              takenError.show(typed !== state.property.name && this.options.isNameTaken?.(state.property.id, typed) === true ? typed : null);
             },
+          });
+          const takenError = nameTakenError(name, 'data-blok-database-form-question-name-error', i18n);
+
+          name.addEventListener('change', commitName);
+          name.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            event.preventDefault();
+            if (!takenError.element.hidden) return;
+            commitName();
+            panel.close();
           });
           const description = panelInput({
             value: state.setting.description ?? '',
@@ -693,11 +721,13 @@ export class DatabaseFormView implements DatabaseViewRenderer {
           });
           const rows: HTMLElement[] = [
             name,
+            takenError.element,
             panelSwitch({
               label: i18n.t('tools.database.formSyncPropertyName'),
               testId: 'database-form-question-sync-name',
               checked: state.setting.questionName === undefined,
               onToggle: (checked) => {
+                commitName();
                 change({ questionName: checked ? undefined : state.property.name });
                 panel.refresh();
               },
@@ -715,25 +745,28 @@ export class DatabaseFormView implements DatabaseViewRenderer {
               testId: 'database-form-question-type',
               disabled: state.property.type === 'title',
               opensPage: true,
-              onClick: () => panel.push({
-                title: i18n.t('tools.database.changeType'),
-                build: () => NEW_QUESTION_TYPES
-                  .filter((type) => type !== 'person' || this.options.hasPeople === true)
-                  .map((type) => panelRow({
-                    label: this.typeLabel(type),
-                    testId: `database-form-question-type-${type}`,
-                    icon: propertyTypeMeta(type).icon,
-                    checked: this.typeLabel(type) === this.typeLabel(state.property.type),
-                    onClick: () => {
-                      // A Select already reads "Multiple choice": the checked row must not convert it.
-                      if (this.typeLabel(type) !== this.typeLabel(state.property.type)) {
-                        this.options.changePropertyType?.(state.property.id, type);
-                        state.property = { ...state.property, type };
-                      }
-                      panel.back();
-                    },
-                  })),
-              }),
+              onClick: () => {
+                commitName();
+                panel.push({
+                  title: i18n.t('tools.database.changeType'),
+                  build: () => NEW_QUESTION_TYPES
+                    .filter((type) => type !== 'person' || this.options.hasPeople === true)
+                    .map((type) => panelRow({
+                      label: this.typeLabel(type),
+                      testId: `database-form-question-type-${type}`,
+                      icon: propertyTypeMeta(type).icon,
+                      checked: this.typeLabel(type) === this.typeLabel(state.property.type),
+                      onClick: () => {
+                        // A Select already reads "Multiple choice": the checked row must not convert it.
+                        if (this.typeLabel(type) !== this.typeLabel(state.property.type)) {
+                          this.options.changePropertyType?.(state.property.id, type);
+                          state.property = { ...state.property, type };
+                        }
+                        panel.back();
+                      },
+                    })),
+                });
+              },
             }),
           ];
 

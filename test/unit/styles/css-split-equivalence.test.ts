@@ -831,6 +831,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352;
     // database.css: the property menu's taken-name error line (research/14 §3).
     const DATABASE_PROPERTY_NAME_CLASH_BYTES = 233;
+    // database.css: the form question's taken-name error line (research/14 §3).
+    const DATABASE_FORM_QUESTION_NAME_CLASH_BYTES = 267;
     // database.css: page icon boxes in calendar events, timeline bars and feed cards (research/16 §2).
     const DATABASE_VIEW_PAGE_ICON_BYTES = 1_462;
     // database.css: no ring on the gallery while its arrows select cards (research/16 §3a).
@@ -971,7 +973,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_MAPLIBRE_BYTES
       + DATABASE_LINKED_VIEW_BYTES
       + DATABASE_GALLERY_CARD_ACTIONS_BYTES
-      + DATABASE_LIST_ROW_HANDLE_BYTES;
+      + DATABASE_LIST_ROW_HANDLE_BYTES
+      + DATABASE_FORM_QUESTION_NAME_CLASH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

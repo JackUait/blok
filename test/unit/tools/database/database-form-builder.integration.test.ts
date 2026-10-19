@@ -157,6 +157,51 @@ describe('local form question builder', () => {
     expect(q(byTestId('database-form-question-menu'))).toBeNull();
   });
 
+  // research/14 §3: a taken name is refused with the property menu's error; the real name stays.
+  it('shows the taken-name error for another property\'s name and keeps the property name', async () => {
+    await mount(blocksFor([notes, tags]));
+    openQuestionMenu('notes');
+    edit('database-form-question-name', 'Tags');
+    const input = requireElement<HTMLInputElement>(byTestId('database-form-question-name'));
+    const error = requireElement('[data-blok-database-form-question-name-error]');
+
+    expect(error.hidden).toBe(false);
+    expect(error.textContent).toBe('A property named Tags already exists in this database.');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.value).toBe('Tags');
+    setSwitch('database-form-question-sync-name', false);
+    dismiss();
+    const saved = await save();
+
+    expect(saved.blocks.find((block) => block.id === 'db')?.data.schema).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'notes', name: 'Notes' }),
+    ]));
+    expect(formSetting(saved, 'notes')).toHaveProperty('questionName', 'Notes');
+  });
+
+  // Typing "Status" over "Owner" one key at a time must not leave the property named "Statu".
+  it('a taken name typed key by key keeps the old name; a free one is saved whole', async () => {
+    const owner: PropertyDefinition = { id: 'owner', name: 'Owner', type: 'text', position: 'a1' };
+    const status: PropertyDefinition = { id: 'status', name: 'Status', type: 'text', position: 'a2' };
+    const typeKeys = (word: string): void => {
+      for (let end = 1; end <= word.length; end += 1) edit('database-form-question-name', word.slice(0, end));
+    };
+    const nameOf = (output: OutputData): string | undefined =>
+      (output.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.schema.find((property) => property.id === 'owner')?.name;
+
+    await mount(blocksFor([owner, status]));
+    openQuestionMenu('owner');
+    typeKeys('Status');
+    expect(requireElement('[data-blok-database-form-question-name-error]').hidden).toBe(false);
+    dismiss();
+    expect(nameOf(await save())).toBe('Owner');
+
+    openQuestionMenu('owner');
+    typeKeys('Statusx');
+    dismiss();
+    expect(nameOf(await save())).toBe('Statusx');
+  });
+
   it('removes the detached question label when name sync is turned back on', async () => {
     await mount(blocksFor([notes]));
     openQuestionMenu('notes');

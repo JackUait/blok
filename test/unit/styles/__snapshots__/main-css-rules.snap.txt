@@ -9543,6 +9543,12 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-table-border);
 }
 
+[data-blok-database-form-question-name-error] {
+  padding-inline: calc(var(--blok-space-2) + var(--blok-space-1-5));
+  font-size: 14px;
+  color: var(--blok-color-danger);
+}
+
 [data-blok-database-panel-input] {
   width: calc(100% - 16px);
   height: 28px;

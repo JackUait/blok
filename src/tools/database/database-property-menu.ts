@@ -1,5 +1,5 @@
 import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconPageLayout, IconWand } from '../../components/icons';
-import { nanoid } from 'nanoid';
+import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -313,24 +313,12 @@ export class DatabasePropertyMenu {
     input.value = property.name;
     input.setAttribute('data-blok-database-property-menu-name-input', '');
     input.setAttribute('aria-label', this.t('tools.database.propertyName'));
-    const error = document.createElement('div');
-
-    error.id = `blok-database-property-name-error-${nanoid()}`;
-    error.setAttribute('data-blok-database-property-menu-name-error', '');
-    error.hidden = true;
+    const error = nameTakenError(input, 'data-blok-database-property-menu-name-error', this.options.i18n);
     const taken = (name: string): boolean => name !== property.name && this.options.isNameTaken?.(property.id, name) === true;
     const showError = (): void => {
       const name = input.value.trim();
 
-      error.hidden = !taken(name);
-      error.textContent = error.hidden ? '' : this.options.i18n.t('tools.database.propertyNameTaken', { name });
-      if (error.hidden) {
-        input.removeAttribute('aria-invalid');
-        input.removeAttribute('aria-describedby');
-      } else {
-        input.setAttribute('aria-invalid', 'true');
-        input.setAttribute('aria-describedby', error.id);
-      }
+      error.show(taken(name) ? name : null);
     };
     const commit = (): void => {
       const name = input.value.trim();
@@ -350,7 +338,7 @@ export class DatabasePropertyMenu {
         this.close();
       }
     });
-    row.append(icon, input, error);
+    row.append(icon, input, error.element);
 
     return row;
   }

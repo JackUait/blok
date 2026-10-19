@@ -3472,6 +3472,7 @@ export class DatabaseTool implements BlockTool {
               this.updateActiveView({ properties: withPropertyOrder(shown, this.model.getSchema(), propertyId, null) });
             }, undefined),
             renameProperty: (propertyId: string, name: string) => editQuestion(() => this.renameProperty(propertyId, name), undefined),
+            isNameTaken: (propertyId: string, name: string) => this.isPropertyNameTaken(propertyId, name),
             changePropertyType: (propertyId: string, type: PropertyType) => editQuestion(() => this.changePropertyType(propertyId, type), undefined),
             duplicateProperty: (propertyId: string) => editQuestion(() => this.duplicateProperty(propertyId), null),
             deleteProperty: (propertyId: string) => editQuestion(() => this.deleteProperty(propertyId), undefined),

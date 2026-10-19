@@ -6285,6 +6285,13 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 /* Measured: 196x28, 3px 6px padding, 6px radius. Text fields never show a ring. */
+/* research/14 §3: the form question's taken-name error, lined up with the input's text. */
+[data-blok-database-form-question-name-error] {
+  padding-inline: calc(var(--blok-space-2) + var(--blok-space-1-5));
+  font-size: 14px;
+  color: var(--blok-color-danger);
+}
+
 [data-blok-database-panel-input] {
   width: calc(100% - 16px);
   height: 28px;

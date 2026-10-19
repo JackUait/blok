@@ -73,6 +73,7 @@ export class AssistantBar {
   private readonly thinking: HTMLButtonElement;
   private thinkingView: AssistantThinkingView | null = null;
   private thinkingMenu: PopoverDesktop | null = null;
+  private replyToken = 0;
 
   public constructor(
     private readonly t: (key: string, vars?: Record<string, string | number>) => string,
@@ -87,7 +88,7 @@ export class AssistantBar {
     });
     // Scopes Blok's preflight and utilities to the bar in a host page; Find skips it too.
     this.element.setAttribute('data-blok-interface', 'assistant');
-    this.reply = build('p', { [ATTR.reply]: '' });
+    this.reply = build('div', { [ATTR.reply]: '' });
     this.alert = build('p', { [ATTR.alert]: '', role: 'alert' });
     this.status = build('p', { [ATTR.status]: '', role: 'status' });
 
@@ -183,8 +184,7 @@ export class AssistantBar {
     const working = view.kind === 'working';
 
     this.element.toggleAttribute(ATTR.working, working);
-    this.reply.textContent = (view.kind === 'answered' && view.reply) || '';
-    this.reply.hidden = this.reply.textContent === '';
+    this.showReply((view.kind === 'answered' && view.reply) || '');
     this.alert.textContent = view.kind === 'error' ? view.message : '';
     this.alert.hidden = this.alert.textContent === '';
     this.status.textContent = working ? view.status : '';
@@ -282,6 +282,31 @@ export class AssistantBar {
     this.thinking.setAttribute('aria-expanded', 'true');
     this.thinkingMenu = menu;
     menu.show();
+  }
+
+  /**
+   * Show the reply as plain text at once, then swap in its markdown rendering.
+   * The renderer is imported lazily so the core bundle does not carry it.
+   * @param reply - the model's final message, in markdown
+   */
+  private showReply(reply: string): void {
+    const token = this.replyToken + 1;
+
+    this.replyToken = token;
+    this.reply.textContent = reply;
+    this.reply.hidden = reply === '';
+    if (reply === '') {
+      return;
+    }
+    void import('../../../markdown/markdownToHtml')
+      .then(({ markdownToHtml }) => markdownToHtml(reply))
+      .then((html) => {
+        // A later render (a new prompt, close) owns the reply now.
+        if (this.replyToken === token) {
+          this.reply.innerHTML = html;
+        }
+      })
+      .catch(() => undefined);
   }
 
   private syncSend(): void {

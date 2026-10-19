@@ -22812,8 +22812,91 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-assistant-reply] {
   max-height: 40vh;
   overflow-y: auto;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+[data-blok-assistant-reply] :where(p, ul, ol, blockquote, pre, table, .blok-md-alert) {
+  margin: 0 0 var(--blok-space-2);
+}
+
+[data-blok-assistant-reply] > :last-child {
+  margin-bottom: 0;
+}
+
+[data-blok-assistant-reply] :where(h1, h2, h3, h4, h5, h6) {
+  margin: var(--blok-space-3) 0 var(--blok-space-1);
+  font-size: inherit;
+  font-weight: var(--blok-font-weight-semibold);
+  line-height: var(--blok-line-height-tight);
+}
+
+[data-blok-assistant-reply] > :where(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}
+
+[data-blok-assistant-reply] :where(ul, ol) {
+  padding-inline-start: var(--blok-space-6);
+}
+
+[data-blok-assistant-reply] ul {
+  list-style: disc;
+}
+
+[data-blok-assistant-reply] ol {
+  list-style: decimal;
+}
+
+[data-blok-assistant-reply] li > :where(ul, ol) {
+  margin-block: 0;
+}
+
+[data-blok-assistant-reply] a {
+  color: var(--blok-color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-blok-assistant-reply] blockquote {
+  padding-inline-start: var(--blok-space-3);
+  border-inline-start: 3px solid var(--blok-border-strong);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-assistant-reply] code {
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  font-size: 0.875em;
+  background: var(--blok-bg-tertiary);
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border-radius: var(--blok-radius-mark);
+}
+
+[data-blok-assistant-reply] pre {
+  padding: var(--blok-space-2) var(--blok-space-3);
+  background: var(--blok-bg-tertiary);
+  border-radius: var(--blok-radius-block);
+  overflow-x: auto;
+}
+
+[data-blok-assistant-reply] pre code {
+  padding: 0;
+  background: none;
+}
+
+[data-blok-assistant-reply] table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+[data-blok-assistant-reply] :where(th, td) {
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border: 1px solid var(--blok-border-subtle);
+  text-align: start;
+  vertical-align: top;
+}
+
+[data-blok-assistant-reply] th {
+  background: var(--blok-bg-tertiary);
+  font-weight: var(--blok-font-weight-semibold);
 }
 
 [data-blok-assistant-alert] {

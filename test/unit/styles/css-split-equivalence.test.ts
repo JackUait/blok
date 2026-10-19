@@ -591,6 +591,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const ASSISTANT_BAR_BYTES = 4_888;
     // assistant.css: the bar's thinking level button and its menu's checkmark-only selected row.
     const ASSISTANT_THINKING_PICKER_BYTES = 1_175;
+    // assistant.css: the reply's markdown look (paragraphs, headings, lists, code, tables).
+    const ASSISTANT_REPLY_MARKDOWN_BYTES = 2_105;
     // Emoji sections past the first skip rendering, sized from their row count
     // and the measured cell: 592 bytes in emoji-picker.css.
     const EMOJI_DEFERRED_SECTIONS_BYTES = 592;
@@ -873,6 +875,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FIND_IN_PAGE_BYTES
       + ASSISTANT_BAR_BYTES
       + ASSISTANT_THINKING_PICKER_BYTES
+      + ASSISTANT_REPLY_MARKDOWN_BYTES
       + EMOJI_DEFERRED_SECTIONS_BYTES
       + PRESENCE_TONAL_GLYPHS_BYTES
       + TRASH_LID_HOVER_BYTES

@@ -185,6 +185,36 @@ describe('in-editor assistant bar', () => {
     expect(await texts(editor)).toEqual(['Hello', 'From AI']);
   });
 
+  it('renders the reply as markdown, with tables, lists and bold, and keeps raw HTML inert', async () => {
+    const reply = [
+      'Added a **fact table**:',
+      '',
+      '| Fact | Detail |',
+      '|---|---|',
+      '| Born | 1989 |',
+      '',
+      '- one',
+      '- two',
+      '',
+      'Try <img src=x onerror="alert(1)"> here.',
+    ].join('\n');
+
+    const editor = await createEditor(scripted(answer(reply)));
+
+    editor.agent.openAssistant();
+    submit('Add a table');
+    await waitFor(() => expect(within(bar()).getByRole('table')).toBeVisible());
+
+    const table = within(bar()).getByRole('table');
+
+    expect(within(table).getByRole('columnheader', { name: 'Fact' })).toBeVisible();
+    expect(within(table).getByRole('cell', { name: '1989' })).toBeVisible();
+    expect(within(bar()).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['one', 'two']);
+    expect(bar()).toContainHTML('<strong>fact table</strong>');
+    expect(within(bar()).queryByRole('img')).toBeNull();
+    expect(bar()).toHaveTextContent('Try <img src=x onerror="alert(1)"> here.');
+  });
+
   it('Discard removes what the assistant wrote and closes', async () => {
     const editor = await createEditor(scripted(insertBatch('From AI'), answer('Done.')));
 

@@ -1,5 +1,5 @@
 import { AgentFailure } from './errors';
-import { failUnknownTool } from './plan-block';
+import { failUnknownTool, withRequiredDefaults } from './plan-block';
 import { PlanState, unresolvedRefMessage } from './plan-state';
 import { DocSnapshot } from './snapshot';
 import { dataProblem } from './write-validation';
@@ -125,7 +125,7 @@ const specProblems = (state: PlanState, index: number, spec: unknown, path: stri
     const problem = dataProblem(state, index, {
       subject: id === undefined ? `The new "${type}" block` : `Block "${id}"`,
       type, path: `/commands/${index}/args${path}/data`, ...(id !== undefined && { blockId: id }),
-    }, state.prepareData(type, data, `${path}/data`, id ?? ''));
+    }, state.prepareData(type, withRequiredDefaults(tool, data), `${path}/data`, id ?? ''));
 
     return problem === undefined ? [] : [problem];
   });

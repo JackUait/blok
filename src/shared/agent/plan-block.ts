@@ -286,6 +286,30 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
   });
 };
 
+/**
+ * The spec's data plus each required field it left out whose default is a setting (a code language,
+ * a heading level). Never content: rich text and empty defaults ('' code, '' tab title) stay missing,
+ * so an empty block is still refused.
+ */
+export const withRequiredDefaults = (
+  tool: PlannerTool,
+  data: Record<string, unknown>,
+  onFill: (field: string, value: unknown) => void = () => undefined
+): Record<string, unknown> => {
+  const defaults = tool.entry.defaultData ?? {};
+  const required = isArray(tool.entry.data.required) ? tool.entry.data.required : [];
+  const filled = required.filter((field): field is string => typeof field === 'string'
+    && !Object.hasOwn(data, field) && Object.hasOwn(defaults, field)
+    && !tool.entry.richTextFields.includes(field) && isSetting(defaults[field]));
+
+  filled.forEach(field => onFill(field, defaults[field]));
+
+  return filled.length === 0 ? data : { ...Object.fromEntries(filled.map(field => [field, defaults[field]])), ...data };
+};
+
+const isSetting = (value: unknown): boolean => value !== null && value !== '' &&
+  !(isArray(value) && value.length === 0) && !(isRecord(value) && Object.keys(value).length === 0);
+
 export const failUnknownTool = (state: PlanState, type: string, path: string): never => {
   const known = [...state.ctx.tools.keys()];
   const entries = [...state.ctx.tools.values()].map(tool => tool.entry);
@@ -339,7 +363,10 @@ const buildBlock = (
   }
 
   const id = state.newBlockId(spec.id, `${path}/id`);
-  const data = state.prepareData(type, { ...(spec.data ?? tool.entry.defaultData ?? {}), ...(extra ?? {}) }, `${path}/data`, id, { normalize: !pending });
+  const given = spec.data === undefined ? tool.entry.defaultData ?? {} : withRequiredDefaults(tool, spec.data, (field, value) => {
+    state.warn('CORRECTED', `Required field "${field}" was missing, so it got its default ${JSON.stringify(value)}.`, { blockId: id, field });
+  });
+  const data = state.prepareData(type, { ...given, ...(extra ?? {}) }, `${path}/data`, id, { normalize: !pending });
   const inCell = 'type' in parent ? parent.inCell : parent.id !== null && state.draft.cellOf(parent.id) !== null;
   // A seed only keeps a free container from being empty. Skip it when a command in the batch names the
   // container as parentId: an earlier one cannot (the id does not exist yet), so that command fills it.

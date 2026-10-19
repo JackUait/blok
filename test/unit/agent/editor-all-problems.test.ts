@@ -75,7 +75,7 @@ describe('the in-app editor reports every problem of a failed batch, like the st
       ] } },
       { name: 'text.replace', args: { id: '$headA', with: 'Plan A' } },
       { name: 'text.replace', args: { id: '$headB', with: 'Plan B' } },
-      { name: 'block.insert', args: { type: 'code', data: { code: 'npm run build' } } },
+      { name: 'block.insert', args: { type: 'code', data: { language: 'bash' } } },
     ] } as AgentBatch;
     const editor = await inEditor(batch);
 

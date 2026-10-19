@@ -888,7 +888,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       cell.appendChild(open);
     }
     const run = this.createAutofillButton(cell, column.property, rowId, value);
-    const filled = cell.contains(value) && !value.hasAttribute('data-empty');
+    // A checkbox never carries data-empty, so unchecked counts as unfilled here.
+    const filled = cell.contains(value) && !value.hasAttribute('data-empty')
+      && (column.property.type !== 'checkbox' || readPropertyValue(row, column.property) === true);
 
     // A title cell's corner belongs to OPEN, so its Autofill stays alone.
     if (run !== null && filled && column.property.type !== 'title') {

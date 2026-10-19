@@ -13,10 +13,11 @@ const schema: PropertyDefinition[] = [
     { id: 'o-a', label: 'Red', color: 'red', position: 'a0' },
     { id: 'o-b', label: 'Blue', color: 'blue', position: 'a1' },
   ] } },
+  { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a3', autofill: { mode: 'summary' } },
 ];
 
 const rows = (): DatabaseRow[] => [
-  { id: 'r1', position: 'a0', properties: { 'p-title': 'Alpha', 'p-summary': 'The page describes Alpha.', 'p-tags': ['o-a', 'o-b'] } },
+  { id: 'r1', position: 'a0', properties: { 'p-title': 'Alpha', 'p-summary': 'The page describes Alpha.', 'p-tags': ['o-a', 'o-b'], 'p-done': true } },
   { id: 'r2', position: 'a1', properties: { 'p-title': 'Beta' } },
 ];
 
@@ -135,6 +136,27 @@ describe('table AI Autofill cell hover actions', () => {
 
     expect(actions(target)).toBeNull();
     expect(target.querySelectorAll('[data-blok-database-table-autofill]')).toHaveLength(1);
+  });
+
+  // A checkbox cell never reads as empty, so unchecked must count as unfilled here.
+  it('an unchecked autofill checkbox keeps the lone Autofill button; a checked one gets the pill', () => {
+    const { root } = mount({ comment: vi.fn() });
+
+    expect(actions(cell(root, 'r2', 'p-done'))).toBeNull();
+    expect(cell(root, 'r2', 'p-done').querySelectorAll('[data-blok-database-table-autofill]')).toHaveLength(1);
+    expect(labels(cell(root, 'r1', 'p-done'))).toHaveLength(3);
+  });
+
+  it('Mod+Enter on a selected filled autofill cell runs autofill for it', () => {
+    const { root, run } = mount({ comment: vi.fn() });
+    const grid = root.querySelector<HTMLElement>('[role="grid"]') ?? root;
+
+    clickOn(cell(root, 'r1', 'p-summary'));
+    document.querySelector('[data-blok-database-cell-editor] [data-blok-database-cell-input]')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }));
+
+    expect(run).toHaveBeenCalledWith('r1', 'p-summary');
   });
 
   it('a cell that is still Thinking… shows no buttons', () => {

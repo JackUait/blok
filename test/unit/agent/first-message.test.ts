@@ -124,6 +124,13 @@ describe('composeFirstMessage', () => {
     expect(message).not.toContain('Do not read it again');
   });
 
+  it('still tells the model not to repeat the outline read, which would return the same thing', async () => {
+    const view: DocumentView = { revision: 'r1', rootId: null, blocks: [] };
+    const message = await composeFirstMessage('Fix it', '', async () => view);
+
+    expect(message).toContain(`read for you with blok_read ${JSON.stringify(OUTLINE_READ)}. Do not repeat that read.`);
+  });
+
   it('falls back to the prompt and context when the read fails', async () => {
     const message = await composeFirstMessage('Fix it', '(ctx)', async () => {
       throw new Error('closed');

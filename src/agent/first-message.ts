@@ -29,7 +29,7 @@ export async function composeFirstMessage(
   const more = view.next === undefined
     ? ''
     : `\nMore blocks follow: call blok_read with ${JSON.stringify({ cursor: view.next })}.`;
-  const outline = `The document, read for you with blok_read ${JSON.stringify(OUTLINE_READ)}. ${LEFT_OUT}\n${JSON.stringify(view)}${more}`;
+  const outline = `The document, read for you with blok_read ${JSON.stringify(OUTLINE_READ)}. Do not repeat that read. ${LEFT_OUT}\n${JSON.stringify(view)}${more}`;
   // Paging only goes forward, so a caret past the outline is read on its own.
   const missing = focus.filter((id) => !view.blocks.some((block) => block.id === id));
   const args: ViewArgs = { ids: missing };

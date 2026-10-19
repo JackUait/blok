@@ -9,11 +9,11 @@ The server exposes six tools.
 | Tool | What it does |
 |---|---|
 | `blok_list_documents` | Lists documents the caller may open, if the source can list them. |
-| `blok_open` | Opens a document and returns a `handle`. Every other tool takes it. |
+| `blok_open` | Opens a document and returns a `handle`. Every other tool takes it. Without `documentId` it opens the only listed document, or returns the list to choose from. |
 | `blok_read` | Returns the document view for a handle. |
 | `blok_describe` | Returns the command contract, or one tool or command. |
 | `blok_execute` | Runs one batch of commands on a handle. |
-| `blok_close` | Closes a handle. |
+| `blok_close` | Closes a handle. Live: leaves the room. Stored: optional, since every batch already saved. |
 
 A document opens in one of two modes:
 

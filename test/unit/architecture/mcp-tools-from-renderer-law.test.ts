@@ -216,15 +216,15 @@ describe('MCP tools come from the shared renderer', () => {
     }
   });
 
-  it('opens by document id with auto mode, read-only default and an optional first view', () => {
+  it('opens by document id or by a search, with auto mode, read-only default and an optional first view', () => {
     const input = byName(listMcpTools(stored, { schema: 'envelope', handleIdleMs: 600_000 }), 'blok_open').inputSchema;
 
     expect(input).toEqual({
       type: 'object',
       additionalProperties: false,
-      required: ['documentId'],
       properties: {
         documentId: { type: 'string', minLength: 1, maxLength: 512 },
+        query: expect.objectContaining({ type: 'string', maxLength: 200 }),
         mode: { enum: ['auto', 'live', 'stored'], default: 'auto' },
         write: { type: 'boolean', default: false },
         view: expect.objectContaining({ type: 'object' }),
@@ -234,7 +234,9 @@ describe('MCP tools come from the shared renderer', () => {
     for (const mode of ['auto', 'live', 'stored']) {
       expect(validateAgainst(input, { documentId: 'doc', mode, write: true, view: {} })).toEqual([]);
     }
-    for (const invalid of [{}, { documentId: '' }, { documentId: 'd'.repeat(513) }, { documentId: 'doc', mode: 'other' }, { documentId: 'doc', extra: true }]) {
+    expect(validateAgainst(input, {})).toEqual([]);
+    expect(validateAgainst(input, { query: 'plan', write: true })).toEqual([]);
+    for (const invalid of [{ documentId: '' }, { documentId: 'd'.repeat(513) }, { query: 'q'.repeat(201) }, { documentId: 'doc', mode: 'other' }, { documentId: 'doc', extra: true }]) {
       expect(validateAgainst(input, invalid)).not.toEqual([]);
     }
   });
@@ -288,6 +290,31 @@ describe('MCP tools come from the shared renderer', () => {
     for (const invalid of [{ ...opened, expiresAfterIdleMs: 1.5 }, { ...opened, durability: 'other' }, { ...opened, view: 'outline' }]) {
       expect(validateAgainst(output, invalid)).not.toEqual([]);
     }
+    expect(validateAgainst(output, { ...opened, documentId: 'doc-1', queryMatched: false })).toEqual([]);
+  });
+
+  it('lets open without a documentId answer with the documents to choose from', () => {
+    const output = byName(listMcpTools(stored, { schema: 'envelope', handleIdleMs: 600_000 }), 'blok_open').outputSchema;
+    const listing = { documents: [{ id: 'doc-1', title: 'One', live: false }, { id: 'doc-2', title: null, live: false }], nextCursor: null, supported: true };
+
+    expect(validateAgainst(output, listing)).toEqual([]);
+    expect(validateAgainst(output, { ...listing, queryMatched: false })).toEqual([]);
+    expect(validateAgainst(output, { documents: [{ title: 'Missing id' }] })).not.toEqual([]);
+  });
+
+  it('lets the model open without listing first, and does not send it to blok_list_documents first', () => {
+    const tools = listMcpTools(stored, { schema: 'mixed', handleIdleMs: 600_000 });
+
+    expect(byName(tools, 'blok_list_documents').description).not.toMatch(/call it first/i);
+    expect(byName(tools, 'blok_open').description).toMatch(/without documentId/);
+    expect(byName(tools, 'blok_open').description).not.toMatch(/take the id .* from blok_list_documents/);
+  });
+
+  it('says a stored-mode close is not needed to save, and a live close leaves the room', () => {
+    const close = byName(listMcpTools(stored, { schema: 'mixed', handleIdleMs: 600_000 }), 'blok_close');
+
+    expect(close.description).toMatch(/stored mode.*blok_execute.*saves/i);
+    expect(close.description).toMatch(/live.*leaves the room/i);
   });
 
   it('describes close acknowledgement and optional host-record lag', () => {

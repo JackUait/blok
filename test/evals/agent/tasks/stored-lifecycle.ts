@@ -9,7 +9,7 @@ export const storedLifecycle: EvalTask = {
   prompt: 'Open the document "doc-x", add a closing paragraph "Thanks for reading.", and save it.',
   surfaces: ['mcp-stored'],
   graders: [
-    toolSequence(['blok_open', 'blok_execute', 'blok_close']),
+    toolSequence(['blok_open', 'blok_execute']),
     text('closing', { type: 'paragraph', nth: 1 }, 'Thanks for reading.'),
     ackedOnly(),
   ],

@@ -126,7 +126,7 @@ export const openMcpStored = (extraArgs: string[] = [], extraEnv: Record<string,
 
       return { content: text, isError: response.isError === true };
     },
-    // blok_close saves (04 §3.6): a run that never closed still holds the seed here.
+    // Each blok_execute saves the file, so this is the saved result with or without blok_close.
     finish: async () => ({
       final: savedDocument(join(dir, `${docId}.json`)),
       log: logFromExecuteCalls(calls, MCP_ACTOR_ID),

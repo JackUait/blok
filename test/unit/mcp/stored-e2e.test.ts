@@ -77,13 +77,14 @@ describe('stored mode through the MCP dispatcher', () => {
     expect(fresh.structuredContent).toMatchObject({ exists: false });
   });
 
-  it('describes exists on blok_open and sends a model without an id to blok_list_documents', () => {
+  it('describes exists on blok_open and lets a model without an id open without one', () => {
     const open = mcp.tools.find((tool) => tool.name === 'blok_open');
     const success = (open?.outputSchema.oneOf as Array<{ allOf?: Array<{ properties?: Record<string, unknown> }> }> | undefined)?.[0];
     const properties = success?.allOf?.[0]?.properties;
 
     expect(properties?.exists).toEqual({ type: 'boolean' });
-    expect(open?.description).toMatch(/new, empty document.*blok_list_documents/);
+    expect(open?.description).toMatch(/without documentId.*opens that one/);
+    expect(open?.description).toMatch(/new, empty document/);
   });
 
   it('writes the page title into OutputData.title (01 D-1)', async () => {
@@ -231,6 +232,30 @@ describe('stored mode through the MCP dispatcher', () => {
     }, caller);
 
     expect(next.structuredContent).toMatchObject({ ok: true });
+  });
+
+  it('opens the only document when blok_open gets no documentId, and saves edits to it', async () => {
+    writeFileSync(join(dir, 'a.json'), JSON.stringify({ blocks: [], title: 'Alpha' }));
+    const opened = await mcp.dispatch('blok_open', { write: true, view: {} }, caller);
+
+    expect(opened.structuredContent).toMatchObject({ documentId: 'a', exists: true, view: expect.any(Object) });
+    await mcp.dispatch('blok_execute', {
+      handle: opened.structuredContent.handle,
+      commands: [{ name: 'block.insert', args: { type: 'paragraph', id: 'p1', data: { text: 'Hi' } } }],
+    }, caller);
+    expect((file('a') as { blocks: Array<{ id: string }> }).blocks.map((block) => block.id)).toEqual(['p1']);
+  });
+
+  it('opens nothing and lists the choices when blok_open gets no documentId and several exist', async () => {
+    writeFileSync(join(dir, 'a.json'), JSON.stringify({ blocks: [], title: 'Alpha' }));
+    writeFileSync(join(dir, 'b.json'), JSON.stringify({ blocks: [], title: 'Beta' }));
+    const all = await mcp.dispatch('blok_open', {}, caller);
+    const one = await mcp.dispatch('blok_open', { query: 'beta' }, caller);
+
+    expect(all.structuredContent).toEqual({
+      documents: [{ id: 'a', title: 'Alpha', live: false }, { id: 'b', title: 'Beta', live: false }], nextCursor: null, supported: true,
+    });
+    expect(one.structuredContent).toMatchObject({ documentId: 'b' });
   });
 
   it('lists the directory', async () => {

@@ -108,11 +108,23 @@ export const createToolDispatcher = (
   deps: DispatcherDeps,
 ): ((name: string, args: Record<string, unknown>, caller: Caller, options?: CallOptions) => Promise<ToolOutcome>) => {
   // A miss on the first page lists everything, so the model does not call again without query.
-  const listDocuments = async (request: ListRequest, caller: Caller): Promise<Record<string, unknown>> => {
+  const listDocuments = async (request: ListRequest, caller: Caller): Promise<ListResult & { queryMatched?: false }> => {
     const listing = await deps.list(request, caller);
     const missed = request.query !== undefined && request.cursor === undefined && listing.supported && listing.documents.length === 0;
 
     return missed ? { ...await deps.list({ limit: request.limit }, caller), queryMatched: false } : { ...listing };
+  };
+
+  // blok_open without an id opens the only listed document; otherwise the model chooses from the listing.
+  const findDocument = async (query: unknown, caller: Caller): Promise<{ id: string; queryMatched?: false } | { listing: ListResult }> => {
+    requireScope(caller, 'blok.read');
+    const listing = await listDocuments({ limit: 25, ...(typeof query === 'string' && { query }) }, caller);
+
+    if (listing.documents.length !== 1 || listing.nextCursor !== null) {
+      return { listing };
+    }
+
+    return { id: listing.documents[0].id, ...(listing.queryMatched === false && { queryMatched: false as const }) };
   };
 
   const onHandle = <T>(
@@ -135,8 +147,12 @@ export const createToolDispatcher = (
     const write = args.write === true;
 
     requireScope(caller, write ? 'blok.write' : 'blok.read');
-    if (typeof args.documentId !== 'string' || args.documentId === '' || args.documentId.length > 512) {
+    if (args.documentId !== undefined
+      && (typeof args.documentId !== 'string' || args.documentId === '' || args.documentId.length > 512)) {
       throw surfaceError('INVALID_ARGS', 'documentId must be a string of 1 to 512 characters.');
+    }
+    if (args.documentId === undefined && args.query !== undefined && typeof args.query !== 'string') {
+      throw surfaceError('INVALID_ARGS', 'query must be a string.');
     }
     if (args.mode !== undefined && !MODES.has(args.mode)) {
       throw surfaceError('INVALID_ARGS', 'mode must be "auto", "live" or "stored".');
@@ -145,10 +161,16 @@ export const createToolDispatcher = (
       throw surfaceError('INVALID_ARGS', 'view must be an object of blok_read arguments.');
     }
     const mode = args.mode === 'live' || args.mode === 'stored' ? args.mode : 'auto';
+    const found = typeof args.documentId === 'string' ? null : await findDocument(args.query, caller);
+
+    if (found !== null && 'listing' in found) {
+      return ok({ ...found.listing });
+    }
+    const documentId = found === null ? String(args.documentId) : found.id;
 
     // Opening can mint a ticket and join a room, so refuse at the cap first.
     deps.handles.assertRoom(caller.principal);
-    const session = await deps.open({ documentId: args.documentId, mode, write }, caller);
+    const session = await deps.open({ documentId, mode, write }, caller);
 
     try {
       const view = isPlainObject(args.view) ? await session.read(args.view) : undefined;
@@ -157,7 +179,7 @@ export const createToolDispatcher = (
       if (signal?.aborted === true) {
         throw failure('CANCELLED', 'The request was cancelled before the document opened.');
       }
-      const handle = deps.handles.add(caller.principal, args.documentId, session);
+      const handle = deps.handles.add(caller.principal, documentId, session);
 
       return ok({
         handle,
@@ -166,6 +188,7 @@ export const createToolDispatcher = (
         durability: session.durability,
         expiresAfterIdleMs: deps.handleIdleMs,
         contractRevision: session.contractRevision,
+        ...(found !== null && { documentId, ...(found.queryMatched === false && { queryMatched: false }) }),
         ...(session.exists !== undefined && { exists: session.exists }),
         ...(view !== undefined && { view }),
       });
@@ -202,7 +225,7 @@ export const createToolDispatcher = (
         case 'blok_list_documents': {
           requireScope(caller, 'blok.read');
 
-          return ok(await listDocuments(listRequestOf(args), caller));
+          return ok({ ...await listDocuments(listRequestOf(args), caller) });
         }
         case 'blok_open':
           return await openDocument(args, caller, options.signal);

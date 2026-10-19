@@ -468,7 +468,7 @@ describe('createToolDispatcher', () => {
     });
   });
 
-  const malformedDocuments: unknown[] = [undefined, null, '', 42, 'd'.repeat(513)];
+  const malformedDocuments: unknown[] = [null, '', 42, 'd'.repeat(513)];
 
   it.each(malformedDocuments)('refuses malformed documentId %# before opening', async documentId => {
     const { deps, dispatch } = fixture();
@@ -486,6 +486,88 @@ describe('createToolDispatcher', () => {
 
     expect(outcome.isError).toBe(false);
     expect(deps.open).toHaveBeenCalledExactlyOnceWith({ documentId, mode: 'auto', write: false }, stdio);
+  });
+
+  describe('blok_open without a documentId', () => {
+    const one = { documents: [{ id: 'doc-7', title: 'Plan', live: false }], nextCursor: null, supported: true };
+    const two = {
+      documents: [{ id: 'doc-7', title: 'Plan', live: false }, { id: 'doc-8', title: 'Notes', live: false }],
+      nextCursor: null,
+      supported: true,
+    };
+
+    it('opens the only document and says which one, so the model needs no listing call', async () => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValueOnce(one);
+      const outcome = await invoke(dispatch, 'blok_open', { write: true, view: {} });
+      const handle = handleFrom(outcome);
+
+      expect(outcome.structuredContent).toMatchObject({ handle, documentId: 'doc-7', view: expect.any(Object) });
+      expect(deps.list).toHaveBeenCalledExactlyOnceWith({ limit: 25 }, stdio);
+      expect(deps.open).toHaveBeenCalledExactlyOnceWith({ documentId: 'doc-7', mode: 'auto', write: true }, stdio);
+      await invoke(dispatch, 'blok_execute', { handle, commands: [{ name: 'block.insert', args: {} }] });
+      expect(deps.stillAllowed).toHaveBeenCalledWith(stdio, 'doc-7', true);
+    });
+
+    it('passes query to the listing and opens its only match', async () => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValueOnce(one);
+      const outcome = await invoke(dispatch, 'blok_open', { query: 'plan' });
+
+      expect(outcome.structuredContent).toMatchObject({ documentId: 'doc-7' });
+      expect(deps.list).toHaveBeenCalledExactlyOnceWith({ query: 'plan', limit: 25 }, stdio);
+    });
+
+    it('opens the only document even when query missed, and says the query did not match', async () => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValueOnce({ documents: [], nextCursor: null, supported: true }).mockResolvedValueOnce(one);
+      const outcome = await invoke(dispatch, 'blok_open', { query: 'budget' });
+
+      expect(outcome.structuredContent).toMatchObject({ documentId: 'doc-7', queryMatched: false });
+      expect(deps.open).toHaveBeenCalledOnce();
+    });
+
+    it('returns the documents to choose from and opens nothing when several match', async () => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValueOnce(two);
+      const outcome = await invoke(dispatch, 'blok_open', { write: true });
+
+      expect(outcome).toEqual({ isError: false, structuredContent: two });
+      expect(deps.open).not.toHaveBeenCalled();
+      expect(deps.handles.count('alice')).toBe(0);
+    });
+
+    it.each([
+      { documents: [{ id: 'doc-7', title: 'Plan', live: false }], nextCursor: 'more', supported: true },
+      { documents: [], nextCursor: null, supported: true },
+      { documents: [], nextCursor: null, supported: false },
+    ])('opens nothing for listing %j', async (listing) => {
+      const { deps, dispatch } = fixture();
+      vi.mocked(deps.list).mockResolvedValue(listing);
+      const outcome = await invoke(dispatch, 'blok_open', {});
+
+      expect(outcome.isError).toBe(false);
+      expect(outcome.structuredContent).not.toHaveProperty('handle');
+      expect(outcome.structuredContent.documents).toEqual(listing.documents);
+      expect(deps.open).not.toHaveBeenCalled();
+    });
+
+    it('ignores query when a documentId is given', async () => {
+      const { deps, dispatch } = fixture();
+      const outcome = await invoke(dispatch, 'blok_open', { documentId: 'doc-1', query: 'plan' });
+
+      expect(outcome.structuredContent).not.toHaveProperty('documentId');
+      expect(deps.list).not.toHaveBeenCalled();
+      expect(deps.open).toHaveBeenCalledExactlyOnceWith({ documentId: 'doc-1', mode: 'auto', write: false }, stdio);
+    });
+
+    it('refuses a non-string query and needs the read scope to search', async () => {
+      const { deps, dispatch } = fixture();
+
+      expectFailure(await invoke(dispatch, 'blok_open', { query: 5 }), 'INVALID_ARGS');
+      expectFailure(await invoke(dispatch, 'blok_open', { write: true }, writer), 'FORBIDDEN');
+      expect(deps.list).not.toHaveBeenCalled();
+    });
   });
 
   const malformedEntries: unknown[] = [null, 'doc.read', ['doc.read'], {}, { name: 7 }, { name: null }];

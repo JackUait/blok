@@ -1,6 +1,7 @@
 import { composeGuidance } from '../../../../../src/agent/guidance';
 import { renderAgentTools } from '../../../../../src/agent/render-tools';
 import { AgentFailure } from '../../../../../src/shared/agent/errors';
+import { modelAnswer } from '../../../../../src/shared/agent/model-answer';
 import { nodeContract, openJsonSession } from '../../../../unit/agent/harness';
 import type { AgentResult, DocumentView } from '../../../../../types/agent';
 import type { ExecuteResult } from '../../types';
@@ -51,7 +52,7 @@ export const openInApp: OpenSurface = async (task, schema) => {
 
           results.push(result);
 
-          return { content: JSON.stringify(result), isError: !result.ok };
+          return { content: JSON.stringify(modelAnswer(result)), isError: !result.ok };
         }
 
         return { content: `Unknown tool ${name}`, isError: true };

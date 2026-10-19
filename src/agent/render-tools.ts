@@ -1,7 +1,7 @@
 import type { AgentContract, CommandEntry } from '../../types/tool-manifest';
 
 import { EXECUTE_OUTPUT_SCHEMA, orError } from './result-schemas';
-import { cloneSchema, hoistDefs, isClosedSchema, measureSchema } from './schema-walk';
+import { cloneSchema, hoistDefs, isClosedSchema, measureSchema, shareRepeatedSchemas } from './schema-walk';
 
 export type AgentToolName = 'blok_read' | 'blok_describe' | 'blok_execute';
 
@@ -54,12 +54,16 @@ export class AgentToolsTooLargeError extends Error {
 
 /**
  * The commands most edits use. 'full' for all of them is too big to send on every call.
- * The last four are the ones models looked up most with blok_describe in the MCP eval.
+ * text.format, block.convert, doc.setTitle and doc.setIcon are the ones models looked up most
+ * with blok_describe in the MCP eval.
  */
 export const COMMON_COMMANDS: readonly string[] = [
-  'block.insert', 'text.replace', 'block.delete', 'markdown.insert',
+  'block.insert', 'text.replace', 'block.delete', 'markdown.insert', 'block.move',
   'text.format', 'block.convert', 'doc.setTitle', 'doc.setIcon',
 ];
+
+// Repeats shorter than this cost about as much as the $ref that replaces them.
+const SHARED_SCHEMA_MIN_LENGTH = 100;
 
 const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.';
 
@@ -154,8 +158,11 @@ const mixedExecuteInput = (contract: AgentContract): Schema => {
   const rest = available.filter(entry => !isCommon(entry)).map(entry => entry.name);
   const defs: Schema = {};
   const branches = [...fullBranches(available.filter(isCommon), defs), ...(rest.length === 0 ? [] : [envelopeItem(rest)])];
+  const input = executeInput({ oneOf: branches });
 
-  return withDefs(executeInput({ oneOf: branches }), defs);
+  shareRepeatedSchemas(input, defs, SHARED_SCHEMA_MIN_LENGTH);
+
+  return withDefs(input, defs);
 };
 
 const mixedExecuteDescription = (contract: AgentContract): string => {

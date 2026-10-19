@@ -366,7 +366,7 @@ describe('createToolDispatcher', () => {
     expect(session.describe).toHaveBeenCalledExactlyOnceWith(query);
   });
 
-  it('executes the batch with its revision and returns every result field unchanged', async () => {
+  it('executes the batch with its revision and returns every result field, without the empty changed lists', async () => {
     const { session, dispatch } = fixture();
     const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
     const batch: AgentBatch = {
@@ -375,8 +375,31 @@ describe('createToolDispatcher', () => {
     };
     const outcome = await invoke(dispatch, 'blok_execute', { handle, ...batch });
 
-    expect(outcome).toEqual({ isError: false, structuredContent: savedResult });
+    expect(outcome).toEqual({ isError: false, structuredContent: { ...savedResult, changed: { created: ['new-block'] } } });
     expect(session.execute).toHaveBeenCalledExactlyOnceWith(batch);
+  });
+
+  it('caps the ids a big delete lists, so one answer stays small', async () => {
+    const removed = Array.from({ length: 500 }, (_, i) => `cell-${i}`);
+    const deleted: McpExecuteResult = {
+      ...savedResult,
+      results: [{ removedIds: removed, liftedIds: [] }],
+      refs: {},
+      changed: { created: [], updated: [], moved: [], removed },
+      warnings: [],
+    };
+    const { dispatch } = fixture(fakeSession({ execute: vi.fn(async () => deleted) }));
+    const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
+    const outcome = await invoke(dispatch, 'blok_execute', { handle, commands: [{ name: 'block.delete', args: { id: 'table' } }] });
+
+    expect(outcome.structuredContent).toEqual({
+      ok: true,
+      revision: 'content-r2',
+      results: [{ removedIds: removed.slice(0, 50), moreRemovedIds: 450, liftedIds: [] }],
+      changed: { removed: removed.slice(0, 50), moreRemoved: 450 },
+      lastRange: savedResult.lastRange,
+      delivery: savedResult.delivery,
+    });
   });
 
   it('omits expectRevision when the caller did not supply one', async () => {
@@ -397,7 +420,7 @@ describe('createToolDispatcher', () => {
     const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
     const outcome = await invoke(dispatch, 'blok_execute', { handle, commands: [{ name: 'doc.setTitle', args: { title: 'New' } }] });
 
-    expect(outcome).toEqual({ isError: false, structuredContent: pending });
+    expect(outcome).toEqual({ isError: false, structuredContent: { ...pending, changed: { created: ['new-block'] } } });
   });
 
   it('keeps a failed session result with its revision, warning and rejection delivery', async () => {

@@ -1,5 +1,6 @@
 import type { AgentBatch, AgentCommand, AgentError, ViewArgs } from '../../types/agent';
 import { AgentFailure, failure } from '../shared/agent/errors';
+import { modelAnswer } from '../shared/agent/model-answer';
 
 import { failedResult, isMcpSurfaceError, surfaceError } from './errors';
 import type { HandleRegistry } from './handles';
@@ -216,7 +217,7 @@ export const createToolDispatcher = (
     } as AgentBatch;
     const result = await onHandle(caller, handleOf(args), true, session => session.execute(batch));
 
-    return { structuredContent: result as unknown as Record<string, unknown>, isError: !result.ok };
+    return { structuredContent: modelAnswer(result), isError: !result.ok };
   };
 
   return async (name, args, caller, options = {}): Promise<ToolOutcome> => {

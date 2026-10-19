@@ -4,6 +4,8 @@ import type { AgentError, AgentResult } from '../../../types/agent';
 
 import { renderAgentTools, TOOL_NAME_PATTERN, type RenderedTool, type RenderOptions } from '../../../src/agent/render-tools';
 import { validateAgainst } from '../../../src/shared/schema/validate';
+import { inlineRefs } from './fixtures/inline-refs';
+import { modelAnswer } from '../../../src/shared/agent/model-answer';
 import { isClosedSchema } from '../../../src/agent/schema-walk';
 import { command, deepFreeze, makeContract } from './fixtures/contract';
 import { createHeadlessAgentSetup } from '../../../src/view/agent-runtime';
@@ -522,12 +524,12 @@ describe('renderAgentTools mixed', () => {
   it('hoists the definitions a common command refers to', () => {
     const root = mixedInput(deepFreeze(makeContract()));
 
-    expect(Object.keys(schema(root.$defs))).toEqual(['block_insert__InsertSpec']);
+    expect(Object.keys(schema(root.$defs))).toContain('block_insert__InsertSpec');
     expect(JSON.stringify(root)).toContain('#/$defs/block_insert__InsertSpec');
   });
 
   it('accepts a known command through exactly one branch', () => {
-    const root = mixedInput();
+    const root = inlineRefs(mixedInput());
 
     expect(validateAgainst(root, { commands: [{ name: 'block.insert', args: { type: 'paragraph' } }] })).toEqual([]);
     expect(validateAgainst(root, { commands: [{ name: 'poll.addOption', args: { label: 'x' } }] })).toEqual([]);
@@ -679,6 +681,23 @@ describe('renderAgentTools MCP', () => {
     expect(schemaList(output.oneOf)).toHaveLength(2);
   });
 
+  it('execute validates the trimmed answer the model sees', () => {
+    const output = outputOf(byName(mcp(), 'blok_execute'));
+    const removed = Array.from({ length: 80 }, (_, index) => `b${index}`);
+    const deleted = modelAnswer({
+      ok: true,
+      revision: 'rev-2',
+      results: [{ removedIds: removed, liftedIds: [] }],
+      refs: {},
+      changed: { created: [], updated: [], moved: [], removed },
+      warnings: [],
+    });
+
+    expect(deleted).toMatchObject({ changed: { moreRemoved: 30 } });
+    expect(validateAgainst(output, { ...deleted, delivery })).toEqual([]);
+    expect(validateAgainst(output, { ...modelAnswer({ ok: false, error, warnings: [] }), delivery })).toEqual([]);
+  });
+
   it('execute failure carries the other problems of the batch', () => {
     const output = outputOf(byName(mcp(), 'blok_execute'));
     const others = [{ code: 'DATA_REJECTED', message: 'Block "h": missing "text".', commandIndex: 1, path: '/commands/1' }];
@@ -708,7 +727,8 @@ describe('renderAgentTools MCP', () => {
     };
 
     expect(validateAgainst(output, { ...result, delivery: { ...delivery, serverSequence: 2 } })).not.toEqual([]);
-    expect(validateAgainst(output, { ...result, changed: { created: [] } })).not.toEqual([]);
+    expect(validateAgainst(output, { ...result, changed: { created: 'p1' } })).not.toEqual([]);
+    expect(validateAgainst(output, { ...result, changed: { removed: ['p1'], moreRemoved: 'many' } })).not.toEqual([]);
     expect(validateAgainst(output, { ...result, warnings: [{ code: 'SANITIZED' }] })).not.toEqual([]);
   });
 

@@ -70,7 +70,7 @@
   },
   {
     "name": "blok_execute",
-    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert. The schema has the full arguments for block.convert, block.delete, block.insert, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments. Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.",
+    "description": "Run a batch of commands. Either all of them land or none do. Use block ids from blok_read. To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert. The schema has the full arguments for block.convert, block.delete, block.insert, block.move, doc.setIcon, doc.setTitle, markdown.insert, text.format, text.replace. Call blok_describe for any other command's arguments. Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -89,9 +89,7 @@
                     "type": "object",
                     "properties": {
                       "id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                        "$ref": "#/$defs/id"
                       },
                       "type": {
                         "type": "string",
@@ -125,9 +123,7 @@
                     "type": "object",
                     "properties": {
                       "id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                        "$ref": "#/$defs/id"
                       }
                     },
                     "required": [
@@ -173,55 +169,10 @@
                         }
                       },
                       "parentId": {
-                        "oneOf": [
-                          {
-                            "type": "string",
-                            "minLength": 1,
-                            "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
+                        "$ref": "#/$defs/parentId"
                       },
                       "position": {
-                        "description": "'start' | 'end' | { before: id } | { after: id }",
-                        "oneOf": [
-                          {
-                            "enum": [
-                              "start",
-                              "end"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "before": {
-                                "type": "string",
-                                "minLength": 1,
-                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                              }
-                            },
-                            "required": [
-                              "before"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "after": {
-                                "type": "string",
-                                "minLength": 1,
-                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                              }
-                            },
-                            "required": [
-                              "after"
-                            ],
-                            "additionalProperties": false
-                          }
-                        ]
+                        "$ref": "#/$defs/position"
                       },
                       "demote": {
                         "type": "boolean"
@@ -234,6 +185,38 @@
                   },
                   "ref": {
                     "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "block.move"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "parentId": {
+                        "$ref": "#/$defs/parentId"
+                      },
+                      "position": {
+                        "$ref": "#/$defs/position"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "position"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -341,55 +324,10 @@
                         "type": "string"
                       },
                       "parentId": {
-                        "oneOf": [
-                          {
-                            "type": "string",
-                            "minLength": 1,
-                            "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
+                        "$ref": "#/$defs/parentId"
                       },
                       "position": {
-                        "description": "'start' | 'end' | { before: id } | { after: id }",
-                        "oneOf": [
-                          {
-                            "enum": [
-                              "start",
-                              "end"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "before": {
-                                "type": "string",
-                                "minLength": 1,
-                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                              }
-                            },
-                            "required": [
-                              "before"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "after": {
-                                "type": "string",
-                                "minLength": 1,
-                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                              }
-                            },
-                            "required": [
-                              "after"
-                            ],
-                            "additionalProperties": false
-                          }
-                        ]
+                        "$ref": "#/$defs/position"
                       }
                     },
                     "required": [
@@ -414,57 +352,13 @@
                     "type": "object",
                     "properties": {
                       "id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                        "$ref": "#/$defs/id"
                       },
                       "field": {
                         "type": "string"
                       },
                       "range": {
-                        "oneOf": [
-                          {
-                            "const": "all"
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "start": {
-                                "type": "integer",
-                                "minimum": 0
-                              },
-                              "end": {
-                                "type": "integer",
-                                "minimum": 0
-                              },
-                              "expectText": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "start",
-                              "end"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "find": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "occurrence": {
-                                "type": "integer",
-                                "minimum": 1
-                              }
-                            },
-                            "required": [
-                              "find"
-                            ],
-                            "additionalProperties": false
-                          }
-                        ]
+                        "$ref": "#/$defs/range"
                       },
                       "set": {
                         "type": "object",
@@ -561,57 +455,13 @@
                     "type": "object",
                     "properties": {
                       "id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                        "$ref": "#/$defs/id"
                       },
                       "field": {
                         "type": "string"
                       },
                       "range": {
-                        "oneOf": [
-                          {
-                            "const": "all"
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "start": {
-                                "type": "integer",
-                                "minimum": 0
-                              },
-                              "end": {
-                                "type": "integer",
-                                "minimum": 0
-                              },
-                              "expectText": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "start",
-                              "end"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "find": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "occurrence": {
-                                "type": "integer",
-                                "minimum": 1
-                              }
-                            },
-                            "required": [
-                              "find"
-                            ],
-                            "additionalProperties": false
-                          }
-                        ]
+                        "$ref": "#/$defs/range"
                       },
                       "with": {
                         "description": "Plain text, or rich-text segments. Never Markdown.",
@@ -650,7 +500,6 @@
                       "audio.setCover",
                       "audio.setSource",
                       "block.duplicate",
-                      "block.move",
                       "block.update",
                       "column_list.addColumn",
                       "column_list.create",
@@ -768,6 +617,101 @@
             "type"
           ],
           "additionalProperties": false
+        },
+        "position": {
+          "description": "'start' | 'end' | { before: id } | { after: id }",
+          "oneOf": [
+            {
+              "enum": [
+                "start",
+                "end"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "before": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "required": [
+                "before"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "after": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "required": [
+                "after"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "range": {
+          "oneOf": [
+            {
+              "const": "all"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "expectText": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "find": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "occurrence": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "find"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "parentId": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
         }
       }
     }

@@ -18,6 +18,15 @@ export const LIFECYCLE_TOOL_NAMES: readonly ['blok_list_documents', 'blok_open',
   'blok_list_documents', 'blok_open', 'blok_close',
 ];
 
+const DOCUMENTS_SCHEMA = {
+  type: 'array',
+  items: {
+    type: 'object',
+    required: ['id'],
+    properties: { id: { type: 'string' }, title: { type: ['string', 'null'] }, live: { type: 'boolean' } },
+  },
+};
+
 /** blok_read's input without the handle: what blok_open's view passes to the read. */
 const readArguments = (core: McpTool[]): Record<string, unknown> => {
   const read = core.find(tool => tool.name === 'blok_read')?.inputSchema ?? {};
@@ -41,7 +50,7 @@ export const listMcpTools = (
   return [
     {
       name: 'blok_list_documents',
-      description: 'Lists Blok documents you may open. Call it first when you were not given a document id. query matches document ids and titles, not their content; when nothing matches, it lists every document and sets queryMatched: false. Returns supported: false when the document source cannot list.',
+      description: 'Lists Blok documents you may open. blok_open without documentId runs this listing itself and opens the only match, so you rarely need it. query matches document ids and titles, not their content; when nothing matches, it lists every document and sets queryMatched: false. Returns supported: false when the document source cannot list.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -55,14 +64,7 @@ export const listMcpTools = (
         type: 'object',
         required: ['documents'],
         properties: {
-          documents: {
-            type: 'array',
-            items: {
-              type: 'object',
-              required: ['id'],
-              properties: { id: { type: 'string' }, title: { type: ['string', 'null'] }, live: { type: 'boolean' } },
-            },
-          },
+          documents: DOCUMENTS_SCHEMA,
           nextCursor: { type: ['string', 'null'] },
           supported: { type: 'boolean' },
           queryMatched: { type: 'boolean' },
@@ -73,7 +75,8 @@ export const listMcpTools = (
       name: 'blok_open',
       description: [
         'Opens a Blok document and returns a handle for blok_read, blok_describe, blok_execute and blok_close.',
-        'In stored mode an unknown documentId opens a new, empty document (exists: false), so take the id of an existing document from blok_list_documents.',
+        'Called without documentId, it lists documents the way blok_list_documents does (query filters ids and titles): when exactly one is found it opens that one and returns its documentId; otherwise it opens nothing and returns documents to choose from.',
+        'In stored mode an unknown documentId opens a new, empty document (exists: false), so pass only ids you were given or saw listed.',
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
         'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
@@ -83,9 +86,9 @@ export const listMcpTools = (
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        required: ['documentId'],
         properties: {
           documentId: { type: 'string', minLength: 1, maxLength: 512 },
+          query: { type: 'string', maxLength: 200, description: 'Without documentId: matches part of a document id or title.' },
           mode: { enum: ['auto', 'live', 'stored'], default: 'auto' },
           write: { type: 'boolean', default: false },
           view: readArguments(core),
@@ -93,9 +96,11 @@ export const listMcpTools = (
       },
       outputSchema: orError({
         type: 'object',
-        required: ['handle', 'mode', 'write', 'expiresAfterIdleMs'],
+        // Opened, or (without documentId) the documents to choose from.
+        anyOf: [{ required: ['handle', 'mode', 'write', 'expiresAfterIdleMs'] }, { required: ['documents'] }],
         properties: {
           handle: { type: 'string' },
+          documentId: { type: 'string' },
           mode: { enum: ['live', 'stored'] },
           write: { type: 'boolean' },
           durability: { enum: ['acknowledged', 'best-effort', 'saved-on-execute'] },
@@ -103,6 +108,10 @@ export const listMcpTools = (
           contractRevision: { type: 'string' },
           exists: { type: 'boolean' },
           view: { type: 'object' },
+          documents: DOCUMENTS_SCHEMA,
+          nextCursor: { type: ['string', 'null'] },
+          supported: { type: 'boolean' },
+          queryMatched: { type: 'boolean' },
         },
       }),
     },

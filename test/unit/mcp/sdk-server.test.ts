@@ -163,6 +163,21 @@ describe.each(ERAS)('buildSdkServer over real SDK stdio (%s)', era => {
     });
   });
 
+  it.each([
+    { documents: [{ id: 'a', title: 'Alpha', live: false }, { id: 'b', title: null, live: false }], nextCursor: null, supported: true },
+    { handle: 'h-1', mode: 'stored', write: true, expiresAfterIdleMs: 600_000, documentId: 'a', queryMatched: false },
+  ])('passes a schema-valid blok_open answer without a documentId (%#)', async structuredContent => {
+    const dispatch = vi.fn<Dispatch>(async () => ({ structuredContent, isError: false }));
+
+    await withClient(era, deploymentTools(), dispatch, async client => {
+      await client.listTools(undefined, REQUEST);
+      const result = await client.callTool({ name: 'blok_open', arguments: { query: 'a' } }, REQUEST);
+
+      expect(result.structuredContent).toEqual(structuredContent);
+      expect(result.isError).toBe(false);
+    });
+  });
+
   it('hands the request abort signal to the dispatcher and aborts it on cancel', async () => {
     const seen: AbortSignal[] = [];
     let markStarted: (() => void) | undefined;

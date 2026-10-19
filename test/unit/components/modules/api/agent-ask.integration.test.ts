@@ -222,7 +222,8 @@ describe('editor.agent.ask', () => {
     const editor = await createEditor(model);
     const run = editor.agent.ask('Write');
 
-    await settle();
+    // The first message awaits a document read, so the model is called a few ticks later.
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
     run.stop();
 
     await expect(run.result).resolves.toMatchObject({ status: 'stopped', changed: [] });

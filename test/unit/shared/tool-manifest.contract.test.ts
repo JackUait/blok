@@ -489,7 +489,7 @@ describe('buildAgentContract', () => {
 
     // A toolbox seed like columnCount is not saved data; naming it leads straight into DATA_REJECTED.
     expect(type.description).toBe(`A block tool: row, list. A variant sets these data fields; the tool's other required fields still go in data: list {style: "checklist"}.`);
-    // describe({ tool }) shows these variants too.
+    // The manifest entry, which describe shows for a tool, lists these variants too.
     expect(contract.manifest.blocks.find(entry => entry.name === 'row')?.variants).toEqual([{ name: 'row-2', title: '2 columns', data: {} }]);
   });
 });

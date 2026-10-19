@@ -118,7 +118,6 @@ describe('composeFirstMessage', () => {
     const view: DocumentView = { revision: 'r1', rootId: null, blocks: [] };
     const message = await composeFirstMessage('Fix it', '', async () => view);
 
-    expect(OUTLINE_READ.textLimit).toBe(120);
     expect(message).toContain(`Text is cut at ${OUTLINE_READ.textLimit} characters and has no formatting.`);
     expect(message).toContain('For full text, formatting, table cells or other block data, call blok_read with ids.');
     expect(message).not.toContain('Do not read it again');

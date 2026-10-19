@@ -82,6 +82,7 @@ export const listMcpTools = (
         'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
         `A handle expires after ${idleDuration} without a call; then open again.`,
         'Write rich text with commands such as text.format or markdown.insert. Never put Markdown or HTML into block data.',
+        'A CORRECTED warning means Blok changed your command. Check the result is what you meant.',
       ].join(' '),
       inputSchema: {
         type: 'object',

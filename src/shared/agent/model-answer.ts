@@ -51,12 +51,23 @@ const answerField = (key: string, value: unknown): unknown => {
   return key === 'changed' && isRecord(value) ? cappedChanged(value) : value;
 };
 
+// Warnings come right after ok: after up to 50 block rows a model skims past them.
+const FIRST_KEYS = ['ok', 'warnings'];
+
 /**
  * The answer a model sees for one batch: empty fields left out, long id lists capped.
  * Hosts keep the full result; only what goes to the model is trimmed.
  */
-export const modelAnswer = (result: AgentResult): Answer => Object.fromEntries(Object.entries(result).flatMap(([key, value]) => {
-  const field = answerField(key, value);
+export const modelAnswer = (result: AgentResult): Answer => {
+  const entries = Object.entries(result);
+  const ordered = [
+    ...FIRST_KEYS.flatMap(key => entries.filter(([name]) => name === key)),
+    ...entries.filter(([name]) => !FIRST_KEYS.includes(name)),
+  ];
 
-  return ['refs', 'changed', 'warnings'].includes(key) && isEmpty(field) ? [] : [[key, field]];
-}));
+  return Object.fromEntries(ordered.flatMap(([key, value]) => {
+    const field = answerField(key, value);
+
+    return ['refs', 'changed', 'warnings'].includes(key) && isEmpty(field) ? [] : [[key, field]];
+  }));
+};

@@ -32,7 +32,7 @@ export const insertSpecIds = (spec: unknown): string[] => !isRecord(spec) ? [] :
 /** Why "$ref" resolves to nothing: `isBlock` when a block has that id, `known` the refs set so far. */
 export const unresolvedRefMessage = (ref: string, isBlock: boolean, known: readonly string[]): string => {
   if (isBlock) {
-    return `"$${ref}" is not a ref, but block "${ref}" exists. Use "${ref}" without the "$".`;
+    return `"$${ref}" is not a ref. To mean the existing block "${ref}", write "${ref}" without the "$". To mean a block this batch creates, give that command "ref": "${ref}".`;
   }
 
   const example = /^[A-Za-z][\w-]*$/.test(ref) ? ref : (known[0] ?? 'intro');

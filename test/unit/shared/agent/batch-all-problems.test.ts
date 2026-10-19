@@ -259,7 +259,7 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
       ] }));
 
       expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 1, path: '/commands/1/args/position/after' });
-      expect(error.message).toBe('"$h1" is not a ref, but block "h1" exists. Use "h1" without the "$".');
+      expect(error.message).toBe('"$h1" is not a ref. To mean the existing block "h1", write "h1" without the "$". To mean a block this batch creates, give that command "ref": "h1".');
     } finally {
       session.close();
     }
@@ -402,7 +402,7 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
     ]));
 
     expect(error.others).toEqual([expect.objectContaining({
-      code: 'BLOCK_NOT_FOUND', commandIndex: 1, message: '"$p1" is not a ref, but block "p1" exists. Use "p1" without the "$".',
+      code: 'BLOCK_NOT_FOUND', commandIndex: 1, message: '"$p1" is not a ref. To mean the existing block "p1", write "p1" without the "$". To mean a block this batch creates, give that command "ref": "p1".',
     })]);
   });
 });

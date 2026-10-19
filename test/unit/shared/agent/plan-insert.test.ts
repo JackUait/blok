@@ -457,7 +457,7 @@ describe('block.insert planning', () => {
     const error = failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } }]));
 
     expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', path: '/commands/0/args/position/after', details: { ref: 'tg' } });
-    expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
+    expect(error.message).toBe('"$tg" is not a ref. To mean the existing block "tg", write "tg" without the "$". To mean a block this batch creates, give that command "ref": "tg".');
   });
 
   it('fills a missing required field from its default only when the tool lists it in fillMissing', () => {
@@ -484,7 +484,7 @@ describe('block.insert planning', () => {
       { name: 'block.insert', args: { type: 'paragraph' }, ref: 'tg' },
     ]));
 
-    expect(error.message).toBe('"$tg" is not a ref, but block "tg" exists. Use "tg" without the "$".');
+    expect(error.message).toBe('"$tg" is not a ref. To mean the existing block "tg", write "tg" without the "$". To mean a block this batch creates, give that command "ref": "tg".');
   });
 
   it('gives no plain-id hint for an id a later command reserves', () => {

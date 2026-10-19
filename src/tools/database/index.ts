@@ -8623,24 +8623,7 @@ export class DatabaseTool implements BlockTool {
 
     if (params.type === 'relation') settings.relation = { targetDatabaseId: this.dataId };
     const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);
-    const view = this.model.getView(this.activeViewId);
-    const schema = this.model.getSchema();
-    const placed = params.afterId !== undefined || params.beforeId !== undefined;
-    // A legacy `visibleProperties` view reads every unlisted property as hidden. Shown
-    // here so it matches a view that never listed it; board and other layouts keep hiding it.
-    const reveal = view !== undefined && defaultVisible(view, prop)
-      && resolveViewProperties(view, schema).find((p) => p.id === prop.id)?.visible !== true;
-
-    if (view !== undefined && (placed || reveal)) {
-      // The view's column order, not the schema's: a user may have dragged the columns.
-      const order = resolveViewProperties(view, schema).map((p) => p.id).filter((id) => id !== prop.id);
-      const beforeId = params.beforeId ?? order[order.indexOf(params.afterId ?? '') + 1] ?? null;
-      const ordered = placed ? { ...view, properties: withPropertyOrder(view, schema, prop.id, beforeId) } : view;
-      const properties = reveal ? withPropertySetting(ordered, schema, prop.id, { visible: true }) : ordered.properties ?? [];
-
-      this.model.updateView(view.id, { properties });
-      void this.sync.syncUpdateView({ viewId: view.id, changes: { properties } });
-    }
+    this.showInActiveView(prop, params.afterId, params.beforeId);
     this.writeEmptyLists(prop.id);
     void this.sync.syncCreateProperty({
       id: prop.id,
@@ -8654,6 +8637,32 @@ export class DatabaseTool implements BlockTool {
     this.commitSchema();
 
     return prop;
+  }
+
+  /**
+   * Places a property just added from the active view and makes sure it shows
+   * there. A legacy `visibleProperties` view reads every unlisted property as
+   * hidden; a table or form shows it, as it would in a view that never listed it.
+   * Other layouts keep hiding it.
+   */
+  private showInActiveView(prop: PropertyDefinition, afterId?: string, beforeId?: string): void {
+    const view = this.model.getView(this.activeViewId);
+
+    if (view === undefined) return;
+    const schema = this.model.getSchema();
+    const placed = afterId !== undefined || beforeId !== undefined;
+    const reveal = defaultVisible(view, prop) && resolveViewProperties(view, schema).find((p) => p.id === prop.id)?.visible !== true;
+
+    if (!placed && !reveal) return;
+    // The view's column order, not the schema's: a user may have dragged the columns.
+    const order = resolveViewProperties(view, schema).map((p) => p.id).filter((id) => id !== prop.id);
+    const before = beforeId ?? order[order.indexOf(afterId ?? '') + 1] ?? null;
+    const ordered = placed ? withPropertyOrder(view, schema, prop.id, before) : view.properties;
+    // Not placed means revealed, so `ordered` is only read when it was just written.
+    const properties = reveal ? withPropertySetting({ ...view, properties: ordered }, schema, prop.id, { visible: true }) : ordered ?? [];
+
+    this.model.updateView(view.id, { properties });
+    void this.sync.syncUpdateView({ viewId: view.id, changes: { properties } });
   }
 
   /**
@@ -8759,6 +8768,7 @@ export class DatabaseTool implements BlockTool {
       settings
     );
 
+    this.showInActiveView(copy);
     for (const row of this.model.getOrderedRows()) {
       const value = row.properties[propertyId];
 

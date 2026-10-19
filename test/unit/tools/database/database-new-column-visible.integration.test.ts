@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SCHEMA, buildTool, makeDoc, tableData } from './tier3-harness';
 import type { DatabaseTool } from '../../../../src/tools/database';
+import { csvDatabaseBlocks } from '../../../../src/tools/database/database-csv';
 import type { DatabaseData } from '../../../../src/tools/database/types';
 
 vi.mock('../../../../src/blok', () => ({
@@ -115,6 +116,30 @@ describe('DatabaseTool — a column added from a table view shows in it', () => 
     expect(headerOrder(el)).not.toContain('where');
     expect(headerOrder(el)).toContain(id);
     expect(tool.save(el).views[0].properties?.find((p) => p.id === 'where')?.visible).toBe(false);
+  });
+
+  it('header "+" on a CSV-imported database shows the new column', () => {
+    const imported = csvDatabaseBlocks([['Task', 'Points'], ['Write', '3']], {
+      newId: (() => { let n = 0; return () => `csv${n++}`; })(), untitled: 'Column', viewName: 'Table', title: 'Pasted',
+    });
+    const { tool, el } = build(imported.data);
+    const before = imported.data.schema.map((p) => p.id);
+
+    addFromHeaderPlus(el);
+    const id = tool.save(el).schema.find((p) => !before.includes(p.id))?.id;
+
+    expect(id).toBeDefined();
+    expect(headerOrder(el)).toEqual([...before, id]);
+  });
+
+  it('Duplicate property on that view shows the copy', () => {
+    const { tool, el } = build(legacy(['notes', 'where']));
+
+    el.querySelector<HTMLElement>('[data-blok-database-table-column-header][data-property-id="notes"] [data-blok-database-table-column-button]')?.click();
+    menuItem('tools.database.duplicateProperty').click();
+    const id = newId(tool, el);
+
+    expect(headerOrder(el)).toContain(id);
   });
 
   it('a column hidden in the view stays hidden after another is added', () => {

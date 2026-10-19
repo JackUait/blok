@@ -116,6 +116,23 @@ describe('group-keys', () => {
       expect(defaultGroupSort('date')).toBe('ascending');
       expect(defaultGroupSort('number')).toBe('ascending');
       expect(defaultGroupSort('text')).toBe('manual');
+      expect(defaultGroupSort('status')).toBe('ascending');
+    });
+
+    it('sorts status groups ascending in workflow order, not by label', () => {
+      const status = prop('status');
+      // Group order, then option order: what getSelectOptions hands over.
+      const workflow = [
+        { id: 's-todo', label: 'Not started', position: 'a0' },
+        { id: 's-doing', label: 'In progress', position: 'a0' },
+        { id: 's-done', label: 'Done', position: 'a0' },
+      ];
+      const keys = ['s-done', NO_VALUE_GROUP_KEY, 's-todo', 's-doing'];
+
+      expect(orderGroupKeys(status, keys, {}, NOW, workflow)).toEqual(['s-todo', 's-doing', 's-done', NO_VALUE_GROUP_KEY]);
+      expect(orderGroupKeys(status, keys, { sort: 'ascending' }, NOW, workflow)).toEqual(['s-todo', 's-doing', 's-done', NO_VALUE_GROUP_KEY]);
+      expect(orderGroupKeys(status, keys, { sort: 'descending' }, NOW, workflow)).toEqual(['s-done', 's-doing', 's-todo', NO_VALUE_GROUP_KEY]);
+      expect(orderGroupKeys(status, keys, { sort: 'manual' }, NOW, workflow)).toEqual(['s-todo', 's-doing', 's-done', NO_VALUE_GROUP_KEY]);
     });
   });
 

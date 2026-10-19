@@ -439,6 +439,18 @@ describe('view settings panel', () => {
     expect(exists('database-group-color-columns')).toBe(true);
   });
 
+  it('shows Ascending as the status group sort when the view stores none (research/08)', () => {
+    const h = harness({ type: 'board', groupBy: 'prog' });
+    const panel = h.open('group');
+
+    try {
+      expect(panel.root.querySelector('[data-blok-testid="database-group-sort"] [data-blok-database-panel-value]')?.textContent)
+        .toBe('tools.database.groupSortAscending');
+    } finally {
+      panel.close();
+    }
+  });
+
   it('shows no group sort for a person grouping', () => {
     harness({ groupBy: 'owner' }).open('group');
 

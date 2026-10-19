@@ -135,7 +135,7 @@ import type { ViewGroupEntry, ViewSettingsAction, ViewSettingsContext } from './
 import { openFilterList } from './database-view-settings-panel';
 import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
-import { GROUPABLE_TYPES, groupValueForKey } from './group-keys';
+import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey } from './group-keys';
 import { resolveRowColors } from './view-data';
 import { groupLabel } from './database-group-labels';
 import { buildChartData, foldChartData } from './chart-data';
@@ -4443,12 +4443,15 @@ export class DatabaseTool implements BlockTool {
     const listed = statusBy === 'group' && property?.type === 'status'
       ? statusGroupsOf(property).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))
       : localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId, { statusBy }), this.api.i18n);
-    const sort = view?.groupSettings?.sort ?? 'manual';
-    const options = sort === 'manual'
-      ? listed
+    const sort = view?.groupSettings?.sort ?? (property === undefined ? 'manual' : defaultGroupSort(property.type));
+    // A status's Ascending is its workflow order, the order `listed` is in.
+    const inOrder = sort === 'manual' || (property?.type === 'status' && sort === 'ascending');
+    const reorder = (): SelectOption[] => property?.type === 'status'
+      ? [...listed].reverse()
       : [...listed].sort((x, y) => x.label.localeCompare(y.label) * (sort === 'descending' ? -1 : 1));
+    const options = inOrder ? listed : reorder();
     const stored = view?.noValueGroupPosition;
-    const index = stored === undefined || sort !== 'manual' ? -1 : options.findIndex((option) => option.position > stored);
+    const index = stored === undefined || !inOrder ? -1 : options.findIndex((option) => option.position > stored);
     const all = index === -1
       ? [...options, noValue]
       : [...options.slice(0, index), noValue, ...options.slice(index)];

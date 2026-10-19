@@ -21,9 +21,12 @@ const OPTION_LIKE: readonly PropertyType[] = ['select', 'multiSelect', 'status']
 
 const PERSON_LIKE: readonly PropertyType[] = ['person', 'createdBy', 'lastEditedBy'];
 
-/** Notion's defaults per type (research/08): options keep manual order, numbers and dates go up. */
+/**
+ * Notion's defaults per type (research/08): options keep manual order; numbers,
+ * dates and statuses go up. A status goes up by workflow, not by label.
+ */
 export const defaultGroupSort = (type: PropertyType): GroupSort =>
-  type === 'number' || type === 'checkbox' || DATE_LIKE.includes(type) ? 'ascending' : 'manual';
+  type === 'number' || type === 'checkbox' || type === 'status' || DATE_LIKE.includes(type) ? 'ascending' : 'manual';
 
 /** Notion's API default bucket is unknown; 0 to 1000 in steps of 100 is a guess. */
 const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
@@ -235,7 +238,13 @@ export const orderGroupKeys = (
   // Status groups and options come in order already; their positions live in two key spaces.
   const manual = isOptionType && groupOptions === undefined ? [...real].sort(byPosition) : real;
   const listed = groupOptions === undefined ? manual : [...real].sort((a, b) => options.findIndex((o) => o.id === a) - options.findIndex((o) => o.id === b));
-  const ordered = sort === 'manual' ? listed : [...real].sort((a, b) => compare(a, b) * sign);
+  // A status sorts by workflow, the order `listed` is in.
+  const sorted = (): string[] => {
+    if (property.type !== 'status') return [...real].sort((a, b) => compare(a, b) * sign);
+
+    return sign === 1 ? listed : [...listed].reverse();
+  };
+  const ordered = sort === 'manual' ? listed : sorted();
 
   if (!hasEmpty) return ordered;
 

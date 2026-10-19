@@ -3655,6 +3655,59 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    describe('grouped by a status', () => {
+      // Labels sort Done < In progress < Not started, the reverse of the workflow.
+      const statusBoard = (view: Partial<DatabaseViewConfig> = {}): { tool: DatabaseTool; element: HTMLElement } => {
+        const options = createDatabaseOptions({
+          schema: [
+            { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+            { id: 'prop-stage', name: 'Stage', type: 'status', position: 'a1',
+              status: { groups: [
+                { id: 'todo', kind: 'todo', name: 'To-do', position: 'a0' },
+                { id: 'doing', kind: 'inProgress', name: 'In progress', position: 'a1' },
+                { id: 'complete', kind: 'complete', name: 'Complete', position: 'a2' },
+              ] },
+              config: { options: [
+                { id: 's-done', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' },
+                { id: 's-doing', label: 'In progress', color: 'blue', position: 'a0', groupId: 'doing' },
+                { id: 's-todo', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' },
+              ] } },
+          ],
+          views: [{
+            id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-stage',
+            sorts: [], filters: [], visibleProperties: [], ...view,
+          }],
+        });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        tool.rendered();
+
+        return { tool, element };
+      };
+
+      it.each([
+        ['no stored sort', {}, ['s-todo', 's-doing', 's-done', NO_VALUE_GROUP_KEY]],
+        ['ascending', { groupSettings: { sort: 'ascending' } }, ['s-todo', 's-doing', 's-done', NO_VALUE_GROUP_KEY]],
+        ['descending', { groupSettings: { sort: 'descending' } }, ['s-done', 's-doing', 's-todo', NO_VALUE_GROUP_KEY]],
+        ['manual', { groupSettings: { sort: 'manual' } }, ['s-todo', 's-doing', 's-done', NO_VALUE_GROUP_KEY]],
+      ] as const)('orders columns by workflow, not label, with %s', (_name, view, expected) => {
+        const { tool, element } = statusBoard(view);
+
+        expect(columnIds(element)).toEqual(expected);
+
+        tool.destroy();
+      });
+
+      it('keeps the stored no-value place under the default sort', () => {
+        const { tool, element } = statusBoard({ noValueGroupPosition: '0' });
+
+        expect(columnIds(element)).toEqual([NO_VALUE_GROUP_KEY, 's-todo', 's-doing', 's-done']);
+
+        tool.destroy();
+      });
+    });
+
     it('places a group added from "New group" after the no-value column, and keeps it there', () => {
       const { tool, element } = renderBoard([]);
       const addColumn = queryByData(element, 'data-blok-database-add-column');

@@ -128,10 +128,14 @@ export class DocSnapshot {
       chain.forEach(id => checked.add(id));
     });
 
+    // A block has one parent, so one set is enough to know it is already placed.
+    const placed = new Set<string>();
+
     records.forEach(({ block, order }) => {
       for (const childId of order) {
-        if (blocks.get(childId)?.parent === block.id && !block.content.includes(childId)) {
+        if (blocks.get(childId)?.parent === block.id && !placed.has(childId)) {
           block.content.push(childId);
+          placed.add(childId);
         }
       }
     });
@@ -145,8 +149,9 @@ export class DocSnapshot {
       }
       const parent = blocks.get(block.parent);
 
-      if (parent !== undefined && !parent.content.includes(block.id)) {
+      if (parent !== undefined && !placed.has(block.id)) {
         parent.content.push(block.id);
+        placed.add(block.id);
       }
     }
 

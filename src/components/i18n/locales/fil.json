@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Huling na-edit ni {name}",
   "tools.database.rowWordCount": "Mga salita: {words}, mga karakter: {characters}",
   "tools.database.rowMenuPage": "Pahina",
+  "tools.database.rowAddToFavorites": "Idagdag sa Mga Paborito",
+  "tools.database.rowRemoveFromFavorites": "Alisin sa Mga Paborito",
   "tools.database.rowLastEdited": "Huling na-edit",
   "tools.database.tableLinkCopied": "Nakopya ang link",
   "tools.database.tableDuplicate": "Gumawa ng kopya",

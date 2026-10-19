@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Naposledy upraveno uživatelem {name}",
   "tools.database.rowWordCount": "Počet slov: {words}, počet znaků: {characters}",
   "tools.database.rowMenuPage": "Stránka",
+  "tools.database.rowAddToFavorites": "Přidat do oblíbených",
+  "tools.database.rowRemoveFromFavorites": "Odebrat z oblíbených",
   "tools.database.rowLastEdited": "Naposledy upraveno",
   "tools.database.tableLinkCopied": "Odkaz zkopírován",
   "tools.database.tableDuplicate": "Duplikovat",

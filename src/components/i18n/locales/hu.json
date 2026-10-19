@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Utoljára szerkesztette: {name}",
   "tools.database.rowWordCount": "Szavak: {words}, karakterek: {characters}",
   "tools.database.rowMenuPage": "Oldal",
+  "tools.database.rowAddToFavorites": "Hozzáadás a kedvencekhez",
+  "tools.database.rowRemoveFromFavorites": "Eltávolítás a kedvencek közül",
   "tools.database.rowLastEdited": "Utoljára szerkesztve",
   "tools.database.tableLinkCopied": "Hivatkozás másolva",
   "tools.database.tableDuplicate": "Megkettőzés",

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Останнє редагування: {name}",
   "tools.database.rowWordCount": "Слів: {words}, символів: {characters}",
   "tools.database.rowMenuPage": "Сторінка",
+  "tools.database.rowAddToFavorites": "Додати до обраного",
+  "tools.database.rowRemoveFromFavorites": "Видалити з обраного",
   "tools.database.rowLastEdited": "Останнє редагування",
   "tools.database.tableLinkCopied": "Посилання скопійовано",
   "tools.database.tableDuplicate": "Дублювати",

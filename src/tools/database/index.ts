@@ -34,6 +34,7 @@ import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
 import { calculationItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import type { RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -1038,6 +1039,26 @@ export class DatabaseTool implements BlockTool {
       comment: (rowId, propertyId, anchor) => comments.open({ databaseId: this.block.id, rowId, ...(propertyId !== undefined ? { propertyId } : {}) }, anchor),
       ...this.commentBadgeLever(),
     };
+  }
+
+  /**
+   * The row menu's Add to Favorites, asked fresh on each open. It changes no
+   * document, so read-only gets it too. A throw counts as not a favorite.
+   */
+  private favoriteFor(rowId: string): RowFavorite | undefined {
+    const favorites = this.config.favorites;
+
+    if (favorites === undefined) return undefined;
+    const input = { databaseId: this.dataId, rowId };
+    const on = ((): boolean => {
+      try {
+        return favorites.isFavorite(input);
+      } catch {
+        return false;
+      }
+    })();
+
+    return { on, onToggle: () => favorites.onToggle({ ...input, favorite: !on }) };
   }
 
   /** Row comment counts, when the host gives `count` or comments are built in. A throw counts as zero. */
@@ -5130,6 +5151,7 @@ export class DatabaseTool implements BlockTool {
         handlers: this.tableHandlers(context, () => renderer),
       }),
       ...this.commentLever(),
+      ...(this.config.favorites !== undefined ? { favorite: (rowId: string) => this.favoriteFor(rowId) } : {}),
       ...this.autofillLever(readOnly, context),
       notify: (message) => this.api.notifier.show({ message }),
       ...(readOnly ? {} : { buttonError: (property: PropertyDefinition) => this.buttonHasError(property.id) }),
@@ -6540,9 +6562,11 @@ export class DatabaseTool implements BlockTool {
 
     this.cardMenuPopover?.destroy();
     card.setAttribute('data-popover-open', '');
+    const favorite = this.favoriteFor(rowId);
     const popover = openMenu(anchor, rowMenuItems({
       i18n: this.api.i18n,
       properties,
+      ...(favorite !== undefined ? { favorite } : {}),
       ...edits,
       onOpenIn: (mode) => this.handleRowClick(rowId, mode),
       onCopyLink: () => this.copyRowLink(rowId),

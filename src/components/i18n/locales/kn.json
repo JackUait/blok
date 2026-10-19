@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಿದ್ದಾರೆ",
   "tools.database.rowWordCount": "ಪದಗಳು: {words}, ಅಕ್ಷರಗಳು: {characters}",
   "tools.database.rowMenuPage": "ಪುಟ",
+  "tools.database.rowAddToFavorites": "ಮೆಚ್ಚಿನವುಗಳಿಗೆ ಸೇರಿಸಿ",
+  "tools.database.rowRemoveFromFavorites": "ಮೆಚ್ಚಿನವುಗಳಿಂದ ತೆಗೆದುಹಾಕಿ",
   "tools.database.rowLastEdited": "ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಲಾಗಿದೆ",
   "tools.database.tableLinkCopied": "ಲಿಂಕ್ ನಕಲಾಗಿದೆ",
   "tools.database.tableDuplicate": "ನಕಲು ಮಾಡಿ",

@@ -327,6 +327,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-group-calc-count': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/database-group-calc-cap-counts': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/database-timeline-zoom-*': exempt('cut-v1', VIEW_LAYOUT_CUT),
+  'menu:database/database-row-favorite': exempt('view-only', 'Hands the row to the host favorites list (config.favorites); the document does not change.'),
   'menu:database/database-row-edit-icon': fld('database-row.icon'),
   'menu:database/database-row-open-in-*': exempt('view-only', 'Opens the row page in a peek, a side panel or full page; the document does not change.'),
   'menu:database/database-row-comment': exempt('view-only', 'Hands the row to the host comment UI; the document does not change.'),

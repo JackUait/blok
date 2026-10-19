@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "נערך לאחרונה על ידי {name}",
   "tools.database.rowWordCount": "מילים: {words}, תווים: {characters}",
   "tools.database.rowMenuPage": "דף",
+  "tools.database.rowAddToFavorites": "הוספה למועדפים",
+  "tools.database.rowRemoveFromFavorites": "הסרה מהמועדפים",
   "tools.database.rowLastEdited": "נערך לאחרונה",
   "tools.database.tableLinkCopied": "הקישור הועתק",
   "tools.database.tableDuplicate": "שכפל",

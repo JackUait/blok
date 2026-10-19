@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} විසින් අවසන් සංස්කරණය",
   "tools.database.rowWordCount": "වචන: {words}, අක්ෂර: {characters}",
   "tools.database.rowMenuPage": "පිටුව",
+  "tools.database.rowAddToFavorites": "ප්‍රියතමවලට එක් කරන්න",
+  "tools.database.rowRemoveFromFavorites": "ප්‍රියතමවලින් ඉවත් කරන්න",
   "tools.database.rowLastEdited": "අවසන් සංස්කරණය",
   "tools.database.tableLinkCopied": "සබැඳිය පිටපත් කරන ලදී",
   "tools.database.tableDuplicate": "අනුපිටපත",

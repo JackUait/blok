@@ -212,6 +212,7 @@ export {
   DatabaseLinkedSources,
   DatabaseBacklink,
   DatabaseBacklinks,
+  DatabaseFavorites,
   SubItemsDisplay,
   SubItemsFilter,
 } from './tools/database';

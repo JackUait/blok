@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} द्वारा अंतिम बार संपादित",
   "tools.database.rowWordCount": "शब्द: {words}, वर्ण: {characters}",
   "tools.database.rowMenuPage": "पृष्ठ",
+  "tools.database.rowAddToFavorites": "पसंदीदा में जोड़ें",
+  "tools.database.rowRemoveFromFavorites": "पसंदीदा से हटाएं",
   "tools.database.rowLastEdited": "अंतिम बार संपादित",
   "tools.database.tableLinkCopied": "लिंक कॉपी किया गया",
   "tools.database.tableDuplicate": "प्रतिलिपि बनाएँ",

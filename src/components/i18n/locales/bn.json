@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",
   "tools.database.rowWordCount": "শব্দ: {words}, অক্ষর: {characters}",
   "tools.database.rowMenuPage": "পৃষ্ঠা",
+  "tools.database.rowAddToFavorites": "পছন্দের তালিকায় যোগ করুন",
+  "tools.database.rowRemoveFromFavorites": "পছন্দের তালিকা থেকে সরান",
   "tools.database.rowLastEdited": "সর্বশেষ সম্পাদনা",
   "tools.database.tableLinkCopied": "লিঙ্ক কপি হয়েছে",
   "tools.database.tableDuplicate": "প্রতিলিপি",

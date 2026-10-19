@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} ਦੁਆਰਾ ਆਖਰੀ ਸੋਧ",
   "tools.database.rowWordCount": "ਸ਼ਬਦ: {words}, ਅੱਖਰ: {characters}",
   "tools.database.rowMenuPage": "ਪੰਨਾ",
+  "tools.database.rowAddToFavorites": "ਮਨਪਸੰਦ ਵਿੱਚ ਸ਼ਾਮਲ ਕਰੋ",
+  "tools.database.rowRemoveFromFavorites": "ਮਨਪਸੰਦ ਵਿੱਚੋਂ ਹਟਾਓ",
   "tools.database.rowLastEdited": "ਆਖਰੀ ਸੋਧ",
   "tools.database.tableLinkCopied": "ਲਿੰਕ ਕਾਪੀ ਹੋ ਗਿਆ",
   "tools.database.tableDuplicate": "ਨਕਲ ਬਣਾਓ",

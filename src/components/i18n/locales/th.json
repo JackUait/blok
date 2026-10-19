@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "แก้ไขล่าสุดโดย {name}",
   "tools.database.rowWordCount": "คำ: {words}, อักขระ: {characters}",
   "tools.database.rowMenuPage": "หน้า",
+  "tools.database.rowAddToFavorites": "เพิ่มในรายการโปรด",
+  "tools.database.rowRemoveFromFavorites": "นำออกจากรายการโปรด",
   "tools.database.rowLastEdited": "แก้ไขล่าสุด",
   "tools.database.tableLinkCopied": "คัดลอกลิงก์แล้ว",
   "tools.database.tableDuplicate": "ทำซ้ำ",

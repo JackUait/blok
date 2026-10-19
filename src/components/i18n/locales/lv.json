@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Pēdējo reizi rediģēja {name}",
   "tools.database.rowWordCount": "Vārdu skaits: {words}, rakstzīmju skaits: {characters}",
   "tools.database.rowMenuPage": "Lapa",
+  "tools.database.rowAddToFavorites": "Pievienot izlasei",
+  "tools.database.rowRemoveFromFavorites": "Noņemt no izlases",
   "tools.database.rowLastEdited": "Pēdējo reizi rediģēts",
   "tools.database.tableLinkCopied": "Saite nokopēta",
   "tools.database.tableDuplicate": "Dublēt",

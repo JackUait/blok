@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Viimeksi muokannut {name}",
   "tools.database.rowWordCount": "Sanoja: {words}, merkkejä: {characters}",
   "tools.database.rowMenuPage": "Sivu",
+  "tools.database.rowAddToFavorites": "Lisää suosikkeihin",
+  "tools.database.rowRemoveFromFavorites": "Poista suosikeista",
   "tools.database.rowLastEdited": "Viimeksi muokattu",
   "tools.database.tableLinkCopied": "Linkki kopioitu",
   "tools.database.tableDuplicate": "Monista",

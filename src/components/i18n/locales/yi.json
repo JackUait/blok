@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "לעצט רעדאַקטירט דורך {name}",
   "tools.database.rowWordCount": "ווערטער: {words}, צייכנס: {characters}",
   "tools.database.rowMenuPage": "בלאַט",
+  "tools.database.rowAddToFavorites": "צולייגן צו פֿאַוואָריטן",
+  "tools.database.rowRemoveFromFavorites": "אַראָפּנעמען פֿון פֿאַוואָריטן",
   "tools.database.rowLastEdited": "לעצט רעדאַקטירט",
   "tools.database.tableLinkCopied": "לינק קאָפּירט",
   "tools.database.tableDuplicate": "דופּליקירן",

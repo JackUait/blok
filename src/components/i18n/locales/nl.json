@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Laatst bewerkt door {name}",
   "tools.database.rowWordCount": "Woorden: {words}, tekens: {characters}",
   "tools.database.rowMenuPage": "Pagina",
+  "tools.database.rowAddToFavorites": "Toevoegen aan favorieten",
+  "tools.database.rowRemoveFromFavorites": "Verwijderen uit favorieten",
   "tools.database.rowLastEdited": "Laatst bewerkt",
   "tools.database.tableLinkCopied": "Link gekopieerd",
   "tools.database.tableDuplicate": "Dupliceren",

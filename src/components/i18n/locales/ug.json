@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",
   "tools.database.rowWordCount": "سۆز: {words}، ھەرپ: {characters}",
   "tools.database.rowMenuPage": "بەت",
+  "tools.database.rowAddToFavorites": "ياقتۇرغانلارغا قوشۇش",
+  "tools.database.rowRemoveFromFavorites": "ياقتۇرغانلاردىن چىقىرىۋېتىش",
   "tools.database.rowLastEdited": "ئاخىرقى تەھرىرلەش",
   "tools.database.tableLinkCopied": "ئۇلانما كۆچۈرۈلدى",
   "tools.database.tableDuplicate": "كۆپەيتىش",

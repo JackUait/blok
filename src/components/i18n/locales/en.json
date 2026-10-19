@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Last edited by {name}",
   "tools.database.rowWordCount": "Words: {words}, characters: {characters}",
   "tools.database.rowMenuPage": "Page",
+  "tools.database.rowAddToFavorites": "Add to Favorites",
+  "tools.database.rowRemoveFromFavorites": "Remove from Favorites",
   "tools.database.rowLastEdited": "Last edited",
   "tools.database.tableLinkCopied": "Link copied",
   "tools.database.tableDuplicate": "Duplicate",

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Viimati muutis {name}",
   "tools.database.rowWordCount": "Sõnu: {words}, märke: {characters}",
   "tools.database.rowMenuPage": "Leht",
+  "tools.database.rowAddToFavorites": "Lisa lemmikutesse",
+  "tools.database.rowRemoveFromFavorites": "Eemalda lemmikutest",
   "tools.database.rowLastEdited": "Viimati muudetud",
   "tools.database.tableLinkCopied": "Link kopeeriti",
   "tools.database.tableDuplicate": "Dubleeri",

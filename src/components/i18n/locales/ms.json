@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Kali terakhir disunting oleh {name}",
   "tools.database.rowWordCount": "Perkataan: {words}, aksara: {characters}",
   "tools.database.rowMenuPage": "Halaman",
+  "tools.database.rowAddToFavorites": "Tambah ke Kegemaran",
+  "tools.database.rowRemoveFromFavorites": "Alih keluar daripada Kegemaran",
   "tools.database.rowLastEdited": "Kali terakhir disunting",
   "tools.database.tableLinkCopied": "Pautan disalin",
   "tools.database.tableDuplicate": "Gandakan",

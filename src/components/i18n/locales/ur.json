@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} نے آخری ترمیم کی",
   "tools.database.rowWordCount": "الفاظ: {words}، حروف: {characters}",
   "tools.database.rowMenuPage": "صفحہ",
+  "tools.database.rowAddToFavorites": "پسندیدہ میں شامل کریں",
+  "tools.database.rowRemoveFromFavorites": "پسندیدہ سے ہٹائیں",
   "tools.database.rowLastEdited": "آخری ترمیم",
   "tools.database.tableLinkCopied": "لنک کاپی ہو گیا",
   "tools.database.tableDuplicate": "نقل بنائیں",

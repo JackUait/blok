@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} сүүлд засварласан",
   "tools.database.rowWordCount": "Үгийн тоо: {words}, тэмдэгтийн тоо: {characters}",
   "tools.database.rowMenuPage": "Хуудас",
+  "tools.database.rowAddToFavorites": "Дуртай зүйлд нэмэх",
+  "tools.database.rowRemoveFromFavorites": "Дуртай зүйлээс хасах",
   "tools.database.rowLastEdited": "Сүүлд засварласан",
   "tools.database.tableLinkCopied": "Холбоосыг хуулав",
   "tools.database.tableDuplicate": "Хувилах",

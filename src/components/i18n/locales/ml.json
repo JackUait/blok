@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "അവസാനം തിരുത്തിയത്: {name}",
   "tools.database.rowWordCount": "വാക്കുകൾ: {words}, പ്രതീകങ്ങൾ: {characters}",
   "tools.database.rowMenuPage": "പേജ്",
+  "tools.database.rowAddToFavorites": "പ്രിയപ്പെട്ടവയിലേക്ക് ചേർക്കുക",
+  "tools.database.rowRemoveFromFavorites": "പ്രിയപ്പെട്ടവയിൽ നിന്ന് നീക്കം ചെയ്യുക",
   "tools.database.rowLastEdited": "അവസാനം തിരുത്തിയത്",
   "tools.database.tableLinkCopied": "ലിങ്ക് പകർത്തി",
   "tools.database.tableDuplicate": "പകർപ്പുണ്ടാക്കുക",

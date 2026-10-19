@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Nazadnje urejeno: {name}",
   "tools.database.rowWordCount": "Besede: {words}, znaki: {characters}",
   "tools.database.rowMenuPage": "Stran",
+  "tools.database.rowAddToFavorites": "Dodaj med priljubljene",
+  "tools.database.rowRemoveFromFavorites": "Odstrani iz priljubljenih",
   "tools.database.rowLastEdited": "Nazadnje urejeno",
   "tools.database.tableLinkCopied": "Povezava kopirana",
   "tools.database.tableDuplicate": "Podvoji",

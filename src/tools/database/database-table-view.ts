@@ -27,7 +27,7 @@ import type { CellChange, TableState } from './database-table-grid';
 import { pageIconElement, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
-import type { CountCap } from './database-table-menus';
+import type { CountCap, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize } from './database-table-resize';
 import { DatabaseTableColumnDrag } from './database-table-column-drag';
@@ -143,6 +143,8 @@ export interface DatabaseTableViewOptions {
   comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void;
   /** The host's comment counts. Without it there are no badges. */
   commentBadges?: CommentBadges;
+  /** The host's favorites. Without it the row menu has no Add to Favorites. */
+  favorite?: (rowId: string) => RowFavorite | undefined;
   /** Where the selection bar goes: the view toolbar row, which it replaces (research/08). Else the table's top. */
   selectionBarSlot?: () => HTMLElement | null;
   /** AI Autofill run actions. The tool leaves it out when read-only, locked or without `config.ai`. */
@@ -1572,8 +1574,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     this.grid?.selectRows([rowId]);
+    const favorite = this.options.favorite?.(rowId);
+
     this.showMenu(anchor, rowMenuItems({
       i18n: this.options.i18n,
+      ...(favorite !== undefined ? { favorite } : {}),
       properties: this.columns.map((c) => c.property).filter((p) => p.type !== 'title'),
       onEditIcon: () => handlers.editRowIcon(rowId),
       onEditProperty: (propertyId) => {

@@ -94,6 +94,35 @@ describe('row ⋮⋮ menu (research/08)', () => {
     expect(footer.element?.textContent).toContain('tools.database.rowWordCount:{"words":1,"characters":5}');
   });
 
+  it('has no Add to Favorites without the host favorites lever', () => {
+    const titles = items(context()).map((i) => i.title);
+
+    expect(titles).not.toContain('tools.database.rowAddToFavorites');
+    expect(titles).not.toContain('tools.database.rowRemoveFromFavorites');
+  });
+
+  it('Add to Favorites comes first under "Page", before Edit icon (research/08)', () => {
+    const onToggle = vi.fn();
+    const list = items(context({ favorite: { on: false, onToggle } }));
+
+    expect(list[1].title).toBe('tools.database.rowAddToFavorites');
+    expect(list[2].title).toBe('tools.database.tableEditIcon');
+    list[1].onActivate?.(undefined as never, undefined);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('a favorite row offers Remove from Favorites', () => {
+    const list = items(context({ favorite: { on: true, onToggle: vi.fn() } }));
+
+    expect(list[1].title).toBe('tools.database.rowRemoveFromFavorites');
+  });
+
+  it('with only the favorite under "Page", a line still follows it', () => {
+    const list = items(context({ onEditIcon: undefined, onEditProperty: undefined, favorite: { on: false, onToggle: vi.fn() } }));
+
+    expect(list.slice(1, 4).map((i) => i.title ?? i.type)).toEqual(['tools.database.rowAddToFavorites', 'separator', 'tools.database.tableOpenIn']);
+  });
+
   it('ends with a "Last edited by" footer when the row knows who edited it', () => {
     const list = items(context({ lastEdited: { name: 'Jack', time: 'today 3:02 AM' } }));
     const footer = list[list.length - 1];
@@ -109,7 +138,7 @@ describe('row ⋮⋮ menu in the table', () => {
   const schema: PropertyDefinition[] = [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }];
   const rows: DatabaseRow[] = [{ id: 'r1', position: 'a0', properties: { 'p-title': 'Alpha' }, meta: { lastEditedBy: 'u1', lastEditedAt: Date.parse('2026-10-09T03:02:00') } }];
 
-  const mount = (handlers: Partial<TableHandlers> = {}): HTMLElement => {
+  const mount = (handlers: Partial<TableHandlers> = {}, extra: Partial<DatabaseTableViewOptions> = {}): HTMLElement => {
     const view = new DatabaseTableView({
       readOnly: false,
       i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${Object.values(vars).join(',')}`) } as DatabaseTableViewOptions['i18n'],
@@ -121,6 +150,7 @@ describe('row ⋮⋮ menu in the table', () => {
       locale: 'en-US',
       cellContext: { people: [{ id: 'u1', name: 'Jack Uait' }], now: new Date('2026-10-09T15:00:00') },
       handlers: { openRow: vi.fn(), ...handlers } as unknown as TableHandlers,
+      ...extra,
     });
     const root = view.createView();
 
@@ -154,6 +184,24 @@ describe('row ⋮⋮ menu in the table', () => {
     root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
 
     expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowWordCount:1,5');
+  });
+
+  it('Add to Favorites asks the host on each open and hands it the next state', () => {
+    const favorites = new Set<string>();
+    const toggle = vi.fn((rowId: string, next: boolean) => (next ? favorites.add(rowId) : favorites.delete(rowId)));
+    const root = mount({}, { favorite: (rowId) => ({ on: favorites.has(rowId), onToggle: () => toggle(rowId, !favorites.has(rowId)) }) });
+    const open = (): HTMLElement | undefined => {
+      root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+
+      return document.querySelector<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]') ?? undefined;
+    };
+
+    const first = open();
+
+    expect(first?.textContent).toBe('tools.database.rowAddToFavorites');
+    first?.click();
+    expect(toggle).toHaveBeenCalledWith('r1', true);
+    expect(open()?.textContent).toBe('tools.database.rowRemoveFromFavorites');
   });
 
   it('Move to shows its key on screen next to its chevron', () => {

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} 님이 마지막으로 수정",
   "tools.database.rowWordCount": "단어 수: {words}, 문자 수: {characters}",
   "tools.database.rowMenuPage": "페이지",
+  "tools.database.rowAddToFavorites": "즐겨찾기에 추가",
+  "tools.database.rowRemoveFromFavorites": "즐겨찾기에서 제거",
   "tools.database.rowLastEdited": "마지막 수정",
   "tools.database.tableLinkCopied": "링크 복사됨",
   "tools.database.tableDuplicate": "복제",

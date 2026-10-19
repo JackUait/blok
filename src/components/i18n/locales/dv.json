@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} އެންމެ ފަހުން އެޑިޓްކުރީ",
   "tools.database.rowWordCount": "ބަސް: {words}، އަކުރު: {characters}",
   "tools.database.rowMenuPage": "ޞަފްޙާ",
+  "tools.database.rowAddToFavorites": "ފޭވަރިޓްސްއަށް އިތުރުކުރޭ",
+  "tools.database.rowRemoveFromFavorites": "ފޭވަރިޓްސްއިން ނައްތާލާ",
   "tools.database.rowLastEdited": "އެންމެ ފަހުން އެޑިޓްކުރީ",
   "tools.database.tableLinkCopied": "ލިންކް ކޮޕީ ކުރެވިއްޖެ",
   "tools.database.tableDuplicate": "ކޮޕީ ހަދާ",

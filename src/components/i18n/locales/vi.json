@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Chỉnh sửa lần cuối bởi {name}",
   "tools.database.rowWordCount": "Số từ: {words}, số ký tự: {characters}",
   "tools.database.rowMenuPage": "Trang",
+  "tools.database.rowAddToFavorites": "Thêm vào mục yêu thích",
+  "tools.database.rowRemoveFromFavorites": "Xóa khỏi mục yêu thích",
   "tools.database.rowLastEdited": "Chỉnh sửa lần cuối",
   "tools.database.tableLinkCopied": "Đã sao chép liên kết",
   "tools.database.tableDuplicate": "Nhân bản",

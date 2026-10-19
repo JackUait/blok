@@ -424,6 +424,17 @@ export interface DatabaseBacklinks {
   open(backlink: DatabaseBacklink): void;
 }
 
+/**
+ * Host lever for "Add to Favorites" in the row menu. The host keeps the list:
+ * Blok has no sidebar. Without it the menu has no such item.
+ */
+export interface DatabaseFavorites {
+  /** Asked each time a row menu opens. */
+  isFavorite(input: { databaseId: string; rowId: string }): boolean;
+  /** `favorite` is the state the person asked for. */
+  onToggle(input: { databaseId: string; rowId: string; favorite: boolean }): void;
+}
+
 // ─── Computed properties (Phase 6) ───
 
 /** Relation stores row ids; formula and rollup are computed and never stored in `properties`. */
@@ -1388,6 +1399,8 @@ export interface DatabaseConfig {
   linkedSources?: DatabaseLinkedSources;
   /** Mentions of a row in other documents, for its "N backlinks". */
   backlinks?: DatabaseBacklinks;
+  /** "Add to Favorites" in the row menu. */
+  favorites?: DatabaseFavorites;
 }
 
 /**

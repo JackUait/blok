@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "最后由 {name} 编辑",
   "tools.database.rowWordCount": "字数：{words}，字符数：{characters}",
   "tools.database.rowMenuPage": "页面",
+  "tools.database.rowAddToFavorites": "添加到收藏",
+  "tools.database.rowRemoveFromFavorites": "从收藏中移除",
   "tools.database.rowLastEdited": "上次编辑",
   "tools.database.tableLinkCopied": "链接已复制",
   "tools.database.tableDuplicate": "创建副本",

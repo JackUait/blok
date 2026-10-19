@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Senast redigerad av {name}",
   "tools.database.rowWordCount": "Ord: {words}, tecken: {characters}",
   "tools.database.rowMenuPage": "Sida",
+  "tools.database.rowAddToFavorites": "Lägg till i favoriter",
+  "tools.database.rowRemoveFromFavorites": "Ta bort från favoriter",
   "tools.database.rowLastEdited": "Senast redigerad",
   "tools.database.tableLinkCopied": "Länken kopierades",
   "tools.database.tableDuplicate": "Duplicera",

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "آخري ترميم ڪندڙ: {name}",
   "tools.database.rowWordCount": "لفظ: {words}، اکر: {characters}",
   "tools.database.rowMenuPage": "صفحو",
+  "tools.database.rowAddToFavorites": "پسنديده ۾ شامل ڪريو",
+  "tools.database.rowRemoveFromFavorites": "پسنديده مان هٽايو",
   "tools.database.rowLastEdited": "آخري ترميم",
   "tools.database.tableLinkCopied": "لنڪ ڪاپي ٿي ويو",
   "tools.database.tableDuplicate": "نقل ٺاهيو",

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} tərəfindən son redaktə",
   "tools.database.rowWordCount": "Söz sayı: {words}, simvol sayı: {characters}",
   "tools.database.rowMenuPage": "Səhifə",
+  "tools.database.rowAddToFavorites": "Seçilmişlərə əlavə et",
+  "tools.database.rowRemoveFromFavorites": "Seçilmişlərdən sil",
   "tools.database.rowLastEdited": "Son redaktə",
   "tools.database.tableLinkCopied": "Keçid kopyalandı",
   "tools.database.tableDuplicate": "Dublikatını çıxar",

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "دوایین دەستکاری لەلایەن {name}",
   "tools.database.rowWordCount": "وشەکان: {words}، پیتەکان: {characters}",
   "tools.database.rowMenuPage": "پەڕە",
+  "tools.database.rowAddToFavorites": "Li bijartiyan zêde bike",
+  "tools.database.rowRemoveFromFavorites": "Ji bijartiyan rake",
   "tools.database.rowLastEdited": "دوایین دەستکاری",
   "tools.database.tableLinkCopied": "بەستەر کۆپی کرا",
   "tools.database.tableDuplicate": "دووبارەکردنەوە",

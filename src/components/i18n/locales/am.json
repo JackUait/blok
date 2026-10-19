@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "የመጨረሻው አርትዖት በ{name}",
   "tools.database.rowWordCount": "ቃላት፦ {words}፣ ቁምፊዎች፦ {characters}",
   "tools.database.rowMenuPage": "ገጽ",
+  "tools.database.rowAddToFavorites": "ወደ ተወዳጆች አክል",
+  "tools.database.rowRemoveFromFavorites": "ከተወዳጆች አስወግድ",
   "tools.database.rowLastEdited": "የመጨረሻ አርትዖት",
   "tools.database.tableLinkCopied": "አገናኝ ተቀድቷል",
   "tools.database.tableDuplicate": "አባዛ",

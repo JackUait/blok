@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Última edición por {name}",
   "tools.database.rowWordCount": "Palabras: {words}, caracteres: {characters}",
   "tools.database.rowMenuPage": "Página",
+  "tools.database.rowAddToFavorites": "Añadir a favoritos",
+  "tools.database.rowRemoveFromFavorites": "Quitar de favoritos",
   "tools.database.rowLastEdited": "Última edición",
   "tools.database.tableLinkCopied": "Enlace copiado",
   "tools.database.tableDuplicate": "Duplicar",

@@ -956,6 +956,48 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('Add to Favorites (config.favorites)', () => {
+    const openCardMenu = (config: DatabaseConfig, readOnly = false): HTMLElement => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
+      const tool = new DatabaseTool(createDatabaseOptions({}, config, { childBlocks, readOnly }));
+      const element = tool.render();
+
+      tool.rendered();
+      // Read-only cards have no ••• button; a right-click opens the same menu.
+      if (readOnly) queryByData(element, 'data-blok-database-card')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      else queryByData(element, 'data-blok-database-card-menu')?.click();
+
+      return document.body;
+    };
+
+    afterEach(() => {
+      queryByData(document.body, 'data-mock-popover')?.remove();
+    });
+
+    it('is not in the card menu without the lever', () => {
+      expect(queryByData(openCardMenu({}), 'data-mock-popover-action', /favorites/)).toBeNull();
+    });
+
+    it('asks the host and hands it the next state, read-only too', () => {
+      const favorites = { isFavorite: vi.fn(() => false), onToggle: vi.fn() };
+      const body = openCardMenu({ favorites }, true);
+      const item = queryByData(body, 'data-mock-popover-action', /addtofavorites/);
+
+      expect(favorites.isFavorite).toHaveBeenCalledWith({ databaseId: 'test-block-id', rowId: 'row-1' });
+      if (item === null) throw new Error('no Add to Favorites');
+      item.click();
+      expect(favorites.onToggle).toHaveBeenCalledWith({ databaseId: 'test-block-id', rowId: 'row-1', favorite: true });
+    });
+
+    it('a throwing isFavorite still opens the menu, as not a favorite', () => {
+      const body = openCardMenu({ favorites: { isFavorite: () => { throw new Error('host'); }, onToggle: vi.fn() } });
+
+      expect(queryByData(body, 'data-mock-popover-action', /addtofavorites/)).not.toBeNull();
+    });
+  });
+
   describe('card menu teardown', () => {
     it('closes an open card menu when the tool is destroyed', () => {
       const childBlocks = [

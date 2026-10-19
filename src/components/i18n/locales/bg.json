@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Последна редакция от {name}",
   "tools.database.rowWordCount": "Думи: {words}, знаци: {characters}",
   "tools.database.rowMenuPage": "Страница",
+  "tools.database.rowAddToFavorites": "Добавяне към любими",
+  "tools.database.rowRemoveFromFavorites": "Премахване от любими",
   "tools.database.rowLastEdited": "Последна редакция",
   "tools.database.tableLinkCopied": "Връзката е копирана",
   "tools.database.tableDuplicate": "Дублирай",

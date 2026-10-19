@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Terakhir diedit oleh {name}",
   "tools.database.rowWordCount": "Kata: {words}, karakter: {characters}",
   "tools.database.rowMenuPage": "Halaman",
+  "tools.database.rowAddToFavorites": "Tambahkan ke Favorit",
+  "tools.database.rowRemoveFromFavorites": "Hapus dari Favorit",
   "tools.database.rowLastEdited": "Terakhir diedit",
   "tools.database.tableLinkCopied": "Tautan disalin",
   "tools.database.tableDuplicate": "Gandakan",

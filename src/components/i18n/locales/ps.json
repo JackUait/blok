@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "د {name} لخوا وروستی سمون",
   "tools.database.rowWordCount": "ټکي: {words}، توري: {characters}",
   "tools.database.rowMenuPage": "پاڼه",
+  "tools.database.rowAddToFavorites": "خوښو ته ورزیات کړئ",
+  "tools.database.rowRemoveFromFavorites": "له خوښو لرې کړئ",
   "tools.database.rowLastEdited": "وروستی سمون",
   "tools.database.tableLinkCopied": "لینک کاپي شو",
   "tools.database.tableDuplicate": "کاپي جوړه کړئ",

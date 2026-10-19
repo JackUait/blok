@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Ndryshuar për herë të fundit nga {name}",
   "tools.database.rowWordCount": "Fjalë: {words}, karaktere: {characters}",
   "tools.database.rowMenuPage": "Faqe",
+  "tools.database.rowAddToFavorites": "Shto te të preferuarat",
+  "tools.database.rowRemoveFromFavorites": "Hiq nga të preferuarat",
   "tools.database.rowLastEdited": "Ndryshuar për herë të fundit",
   "tools.database.tableLinkCopied": "Lidhja u kopjua",
   "tools.database.tableDuplicate": "Dyfisho",

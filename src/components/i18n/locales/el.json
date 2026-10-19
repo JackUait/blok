@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Τελευταία επεξεργασία από {name}",
   "tools.database.rowWordCount": "Λέξεις: {words}, χαρακτήρες: {characters}",
   "tools.database.rowMenuPage": "Σελίδα",
+  "tools.database.rowAddToFavorites": "Προσθήκη στα αγαπημένα",
+  "tools.database.rowRemoveFromFavorites": "Αφαίρεση από τα αγαπημένα",
   "tools.database.rowLastEdited": "Τελευταία επεξεργασία",
   "tools.database.tableLinkCopied": "Ο σύνδεσμος αντιγράφηκε",
   "tools.database.tableDuplicate": "Διπλότυπο",

@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Paskutinį kartą redagavo {name}",
   "tools.database.rowWordCount": "Žodžių: {words}, simbolių: {characters}",
   "tools.database.rowMenuPage": "Puslapis",
+  "tools.database.rowAddToFavorites": "Pridėti prie mėgstamiausių",
+  "tools.database.rowRemoveFromFavorites": "Pašalinti iš mėgstamiausių",
   "tools.database.rowLastEdited": "Paskutinį kartą redaguota",
   "tools.database.tableLinkCopied": "Nuoroda nukopijuota",
   "tools.database.tableDuplicate": "Dubliuoti",

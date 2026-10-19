@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} చివరిగా సవరించారు",
   "tools.database.rowWordCount": "పదాలు: {words}, అక్షరాలు: {characters}",
   "tools.database.rowMenuPage": "పేజీ",
+  "tools.database.rowAddToFavorites": "ఇష్టమైనవాటికి జోడించు",
+  "tools.database.rowRemoveFromFavorites": "ఇష్టమైనవాటి నుండి తీసివేయి",
   "tools.database.rowLastEdited": "చివరిగా సవరించబడింది",
   "tools.database.tableLinkCopied": "లింక్ కాపీ చేయబడింది",
   "tools.database.tableDuplicate": "నకలు చేయండి",

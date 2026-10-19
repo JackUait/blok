@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Автор последнего изменения: {name}",
   "tools.database.rowWordCount": "Слов: {words}, символов: {characters}",
   "tools.database.rowMenuPage": "Страница",
+  "tools.database.rowAddToFavorites": "Добавить в избранное",
+  "tools.database.rowRemoveFromFavorites": "Удалить из избранного",
   "tools.database.rowLastEdited": "Последнее изменение",
   "tools.database.tableLinkCopied": "Ссылка скопирована",
   "tools.database.tableDuplicate": "Дублировать",

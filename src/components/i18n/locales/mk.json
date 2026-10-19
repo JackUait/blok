@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "Последно уредено од {name}",
   "tools.database.rowWordCount": "Зборови: {words}, знаци: {characters}",
   "tools.database.rowMenuPage": "Страница",
+  "tools.database.rowAddToFavorites": "Додај во омилени",
+  "tools.database.rowRemoveFromFavorites": "Отстрани од омилени",
   "tools.database.rowLastEdited": "Последно уредено",
   "tools.database.tableLinkCopied": "Врската е копирана",
   "tools.database.tableDuplicate": "Дуплирај",

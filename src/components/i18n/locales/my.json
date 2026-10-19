@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",
   "tools.database.rowWordCount": "စကားလုံး: {words}၊ စာလုံး: {characters}",
   "tools.database.rowMenuPage": "စာမျက်နှာ",
+  "tools.database.rowAddToFavorites": "အကြိုက်ဆုံးများသို့ ထည့်ရန်",
+  "tools.database.rowRemoveFromFavorites": "အကြိုက်ဆုံးများမှ ဖယ်ရှားရန်",
   "tools.database.rowLastEdited": "နောက်ဆုံးတည်းဖြတ်ချိန်",
   "tools.database.tableLinkCopied": "လင့်ခ် ကူးယူပြီးပါပြီ",
   "tools.database.tableDuplicate": "မိတ္တူပွားရန်",

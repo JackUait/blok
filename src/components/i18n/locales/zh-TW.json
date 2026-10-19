@@ -1021,6 +1021,8 @@
   "tools.database.rowLastEditedBy": "上次由 {name} 編輯",
   "tools.database.rowWordCount": "字數：{words}，字元數：{characters}",
   "tools.database.rowMenuPage": "頁面",
+  "tools.database.rowAddToFavorites": "加入我的最愛",
+  "tools.database.rowRemoveFromFavorites": "從我的最愛移除",
   "tools.database.rowLastEdited": "上次編輯",
   "tools.database.tableLinkCopied": "已複製連結",
   "tools.database.tableDuplicate": "建立副本",

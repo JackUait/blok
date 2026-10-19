@@ -10,6 +10,7 @@ import {
   IconCopy,
   IconExpandFullscreen,
   IconEmojiSmile,
+  IconEmojiStar,
   IconEyeSlash,
   IconInsertLeft,
   IconInsertRight,
@@ -260,8 +261,16 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
   return items;
 };
 
+/** The row's place in the host's favorites (`config.favorites`). */
+export interface RowFavorite {
+  on: boolean;
+  onToggle: () => void;
+}
+
 export interface RowMenuContext {
   i18n: T;
+  /** The host's favorites lever. Without it there is no Add to Favorites row. */
+  favorite?: RowFavorite;
   /** Columns the row can edit from "Edit property ›". */
   properties: PropertyDefinition[];
   /** Without it there is no Edit icon row. */
@@ -434,14 +443,23 @@ const rowMenuHeading = (i18n: T): PopoverItemParams => {
 /**
  * The one row menu of every view: the table's ⋮⋮, the board's •••, a right-click
  * on a card or list row, and the feed's More actions (research/08, research/12 §3,
- * research/19 §2e). Measured order: "Page", then Edit icon, Edit property ›
- * (Layout, Property visibility on board and gallery); Open in ›, Comment; Copy
- * link, Duplicate, Move to, Move to Trash; footer. No Add to Favorites: Blok has
- * no favorites.
+ * research/19 §2e). Measured order: "Page", then Add to Favorites, Edit icon,
+ * Edit property › (Layout, Property visibility on board and gallery); Open in ›,
+ * Comment; Copy link, Duplicate, Move to, Move to Trash; footer.
+ * "Remove from Favorites" and its icon are unmeasured.
  */
 export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
-  const { i18n, onEditIcon, onEditProperty, onLayout, onPropertyVisibility } = ctx;
+  const { i18n, favorite, onEditIcon, onEditProperty, onLayout, onPropertyVisibility } = ctx;
   const page: PopoverItemParams[] = [
+    ...(favorite !== undefined
+      ? [{
+        type: PopoverItemType.Default as const,
+        name: 'database-row-favorite',
+        title: i18n.t(favorite.on ? 'tools.database.rowRemoveFromFavorites' : 'tools.database.rowAddToFavorites'),
+        icon: IconEmojiStar,
+        onActivate: favorite.onToggle,
+      }]
+      : []),
     ...(onEditIcon !== undefined
       ? [{ type: PopoverItemType.Default as const, name: 'database-row-edit-icon', title: i18n.t('tools.database.tableEditIcon'), icon: IconEmojiSmile, onActivate: onEditIcon }]
       : []),

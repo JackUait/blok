@@ -108,4 +108,23 @@ describe('repeating template schedule', () => {
       expect(next({ frequency: 'weekly', start: '2026-10-05T09:00:00.000Z' }, '2026-10-12T09:00:00.000Z')).toBe('2026-10-19T09:00:00.000Z');
     });
   });
+
+  describe('a malformed repeat from the document', () => {
+    const now = new Date('2026-10-09T12:00:00.000Z');
+    const bad: Array<[string, TemplateRepeat]> = [
+      ['interval 0', { frequency: 'daily', start: '2026-10-01T09:00:00.000Z', interval: 0 }],
+      ['interval NaN', { frequency: 'daily', start: '2026-10-01T09:00:00.000Z', interval: Number.NaN }],
+      ['negative interval', { frequency: 'daily', start: '2026-10-01T09:00:00.000Z', interval: -3 }],
+      ['unknown frequency', { frequency: 'hourly' as TemplateRepeat['frequency'], start: '2026-10-01T09:00:00.000Z' }],
+    ];
+
+    it.each(bad)('%s has no due run and no next run', (_, repeat) => {
+      expect(dueRun(repeat, now)).toBeNull();
+      expect(nextRun(repeat, now)).toBeNull();
+    });
+
+    it('a start 1000 years ago still gives the next run', () => {
+      expect(nextRun({ frequency: 'daily', start: '1026-10-01T09:00:00.000Z' }, now)).toBe(Date.parse('2026-10-10T09:00:00.000Z'));
+    });
+  });
 });

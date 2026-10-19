@@ -24,11 +24,11 @@ export const repeatZone = (repeat: Pick<TemplateRepeat, 'timeZone'>): string => 
  * so the 31st comes back after a short month. Runs keep the wall clock of the zone.
  */
 const occurrence = (start: Date, repeat: TemplateRepeat, k: number): Date =>
-  new Date(addToDate(start.getTime(), Math.max(1, Math.floor(repeat.interval ?? 1)) * k, UNITS[repeat.frequency], repeatZone(repeat)));
+  new Date(addToDate(start.getTime(), (repeat.interval ?? 1) * k, UNITS[repeat.frequency], repeatZone(repeat)));
 
 /** How many runs fit between the start and `now`, give or take one. */
 const roughIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {
-  const interval = Math.max(1, Math.floor(repeat.interval ?? 1));
+  const interval = repeat.interval ?? 1;
   const days = (now.getTime() - start.getTime()) / DAY_MS;
   const perRun: Record<TemplateRepeat['frequency'], number> = { daily: 1, weekly: 7, monthly: 28, yearly: 365 };
 
@@ -36,18 +36,33 @@ const roughIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {
 };
 
 /**
+ * The repeat comes from the document, so any client may have written it. An unknown
+ * frequency adds nothing per run and a bad interval gives NaN times: both have no runs.
+ */
+const validRepeat = (repeat: TemplateRepeat | undefined): repeat is TemplateRepeat =>
+  repeat !== undefined
+  && Object.hasOwn(UNITS, repeat.frequency)
+  && (repeat.interval === undefined || (Number.isInteger(repeat.interval) && repeat.interval >= 1))
+  && !Number.isNaN(new Date(repeat.start).getTime());
+
+/** The index of the last run at or before `now`. The rough index can run ahead (a month counts as 28 days), so step back. */
+const lastIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {
+  const rough = roughIndex(start, now, repeat);
+
+  return Array.from({ length: rough + 1 }, (_, i) => rough - i)
+    .find((k) => occurrence(start, repeat, k).getTime() <= now.getTime()) ?? 0;
+};
+
+/**
  * The latest run of a repeating template at or before `now` that has not
  * been made yet, as an ISO string, or null when nothing is due.
  */
 export const dueRun = (repeat: TemplateRepeat | undefined, now: Date): string | null => {
-  if (repeat === undefined) return null;
+  if (!validRepeat(repeat)) return null;
   const start = new Date(repeat.start);
 
-  if (Number.isNaN(start.getTime()) || start.getTime() > now.getTime()) return null;
-  const index = Array.from({ length: roughIndex(start, now, repeat) + 1 }, (_, k) => k)
-    .reverse()
-    .find((k) => occurrence(start, repeat, k).getTime() <= now.getTime()) ?? 0;
-  const due = occurrence(start, repeat, index);
+  if (start.getTime() > now.getTime()) return null;
+  const due = occurrence(start, repeat, lastIndex(start, now, repeat));
   const last = repeat.lastRunAt === undefined ? Number.NaN : new Date(repeat.lastRunAt).getTime();
 
   return !Number.isNaN(last) && last >= due.getTime() ? null : due.toISOString();
@@ -55,21 +70,13 @@ export const dueRun = (repeat: TemplateRepeat | undefined, now: Date): string | 
 
 /** The first run of a repeating template after `now`, in ms, or null when it has none. */
 export const nextRun = (repeat: TemplateRepeat | undefined, now: Date): number | null => {
-  if (repeat === undefined) return null;
+  if (!validRepeat(repeat)) return null;
   const start = new Date(repeat.start);
 
-  if (Number.isNaN(start.getTime())) return null;
   if (start.getTime() > now.getTime()) return start.getTime();
-  const after = (k: number): number => {
-    const at = occurrence(start, repeat, k).getTime();
+  const last = lastIndex(start, now, repeat);
 
-    return at > now.getTime() ? at : after(k + 1);
-  };
-
-  // The rough index can run ahead (a month counts as 28 days): step back to the last run made, then forward.
-  const last = Array.from({ length: roughIndex(start, now, repeat) + 1 }, (_, k) => k)
-    .reverse()
-    .find((k) => occurrence(start, repeat, k).getTime() <= now.getTime()) ?? 0;
-
-  return after(last + 1);
+  // The run after the last one is normally next; a few more steps cover zone shifts. Bounded, never a loop on bad data.
+  return Array.from({ length: 8 }, (_, i) => occurrence(start, repeat, last + 1 + i).getTime())
+    .find((at) => at > now.getTime()) ?? null;
 };

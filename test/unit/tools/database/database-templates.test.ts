@@ -256,4 +256,18 @@ describe('DatabaseTool — a repeating template that comes due while open', () =
     expect(onRepeatDue).toHaveBeenCalledTimes(2);
     expect(doc.row('tpl').repeat?.lastRunAt).toBe('2026-10-10T09:00:00.000Z');
   });
+
+  it('a template with a broken repeat does not stop another from running', () => {
+    const onRepeatDue = vi.fn();
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('bad', 'db', { properties: { title: 'Broken' }, position: 'a0', template: true, repeat: { frequency: 'hourly' as 'daily', start: '2026-10-01T09:00:00.000Z' } }),
+      rowSeed('tpl', 'db', { properties: { title: 'Standup' }, position: 'a1', template: true, repeat: { frequency: 'daily', start: '2026-10-01T09:00:00.000Z', lastRunAt: '2026-10-08T09:00:00.000Z' } }),
+    ]);
+
+    buildDatabase(doc, 'db', data(), { templates: { onRepeatDue } });
+    vi.advanceTimersByTime(5 * 60_000);
+
+    expect(onRepeatDue.mock.calls.map((call) => (call[0] as { templateId: string }).templateId)).toEqual(['tpl']);
+  });
 });

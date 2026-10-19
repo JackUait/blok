@@ -400,6 +400,26 @@ describe('a reminder that comes due while the database is open', () => {
     expect(onReminderDue).toHaveBeenCalledTimes(1);
   });
 
+  it('a reminder a peer writes after render is offered when it comes due', async () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'Ship', due: '2027-06-15' } }),
+    ]);
+    const onReminderDue = vi.fn();
+
+    buildDatabase(doc, 'db', data(), { reminders: { onReminderDue } });
+    const entry = doc.blocks.get('r1');
+
+    if (entry === undefined) throw new Error('no row');
+    entry.data = { ...entry.data, reminders: { due: { remind: '1_day_before' } } };
+    doc.api.events.emit('block changed', { event: { detail: { target: entry.block } } });
+    await vi.advanceTimersByTimeAsync(0);
+    vi.advanceTimersByTime(5 * 60_000);
+
+    expect(onReminderDue).toHaveBeenCalledTimes(1);
+    expect(onReminderDue.mock.calls[0][0]).toMatchObject({ rowId: 'r1', dueAt: '2027-06-14T13:00:00.000Z' });
+  });
+
   it('a reminder picked after render is offered when it comes due', () => {
     const doc = makeDoc([
       { id: 'db', name: 'database', parentId: null, data: {} },

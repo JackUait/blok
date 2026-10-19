@@ -372,11 +372,11 @@ export interface TemplateRepeat {
   lastRunAt?: string;
 }
 
-/** Host lever for repeating templates. Blok has no scheduler. */
+/** Host lever for repeating templates. Blok tells the host when a run is due; the host makes it. */
 export interface DatabaseTemplates {
   /**
    * Called when a repeating template is due, on each client that renders the
-   * database. `createRow` makes the row and stamps `lastRunAt`; the host
+   * database: at render, and again when a run comes due while it is open. `createRow` makes the row and stamps `lastRunAt`; the host
    * decides which client calls it.
    */
   onRepeatDue?(input: { databaseId: string; templateId: string; dueAt: string; createRow: () => string | null }): void;
@@ -386,7 +386,7 @@ export interface DatabaseTemplates {
 export interface DatabaseReminders {
   /**
    * Called for each reminder whose time has come, on each client that renders
-   * the database. `markSent` stamps that due time so it is not offered again;
+   * the database: at render, and again when one comes due while it is open. `markSent` stamps that due time so it is not offered again;
    * the host decides which client sends it and to whom.
    */
   onReminderDue?(input: { databaseId: string; rowId: string; propertyId: string; remind: DateReminderOffset; dueAt: string; markSent: () => void }): void;

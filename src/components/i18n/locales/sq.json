@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galeri",
   "tools.database.galleryNew": "Faqe e re",
   "tools.database.galleryLoadMore": "Ngarko më shumë",
+  "tools.database.galleryCardEdit": "Redakto",
+  "tools.database.galleryCardMore": "Riemërto, fshi, zhvendos dhe më shumë…",
   "tools.database.galleryCardSize": "Madhësia e kartës",
   "tools.database.galleryCardSizeSmall": "E vogël",
   "tools.database.galleryCardSizeMedium": "E mesme",

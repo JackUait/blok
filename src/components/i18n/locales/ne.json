@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ग्यालरी",
   "tools.database.galleryNew": "नयाँ",
   "tools.database.galleryLoadMore": "थप लोड गर्नुहोस्",
+  "tools.database.galleryCardEdit": "सम्पादन गर्नुहोस्",
+  "tools.database.galleryCardMore": "नाम बदल्नुहोस्, मेटाउनुहोस्, सार्नुहोस् र थप…",
   "tools.database.galleryCardSize": "कार्डको आकार",
   "tools.database.galleryCardSizeSmall": "सानो",
   "tools.database.galleryCardSizeMedium": "मध्यम",

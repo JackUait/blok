@@ -6299,7 +6299,7 @@ export class DatabaseTool implements BlockTool {
 
       if (cardMenuBtn instanceof HTMLElement) {
         const rowId = cardMenuBtn.getAttribute('data-row-id');
-        const cardEl = cardMenuBtn.closest('[data-blok-database-card]');
+        const cardEl = cardMenuBtn.closest('[data-blok-database-card], [data-blok-database-gallery-card]');
 
         if (rowId !== null && cardEl instanceof HTMLElement) {
           event.stopPropagation();

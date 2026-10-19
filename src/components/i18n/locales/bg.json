@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Галерия",
   "tools.database.galleryNew": "Нова страница",
   "tools.database.galleryLoadMore": "Зареди още",
+  "tools.database.galleryCardEdit": "Редактирай",
+  "tools.database.galleryCardMore": "Преименуване, изтриване, преместване и още…",
   "tools.database.galleryCardSize": "Размер на картата",
   "tools.database.galleryCardSizeSmall": "Малък",
   "tools.database.galleryCardSizeMedium": "Среден",

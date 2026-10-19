@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galería",
   "tools.database.galleryNew": "Nuevo",
   "tools.database.galleryLoadMore": "Cargar más",
+  "tools.database.galleryCardEdit": "Editar",
+  "tools.database.galleryCardMore": "Cambiar nombre, eliminar, mover y más…",
   "tools.database.galleryCardSize": "Tamaño de la tarjeta",
   "tools.database.galleryCardSizeSmall": "Pequeño",
   "tools.database.galleryCardSizeMedium": "Mediano",

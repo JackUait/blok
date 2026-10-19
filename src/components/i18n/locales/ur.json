@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "گیلری",
   "tools.database.galleryNew": "نیا",
   "tools.database.galleryLoadMore": "مزید لوڈ کریں",
+  "tools.database.galleryCardEdit": "ترمیم کریں",
+  "tools.database.galleryCardMore": "نام تبدیل کریں، حذف کریں، منتقل کریں اور مزید…",
   "tools.database.galleryCardSize": "کارڈ کا سائز",
   "tools.database.galleryCardSizeSmall": "چھوٹا",
   "tools.database.galleryCardSizeMedium": "درمیانہ",

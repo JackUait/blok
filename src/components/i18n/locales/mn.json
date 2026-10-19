@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Галерей",
   "tools.database.galleryNew": "Шинэ",
   "tools.database.galleryLoadMore": "Цааш ачаалах",
+  "tools.database.galleryCardEdit": "Засах",
+  "tools.database.galleryCardMore": "Нэр өөрчлөх, устгах, зөөх болон бусад…",
   "tools.database.galleryCardSize": "Картын хэмжээ",
   "tools.database.galleryCardSizeSmall": "Жижиг",
   "tools.database.galleryCardSizeMedium": "Дунд",

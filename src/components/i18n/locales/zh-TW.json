@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "圖庫",
   "tools.database.galleryNew": "新增",
   "tools.database.galleryLoadMore": "載入更多",
+  "tools.database.galleryCardEdit": "編輯",
+  "tools.database.galleryCardMore": "重新命名、刪除、移動等…",
   "tools.database.galleryCardSize": "卡片大小",
   "tools.database.galleryCardSizeSmall": "小",
   "tools.database.galleryCardSizeMedium": "中",

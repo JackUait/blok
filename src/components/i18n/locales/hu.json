@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galéria",
   "tools.database.galleryNew": "Új oldal",
   "tools.database.galleryLoadMore": "Továbbiak betöltése",
+  "tools.database.galleryCardEdit": "Szerkesztés",
+  "tools.database.galleryCardMore": "Átnevezés, törlés, áthelyezés és egyebek…",
   "tools.database.galleryCardSize": "Kártyaméret",
   "tools.database.galleryCardSizeSmall": "Kicsi",
   "tools.database.galleryCardSizeMedium": "Közepes",

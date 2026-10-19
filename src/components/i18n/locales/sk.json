@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galéria",
   "tools.database.galleryNew": "Nová stránka",
   "tools.database.galleryLoadMore": "Načítať ďalšie",
+  "tools.database.galleryCardEdit": "Upraviť",
+  "tools.database.galleryCardMore": "Premenovať, odstrániť, presunúť a ďalšie…",
   "tools.database.galleryCardSize": "Veľkosť karty",
   "tools.database.galleryCardSizeSmall": "Malá",
   "tools.database.galleryCardSizeMedium": "Stredná",

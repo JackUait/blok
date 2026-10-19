@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "แกลเลอรี",
   "tools.database.galleryNew": "ใหม่",
   "tools.database.galleryLoadMore": "โหลดเพิ่มเติม",
+  "tools.database.galleryCardEdit": "แก้ไข",
+  "tools.database.galleryCardMore": "เปลี่ยนชื่อ ลบ ย้าย และอื่นๆ…",
   "tools.database.galleryCardSize": "ขนาดการ์ด",
   "tools.database.galleryCardSizeSmall": "เล็ก",
   "tools.database.galleryCardSizeMedium": "กลาง",

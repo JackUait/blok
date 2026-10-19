@@ -63,9 +63,9 @@ const rightClick = (target: Element): MouseEvent => {
 
 /** Opens the row's menu the way each view does: •••, right-click, More actions or ⋮⋮. */
 const openMenu = (el: HTMLElement, type: ViewType): void => {
-  if (type === 'board') {
-    rowEl(el, 'board').querySelector<HTMLElement>('[data-blok-database-card-menu]')?.click();
-  } else if (type === 'gallery' || type === 'list') {
+  if (type === 'board' || type === 'gallery') {
+    rowEl(el, type).querySelector<HTMLElement>('[data-blok-database-card-menu]')?.click();
+  } else if (type === 'list') {
     rightClick(rowEl(el, type));
   } else if (type === 'feed') {
     el.querySelector<HTMLElement>('[data-blok-database-feed-more-actions]')?.click();

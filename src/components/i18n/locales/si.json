@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ගැලරිය",
   "tools.database.galleryNew": "නව",
   "tools.database.galleryLoadMore": "තවත් පූරණය කරන්න",
+  "tools.database.galleryCardEdit": "සංස්කරණය",
+  "tools.database.galleryCardMore": "නැවත නම් කරන්න, මකන්න, ගෙන යන්න සහ තවත්…",
   "tools.database.galleryCardSize": "කාඩ්පත් ප්‍රමාණය",
   "tools.database.galleryCardSizeSmall": "කුඩා",
   "tools.database.galleryCardSizeMedium": "මධ්‍යම",

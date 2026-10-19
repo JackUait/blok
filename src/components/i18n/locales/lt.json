@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galerija",
   "tools.database.galleryNew": "Naujas puslapis",
   "tools.database.galleryLoadMore": "Įkelti daugiau",
+  "tools.database.galleryCardEdit": "Redaguoti",
+  "tools.database.galleryCardMore": "Pervadinti, ištrinti, perkelti ir daugiau…",
   "tools.database.galleryCardSize": "Kortelės dydis",
   "tools.database.galleryCardSizeSmall": "Mažas",
   "tools.database.galleryCardSizeMedium": "Vidutinis",

@@ -667,6 +667,77 @@ describe('DatabaseGalleryView', () => {
     });
   });
 
+  describe('card hover buttons (research/12 §3, research/16 §3a)', () => {
+    const edit = (card: HTMLElement): HTMLElement | null => card.querySelector('[data-blok-database-edit-card]');
+    const more = (card: HTMLElement): HTMLElement | null => card.querySelector('[data-blok-database-card-menu]');
+
+    it('Tab goes card, Edit, then "Rename, delete, move to and more…", then the next card', () => {
+      const { root } = mount();
+      const stops = [...root.querySelectorAll<HTMLElement>('[tabindex], button')]
+        .filter((el) => el.tabIndex >= 0)
+        .map((el) => el.getAttribute('data-row-id') !== null && el.matches('[data-blok-database-gallery-card]')
+          ? `card:${el.getAttribute('data-row-id')}`
+          : el.getAttribute('aria-label'));
+
+      expect(stops.slice(0, 6)).toEqual([
+        'card:r1', 'tools.database.galleryCardEdit', 'tools.database.galleryCardMore',
+        'card:r2', 'tools.database.galleryCardEdit', 'tools.database.galleryCardMore',
+      ]);
+    });
+
+    it('Edit renames the card title in place, without opening it', () => {
+      const renameRow = vi.fn();
+      const { root, handlers } = mount({ handlers: { ...makeHandlers(), renameRow } });
+      const button = edit(cards(root)[0]);
+
+      button?.click();
+      const input = cards(root)[0].querySelector<HTMLInputElement>('input');
+
+      expect(input).toHaveFocus();
+      expect(handlers.openRow).not.toHaveBeenCalled();
+      if (input === null) return;
+      input.value = 'Alpha 2';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      expect(renameRow).toHaveBeenCalledWith('r1', 'Alpha 2');
+    });
+
+    it('"•••" and Enter on a focused button never open the card: the tool opens the row menu', () => {
+      const { root, handlers } = mount();
+      const button = more(cards(root)[0]);
+
+      expect(button?.getAttribute('data-row-id')).toBe('r1');
+      button?.click();
+      button?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('a press on a button never drags the card', () => {
+      const { root, handlers } = mount();
+      const button = more(cards(root)[0]);
+
+      if (button === null) throw new Error('no ••• button');
+      rect(cards(root)[1], 200, 0);
+      pointer('pointerdown', button, 10, 10);
+      pointer('pointermove', document, 250, 50);
+      pointer('pointerup', document, 250, 50);
+
+      expect(handlers.moveRow).not.toHaveBeenCalled();
+    });
+
+    it('has no Edit while the card name is hidden, and no buttons when read-only', () => {
+      const hidden = mount({ view: galleryView({ properties: [{ id: 'p-title', visible: false }] }) });
+
+      expect(edit(cards(hidden.root)[0])).toBeNull();
+      expect(more(cards(hidden.root)[0])).not.toBeNull();
+      hidden.root.remove();
+
+      const { root } = mount({ readOnly: true });
+
+      expect(root.querySelector('[data-blok-database-card-actions]')).toBeNull();
+    });
+  });
+
   it('updates a card title in place', () => {
     const { root, view } = mount();
 

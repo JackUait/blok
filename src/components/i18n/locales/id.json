@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galeri",
   "tools.database.galleryNew": "Baru",
   "tools.database.galleryLoadMore": "Muat lainnya",
+  "tools.database.galleryCardEdit": "Ubah",
+  "tools.database.galleryCardMore": "Ubah nama, hapus, pindahkan, dan lainnya…",
   "tools.database.galleryCardSize": "Ukuran kartu",
   "tools.database.galleryCardSizeSmall": "Kecil",
   "tools.database.galleryCardSizeMedium": "Sedang",

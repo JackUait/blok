@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Matunzio",
   "tools.database.galleryNew": "Mpya",
   "tools.database.galleryLoadMore": "Pakia zaidi",
+  "tools.database.galleryCardEdit": "Hariri",
+  "tools.database.galleryCardMore": "Badilisha jina, futa, hamisha na zaidi…",
   "tools.database.galleryCardSize": "Ukubwa wa kadi",
   "tools.database.galleryCardSizeSmall": "Ndogo",
   "tools.database.galleryCardSizeMedium": "Wastani",

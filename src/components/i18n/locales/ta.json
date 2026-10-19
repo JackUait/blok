@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "கேலரி",
   "tools.database.galleryNew": "புதியது",
   "tools.database.galleryLoadMore": "மேலும் ஏற்று",
+  "tools.database.galleryCardEdit": "திருத்து",
+  "tools.database.galleryCardMore": "மறுபெயரிடு, அழி, நகர்த்து மற்றும் பல…",
   "tools.database.galleryCardSize": "அட்டை அளவு",
   "tools.database.galleryCardSizeSmall": "சிறியது",
   "tools.database.galleryCardSizeMedium": "நடுத்தரம்",

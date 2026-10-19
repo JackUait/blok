@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ማዕከለ-ስዕላት",
   "tools.database.galleryNew": "አዲስ",
   "tools.database.galleryLoadMore": "ተጨማሪ ጫን",
+  "tools.database.galleryCardEdit": "አርትዕ",
+  "tools.database.galleryCardMore": "ዳግም ሰይም፣ አጥፋ፣ አንቀሳቅስ እና ሌሎችም…",
   "tools.database.galleryCardSize": "የካርድ መጠን",
   "tools.database.galleryCardSizeSmall": "ትንሽ",
   "tools.database.galleryCardSizeMedium": "መካከለኛ",

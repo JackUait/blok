@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Bộ sưu tập",
   "tools.database.galleryNew": "Mới",
   "tools.database.galleryLoadMore": "Tải thêm",
+  "tools.database.galleryCardEdit": "Chỉnh sửa",
+  "tools.database.galleryCardMore": "Đổi tên, xóa, di chuyển và nhiều hơn…",
   "tools.database.galleryCardSize": "Kích thước thẻ",
   "tools.database.galleryCardSizeSmall": "Nhỏ",
   "tools.database.galleryCardSizeMedium": "Vừa",

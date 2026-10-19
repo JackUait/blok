@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galeriya",
   "tools.database.galleryNew": "Bago",
   "tools.database.galleryLoadMore": "Mag-load pa",
+  "tools.database.galleryCardEdit": "I-edit",
+  "tools.database.galleryCardMore": "Palitan ang pangalan, tanggalin, ilipat at iba pa…",
   "tools.database.galleryCardSize": "Laki ng card",
   "tools.database.galleryCardSizeSmall": "Maliit",
   "tools.database.galleryCardSizeMedium": "Katamtaman",

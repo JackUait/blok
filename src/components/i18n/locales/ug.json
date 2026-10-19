@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "كۆرگەزمە",
   "tools.database.galleryNew": "يېڭى",
   "tools.database.galleryLoadMore": "تېخىمۇ كۆپ يۈكلەش",
+  "tools.database.galleryCardEdit": "تەھرىرلە",
+  "tools.database.galleryCardMore": "قايتا ئاتاش، ئۆچۈرۈش، يۆتكەش ۋە تېخىمۇ كۆپ…",
   "tools.database.galleryCardSize": "كارتا چوڭلۇقى",
   "tools.database.galleryCardSizeSmall": "كىچىك",
   "tools.database.galleryCardSizeMedium": "ئوتتۇرا",

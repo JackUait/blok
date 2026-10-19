@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galleri",
   "tools.database.galleryNew": "Ny",
   "tools.database.galleryLoadMore": "Last inn flere",
+  "tools.database.galleryCardEdit": "Rediger",
+  "tools.database.galleryCardMore": "Gi nytt navn, slett, flytt og mer…",
   "tools.database.galleryCardSize": "Kortstørrelse",
   "tools.database.galleryCardSizeSmall": "Liten",
   "tools.database.galleryCardSizeMedium": "Middels",

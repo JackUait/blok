@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Qalereya",
   "tools.database.galleryNew": "Yeni",
   "tools.database.galleryLoadMore": "Daha çox yüklə",
+  "tools.database.galleryCardEdit": "Redaktə et",
+  "tools.database.galleryCardMore": "Adını dəyiş, sil, köçür və daha çox…",
   "tools.database.galleryCardSize": "Kart ölçüsü",
   "tools.database.galleryCardSizeSmall": "Kiçik",
   "tools.database.galleryCardSizeMedium": "Orta",

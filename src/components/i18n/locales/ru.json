@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Галерея",
   "tools.database.galleryNew": "Новая страница",
   "tools.database.galleryLoadMore": "Загрузить ещё",
+  "tools.database.galleryCardEdit": "Изменить",
+  "tools.database.galleryCardMore": "Переименовать, удалить, переместить и не только…",
   "tools.database.galleryCardSize": "Размер карточки",
   "tools.database.galleryCardSizeSmall": "Маленький",
   "tools.database.galleryCardSizeMedium": "Средний",

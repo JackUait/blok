@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "გალერეა",
   "tools.database.galleryNew": "ახალი",
   "tools.database.galleryLoadMore": "მეტის ჩატვირთვა",
+  "tools.database.galleryCardEdit": "რედაქტირება",
+  "tools.database.galleryCardMore": "გადარქმევა, წაშლა, გადატანა და სხვა…",
   "tools.database.galleryCardSize": "ბარათის ზომა",
   "tools.database.galleryCardSizeSmall": "პატარა",
   "tools.database.galleryCardSizeMedium": "საშუალო",

@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ګالري",
   "tools.database.galleryNew": "نوی",
   "tools.database.galleryLoadMore": "نور بار کړئ",
+  "tools.database.galleryCardEdit": "سم یې کړئ",
+  "tools.database.galleryCardMore": "نوم بدلول، ړنګول، لېږدول او نور…",
   "tools.database.galleryCardSize": "د کارت اندازه",
   "tools.database.galleryCardSizeSmall": "وړوکی",
   "tools.database.galleryCardSizeMedium": "منځنی",

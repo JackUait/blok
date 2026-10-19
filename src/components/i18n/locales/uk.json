@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Галерея",
   "tools.database.galleryNew": "Нова сторінка",
   "tools.database.galleryLoadMore": "Завантажити ще",
+  "tools.database.galleryCardEdit": "Редагувати",
+  "tools.database.galleryCardMore": "Перейменувати, видалити, перемістити й інше…",
   "tools.database.galleryCardSize": "Розмір картки",
   "tools.database.galleryCardSizeSmall": "Малий",
   "tools.database.galleryCardSizeMedium": "Середній",

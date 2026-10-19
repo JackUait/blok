@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ਗੈਲਰੀ",
   "tools.database.galleryNew": "ਨਵਾਂ",
   "tools.database.galleryLoadMore": "ਹੋਰ ਲੋਡ ਕਰੋ",
+  "tools.database.galleryCardEdit": "ਸੋਧੋ",
+  "tools.database.galleryCardMore": "ਨਾਮ ਬਦਲੋ, ਮਿਟਾਓ, ਲਿਜਾਓ ਅਤੇ ਹੋਰ…",
   "tools.database.galleryCardSize": "ਕਾਰਡ ਦਾ ਆਕਾਰ",
   "tools.database.galleryCardSizeSmall": "ਛੋਟਾ",
   "tools.database.galleryCardSizeMedium": "ਦਰਮਿਆਨਾ",

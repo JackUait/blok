@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galeri",
   "tools.database.galleryNew": "Baharu",
   "tools.database.galleryLoadMore": "Muat lagi",
+  "tools.database.galleryCardEdit": "Sunting",
+  "tools.database.galleryCardMore": "Namakan semula, padam, alihkan dan lagi…",
   "tools.database.galleryCardSize": "Saiz kad",
   "tools.database.galleryCardSizeSmall": "Kecil",
   "tools.database.galleryCardSizeMedium": "Sederhana",

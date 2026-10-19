@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "گەلەری",
   "tools.database.galleryNew": "نوێ",
   "tools.database.galleryLoadMore": "بارکردنی زیاتر",
+  "tools.database.galleryCardEdit": "دەستکاری",
+  "tools.database.galleryCardMore": "ناو گۆڕین، سڕینەوە، گواستنەوە و زیاتر…",
   "tools.database.galleryCardSize": "قەبارەی کارت",
   "tools.database.galleryCardSizeSmall": "بچووک",
   "tools.database.galleryCardSizeMedium": "مامناوەند",

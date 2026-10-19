@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ແກເລີຣີ",
   "tools.database.galleryNew": "ໃໝ່",
   "tools.database.galleryLoadMore": "ໂຫຼດເພີ່ມ",
+  "tools.database.galleryCardEdit": "ແກ້ໄຂ",
+  "tools.database.galleryCardMore": "ປ່ຽນຊື່, ລຶບ, ຍ້າຍ ແລະ ອື່ນໆ…",
   "tools.database.galleryCardSize": "ຂະໜາດບັດ",
   "tools.database.galleryCardSizeSmall": "ນ້ອຍ",
   "tools.database.galleryCardSizeMedium": "ປານກາງ",

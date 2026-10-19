@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "گالری",
   "tools.database.galleryNew": "جدید",
   "tools.database.galleryLoadMore": "بارگیری بیشتر",
+  "tools.database.galleryCardEdit": "ویرایش",
+  "tools.database.galleryCardMore": "تغییر نام، حذف، انتقال و موارد بیشتر…",
   "tools.database.galleryCardSize": "اندازه کارت",
   "tools.database.galleryCardSizeSmall": "کوچک",
   "tools.database.galleryCardSizeMedium": "متوسط",

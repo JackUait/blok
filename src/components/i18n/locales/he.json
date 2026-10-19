@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "גלריה",
   "tools.database.galleryNew": "חדש",
   "tools.database.galleryLoadMore": "טען עוד",
+  "tools.database.galleryCardEdit": "ערוך",
+  "tools.database.galleryCardMore": "שינוי שם, מחיקה, העברה ועוד…",
   "tools.database.galleryCardSize": "גודל כרטיס",
   "tools.database.galleryCardSizeSmall": "קטן",
   "tools.database.galleryCardSizeMedium": "בינוני",

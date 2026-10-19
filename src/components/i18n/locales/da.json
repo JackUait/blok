@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galleri",
   "tools.database.galleryNew": "Ny",
   "tools.database.galleryLoadMore": "Indlæs flere",
+  "tools.database.galleryCardEdit": "Rediger",
+  "tools.database.galleryCardMore": "Omdøb, slet, flyt og mere…",
   "tools.database.galleryCardSize": "Kortstørrelse",
   "tools.database.galleryCardSizeSmall": "Lille",
   "tools.database.galleryCardSizeMedium": "Mellem",

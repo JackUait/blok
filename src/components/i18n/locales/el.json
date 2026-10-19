@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Συλλογή",
   "tools.database.galleryNew": "Νέα σελίδα",
   "tools.database.galleryLoadMore": "Φόρτωση περισσότερων",
+  "tools.database.galleryCardEdit": "Επεξεργασία",
+  "tools.database.galleryCardMore": "Μετονομασία, διαγραφή, μετακίνηση και άλλα…",
   "tools.database.galleryCardSize": "Μέγεθος κάρτας",
   "tools.database.galleryCardSizeSmall": "Μικρό",
   "tools.database.galleryCardSizeMedium": "Μεσαίο",

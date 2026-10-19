@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galerija",
   "tools.database.galleryNew": "Jauna lapa",
   "tools.database.galleryLoadMore": "Ielādēt vairāk",
+  "tools.database.galleryCardEdit": "Rediģēt",
+  "tools.database.galleryCardMore": "Pārdēvēt, dzēst, pārvietot un vairāk…",
   "tools.database.galleryCardSize": "Kartītes izmērs",
   "tools.database.galleryCardSizeSmall": "Mazs",
   "tools.database.galleryCardSizeMedium": "Vidējs",

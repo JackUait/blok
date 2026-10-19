@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "画廊",
   "tools.database.galleryNew": "新建",
   "tools.database.galleryLoadMore": "加载更多",
+  "tools.database.galleryCardEdit": "编辑",
+  "tools.database.galleryCardMore": "重命名、删除、移动等…",
   "tools.database.galleryCardSize": "卡片大小",
   "tools.database.galleryCardSizeSmall": "小",
   "tools.database.galleryCardSizeMedium": "中",

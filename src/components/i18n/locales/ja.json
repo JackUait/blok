@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ギャラリー",
   "tools.database.galleryNew": "新規",
   "tools.database.galleryLoadMore": "さらに読み込む",
+  "tools.database.galleryCardEdit": "編集",
+  "tools.database.galleryCardMore": "名前の変更、削除、移動など…",
   "tools.database.galleryCardSize": "カードサイズ",
   "tools.database.galleryCardSizeSmall": "小",
   "tools.database.galleryCardSizeMedium": "中",

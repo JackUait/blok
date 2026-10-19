@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galerii",
   "tools.database.galleryNew": "Uus leht",
   "tools.database.galleryLoadMore": "Laadi rohkem",
+  "tools.database.galleryCardEdit": "Muuda",
+  "tools.database.galleryCardMore": "Nimeta ümber, kustuta, teisalda ja muud…",
   "tools.database.galleryCardSize": "Kaardi suurus",
   "tools.database.galleryCardSizeSmall": "Väike",
   "tools.database.galleryCardSizeMedium": "Keskmine",

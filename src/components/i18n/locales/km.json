@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "វិចិត្រសាល",
   "tools.database.galleryNew": "ថ្មី",
   "tools.database.galleryLoadMore": "ផ្ទុកបន្ថែម",
+  "tools.database.galleryCardEdit": "កែសម្រួល",
+  "tools.database.galleryCardMore": "ប្ដូរឈ្មោះ លុប ផ្លាស់ទី និងច្រើនទៀត…",
   "tools.database.galleryCardSize": "ទំហំកាត",
   "tools.database.galleryCardSizeSmall": "តូច",
   "tools.database.galleryCardSizeMedium": "មធ្យម",

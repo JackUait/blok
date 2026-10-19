@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galerija",
   "tools.database.galleryNew": "Nova stran",
   "tools.database.galleryLoadMore": "Naloži več",
+  "tools.database.galleryCardEdit": "Uredi",
+  "tools.database.galleryCardMore": "Preimenuj, izbriši, premakni in več…",
   "tools.database.galleryCardSize": "Velikost kartice",
   "tools.database.galleryCardSizeSmall": "Majhna",
   "tools.database.galleryCardSizeMedium": "Srednja",

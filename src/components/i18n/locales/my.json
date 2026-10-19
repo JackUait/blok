@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ပြခန်း",
   "tools.database.galleryNew": "အသစ်",
   "tools.database.galleryLoadMore": "ထပ်မံ တင်ရန်",
+  "tools.database.galleryCardEdit": "တည်းဖြတ်ရန်",
+  "tools.database.galleryCardMore": "အမည်ပြောင်း၊ ဖျက်၊ ရွှေ့ နှင့် နောက်ထပ်…",
   "tools.database.galleryCardSize": "ကတ်အရွယ်အစား",
   "tools.database.galleryCardSizeSmall": "သေး",
   "tools.database.galleryCardSizeMedium": "အလတ်",

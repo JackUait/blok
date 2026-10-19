@@ -877,6 +877,8 @@ export type BlokMessageKey =
   | 'tools.database.formulaLabel'
   | 'tools.database.formulaPlaceholder'
   | 'tools.database.formulaReference'
+  | 'tools.database.galleryCardEdit'
+  | 'tools.database.galleryCardMore'
   | 'tools.database.galleryCardPreview'
   | 'tools.database.galleryCardPreviewContent'
   | 'tools.database.galleryCardPreviewCover'

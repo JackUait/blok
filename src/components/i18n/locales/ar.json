@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "معرض",
   "tools.database.galleryNew": "جديد",
   "tools.database.galleryLoadMore": "تحميل المزيد",
+  "tools.database.galleryCardEdit": "تحرير",
+  "tools.database.galleryCardMore": "إعادة التسمية والحذف والنقل والمزيد…",
   "tools.database.galleryCardSize": "حجم البطاقة",
   "tools.database.galleryCardSizeSmall": "صغير",
   "tools.database.galleryCardSizeMedium": "متوسط",

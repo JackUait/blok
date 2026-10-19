@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Галерија",
   "tools.database.galleryNew": "Нова страница",
   "tools.database.galleryLoadMore": "Вчитај повеќе",
+  "tools.database.galleryCardEdit": "Уреди",
+  "tools.database.galleryCardMore": "Преименувај, избриши, премести и повеќе…",
   "tools.database.galleryCardSize": "Големина на картичката",
   "tools.database.galleryCardSizeSmall": "Мала",
   "tools.database.galleryCardSizeMedium": "Средна",

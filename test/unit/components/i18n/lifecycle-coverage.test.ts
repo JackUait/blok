@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1224 + 125 + 434 + 4 closure for all 1787 keys', () => {
+  it('rebuilds a disjoint 1226 + 125 + 434 + 4 closure for all 1789 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1787);
+    expect(lifecycle.size).toBe(1789);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -394,7 +394,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the Place editor's name chip × calls tools.database.placeClear by literal.
       // +6: the linked view's source panel calls its eight tools.database.linked* keys by literal;
       // the old inline picker's linkedPickSource and linkedNoSources are gone.
-      'executable-literal': 1224,
+      'executable-literal': 1226,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

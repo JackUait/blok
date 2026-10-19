@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "গ্যালারি",
   "tools.database.galleryNew": "নতুন",
   "tools.database.galleryLoadMore": "আরও লোড করুন",
+  "tools.database.galleryCardEdit": "সম্পাদনা",
+  "tools.database.galleryCardMore": "নাম পরিবর্তন, মুছুন, সরান এবং আরও…",
   "tools.database.galleryCardSize": "কার্ডের আকার",
   "tools.database.galleryCardSizeSmall": "ছোট",
   "tools.database.galleryCardSizeMedium": "মাঝারি",

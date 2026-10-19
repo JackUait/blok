@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "ಗ್ಯಾಲರಿ",
   "tools.database.galleryNew": "ಹೊಸದು",
   "tools.database.galleryLoadMore": "ಇನ್ನಷ್ಟು ಲೋಡ್ ಮಾಡಿ",
+  "tools.database.galleryCardEdit": "ಸಂಪಾದಿಸಿ",
+  "tools.database.galleryCardMore": "ಮರುಹೆಸರಿಸಿ, ಅಳಿಸಿ, ಸರಿಸಿ ಮತ್ತು ಇನ್ನಷ್ಟು…",
   "tools.database.galleryCardSize": "ಕಾರ್ಡ್ ಗಾತ್ರ",
   "tools.database.galleryCardSizeSmall": "ಚಿಕ್ಕದು",
   "tools.database.galleryCardSizeMedium": "ಮಧ್ಯಮ",

@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "గ్యాలరీ",
   "tools.database.galleryNew": "కొత్తది",
   "tools.database.galleryLoadMore": "మరిన్ని లోడ్ చేయండి",
+  "tools.database.galleryCardEdit": "సవరించు",
+  "tools.database.galleryCardMore": "పేరు మార్చు, తొలగించు, తరలించు మరియు మరిన్ని…",
   "tools.database.galleryCardSize": "కార్డ్ పరిమాణం",
   "tools.database.galleryCardSizeSmall": "చిన్నది",
   "tools.database.galleryCardSizeMedium": "మధ్యస్థం",

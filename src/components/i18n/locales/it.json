@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galleria",
   "tools.database.galleryNew": "Nuovo",
   "tools.database.galleryLoadMore": "Carica altro",
+  "tools.database.galleryCardEdit": "Modifica",
+  "tools.database.galleryCardMore": "Rinomina, elimina, sposta e altro…",
   "tools.database.galleryCardSize": "Dimensione delle schede",
   "tools.database.galleryCardSizeSmall": "Piccola",
   "tools.database.galleryCardSizeMedium": "Media",

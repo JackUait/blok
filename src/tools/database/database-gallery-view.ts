@@ -11,7 +11,8 @@ import { resolveCardPreview, resolveCardSize, resolveFitImage, resolveViewProper
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconPlus } from '../../components/icons';
+import { IconDotsHorizontal, IconPencil, IconPlus } from '../../components/icons';
+import { onHover } from '../../components/utils/tooltip';
 import { startInlineRename } from '../../components/utils/inline-rename';
 
 export interface GalleryGroup {
@@ -71,6 +72,8 @@ export interface DatabaseGalleryViewOptions {
 /** Painted by the tool's paintRowSelection; the gallery reads the selection back from it. */
 const SELECTED_ATTR = 'data-blok-database-row-selected';
 const CARD = '[data-blok-database-gallery-card]';
+/** The card's hover buttons; the tool opens the row menu from "•••". */
+const CARD_ACTIONS = '[data-blok-database-card-actions]';
 
 /** Pixels the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 4;
@@ -279,8 +282,39 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     if (list.childElementCount > 0) {
       card.appendChild(list);
     }
+    if (!this.options.readOnly) {
+      card.appendChild(this.createActions(row.id, titleShown));
+    }
 
     return card;
+  }
+
+  /** Edit and "•••" at the cover's top-right, Tab stops right after the card (research/12 §3, research/16 §3a). */
+  private createActions(rowId: string, titleShown: boolean): HTMLElement {
+    const actions = document.createElement('div');
+    const button = (attribute: string, label: string, icon: string): HTMLButtonElement => {
+      const el = document.createElement('button');
+
+      el.type = 'button';
+      el.setAttribute(attribute, '');
+      el.setAttribute('data-row-id', rowId);
+      el.setAttribute('aria-label', label);
+      el.innerHTML = icon;
+      onHover(el, label);
+      actions.appendChild(el);
+
+      return el;
+    };
+
+    actions.setAttribute('data-blok-database-card-actions', '');
+    // A hidden name has nothing to rename.
+    if (titleShown) {
+      button('data-blok-database-edit-card', this.t('tools.database.galleryCardEdit'), IconPencil)
+        .addEventListener('click', () => this.startRename(rowId));
+    }
+    button('data-blok-database-card-menu', this.t('tools.database.galleryCardMore'), IconDotsHorizontal);
+
+    return actions;
   }
 
   private createTitle(title: string): HTMLElement {
@@ -335,6 +369,11 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     if (more !== null) {
       handlers.loadMore(more.getAttribute('data-group-key') ?? '');
 
+      return;
+    }
+
+    // The buttons act on their own; the click goes on to the tool for "•••".
+    if (target.closest(CARD_ACTIONS) !== null) {
       return;
     }
 
@@ -509,7 +548,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0 || !this.canDrag || !(event.target instanceof Element)) {
+    if (event.button !== 0 || !this.canDrag || !(event.target instanceof Element) || event.target.closest(CARD_ACTIONS) !== null) {
       return;
     }
 

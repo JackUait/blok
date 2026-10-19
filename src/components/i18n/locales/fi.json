@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galleria",
   "tools.database.galleryNew": "Uusi",
   "tools.database.galleryLoadMore": "Lataa lisää",
+  "tools.database.galleryCardEdit": "Muokkaa",
+  "tools.database.galleryCardMore": "Nimeä uudelleen, poista, siirrä ja muuta…",
   "tools.database.galleryCardSize": "Kortin koko",
   "tools.database.galleryCardSizeSmall": "Pieni",
   "tools.database.galleryCardSizeMedium": "Keskikokoinen",

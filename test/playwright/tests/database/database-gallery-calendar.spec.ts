@@ -189,6 +189,47 @@ test.describe('gallery', () => {
     expect(await savedRows(page)).toHaveLength(4);
   });
 
+  test.describe('hover buttons (research/12 §3)', () => {
+    test('Edit and "•••" show at the card\'s top-right on hover only', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      const more = card(page, 'r1').getByRole('button', { name: 'Rename, delete, move to and more…' });
+      const actions = card(page, 'r1').locator('[data-blok-database-card-actions]');
+
+      await expect(actions).toHaveCSS('opacity', '0');
+      await card(page, 'r1').hover();
+      await expect(actions).toHaveCSS('opacity', '1');
+      const cardBox = await card(page, 'r1').boundingBox();
+      const moreBox = await more.boundingBox();
+
+      if (cardBox === null || moreBox === null) throw new Error('no box');
+      expect(cardBox.x + cardBox.width - (moreBox.x + moreBox.width)).toBeLessThan(16);
+      expect(moreBox.y - cardBox.y).toBeLessThan(16);
+    });
+
+    test('"•••" opens the row menu, not the page', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await card(page, 'r1').hover();
+      await card(page, 'r1').getByRole('button', { name: 'Rename, delete, move to and more…' }).click();
+
+      await expect(page.locator('[data-blok-database-row-menu-heading]')).toBeVisible();
+      await expect(drawer(page)).toBeHidden();
+    });
+
+    test('Edit renames the card in place', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await card(page, 'r1').hover();
+      await card(page, 'r1').getByRole('button', { name: 'Edit' }).click();
+      const input = card(page, 'r1').locator('[data-blok-database-gallery-title-input]');
+
+      await expect(input).toBeFocused();
+      await input.fill('Launch day');
+      await input.press('Enter');
+
+      await expect(drawer(page)).toBeHidden();
+      expect((await savedRow(page, 'r1'))['p-title']).toBe('Launch day');
+    });
+  });
+
   test('clicking a card opens the row', async ({ page }) => {
     await mount(page, blocks({ type: 'gallery' }));
 
@@ -327,12 +368,16 @@ test.describe('gallery', () => {
       await expect(page.locator('[data-blok-database-gallery-card] input')).toHaveCount(0);
     });
 
-    test('Tab focuses one card after another, and Enter opens the focused card', async ({ page }) => {
+    test('Tab goes card, Edit, "Rename, delete, move to and more…", next card; Enter opens the focused card', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await clickBlank(page);
 
       await page.keyboard.press('Tab');
       await expect(card(page, 'r1')).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(card(page, 'r1').getByRole('button', { name: 'Edit' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(card(page, 'r1').getByRole('button', { name: 'Rename, delete, move to and more…' })).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(card(page, 'r2')).toBeFocused();
       await page.keyboard.press('Enter');
@@ -343,8 +388,8 @@ test.describe('gallery', () => {
     test('an arrow on a Tab-focused card selects that card, with no ring around the gallery', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await clickBlank(page);
-      await page.keyboard.press('Tab');
-      await page.keyboard.press('Tab');
+      // Card r1, its Edit and "•••", then card r2.
+      for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
       await expect(card(page, 'r2')).toBeFocused();
 
       await page.keyboard.press('ArrowDown');

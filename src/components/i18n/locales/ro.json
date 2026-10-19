@@ -1210,6 +1210,8 @@
   "tools.database.galleryLabel": "Galerie",
   "tools.database.galleryNew": "Pagină nouă",
   "tools.database.galleryLoadMore": "Încarcă mai multe",
+  "tools.database.galleryCardEdit": "Editează",
+  "tools.database.galleryCardMore": "Redenumește, șterge, mută și altele…",
   "tools.database.galleryCardSize": "Dimensiunea cardului",
   "tools.database.galleryCardSizeSmall": "Mică",
   "tools.database.galleryCardSizeMedium": "Medie",

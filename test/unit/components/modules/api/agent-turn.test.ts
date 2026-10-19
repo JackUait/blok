@@ -96,7 +96,8 @@ describe('createAgentTurn dispatch', () => {
 
     const result = await turn.call('blok_execute', input);
 
-    expect(result).toEqual({ content: JSON.stringify({ ...ok(), changed: { created: ['b1'] } }), isError: false });
+    expect(result.isError).toBe(false);
+    expect(JSON.parse(String(result.content))).toEqual({ ...ok(), changed: { created: ['b1'] } });
     expect(session.execute).toHaveBeenCalledExactlyOnceWith(BATCH, { signal: turn.signal });
     expect(hooks.onExecuted).toHaveBeenCalledExactlyOnceWith(ok());
     expect(session.read).not.toHaveBeenCalled();
@@ -115,7 +116,8 @@ describe('createAgentTurn dispatch', () => {
     session.execute.mockResolvedValue(failed);
     const result = await createAgentTurn(session, hooks).call('blok_execute', BATCH);
 
-    expect(result).toEqual({ content: JSON.stringify(failed), isError: true });
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(String(result.content))).toEqual(failed);
     expect(hooks.onExecuted).not.toHaveBeenCalled();
   });
 

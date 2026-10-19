@@ -95,6 +95,15 @@ describe('database.updateProperty', () => {
     run(doc, id, 'updateProperty', { propertyId: status.id, name: status.name, settings: { icon: '🚦' } });
     expect(schema()[1]).toMatchObject({ name: status.name, icon: '🚦' });
   });
+
+  it('keeps its own current name even when another property already has it', () => {
+    const { doc, id, schema } = make();
+    const [title, status] = schema();
+
+    createFakeCtx(doc, id).update(id, { schema: schema().map(property => (property.id === status.id ? { ...property, name: title.name } : property)) });
+    run(doc, id, 'updateProperty', { propertyId: status.id, name: title.name, settings: { icon: '🚦' } });
+    expect(schema()[1]).toMatchObject({ name: title.name, icon: '🚦' });
+  });
 });
 
 describe('database.duplicateProperty / deleteProperty', () => {

@@ -553,8 +553,11 @@ const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settin
     const { block, state } = openDatabase(ctx);
     const index = propertyAt(ctx, state, args.propertyId);
 
-    // Same rule as DatabaseTool.isPropertyNameTaken: exact and case-sensitive.
-    if (name !== undefined && state.schema.some((property, i) => i !== index && property.name === name)) {
+    // Same rule as the property menu: exact and case-sensitive; the current name always stays allowed.
+    const taken = name !== undefined && name !== state.schema[index]?.name
+      && state.schema.some((property, i) => i !== index && property.name === name);
+
+    if (taken) {
       ctx.fail('PRECONDITION_FAILED', `A property named ${name} already exists in this database.`);
     }
     const settings = Object.entries(args.settings ?? {}).filter(([key]) => SETTING_KEYS.some(known => known === key));

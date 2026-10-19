@@ -14,10 +14,10 @@ const errorOf = async (response: Response): Promise<string> => {
 
 /**
  * agent.assistant.model for the playground. Reads the NDJSON that
- * scripts/dev-ai.mjs streams and shows each block's text while it arrives.
+ * scripts/dev-ai.mjs streams and returns its final message.
  * @param url - the dev endpoint `yarn serve` starts
  */
-export const playgroundModel = (url: string): AgentModel => async ({ system, messages, tools, signal, onText }) => {
+export const playgroundModel = (url: string): AgentModel => async ({ system, messages, tools, signal }) => {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,23 +30,14 @@ export const playgroundModel = (url: string): AgentModel => async ({ system, mes
   }
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-  const texts = new Map<number, string>();
   const state = { buffered: '' };
 
   const handle = (line: Line): AgentModelResponse | null => {
     if (line.type === 'error') {
       throw new Error(line.error);
     }
-    if (line.type === 'message') {
-      return { content: line.content, stop_reason: line.stop_reason };
-    }
-
-    const text = (texts.get(line.index) ?? '') + line.text;
-
-    texts.set(line.index, text);
-    onText?.(text);
-
-    return null;
+    // Deltas are skipped: the bar shows a status line, not the text in flight.
+    return line.type === 'message' ? { content: line.content, stop_reason: line.stop_reason } : null;
   };
 
   for (;;) {

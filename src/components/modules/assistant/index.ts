@@ -144,7 +144,7 @@ export class Assistant extends Module {
 
     const id = ++this.answerId;
 
-    this.bar?.render({ kind: 'working', status: this.workingStatus() });
+    this.bar?.render({ kind: 'working', status: this.activityStatus('thinking') });
     void pending.then((result) => {
       if (id === this.answerId) {
         this.show(result);
@@ -152,21 +152,36 @@ export class Assistant extends Module {
     });
   }
 
-  private workingStatus(): string {
-    const name = this.config.agent?.assistant?.name?.trim() || 'AI';
+  /**
+   * One line for the step the run is on. Hosts reword it with i18n messages.
+   * @param activity - 'thinking', or the tool the model calls
+   */
+  private activityStatus(activity: string): string {
+    const i18n = this.Blok.I18n;
 
-    return this.Blok.I18n.t('assistant.working', { agent: name });
+    switch (activity) {
+      case 'thinking':
+        return i18n.t('assistant.status.thinking');
+      case 'blok_read':
+        return i18n.t('assistant.status.reading');
+      case 'blok_describe':
+        return i18n.t('assistant.status.checking');
+      case 'blok_execute':
+        return i18n.t('assistant.status.editing');
+      default:
+        return i18n.t('assistant.status.working');
+    }
   }
 
-  private progress(text: string): void {
+  private activity(activity: string): void {
     if (this.isWorking()) {
-      this.bar?.render({ kind: 'working', status: this.workingStatus(), progress: text });
+      this.bar?.render({ kind: 'working', status: this.activityStatus(activity) });
     }
   }
 
   private startRun(prompt: string): Promise<AgentRunResult> | null {
     try {
-      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, (text) => this.progress(text));
+      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, (activity) => this.activity(activity));
 
       return this.run.result;
     } catch (thrown) {

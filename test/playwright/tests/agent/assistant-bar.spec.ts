@@ -130,7 +130,7 @@ test.describe('in-editor assistant', () => {
     await field.fill('Add a closing sentence');
     await page.keyboard.press('Enter');
 
-    await expect(bar.getByRole('status')).toHaveText('Claude is writing…');
+    await expect(bar.getByRole('status')).toHaveText('Thinking…');
     await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(1);
     await page.evaluate(() => window.assistantRelease?.());
     await expect(page.locator(`#${HOLDER_ID}`).getByText('Written by Claude')).toBeVisible();

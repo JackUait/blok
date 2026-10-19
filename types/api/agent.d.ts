@@ -108,12 +108,6 @@ export interface AgentModelRequest {
   signal: AbortSignal;
   /** The level for this prompt. Absent when the host set no `thinking` and the caller passed none. */
   thinking?: AgentThinkingLevel;
-  /**
-   * Optional. If you stream, call it with the full text so far of the block the model
-   * is writing: its answer, or a short note between tool calls. Each call replaces
-   * the last. The prompt bar shows it while the model works.
-   */
-  onText?(text: string): void;
 }
 
 /** The model's reply. An Anthropic `Message` fits this shape as is. */

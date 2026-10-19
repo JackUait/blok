@@ -29,8 +29,8 @@ export interface AssistantLoopOptions {
   maxSteps: number;
   /** Sent on every model request of this run. */
   thinking?: AgentThinkingLevel;
-  /** Text the model is streaming. Silent after the run stops. */
-  onText?(text: string): void;
+  /** 'thinking' before each model request, then the name of each tool called. Silent after the run stops. */
+  onActivity?(activity: string): void;
 }
 
 type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
@@ -59,6 +59,10 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promis
   const results: AgentModelContentBlock[] = [];
 
   for (const use of uses) {
+    if (!options.signal.aborted) {
+      options.onActivity?.(use.name);
+    }
+
     const outcome = options.signal.aborted ? null : await options.call(use.name, use.input);
 
     results.push(outcome === null
@@ -72,24 +76,12 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promis
 type Step = { next: 'continue'; reply: string } | { next: 'return'; result: AssistantLoopResult };
 
 const ask = (options: AssistantLoopOptions): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> => {
-  const { onText, signal } = options;
-  const show = onText === undefined
-    ? {}
-    : {
-      onText: (text: string) => {
-        if (!signal.aborted) {
-          onText(text);
-        }
-      },
-    };
-
   return options.model({
     system: options.system,
     messages: options.messages,
     tools: options.tools,
-    signal,
+    signal: options.signal,
     ...(options.thinking === undefined ? {} : { thinking: options.thinking }),
-    ...show,
   }).then(
     (value) => ({ ok: true as const, value }),
     (thrown: unknown) => ({ ok: false as const, error: messageOf(thrown) })
@@ -107,6 +99,8 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
   if (signal.aborted) {
     return finish('stopped');
   }
+
+  options.onActivity?.('thinking');
 
   const response = await ask(options);
 

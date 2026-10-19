@@ -19,8 +19,8 @@ export interface AgentRunDeps {
   changed(): string[];
   /** Read once per prompt, so a run already answering keeps its level. */
   thinking(): AgentThinkingLevel | undefined;
-  /** Text the model is streaming, for the prompt bar. */
-  onText?(text: string): void;
+  /** What the run does now, for the prompt bar's status line. */
+  onActivity?(activity: string): void;
 }
 
 const busy = (): Error => new Error('editor.agent: this run is still answering. Await `result` or call stop() first.');
@@ -58,7 +58,7 @@ export function createAgentRun(prompt: string, deps: AgentRunDeps): AgentRun {
           signal: controller.signal,
           maxSteps: deps.maxSteps,
           ...(thinking === undefined ? {} : { thinking }),
-          onText: deps.onText,
+          onActivity: deps.onActivity,
         });
 
         return { ...outcome, changed: deps.changed() };

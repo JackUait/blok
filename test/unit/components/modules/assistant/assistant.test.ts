@@ -206,7 +206,7 @@ describe('in-editor assistant bar', () => {
 
     const stop = within(bar()).getByRole('button', { name: 'Stop' });
 
-    expect(within(bar()).getByRole('status')).toHaveTextContent('Writer is writing');
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
     stop.click();
 
     await waitFor(() => expect(within(bar()).queryByRole('button', { name: 'Stop' })).toBeNull());
@@ -214,53 +214,85 @@ describe('in-editor assistant bar', () => {
     expect(editor.agent.state.status).toBe('working');
   });
 
-  it('shows the text the model streams while it works, outside the status line', async () => {
+  it('keeps the model\'s notes between tool calls out of the bar while it works', async () => {
     const { model, release } = gated(answer('Added a line.'));
-    const streaming: AgentModel = async (request) => {
-      request.onText?.('Reading');
-      request.onText?.('Reading the document first.');
+    const responses: AgentModelResponse[] = [{
+      stop_reason: 'tool_use',
+      content: [
+        { type: 'text', text: 'The document has one empty paragraph. Let me check callout data fields.' },
+        { type: 'tool_use', id: 'r1', name: 'blok_read', input: {} },
+      ],
+    }];
+    const editor = await createEditor(async (request) => responses.shift() ?? model(request));
 
-      return model(request);
-    };
-    const editor = await createEditor(streaming);
+    editor.agent.openAssistant();
+    submit('Write');
+    await settle(20);
+
+    expect(within(bar()).queryByText(/Let me check/)).toBeNull();
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
+
+    release();
+    await waitFor(() => expect(within(bar()).getByText('Added a line.')).toBeVisible());
+    expect(editor.agent.state.status).toBe('working');
+  });
+
+  it('shows one status line naming the tool being called', async () => {
+    const statuses: string[] = [];
+    const editor = await createEditor(scripted(
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'r1', name: 'blok_read', input: {} }] },
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'd1', name: 'blok_describe', input: {} }] },
+      insertBatch('From AI'),
+      answer('Done.')
+    ));
+    const observer = new MutationObserver(() => {
+      const text = document.querySelector('[data-blok-testid="assistant-bar"] [role="status"]')?.textContent ?? '';
+
+      if (text !== '' && statuses.at(-1) !== text) {
+        statuses.push(text);
+      }
+    });
+
+    editor.agent.openAssistant();
+    observer.observe(bar(), { subtree: true, childList: true, characterData: true });
+    submit('Write');
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    observer.disconnect();
+
+    expect(statuses).toEqual([
+      'Thinking…',
+      'Reading the page…',
+      'Thinking…',
+      'Looking up blocks…',
+      'Thinking…',
+      'Making changes…',
+      'Thinking…',
+    ]);
+    expect(within(bar()).getByRole('status')).toHaveTextContent('');
+  });
+
+  it('lets the host reword the status line through i18n messages', async () => {
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+
+    const editor = new Blok({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }] },
+      i18n: { messages: { 'assistant.status.thinking': 'Mulling it over…' } },
+      agent: { assistant: { model: gated(answer('late')).model } },
+    }) as unknown as TestEditor;
+
+    editors.push(editor);
+    await editor.isReady;
+    await settle();
 
     editor.agent.openAssistant();
     submit('Write');
     await settle();
 
-    expect(within(bar()).getByText('Reading the document first.')).toBeVisible();
-    expect(within(bar()).getByRole('status')).toHaveTextContent('Writer is writing');
-    expect(within(bar()).getByRole('status')).not.toHaveTextContent('Reading');
-
-    release();
-    await waitFor(() => expect(within(bar()).getByText('Added a line.')).toBeVisible());
-    expect(within(bar()).queryByText('Reading the document first.')).toBeNull();
-    expect(editor.agent.state.status).toBe('working');
-  });
-
-  it('streams a follow-up answer too', async () => {
-    const replies = [answer('First answer'), answer('Second answer')];
-    const shown: string[] = [];
-    const streaming: AgentModel = async (request) => {
-      request.onText?.(`streaming ${replies.length}`);
-      shown.push(within(bar()).queryByText(`streaming ${replies.length}`)?.textContent ?? '');
-      const next = replies.shift();
-
-      if (next === undefined) {
-        throw new Error('unscripted model call');
-      }
-
-      return next;
-    };
-    const editor = await createEditor(streaming);
-
-    editor.agent.openAssistant();
-    submit('One');
-    await waitFor(() => expect(within(bar()).getByText('First answer')).toBeVisible());
-    submit('Two');
-    await waitFor(() => expect(within(bar()).getByText('Second answer')).toBeVisible());
-    expect(shown).toEqual(['streaming 2', 'streaming 1']);
-    expect(editor.agent.state.status).toBe('working');
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Mulling it over…');
   });
 
   it('sends a second prompt as a follow-up in the same conversation', async () => {

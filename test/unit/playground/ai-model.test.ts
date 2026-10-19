@@ -13,9 +13,9 @@ const streamed = (...chunks: string[]): Response => new Response(new ReadableStr
   },
 }), { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
 
-const ask = (onText?: (text: string) => void): ReturnType<ReturnType<typeof playgroundModel>> =>
+const ask = (): ReturnType<ReturnType<typeof playgroundModel>> =>
   playgroundModel('http://127.0.0.1:4800/ai')({
-    system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [], signal: new AbortController().signal, onText,
+    system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [], signal: new AbortController().signal,
   });
 
 describe('playgroundModel', () => {
@@ -27,17 +27,14 @@ describe('playgroundModel', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows each block\'s text so far, then returns the final message', async () => {
+  it('skips the deltas and returns the final message', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(streamed(
       '{"type":"delta","index":0,"text":"Reading "}\n{"type":"del',
       'ta","index":0,"text":"the page."}\n{"type":"delta","index":2,"text":"Done."}\n',
       '{"type":"message","content":[{"type":"text","text":"Done."}],"stop_reason":"end_turn"}\n'
     ));
-    const shown: string[] = [];
+    const response = await ask();
 
-    const response = await ask((text) => shown.push(text));
-
-    expect(shown).toEqual(['Reading ', 'Reading the page.', 'Done.']);
     expect(response).toEqual({ content: [{ type: 'text', text: 'Done.' }], stop_reason: 'end_turn' });
   });
 

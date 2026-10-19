@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderAgentTools } from '../../../src/agent/render-tools';
 import type { RenderedTool } from '../../../src/agent/render-tools';
 import { readCustomToolsFile } from '../../../src/shared/custom-tools-file';
+import { validateAgainst } from '../../../src/shared/schema/validate';
+import { inlineRefs } from './fixtures/inline-refs';
 import type { AgentContract } from '../../../types/tool-manifest';
 import { contractFor } from './harness';
 import { CORPUS_ROOT } from './parity/corpus';
@@ -172,6 +174,42 @@ describe.each(['envelope', 'full', 'mixed'] as const)('renderAgentTools parity (
 
   it('matches the checked-in snapshot', async () => {
     await expect(JSON.stringify(inApp, null, 2)).toMatchFileSnapshot(`./__snapshots__/render-tools.anthropic.${schema}.json`);
+  });
+});
+
+/** Every schema node of at least `min` chars, as JSON, once per place it appears. */
+const schemaNodes = (value: unknown, min: number): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap(item => schemaNodes(item, min));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  const json = JSON.stringify(value);
+  const maps = ['properties', '$defs'].flatMap(key => (isRecord(value[key]) ? Object.values(value[key]) : []));
+  const children = ['items', 'oneOf', 'anyOf', 'allOf', 'additionalProperties'].map(key => value[key]);
+
+  return [...(json.length >= min ? [json] : []), ...[...maps, ...children].flatMap(child => schemaNodes(child, min))];
+};
+
+describe('renderAgentTools mixed schema', () => {
+  const mixed = inlineRefs(rawSchemaOf(executeTool(renderAgentTools(editor, { format: 'anthropic', schema: 'mixed' }))));
+  const raw = rawSchemaOf(executeTool(renderAgentTools(editor, { format: 'anthropic', schema: 'mixed' })));
+
+  it('states each repeated argument schema once, in $defs', () => {
+    const nodes = schemaNodes(raw, 100);
+    const repeated = nodes.filter((node, index) => nodes.indexOf(node) !== index);
+
+    expect(repeated).toEqual([]);
+  });
+
+  it('gives block.move its full arguments, and they still validate through $ref', () => {
+    const branches = asSchema(raw).properties?.commands?.items?.oneOf ?? [];
+
+    expect(branches.some(branch => branch.properties?.name?.const === 'block.move')).toBe(true);
+    expect(validateAgainst(mixed, { commands: [{ name: 'block.move', args: { id: 'a', position: { after: 'b' } } }] })).toEqual([]);
+    expect(validateAgainst(mixed, { commands: [{ name: 'block.move', args: { id: 'a', position: { after: '' } } }] })).not.toEqual([]);
+    expect(validateAgainst(mixed, { commands: [{ name: 'block.move', args: { id: '', position: 'end' } }] })).not.toEqual([]);
   });
 });
 

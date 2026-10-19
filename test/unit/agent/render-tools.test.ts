@@ -4,6 +4,7 @@ import type { AgentError, AgentResult } from '../../../types/agent';
 
 import { renderAgentTools, TOOL_NAME_PATTERN, type RenderedTool, type RenderOptions } from '../../../src/agent/render-tools';
 import { validateAgainst } from '../../../src/shared/schema/validate';
+import { inlineRefs } from './fixtures/inline-refs';
 import { modelAnswer } from '../../../src/shared/agent/model-answer';
 import { isClosedSchema } from '../../../src/agent/schema-walk';
 import { command, deepFreeze, makeContract } from './fixtures/contract';
@@ -523,12 +524,12 @@ describe('renderAgentTools mixed', () => {
   it('hoists the definitions a common command refers to', () => {
     const root = mixedInput(deepFreeze(makeContract()));
 
-    expect(Object.keys(schema(root.$defs))).toEqual(['block_insert__InsertSpec']);
+    expect(Object.keys(schema(root.$defs))).toContain('block_insert__InsertSpec');
     expect(JSON.stringify(root)).toContain('#/$defs/block_insert__InsertSpec');
   });
 
   it('accepts a known command through exactly one branch', () => {
-    const root = mixedInput();
+    const root = inlineRefs(mixedInput());
 
     expect(validateAgainst(root, { commands: [{ name: 'block.insert', args: { type: 'paragraph' } }] })).toEqual([]);
     expect(validateAgainst(root, { commands: [{ name: 'poll.addOption', args: { label: 'x' } }] })).toEqual([]);

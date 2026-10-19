@@ -220,3 +220,106 @@ export function hoistDefs(prefix: string, schema: Readonly<Schema>, into: Schema
 
   return cloned;
 }
+
+type Visit = (child: unknown, set: (next: Schema) => void, key: string | undefined) => void;
+
+const put = (target: Schema, key: string, value: unknown): void => {
+  Object.defineProperty(target, key, { value, enumerable: true, writable: true, configurable: true });
+};
+
+const eachSchemaChild = (value: Schema, visit: Visit): void => {
+  SCHEMA_MAPS.forEach(mapKey => {
+    const map = value[mapKey];
+
+    if (isSchema(map)) {
+      Object.keys(map).forEach(key => visit(map[key], next => {
+        map[key] = next;
+      }, mapKey === 'properties' ? key : undefined));
+    }
+  });
+  SCHEMA_LISTS.forEach(listKey => {
+    const list: unknown = value[listKey];
+
+    if (Array.isArray(list)) {
+      const items: unknown[] = list;
+
+      items.forEach((item, index) => visit(item, next => {
+        items[index] = next;
+      }, undefined));
+    }
+  });
+  SCHEMA_VALUES.forEach(valueKey => visit(value[valueKey], next => put(value, valueKey, next), undefined));
+};
+
+const mostCommon = (keys: string[]): string | undefined => {
+  const counts = new Map<string, number>();
+
+  keys.forEach(key => counts.set(key, (counts.get(key) ?? 0) + 1));
+
+  return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
+};
+
+const uniqueName = (base: string, taken: Schema): string => {
+  const candidate = { name: `${base}_2`, suffix: 3 };
+
+  while (Object.hasOwn(taken, candidate.name)) {
+    candidate.name = `${base}_${candidate.suffix++}`;
+  }
+
+  return candidate.name;
+};
+
+/**
+ * Moves every schema of at least `minLength` chars that appears more than once into `defs`,
+ * and points each copy at it with $ref. Biggest first, so a repeat inside it is counted once.
+ * Mutates `root` and `defs`.
+ */
+export function shareRepeatedSchemas(root: Schema, defs: Schema, minLength: number): void {
+  const walk = (visit: (node: Schema, json: string, set: (next: Schema) => void, key: string | undefined) => void, skip?: string): void => {
+    const step: Visit = (child, set, key) => {
+      if (!isSchema(child)) {
+        return;
+      }
+      visit(child, JSON.stringify(child), set, key);
+      eachSchemaChild(child, step);
+    };
+
+    eachSchemaChild(root, step);
+    Object.keys(defs).filter(name => name !== skip).forEach(name => step(defs[name], next => put(defs, name, next), undefined));
+  };
+
+  for (;;) {
+    const seen = new Map<string, { count: number; keys: string[] }>();
+
+    walk((node, json, _set, key) => {
+      if (json.length < minLength || typeof node.$ref === 'string') {
+        return;
+      }
+      const entry = seen.get(json) ?? { count: 0, keys: [] };
+
+      entry.count += 1;
+      entry.keys.push(...(key === undefined ? [] : [key]));
+      seen.set(json, entry);
+    });
+    const best = [...seen].filter(([, entry]) => entry.count > 1).sort(([a], [b]) => b.length - a.length)[0];
+
+    if (best === undefined) {
+      return;
+    }
+    const [json, { keys }] = best;
+    const base = (mostCommon(keys) ?? 'shared').replace(/[^A-Za-z0-9_]/g, '_');
+    const name = Object.hasOwn(defs, base) ? uniqueName(base, defs) : base;
+    const definition: unknown = JSON.parse(json);
+
+    if (!isSchema(definition)) {
+      return;
+    }
+    put(defs, name, definition);
+    walk((_node, nodeJson, set) => {
+      if (nodeJson === json) {
+        set({ $ref: `#/$defs/${name}` });
+      }
+    }, name);
+  }
+}
+

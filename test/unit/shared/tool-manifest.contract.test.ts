@@ -459,6 +459,39 @@ describe('buildAgentContract', () => {
 
     expect(type.description).toBe(`A block tool: paragraph, grid. A variant sets these data fields; the tool's other required fields still go in data: grid {columns: 4}.`);
   });
+
+  it("leaves out variant data fields the tool's data schema refuses", () => {
+    const statics = block().statics;
+    const insertCore: CoreCommandTable = {
+      'block.insert': {
+        argsSchema: { type: 'object', properties: { type: { type: 'string' }, data: { type: 'object' } } },
+        readOnly: false, runtime: 'any', summary: 'Insert.',
+      },
+    };
+    const closed = (properties: Record<string, BlokSchema>): BlockToolDescription => ({
+      ...description, data: { type: 'object', additionalProperties: false, properties },
+    });
+    const contract = buildAgentContract(buildToolManifest(snapshot({
+      blocks: [
+        block({
+          name: 'row', title: 'Row', description: closed({}),
+          statics: { ...statics, toolbox: [{ name: 'row-2', title: '2 columns', data: { columnCount: 2 } }] },
+        }),
+        block({
+          name: 'list', title: 'List', description: closed({ style: { type: 'string' } }),
+          statics: { ...statics, toolbox: [{ name: 'todo', title: 'To-do', data: { style: 'checklist', seed: 1 } }] },
+        }),
+      ],
+    })), insertCore, where);
+    const args = commandFor(contract, 'block.insert').args;
+    const properties = isRecordLike(args.properties) ? args.properties : {};
+    const type = isRecordLike(properties.type) ? properties.type : {};
+
+    // A toolbox seed like columnCount is not saved data; naming it leads straight into DATA_REJECTED.
+    expect(type.description).toBe(`A block tool: row, list. A variant sets these data fields; the tool's other required fields still go in data: list {style: "checklist"}.`);
+    // describe({ tool }) shows these variants too.
+    expect(contract.manifest.blocks.find(entry => entry.name === 'row')?.variants).toEqual([{ name: 'row-2', title: '2 columns', data: {} }]);
+  });
 });
 
 const isRecordLike = (value: unknown): value is Record<string, unknown> =>

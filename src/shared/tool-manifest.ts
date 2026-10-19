@@ -59,6 +59,15 @@ export const structuralDataSchema = (richTextFields: string[]): BlokSchema => ({
   properties: Object.fromEntries(richTextFields.map(field => [field, richText(`Rich-text field "${field}".`)])),
 });
 
+/** Whether a block's data schema takes this field. Toolbox seeds like column_list's columnCount are not data. */
+const acceptsField = (schema: BlokSchema, key: string): boolean => {
+  const patterns = isRecord(schema.patternProperties) ? Object.keys(schema.patternProperties) : [];
+
+  return schema.additionalProperties !== false
+    || (isRecord(schema.properties) && Object.hasOwn(schema.properties, key))
+    || patterns.some(pattern => new RegExp(pattern, 'u').test(key));
+};
+
 const isPlainRecord = (value: unknown): value is Record<string, unknown> => {
   if (!isRecord(value)) {
     return false;
@@ -193,6 +202,7 @@ const blockEntry = (
   const guidance = [description?.guidance, override?.guidance].filter((text): text is string => typeof text === 'string' && text !== '');
   const reserved = isReserved(block.name);
   const assetKind = statics.assetKind;
+  const data = description?.data ?? structuralDataSchema(statics.richTextFields);
 
   return {
     name: block.name,
@@ -202,8 +212,11 @@ const blockEntry = (
     level: description === null ? 'structural' : 'described',
     // An annotation (a comment thread) is written by people in the editor, never inserted by an agent.
     insertable: block.insertable && statics.isAnnotation !== true,
-    variants: statics.toolbox.map(entry => ({ name: entry.name, title: entry.title, data: entry.data ?? {} })),
-    data: description?.data ?? structuralDataSchema(statics.richTextFields),
+    variants: statics.toolbox.map(entry => ({
+      name: entry.name, title: entry.title,
+      data: Object.fromEntries(Object.entries(entry.data ?? {}).filter(([key]) => acceptsField(data, key))),
+    })),
+    data,
     ...(description?.defaultData === undefined ? {} : { defaultData: description.defaultData }),
     ...(description?.examples === undefined ? {} : { examples: description.examples }),
     richTextFields: statics.richTextFields,

@@ -33,7 +33,7 @@ const FEED_DEFAULT_LOAD_LIMIT: LoadLimit = 10;
 
 const LAYOUT_LOAD_LIMITS: Partial<Record<string, LoadLimit>> = { board: BOARD_DEFAULT_LOAD_LIMIT, feed: FEED_DEFAULT_LOAD_LIMIT };
 
-export { defaultVisible, resolveViewProperties, resolveWrapCells, visibleRowPropertyIds } from '../../shared/database/view-properties';
+export { defaultVisible, resolveViewProperties, resolveWrapCells, revealedInLegacyView, visibleRowPropertyIds } from '../../shared/database/view-properties';
 export type { ResolvedViewProperty } from '../../shared/database/view-properties';
 
 export type ViewPropertyPatch = Partial<Pick<ViewPropertySetting, 'visible' | 'width' | 'wrap' | 'required' | 'description' | 'questionName' | 'longAnswer' | 'maxSelections' | 'showOptionsAs'>>;

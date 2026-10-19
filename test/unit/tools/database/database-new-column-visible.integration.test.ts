@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SCHEMA, buildTool, makeDoc, tableData } from './tier3-harness';
 import type { DatabaseTool } from '../../../../src/tools/database';
 import { csvDatabaseBlocks } from '../../../../src/tools/database/database-csv';
-import type { DatabaseData } from '../../../../src/tools/database/types';
+import type { DatabaseData, PropertyDefinition } from '../../../../src/tools/database/types';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -151,5 +151,25 @@ describe('DatabaseTool — a column added from a table view shows in it', () => 
     const id = newId(tool, el);
 
     expect(headerOrder(el)).toEqual(['title', 'where', id]);
+  });
+  it('two-way on a self-relation shows the reverse property in that view', () => {
+    const related: PropertyDefinition = { id: 'rel', name: 'Related', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db' } };
+    const { tool, el } = build(tableData([...SCHEMA, related], { visibleProperties: ['notes', 'rel'] }));
+
+    tool.setRelationTwoWay('rel', true);
+    const reverse = tool.save(el).schema.find((p) => p.relation?.syncedPropertyId === 'rel')?.id;
+
+    expect(reverse).toBeDefined();
+    expect(headerOrder(el)).toContain(reverse);
+  });
+
+  it('a relation another database adds here shows in a legacy table view', () => {
+    const { tool, el } = build(legacy(['notes']));
+    const created: string[] = [];
+
+    tool.addSyncedRelation({ name: 'Back', relation: { targetDatabaseId: 'other', twoWay: true, syncedPropertyId: 'x' }, receive: (id) => created.push(id) });
+
+    expect(created).toHaveLength(1);
+    expect(headerOrder(el)).toEqual(['title', 'notes', created[0]]);
   });
 });

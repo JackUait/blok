@@ -111,3 +111,20 @@ export const visibleRowPropertyIds = (view: DatabaseViewConfig, schema: Property
     .filter((p) => p.visible && !titleIds.has(p.id))
     .map((p) => p.id);
 };
+
+/**
+ * The view with a just-added property shown, when the view is a legacy
+ * `visibleProperties` table or form that would read it as hidden. Any other
+ * view comes back unchanged: a `properties` list already shows an unlisted
+ * property where its layout does. Writes `visibleProperties` too, for
+ * v1.16.1 readers.
+ */
+export const revealedInLegacyView = (view: DatabaseViewConfig, schema: PropertyDefinition[], property: PropertyDefinition): DatabaseViewConfig => {
+  if (Array.isArray(view.properties) || !defaultVisible(view, property)) return view;
+  const entries = legacyEntries(view, schema);
+
+  if (entries.find((entry) => entry.id === property.id)?.visible !== false) return view;
+  const properties = entries.map((entry) => (entry.id === property.id ? { ...entry, visible: true } : entry));
+
+  return { ...view, properties, visibleProperties: visibleRowPropertyIds({ ...view, properties }, schema) };
+};

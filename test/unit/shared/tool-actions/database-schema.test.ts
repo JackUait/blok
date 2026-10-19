@@ -109,6 +109,56 @@ describe('database properties', () => {
     expect(nameOf(propertyId)).toBe('Notes (copy) 1');
   });
 
+  /** The v1.16.1 shape: `visibleProperties` lists the columns, no `properties`. */
+  const legacyViews = (doc: FakeDoc, id: string, views: Array<Record<string, unknown>>): void => {
+    const block = doc.get(id);
+
+    if (block === undefined) throw new Error('no database');
+    const base = { position: 'a0', sorts: [], filters: [] };
+
+    block.data = { ...block.data, views: views.map(view => ({ ...base, ...view })), activeViewId: 'v1' };
+  };
+  type SavedView = { id: string; visibleProperties: string[]; properties?: Array<{ id: string; visible: boolean }> };
+  const viewOf = (data: Record<string, unknown>, viewId: string): SavedView | undefined =>
+    (data.views as SavedView[]).find(view => view.id === viewId);
+
+  // A legacy list reads every unlisted property as hidden; in Notion a new property shows in a table.
+  it('a property added to a database shows in its legacy table views', () => {
+    const { doc, id, schema, data } = make();
+    const statusId = schema()[1].id;
+
+    legacyViews(doc, id, [
+      { id: 'v1', name: 'Table', type: 'table', visibleProperties: [statusId] },
+      { id: 'v2', name: 'Board', type: 'board', visibleProperties: [statusId] },
+    ]);
+    const { propertyId } = run(doc, id, 'addProperty', { name: 'Notes', type: 'text' }) as { propertyId: string };
+
+    expect(viewOf(data(), 'v1')?.visibleProperties).toEqual([statusId, propertyId]);
+    expect(viewOf(data(), 'v1')?.properties?.find(entry => entry.id === propertyId)?.visible).toBe(true);
+    expect(viewOf(data(), 'v2')).toMatchObject({ visibleProperties: [statusId] });
+    expect(viewOf(data(), 'v2')?.properties).toBeUndefined();
+    expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
+  });
+
+  it('a duplicated property shows in a legacy table view', () => {
+    const { doc, id, schema, data } = make();
+    const statusId = schema()[1].id;
+
+    legacyViews(doc, id, [{ id: 'v1', name: 'Table', type: 'table', visibleProperties: [statusId] }]);
+    const { propertyId } = run(doc, id, 'duplicateProperty', { propertyId: statusId }) as { propertyId: string };
+
+    expect(viewOf(data(), 'v1')?.visibleProperties).toEqual([statusId, propertyId]);
+  });
+
+  it('leaves a view that already shows unlisted properties as it is', () => {
+    const { doc, id, data } = make();
+    const before = JSON.stringify(data().views);
+
+    run(doc, id, 'addProperty', { name: 'Notes', type: 'text' });
+
+    expect(JSON.stringify(data().views)).toBe(before);
+  });
+
   it('refuses options on a text property and a second title', () => {
     const { doc, id } = make();
 

@@ -68,6 +68,21 @@ const rowIds = (el: HTMLElement, widgetId: string): string[] =>
     .filter((row) => row.matches('[data-blok-database-table-row], [data-blok-database-list-row]'))
     .map((row) => row.getAttribute('data-row-id') ?? '');
 
+const widgetHeaders = (el: HTMLElement, widgetId: string): string[] =>
+  [...el.querySelectorAll<HTMLElement>(
+    `[data-blok-database-dashboard-widget="${CSS.escape(widgetId)}"] [data-blok-database-table-column-header]`
+  )].map((header) => header.getAttribute('data-property-id') ?? '');
+
+const menuItem = (title: string): HTMLElement => {
+  const titleEl = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+    .find((node) => node.textContent === title);
+  const item = titleEl?.closest<HTMLElement>('[data-blok-popover-item]');
+
+  if (item === null || item === undefined) throw new Error(`no ${title} item`);
+
+  return item;
+};
+
 describe('DatabaseTool — dashboard widgets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -124,5 +139,43 @@ describe('DatabaseTool — dashboard widgets', () => {
     expect(rowIds(el, 'w-todo')).toEqual(['a', 'c']);
     expect(tool.save(el).views.find((entry) => entry.id === 'dash')?.dashboard)
       .toEqual(dash.dashboard);
+  });
+  it('Insert right in a widget table places and shows the column in that widget view', async () => {
+    const input = fixture();
+    const todo = input.views.find((entry) => entry.id === 'todo');
+
+    if (todo === undefined) throw new Error('missing todo view');
+    todo.visibleProperties = ['done'];
+    const { tool, el } = mount(input);
+
+    expect(widgetHeaders(el, 'w-todo')).toEqual(['title', 'done']);
+    el.querySelector<HTMLElement>('[data-blok-database-dashboard-widget="w-todo"] [data-blok-database-table-column-header][data-property-id="done"] [data-blok-database-table-column-button]')?.click();
+    menuItem('tools.database.tableInsertRight').click();
+    document.querySelector<HTMLElement>('[data-blok-database-property-type-option="text"]')?.click();
+    await Promise.resolve();
+    const saved = tool.save(el);
+    const id = saved.schema.find((p) => !schema.some((known) => known.id === p.id))?.id;
+
+    expect(saved.views.find((entry) => entry.id === 'dash')?.properties).toBeUndefined();
+    expect(id).toBeDefined();
+    expect(saved.views.find((entry) => entry.id === 'todo')?.visibleProperties).toEqual(['done', id]);
+    expect(widgetHeaders(el, 'w-todo')).toEqual(['title', 'done', id]);
+  });
+  it('Duplicate property in a widget table shows the copy in that widget view', () => {
+    const input = fixture();
+    const todo = input.views.find((entry) => entry.id === 'todo');
+
+    if (todo === undefined) throw new Error('missing todo view');
+    todo.visibleProperties = ['done'];
+    const { tool, el } = mount(input);
+
+    el.querySelector<HTMLElement>('[data-blok-database-dashboard-widget="w-todo"] [data-blok-database-table-column-header][data-property-id="done"] [data-blok-database-table-column-button]')?.click();
+    menuItem('tools.database.duplicateProperty').click();
+    const saved = tool.save(el);
+    const id = saved.schema.find((p) => !schema.some((known) => known.id === p.id))?.id;
+
+    expect(id).toBeDefined();
+    expect(saved.views.find((entry) => entry.id === 'todo')?.visibleProperties).toContain(id);
+    expect(saved.views.find((entry) => entry.id === 'dash')?.properties).toBeUndefined();
   });
 });

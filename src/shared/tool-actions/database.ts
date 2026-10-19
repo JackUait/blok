@@ -11,6 +11,7 @@ import {
   newView,
   positionBetween,
 } from '../database/schema-ops';
+import { revealedInLegacyView } from '../database/view-properties';
 
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
@@ -51,6 +52,14 @@ export const assertUnlocked = (ctx: ToolActionContext, state: DatabaseState): vo
   if (state.schema.some(property => property.type === 'title' && property.databaseLocked === true)) {
     ctx.fail('PRECONDITION_FAILED', 'This database is locked: its properties and views cannot change. Rows can.');
   }
+};
+
+/** The schema with `property` added, and the views only when a legacy table view had to show it. */
+const withNewProperty = (state: DatabaseState, property: PropertyDefinition): { schema: PropertyDefinition[]; views?: DatabaseViewConfig[] } => {
+  const schema = [...state.schema, property];
+  const views = state.views.map(view => revealedInLegacyView(view, schema, property));
+
+  return views.some((view, i) => view !== state.views[i]) ? { schema, views } : { schema };
 };
 
 /** Opens the target database for a schema or view change. */
@@ -331,7 +340,7 @@ const addProperty: ToolActionImpl<AddPropertyArgs, undefined, { propertyId: stri
       ...extra,
     };
 
-    ctx.update(block.id, { schema: [...state.schema, property] });
+    ctx.update(block.id, withNewProperty(state, property));
     if (isListValueType(args.type)) {
       rowsOf(ctx, block.id)
         .filter(row => row.properties[property.id] === undefined || row.properties[property.id] === null)
@@ -592,7 +601,7 @@ const duplicateProperty: ToolActionImpl<{ propertyId: string }, undefined, { pro
       position: positionAround(ctx, state.schema, { after: source.id }),
     };
 
-    ctx.update(block.id, { schema: [...state.schema, copy] });
+    ctx.update(block.id, withNewProperty(state, copy));
     for (const row of rowsOf(ctx, block.id)) {
       const value = row.properties[source.id];
       const empty = value === undefined || value === null;

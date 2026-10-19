@@ -83,6 +83,7 @@ import {
   resolveTimelineEndBy,
   resolveTimelineZoom,
   defaultVisible,
+  revealedInLegacyView,
   resolveViewProperties,
   visibleRowPropertyIds,
   withCalculation,
@@ -8603,7 +8604,7 @@ export class DatabaseTool implements BlockTool {
    * when the type cannot be added (person without a people directory) or
    * the block is read-only.
    */
-  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string }): PropertyDefinition | null {
+  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string }, context?: NativeWidgetContext): PropertyDefinition | null {
     if (this.readOnly || this.destroyed || params.type === 'title' || (params.type === 'person' && !this.hasPeople)) {
       return null;
     }
@@ -8623,7 +8624,7 @@ export class DatabaseTool implements BlockTool {
 
     if (params.type === 'relation') settings.relation = { targetDatabaseId: this.dataId };
     const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);
-    this.showInActiveView(prop, params.afterId, params.beforeId);
+    this.showInActiveView(prop, context, params.afterId, params.beforeId);
     this.writeEmptyLists(prop.id);
     void this.sync.syncCreateProperty({
       id: prop.id,
@@ -8640,13 +8641,16 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * Places a property just added from the active view and makes sure it shows
-   * there. A legacy `visibleProperties` view reads every unlisted property as
-   * hidden; a table or form shows it, as it would in a view that never listed it.
-   * Other layouts keep hiding it.
+   * Places a property just added from the active view, or from a dashboard
+   * widget's view, and makes sure it shows there. A legacy `visibleProperties`
+   * view reads every unlisted property as hidden; a table or form shows it, as
+   * it would in a view that never listed it. Other layouts keep hiding it.
    */
-  private showInActiveView(prop: PropertyDefinition, afterId?: string, beforeId?: string): void {
-    const view = this.model.getView(this.activeViewId);
+  private showInActiveView(prop: PropertyDefinition, context?: NativeWidgetContext, afterId?: string, beforeId?: string): void {
+    // A widget's view lives on its owner; the schema is this database's.
+    const owner = context?.owner ?? this;
+    // The stored view, not context.view: that one carries personal overrides.
+    const view = owner.model.getView(context?.viewId ?? this.activeViewId);
 
     if (view === undefined) return;
     const schema = this.model.getSchema();
@@ -8661,8 +8665,9 @@ export class DatabaseTool implements BlockTool {
     // Not placed means revealed, so `ordered` is only read when it was just written.
     const properties = reveal ? withPropertySetting({ ...view, properties: ordered }, schema, prop.id, { visible: true }) : ordered ?? [];
 
-    this.model.updateView(view.id, { properties });
-    void this.sync.syncUpdateView({ viewId: view.id, changes: { properties } });
+    owner.model.updateView(view.id, { properties });
+    void owner.sync.syncUpdateView({ viewId: view.id, changes: { properties } });
+    if (owner !== this) owner.block.dispatchChange();
   }
 
   /**
@@ -8755,7 +8760,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Copies a property and every row's value of it, right after the original. */
-  duplicateProperty(propertyId: string): PropertyDefinition | null {
+  duplicateProperty(propertyId: string, context?: NativeWidgetContext): PropertyDefinition | null {
     const property = this.model.getProperty(propertyId);
 
     if (this.readOnly || this.destroyed || property === undefined || property.type === 'title' || property.type === 'uniqueId') return null;
@@ -8768,7 +8773,7 @@ export class DatabaseTool implements BlockTool {
       settings
     );
 
-    this.showInActiveView(copy);
+    this.showInActiveView(copy, context);
     for (const row of this.model.getOrderedRows()) {
       const value = row.properties[propertyId];
 
@@ -8997,7 +9002,7 @@ export class DatabaseTool implements BlockTool {
    * undo step. Off: the mirror stays as a one-way relation, as Notion leaves
    * the other property in place.
    */
-  setRelationTwoWay(propertyId: string, twoWay: boolean): void {
+  setRelationTwoWay(propertyId: string, twoWay: boolean, context?: NativeWidgetContext): void {
     const property = this.model.getProperty(propertyId);
     const settings = property?.relation;
 
@@ -9014,7 +9019,7 @@ export class DatabaseTool implements BlockTool {
       const reverseName = this.api.i18n.t('tools.database.relationReverseName', { name: this.title === '' ? property.name : this.title });
       const reverseRelation = { targetDatabaseId: this.dataId, twoWay: true, syncedPropertyId: propertyId };
       const reverseId = target === this.dataId
-        ? this.addOwnRelation(reverseName, reverseRelation)
+        ? this.addOwnRelation(reverseName, reverseRelation, context)
         : this.addForeignRelation(target, reverseName, reverseRelation);
 
       if (reverseId === null) return;
@@ -9058,9 +9063,10 @@ export class DatabaseTool implements BlockTool {
     popover.show();
   }
 
-  private addOwnRelation(name: string, relation: RelationSettings): string {
+  private addOwnRelation(name: string, relation: RelationSettings, context?: NativeWidgetContext): string {
     const prop = this.model.addProperty(name, 'relation', undefined, {}, { relation });
 
+    this.showInActiveView(prop, context);
     this.writeEmptyLists(prop.id);
     void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position, relation });
 
@@ -9080,7 +9086,18 @@ export class DatabaseTool implements BlockTool {
   addSyncedRelation(param: { name: string; relation: RelationSettings; receive: (propertyId: string) => void }): void {
     if (this.readOnly || this.destroyed) return;
     const prop = this.model.addProperty(param.name, 'relation', undefined, {}, { relation: param.relation });
+    const schema = this.model.getSchema();
 
+    // No view here is where the user acted: a legacy table shows it as a modern one would.
+    for (const view of this.model.getViews()) {
+      const revealed = revealedInLegacyView(view, schema, prop);
+
+      if (revealed === view) continue;
+      const changes = { properties: revealed.properties ?? [] };
+
+      this.model.updateView(view.id, changes);
+      void this.sync.syncUpdateView({ viewId: view.id, changes });
+    }
     this.writeEmptyLists(prop.id);
     void this.sync.syncCreateProperty({ id: prop.id, name: prop.name, type: prop.type, position: prop.position, relation: param.relation });
     this.commitSchema();
@@ -9127,7 +9144,7 @@ export class DatabaseTool implements BlockTool {
       onUpdate: (id, patch) => { if (parentWritable()) this.updatePropertySettings(id, patch); },
       onIconUpdate: (id, patch) => { if (iconWritable()) this.updatePropertySettings(id, patch); },
       onChangeType: (id, type) => { if (parentWritable()) this.changePropertyType(id, type); },
-      onDuplicate: (id) => { if (parentWritable()) this.duplicateProperty(id); },
+      onDuplicate: (id) => { if (parentWritable()) this.duplicateProperty(id, context); },
       onDelete: (id) => { if (parentWritable()) this.deleteProperty(id); },
       onOptionsChange: (id, options) => {
         if (!parentWritable()) return;
@@ -9139,7 +9156,7 @@ export class DatabaseTool implements BlockTool {
         databases: () => this.documentDatabases(),
         targetSchema: (databaseId) => (databaseId === this.dataId ? this.model.getSchema() : this.readDatabaseSource(databaseId)?.schema ?? []),
         onEditFormula: (id) => { if (parentWritable()) this.openFormulaEditor(id, anchor); },
-        onSetTwoWay: (id, twoWay) => { if (parentWritable()) this.setRelationTwoWay(id, twoWay); },
+        onSetTwoWay: (id, twoWay) => { if (parentWritable()) this.setRelationTwoWay(id, twoWay, context); },
         hasHostActions: this.config.buttons?.onAction !== undefined,
         hasNotify: this.config.buttons?.onNotify !== undefined,
         databaseId: this.dataId,
@@ -9342,7 +9359,7 @@ export class DatabaseTool implements BlockTool {
       onSelect: (type, name) => {
         if (!writable()) return;
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
-        const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) });
+        const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
 
         if (created !== null) {
           onAdded?.(created);

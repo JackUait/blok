@@ -4,8 +4,12 @@ import { plainText } from './text';
 const ok = (detail: string): Verdict => ({ pass: true, detail });
 const no = (detail: string): Verdict => ({ pass: false, detail });
 
+// The MCP answer caps changed lists at 50 ids; resultIds fills in what the cap left out.
 export const agentTouched = (results?: readonly ExecuteResult[]): Set<string> =>
-  new Set((results ?? []).flatMap((r) => (r.changed === undefined ? [] : [...r.changed.created, ...r.changed.updated, ...r.changed.moved])));
+  new Set((results ?? []).flatMap((r) => [
+    ...(r.changed === undefined ? [] : [...r.changed.created, ...r.changed.updated, ...r.changed.moved]),
+    ...(r.resultIds ?? []),
+  ]));
 
 export const humanPreserved = (): Grader => ({
   name: 'humanPreserved',

@@ -6,6 +6,8 @@ export interface ChangedSet { created: string[]; updated: string[]; moved: strin
 export interface ExecuteResult {
   ok: boolean;
   changed?: ChangedSet;
+  /** Ids the per-command results name. The MCP answer caps changed lists, but not these. */
+  resultIds?: string[];
   warnings?: Array<{ code: string; blockId?: string }>;
   error?: { code: string; message?: string; commandIndex?: number };
   delivery?: { durable: boolean; pending: boolean; serverSequence: string | null; savedVersion: string | null };

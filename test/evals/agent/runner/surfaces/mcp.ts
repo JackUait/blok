@@ -54,6 +54,13 @@ const changedOf = (changed: unknown): ChangedSet => {
   return { created: list('created'), updated: list('updated'), moved: list('moved'), removed: list('removed') };
 };
 
+// Ids a command created, changed or moved. removedIds and liftedIds are left out: they name no block the agent wrote.
+const resultIdsOf = (results: unknown): string[] => (Array.isArray(results) ? results : []).filter(isRecord).flatMap((r) => [
+  ...(typeof r.id === 'string' ? [r.id] : []),
+  ...(isStrings(r.ids) ? r.ids : []),
+  ...(isStrings(r.childIds) ? r.childIds : []),
+]);
+
 /** Keeps the fields graders read; anything malformed is dropped, not trusted. */
 export const executeResultOf = (text: string): ExecuteResult => {
   const value: unknown = JSON.parse(text);
@@ -63,10 +70,12 @@ export const executeResultOf = (text: string): ExecuteResult => {
   }
 
   const { changed, warnings, error, delivery } = value;
+  const resultIds = value.ok ? resultIdsOf(value.results) : [];
 
   return {
     ok: value.ok,
     ...(value.ok && { changed: changedOf(changed) }),
+    ...(resultIds.length > 0 && { resultIds }),
     ...(Array.isArray(warnings) && {
       warnings: warnings.filter(isRecord).flatMap((w) => typeof w.code === 'string'
         ? [{ code: w.code, ...(typeof w.blockId === 'string' && { blockId: w.blockId }) }]

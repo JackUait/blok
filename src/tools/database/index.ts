@@ -240,6 +240,7 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-hidden-groups]',
   '[data-blok-database-add-column]',
   '[data-blok-database-card-menu]',
+  '[data-blok-database-list-row-handle]',
   '[data-blok-database-add-row]',
   '[data-blok-database-delete-row]',
   '[data-blok-database-list-row-property][data-editable]',
@@ -6305,6 +6306,17 @@ export class DatabaseTool implements BlockTool {
           event.stopPropagation();
           this.openCardMenu(cardMenuBtn, cardEl, rowId);
         }
+
+        return;
+      }
+
+      const listHandle = target.closest<HTMLElement>('[data-blok-database-list-row-handle]');
+      const listRowEl = listHandle?.closest<HTMLElement>('[data-blok-database-list-row]');
+      const listRowId = listRowEl?.getAttribute('data-row-id');
+
+      if (listHandle !== null && listRowEl !== null && listRowEl !== undefined && listRowId !== null && listRowId !== undefined) {
+        event.stopPropagation();
+        this.openCardMenu(listHandle, listRowEl, listRowId);
 
         return;
       }

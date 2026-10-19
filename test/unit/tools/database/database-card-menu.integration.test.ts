@@ -211,6 +211,22 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(await footerOf(type)).toBe(await footerOf('table'));
   });
 
+  it('a click on the list row\'s drag handle opens the list row menu, not the page (research/12 §3, 66-list-handle-click.png)', () => {
+    const { el, tool } = buildTool(oneRow(), { comments: { open: vi.fn() } }, viewData('list'));
+    const openPage = vi.spyOn(tool as unknown as { handleRowClick: (rowId: string) => void }, 'handleRowClick');
+    const handle = rowEl(el, 'list').querySelector<HTMLElement>('[data-blok-database-list-row-handle]');
+
+    if (handle === null) throw new Error('no list row handle');
+    handle.click();
+
+    expect(menuOutline()).toEqual(WITHOUT_VIEW_SETTINGS);
+    expect(rowEl(el, 'list').hasAttribute('data-popover-open')).toBe(true);
+    expect(openPage).not.toHaveBeenCalled();
+    // A click on the row itself does open the page, so the check above can fail.
+    rowEl(el, 'list').querySelector<HTMLElement>('[data-blok-database-list-row-title]')?.click();
+    expect(openPage).toHaveBeenCalledWith('a');
+  });
+
   it('Edit property › lists the card\'s properties, and one opens that value\'s editor on the row page', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));
 

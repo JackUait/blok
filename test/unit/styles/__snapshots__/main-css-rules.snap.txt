@@ -5582,8 +5582,45 @@ button[data-blok-database-column-count]:hover {
   transition: background-color 20ms ease-in;
 }
 
-[data-blok-database-list-row]:hover {
+[data-blok-database-list-row]:hover, [data-blok-database-list-row][data-popover-open] {
   background-color: var(--blok-database-add-hover-bg);
+}
+
+[data-blok-database-list-row-gutter] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 100%;
+  display: flex;
+  align-items: center;
+  padding-inline-end: var(--blok-space-0-5);
+  opacity: 0;
+}
+
+[data-blok-database-list-row]:hover > [data-blok-database-list-row-gutter], [data-blok-database-list-row][data-popover-open] > [data-blok-database-list-row-gutter] {
+  opacity: 1;
+}
+
+[data-blok-database-list-row-handle] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-table-gutter-icon);
+  cursor: grab;
+}
+
+[data-blok-database-list-row-handle]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-list-row-handle] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-list-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *), [data-blok-database-list-row-property][data-editable]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {

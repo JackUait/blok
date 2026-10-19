@@ -5,7 +5,7 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import { readPropertyValue } from './property-values';
 import { renderCellValue } from './cells';
 import type { CellContext } from './cells';
-import { IconChevronDown } from '../../components/icons';
+import { IconChevronDown, IconMenu } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -468,6 +468,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
     rowEl.setAttribute('role', 'listitem');
     rowEl.setAttribute('tabindex', '-1');
 
+    if (!this.readOnly) {
+      rowEl.appendChild(this.createGutter(row.id));
+    }
+
     const icon = this.showPageIcon ? pageIconElement(row) : null;
 
     if (icon !== null) {
@@ -483,6 +487,23 @@ export class DatabaseListView implements DatabaseViewRenderer {
     rowEl.appendChild(propertiesEl);
 
     return rowEl;
+  }
+
+  /** The ⋮⋮ left of the row: drags the row, and a click opens the row menu (research/12 §3, 66-list-handle-click.png). */
+  private createGutter(rowId: string): HTMLElement {
+    const gutter = document.createElement('div');
+    const handle = document.createElement('button');
+
+    gutter.setAttribute('data-blok-database-list-row-gutter', '');
+    handle.type = 'button';
+    handle.setAttribute('data-blok-database-list-row-handle', '');
+    handle.setAttribute('data-row-id', rowId);
+    handle.setAttribute('aria-label', this.i18n.t('tools.database.tableDragHandle'));
+    handle.tabIndex = -1;
+    handle.innerHTML = IconMenu;
+    gutter.appendChild(handle);
+
+    return gutter;
   }
 
   private createTitleElement(title: string): HTMLDivElement {

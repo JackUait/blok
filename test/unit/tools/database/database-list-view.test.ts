@@ -69,6 +69,24 @@ describe('DatabaseListView', () => {
       expect([...(rows?.children ?? [])].every((child) => child.getAttribute('role') === 'listitem')).toBe(true);
     });
 
+    it('gives each editable row a drag handle in its left gutter, as the table\'s ⋮⋮ (research/12 §3, 64-list-row-hover.png)', () => {
+      const editable = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      }).createView();
+      const handle = editable.querySelector<HTMLButtonElement>('[data-blok-database-list-row] > [data-blok-database-list-row-gutter] > [data-blok-database-list-row-handle]');
+
+      expect(handle?.getAttribute('aria-label')).toBe('tools.database.tableDragHandle');
+      expect(handle?.getAttribute('data-row-id')).toBe('row-1');
+      expect(handle?.tabIndex).toBe(-1);
+      expect(handle?.type).toBe('button');
+
+      const readOnly = new DatabaseListView({
+        readOnly: true, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      }).createView();
+
+      expect(readOnly.querySelector('[data-blok-database-list-row-handle]')).toBeNull();
+    });
+
     it('renders one row element per row', () => {
       const rows = [
         makeRow({ id: 'row-1', position: 'a0' }),

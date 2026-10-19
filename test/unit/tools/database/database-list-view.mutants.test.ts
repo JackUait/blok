@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconChevronDown } from '../../../../src/components/icons';
+import { IconChevronDown, IconMenu } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -43,8 +43,20 @@ const rowPropsHtml = (rowId: string): string =>
   + `<button data-blok-database-delete-row="" data-row-id="${rowId}" aria-label="T(tools.database.deleteRow)">×</button>`
   + '</div>';
 
+/** The editable row's ⋮⋮, as the DOM serializes it. */
+const gutterHtml = (rowId: string): string => {
+  const icon = document.createElement('div');
+
+  icon.innerHTML = IconMenu;
+
+  return '<div data-blok-database-list-row-gutter="">'
+    + `<button type="button" data-blok-database-list-row-handle="" data-row-id="${rowId}" aria-label="T(tools.database.tableDragHandle)" tabindex="-1">${icon.innerHTML}</button>`
+    + '</div>';
+};
+
 const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
   `<div data-blok-database-list-row="" data-row-id="${rowId}" role="listitem" tabindex="${tabindex}">`
+  + gutterHtml(rowId)
   + `<div data-blok-database-list-row-title="">${title}</div>`
   + rowPropsHtml(rowId)
   + '</div>';

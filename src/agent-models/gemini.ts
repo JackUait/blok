@@ -54,6 +54,11 @@ const modelContent = (message: AgentModelMessage): unknown => {
   };
 };
 
+/** Tries per step when Gemini writes a malformed call. Nothing ran, so asking again is safe. */
+const MALFORMED_TRIES = 3;
+
+class MalformedCall extends Error {}
+
 const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const error = errorOf(reply, 'Gemini');
 
@@ -88,7 +93,7 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
     throw new Error(`Gemini stopped: ${String(finish)}`);
   }
   if (finish === 'MALFORMED_FUNCTION_CALL') {
-    content.push({ type: 'text', text: 'The model wrote a tool call that was not valid.' });
+    throw new MalformedCall(typeof first.finishMessage === 'string' ? first.finishMessage : '');
   }
   content.push(providerBlock(FORMAT, stored));
 
@@ -123,6 +128,23 @@ export function geminiModel(options: AdapterOptions): AgentModel {
       generationConfig: { maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS },
     }, request, LEVELS, options);
 
-    return readReply(await post(body, request, options), step);
+    const ask = async (tries: number): Promise<AgentModelResponse> => {
+      const reply = await post(body, request, options);
+
+      try {
+        return readReply(reply, step);
+      } catch (error) {
+        if (!(error instanceof MalformedCall)) {
+          throw error;
+        }
+        if (tries === MALFORMED_TRIES || request.signal.aborted) {
+          throw new Error(`Gemini wrote a tool call that was not valid, ${tries} times${error.message === '' ? '.' : `: ${error.message}`}`);
+        }
+
+        return ask(tries + 1);
+      }
+    };
+
+    return ask(1);
   };
 }

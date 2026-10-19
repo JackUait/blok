@@ -141,6 +141,30 @@ describe('geminiModel', () => {
     expect(await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }]))
       .toEqual({ status: 'failed', reply: '', error: 'Gemini: API key not valid' });
   });
+  // Nothing ran for a malformed call, so asking again is safe; a "done" with no edit is not.
+  it('asks again when the model writes a malformed tool call', async () => {
+    const malformed = { candidates: [{ content: { role: 'model', parts: [] }, finishReason: 'MALFORMED_FUNCTION_CALL' }] };
+    const { send, bodies } = fakeSend(malformed, candidate([signedCall]), candidate([{ text: 'Done.' }]));
+
+    const result = await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }]);
+
+    expect(result).toEqual({ status: 'done', reply: 'Done.' });
+    expect(bodies).toHaveLength(3);
+    expect(bodies[1]).toEqual(bodies[0]);
+  });
+
+  it('fails the run with Gemini\'s message when every try is malformed', async () => {
+    const malformed = {
+      candidates: [{ content: { role: 'model', parts: [] }, finishReason: 'MALFORMED_FUNCTION_CALL', finishMessage: 'Malformed function call: bad quote' }],
+    };
+    const { send, bodies } = fakeSend(malformed, malformed, malformed);
+
+    expect(await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }])).toEqual({
+      status: 'failed', reply: '', error: 'Gemini wrote a tool call that was not valid, 3 times: Malformed function call: bad quote',
+    });
+    expect(bodies).toHaveLength(3);
+  });
+
   it('fails the run on a stop reason it does not handle', async () => {
     const missing = fakeSend({ candidates: [{ finishReason: 'MISSING_THOUGHT_SIGNATURE' }] });
     const tooMany = fakeSend({ candidates: [{ content: { role: 'model', parts: [] }, finishReason: 'TOO_MANY_TOOL_CALLS' }] });

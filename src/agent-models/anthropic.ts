@@ -1,7 +1,7 @@
 import type { AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelResponse, AgentThinkingLevel } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, errorOf, isRecord, post, withLevel, type AdapterOptions, type Body,
+  DEFAULT_MAX_TOKENS, callId, errorOf, isRecord, post, stepOf, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 // Claude Opus 5.5 rejects disabled thinking, so "off" is the lowest effort.
@@ -20,7 +20,12 @@ const withoutProviderBlocks = (message: AgentModelMessage): AgentModelMessage =>
 
 const isBlock = (entry: unknown): entry is AgentModelContentBlock => isRecord(entry) && typeof entry.type === 'string';
 
-const readReply = (reply: unknown): AgentModelResponse => {
+// A call with no id or name would be dropped by the loop and left unanswered; this way it runs or gets "unknown tool".
+const withCallIds = (blocks: AgentModelContentBlock[], step: number): AgentModelContentBlock[] => blocks.map((block, index) => (block.type === 'tool_use'
+  ? { ...block, id: callId(block.id, step, index), name: typeof block.name === 'string' ? block.name : '' }
+  : block));
+
+const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const error = errorOf(reply, 'Anthropic');
 
   if (error !== null) {
@@ -32,7 +37,7 @@ const readReply = (reply: unknown): AgentModelResponse => {
     throw new Error('Anthropic: the reply has no content.');
   }
 
-  return { content: content.filter(isBlock), stop_reason: typeof reply.stop_reason === 'string' ? reply.stop_reason : null };
+  return { content: withCallIds(content.filter(isBlock), step), stop_reason: typeof reply.stop_reason === 'string' ? reply.stop_reason : null };
 };
 
 /**
@@ -52,6 +57,6 @@ export function anthropicModel(options: AdapterOptions): AgentModel {
       cache_control: { type: 'ephemeral' },
     }, request, LEVELS, options);
 
-    return readReply(await post(body, request, options));
+    return readReply(await post(body, request, options), stepOf(request));
   };
 }

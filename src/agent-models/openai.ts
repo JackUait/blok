@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  providerBlock, rawTurn, post, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, stepOf, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'openai-responses';
@@ -48,7 +48,7 @@ const assistantItems = (message: AgentModelMessage): unknown[] => {
   });
 };
 
-const readReply = (reply: unknown): AgentModelResponse => {
+const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const error = errorOf(reply, 'OpenAI');
 
   if (error !== null) {
@@ -60,8 +60,12 @@ const readReply = (reply: unknown): AgentModelResponse => {
 
   const content: AgentModelContentBlock[] = [];
   const state = { refused: false };
+  // A call without a call_id gets one, and the stored output gets it too, so the output item matches.
+  const output = reply.output.filter(isRecord).map((item, index) => (item.type === 'function_call'
+    ? { ...item, call_id: callId(item.call_id, step, index) }
+    : item));
 
-  reply.output.filter(isRecord).forEach((item) => {
+  output.forEach((item) => {
     if (item.type === 'function_call') {
       content.push({ type: 'tool_use', id: String(item.call_id), name: String(item.name), input: parseArguments(item.arguments) });
 
@@ -79,7 +83,7 @@ const readReply = (reply: unknown): AgentModelResponse => {
       }
     });
   });
-  content.push(providerBlock(FORMAT, reply.output));
+  content.push(providerBlock(FORMAT, output));
 
   const reason = isRecord(reply.incomplete_details) ? reply.incomplete_details.reason : undefined;
 
@@ -119,6 +123,6 @@ export function openaiModel(options: AdapterOptions): AgentModel {
       })),
     }, request, LEVELS, options);
 
-    return readReply(await post(body, request, options));
+    return readReply(await post(body, request, options), stepOf(request));
   };
 }

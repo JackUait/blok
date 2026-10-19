@@ -133,6 +133,35 @@ describe('anthropicModel', () => {
     expect(bodies.map((body) => (body.tools as unknown[]).length)).toEqual([1, 1, 1]);
   });
 
+  it('gives a tool_use without an id one, so the call runs and its result matches', async () => {
+    const { send, bodies } = fakeSend(
+      { content: [{ type: 'tool_use', name: 'blok_read', input: {} }], stop_reason: 'tool_use' },
+      { content: [{ type: 'text', text: 'Done.' }], stop_reason: 'end_turn' }
+    );
+
+    expect(await run(anthropicModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }])).toEqual({ status: 'done', reply: 'Done.' });
+    expect((bodies[1].messages as unknown[]).slice(1)).toEqual([
+      { role: 'assistant', content: [{ type: 'tool_use', id: 'call-1-0', name: 'blok_read', input: {} }] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-1-0', content: '{"ok":true}', is_error: false }] },
+    ]);
+  });
+
+  it('answers a tool_use without a name as an unknown tool instead of dropping it', async () => {
+    const { send, bodies } = fakeSend(
+      { content: [{ type: 'tool_use', id: 't1', input: {} }], stop_reason: 'tool_use' },
+      { content: [{ type: 'text', text: 'Done.' }], stop_reason: 'end_turn' }
+    );
+    const call = vi.fn(async () => ({ content: '{"ok":false}', isError: true }));
+
+    await runAssistantLoop({
+      model: anthropicModel({ model: 'm', send }), system: 'sys', tools: [], messages: [{ role: 'user', content: 'Go' }],
+      call, signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(call).toHaveBeenCalledWith('', {});
+    expect(bodies).toHaveLength(2);
+  });
+
   it('turns an error body into a failed run', async () => {
     const { send } = fakeSend({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } });
 

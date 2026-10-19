@@ -61,6 +61,23 @@ describe('openaiModel', () => {
     ]);
   });
 
+  it('gives each call without a call_id its own id, and the replayed call carries it', async () => {
+    const bare = { type: 'function_call', name: 'blok_read', arguments: '{}' };
+    const { send, bodies } = fakeSend(
+      { status: 'completed', output: [bare, bare] },
+      { status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Done.', annotations: [] }] }] }
+    );
+
+    await run(openaiModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+    expect(bodies[1].input).toEqual([
+      { role: 'user', content: 'Go' },
+      { ...bare, call_id: 'call-1-0' },
+      { ...bare, call_id: 'call-1-1' },
+      { type: 'function_call_output', call_id: 'call-1-0', output: '{"ok":true}' },
+      { type: 'function_call_output', call_id: 'call-1-1', output: '{"ok":true}' },
+    ]);
+  });
+
   it('maps stop states: truncation, refusal, content filter', async () => {
     const truncated = fakeSend({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [] });
     const refused = fakeSend({ status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'refusal', refusal: 'No.' }] }] });

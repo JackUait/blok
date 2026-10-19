@@ -81,6 +81,7 @@ describe('published tool description types', () => {
       defaultData?: Record<string, unknown>;
       examples?: Array<Record<string, unknown>>;
       summaryFields?: string[];
+      fillMissing?: string[];
       inputFields?: string[];
       viewState?: string[];
       guardedFields?: Record<string, string>;
@@ -160,6 +161,7 @@ describe('published tool description types', () => {
       selfPlacesChildren: boolean;
       restrictedInTableCell: boolean;
       summaryFields?: string[];
+      fillMissing?: string[];
       inputFields?: string[];
       convertsTo: string[];
       conversion: { import?: string; export?: string };

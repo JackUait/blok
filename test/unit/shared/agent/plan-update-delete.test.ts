@@ -614,7 +614,7 @@ describe('block.delete planning', () => {
     expect(draft.get('after')?.rest).toEqual({ lastEditedBy: 'human', lastEditedAt: 7 });
   });
 
-  it('lifts self-placed children when deletedWithParent is false', () => {
+  it('removes self-placed children with their parent even when deletedWithParent is false', () => {
     const tools = new Map(TOOLS);
 
     tools.set('grid', tool('grid', { selfPlacesChildren: true }));
@@ -624,13 +624,10 @@ describe('block.delete planning', () => {
     ] };
     const { plan, draft } = planOn(input, [{ name: 'block.delete', args: { id: 'grid' } }], { tools });
 
-    expect(draft.ids()).toEqual(['p']);
-    expect(plan.edits).toEqual([
-      { op: 'move', id: 'p', parentId: null, afterId: 'grid' },
-      { op: 'remove', id: 'grid', withChildren: false },
-    ]);
-    expect(plan.results).toEqual([{ removedIds: ['grid'], liftedIds: ['p'] }]);
-    expect([...plan.touched]).toEqual(['p']);
+    expect(plan.edits).toEqual([{ op: 'remove', id: 'grid', withChildren: true }]);
+    expect(draft.ids()).toEqual([]);
+    expect(plan.results).toEqual([{ removedIds: ['grid', 'p'], liftedIds: [] }]);
+    expect([...plan.touched]).toEqual([]);
   });
 
   it('does not mistake layout or ownership alone for the deleting-children flag', () => {

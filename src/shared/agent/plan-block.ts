@@ -712,7 +712,9 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
 
 export const planDelete = (state: PlanState, args: Record<string, unknown>): unknown => {
   const block = state.requireBlock(args.id, '/id');
-  const withChildren = state.tool(block.type)?.entry.children.deletedWithParent === true;
+  const entry = state.tool(block.type)?.entry;
+  // Self-placed children (table cells, database rows) die with the parent, as in core's removeBlock.
+  const withChildren = entry?.children.deletedWithParent === true || entry?.selfPlacesChildren === true;
   const result = {
     removedIds: withChildren ? state.draft.subtree(block.id) : [block.id],
     liftedIds: withChildren ? [] : [...state.draft.childrenOf(block.id)],

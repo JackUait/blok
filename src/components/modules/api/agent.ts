@@ -17,6 +17,7 @@ import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
 import { inputIndexForField } from '../collaboration/agent-placement';
+import { composeFirstMessage } from '../../../agent/first-message';
 import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../../agent/thinking';
 
 import { createAgentPresence, type AgentPresence } from './agent-presence';
@@ -150,7 +151,7 @@ export class AgentAPI extends Module {
     const name = assistant.name?.trim() || 'AI';
     const turn = this.begin({ agent: { id: 'blok-assistant', name } });
 
-    return createAgentRun(context === '' ? prompt : `${prompt}\n\n${context}`, {
+    return createAgentRun(composeFirstMessage(prompt, context, turn.read), {
       turn,
       model: assistant.model,
       maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,

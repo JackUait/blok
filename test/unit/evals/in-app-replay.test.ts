@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { composeFirstMessage } from '../../../src/agent/first-message';
 import { composeGuidance } from '../../../src/agent/guidance';
 import { renderAgentTools } from '../../../src/agent/render-tools';
-import { nodeContract } from '../agent/harness';
+import { nodeContract, openJsonSession } from '../agent/harness';
 import { TokenBudget } from '../../evals/agent/runner/model-loop';
 import { replayClient } from '../../evals/agent/runner/replay-client';
 import { runTrial } from '../../evals/agent/runner/run-task';
@@ -56,6 +57,37 @@ describe('in-app surface, shipped setup', () => {
       );
     } finally {
       await surface.close();
+    }
+  });
+
+  it('sends the first message the assistant sends: the request with the document as blok_read returns it', async () => {
+    const task = ALL_TASKS.find((t) => t.surfaces.includes('in-app'));
+
+    if (task === undefined) {
+      throw new Error('no in-app task');
+    }
+    const replay = replayClient(task, 'session');
+    const seen: unknown[] = [];
+    const client: typeof replay = {
+      create: async (params) => {
+        seen.push(params.messages[0]?.content);
+
+        return replay.create(params);
+      },
+    };
+
+    await runTrial({
+      task, surface: 'in-app', open: openInApp, trial: 0, client,
+      model: 'replay', effort: 'high', schema: 'shipped', dispatch: new TokenBudget(1),
+    });
+
+    const session = openJsonSession(task.seed);
+
+    try {
+      expect(seen[0]).toBe(await composeFirstMessage(task.prompt, '', (args) => session.read(args)));
+      expect(seen[0]).toEqual(expect.stringContaining(`"id":"${task.seed.blocks[0]?.id ?? ''}"`));
+    } finally {
+      await session.close();
     }
   });
 

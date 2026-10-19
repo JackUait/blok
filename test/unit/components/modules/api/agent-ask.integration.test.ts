@@ -122,6 +122,20 @@ describe('editor.agent.ask', () => {
     run.end();
   });
 
+  it('sends the document with the request, as blok_read returns it, so the model need not read first', async () => {
+    const model = scripted(answer('Nothing to do.'));
+    const editor = await createEditor(model);
+
+    const run = editor.agent.ask('Shorten the first line');
+
+    await run.result;
+    const first = model.requests[0].messages[0].content;
+
+    expect(typeof first === 'string' && first.startsWith('Shorten the first line')).toBe(true);
+    expect(first).toEqual(expect.stringContaining('"id":"p1","type":"paragraph","depth":0,"text":"First line here"'));
+    run.end();
+  });
+
   it('sends the full arguments of the common commands, so a plain insert needs no blok_describe call', async () => {
     const model = scripted(answer('Nothing to do.'));
     const editor = await createEditor(model);
@@ -221,8 +235,7 @@ describe('editor.agent.ask', () => {
     await run.result;
     const first = model.requests[0].messages[0].content;
 
-    expect(first).toEqual(expect.stringContaining('p1'));
-    expect(first).toEqual(expect.stringContaining('"line"'));
+    expect(first).toEqual(expect.stringContaining('selected this text in block p1: "line"'));
     run.end();
   });
 

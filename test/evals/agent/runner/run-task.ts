@@ -14,6 +14,8 @@ export interface SurfaceRun {
   tools: Anthropic.Tool[];
   /** The system prompt the surface ships with; without one the trial sends SYSTEM_PROMPT. */
   system?: string;
+  /** The first user message the surface's product sends; without one the trial sends the prompt. */
+  firstMessage?(prompt: string): Promise<string>;
   execute: Execute;
   finish(): Promise<{ final: OutputData; log: LogEntry[]; results: ExecuteResult[]; observed?: Observed; actorId?: string }>;
   close(): Promise<void>;
@@ -87,8 +89,9 @@ export const runTrial = async (o: {
   }
 
   try {
-    const prompt = o.task.docId === undefined ? o.task.prompt : `The document id is "${o.task.docId}". ${o.task.prompt}`;
+    const asked = o.task.docId === undefined ? o.task.prompt : `The document id is "${o.task.docId}". ${o.task.prompt}`;
     const started = performance.now();
+    const prompt = surface.firstMessage === undefined ? asked : await surface.firstMessage(asked);
     const loop = await runModelLoop({
       client: o.client, model: o.model, effort: o.effort, system: surface.system ?? SYSTEM_PROMPT, prompt,
       tools: surface.tools, execute: surface.execute, budget: o.task.budget, dispatch: o.dispatch,

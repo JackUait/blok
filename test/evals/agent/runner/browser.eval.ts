@@ -3,6 +3,7 @@ import { appendFileSync } from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
 import { test } from '@playwright/test';
 
+import { composeFirstMessage } from '../../../../src/agent/first-message';
 import type { Blok } from '../../../../types';
 import type { AgentTurn } from '../../../../types/api/agent';
 import { isSeed } from '../../../unit/agent/parity/corpus';
@@ -76,6 +77,14 @@ for (const task of tasks) {
 
         return {
           system: rendered.system,
+          // The page sets no caret, so the editor context is empty (agent.ts editorContext).
+          firstMessage: (prompt) => composeFirstMessage(prompt, '', (args) => page.evaluate(async (a) => {
+            if (window.evalTurn === undefined) {
+              throw new Error('no open agent turn');
+            }
+
+            return window.evalTurn.read(a);
+          }, args)),
           tools: rendered.tools.map((tool) => asAnthropicTool({ name: tool.name, description: tool.description, schema: tool.input_schema })),
           execute: async (name, input) => {
             const out = await page.evaluate(async ({ n, i }) => {

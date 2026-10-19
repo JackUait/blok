@@ -117,7 +117,7 @@ export const listMcpTools = (
     },
     {
       name: 'blok_close',
-      description: 'Closes a handle: leaves the live room, or drops the stored session. Reports work the server had not acknowledged.',
+      description: 'Closes a handle. In live mode it leaves the room and reports work the server had not acknowledged. In stored mode every blok_execute already saves, so closing is not needed to save; it only frees the handle.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,

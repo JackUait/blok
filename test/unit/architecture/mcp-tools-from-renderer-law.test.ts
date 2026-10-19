@@ -310,6 +310,13 @@ describe('MCP tools come from the shared renderer', () => {
     expect(byName(tools, 'blok_open').description).not.toMatch(/take the id .* from blok_list_documents/);
   });
 
+  it('says a stored-mode close is not needed to save, and a live close leaves the room', () => {
+    const close = byName(listMcpTools(stored, { schema: 'mixed', handleIdleMs: 600_000 }), 'blok_close');
+
+    expect(close.description).toMatch(/stored mode.*blok_execute.*saves/i);
+    expect(close.description).toMatch(/live.*leaves the room/i);
+  });
+
   it('describes close acknowledgement and optional host-record lag', () => {
     const output = byName(listMcpTools(stored, { schema: 'envelope', handleIdleMs: 600_000 }), 'blok_close').outputSchema;
 

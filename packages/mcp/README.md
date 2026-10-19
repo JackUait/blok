@@ -13,7 +13,7 @@ The server exposes six tools.
 | `blok_read` | Returns the document view for a handle. |
 | `blok_describe` | Returns the command contract, or one tool or command. |
 | `blok_execute` | Runs one batch of commands on a handle. |
-| `blok_close` | Closes a handle. |
+| `blok_close` | Closes a handle. Live: leaves the room. Stored: optional, since every batch already saved. |
 
 A document opens in one of two modes:
 

@@ -6,6 +6,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 
 import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
+import { newView } from '../../shared/database/schema-ops';
 
 const BOM = '﻿';
 
@@ -426,7 +427,7 @@ export const csvDatabaseBlocks = (
 ): CsvDatabaseBlocks => {
   const id = options.newId();
   const imported = buildCsvImport(table, options);
-  const [titleProperty, ...rest] = imported.schema;
+  const [titleProperty] = imported.schema;
   const viewId = options.newId();
   const positions = imported.rows.reduce<string[]>((list) => [...list, generateKeyBetween(list.at(-1) ?? null, null)], []);
 
@@ -435,7 +436,7 @@ export const csvDatabaseBlocks = (
     data: {
       title: options.title,
       schema: imported.schema,
-      views: [{ id: viewId, name: options.viewName, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: rest.map((p) => p.id) }],
+      views: [newView({ id: viewId, name: options.viewName, type: 'table', position: 'a0' }, imported.schema)],
       activeViewId: viewId,
     },
     rows: imported.rows.map((properties, index) => {

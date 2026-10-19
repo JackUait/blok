@@ -19,7 +19,7 @@ export const bySchemaPosition = (schema: PropertyDefinition[]): PropertyDefiniti
   [...schema].sort((a, b) => (a.position < b.position ? -1 : 1));
 
 /** A property the view does not mention: shown in a table, hidden elsewhere. The title always shows. */
-const defaultVisible = (view: DatabaseViewConfig, property: PropertyDefinition): boolean =>
+export const defaultVisible = (view: DatabaseViewConfig, property: PropertyDefinition): boolean =>
   property.type === 'title' || view.type === 'table' || view.type === 'form';
 
 /** Stored entries merged by id. The first occurrence keeps its place; later fields win. */

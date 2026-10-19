@@ -82,6 +82,7 @@ import {
   resolveTimelineBy,
   resolveTimelineEndBy,
   resolveTimelineZoom,
+  defaultVisible,
   resolveViewProperties,
   visibleRowPropertyIds,
   withCalculation,
@@ -8623,13 +8624,19 @@ export class DatabaseTool implements BlockTool {
     if (params.type === 'relation') settings.relation = { targetDatabaseId: this.dataId };
     const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);
     const view = this.model.getView(this.activeViewId);
+    const schema = this.model.getSchema();
+    const placed = params.afterId !== undefined || params.beforeId !== undefined;
+    // A legacy `visibleProperties` view reads every unlisted property as hidden. Shown
+    // here so it matches a view that never listed it; board and other layouts keep hiding it.
+    const reveal = view !== undefined && defaultVisible(view, prop)
+      && resolveViewProperties(view, schema).find((p) => p.id === prop.id)?.visible !== true;
 
-    if (view !== undefined && (params.afterId !== undefined || params.beforeId !== undefined)) {
-      const schema = this.model.getSchema();
+    if (view !== undefined && (placed || reveal)) {
       // The view's column order, not the schema's: a user may have dragged the columns.
       const order = resolveViewProperties(view, schema).map((p) => p.id).filter((id) => id !== prop.id);
       const beforeId = params.beforeId ?? order[order.indexOf(params.afterId ?? '') + 1] ?? null;
-      const properties = withPropertyOrder(view, schema, prop.id, beforeId);
+      const ordered = placed ? { ...view, properties: withPropertyOrder(view, schema, prop.id, beforeId) } : view;
+      const properties = reveal ? withPropertySetting(ordered, schema, prop.id, { visible: true }) : ordered.properties ?? [];
 
       this.model.updateView(view.id, { properties });
       void this.sync.syncUpdateView({ viewId: view.id, changes: { properties } });

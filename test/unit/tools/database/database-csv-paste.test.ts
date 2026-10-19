@@ -33,13 +33,24 @@ describe('pastedTable', () => {
       expect(built.id).toBe('db');
       expect(built.data.title).toBe('Pasted');
       expect(built.data.schema.map((p) => [p.name, p.type])).toEqual([['Task', 'title'], ['Points', 'number']]);
-      expect(built.data.views).toEqual([{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p2'] }]);
+      expect(built.data.views).toHaveLength(1);
+      expect(built.data.views[0]).toMatchObject({ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p2'] });
       expect(built.data.activeViewId).toBe('v1');
       expect(built.rows.map((row) => [row.id, row.data.title, row.data.properties])).toEqual([
         ['r1', 'Write', { p1: 'Write', p2: 3 }],
         ['r2', 'Ship', { p1: 'Ship', p2: 5 }],
       ]);
       expect(built.rows[0].data.position < built.rows[1].data.position).toBe(true);
+    });
+
+    // A view without `properties` hides every column added later (legacyEntries).
+    it('writes the view with per-column settings, so a column added later shows', () => {
+      const ids = ['db', 'p1', 'p2', 'v1'];
+      const built = csvDatabaseBlocks([['Task', 'Points'], ['Write', '3']], {
+        newId: () => ids.shift() ?? 'x', untitled: 'Column', viewName: 'Table', title: 'Pasted',
+      });
+
+      expect(built.data.views[0].properties).toEqual([{ id: 'p1', visible: true }, { id: 'p2', visible: true }]);
     });
   });
 });

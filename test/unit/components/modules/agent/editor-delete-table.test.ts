@@ -27,6 +27,14 @@ const settle = async (editor: BlokModules): Promise<void> => {
   await new Promise<void>(resolve => setTimeout(resolve, 0));
 };
 
+// Typed as unknown: `listeners` is protected on Module, so tsc rejects reading it off a module type.
+const removeModuleListeners = (owner: unknown): void => {
+  if (typeof owner === 'object' && owner !== null &&
+      'listeners' in owner && owner.listeners instanceof Listeners) {
+    owner.listeners.removeAll();
+  }
+};
+
 const destroyCore = async (instance: Core): Promise<void> => {
   const modules = Object.values<BlokModules[keyof BlokModules]>({ ...instance.moduleInstances });
 
@@ -35,9 +43,7 @@ const destroyCore = async (instance: Core): Promise<void> => {
     if (hasDestroy(module)) {
       await module.destroy();
     }
-    if ('listeners' in module && module.listeners instanceof Listeners) {
-      module.listeners.removeAll();
-    }
+    removeModuleListeners(module);
   }
   destroyTooltip();
 };

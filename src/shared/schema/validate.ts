@@ -65,7 +65,7 @@ const sameJson = (a: unknown, b: unknown): boolean => {
     keys.every(key => Object.prototype.hasOwnProperty.call(b, key) && sameJson(a[key], b[key]));
 };
 
-const validPattern = (value: unknown): boolean => {
+export const validPattern = (value: unknown): boolean => {
   if (typeof value !== 'string') {
     return false;
   }

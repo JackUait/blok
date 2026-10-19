@@ -19,6 +19,7 @@ import type {
 } from '../../types';
 import { deepEqual } from './deep-equal';
 import { ownEntry } from './own-entry';
+import { validPattern } from './schema/validate';
 import { richText } from './tool-descriptions/rich-text';
 
 export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'history'] as const;
@@ -65,7 +66,7 @@ const acceptsField = (schema: BlokSchema, key: string): boolean => {
 
   return schema.additionalProperties !== false
     || (isRecord(schema.properties) && Object.hasOwn(schema.properties, key))
-    || patterns.some(pattern => new RegExp(pattern, 'u').test(key));
+    || patterns.some(pattern => validPattern(pattern) && new RegExp(pattern, 'u').test(key));
 };
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> => {

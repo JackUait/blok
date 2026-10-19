@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { dueRun } from '../../../../src/tools/database/templates';
+import { dueRun, nextRun } from '../../../../src/tools/database/templates';
 import type { TemplateRepeat } from '../../../../src/tools/database/types';
 
 const due = (repeat: TemplateRepeat, now: string): string | null => dueRun(repeat, new Date(now));
@@ -87,6 +87,25 @@ describe('repeating template schedule', () => {
 
     it('falls back to UTC when the stored zone is not a real zone', () => {
       expect(due({ frequency: 'daily', start: '2026-10-30T13:00:00.000Z', timeZone: 'Mars/Olympus' }, '2026-11-02T15:00:00.000Z')).toBe('2026-11-02T13:00:00.000Z');
+    });
+  });
+
+  describe('next run', () => {
+    const next = (repeat: TemplateRepeat, now: string): string | null => {
+      const at = nextRun(repeat, new Date(now));
+
+      return at === null ? null : new Date(at).toISOString();
+    };
+
+    it('is the next month, not one the 28-day estimate skips to', () => {
+      // Two years of months: a 28-day month estimate lands about two runs ahead.
+      expect(next({ frequency: 'monthly', start: '2025-01-15T09:00:00.000Z' }, '2027-01-14T10:00:00.000Z')).toBe('2027-01-15T09:00:00.000Z');
+    });
+    it('is the start while the start is ahead', () => {
+      expect(next({ frequency: 'daily', start: '2026-10-09T09:00:00.000Z' }, '2026-10-01T00:00:00.000Z')).toBe('2026-10-09T09:00:00.000Z');
+    });
+    it('is strictly after now when now is a run', () => {
+      expect(next({ frequency: 'weekly', start: '2026-10-05T09:00:00.000Z' }, '2026-10-12T09:00:00.000Z')).toBe('2026-10-19T09:00:00.000Z');
     });
   });
 });

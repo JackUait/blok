@@ -52,3 +52,24 @@ export const dueRun = (repeat: TemplateRepeat | undefined, now: Date): string | 
 
   return !Number.isNaN(last) && last >= due.getTime() ? null : due.toISOString();
 };
+
+/** The first run of a repeating template after `now`, in ms, or null when it has none. */
+export const nextRun = (repeat: TemplateRepeat | undefined, now: Date): number | null => {
+  if (repeat === undefined) return null;
+  const start = new Date(repeat.start);
+
+  if (Number.isNaN(start.getTime())) return null;
+  if (start.getTime() > now.getTime()) return start.getTime();
+  const after = (k: number): number => {
+    const at = occurrence(start, repeat, k).getTime();
+
+    return at > now.getTime() ? at : after(k + 1);
+  };
+
+  // The rough index can run ahead (a month counts as 28 days): step back to the last run made, then forward.
+  const last = Array.from({ length: roughIndex(start, now, repeat) + 1 }, (_, k) => k)
+    .reverse()
+    .find((k) => occurrence(start, repeat, k).getTime() <= now.getTime()) ?? 0;
+
+  return after(last + 1);
+};

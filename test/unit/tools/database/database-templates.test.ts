@@ -190,3 +190,70 @@ describe('DatabaseTool — templates', () => {
     expect(onRepeatDue).not.toHaveBeenCalled();
   });
 });
+
+describe('DatabaseTool — a repeating template that comes due while open', () => {
+  const standup = (): ReturnType<typeof makeDoc> => makeDoc([
+    { id: 'db', name: 'database', parentId: null, data: {} },
+    rowSeed('tpl', 'db', { properties: { title: 'Standup' }, template: true, repeat: { frequency: 'daily', start: '2026-10-01T09:00:00.000Z', lastRunAt: '2026-10-08T09:00:00.000Z' } }),
+  ]);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-09T08:55:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('is offered at its run time, without a re-render', () => {
+    const onRepeatDue = vi.fn();
+
+    buildDatabase(standup(), 'db', data(), { templates: { onRepeatDue } });
+    expect(onRepeatDue).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(5 * 60_000);
+
+    expect(onRepeatDue).toHaveBeenCalledTimes(1);
+    expect(onRepeatDue.mock.calls[0][0]).toMatchObject({ templateId: 'tpl', dueAt: '2026-10-09T09:00:00.000Z' });
+  });
+
+  it('is not offered after the block is destroyed', () => {
+    const onRepeatDue = vi.fn();
+    const { tool } = buildDatabase(standup(), 'db', data(), { templates: { onRepeatDue } });
+
+    tool.destroy();
+    vi.advanceTimersByTime(60 * 60_000);
+
+    expect(onRepeatDue).not.toHaveBeenCalled();
+  });
+
+  it('offers each run once, and the next run on the next day', () => {
+    const onRepeatDue = vi.fn();
+
+    buildDatabase(standup(), 'db', data(), { templates: { onRepeatDue } });
+    vi.advanceTimersByTime(5 * 60_000 + 60 * 60_000);
+    expect(onRepeatDue).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(24 * 60 * 60_000);
+
+    expect(onRepeatDue.mock.calls.map((call) => (call[0] as { dueAt: string }).dueAt))
+      .toEqual(['2026-10-09T09:00:00.000Z', '2026-10-10T09:00:00.000Z']);
+  });
+
+  it('after createRow, offers the next run when it comes', () => {
+    const onRepeatDue = vi.fn((input: { createRow: () => string | null }) => {
+      input.createRow();
+    });
+    const doc = standup();
+
+    buildDatabase(doc, 'db', data(), { templates: { onRepeatDue } });
+    vi.advanceTimersByTime(5 * 60_000 + 24 * 60 * 60_000);
+
+    expect(onRepeatDue).toHaveBeenCalledTimes(2);
+    expect(doc.row('tpl').repeat?.lastRunAt).toBe('2026-10-10T09:00:00.000Z');
+  });
+});

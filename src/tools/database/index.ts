@@ -23,7 +23,7 @@ import type { DatabaseSource } from './computed-properties';
 import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
 import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
 import { buttonHasError } from './database-button-menu';
-import { dueRun, isTemplateData } from './templates';
+import { dueRun, isTemplateData, nextRun } from './templates';
 import { copiedReminders, dueReminder, storedReminderDueAt, viewerTimeZone } from './reminders';
 import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDisplay } from './sub-items';
 import { comparePositions } from './positions';
@@ -367,6 +367,11 @@ export class DatabaseTool implements BlockTool {
 
   private title: string;
   private backlinksTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Wakes the block when the next reminder or template run comes due. Armed from the first render. */
+  private dueTimer: ReturnType<typeof setTimeout> | null = null;
+  private dueWatching = false;
+  /** Reminder and run keys this block has offered: a later wake must not offer them again. */
+  private readonly offeredDue = new Set<string>();
   /** The host's backlinks of the last row whose page opened. */
   private hostBacklinks: { rowId: string; items: DatabaseBacklink[] } | null = null;
   private unknown: Record<string, unknown>;
@@ -1321,8 +1326,9 @@ export class DatabaseTool implements BlockTool {
     // A database that rendered first read this one before its tool existed.
     this.api.events.emit(DATABASE_RENDERED_EVENT, { databaseId: this.block.id });
     this.queueDraftCleanup();
-    this.offerDueTemplates();
-    this.offerDueReminders();
+    this.dueWatching = true;
+    document.addEventListener('visibilitychange', this.handleDueVisibility);
+    this.offerDue();
     this.openLinkedRow();
     if (this.linkPicker) this.openSourcePicker();
 
@@ -1420,6 +1426,9 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.scheduleBacklinks);
     this.api.events.off('block replayed', this.scheduleBacklinks);
     if (this.backlinksTimer !== null) clearTimeout(this.backlinksTimer);
+    this.dueWatching = false;
+    this.scheduleDue();
+    document.removeEventListener('visibilitychange', this.handleDueVisibility);
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.off('collaboration:status', this.handleCollaborationStatus);
     if (this.draftGraceTimer !== null) clearTimeout(this.draftGraceTimer);
@@ -1496,6 +1505,7 @@ export class DatabaseTool implements BlockTool {
 
     this.tabBar?.setReadOnly(this.readOnly || this.structureLocked());
     this.syncTitleRowAddBtn();
+    this.scheduleDue();
 
     this.rerenderView();
     this.api.events.emit(DATABASE_RENDERED_EVENT, { databaseId: this.block.id });
@@ -1652,6 +1662,8 @@ export class DatabaseTool implements BlockTool {
     this.refreshRowPrompts();
     // A peer's layout write can settle which of two tabs blocks wins.
     if (this.madeTabsBlocks.size > 0) this.queueLayoutTabsSync();
+    // Every reminder and repeat write lands here, so the next wake follows it.
+    this.scheduleDue();
   }
 
   /**
@@ -6048,8 +6060,10 @@ export class DatabaseTool implements BlockTool {
       const block = this.api.blocks.getChildren(this.dataId).find((child) => child.id === template.id);
       const repeat = this.templateRepeat(block);
       const dueAt = dueRun(repeat, new Date());
+      const key = `template:${template.id}:${dueAt ?? ''}`;
 
-      if (dueAt === null || repeat === undefined || block === undefined) continue;
+      if (dueAt === null || repeat === undefined || block === undefined || this.offeredDue.has(key)) continue;
+      this.offeredDue.add(key);
       onRepeatDue({
         databaseId: this.dataId,
         templateId: template.id,
@@ -6076,6 +6090,47 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  private offerDue(): void {
+    this.offerDueTemplates();
+    this.offerDueReminders();
+    this.scheduleDue();
+  }
+
+  private readonly handleDueVisibility = (): void => {
+    // A sleeping laptop holds timers back; waking up checks at once.
+    if (document.visibilityState === 'visible' && this.dueWatching) this.offerDue();
+  };
+
+  /** Sets one timer for the next reminder or template run still to come. */
+  private scheduleDue(): void {
+    if (this.dueTimer !== null) clearTimeout(this.dueTimer);
+    this.dueTimer = null;
+    const reminders = this.config.reminders?.onReminderDue !== undefined;
+    const templates = this.config.templates?.onRepeatDue !== undefined;
+
+    if (!this.dueWatching || this.destroyed || this.readOnly || this.linked || (!reminders && !templates)) return;
+    const now = new Date();
+    const dates = reminders ? this.model.getSchema().filter((property) => property.type === 'date') : [];
+    const reminderTimes = this.model.getOrderedRows().flatMap((row) => dates.map((property) => {
+      const reminder = row.reminders?.[property.id];
+
+      return reminder === undefined ? null : storedReminderDueAt(row.properties[property.id], reminder, property.date?.timeZone);
+    }));
+    const runTimes = templates
+      ? this.templates.map((template) => nextRun(this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === template.id)), now))
+      : [];
+    const next = [...reminderTimes, ...runTimes].filter((at): at is number => at !== null && at > now.getTime());
+
+    if (next.length === 0) return;
+    // setTimeout overflows past 2^31 - 1 ms (about 24.8 days) and fires at once; a long wait wakes early and reschedules.
+    const delay = Math.min(Math.min(...next) - now.getTime(), 2 ** 31 - 1);
+
+    this.dueTimer = setTimeout(() => {
+      this.dueTimer = null;
+      this.offerDue();
+    }, delay);
+  }
+
   /** Hands every due date reminder to the host, as `offerDueTemplates` does for templates. */
   private offerDueReminders(): void {
     const onReminderDue = this.config.reminders?.onReminderDue;
@@ -6089,7 +6144,15 @@ export class DatabaseTool implements BlockTool {
       const dueAt = reminder === undefined ? null : dueReminder(row.properties[property.id], reminder, property.date?.timeZone, now);
 
       return reminder === undefined || dueAt === null ? null : { rowId: row.id, propertyId: property.id, remind: reminder.remind, dueAt };
-    })).filter((entry) => entry !== null);
+    })).filter((entry) => entry !== null)
+      .filter(({ rowId, propertyId, dueAt }) => {
+        const key = `reminder:${rowId}:${propertyId}:${dueAt}`;
+        const fresh = !this.offeredDue.has(key);
+
+        this.offeredDue.add(key);
+
+        return fresh;
+      });
 
     due.forEach(({ rowId, propertyId, remind, dueAt }) => onReminderDue({
       databaseId: this.dataId,

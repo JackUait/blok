@@ -328,3 +328,93 @@ describe('copies carry reminders, not their sent stamp', () => {
     expect(doc.row(tool.newFromTemplate('tpl') ?? '').reminders).toBeUndefined();
   });
 });
+
+describe('a reminder that comes due while the database is open', () => {
+  const seedDue = (): ReturnType<typeof makeDoc> => makeDoc([
+    { id: 'db', name: 'database', parentId: null, data: {} },
+    // Due 2027-06-14T13:00Z (1 day before, 9:00 New York).
+    rowSeed('r1', 'db', { properties: { title: 'Ship', due: '2027-06-15' }, reminders: { due: { remind: '1_day_before' } } }),
+  ]);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2027-06-14T12:55:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+  });
+
+  it('is offered at its due time, without a re-render', () => {
+    const onReminderDue = vi.fn();
+
+    buildDatabase(seedDue(), 'db', data(), { reminders: { onReminderDue } });
+    expect(onReminderDue).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(5 * 60_000);
+
+    expect(onReminderDue).toHaveBeenCalledTimes(1);
+    expect(onReminderDue.mock.calls[0][0]).toMatchObject({ rowId: 'r1', propertyId: 'due', dueAt: '2027-06-14T13:00:00.000Z' });
+  });
+
+  it('is not offered after the block is destroyed', () => {
+    const onReminderDue = vi.fn();
+    const { tool } = buildDatabase(seedDue(), 'db', data(), { reminders: { onReminderDue } });
+
+    tool.destroy();
+    vi.advanceTimersByTime(60 * 60_000);
+
+    expect(onReminderDue).not.toHaveBeenCalled();
+  });
+
+  it('is offered once, even when the host never marks it sent', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'Ship', due: '2027-06-15' }, reminders: { due: { remind: '1_day_before' } } }),
+      // Due an hour later: its timer must not re-offer r1.
+      rowSeed('r2', 'db', { properties: { title: 'Later', due: '2027-06-14T10:00' }, reminders: { due: { remind: 'at_time_of_event' } } }),
+    ]);
+    const onReminderDue = vi.fn();
+
+    buildDatabase(doc, 'db', data(), { reminders: { onReminderDue } });
+    vi.advanceTimersByTime(24 * 60 * 60_000);
+
+    expect(onReminderDue.mock.calls.map((call) => (call[0] as DueInput).rowId)).toEqual(['r1', 'r2']);
+  });
+
+  it('is offered when the page shows again after the clock jumped past it', () => {
+    const onReminderDue = vi.fn();
+
+    buildDatabase(seedDue(), 'db', data(), { reminders: { onReminderDue } });
+    // A sleeping laptop: the clock moves on, the timer has not run.
+    vi.setSystemTime(new Date('2027-06-14T13:01:00.000Z'));
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(onReminderDue).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(60 * 60_000);
+    expect(onReminderDue).toHaveBeenCalledTimes(1);
+  });
+
+  it('a reminder picked after render is offered when it comes due', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'Ship', due: '2027-06-14T09:10' } }),
+    ]);
+    const onReminderDue = vi.fn();
+    const { el } = buildDatabase(doc, 'db', data(), { reminders: { onReminderDue } });
+
+    el.querySelector<HTMLElement>('[data-row-id="r1"] [role="gridcell"][data-property-id="due"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    document.querySelector<HTMLElement>('[data-blok-database-date-remind]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-database-date-remind-option="at_time_of_event"]')?.click();
+    vi.advanceTimersByTime(15 * 60_000);
+
+    expect(onReminderDue).toHaveBeenCalledTimes(1);
+    expect(onReminderDue.mock.calls[0][0]).toMatchObject({ rowId: 'r1', dueAt: '2027-06-14T13:10:00.000Z' });
+  });
+});

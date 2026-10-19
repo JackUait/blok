@@ -364,8 +364,9 @@ export interface API {
   /**
    * Read-only view of selected editor configuration. `collaboration` names the writer of a built-in database comment.
    * `user` is who new blocks are stamped as created by.
+   * `agent.assistant` tells a tool whether `agent.ask()` can run.
    */
-  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link' | 'media' | 'collaboration' | 'user'>>;
+  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link' | 'media' | 'collaboration' | 'user' | 'agent'>>;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;

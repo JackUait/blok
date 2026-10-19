@@ -366,6 +366,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/buttonAdd-addPage': cmd('database.updateProperty'),
   'menu:database/buttonAdd-editPages': cmd('database.updateProperty'),
   'menu:database/buttonAdd-sendNotification': cmd('database.updateProperty'),
+  'menu:database/buttonAdd-sendAgentMessage': cmd('database.updateProperty'),
   'menu:database/buttonAdd-showConfirmation': cmd('database.updateProperty'),
   'menu:database/buttonAdd-defineVariables': cmd('database.updateProperty'),
   'menu:database/buttonSource-*': cmd('database.updateProperty'),

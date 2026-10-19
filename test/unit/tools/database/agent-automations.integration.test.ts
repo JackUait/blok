@@ -903,6 +903,23 @@ describe('an agent presses a database button as the person\'s click does', { tim
     }
   });
 
+  it('adversarial: the agent\'s press sends no message to the agent, as it opens no page', async () => {
+    const steps = [STEPS[0], { id: 'a1', type: 'sendAgentMessage', message: 'Summarise this row' }];
+    const { instance } = await boot(buttonSeed(steps), undefined, { config: buttonConfig });
+    const agent = instance.moduleInstances.API.methods.agent;
+
+    if (agent === undefined) throw new Error('agent API is missing');
+    const ask = vi.spyOn(agent, 'ask');
+    const approve = vi.fn<AgentApprover>(() => Promise.resolve(true));
+
+    expect(await asked(instance, press, approve)).toBeNull();
+    await settled();
+
+    expect(ask).not.toHaveBeenCalled();
+    expect(approve).not.toHaveBeenCalled();
+    expect((await rowsOf(instance)).find((row) => row.id === 'r1')?.properties.c).toBe(true);
+  });
+
   it('adversarial: a button aimed at the lock or a form\'s sharing refuses the press and asks no one', async () => {
     for (const step of [
       { id: 'x', type: 'editProperty', propertyId: 'databaseLocked', value: false },

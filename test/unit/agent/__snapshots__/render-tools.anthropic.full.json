@@ -2966,7 +2966,8 @@
                                             "editPages",
                                             "showConfirmation",
                                             "defineVariables",
-                                            "sendNotification"
+                                            "sendNotification",
+                                            "sendAgentMessage"
                                           ]
                                         },
                                         "propertyId": {
@@ -3063,7 +3064,7 @@
                                         },
                                         "message": {
                                           "type": "string",
-                                          "description": "showConfirmation: the question. sendNotification: the message."
+                                          "description": "showConfirmation: the question. sendNotification: the message. sendAgentMessage: sent to the editor assistant after the writes, with the row id; required."
                                         },
                                         "confirmLabel": {
                                           "type": "string",

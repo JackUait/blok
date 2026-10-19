@@ -35,6 +35,7 @@ const host = (): ButtonHost & { log: string[] } => {
     source: vi.fn(() => undefined),
     rowValues: vi.fn(() => undefined),
     notify: vi.fn((action, to: string[], message: string) => log.push(`notify:${to.join(',')}:${message}`)),
+    askAgent: vi.fn((message: string) => log.push(`agent:${message}`)),
   };
 };
 
@@ -286,6 +287,25 @@ describe('runButtonActions — Notion actions', () => {
     ], 'r1', h);
 
     expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it('messages the agent only after the writes commit', () => {
+    const h = host();
+
+    runButtonActions([
+      { id: '1', type: 'sendAgentMessage', message: 'Summarize this page' },
+      { id: '2', type: 'editProperty', propertyId: 'a', value: 'x' },
+    ], 'r1', h);
+
+    expect(h.log).toEqual(['transact:start', 'write:r1:{"a":"x"}', 'transact:end', 'agent:Summarize this page']);
+  });
+
+  it('sends the agent no empty message', () => {
+    const h = host();
+
+    runButtonActions([{ id: '1', type: 'sendAgentMessage' }, { id: '2', type: 'sendAgentMessage', message: '  ' }], 'r1', h);
+
+    expect(h.askAgent).not.toHaveBeenCalled();
   });
 
   it('opens the page an earlier step added', () => {

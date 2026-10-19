@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1896 + 136 + 521 + 4 closure for all 2557 keys', () => {
+  it('rebuilds a disjoint 1899 + 136 + 521 + 4 closure for all 2560 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2557);
+    expect(lifecycle.size).toBe(2560);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -468,7 +468,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the Ask AI sharing question, its untitled form, Allow, Keep as is and Calendar sync, all by literal.
       // +4: groupSort, groupSortManual, groupSortAlphabetical and groupSortReverse gained literal callers
       // in the select option Sort row (a71fed2d).
-      'executable-literal': 1896,
+      // +3: the button's Send message to agent action, its busy toast and its failed toast, by literal.
+      'executable-literal': 1899,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

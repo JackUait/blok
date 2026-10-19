@@ -170,7 +170,7 @@ const PROPERTY_SETTINGS = {
             id: { type: 'string' },
             type: {
               type: 'string',
-              enum: ['editProperty', 'insertBlocks', 'openPage', 'callback', 'addPage', 'editPages', 'showConfirmation', 'defineVariables', 'sendNotification'],
+              enum: ['editProperty', 'insertBlocks', 'openPage', 'callback', 'addPage', 'editPages', 'showConfirmation', 'defineVariables', 'sendNotification', 'sendAgentMessage'],
             },
             propertyId: { type: 'string', description: 'editProperty: the property to set.' },
             value: { description: 'editProperty: the new value. [{ "id": "@me" }] and "@today" are filled in on click.' },
@@ -209,7 +209,7 @@ const PROPERTY_SETTINGS = {
               },
             },
             stepId: { type: 'string', description: 'openPage: open the page an earlier addPage action added. Wins over url.' },
-            message: { type: 'string', description: 'showConfirmation: the question. sendNotification: the message.' },
+            message: { type: 'string', description: 'showConfirmation: the question. sendNotification: the message. sendAgentMessage: sent to the editor assistant after the writes, with the row id; required.' },
             confirmLabel: { type: 'string', description: 'showConfirmation: the Continue button text.' },
             cancelLabel: { type: 'string', description: 'showConfirmation: the Cancel button text. Cancel stops this action and every one after it.' },
             variables: {

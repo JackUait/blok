@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ButtonAction, DatabaseData, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { AgentRunResult } from '../../../../types/api';
 import { buildDatabase, makeDoc, rowSeed } from './structure-harness';
+import type { Doc } from './structure-harness';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -241,5 +243,148 @@ describe('DatabaseTool — button actions from Notion', () => {
 
     expect(header(fine.el)).not.toBeNull();
     expect(header(fine.el)?.querySelector('[data-blok-database-button-error]')).toBeNull();
+  });
+});
+
+interface AgentStub {
+  ask: ReturnType<typeof vi.fn>;
+  end: ReturnType<typeof vi.fn>;
+  finish: (result: AgentRunResult) => void;
+}
+
+/** A live editor's `api.agent` and `api.config.agent`, with a run the test finishes. */
+const withAgent = (doc: Doc, status: 'idle' | 'working' = 'idle', fail = false): AgentStub => {
+  const settle: { finish: (result: AgentRunResult) => void } = { finish: () => undefined };
+  const result = new Promise<AgentRunResult>((resolve) => {
+    settle.finish = resolve;
+  });
+  const end = vi.fn();
+  const ask = vi.fn(() => {
+    if (fail) throw new TypeError('editor.agent.ask() needs agent.assistant.model in the editor config.');
+
+    return { result, end, stop: vi.fn(), discard: vi.fn(), followUp: vi.fn() };
+  });
+  const state = status === 'idle' ? { status } : { status, turn: { id: 't', agent: { id: 'blok-assistant', name: 'AI' } } };
+
+  Object.assign(doc.api, {
+    agent: { state, ask },
+    config: { agent: { assistant: { model: vi.fn() } } },
+  });
+
+  return { ask, end, finish: settle.finish };
+};
+
+const agentData = (message = 'Summarize this page'): DatabaseData => withActions([
+  { id: 'x', type: 'editProperty', propertyId: 'status', value: 'done' },
+  { id: 'm', type: 'sendAgentMessage', message },
+]);
+
+describe('DatabaseTool — Send message to agent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('asks the agent about this row after the click\'s one undo step, then ends the run', async () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+    const agent = withAgent(doc);
+    const { el } = buildDatabase(doc, 'db', agentData());
+
+    doc.transact.mockClear();
+    buttonOf(el, 'r1')?.click();
+
+    expect(doc.transact).toHaveBeenCalledTimes(1);
+    expect(agent.ask).toHaveBeenCalledTimes(1);
+    expect(doc.transact.mock.invocationCallOrder[0]).toBeLessThan(agent.ask.mock.invocationCallOrder[0]);
+    const [prompt, options] = agent.ask.mock.calls[0] as [string, unknown];
+
+    expect(prompt.startsWith('Summarize this page')).toBe(true);
+    expect(prompt).toContain('database row block r1');
+    expect(options).toEqual({ context: false });
+    expect(agent.end).not.toHaveBeenCalled();
+
+    agent.finish({ status: 'done', reply: 'Done.', changed: [] });
+    await flush();
+
+    expect(agent.end).toHaveBeenCalledTimes(1);
+    expect(doc.api.notifier.show).not.toHaveBeenCalled();
+  });
+
+  it('shows a notice and asks nothing while the agent is already working', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+    const agent = withAgent(doc, 'working');
+    const { el } = buildDatabase(doc, 'db', agentData());
+
+    buttonOf(el, 'r1')?.click();
+
+    expect(agent.ask).not.toHaveBeenCalled();
+    expect(doc.row('r1').properties.status).toBe('done');
+    expect(doc.api.notifier.show).toHaveBeenCalledWith({ message: 'tools.database.buttonAgentBusy', style: 'error' });
+  });
+
+  it('shows a notice when the agent cannot start, with no unhandled error', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+
+    withAgent(doc, 'idle', true);
+    const { el } = buildDatabase(doc, 'db', agentData());
+
+    expect(() => buttonOf(el, 'r1')?.click()).not.toThrow();
+    expect(doc.api.notifier.show).toHaveBeenCalledWith({ message: 'tools.database.buttonAgentFailed', style: 'error' });
+  });
+
+  it('ends the run and shows a notice when the model call fails', async () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+    const agent = withAgent(doc);
+    const { el } = buildDatabase(doc, 'db', agentData());
+
+    buttonOf(el, 'r1')?.click();
+    agent.finish({ status: 'failed', reply: '', error: '<b>quota</b>', changed: [] });
+    await flush();
+
+    expect(agent.end).toHaveBeenCalledTimes(1);
+    expect(doc.api.notifier.show).toHaveBeenCalledWith({ message: 'tools.database.buttonAgentFailed', style: 'error' });
+  });
+
+  it('asks nothing after Cancel on a confirmation before it', async () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+    const agent = withAgent(doc);
+    const { el } = buildDatabase(doc, 'db', withActions([
+      { id: 'c', type: 'showConfirmation' },
+      { id: 'm', type: 'sendAgentMessage', message: 'Summarize' },
+    ]));
+
+    buttonOf(el, 'r1')?.click();
+    document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="cancel"]')?.click();
+    await flush();
+
+    expect(agent.ask).not.toHaveBeenCalled();
+  });
+
+  it('asks after Continue on a confirmation before it', async () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+    const agent = withAgent(doc);
+    const { el } = buildDatabase(doc, 'db', withActions([
+      { id: 'c', type: 'showConfirmation' },
+      { id: 'm', type: 'sendAgentMessage', message: 'Summarize' },
+    ]));
+
+    buttonOf(el, 'r1')?.click();
+    document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
+    await flush();
+
+    expect(agent.ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the header of a button whose agent message is empty', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+
+    withAgent(doc);
+    const { el } = buildDatabase(doc, 'db', agentData(''));
+
+    expect(el.querySelector('[data-blok-database-table-column-header][data-property-id="btn"] [data-blok-database-button-error]')).not.toBeNull();
   });
 });

@@ -1197,6 +1197,8 @@ const pressButton: ToolActionImpl<{ rowId: string; propertyId: string }> = {
       }),
       openRow: () => undefined,
       openUrl: () => undefined,
+      // The agent is already the one acting: a message to itself would start a second run.
+      askAgent: () => undefined,
       callback: (action) => {
         const clean = cleanCallback(action);
 

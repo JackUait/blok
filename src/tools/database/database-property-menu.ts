@@ -114,6 +114,8 @@ export interface ComputedMenuHost {
   hasHostActions?: boolean;
   /** The host set `config.buttons.onNotify`: buttons may send notifications. */
   hasNotify?: boolean;
+  /** The editor has `agent.assistant`: buttons may message the agent. */
+  hasAgent?: boolean;
   /** This database block. */
   databaseId?: string;
   /** Databases a button can add pages to or edit, this one first. */
@@ -1319,6 +1321,7 @@ export class DatabasePropertyMenu {
         hasHostActions: computed?.hasHostActions === true,
         update,
         hasNotify: computed?.hasNotify === true,
+        hasAgent: computed?.hasAgent === true,
         ...(computed?.databaseId === undefined ? {} : { databaseId: computed.databaseId }),
         ...(computed?.dataSources === undefined ? {} : { dataSources: computed.dataSources }),
         ...(computed === undefined ? {} : { targetSchema: computed.targetSchema }),

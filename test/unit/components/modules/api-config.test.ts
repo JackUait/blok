@@ -68,4 +68,17 @@ describe('API.config', () => {
     expect(makeApi({ user: { id: 'u-ada' } }).methods.config.user?.id).toBe('u-ada');
     expect(makeApi({}).methods.config.user).toBeUndefined();
   });
+
+  it('exposes the agent config slice, so a tool can tell whether an assistant is set', () => {
+    const model = async (): Promise<{ content: []; stop_reason: null }> => ({ content: [], stop_reason: null });
+    const api = makeApi({ agent: { assistant: { model } } });
+
+    expect(api.methods.config.agent?.assistant?.model).toBe(model);
+  });
+
+  it('returns undefined agent when unset', () => {
+    const api = makeApi({});
+
+    expect(api.methods.config.agent).toBeUndefined();
+  });
 });

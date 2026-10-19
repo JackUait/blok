@@ -27,6 +27,8 @@ export interface ButtonMenuContext {
   update: (patch: Partial<PropertySettingsV2>) => void;
   /** The host set `config.buttons.onNotify`: buttons may send notifications. */
   hasNotify?: boolean;
+  /** The editor has `agent.assistant`: buttons may message the agent. */
+  hasAgent?: boolean;
   /** This database block. */
   databaseId?: string;
   /** Databases a page can be added to or edited in, this one first. */
@@ -72,6 +74,7 @@ const ACTION_KEYS: Record<ButtonAction['type'], string> = {
   sendNotification: 'tools.database.buttonActionSendNotification',
   showConfirmation: 'tools.database.buttonActionShowConfirmation',
   openPage: 'tools.database.buttonActionOpenPage',
+  sendAgentMessage: 'tools.database.buttonActionSendAgentMessage',
   defineVariables: 'tools.database.buttonActionDefineVariables',
   insertBlocks: 'tools.database.buttonActionInsertBlocks',
   callback: 'tools.database.buttonActionCallback',
@@ -163,6 +166,8 @@ export const buttonHasError = (settings: ButtonSettings, ctx: Pick<ButtonMenuCon
       }
       case 'sendNotification':
         return !recipientsValid(action, ctx.schema());
+      case 'sendAgentMessage':
+        return (action.message ?? '').trim() === '';
       case 'insertBlocks':
       case 'openPage':
       case 'callback':
@@ -493,11 +498,19 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
         }),
       ];
     }
+    if (action.type === 'sendAgentMessage') {
+      return [textField(`buttonAction-${action.id}-message`, t('tools.database.buttonMessage'), action.message ?? '', (message) => {
+        const { message: _old, ...rest } = action;
+
+        replace(message === '' ? rest : { ...rest, message });
+      })];
+    }
 
     return [];
   };
   const targets = writable(ctx.schema(), property.id);
   const hasNotification = actions.some((action) => action.type === 'sendNotification');
+  const hasAgentMessage = actions.some((action) => action.type === 'sendAgentMessage');
 
   return [
     textField('buttonLabel', t('tools.database.buttonLabel'), settings.label ?? '', (label) => save(actions, label === '' ? undefined : label)),
@@ -576,6 +589,15 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
             closeOnActivate: true,
             onActivate: () => add({ type: 'openPage' }),
           },
+          // Only one agent turn runs at a time, so a click can send one message.
+          ...(ctx.hasAgent === true && !hasAgentMessage
+            ? [{
+              name: 'buttonAdd-sendAgentMessage',
+              title: t(ACTION_KEYS.sendAgentMessage),
+              closeOnActivate: true,
+              onActivate: () => add({ type: 'sendAgentMessage' }),
+            }]
+            : []),
           {
             name: 'buttonAdd-defineVariables',
             title: t(ACTION_KEYS.defineVariables),

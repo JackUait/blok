@@ -38,6 +38,8 @@ export interface ButtonHost {
   /** This database's row values, read after the writes. */
   rowValues: (rowId: string) => Record<string, PropertyValue> | undefined;
   notify: (action: ButtonSendNotificationAction, to: string[], message: string) => void;
+  /** Starts an assistant run about this row. */
+  askAgent: (message: string) => void;
 }
 
 interface AddedPage {
@@ -118,14 +120,19 @@ const runAfter = (action: ButtonAction, rowId: string, host: ButtonHost, added: 
     const to = recipientsOf(action, rowId, host);
 
     if (to.length > 0) host.notify(action, to, action.message ?? '');
+  } else if (action.type === 'sendAgentMessage') {
+    const message = (action.message ?? '').trim();
+
+    if (message !== '') host.askAgent(message);
   }
 };
 
 /**
  * Runs the actions in order. Every write lands in one transact, so one undo
- * takes the whole click back. Opening a page, the host callback and a
- * notification run after it: they are not document edits, and a page opened
- * mid-step would show the row before the rest of the writes. A confirmation
+ * takes the whole click back. Opening a page, the host callback, a
+ * notification and the agent message run after it: they are not document
+ * edits, a page opened mid-step would show the row before the rest of the
+ * writes, and the agent's turn keeps its own undo steps. A confirmation
  * is asked before this, by `askConfirmations`.
  */
 export const runButtonActions = (actions: readonly ButtonAction[], rowId: string, host: ButtonHost): void => {

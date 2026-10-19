@@ -97,6 +97,7 @@ const ctxOf = (actions: ButtonAction[], extra: Partial<Omit<ButtonMenuContext, '
   schema: () => [...schema, { ...button, button: { buttonActions: actions } }],
   hasHostActions: true,
   hasNotify: true,
+  hasAgent: true,
   databaseId: 'db',
   dataSources: () => [{ id: 'db', title: 'Here' }, { id: 'other', title: 'Other' }],
   targetSchema: (id: string) => (id === 'other' ? OTHER : schema),
@@ -126,11 +127,12 @@ describe('button settings items — Notion actions', () => {
 
     expect(add.map((i) => i.name)).toEqual([
       'buttonAdd-editProperty', 'buttonAdd-addPage', 'buttonAdd-editPages', 'buttonAdd-sendNotification',
-      'buttonAdd-showConfirmation', 'buttonAdd-openPage', 'buttonAdd-defineVariables', 'buttonAdd-insertBlocks', 'buttonAdd-callback',
+      'buttonAdd-showConfirmation', 'buttonAdd-openPage', 'buttonAdd-sendAgentMessage', 'buttonAdd-defineVariables', 'buttonAdd-insertBlocks', 'buttonAdd-callback',
     ]);
-    expect(add.map((i) => i.title).slice(1, 7)).toEqual([
+    expect(add.map((i) => i.title).slice(1, 8)).toEqual([
       'tools.database.buttonActionAddPage', 'tools.database.buttonActionEditPages', 'tools.database.buttonActionSendNotification',
-      'tools.database.buttonActionShowConfirmation', 'tools.database.buttonActionOpenPage', 'tools.database.buttonActionDefineVariables',
+      'tools.database.buttonActionShowConfirmation', 'tools.database.buttonActionOpenPage', 'tools.database.buttonActionSendAgentMessage',
+      'tools.database.buttonActionDefineVariables',
     ]);
   });
 
@@ -139,6 +141,32 @@ describe('button settings items — Notion actions', () => {
 
     expect(names(itemsFor([], ctxOf([], { hasNotify: false })))).not.toContain('buttonAdd-sendNotification');
     expect(names(itemsFor([{ id: 'n', type: 'sendNotification' }]))).not.toContain('buttonAdd-sendNotification');
+  });
+
+  it('offers Send message to agent only with an assistant, and only once: one agent turn runs at a time', () => {
+    const names = (items: PopoverItemParams[]): Array<string | undefined> => (find(items, 'buttonAddAction')?.children?.items ?? []).map((i) => i.name);
+
+    expect(names(itemsFor([]))).toContain('buttonAdd-sendAgentMessage');
+    expect(names(itemsFor([], ctxOf([], { hasAgent: false })))).not.toContain('buttonAdd-sendAgentMessage');
+    expect(names(itemsFor([{ id: 'm', type: 'sendAgentMessage' }]))).not.toContain('buttonAdd-sendAgentMessage');
+  });
+
+  it('edits the agent message in one Message field', () => {
+    const ctx = ctxOf([]);
+
+    find(itemsFor([], ctx), 'buttonAddAction', 'buttonAdd-sendAgentMessage')?.onActivate?.();
+    const added = lastActions(ctx.update)[0];
+
+    expect(added).toMatchObject({ type: 'sendAgentMessage' });
+    const field = find(itemsFor([added], ctx), `buttonAction-${added.id}`, `buttonAction-${added.id}-message`)?.element;
+    const input = field?.querySelector('input');
+
+    expect(field?.textContent).toBe('tools.database.buttonMessage');
+    if (input === null || input === undefined) throw new Error('no message input');
+    input.value = '  Summarize this page ';
+    input.dispatchEvent(new Event('change'));
+
+    expect(lastActions(ctx.update)[0]).toEqual({ id: added.id, type: 'sendAgentMessage', message: 'Summarize this page' });
   });
 
   it('starts a confirmation with Notion\'s message and button texts', () => {
@@ -254,5 +282,8 @@ describe('button settings items — Notion actions', () => {
     expect(flag([{ id: 'a', type: 'addPage', databaseId: 'gone' }])).toBe(true);
     expect(flag([{ id: 'a', type: 'editProperty', propertyId: 'gone', value: null }])).toBe(true);
     expect(flag([{ id: 'a', type: 'addPage', databaseId: 'other', edits: [{ id: 'e', propertyId: 'flag', value: true }] }])).toBe(false);
+    expect(flag([{ id: 'm', type: 'sendAgentMessage' }])).toBe(true);
+    expect(flag([{ id: 'm', type: 'sendAgentMessage', message: '  ' }])).toBe(true);
+    expect(flag([{ id: 'm', type: 'sendAgentMessage', message: 'Summarize' }])).toBe(false);
   });
 });

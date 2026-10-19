@@ -97,6 +97,9 @@ export class API extends Module {
         get user() {
           return apiConfig.user;
         },
+        get agent() {
+          return apiConfig.agent;
+        },
       },
       /**
        * Curated facade exposing exactly the publicly-typed RectangleSelection

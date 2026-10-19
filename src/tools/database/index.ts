@@ -6,6 +6,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-comments';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
+import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
@@ -7672,6 +7673,7 @@ export class DatabaseTool implements BlockTool {
       notify: (action, to, message) => {
         void Promise.resolve(this.config.buttons?.onNotify?.({ databaseId: this.dataId, rowId, propertyId, action, to, message })).catch((error: unknown) => this.showBackendError(error));
       },
+      askAgent: (message) => this.askAgentFromButton(message, rowId),
     });
 
     if (!needsConfirmation(actions)) {
@@ -7690,6 +7692,47 @@ export class DatabaseTool implements BlockTool {
       if (this.readOnly || this.destroyed || this.model.getRow(rowId) === undefined) return;
       run(kept);
       this.rerenderView({ keepDrawer: true });
+    });
+  }
+
+  /**
+   * A button's "Send message to agent". Runs after the click's writes, so the
+   * agent's turn keeps its own undo steps. The run is ended once it answers:
+   * an open run holds the editor's only agent turn.
+   */
+  private askAgentFromButton(message: string, rowId: string): void {
+    const agent = this.api.agent;
+    // The notifier renders HTML, so it only gets translated text, never the model's error.
+    const notice = (key: string): void => this.api.notifier.show({ message: this.api.i18n.t(key), style: 'error' });
+
+    if (agent === undefined) {
+      notice('tools.database.buttonAgentFailed');
+
+      return;
+    }
+    if (agent.state.status === 'working') {
+      notice('tools.database.buttonAgentBusy');
+
+      return;
+    }
+    // Model-facing, in the style of AgentAPI's own editor context line.
+    const prompt = `${message}\n\n(Editor context: the user pressed a button in database row block ${rowId} of database block ${this.dataId}. "This page" in the request means that row.)`;
+    const run = ((): AgentRun | null => {
+      try {
+        return agent.ask(prompt, { context: false });
+      } catch {
+        return null;
+      }
+    })();
+
+    if (run === null) {
+      notice('tools.database.buttonAgentFailed');
+
+      return;
+    }
+    void run.result.then((result) => {
+      run.end();
+      if (result.status === 'failed') notice('tools.database.buttonAgentFailed');
     });
   }
 
@@ -11496,6 +11539,7 @@ export class DatabaseTool implements BlockTool {
         onRenameMirror: (id, name) => { if (writable()) this.renameRelationMirror(id, name); },
         hasHostActions: this.config.buttons?.onAction !== undefined,
         hasNotify: this.config.buttons?.onNotify !== undefined,
+        hasAgent: typeof this.api.config?.agent?.assistant?.model === 'function',
         databaseId: this.dataId,
         dataSources: () => [{ id: this.dataId, title: this.title }, ...this.moveTargets()],
         ...(this.config.people === undefined ? {} : { people: () => this.people ?? [] }),

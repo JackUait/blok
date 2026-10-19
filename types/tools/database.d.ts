@@ -330,6 +330,16 @@ export interface ButtonSendNotificationAction {
   message?: string;
 }
 
+/**
+ * Sends `message` to the editor's assistant (`agent.assistant`) after the
+ * click's writes, with the row's block id. Offered only when an assistant is set.
+ */
+export interface ButtonSendAgentMessageAction {
+  id: string;
+  type: 'sendAgentMessage';
+  message?: string;
+}
+
 /** Runs the host's `config.buttons.onAction` (automations, webhooks). */
 export interface ButtonCallbackAction {
   id: string;
@@ -347,7 +357,8 @@ export type ButtonAction =
   | ButtonEditPagesAction
   | ButtonShowConfirmationAction
   | ButtonDefineVariablesAction
-  | ButtonSendNotificationAction;
+  | ButtonSendNotificationAction
+  | ButtonSendAgentMessageAction;
 
 export interface ButtonSettings {
   label?: string;

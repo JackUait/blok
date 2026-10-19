@@ -9,8 +9,9 @@ import {
 
 const FORMAT = 'openai-responses';
 
+// Some models reject 'none' (and 'minimal') with a 400, so "off" is the lowest effort every model takes.
 const LEVELS: Record<AgentThinkingLevel, Body> = {
-  off: { reasoning: { effort: 'none' } },
+  off: { reasoning: { effort: 'low' } },
   low: { reasoning: { effort: 'low' } },
   medium: { reasoning: { effort: 'medium' } },
   high: { reasoning: { effort: 'high' } },

@@ -48,7 +48,31 @@ describe('anthropicModel', () => {
       { type: 'thinking', thinking: '', signature: 'sig-1' },
       { type: 'tool_use', id: 'u1', name: 'blok_read', input: {} },
     ] });
-    expect(bodies[0]).toMatchObject({ model: 'claude-opus-5-5', max_tokens: 16000, system: 'sys' });
+    expect(bodies[0]).toMatchObject({ model: 'claude-opus-5-5', max_tokens: 16000 });
+  });
+
+  it('caches tools and system across prompts, and the growing conversation within one', async () => {
+    const { send, bodies } = fakeSend(
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'u1', name: 'blok_read', input: {} }] },
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] }
+    );
+
+    await run(anthropicModel({ model: 'm', send }), [{ role: 'user', content: 'Go' }]);
+
+    bodies.forEach((body) => {
+      expect(body.system).toEqual([{ type: 'text', text: 'sys', cache_control: { type: 'ephemeral' } }]);
+      expect(body.cache_control).toEqual({ type: 'ephemeral' });
+    });
+  });
+
+  it('sends an empty system as a string, since an empty text block is rejected', async () => {
+    const { send, bodies } = fakeSend({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }] });
+
+    await runAssistantLoop({
+      model: anthropicModel({ model: 'm', send }), system: '', tools: [], messages: [{ role: 'user', content: 'a' }],
+      call: async () => ({ content: '', isError: false }), signal: new AbortController().signal, maxSteps: 1,
+    });
+    expect(bodies[0].system).toBe('');
   });
 
   it('maps levels to effort, with off as low, and a host override wins', async () => {

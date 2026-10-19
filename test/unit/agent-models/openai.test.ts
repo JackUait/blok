@@ -90,13 +90,13 @@ describe('openaiModel', () => {
     expect(seen).toEqual([{ invalidJson: '{"a":' }]);
   });
 
-  it('maps levels to reasoning.effort, off as none', async () => {
+  it('maps levels to reasoning.effort, off as low, since some models reject none', async () => {
     const end = { status: 'completed', output: [] };
     const { send, bodies } = fakeSend(end, end);
 
     await run(openaiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }], 'off');
     await run(openaiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }], 'high');
-    expect(bodies.map((body) => body.reasoning)).toEqual([{ effort: 'none' }, { effort: 'high' }]);
+    expect(bodies.map((body) => body.reasoning)).toEqual([{ effort: 'low' }, { effort: 'high' }]);
   });
 
   it('rebuilds a turn that has no Responses block, e.g. after switching adapters', async () => {

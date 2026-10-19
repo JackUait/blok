@@ -1,13 +1,12 @@
 import type { AgentBatch, AgentSession } from '../../types/agent';
 import type { OutputData } from '../../types/data-formats/output-data';
 import type { AgentContract } from '../../types/tool-manifest';
-import { contentRevision } from '../shared/agent/revision';
 
 import { failedResult, isMcpSurfaceError, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleSession, McpExecuteResult } from './session';
 import type { DocumentSource } from './sources/types';
 
-type StoredAgent = AgentSession & { output(): OutputData };
+type StoredAgent = AgentSession & { output(): OutputData; revision(): string };
 
 export interface StoredSessionInput {
   documentId: string;
@@ -68,8 +67,8 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       if (writing && !input.write) {
         return failedResult(surfaceError('READ_ONLY', 'This handle is read-only. Open the document with write: true.').agentError);
       }
-      // 01's result.revision is contentRevision of output(); equal means nothing changed here.
-      const before = contentRevision(state.agent.output());
+      // result.revision is the session's own hash; equal means nothing changed here.
+      const before = state.agent.revision();
       const result = await state.agent.execute(batch);
 
       // An unchanged write (page.rename edits another document) has nothing to save.

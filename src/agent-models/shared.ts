@@ -80,7 +80,7 @@ export const parseArguments = (value: unknown): unknown => {
   try {
     return JSON.parse(value) as unknown;
   } catch {
-    // The tool rejects this with a schema error, so the model can retry.
+    // editor.agent's turn answers this with a retryable INVALID_ARGS.
     return { invalidJson: value };
   }
 };

@@ -55,22 +55,39 @@ const unanswered = (use: ToolUse, why: string): AgentModelContentBlock => ({
 
 const messageOf = (thrown: unknown): string => (thrown instanceof Error ? thrown.message : String(thrown));
 
-const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promise<AgentModelContentBlock[]> => {
+const report = (options: AssistantLoopOptions, activity: string, input?: unknown): void => {
+  try {
+    options.onActivity?.(activity, input);
+  } catch {
+    // A status line must not stop an edit.
+  }
+};
+
+/** A call that throws answers itself and the calls after it, then ends the run. */
+const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promise<{ results: AgentModelContentBlock[]; error?: string }> => {
   const results: AgentModelContentBlock[] = [];
 
-  for (const use of uses) {
+  for (const [index, use] of uses.entries()) {
     if (!options.signal.aborted) {
-      options.onActivity?.(use.name, use.input);
+      report(options, use.name, use.input);
     }
 
-    const outcome = options.signal.aborted ? null : await options.call(use.name, use.input);
+    try {
+      const outcome = options.signal.aborted ? null : await options.call(use.name, use.input);
 
-    results.push(outcome === null
-      ? unanswered(use, 'The user stopped the run.')
-      : { type: 'tool_result', tool_use_id: use.id, content: outcome.content, is_error: outcome.isError });
+      results.push(outcome === null
+        ? unanswered(use, 'The user stopped the run.')
+        : { type: 'tool_result', tool_use_id: use.id, content: outcome.content, is_error: outcome.isError });
+    } catch (thrown) {
+      const error = messageOf(thrown);
+
+      results.push(...uses.slice(index).map((skipped) => unanswered(skipped, `The run failed: ${error}`)));
+
+      return { results, error };
+    }
   }
 
-  return results;
+  return { results };
 };
 
 type Step = { next: 'continue'; reply: string } | { next: 'return'; result: AssistantLoopResult };
@@ -100,7 +117,7 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
     return finish('stopped');
   }
 
-  options.onActivity?.('thinking');
+  report(options, 'thinking');
 
   const response = await ask(options);
 
@@ -135,14 +152,20 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
 
     return finish('truncated');
   }
-  if (stop === 'pause_turn') {
+  if (stop === 'pause_turn' && uses.length === 0) {
     return { next: 'continue', reply: reply.text };
   }
   if (uses.length === 0) {
     return finish('done');
   }
 
-  messages.push({ role: 'user', content: await answerAll(uses, options) });
+  const answered = await answerAll(uses, options);
+
+  messages.push({ role: 'user', content: answered.results });
+
+  if (answered.error !== undefined) {
+    return finish('failed', answered.error);
+  }
 
   return signal.aborted ? finish('stopped') : { next: 'continue', reply: reply.text };
 };

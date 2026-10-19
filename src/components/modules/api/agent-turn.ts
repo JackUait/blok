@@ -50,9 +50,16 @@ const parseInput = (input: unknown): Parsed<Record<string, unknown>> => {
     }
   }
 
-  return isRecord(state.raw)
-    ? { ok: true, value: state.raw }
-    : invalid('The tool input must be a JSON object.');
+  if (!isRecord(state.raw)) {
+    return invalid('The tool input must be a JSON object.');
+  }
+
+  // parseArguments (src/agent-models/shared.ts) and the dev AI route send this for arguments that did not parse.
+  if (Object.hasOwn(state.raw, 'invalidJson')) {
+    return invalid('The tool input is not valid JSON, so nothing ran. Send the call again as a JSON object.');
+  }
+
+  return { ok: true, value: state.raw };
 };
 
 const toQuery = (value: Record<string, unknown>): Parsed<{ tool?: string; command?: string }> => {

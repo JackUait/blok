@@ -58,10 +58,13 @@ const executeKey = (input: unknown, typeOf: (id: string) => string | undefined):
 
   const { name, args } = command;
 
+  // hasOwn: a model-sent "toString" must not find Object.prototype.
   if (name === 'block.insert' || name === 'block.convert') {
-    return INSERT_KEYS[stringArg(args, 'type') ?? ''] ?? 'assistant.status.block';
+    const type = stringArg(args, 'type') ?? '';
+
+    return Object.hasOwn(INSERT_KEYS, type) ? INSERT_KEYS[type] : 'assistant.status.block';
   }
-  if (name in COMMAND_KEYS) {
+  if (Object.hasOwn(COMMAND_KEYS, name)) {
     return COMMAND_KEYS[name];
   }
   if (name.startsWith('text.')) {

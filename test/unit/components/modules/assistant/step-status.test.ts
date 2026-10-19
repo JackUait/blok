@@ -76,4 +76,10 @@ describe('stepStatusKey', () => {
     expect(stepStatusKey('blok_execute', execute({ name: 'block.insert' }), noBlocks)).toBe('assistant.status.block');
     expect(stepStatusKey('blok_execute', execute({ name: 'doc.read', args: {} }), noBlocks)).toBe('assistant.status.editing');
   });
+
+  // A key found on Object.prototype is a function, and i18next throws on it in non-English locales.
+  it.each(['toString', 'constructor', '__proto__', 'hasOwnProperty'])('treats a model-sent %s as an unknown name, never a prototype key', (name) => {
+    expect(stepStatusKey('blok_execute', execute({ name: 'block.insert', args: { type: name } }), noBlocks)).toBe('assistant.status.block');
+    expect(stepStatusKey('blok_execute', execute({ name, args: {} }), noBlocks)).toBe('assistant.status.edit');
+  });
 });

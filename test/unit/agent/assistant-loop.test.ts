@@ -170,6 +170,74 @@ describe('runAssistantLoop', () => {
     expect(model.requests[1].messages.at(-1)?.role).toBe('assistant');
   });
 
+  it('runs the tool calls of a pause_turn response before it re-sends, so none is left unanswered', async () => {
+    const model = scripted(
+      reply([{ type: 'tool_use', id: 't1', name: 'blok_read', input: {} }], 'pause_turn'),
+      reply([{ type: 'text', text: 'Done' }], 'end_turn')
+    );
+    const call = vi.fn(async () => ok());
+
+    const result = await runAssistantLoop({
+      model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(model.requests[1].messages.at(-1)).toEqual({
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: 't1', content: '{"ok":true}', is_error: false }],
+    });
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ status: 'done', reply: 'Done' });
+  });
+
+  it('fails the run when a tool call throws, and answers that call and the ones after it so Ask again stays valid', async () => {
+    const model = scripted(reply([
+      { type: 'tool_use', id: 't1', name: 'blok_read', input: {} },
+      { type: 'tool_use', id: 't2', name: 'blok_execute', input: {} },
+    ], 'tool_use'));
+    const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+    const call = vi.fn(async () => {
+      throw new Error('the editor was destroyed');
+    });
+
+    const result = await runAssistantLoop({
+      model, system: '', tools: [], messages, call, signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(messages.at(-1)).toEqual({
+      role: 'user',
+      content: [
+        expect.objectContaining({ type: 'tool_result', tool_use_id: 't1', is_error: true }),
+        expect.objectContaining({ type: 'tool_result', tool_use_id: 't2', is_error: true }),
+      ],
+    });
+    expect(result).toEqual({ status: 'failed', reply: '', error: 'the editor was destroyed' });
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps running when the activity callback throws: a status line must not stop an edit', async () => {
+    const model = scripted(
+      reply([{ type: 'tool_use', id: 't1', name: 'blok_read', input: {} }], 'tool_use'),
+      reply([{ type: 'text', text: 'Done' }], 'end_turn')
+    );
+    const call = vi.fn(async () => ok());
+
+    const result = await runAssistantLoop({
+      model,
+      system: '',
+      tools: [],
+      messages: [{ role: 'user', content: 'x' }],
+      call,
+      signal: new AbortController().signal,
+      maxSteps: 5,
+      onActivity: () => {
+        throw new TypeError('status text');
+      },
+    });
+
+    expect(result).toEqual({ status: 'done', reply: 'Done' });
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+
   it('returns stopped when aborted between tool calls, and answers the calls it skipped', async () => {
     const controller = new AbortController();
     const model = scripted(reply([

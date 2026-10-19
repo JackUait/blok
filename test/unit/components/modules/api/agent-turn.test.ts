@@ -223,6 +223,19 @@ describe('createAgentTurn dispatch', () => {
     expect(session.describe).not.toHaveBeenCalled();
   });
 
+  // Adapters turn tool arguments that are not valid JSON into { invalidJson } (src/agent-models/shared.ts).
+  it.each(['blok_read', 'blok_describe', 'blok_execute'])('tells the model its %s arguments were not valid JSON, and lets it retry', async name => {
+    const session = makeSession();
+    const result = await createAgentTurn(session, makeHooks()).call(name, { invalidJson: '{"commands": [{"args"' });
+
+    expect(result.isError).toBe(true);
+    expect(parseContent(result.content)).toMatchObject({ error: { code: 'INVALID_ARGS', retryable: true } });
+    expect(errorMessage(result.content)).toMatch(/not valid JSON/);
+    expect(session.read).not.toHaveBeenCalled();
+    expect(session.describe).not.toHaveBeenCalled();
+    expect(session.execute).not.toHaveBeenCalled();
+  });
+
   it('uses the turn signal for every direct execute, even with host options', async () => {
     const session = makeSession();
     const hooks = makeHooks();

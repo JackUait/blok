@@ -288,8 +288,8 @@ export const reserveBatchInsertIds = (state: PlanState, batch: AgentBatch): void
 
 /**
  * The spec's data plus each required field it left out whose default is a setting (a code language,
- * a heading level). Never content: rich text and empty defaults ('' code, '' tab title) stay missing,
- * so an empty block is still refused.
+ * a heading level). Never content: rich text, the field the tool converts by, and empty defaults
+ * ('' code, '' tab title) stay missing, so an empty block is still refused.
  */
 export const withRequiredDefaults = (
   tool: PlannerTool,
@@ -298,9 +298,10 @@ export const withRequiredDefaults = (
 ): Record<string, unknown> => {
   const defaults = tool.entry.defaultData ?? {};
   const required = isArray(tool.entry.data.required) ? tool.entry.data.required : [];
+  const content = [...tool.entry.richTextFields, tool.entry.conversion.import, tool.entry.conversion.export];
   const filled = required.filter((field): field is string => typeof field === 'string'
     && !Object.hasOwn(data, field) && Object.hasOwn(defaults, field)
-    && !tool.entry.richTextFields.includes(field) && isSetting(defaults[field]));
+    && !content.includes(field) && isSetting(defaults[field]));
 
   filled.forEach(field => onFill(field, defaults[field]));
 

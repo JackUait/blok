@@ -459,6 +459,24 @@ describe('block.insert planning', () => {
     expect(warnings).toEqual([expect.objectContaining({ code: 'CORRECTED', commandIndex: 0 })]);
   });
 
+  it('never fills a default into the field a tool converts by, even a plain string', () => {
+    const tools = new Map(TOOLS);
+
+    tools.set('note', tool('note', {
+      conversion: { import: 'title', export: 'title' },
+      data: {
+        type: 'object', required: ['title', 'tone'], additionalProperties: false,
+        properties: { title: { type: 'string' }, tone: { type: 'string' } },
+      },
+      defaultData: { title: 'Untitled', tone: 'calm' },
+    }));
+
+    expect(failOf(() => planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: {} } }], { tools })))
+      .toMatchObject({ code: 'DATA_REJECTED', message: expect.stringMatching(/missing required field "title"/) });
+    expect(planOn(doc, [{ name: 'block.insert', args: { type: 'note', data: { title: 'Plan' } } }], { tools }).warnings)
+      .toEqual([expect.objectContaining({ code: 'CORRECTED', field: 'tone' })]);
+  });
+
   it('keeps the plain-id hint when a later command sets a ref of that name', () => {
     const error = failOf(() => planOn(doc, [
       { name: 'block.insert', args: { type: 'paragraph', position: { after: '$tg' } } },

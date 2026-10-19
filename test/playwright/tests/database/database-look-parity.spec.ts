@@ -80,7 +80,7 @@ const blocks = (): OutputBlockData[] => [
   })),
 ];
 
-const mount = async (page: Page, documentId?: string): Promise<void> => {
+const mount = async (page: Page, documentId?: string, input: OutputBlockData[] = blocks()): Promise<void> => {
   await page.evaluate(async ({ input, documentId: docId }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -95,7 +95,7 @@ const mount = async (page: Page, documentId?: string): Promise<void> => {
     // A documentId scopes api.viewState, so personal state survives a remount.
     window.blokInstance = new window.Blok({ holder, ...(docId === undefined ? {} : { documentId: docId }), data: { blocks: input } });
     await window.blokInstance.isReady;
-  }, { input: blocks(), documentId });
+  }, { input, documentId });
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
@@ -221,4 +221,175 @@ test('"Display as" Icon only hides tab names visually, keeps them named, and sur
 
   await mount(page, documentId);
   await expect(page.locator('[data-blok-database-tab-bar]')).toHaveAttribute('data-display', 'icon');
+});
+
+const LEDGER_SCHEMA = [
+  { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'p-amount', name: 'Amount', type: 'number', position: 'a1' },
+  {
+    id: 'p-stage',
+    name: 'Stage',
+    type: 'select',
+    position: 'a2',
+    config: { options: [{ id: 'o-idea', label: 'Idea', color: 'yellow', position: 'a0' }, { id: 'o-build', label: 'Build', color: 'blue', position: 'a1' }] },
+  },
+];
+
+/** A table with a Sum footer, the same table grouped by Stage, and a board. */
+const ledgerBlocks = (): OutputBlockData[] => [
+  {
+    id: 'db-2',
+    type: 'database',
+    data: {
+      schema: LEDGER_SCHEMA,
+      views: [
+        { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], calculations: [{ id: 'p-amount', fn: 'sum' }] },
+        { id: 'v2', name: 'By stage', type: 'table', position: 'a1', groupBy: 'p-stage', sorts: [], filters: [], visibleProperties: [] },
+        { id: 'v3', name: 'Board', type: 'board', position: 'a2', groupBy: 'p-stage', sorts: [], filters: [], visibleProperties: ['p-title'] },
+      ],
+      activeViewId: 'v1',
+    },
+    content: ['l1', 'l2'],
+  },
+  { id: 'l1', type: 'database-row', parent: 'db-2', data: { position: 'a0', properties: { 'p-title': 'Alpha', 'p-amount': 1200, 'p-stage': 'o-idea' } } },
+  { id: 'l2', type: 'database-row', parent: 'db-2', data: { position: 'a1', properties: { 'p-title': 'Bravo', 'p-amount': 35, 'p-stage': 'o-build' } } },
+];
+
+/** rotate(θ) as Chromium reports it: matrix(cos θ, sin θ, -sin θ, cos θ, 0, 0). */
+const rotationDegrees = (transform: string): number | null => {
+  const match = /^matrix\(([^)]+)\)$/.exec(transform);
+
+  if (match === null) return null;
+  const [a, b] = match[1].split(',').map(Number);
+
+  return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+};
+
+test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mount(page, undefined, ledgerBlocks());
+  });
+
+  test('"+ New page" row: 36px, 8px start pad, 14px/20px tertiary ink, 16px icon at 1px/7px, no hover fill (research/08:262)', async ({ page }) => {
+    const add = page.locator('[data-blok-database-table-add-row]').first();
+
+    expect((await add.boundingBox())?.height).toBe(36);
+    expect(await style(add, ['padding-left', 'font-size', 'line-height', 'color'])).toEqual({
+      'padding-left': '8px',
+      'font-size': '14px',
+      'line-height': '20px',
+      'color': 'rgb(161, 158, 153)',
+    });
+
+    // The icon wrapper is the button's first child; the svg inside it.
+    const icon = await add.evaluate((el) => {
+      const wrap = el.firstElementChild;
+      const cs = wrap === null ? null : getComputedStyle(wrap);
+      const box = wrap?.firstElementChild?.getBoundingClientRect();
+
+      return { color: cs?.color, marginLeft: cs?.marginLeft, marginRight: cs?.marginRight, size: [box?.width, box?.height] };
+    });
+
+    expect(icon).toEqual({ color: 'rgb(173, 169, 163)', marginLeft: '1px', marginRight: '7px', size: [16, 16] });
+
+    await add.hover();
+    expect((await style(add, ['background-color']))['background-color']).toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('a number cell is right-aligned: its value ends at the cell\'s content edge (research/08:273)', async ({ page }) => {
+    const numberCell = cell(page, 'l1', 'p-amount');
+
+    expect((await style(numberCell, ['text-align']))['text-align']).toBe('end');
+    const gap = await numberCell.evaluate((el) => {
+      const value = el.querySelector('[data-blok-database-cell="number"]');
+      const range = document.createRange();
+
+      range.selectNodeContents(value ?? el);
+      const cs = getComputedStyle(el);
+      const contentRight = el.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+
+      return contentRight - range.getBoundingClientRect().right;
+    });
+
+    expect(Math.abs(gap)).toBeLessThanOrEqual(1);
+  });
+
+  test('footer label: 10px/15px 500 uppercase, 1px tracking, tertiary ink, 4px before the value (research/08:215)', async ({ page }) => {
+    const label = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-label]');
+
+    await expect(label).toBeVisible();
+    expect(await style(label, ['font-size', 'line-height', 'font-weight', 'text-transform', 'letter-spacing', 'color', 'margin-right'])).toEqual({
+      'font-size': '10px',
+      'line-height': '15px',
+      'font-weight': '500',
+      'text-transform': 'uppercase',
+      'letter-spacing': '1px',
+      'color': 'rgb(161, 158, 153)',
+      'margin-right': '4px',
+    });
+    expect(await label.evaluate((el) => (el instanceof HTMLElement ? el.innerText : ''))).toBe('SUM');
+  });
+
+  test('a database menu grows from the anchor\'s corner: top-left under a header (research/08:125)', async ({ page }) => {
+    const header = page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"] [data-blok-database-table-column-button]');
+
+    await header.click();
+    const container = page.locator('[data-blok-popover][data-blok-popover-custom-class~="blok-database-menu"][data-blok-popover-opened="true"] [data-blok-popover-container]');
+
+    await expect(container).toBeVisible();
+    expect((await style(container, ['transform-origin']))['transform-origin']).toBe('0px 0px');
+
+    const anchorBox = await header.boundingBox();
+    const menuBox = await container.boundingBox();
+
+    // The origin corner is the one nearest the anchor: the menu hangs below it, start edges lined up.
+    expect(Math.abs((menuBox?.x ?? 0) - (anchorBox?.x ?? 0))).toBeLessThanOrEqual(8);
+    expect((menuBox?.y ?? 0)).toBeGreaterThanOrEqual((anchorBox?.y ?? 0) + (anchorBox?.height ?? 0) - 1);
+  });
+
+  test('grouped table: collapse removes rows at once and turns only the caret -90deg over 200ms ease-out (research/08:134)', async ({ page }) => {
+    await tab(page, 'v2').click();
+    const section = page.locator('[data-blok-database-table-group][data-group-key="o-idea"]');
+    const svg = section.locator('[data-blok-database-table-group-toggle] svg');
+
+    await expect(section.locator('[data-row-id="l1"]').first()).toBeVisible();
+    expect(await style(svg, ['transition-property', 'transition-duration', 'transition-timing-function'])).toEqual({
+      'transition-property': 'transform',
+      'transition-duration': '0.2s',
+      'transition-timing-function': 'ease-out',
+    });
+
+    // Rows leave in the same task as the click: no height animation holds them.
+    const rowsAfterClick = await section.evaluate((el) => {
+      el.querySelector<HTMLElement>('[data-blok-database-table-group-toggle]')?.click();
+
+      return el.querySelectorAll('[data-row-id="l1"]').length;
+    });
+
+    expect(rowsAfterClick).toBe(0);
+    await expect.poll(async () => rotationDegrees((await style(svg, ['transform'])).transform)).toBe(-90);
+  });
+
+  test('a view tab switch swaps the body in one frame, with no cross-fade (research/08:140)', async ({ page }) => {
+    const swap = await page.evaluate(() => {
+      const root = document.querySelector('[data-blok-database-board-container]');
+
+      document.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="v3"]')?.click();
+      // Same task as the click: the old body is gone and the new one is in.
+      const bodyAnimations = document.getAnimations().filter((animation) => {
+        const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+
+        return target !== null && root?.contains(target) === true;
+      });
+
+      return {
+        grid: root?.querySelector('[role="grid"]') !== null,
+        board: root?.querySelector('[data-blok-database-board]') !== null,
+        animations: bodyAnimations.map((animation) => animation instanceof CSSTransition ? animation.transitionProperty : animation.constructor.name),
+        opacity: getComputedStyle(root?.firstElementChild ?? document.body).opacity,
+      };
+    });
+
+    expect(swap).toEqual({ grid: false, board: true, animations: [], opacity: '1' });
+  });
 });

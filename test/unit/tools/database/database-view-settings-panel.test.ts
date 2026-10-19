@@ -341,6 +341,93 @@ describe('view settings panel', () => {
     expect(h.state.view.sorts.map((s) => s.id)).toEqual(['s2', 's1']);
   });
 
+  // Ledger D31 (79b5db3a · database-panel.ts:340): a sort row also moves by dragging its ⋮⋮ handle.
+  describe('dragging a sort row by its handle', () => {
+    const sorts = (): DatabaseViewConfig['sorts'] => [
+      { id: 's1', propertyId: 'num', direction: 'asc' },
+      { id: 's2', propertyId: 'due', direction: 'desc' },
+      { id: 's3', propertyId: 'title', direction: 'asc' },
+    ];
+
+    /** jsdom has no layout: rows stack 30px tall from y=100, so the middles are 115, 145, 175. */
+    const layOut = (): void => {
+      document.querySelectorAll<HTMLElement>('[data-blok-testid="database-sorts-list"] [data-blok-database-panel-list-item]').forEach((row, i) => {
+        vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({
+          left: 0, top: 100 + i * 30, width: 200, height: 30, right: 200, bottom: 130 + i * 30, x: 0, y: 100 + i * 30, toJSON: () => ({}),
+        });
+      });
+    };
+
+    const drag = (id: string, toY: number): void => {
+      const handle = document.querySelector(`[data-blok-testid="database-sorts-list-handle-${id}"]`);
+
+      if (handle === null) throw new Error(`no handle ${id}`);
+      handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientY: 115 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: toY }));
+    };
+
+    it('drops the row before the first row whose middle is below the pointer', () => {
+      const h = harness({ sorts: sorts() });
+
+      h.open('sort');
+      layOut();
+      drag('s1', 150);
+
+      expect(h.state.view.sorts.map((sort) => sort.id)).toEqual(['s2', 's1', 's3']);
+    });
+
+    it('drops the row at the end below the last middle', () => {
+      const h = harness({ sorts: sorts() });
+
+      h.open('sort');
+      layOut();
+      drag('s1', 180);
+
+      expect(h.state.view.sorts.map((sort) => sort.id)).toEqual(['s2', 's3', 's1']);
+    });
+
+    it('ignores a right-button press', () => {
+      const h = harness({ sorts: sorts() });
+
+      h.open('sort');
+      layOut();
+      document.querySelector('[data-blok-testid="database-sorts-list-handle-s1"]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 2, clientY: 115 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 180 }));
+
+      expect(h.state.view.sorts.map((sort) => sort.id)).toEqual(['s1', 's2', 's3']);
+    });
+  });
+
+  // Ledger D30 (7f240977 · database-view-settings-panel.ts:1108): a date filter takes Today, One week ago… from its page.
+  it('picks a relative date value for a date filter from the filter page, and an exact date replaces it', () => {
+    const h = harness();
+
+    h.open('filter');
+    click('database-filter-add');
+    click('database-pick-property-due');
+    // A new date filter starts as "is within this week"; "Is" brings the value rows.
+    click('database-filter-operator');
+    click('database-filter-op-equals');
+    click('database-filter-date-one_week_ago');
+
+    expect(h.state.view.filters).toEqual([expect.objectContaining({ propertyId: 'due', operator: 'equals', value: 'one_week_ago' })]);
+    expect(document.querySelector('[data-blok-testid="database-filter-date-one_week_ago"]')?.getAttribute('aria-checked')).toBe('true');
+    expect(document.querySelector('[data-blok-testid="database-filter-date-today"]')?.getAttribute('aria-checked')).toBe('false');
+
+    click('database-filter-date-today');
+    expect(h.state.view.filters[0]?.value).toBe('today');
+
+    const exact = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
+
+    if (exact === null) throw new Error('no exact date field');
+    exact.value = '2026-10-20';
+    exact.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(h.state.view.filters[0]?.value).toBe('2026-10-20');
+    expect(document.querySelector('[data-blok-testid="database-filter-date-today"]')?.getAttribute('aria-checked')).toBe('false');
+  });
+
   it('moves flat filters into the advanced tree on its first edit', () => {
     const h = harness({ filters: [
       { id: 'legacy-title', propertyId: 'title', operator: 'equals', value: 'Alpha' },

@@ -986,6 +986,8 @@ describe('DatabaseTableView', () => {
       expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.find((p) => p.id === 'p-notes')?.wrap).toBe(true);
       pick('tools.database.tableInsertLeft');
       expect(handlers.addProperty).toHaveBeenCalledWith(anchor, { propertyId: 'p-notes', side: 'left' });
+      pick('tools.database.tableInsertRight');
+      expect(handlers.addProperty).toHaveBeenLastCalledWith(anchor, { propertyId: 'p-notes', side: 'right' });
       pick('tools.database.tableSort');
       expect(handlers.viewAction).toHaveBeenCalledWith('sort', 'p-notes', anchor);
     });

@@ -555,11 +555,30 @@ describe('DatabaseTimelineView', () => {
     });
   });
 
+  // Ledger D27: arrows ship (72b7c159). The tool turns `arrowsBy` into pairs (database-dependencies-tool.test.ts:91); the view draws the pairs.
   describe('dependency arrows', () => {
-    it('draws nothing yet, even with arrowsBy set', () => {
+    const arrows = (root: HTMLElement): string[] => [...root.querySelectorAll('[data-blok-database-timeline-arrow]')]
+      .map((arrow) => `${arrow.getAttribute('data-from') ?? ''}>${arrow.getAttribute('data-to') ?? ''}${arrow.hasAttribute('data-conflict') ? '!' : ''}`);
+
+    it('draws one arrow per dependency it is given, marking one into an item that starts before its blocker ends', () => {
+      const { root } = mount({
+        view: timelineView({ arrowsBy: 'p-notes' }),
+        arrows: [{ from: 'r1', to: 'r2' }, { from: 'r2', to: 'r1' }],
+      });
+
+      expect(arrows(root)).toEqual(['r1>r2', 'r2>r1!']);
+    });
+
+    it('skips an arrow whose end has no dates', () => {
+      const { root } = mount({ arrows: [{ from: 'r1', to: 'r3' }, { from: 'r1', to: 'r2' }] });
+
+      expect(arrows(root)).toEqual(['r1>r2']);
+    });
+
+    it('reads no arrowsBy itself: with no pairs given, it draws no arrow layer', () => {
       const { root } = mount({ view: timelineView({ arrowsBy: 'p-notes' }) });
 
-      expect(root.querySelector('[data-blok-database-timeline-arrow]')).toBeNull();
+      expect(root.querySelector('[data-blok-database-timeline-arrows]')).toBeNull();
     });
   });
 

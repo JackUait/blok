@@ -167,6 +167,23 @@ describe('group-keys — Phase 2 types', () => {
     expect(groupValueForKey(person, 'u1', {})).toEqual([{ id: 'u1' }]);
   });
 
+  // Ledger D29: a board groups by relation, one column per related page (bbaabade).
+  it('groups a relation by related page id; a row with two pages sits in both groups; no pages is the no-value group', () => {
+    const relation = prop('relation', { relation: { targetDatabaseId: 'db' } });
+
+    expect(groupKeysFor(relation, [{ id: 'r-b' }, { id: 'r-c' }], {}, NOW)).toEqual(['r-b', 'r-c']);
+    expect(groupKeysFor(relation, [], {}, NOW)).toEqual([NO_VALUE_GROUP_KEY]);
+    expect(groupKeysFor(relation, null, {}, NOW)).toEqual([NO_VALUE_GROUP_KEY]);
+    expect(GROUPABLE_TYPES).toContain('relation');
+  });
+
+  it('moves a row into a relation group by relating it to that one page, and out by clearing it', () => {
+    const relation = prop('relation', { relation: { targetDatabaseId: 'db' } });
+
+    expect(groupValueForKey(relation, 'r-b', {})).toEqual([{ id: 'r-b' }]);
+    expect(groupValueForKey(relation, NO_VALUE_GROUP_KEY, {})).toBeNull();
+  });
+
   it('groups created time by its local day buckets', () => {
     expect(groupKeysFor(prop('createdTime'), new Date(2026, 9, 9, 9).toISOString(), {}, NOW)).toEqual(['rel:today']);
     expect(groupKeysFor(prop('createdTime'), new Date(2026, 9, 9, 9).toISOString(), { dateBy: 'year' }, NOW)).toEqual(['year:2026']);

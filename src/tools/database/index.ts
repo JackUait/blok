@@ -10,6 +10,7 @@ import { isOutputData, isPlaceValue } from './tier3-values';
 import { DatabaseHostLevers } from './database-host-levers';
 import { DatabaseFormView, isAutoQuestion } from './database-form-view';
 import { DatabaseMapView, resolveMapBy } from './database-map-view';
+import { drawMapLibrePlace } from './database-maplibre';
 import { DatabaseDashboardView } from './database-dashboard-view';
 import type { DashboardMount } from './database-dashboard-view';
 import { planTypeChange } from './property-conversion';
@@ -3488,7 +3489,9 @@ export class DatabaseTool implements BlockTool {
         rows,
         colors,
         titlePropertyId: titlePropId,
-        ...(this.config.map !== undefined ? { render: this.config.map.render.bind(this.config.map) } : {}),
+        ...(this.config.map?.render !== undefined ? { render: this.config.map.render.bind(this.config.map) } : {}),
+        ...(this.config.map?.styleUrl !== undefined ? { style: this.config.map.styleUrl } : {}),
+        breadcrumb: this.linked ? this.title : this.titleElement?.textContent ?? this.title,
         open: (rowId) => this.handleRowClick(rowId),
         writable: !this.readOnly,
         addPin: (lngLat) => this.addMapPin(viewConfig.id, lngLat),
@@ -8426,6 +8429,24 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  /** The Place cell's map levers: the host's, else Blok's own mini-map when the host gave a style. */
+  private mapCellContext(): Pick<CellContext, 'renderPlace' | 'geocode' | 'currentLocation'> {
+    const map = this.config.map;
+
+    if (map === undefined) return {};
+    const style = map.styleUrl;
+    const ownMiniMap: CellContext['renderPlace'] = style === undefined
+      ? undefined
+      : (container, place) => drawMapLibrePlace(container, place, { style, i18n: this.api.i18n });
+    const renderPlace = map.renderPlace?.bind(map) ?? ownMiniMap;
+
+    return {
+      ...(renderPlace !== undefined ? { renderPlace } : {}),
+      ...(map.geocode !== undefined ? { geocode: map.geocode.bind(map) } : {}),
+      ...(map.currentLocation !== undefined ? { currentLocation: map.currentLocation.bind(map) } : {}),
+    };
+  }
+
   /** What cells need from the host: people, the current user, file uploads. */
   private cellContext(): Partial<CellContext> {
     const uploader = this.api.uploader;
@@ -8437,7 +8458,7 @@ export class DatabaseTool implements BlockTool {
       relationTitle: (property, rowId) => this.relatedTitle(property, rowId),
       relationCandidates: (property) => this.relationCandidates(property),
       openRelated: (property, rowId) => this.openRelated(property, rowId),
-      ...(this.config.map?.renderPlace !== undefined ? { renderPlace: this.config.map.renderPlace.bind(this.config.map) } : {}),
+      ...this.mapCellContext(),
       ...(this.people !== undefined ? { people: this.people } : {}),
       ...(typeof me === 'string' ? { me } : {}),
       ...(canUpload

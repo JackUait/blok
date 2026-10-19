@@ -335,6 +335,10 @@ describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
       }
       seen.add(file)
       for (const [, spec] of readFileSync(file, 'utf-8').matchAll(RELATIVE_IMPORT_RE)) {
+        // MapLibre's worker source ships as a string; maplibre-runtime.ts rewrites this specifier to a blob URL.
+        if (spec === './maplibre-gl-shared.mjs') {
+          continue
+        }
         visit(join(dirname(file), spec))
       }
     }
@@ -397,6 +401,15 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
     expect(closure.some((file) => /mermaid\.core-[^/]*\.mjs$/.test(file))).toBe(false)
     expect(
       closure.some((file) => /import\(\s*[`'"]\.\/mermaid\.core-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
+    ).toBe(true)
+  })
+
+  it('keeps MapLibre behind a dynamic import (non-vacuity)', async () => {
+    await initLexer()
+    const closure = [...staticClosure()]
+    expect(closure.some((file) => /maplibre-runtime-[^/]*\.mjs$/.test(file))).toBe(false)
+    expect(
+      closure.some((file) => /import\(\s*[`'"]\.\/maplibre-runtime-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
     ).toBe(true)
   })
 
@@ -666,10 +679,12 @@ describe('dist weight (consumer parse cost)', () => {
     // 11.5 MiB: mermaid 12 adds ~1.7 MB of lazy diagram chunks (elkjs is 1.46 MB).
     // 12 MiB: database Notion parity adds ~215 KB of tool code; the budget counts lazy chunks, so splitting does not help.
     // 12.1 MiB (USER, 2026-10-18): built-in database comments add ~16 KB of code and CSS with no duplication.
+    // 13.8 MiB (USER, 2026-10-19: bundle MapLibre): its lazy chunk is 1,705,067 bytes (library, worker and shared
+    // module as blob sources, CSS); code went 12,633,521 -> 14,350,582 bytes.
     const codeBytes = esFiles
       .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    expect(codeBytes).toBeLessThan(12.1 * 1024 * 1024)
+    expect(codeBytes).toBeLessThan(13.8 * 1024 * 1024)
   })
 
   it('emits minified chunks (no indented multi-line output)', () => {

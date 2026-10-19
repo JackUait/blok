@@ -41,6 +41,7 @@ const STYLES_ENTRY = resolve(REPO_ROOT, 'src/styles/main.css');
  * one must be a deliberate, reviewed act with a written justification.
  */
 const EXEMPTIONS: Record<string, string> = {
+  'maplibregl-compact-show': 'MapLibre\'s own class on its attribution control; Blok removes it to start the control collapsed. Styled by maplibre-gl.css.',
   'twitter-tweet': 'X/Twitter widgets.js hook — the blockquote is styled by the third-party embed script',
   'text-post-media': 'Threads embed hook — the blockquote is styled by the third-party embed script',
   'is-focused': 'behaviour marker read by Flipper/DomIterator; the visual state comes from [data-blok-focused]',

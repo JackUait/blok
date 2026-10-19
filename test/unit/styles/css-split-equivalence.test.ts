@@ -857,6 +857,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_MAP_PLACE_BYTES = 3_031;
     // database.css: the Place editor's name chip and its × (research/20 §1d).
     const DATABASE_PLACE_CHIP_BYTES = 138;
+    // database.css: Blok's map pin, its colors and shadow token, the pin hover card and the Place search rows (research/20 §1d, §1e).
+    const DATABASE_MAPLIBRE_BYTES = 5_187;
     // database.css: the linked view's deleted-source banner, "Link a data source" button and "↗ <source>" title (research 20 §2).
     const DATABASE_LINKED_VIEW_BYTES = 904;
     // database.css: the gallery card shows the board's Edit and "•••" on hover (research/12 §3).
@@ -963,6 +965,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FEED_COMMENTS_BYTES
       + DATABASE_MAP_PLACE_BYTES
       + DATABASE_PLACE_CHIP_BYTES
+      + DATABASE_MAPLIBRE_BYTES
       + DATABASE_LINKED_VIEW_BYTES
       + DATABASE_GALLERY_CARD_ACTIONS_BYTES
       + DATABASE_LIST_ROW_HANDLE_BYTES;

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const draw = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../../src/tools/database/database-maplibre', () => ({ drawMapLibreMap: draw }));
+
 import { DatabaseMapView } from '../../../../src/tools/database/database-map-view';
 import type { DatabaseMapViewOptions } from '../../../../src/tools/database/database-map-view';
 import type { DatabaseMapContext, DatabaseMapItem, DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -49,11 +53,69 @@ describe('DatabaseMapView', () => {
     document.body.innerHTML = '';
   });
 
-  it('without a map lever shows an honest empty state, not a fake map', () => {
+  it('without a map style or a host map it says a map style is needed, and loads no map', async () => {
     const { root } = mount();
 
-    expect(root.querySelector('[data-blok-database-map-empty]')?.getAttribute('data-blok-database-map-empty')).toBe('no-provider');
-    expect(root.textContent).toContain('tools.database.mapNoProvider');
+    await flush();
+    expect(root.querySelector('[data-blok-database-map-empty]')?.getAttribute('data-blok-database-map-empty')).toBe('no-style');
+    expect(root.textContent).toBe('tools.database.mapNoStyle');
+    expect(draw).not.toHaveBeenCalled();
+  });
+
+  it('with a map style Blok draws its own map into the canvas, once attached', async () => {
+    const style = 'https://tiles.example.test/style.json';
+    const { root } = mount({ style, breadcrumb: 'Trips' });
+
+    expect(draw).not.toHaveBeenCalled();
+    await flush();
+    const [container, items, ctx, options] = draw.mock.calls[0] as [HTMLElement, DatabaseMapItem[], DatabaseMapContext, { style: unknown; breadcrumb: string }];
+
+    expect(container).toBe(root.querySelector('[data-blok-database-map-canvas]'));
+    expect(container.isConnected).toBe(true);
+    expect(items).toEqual([{ rowId: 'r1', title: 'Ada', place: { name: 'London', lat: 51.5, lon: -0.12 } }]);
+    expect(ctx.height).toBe(400);
+    expect(options).toMatchObject({ style, breadcrumb: 'Trips' });
+  });
+
+  it('a host map still wins over the map style', async () => {
+    const render = vi.fn();
+
+    mount({ render, style: 'https://tiles.example.test/style.json' });
+    await flush();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(draw).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['no-webgl', 'tools.database.mapNoWebgl'],
+    ['failed', 'tools.database.mapLoadFailed'],
+  ] as const)('Blok\'s map that cannot draw (%s) shows a message in its place', async (reason, key) => {
+    draw.mockImplementationOnce((_container: HTMLElement, _items: unknown, _ctx: unknown, options: { onFail(r: string): void }) => {
+      options.onFail(reason);
+
+      return { destroy: vi.fn() };
+    });
+    const { root } = mount({ style: 'https://tiles.example.test/style.json', writable: true, addPin: vi.fn() });
+
+    await flush();
+
+    expect(root.querySelector('[data-blok-database-map-canvas]')).toBeNull();
+    expect(root.querySelector('[data-blok-database-map-add-pin]')).toBeNull();
+    expect(root.querySelector('[data-blok-database-map-empty]')?.getAttribute('data-blok-database-map-empty')).toBe(reason);
+    expect(root.textContent).toContain(key);
+  });
+
+  it('destroy drops Blok\'s map', async () => {
+    const destroy = vi.fn();
+
+    draw.mockReturnValueOnce({ destroy });
+    const { mapView } = mount({ style: { version: 8, sources: {}, layers: [] } });
+
+    await flush();
+    mapView.destroy();
+
+    expect(destroy).toHaveBeenCalledTimes(1);
   });
 
   it('without a place property says a Place property is needed', () => {

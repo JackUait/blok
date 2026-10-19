@@ -47,6 +47,8 @@ const SAFE_HELPERS = [
  * Every entry MUST carry a reason.
  */
 const EXEMPT_SINKS: Record<string, string> = {
+  'tools/database/database-maplibre.ts » `#${encodeURIComponent(item.rowId':
+    'a map pin links to its row as a same-page fragment: a fixed "#" before a percent-encoded id cannot carry a scheme',
   'tools/database/cells/display.ts » href':
     'renderLink takes an href every caller already gated: safeHref(url), or mailtoHref/telHref, which build the URL and return safeHref of it',
   'tools/image/index.ts » src':

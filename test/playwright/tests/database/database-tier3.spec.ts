@@ -224,10 +224,10 @@ test.describe('form view, research/19 §3', () => {
 });
 
 test.describe('map view', () => {
-  test('without a map lever it says so instead of drawing a fake map', async ({ page }) => {
+  test('without a map style or host map it says a style is needed instead of drawing a fake map', async ({ page }) => {
     await mount(page, blocks({ type: 'map' }), 'none');
 
-    await expect(page.locator('[data-blok-database-map-empty="no-provider"]')).toBeVisible();
+    await expect(page.locator('[data-blok-database-map-empty="no-style"]')).toHaveText('A map style is needed to show this map.');
   });
 
   test('the host draws the pins, and a pin opens its page in a center peek', async ({ page }) => {

@@ -84,7 +84,7 @@ describe('DatabaseTool — form, map and dashboard views', () => {
     expect(tool.save(el).views[0].properties?.find((entry) => entry.id === 'where')?.required).toBe(true);
   });
 
-  it('a map without the lever shows the empty state; with it the host draws the rows', async () => {
+  it('a map without a style or host map says a style is needed; with a host map the host draws the rows', async () => {
     const rows = [fakeRow('a', 'db', { title: 'HQ', where: { address: '1 Main St' } }, 'a0')];
     const plain = buildTool(makeDoc(rows), {}, dataWith({ type: 'map' })).el;
     const render = vi.fn();
@@ -92,7 +92,7 @@ describe('DatabaseTool — form, map and dashboard views', () => {
     buildTool(makeDoc(rows), { map: { render } }, dataWith({ type: 'map' }));
     await flush();
 
-    expect(plain.querySelector('[data-blok-database-map-empty="no-provider"]')).not.toBeNull();
+    expect(plain.querySelector('[data-blok-database-map-empty="no-style"]')).not.toBeNull();
     expect(render).toHaveBeenCalledWith(expect.any(HTMLElement), [{ rowId: 'a', title: 'HQ', place: { address: '1 Main St' } }], expect.anything());
   });
 

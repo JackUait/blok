@@ -69,6 +69,10 @@ export interface CellContext {
   reminder?: DateReminderOffset;
   /** The host's small map (`config.map.renderPlace`) for a place's hover card. Without it the card has no map. */
   renderPlace?: DatabaseMap['renderPlace'];
+  /** The host's place search (`config.map.geocode`). Without it the Place editor is a plain address field. */
+  geocode?: DatabaseMap['geocode'];
+  /** The host's "Current Location" (`config.map.currentLocation`). Without it the row is hidden. */
+  currentLocation?: DatabaseMap['currentLocation'];
 }
 
 /**

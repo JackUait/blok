@@ -1186,8 +1186,25 @@ export interface DatabaseMapContext {
 }
 
 export interface DatabaseMap {
-  /** Draws the map into `container`. Called again on every redraw, after `destroy`. */
-  render(container: HTMLElement, items: DatabaseMapItem[], ctx: DatabaseMapContext): { destroy(): void } | void;
+  /**
+   * The MapLibre style Blok draws its own map with: a style URL or a style object.
+   * Blok has no default and makes no network request until one is set. Without it
+   * (and without `render`) the map shows a message that a map style is needed.
+   */
+  styleUrl?: string | Record<string, unknown>;
+  /**
+   * Draws the map into `container` instead of Blok's own map. Called again on every
+   * redraw, after `destroy`. When set, `styleUrl` is not used for the view.
+   */
+  render?(container: HTMLElement, items: DatabaseMapItem[], ctx: DatabaseMapContext): { destroy(): void } | void;
+  /**
+   * Places that match the text typed in the Place editor, best first. Each needs a
+   * `name` or `address`; a picked one is stored as it is. Without it the editor is a
+   * plain address field.
+   */
+  geocode?(query: string): Promise<PlaceValue[]> | PlaceValue[];
+  /** The user's current place, for the Place editor's "Current Location" row. Without it the row is hidden. */
+  currentLocation?(): Promise<PlaceValue | null | undefined> | PlaceValue | null | undefined;
   /**
    * The place at a point, for the row add-pin mode makes: its name or address becomes the
    * row title. Without it, or when it fails, the row keeps the point only and no title.
@@ -1196,7 +1213,8 @@ export interface DatabaseMap {
   /**
    * Draws one place as a small map in the Place cell's hover card. Called each time the
    * card shows, into an attached 150px-high box; `destroy` runs when the card closes.
-   * Without it the card shows the name and address only.
+   * Without it Blok draws the place with `styleUrl`; without both the card shows the
+   * name and address only.
    */
   renderPlace?(container: HTMLElement, place: PlaceValue): { destroy(): void } | void;
 }

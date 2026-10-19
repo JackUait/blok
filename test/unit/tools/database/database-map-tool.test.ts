@@ -1,7 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DatabaseData, DatabaseMapContext, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { onHover } from '../../../../src/components/utils/tooltip';
+import type * as Tooltip from '../../../../src/components/utils/tooltip';
 import { buildTool, fakeRow, makeDoc } from './tier3-harness';
+
+const maplibre = vi.hoisted(() => ({ map: vi.fn(), place: vi.fn() }));
+
+vi.mock('../../../../src/tools/database/database-maplibre', () => ({ drawMapLibreMap: maplibre.map, drawMapLibrePlace: maplibre.place }));
+
+vi.mock('../../../../src/components/utils/tooltip', async (importOriginal) => ({
+  ...await importOriginal<typeof Tooltip>(),
+  onHover: vi.fn(),
+}));
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -142,6 +153,69 @@ describe('DatabaseTool — map view (research/20 §1)', () => {
     await settle();
 
     expect(doc.rows.get(doc.order[0])?.data.properties.where).toEqual({ lat: 48.85, lon: 2.29 });
+  });
+
+  it('config.map.styleUrl alone: Blok draws the map with that style, named after the database', async () => {
+    const rows = [fakeRow('a', 'db', { title: 'HQ', where: { name: 'HQ', lat: 1, lon: 2 } }, 'a0')];
+    const styleUrl = 'https://tiles.example.test/style.json';
+
+    buildTool(makeDoc(rows), { map: { styleUrl } }, { ...dataWith(withPlace, { type: 'map' }), title: 'Trips' });
+    await settle();
+
+    const [container, items, , options] = maplibre.map.mock.calls[0] as [HTMLElement, unknown[], DatabaseMapContext, { style: unknown; breadcrumb: string }];
+
+    expect(container.matches('[data-blok-database-map-canvas]')).toBe(true);
+    expect(items).toEqual([{ rowId: 'a', title: 'HQ', place: { name: 'HQ', lat: 1, lon: 2 } }]);
+    expect(options).toMatchObject({ style: styleUrl, breadcrumb: 'Trips' });
+  });
+
+  it('no style and no host map: the map says a style is needed and draws nothing', async () => {
+    buildTool(makeDoc([]), {}, dataWith(withPlace, { type: 'map' }));
+    await settle();
+
+    expect(document.querySelector('[data-blok-database-map-empty]')?.getAttribute('data-blok-database-map-empty')).toBe('no-style');
+    expect(maplibre.map).not.toHaveBeenCalled();
+  });
+
+  const placeCard = (): HTMLElement | undefined => {
+    const cell = document.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="where"] [data-blok-database-cell-content], [data-row-id="a"] [role="gridcell"][data-property-id="where"]');
+    const call = vi.mocked(onHover).mock.calls.find(([element]) => cell !== null && (element === cell || cell.contains(element)));
+
+    return call?.[1] instanceof HTMLElement ? call[1] : undefined;
+  };
+
+  it('with a style, the Place hover card gets Blok\'s mini-map', async () => {
+    const rows = [fakeRow('a', 'db', { title: 'HQ', where: { name: 'HQ', lat: 1, lon: 2 } }, 'a0')];
+
+    buildTool(makeDoc(rows), {}, dataWith(withPlace));
+    expect(placeCard()?.querySelector('[data-blok-database-place-card-map]')).toBeNull();
+    document.body.innerHTML = '';
+    vi.mocked(onHover).mockClear();
+
+    buildTool(makeDoc(rows), { map: { styleUrl: 'https://tiles.example.test/style.json' } }, dataWith(withPlace));
+    expect(placeCard()?.querySelector('[data-blok-database-place-card-map]')).not.toBeNull();
+  });
+
+  it('the Place editor searches with config.map.geocode', async () => {
+    vi.useFakeTimers();
+    try {
+      const rows = [fakeRow('a', 'db', { title: 'HQ' }, 'a0')];
+      const geocode = vi.fn(() => [{ name: 'Eiffel Tower', address: 'Paris', lat: 48.8, lon: 2.3 }]);
+
+      buildTool(makeDoc(rows), { map: { geocode } }, dataWith(withPlace));
+      document.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="where"]')?.click();
+      const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
+
+      if (field === null) throw new Error('no place editor');
+      field.value = 'Eiffel';
+      field.dispatchEvent(new Event('input'));
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(geocode).toHaveBeenCalledWith('Eiffel');
+      expect(document.querySelector('[data-blok-database-place-result-name]')?.textContent).toBe('Eiffel Tower');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('read-only draws no Add pin button and no "No place" chip', async () => {

@@ -2,6 +2,8 @@ import type { I18n } from '../../../types';
 import { IconCross, IconMap } from '../../components/icons';
 import { onHover } from '../../components/utils/tooltip';
 import { CellPopover } from './cells/cell-popover';
+import { drawMapLibreMap } from './database-maplibre';
+import type { MapFailure } from './database-maplibre';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { isPlaceValue, placeText } from './tier3-values';
 import { resolveLoadLimit } from './view-settings';
@@ -14,8 +16,12 @@ export interface DatabaseMapViewOptions {
   /** The view's rows, filtered and sorted. */
   rows: DatabaseRow[];
   titlePropertyId: string;
-  /** The host's map (`config.map.render`). Without it the view shows an empty state. */
+  /** The host's map (`config.map.render`). It wins over `style`. */
   render?: DatabaseMap['render'];
+  /** The host's MapLibre style (`config.map.styleUrl`). Without it, or `render`, the view says a style is needed. */
+  style?: DatabaseMap['styleUrl'];
+  /** The database name, for Blok's pin hover card. */
+  breadcrumb?: string;
   open: (rowId: string) => void;
   /** Conditional color name per row id. */
   colors?: ReadonlyMap<string, string>;
@@ -43,8 +49,8 @@ const hasPlace = (value: DatabaseRow['properties'][string] | undefined): boolean
   isPlaceValue(value) && (placeText(value) !== '' || (value.lat !== undefined && value.lon !== undefined));
 
 /**
- * Notion's map view. Blok draws no map and geocodes nothing: the host's
- * `config.map.render` draws the pins.
+ * Notion's map view (research/20 §1). Blok draws it with MapLibre and the host's
+ * style, or the host draws it with `config.map.render`. Blok geocodes nothing.
  */
 export class DatabaseMapView implements DatabaseViewRenderer {
   private handle: { destroy(): void } | null = null;
@@ -58,7 +64,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
   createView(): HTMLDivElement {
     const root = document.createElement('div');
     const placeBy = resolveMapBy(this.options.view, this.options.schema);
-    const render = this.options.render;
+    const render = this.drawer();
 
     root.setAttribute('data-blok-database-map', '');
     if (placeBy === undefined) {
@@ -67,7 +73,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
       return root;
     }
     if (render === undefined) {
-      root.appendChild(this.empty('no-provider', 'tools.database.mapNoProvider'));
+      root.appendChild(this.empty('no-style', 'tools.database.mapNoStyle'));
 
       return root;
     }
@@ -124,6 +130,28 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     this.noPlacePopover = null;
     this.handle?.destroy();
     this.handle = null;
+  }
+
+  /** The host's map, else Blok's own map when the host gave a style. */
+  private drawer(): DatabaseMap['render'] | undefined {
+    const { render, style } = this.options;
+
+    if (render !== undefined) return render;
+    if (style === undefined) return undefined;
+
+    return (container, items, ctx) => drawMapLibreMap(container, items, ctx, {
+      style,
+      i18n: this.options.i18n,
+      breadcrumb: this.options.breadcrumb ?? '',
+      onFail: (reason) => this.fail(container, reason),
+    });
+  }
+
+  private fail(canvas: HTMLElement, reason: MapFailure): void {
+    const frame = canvas.closest('[data-blok-database-map-frame]');
+
+    if (this.destroyed || frame === null) return;
+    frame.replaceWith(this.empty(reason, reason === 'no-webgl' ? 'tools.database.mapNoWebgl' : 'tools.database.mapLoadFailed'));
   }
 
   private items(placeBy: PropertyDefinition): DatabaseMapItem[] {
@@ -233,7 +261,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     search.focus();
   }
 
-  private empty(reason: 'no-place' | 'no-provider', key: string): HTMLElement {
+  private empty(reason: 'no-place' | 'no-provider' | 'no-style' | MapFailure, key: string): HTMLElement {
     const empty = document.createElement('p');
 
     empty.setAttribute('data-blok-database-map-empty', reason);

@@ -63,6 +63,16 @@ describe('dist/vendor.LICENSE.txt', () => {
     expect(versions).toEqual([manifest.devDependencies?.mermaid])
   })
 
+  it('bundles one MapLibre GL, BSD-3-Clause, at the version package.json pins', () => {
+    const manifest = JSON.parse(readFileSync(resolve(__dirname, '../../../package.json'), 'utf8')) as {
+      devDependencies?: Record<string, string>
+    }
+    const maplibre = readVendorEntries().filter((entry) => entry.name === 'maplibre-gl')
+
+    expect(maplibre.map((entry) => entry.license)).toEqual(['BSD-3-Clause'])
+    expect(maplibre.map((entry) => /^Version: (.+)$/m.exec(entry.block)?.[1])).toEqual([manifest.devDependencies?.['maplibre-gl']])
+  })
+
   it('bundles only permissive licenses, apart from named exceptions', () => {
     const offenders = readVendorEntries()
       .filter((entry) => !isPermissive(entry.license))

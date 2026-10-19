@@ -27,6 +27,8 @@
   --blok-database-option-pink-text: rgb(104, 53, 78);
   --blok-database-option-red-bg: rgba(206, 24, 0, 0.165);
   --blok-database-option-red-text: rgb(109, 53, 49);
+  /* Measured light (research/20 §1e): the map pin shadow. Dark is unmeasured: the same. */
+  --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
   /* Measured: Notion's table checkbox border (research/07). */
   --blok-database-checkbox-border: rgba(27, 21, 0, 0.19);
   /* Measured: status dots and person avatar ring (research/08). */
@@ -181,6 +183,7 @@
     --blok-database-option-pink-text: rgb(250, 233, 241);
     --blok-database-option-red-bg: rgba(255, 116, 105, 0.525);
     --blok-database-option-red-text: rgb(252, 233, 231);
+    --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
     --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
     /* Status dots unmeasured in dark: kept from light. Avatar ring uses the measured dark cell border. */
     --blok-database-status-dot-gray: rgb(142, 139, 134);
@@ -318,6 +321,7 @@
   --blok-database-option-pink-text: rgb(250, 233, 241);
   --blok-database-option-red-bg: rgba(255, 116, 105, 0.525);
   --blok-database-option-red-text: rgb(252, 233, 231);
+  --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
   --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
   /* Status dots unmeasured in dark: kept from light. Avatar ring uses the measured dark cell border. */
   --blok-database-status-dot-gray: rgb(142, 139, 134);
@@ -8760,6 +8764,86 @@ button[data-blok-database-feed-reaction]:hover,
   cursor: crosshair;
 }
 
+/* MapLibre draws into this box; the canvas sets its height. */
+[data-blok-database-map-gl] {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/*
+  Measured (research/20 §1e): a 22x26 drop pin, #2383E2 with a white dot on a
+  white rim and a 4px drop shadow. Conditional color repaints it.
+*/
+[data-blok-database-map-pin] {
+  --_blok-database-map-pin: var(--blok-color-accent);
+  display: block;
+  inline-size: 22px;
+  block-size: 26px;
+  filter: drop-shadow(var(--blok-database-map-pin-shadow) 0 0 4px);
+  cursor: pointer;
+}
+
+[data-blok-database-map-pin]::before,
+[data-blok-database-map-pin]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+[data-blok-database-map-pin]::before {
+  background-color: var(--blok-bg-primary);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath d='M11 0C4.9 0 0 4.8 0 10.8c0 7.6 9.4 14.4 10.2 15a1.3 1.3 0 0 0 1.6 0C12.6 25.2 22 18.4 22 10.8 22 4.8 17.1 0 11 0z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath d='M11 0C4.9 0 0 4.8 0 10.8c0 7.6 9.4 14.4 10.2 15a1.3 1.3 0 0 0 1.6 0C12.6 25.2 22 18.4 22 10.8 22 4.8 17.1 0 11 0z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+
+/* The dot is a hole: the white rim below shows through it. */
+[data-blok-database-map-pin]::after {
+  background-color: var(--_blok-database-map-pin);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath fill-rule='evenodd' d='M11 2C6 2 2 6 2 10.8c0 6 7.2 11.8 9 13.1 1.8-1.3 9-7.1 9-13.1C20 6 16 2 11 2zm0 5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath fill-rule='evenodd' d='M11 2C6 2 2 6 2 10.8c0 6 7.2 11.8 9 13.1 1.8-1.3 9-7.1 9-13.1C20 6 16 2 11 2zm0 5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+
+[data-blok-database-map-pin][data-color="gray"] { --_blok-database-map-pin: var(--blok-color-gray-text); }
+[data-blok-database-map-pin][data-color="brown"] { --_blok-database-map-pin: var(--blok-color-brown-text); }
+[data-blok-database-map-pin][data-color="orange"] { --_blok-database-map-pin: var(--blok-color-orange-text); }
+[data-blok-database-map-pin][data-color="yellow"] { --_blok-database-map-pin: var(--blok-color-yellow-text); }
+[data-blok-database-map-pin][data-color="green"] { --_blok-database-map-pin: var(--blok-color-green-text); }
+[data-blok-database-map-pin][data-color="blue"] { --_blok-database-map-pin: var(--blok-color-blue-text); }
+[data-blok-database-map-pin][data-color="purple"] { --_blok-database-map-pin: var(--blok-color-purple-text); }
+[data-blok-database-map-pin][data-color="pink"] { --_blok-database-map-pin: var(--blok-color-pink-text); }
+[data-blok-database-map-pin][data-color="red"] { --_blok-database-map-pin: var(--blok-color-red-text); }
+
+/* Measured (research/20 §1e): 260 wide, page icon, "<page> / <database>" crumb over the row title. */
+[data-blok-database-map-pin-card] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+  inline-size: 260px;
+  max-inline-size: 100%;
+  text-align: start;
+}
+
+[data-blok-database-map-pin-card] > div {
+  min-inline-size: 0;
+}
+
+[data-blok-database-map-pin-card-icon] svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+[data-blok-database-map-pin-card-crumb] {
+  overflow: hidden;
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-map-pin-card-title] {
+  font-weight: 600;
+}
+
 /* Measured (research/20 §1b): 24x24, 4px radius, muted glyph, top right of the map. */
 [data-blok-database-map-add-pin] {
   position: absolute;
@@ -8856,6 +8940,51 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 150px;
   border-radius: var(--blok-radius-control);
   overflow: hidden;
+}
+
+/* Measured (research/20 §1d): "Current Location" first, then two-line results, the name over the address. */
+[data-blok-database-place-results] {
+  display: flex;
+  flex-direction: column;
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-place-current],
+[data-blok-database-place-result] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  inline-size: 100%;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-place-current]:hover,
+[data-blok-database-place-result]:hover {
+  background-color: var(--blok-bg-hover);
+}
+
+[data-blok-database-place-current]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-place-result]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: inset 0 0 0 2px var(--blok-focus-ring);
+}
+
+[data-blok-database-place-result-address],
+[data-blok-database-place-loading] {
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+}
+
+[data-blok-database-place-loading] {
+  padding: var(--blok-space-1-5) var(--blok-space-2);
 }
 
 [data-blok-database-place-google-maps] {

@@ -391,11 +391,45 @@ describe('checkEnvelope', () => {
     ] });
   });
 
-  it('says a ref put inside args goes next to name and args', () => {
-    const error = fails({ commands: [{ name: 'block.insert', args: { type: 'column_list', ref: 'cols' } }] });
+  it('moves a ref put inside args next to name and args, and says so', () => {
+    const args = Object.freeze({ type: 'column_list', ref: 'cols' });
+    const batch = Object.freeze({ commands: Object.freeze([Object.freeze({ name: 'block.insert', args })]) });
+
+    expect(checkEnvelope(batch, coreCommandMap(), validateAgainst)).toStrictEqual({
+      batch: { commands: [{ name: 'block.insert', args: { type: 'column_list' }, ref: 'cols' }] },
+      writes: true,
+      warnings: [{
+        code: 'CORRECTED', commandIndex: 0, field: 'ref',
+        message: '"ref" goes next to name and args, not inside args. It was moved there this time.',
+      }],
+    });
+    // The raw batch stays as sent: the pre-flight reads it again.
+    expect(args).toStrictEqual({ type: 'column_list', ref: 'cols' });
+  });
+
+  it('still refuses a ref inside args that is not a string', () => {
+    const error = fails({ commands: [{ name: 'block.insert', args: { type: 'column_list', ref: 7 } }] });
 
     expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/ref' });
-    expect(error.message).toBe('block.insert: "ref" goes next to name and args, not inside args: { "name": "block.insert", "args": { ... }, "ref": "cols" }.');
+    expect(error.message).toBe('block.insert: "ref" goes next to name and args, not inside args: { "name": "block.insert", "args": { ... }, "ref": 7 }.');
+  });
+
+  it('reports the other args problems of a command whose ref it moved', () => {
+    const error = fails({ commands: [{ name: 'block.delete', args: { ref: 'x' } }] });
+
+    expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args' });
+    expect(error.message).toMatch(/^block\.delete: missing required field "id"/);
+  });
+
+  it('leaves ref inside args alone for a command whose args take a ref', () => {
+    const commands = coreCommandMap();
+
+    commands.set('table.inspect', action('table.inspect', {
+      args: { type: 'object', additionalProperties: false, properties: { ref: { type: 'string' } } },
+    }));
+
+    expect(checkEnvelope({ commands: [{ name: 'table.inspect', args: { ref: 'mine' } }] }, commands, validateAgainst))
+      .toStrictEqual({ batch: { commands: [{ name: 'table.inspect', args: { ref: 'mine' } }] }, writes: true });
   });
 
   it('keeps the plain unknown-field message when the command already has a ref', () => {

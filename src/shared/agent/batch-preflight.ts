@@ -72,7 +72,7 @@ const refProblems = (
         path: `/commands/${index}/args${path}`,
       });
     });
-    // A ref misplaced inside args is reported by the envelope; count it as set to avoid echoes.
+    // The envelope moves a ref written inside args next to name, so it counts as set.
     [raw.ref, args.ref].forEach(ref => {
       if (typeof ref === 'string' && !declared.includes(ref)) {
         declared.push(ref);

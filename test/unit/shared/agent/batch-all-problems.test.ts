@@ -56,11 +56,12 @@ describe('a failed batch reports every problem it can find', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists the same misplaced ref in every command, and the code block missing its language', async () => {
-    const error = errorOf(await run(markdownBatch));
+  it('lists the same bad arg in every command, and the code block missing its language', async () => {
+    const error = errorOf(await run(markdownBatch.map(command =>
+      command.name === 'block.insert' ? { ...command, args: { ...command.args, colour: 'red' } } : command)));
 
     expect(error).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0 });
-    expect(error.message).toMatch(/"ref" goes next to name and args/);
+    expect(error.message).toMatch(/unknown field "colour"/);
     const others = error.others ?? [];
 
     expect(others.filter(other => other.code === 'INVALID_ARGS').map(other => other.commandIndex)).toEqual([1, 2, 3, 4, 5]);
@@ -145,7 +146,7 @@ describe('a failed batch reports every problem it can find', () => {
 
   it('strips details from the extra problems and caps the list', async () => {
     const commands = Array.from({ length: 12 }, (_, index) => ({
-      name: 'block.insert', args: { ref: `r${index}`, type: 'paragraph' },
+      name: 'block.insert', args: { colour: `r${index}`, type: 'paragraph' },
     }));
     const error = errorOf(await run(commands));
     const others = error.others ?? [];
@@ -201,3 +202,24 @@ describe('an id field that names a new block is not read as a ref', () => {
     expect(error.others).toBeUndefined();
   });
 });
+
+describe('a slip with one sure meaning runs as meant and warns', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('moves a ref written inside args next to name and args', async () => {
+    const result = await run([
+      { name: 'block.insert', args: { ref: 'h', type: 'header', data: { level: 2, text: 'Plan' }, position: { after: 'p1' } } },
+      { name: 'text.format', args: { id: '$h', range: 'all', set: { bold: true } } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', commandIndex: 0, field: 'ref' }] });
+    expect(result.ok && result.refs.h).toEqual(expect.any(String));
+  });
+});
+

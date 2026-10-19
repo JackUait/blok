@@ -265,10 +265,27 @@ describe('in-editor assistant bar', () => {
       'Thinking…',
       'Looking up blocks…',
       'Thinking…',
-      'Making changes…',
-      'Thinking…',
+      'Writing a paragraph…',
     ]);
     expect(within(bar()).getByRole('status')).toHaveTextContent('');
+  });
+
+  it('holds the line naming a block long enough to read before Thinking returns', async () => {
+    const { model, release } = gated(answer('Done.'));
+    const responses = [insertBatch('From AI')];
+    const editor = await createEditor(async (request) => responses.shift() ?? model(request));
+
+    editor.agent.openAssistant();
+    submit('Write');
+    await settle(50);
+
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…');
+
+    await settle(1600);
+
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
+    release();
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
   });
 
   it('lets the host reword the status line through i18n messages', async () => {

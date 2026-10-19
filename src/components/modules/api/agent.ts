@@ -113,13 +113,13 @@ export class AgentAPI extends Module {
    * @param prompt - the user's request
    * @param context - from describeUserPlace()
    * @param thinking - the bar's current pick, read at each prompt
-   * @param onActivity - 'thinking', or the name of the tool the model calls
+   * @param onActivity - 'thinking', or the tool the model calls and its input
    */
   public startRun(
     prompt: string,
     context: string,
     thinking: () => AgentThinkingLevel | undefined,
-    onActivity?: (activity: string) => void
+    onActivity?: (activity: string, input?: unknown) => void
   ): AgentRun {
     return this.ask(prompt, { context: false }, context, thinking, onActivity);
   }
@@ -129,7 +129,7 @@ export class AgentAPI extends Module {
     options: AgentAskOptions = {},
     captured = '',
     picked: () => AgentThinkingLevel | undefined = () => undefined,
-    onActivity?: (activity: string) => void
+    onActivity?: (activity: string, input?: unknown) => void
   ): AgentRun {
     const assistant = this.config.agent?.assistant;
 

@@ -270,7 +270,7 @@ describe('runAssistantLoop', () => {
     const model = scripted(
       reply([
         { type: 'tool_use', id: 't1', name: 'blok_read', input: {} },
-        { type: 'tool_use', id: 't2', name: 'blok_execute', input: {} },
+        { type: 'tool_use', id: 't2', name: 'blok_execute', input: { commands: [] } },
       ], 'tool_use'),
       reply([{ type: 'text', text: 'Done.' }], 'end_turn')
     );
@@ -287,10 +287,12 @@ describe('runAssistantLoop', () => {
       },
       signal: new AbortController().signal,
       maxSteps: 5,
-      onActivity: (activity) => steps.push(activity),
+      onActivity: (activity, input) => steps.push(input === undefined ? activity : `${activity} ${JSON.stringify(input)}`),
     });
 
-    expect(steps).toEqual(['thinking', 'blok_read', 'call blok_read', 'blok_execute', 'call blok_execute', 'thinking']);
+    expect(steps).toEqual([
+      'thinking', 'blok_read {}', 'call blok_read', 'blok_execute {"commands":[]}', 'call blok_execute', 'thinking',
+    ]);
   });
 
   it('reports nothing once the user stopped the run', async () => {

@@ -11,12 +11,16 @@ import { getUserOS } from '../../utils/browser';
 import { syncPortalDirection } from '../../utils/portal-direction';
 
 import { AssistantBar } from './assistant-bar';
+import { stepStatusKey } from './step-status';
 
 /** The user's place in the document when the bar opened. */
 interface ReturnPoint {
   element: HTMLElement;
   range: Range | null;
 }
+
+/** How long a line naming a write stays up before "Thinking…" may replace it. */
+const WRITE_HOLD_MS = 1500;
 
 const isOpenShortcut = (event: KeyboardEvent): boolean => {
   const mac = getUserOS().mac;
@@ -38,6 +42,9 @@ export class Assistant extends Module {
   private changed = false;
   /** The bar's pick. Undefined when the host offers no choice. */
   private level: AgentThinkingLevel | undefined;
+  private holdTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The line waiting for the hold to end. */
+  private heldStatus: string | null = null;
 
   public get isOpen(): boolean {
     return this.bar?.isOpen === true;
@@ -86,6 +93,7 @@ export class Assistant extends Module {
    */
   public close(options: { restoreFocus?: boolean } = {}): void {
     this.answerId += 1;
+    this.clearHold();
     this.run?.stop();
     this.run?.end();
     this.run = null;
@@ -153,35 +161,56 @@ export class Assistant extends Module {
   }
 
   /**
-   * One line for the step the run is on. Hosts reword it with i18n messages.
+   * Show the line for the step the run is on. Hosts reword it with i18n messages.
+   * A line naming a write stays up for WRITE_HOLD_MS: the write itself takes a few
+   * milliseconds, so the next "Thinking…" would hide it at once.
    * @param activity - 'thinking', or the tool the model calls
+   * @param input - that tool's input
    */
-  private activityStatus(activity: string): string {
-    const i18n = this.Blok.I18n;
+  private activity(activity: string, input?: unknown): void {
+    if (!this.isWorking()) {
+      return;
+    }
 
-    switch (activity) {
-      case 'thinking':
-        return i18n.t('assistant.status.thinking');
-      case 'blok_read':
-        return i18n.t('assistant.status.reading');
-      case 'blok_describe':
-        return i18n.t('assistant.status.checking');
-      case 'blok_execute':
-        return i18n.t('assistant.status.editing');
-      default:
-        return i18n.t('assistant.status.working');
+    const status = this.activityStatus(activity, input);
+
+    if (activity === 'thinking' && this.holdTimer !== null) {
+      this.heldStatus = status;
+
+      return;
+    }
+    this.clearHold();
+    this.bar?.render({ kind: 'working', status });
+    if (activity === 'blok_execute') {
+      this.holdTimer = setTimeout(() => {
+        const held = this.heldStatus;
+
+        this.holdTimer = null;
+        this.heldStatus = null;
+        if (held !== null && this.isWorking()) {
+          this.bar?.render({ kind: 'working', status: held });
+        }
+      }, WRITE_HOLD_MS);
     }
   }
 
-  private activity(activity: string): void {
-    if (this.isWorking()) {
-      this.bar?.render({ kind: 'working', status: this.activityStatus(activity) });
+  private activityStatus(activity: string, input?: unknown): string {
+    const key = stepStatusKey(activity, input, (id) => this.Blok.BlockManager.getBlockById(id)?.name);
+
+    return this.Blok.I18n.t(key);
+  }
+
+  private clearHold(): void {
+    if (this.holdTimer !== null) {
+      clearTimeout(this.holdTimer);
     }
+    this.holdTimer = null;
+    this.heldStatus = null;
   }
 
   private startRun(prompt: string): Promise<AgentRunResult> | null {
     try {
-      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, (activity) => this.activity(activity));
+      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, (activity, input) => this.activity(activity, input));
 
       return this.run.result;
     } catch (thrown) {
@@ -207,6 +236,7 @@ export class Assistant extends Module {
   }
 
   private show(result: AgentRunResult): void {
+    this.clearHold();
     this.changed = this.changed || result.changed.length > 0;
 
     const messages: Record<Exclude<AgentRunResult['status'], 'done' | 'failed'>, string> = {

@@ -29,8 +29,8 @@ export interface AssistantLoopOptions {
   maxSteps: number;
   /** Sent on every model request of this run. */
   thinking?: AgentThinkingLevel;
-  /** 'thinking' before each model request, then the name of each tool called. Silent after the run stops. */
-  onActivity?(activity: string): void;
+  /** 'thinking' before each model request, then each tool called with its input. Silent after the run stops. */
+  onActivity?(activity: string, input?: unknown): void;
 }
 
 type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
@@ -60,7 +60,7 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promis
 
   for (const use of uses) {
     if (!options.signal.aborted) {
-      options.onActivity?.(use.name);
+      options.onActivity?.(use.name, use.input);
     }
 
     const outcome = options.signal.aborted ? null : await options.call(use.name, use.input);

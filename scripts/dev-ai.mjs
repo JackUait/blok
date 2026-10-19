@@ -159,19 +159,74 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
 /**
  * The real model call. Imported late, so a checkout without the SDK still serves the playground.
  *
- * @param {{ apiKey: string | undefined, baseURL: string | undefined }} settings
+ * @param {{ apiKey: string | undefined, baseURL: string | undefined, fetch?: typeof fetch }} settings
+ *   `fetch` lets tests replay a recorded stream.
  * @returns {Promise<CreateMessage>}
  */
-async function anthropicCreateMessage({ apiKey, baseURL }) {
+export async function anthropicCreateMessage({ apiKey, baseURL, fetch }) {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  const { BetaMessageStream } = await import('@anthropic-ai/sdk/lib/BetaMessageStream');
+  const { partialParse } = await import('@anthropic-ai/sdk/_vendor/partial-json-parser/parser');
   const state = { client: null };
+
+  // Arguments the SDK cannot parse become { invalidJson }, as in parseArguments
+  // (src/agent-models/shared.ts): the run reports them and the model retries.
+  // The SDK would instead fail the whole answer. Tool use is not strict here,
+  // so a model can send broken JSON. partialParse is the SDK's own check.
+  const safeArguments = (text) => {
+    try {
+      partialParse(text);
+
+      return text;
+    } catch {
+      return JSON.stringify({ invalidJson: text });
+    }
+  };
+
+  async function* withSafeToolInput(events) {
+    const held = new Map();
+
+    for await (const event of events) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'input_json_delta') {
+        held.set(event.index, (held.get(event.index) ?? '') + event.delta.partial_json);
+        continue;
+      }
+      if (event.type === 'content_block_stop' && held.has(event.index)) {
+        const text = held.get(event.index);
+
+        held.delete(event.index);
+        yield { type: 'content_block_delta', index: event.index, delta: { type: 'input_json_delta', partial_json: text === '' ? text : safeArguments(text) } };
+      }
+      yield event;
+    }
+  }
+
+  const toReadable = (events) => {
+    const encoder = new TextEncoder();
+    const iterator = events[Symbol.asyncIterator]();
+
+    return new ReadableStream({
+      async pull(controller) {
+        const { value, done } = await iterator.next();
+
+        if (done) {
+          controller.close();
+        } else {
+          controller.enqueue(encoder.encode(`${JSON.stringify(value)}\n`));
+        }
+      },
+      cancel: () => iterator.return?.(),
+    });
+  };
 
   return async (params, signal, onDelta) => {
     // Built on first use: a missing key then shows in the bar, not at startup.
     // Undefined fields fall back to the SDK's own lookup (env, then `ant auth login`).
-    state.client ??= new Anthropic({ apiKey, baseURL });
+    state.client ??= new Anthropic({ apiKey, baseURL, fetch });
 
-    const stream = state.client.beta.messages.stream(params, { signal });
+    // The SDK still builds the message, so thinking blocks come back exactly as sent.
+    const raw = await state.client.beta.messages.create({ ...params, stream: true }, { signal });
+    const stream = BetaMessageStream.fromReadableStream(toReadable(withSafeToolInput(raw)));
 
     for await (const event of stream) {
       if (event.type === 'content_block_delta') {

@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 
-import { AI_MODEL, aiSettings, handleAiRequest, messageParams } from '../../../scripts/dev-ai.mjs';
+import Anthropic from '@anthropic-ai/sdk';
+
+import { AI_MODEL, aiSettings, anthropicCreateMessage, handleAiRequest, messageParams } from '../../../scripts/dev-ai.mjs';
 
 const ORIGINS = ['http://localhost:3303', 'http://127.0.0.1:3303'];
 const HOSTS = ['127.0.0.1:4800', 'localhost:4800'];
@@ -174,5 +176,90 @@ describe('aiSettings', () => {
 
   it('falls back to Opus with no key when there is no file', () => {
     expect(aiSettings({}, null)).toEqual({ apiKey: undefined, baseURL: undefined, model: AI_MODEL });
+  });
+});
+
+type StreamEvent = { type: string } & Record<string, unknown>;
+
+/** A fetch that answers every call with these events as server-sent events. */
+const sseFetch = (events: StreamEvent[]): typeof fetch => async () => new Response(
+  events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''),
+  { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+);
+
+const messageStart: StreamEvent = {
+  type: 'message_start',
+  message: {
+    id: 'msg_1', type: 'message', role: 'assistant', model: 'deepseek-flash', content: [],
+    stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 0 },
+  },
+};
+
+const toolBlock = (index: number, id: string, pieces: string[]): StreamEvent[] => [
+  { type: 'content_block_start', index, content_block: { type: 'tool_use', id, name: 'blok_execute', input: {} } },
+  ...pieces.map((partial_json): StreamEvent => ({ type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json } })),
+  { type: 'content_block_stop', index },
+];
+
+const textBlock = (index: number, pieces: string[]): StreamEvent[] => [
+  { type: 'content_block_start', index, content_block: { type: 'text', text: '' } },
+  ...pieces.map((text): StreamEvent => ({ type: 'content_block_delta', index, delta: { type: 'text_delta', text } })),
+  { type: 'content_block_stop', index },
+];
+
+const messageEnd = (stopReason: string): StreamEvent[] => [
+  { type: 'message_delta', delta: { stop_reason: stopReason, stop_sequence: null }, usage: { output_tokens: 42 } },
+  { type: 'message_stop' },
+];
+
+const PARAMS = { model: 'deepseek-flash', max_tokens: 100, messages: [{ role: 'user' as const, content: 'hi' }] };
+
+describe('anthropicCreateMessage', () => {
+  // The exact arguments DeepSeek sent: the first command never gets its name or closing brace.
+  const BROKEN = '{"commands": [{"args": {"id": "F6eqMc4a9R", "range": {"find": "посты и статьи"}, "with": "посты и статьи в блоге"}, '
+    + '{"name": "text.replace", "args": {"id": "F6eqMc4a9R", "range": {"find": "посты и статьи в блоге в блоге"}, "with": "посты и статьи в блоге"}}]}';
+
+  it('hands broken tool arguments back as invalidJson, so the run reports them and the model can retry', async () => {
+    const events = [
+      messageStart,
+      ...toolBlock(0, 'toolu_1', [BROKEN.slice(0, 60), BROKEN.slice(60)]),
+      ...textBlock(1, ['after']),
+      ...messageEnd('tool_use'),
+    ];
+    const create = await anthropicCreateMessage({ apiKey: 'k', baseURL: 'http://model.test', fetch: sseFetch(events) });
+
+    const message = await create(PARAMS, new AbortController().signal, () => {});
+
+    expect(message.content).toEqual([
+      { type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: { invalidJson: BROKEN } },
+      { type: 'text', text: 'after' },
+    ]);
+    expect(message.stop_reason).toBe('tool_use');
+  });
+
+  it('builds the same message as the SDK when the stream is valid', async () => {
+    const events = [
+      messageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '', signature: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: 'Reading ' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: 'the table.' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'signature_delta', signature: 'sig' } },
+      { type: 'content_block_stop', index: 0 },
+      ...textBlock(1, ['Trans', 'lating.']),
+      ...toolBlock(2, 'toolu_1', ['{"commands": [{"name": "text.replace", ', '"args": {"id": "a"}}]}']),
+      ...toolBlock(3, 'toolu_2', []),
+      // Cut off by max_tokens: the SDK keeps what parses so far.
+      ...toolBlock(4, 'toolu_3', ['{"commands": [{"name": "block.delete"']),
+      ...messageEnd('max_tokens'),
+    ];
+    const fetch = sseFetch(events);
+    const expected = await new Anthropic({ apiKey: 'k', baseURL: 'http://model.test', fetch }).beta.messages.stream(PARAMS).finalMessage();
+    const deltas: Array<[number, string]> = [];
+    const create = await anthropicCreateMessage({ apiKey: 'k', baseURL: 'http://model.test', fetch });
+
+    const message = await create(PARAMS, new AbortController().signal, (index, text) => deltas.push([index, text]));
+
+    expect(message).toEqual(expected);
+    expect(deltas).toEqual([[0, 'Reading '], [0, 'the table.'], [1, 'Trans'], [1, 'lating.']]);
   });
 });

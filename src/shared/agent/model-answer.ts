@@ -51,7 +51,7 @@ const answerField = (key: string, value: unknown): unknown => {
   return key === 'changed' && isRecord(value) ? cappedChanged(value) : value;
 };
 
-// Warnings come right after ok: after up to 50 block rows a model skims past them.
+// Warnings come right after ok, so up to 50 block rows cannot bury them.
 const FIRST_KEYS = ['ok', 'warnings'];
 
 /**

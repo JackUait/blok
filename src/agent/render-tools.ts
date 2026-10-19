@@ -68,7 +68,6 @@ const SHARED_SCHEMA_MIN_LENGTH = 100;
 
 const RESULT_SHOWS_BLOCKS = 'Its result lists the changed blocks with their data as they now read, so you can check your work without blok_read.';
 
-
 const SEVERAL_BLOCKS = 'To add several text blocks at once (headings, paragraphs, lists, code), use one markdown.insert.';
 
 const DESCRIPTIONS: Record<AgentToolName, string> = {

@@ -111,7 +111,7 @@ export class AgentAPI extends Module {
   }
 
   /**
-   * Where the user is, as text for the model. Read before focus leaves the document.
+   * Where the user is: text for the model and the block ids it names. Read before focus leaves the document.
    */
   public describeUserPlace(): UserPlace {
     return this.editorContext();

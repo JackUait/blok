@@ -448,6 +448,92 @@ describe('DatabaseTool — linked view, research 20 §2', () => {
     expect(title()?.hidden).toBe(true);
   });
 
+  describe('"+" add view on a linked view (research 20 §2b)', () => {
+    const withBoard = (): DatabaseData => {
+      const data = sourceData();
+
+      data.views.push({ id: 'sb', name: 'Board', type: 'board', position: 'a1', sorts: [], filters: [], visibleProperties: [] });
+      data.views.push({ id: 'sf', name: 'Signup', type: 'form', position: 'a2', sorts: [], filters: [], visibleProperties: [] });
+
+      return data;
+    };
+
+    it('the new tab appears at once, then "Link to existing data source" with "Link…" and the source under "Suggested"', () => {
+      const doc = docWithSource();
+
+      buildDatabase(doc, 'db', withBoard());
+      const { tool, el } = buildDatabase(doc, 'linked', linkedData());
+
+      tool.addView('map');
+      const panel = panelById('database-linked-add-view');
+
+      expect(el.querySelectorAll('[data-blok-database-tab]')).toHaveLength(2);
+      expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.linkedLinkExisting');
+      expect(panel?.querySelector('input')?.placeholder).toBe('tools.database.linkedLinkSearch');
+      expect(panel?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.linkedSuggested');
+      expect(rowLabels(panel)).toEqual(['Tasks']);
+    });
+
+    it('picking the source shows "New view": "New <layout> view", then the source\'s views and this block\'s own', () => {
+      const doc = docWithSource();
+
+      buildDatabase(doc, 'db', withBoard());
+      const { tool } = buildDatabase(doc, 'linked', linkedData());
+
+      tool.addView('map');
+      panelById('database-linked-add-view')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-db"]')?.click();
+      const panel = panelById('database-linked-add-view');
+
+      expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.newView');
+      expect(panel?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.linkedViewsOn {"name":"Tasks"}');
+      expect(rowLabels(panel)).toEqual(['tools.database.linkedNewMapView', 'All', 'Board', 'Mine']);
+    });
+
+    it('a listed view is copied into the new tab only; the block\'s other views stay', () => {
+      const doc = docWithSource();
+
+      buildDatabase(doc, 'db', withBoard());
+      const { tool } = buildDatabase(doc, 'linked', linkedData());
+
+      tool.addView('map');
+      const added = tool.save(document.createElement('div')).views[1];
+
+      panelById('database-linked-add-view')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-db"]')?.click();
+      panelById('database-linked-add-view')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-view-sb"]')?.click();
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.views).toHaveLength(2);
+      expect(saved.views[0]).toMatchObject({ id: 'lv', name: 'Mine', type: 'table' });
+      expect(saved.views[1]).toMatchObject({ id: added.id, position: added.position, name: 'Board', type: 'board' });
+      expect(saved.activeViewId).toBe(added.id);
+      expect(saved.source).toEqual({ databaseId: 'db' });
+    });
+
+    it('"New <layout> view" keeps the new tab as added', () => {
+      const doc = docWithSource();
+
+      buildDatabase(doc, 'db', withBoard());
+      const { tool } = buildDatabase(doc, 'linked', linkedData());
+
+      tool.addView('board');
+      const added = tool.save(document.createElement('div')).views[1];
+
+      panelById('database-linked-add-view')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-db"]')?.click();
+      panelById('database-linked-add-view')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-new-view"]')?.click();
+
+      expect(tool.save(document.createElement('div')).views[1]).toEqual(added);
+    });
+
+    it('a database that holds its own rows opens no source panel on add view', () => {
+      const doc = docWithSource();
+      const { tool } = buildDatabase(doc, 'db', sourceData());
+
+      tool.addView('board');
+
+      expect(panelById('database-linked-add-view')).toBeUndefined();
+    });
+  });
+
   it('the source keeps "Lock database"', () => {
     const doc = docWithSource();
     const { tool, el } = buildDatabase(doc, 'db', sourceData());

@@ -39,7 +39,7 @@ import type { CommentBadges } from './database-comment-badge';
 import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
-import { openLinkedPicker } from './database-linked-picker';
+import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, sortRows } from './database-query';
 import { openDatabaseConfirm } from './database-confirm-dialog';
@@ -253,6 +253,19 @@ const ROW_CONTROL_SELECTOR = [
  * ordinary empty database.
  */
 const LINK_PICKER_KEY = 'linkPicker';
+
+/** "New <layout> view" on a linked view's add-view panel (research 20 §2b). The add-view menu offers no form there, and no dashboard anywhere. */
+const LINKED_NEW_VIEW_KEYS: Readonly<Record<Exclude<ViewType, 'form' | 'dashboard'>, string>> = {
+  table: 'tools.database.linkedNewTableView',
+  board: 'tools.database.linkedNewBoardView',
+  gallery: 'tools.database.linkedNewGalleryView',
+  list: 'tools.database.linkedNewListView',
+  chart: 'tools.database.linkedNewChartView',
+  timeline: 'tools.database.linkedNewTimelineView',
+  feed: 'tools.database.linkedNewFeedView',
+  map: 'tools.database.linkedNewMapView',
+  calendar: 'tools.database.linkedNewCalendarView',
+};
 
 /** Emitted on the editor's own event bus when a database block's tool goes away. */
 const DATABASE_GONE_EVENT = 'database gone';
@@ -3081,6 +3094,52 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);
     if (type === 'form') this.askFormAutoCreate(newView.id);
+    else if (this.linked && type !== 'dashboard') this.openLinkedAddView(newView.id, type);
+  }
+
+  /** research 20 §2b: after the new tab shows, pick the source, then a fresh view or one to copy into it. */
+  private openLinkedAddView(viewId: string, type: Exclude<ViewType, 'form' | 'dashboard'>): void {
+    const source = this.source;
+
+    if (source === undefined || this.readOnly || this.sourceMissing()) return;
+    const anchor = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`)
+      ?? this.titleRowElement ?? this.element;
+
+    if (anchor === null) return;
+    this.sourcePicker?.close();
+    const copyable = (view: DatabaseViewConfig): boolean => view.type !== 'form' && view.type !== 'dashboard';
+    const panel = openLinkedAddView({
+      anchor,
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      source: {
+        id: source.databaseId,
+        title: this.lastSourceTitle,
+        parent: this.pickerSources().find((candidate) => candidate.id === source.databaseId)?.parent ?? '',
+      },
+      newViewLabel: this.api.i18n.t(LINKED_NEW_VIEW_KEYS[type]),
+      views: () => [
+        ...this.sourceViews(source.databaseId).filter(copyable),
+        ...this.model.getViews().filter((view) => view.id !== viewId && copyable(view)),
+      ],
+      copyView: (view) => this.copyIntoView(viewId, view),
+      onClose: () => {
+        if (this.sourcePicker === panel) this.sourcePicker = null;
+      },
+    });
+
+    this.sourcePicker = panel;
+  }
+
+  /** The new tab takes the picked view's settings; it keeps its own id and place. */
+  private copyIntoView(viewId: string, view: DatabaseViewConfig): void {
+    if (this.readOnly || this.structureLocked() || this.model.getView(viewId) === undefined) return;
+    const { id: _id, position: _position, ...settings } = structuredClone(view);
+
+    this.model.updateView(viewId, settings);
+    this.block.dispatchChange();
+    void this.sync.syncUpdateView({ viewId, changes: structuredClone(settings) });
+    this.rebuildTabBar();
+    this.rerenderView();
   }
 
   /** A map needs a place: Notion adds one named "Place" when there is none (research/20 §1a). */

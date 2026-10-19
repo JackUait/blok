@@ -408,6 +408,31 @@ test.describe('linked view, research 20', () => {
     await expect(page.locator('[data-blok-database-title][contenteditable="true"]')).toBeVisible();
   });
 
+  test('"+" add view adds the tab at once, then "Link to existing data source" and "New view" copy a view into it', async ({ page }) => {
+    await mount(page, [...source(), linkedBlock()]);
+    await page.locator('[data-blok-database-add-view]').nth(1).click({ force: true });
+    await page.locator('[data-blok-database-view-option="board"]').click();
+
+    await expect(page.locator('[data-blok-database-tab]').filter({ hasText: 'Board' })).toBeVisible();
+    const panel = page.getByTestId('database-linked-add-view');
+
+    await expect(panel.getByText('Link to existing data source', { exact: true })).toBeVisible();
+    await expect(panel.getByPlaceholder('Link…')).toBeVisible();
+    await expect(panel.getByText('Suggested', { exact: true })).toBeVisible();
+    await panel.getByTestId('database-linked-source-db-1').click();
+
+    await expect(panel.getByText('New view', { exact: true })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'New board view' })).toBeVisible();
+    await expect(panel.getByText('Views on Tasks')).toBeVisible();
+    await panel.getByRole('button', { name: 'Kanban' }).click();
+    await expect(panel).toBeHidden();
+
+    const views = (await savedRow(page, 'linked-1')).views as Array<{ id: string; name: string; type: string }>;
+
+    expect(views.map((v) => [v.id === 'lv', v.name, v.type])).toEqual([[true, 'table', 'table'], [false, 'Kanban', 'board']]);
+    expect(((await savedRow(page, 'db-1')).views as unknown[])).toHaveLength(2);
+  });
+
   test('the add-view menu of a linked view has no Form', async ({ page }) => {
     await mount(page, [...source(), linkedBlock()]);
     await page.locator('[data-blok-database-add-view]').nth(1).click({ force: true });

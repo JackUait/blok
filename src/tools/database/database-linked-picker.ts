@@ -28,6 +28,38 @@ export interface LinkedPickerOptions {
 /** Rows before "Show more" (research 20 §2a, 41-linked-picker.png). */
 const FIRST_ROWS = 3;
 
+/** The "New view" page: a fresh view first, then the views it can copy. */
+const newViewPage = (
+  t: LinkedPickerOptions['t'],
+  source: LinkedPickerSource,
+  fresh: { label: string; testId: string; onClick: () => void },
+  views: DatabaseViewConfig[],
+  copyView: (view: DatabaseViewConfig) => void
+): PanelPage => ({
+  title: t('tools.database.newView'),
+  build: (panel) => [
+    panelRow({
+      label: fresh.label,
+      testId: fresh.testId,
+      icon: IconPlus,
+      onClick: () => {
+        panel.close();
+        fresh.onClick();
+      },
+    }),
+    panelLabel(t('tools.database.linkedViewsOn', { name: source.title === '' ? t('tools.database.relationUntitledDatabase') : source.title })),
+    ...views.map((view) => panelRow({
+      label: view.name,
+      testId: `database-linked-view-${view.id}`,
+      icon: VIEW_ICONS[view.type],
+      onClick: () => {
+        panel.close();
+        copyView(view);
+      },
+    })),
+  ],
+});
+
 /**
  * "Linked view of data source" (research 20 §2a): the "New database" page
  * picks a source, then the "New view" page picks the linked view's first
@@ -37,30 +69,13 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
   const { t } = options;
   const untitled = t('tools.database.relationUntitledDatabase');
 
-  const viewPage = (source: LinkedPickerSource): PanelPage => ({
-    title: t('tools.database.newView'),
-    build: (panel) => [
-      panelRow({
-        label: t('tools.database.linkedNewTableView'),
-        testId: 'database-linked-new-table-view',
-        icon: IconPlus,
-        onClick: () => {
-          panel.close();
-          options.newTableView();
-        },
-      }),
-      panelLabel(t('tools.database.linkedViewsOn', { name: source.title === '' ? untitled : source.title })),
-      ...options.views(source.id).map((view) => panelRow({
-        label: view.name,
-        testId: `database-linked-view-${view.id}`,
-        icon: VIEW_ICONS[view.type],
-        onClick: () => {
-          panel.close();
-          options.copyView(view);
-        },
-      })),
-    ],
-  });
+  const viewPage = (source: LinkedPickerSource): PanelPage => newViewPage(
+    t,
+    source,
+    { label: t('tools.database.linkedNewTableView'), testId: 'database-linked-new-table-view', onClick: options.newTableView },
+    options.views(source.id),
+    options.copyView
+  );
 
   const state = { query: '', expanded: false };
   const list = document.createElement('div');
@@ -130,6 +145,84 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
     anchor: options.anchor,
     root: sourcePage,
     testId: 'database-linked-picker',
+    width: 290,
+    backLabel: t('tools.database.peekBack'),
+    ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),
+  });
+
+  panel.open();
+
+  return panel;
+};
+
+export interface LinkedAddViewOptions {
+  anchor: HTMLElement;
+  t: (key: string, vars?: Record<string, string>) => string;
+  /** The linked view's own source: the one "Suggested" row. */
+  source: LinkedPickerSource;
+  /** "New <layout> view": keeps the tab just added. */
+  newViewLabel: string;
+  /** The views the new tab may copy: the source's, then the block's own. */
+  views: () => DatabaseViewConfig[];
+  copyView: (view: DatabaseViewConfig) => void;
+  onClose?: () => void;
+}
+
+/**
+ * "+" add view on a linked view (research 20 §2b): the tab is added at once,
+ * then "Link to existing data source" picks the source and "New view" picks
+ * a fresh view or one to copy. A linked block holds one source, so only that
+ * source is listed, under "Suggested".
+ */
+export const openLinkedAddView = (options: LinkedAddViewOptions): DatabasePanel => {
+  const { t, source } = options;
+  const name = source.title === '' ? t('tools.database.relationUntitledDatabase') : source.title;
+  const state = { query: '' };
+  const list = document.createElement('div');
+  const fillList = (panel: DatabasePanel): void => {
+    const shown = name.toLowerCase().includes(state.query.trim().toLowerCase());
+
+    list.replaceChildren(...(shown
+      ? [
+        panelLabel(t('tools.database.linkedSuggested')),
+        panelRow({
+          label: name,
+          description: source.parent,
+          testId: `database-linked-source-${source.id}`,
+          icon: IconDatabase,
+          onClick: () => panel.push(newViewPage(
+            t,
+            source,
+            { label: options.newViewLabel, testId: 'database-linked-new-view', onClick: () => undefined },
+            options.views(),
+            options.copyView
+          )),
+        }),
+      ]
+      : []));
+  };
+  const panel = new DatabasePanel({
+    anchor: options.anchor,
+    root: {
+      title: t('tools.database.linkedLinkExisting'),
+      build: (current) => {
+        const search = panelInput({
+          value: state.query,
+          placeholder: t('tools.database.linkedLinkSearch'),
+          label: t('tools.database.linkedLinkSearch'),
+          testId: 'database-linked-add-view-search',
+          onInput: (value) => {
+            state.query = value;
+            fillList(current);
+          },
+        });
+
+        fillList(current);
+
+        return [search, list];
+      },
+    },
+    testId: 'database-linked-add-view',
     width: 290,
     backLabel: t('tools.database.peekBack'),
     ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),

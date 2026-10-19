@@ -6,6 +6,7 @@
  */
 import type { AgentRun, AgentRunResult, AgentThinkingLevel } from '../../../../types/api';
 import type { ThinkingChoice } from '../../../agent/thinking';
+import type { UserPlace } from '../api/agent';
 import { Module } from '../../__module';
 import { getUserOS } from '../../utils/browser';
 import { syncPortalDirection } from '../../utils/portal-direction';
@@ -35,7 +36,7 @@ export class Assistant extends Module {
   private bar: AssistantBar | null = null;
   private run: AgentRun | null = null;
   /** Editor context captured when the bar opened; focus is in the bar after that. */
-  private context = '';
+  private context: UserPlace = { text: '', blockIds: [] };
   private returnPoint: ReturnPoint | null = null;
   /** Bumps on every answer, so a late result of a stopped one is ignored. */
   private answerId = 0;

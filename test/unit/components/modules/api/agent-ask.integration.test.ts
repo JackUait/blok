@@ -28,6 +28,23 @@ const settle = (ms = 0): Promise<void> => new Promise((resolve) => {
 
 const editors: TestEditor[] = [];
 
+// Past the first message's 50-block outline.
+const LONG_DOC = Array.from({ length: 60 }, (_, i) => ({ id: `p${i}`, type: 'paragraph', data: { text: `Paragraph number ${i}` } }));
+
+const putCaretIn = (id: string): void => {
+  const textNode = document.querySelector(`[data-blok-id="${id}"] [data-blok-tool="paragraph"]`)?.firstChild ?? null;
+
+  if (textNode === null) {
+    throw new Error(`${id} has no editable text`);
+  }
+  const range = document.createRange();
+
+  range.setStart(textNode, 2);
+  range.collapse(true);
+  document.getSelection()?.removeAllRanges();
+  document.getSelection()?.addRange(range);
+};
+
 const createEditor = async (
   model: AgentModel | null,
   assistant: Partial<NonNullable<NonNullable<BlokConfig['agent']>['assistant']>> = {}
@@ -239,6 +256,71 @@ describe('editor.agent.ask', () => {
     run.end();
   });
 
+  it('reads the caret block by id when the document outline stops before it', async () => {
+    const model = scripted(answer('ok'));
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+
+    const editor = new Blok({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: LONG_DOC },
+      agent: { assistant: { model, name: 'Writer' } },
+    }) as unknown as TestEditor;
+
+    editors.push(editor);
+    await editor.isReady;
+    await settle();
+    putCaretIn('p55');
+
+    const run = editor.agent.ask('Fix this line');
+
+    await run.result;
+    const first = model.requests[0].messages[0].content;
+
+    expect(first).toEqual(expect.stringContaining('{"ids":["p55"]}'));
+    expect(first).toEqual(expect.stringContaining('Paragraph number 55'));
+    run.end();
+  });
+
+  it('reads the caret block the bar captured on open, after focus has moved to the bar', async () => {
+    const model = scripted(answer('ok'));
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+
+    const editor = new BootedEditor({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: LONG_DOC },
+      agent: { assistant: { model, name: 'Writer' } },
+    });
+
+    editors.push(editor as unknown as TestEditor);
+    await editor.isReady;
+    await settle();
+
+    const agentApi = editor.moduleGraph?.AgentAPI;
+
+    if (agentApi === undefined) {
+      throw new Error('The ready editor has no AgentAPI module.');
+    }
+    putCaretIn('p55');
+    const place = agentApi.describeUserPlace();
+
+    document.getSelection()?.removeAllRanges();
+
+    const run = agentApi.startRun('Fix this line', place, () => undefined);
+
+    await run.result;
+    const first = model.requests[0].messages[0].content;
+
+    expect(first).toEqual(expect.stringContaining('{"ids":["p55"]}'));
+    expect(first).toEqual(expect.stringContaining('caret is in block p55'));
+    run.end();
+  });
+
   it('throws a clear error when no assistant model is configured', async () => {
     const editor = await createEditor(null);
 
@@ -332,7 +414,7 @@ describe('editor.agent.ask', () => {
       throw new Error('The ready editor has no AgentAPI module.');
     }
 
-    const run = agentApi.startRun('First', '', () => pick.level);
+    const run = agentApi.startRun('First', { text: '', blockIds: [] }, () => pick.level);
 
     // The pick changes after the prompt is sent and again while the model is answering.
     pick.level = 'medium';

@@ -73,8 +73,8 @@ describe('the in-app editor reports every problem of a failed batch, like the st
         { type: 'column', id: 'colA', children: [{ type: 'header', id: 'hA', data: { level: 2 } }] },
         { type: 'column', id: 'colB', children: [{ type: 'header', id: 'hB', data: { level: 2 } }] },
       ] } },
-      { name: 'text.replace', args: { id: '$hA', with: 'Plan A' } },
-      { name: 'text.replace', args: { id: '$hB', with: 'Plan B' } },
+      { name: 'text.replace', args: { id: '$headA', with: 'Plan A' } },
+      { name: 'text.replace', args: { id: '$headB', with: 'Plan B' } },
       { name: 'block.insert', args: { type: 'code', data: { code: 'npm run build' } } },
     ] } as AgentBatch;
     const editor = await inEditor(batch);

@@ -52,6 +52,7 @@ const refProblems = (
   const declared: string[] = [];
   const created = new Set<string>();
   const problems: AgentProblem[] = [];
+  const everyRef = new Set(commands.flatMap(raw => !isRecord(raw) ? [] : [raw.ref, isRecord(raw.args) ? raw.args.ref : undefined]));
 
   commands.forEach((raw, index) => {
     if (!isRecord(raw) || !isRecord(raw.args)) {
@@ -65,6 +66,10 @@ const refProblems = (
       }
       const ref = value.slice(1);
 
+      // The planner reads it as block ref (PlanState.isBlockNotRef).
+      if (!everyRef.has(ref) && (created.has(ref) || isBlock(ref))) {
+        return;
+      }
       problems.push({
         code: 'BLOCK_NOT_FOUND',
         message: unresolvedRefMessage(ref, created.has(ref) || isBlock(ref), declared),

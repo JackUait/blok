@@ -74,12 +74,14 @@ describe('a failed batch reports every problem it can find', () => {
   });
 
   it('keeps the first planning error and adds the later ref mistakes and every bad block data', async () => {
-    const error = errorOf(await run(columnsBatch));
+    const error = errorOf(await run(columnsBatch.map(command => command.name === 'text.replace'
+      ? { ...command, args: { ...command.args, id: String(command.args.id).replace('$h', '$head') } }
+      : command)));
 
     expect(error).toMatchObject({
       code: 'BLOCK_NOT_FOUND', commandIndex: 2, path: '/commands/2/args/id',
     });
-    expect(error.message).toMatch(/^"\$hA" is not a ref, but block "hA" exists\. Use "hA" without the "\$"\./);
+    expect(error.message).toMatch(/^Ref "headA" was not set by an earlier command in this batch\./);
     const others = error.others ?? [];
 
     // A tool action's parentId is its own to read, so only text.replace's id is certain to fail.
@@ -94,6 +96,18 @@ describe('a failed batch reports every problem it can find', () => {
       expect.stringMatching(/^Block "hB": missing required field "text"/),
     ]);
     expect(rejected.every(other => other.commandIndex === 1)).toBe(true);
+  });
+
+  it('reads the "$id" slips as blocks, so only the bad block data is left', async () => {
+    const error = errorOf(await run(columnsBatch));
+
+    expect(error).toMatchObject({ code: 'DATA_REJECTED', commandIndex: 1, path: '/commands/1' });
+    expect(error.message).toMatch(/unknown field "columnCount".*"column_list"/);
+    // No BLOCK_NOT_FOUND for "$hA", "$hB", "$colA" or "$colB".
+    expect((error.others ?? []).map(other => other.message)).toEqual([
+      expect.stringMatching(/^Block "hA": missing required field "text"/),
+      expect.stringMatching(/^Block "hB": missing required field "text"/),
+    ]);
   });
 
   it('collects every data rejection when planning succeeds', async () => {
@@ -220,6 +234,47 @@ describe('a slip with one sure meaning runs as meant and warns', () => {
 
     expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', commandIndex: 0, field: 'ref' }] });
     expect(result.ok && result.refs.h).toEqual(expect.any(String));
+  });
+
+  it('reads "$id" as block id when no ref has that name and the block exists', async () => {
+    const result = await run([
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+      { name: 'text.format', args: { id: '$p1', range: 'all', set: { bold: true } } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, changed: { updated: ['p1'] } });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: 'CORRECTED', commandIndex: 0, message: '"$p1" is not a ref, but block "p1" exists, so it was used. Write "p1" without the "$".' }),
+      expect.objectContaining({ code: 'CORRECTED', commandIndex: 1 }),
+    ]);
+  });
+
+  it('reads "$id" as a block an earlier command made with that id', async () => {
+    const result = await run([
+      { name: 'block.insert', args: { type: 'paragraph', id: 'n1', data: { text: 'New' } } },
+      { name: 'text.replace', args: { id: '$n1', with: 'Newer' } },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, warnings: [{ code: 'CORRECTED', commandIndex: 1 }] });
+  });
+
+  it('still fails "$id" when a later command sets a ref of that name', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+      { name: 'block.insert', ref: 'p1', args: { type: 'paragraph' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0, path: '/commands/0/args/id' });
+  });
+
+  it('leaves a "$id" it can read as a block out of the extra problems', async () => {
+    const error = errorOf(await run([
+      { name: 'text.replace', args: { id: 'missing', with: 'x' } },
+      { name: 'text.replace', args: { id: '$p1', with: 'Hello' } },
+    ]));
+
+    expect(error).toMatchObject({ code: 'BLOCK_NOT_FOUND', commandIndex: 0 });
+    expect(error.others).toBeUndefined();
   });
 });
 

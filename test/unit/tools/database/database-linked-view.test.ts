@@ -425,6 +425,29 @@ describe('DatabaseTool — linked view, research 20 §2', () => {
     expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
   });
 
+  it('"Show data source title" off hides the "↗ source" title of that view only, and saves on the view', () => {
+    const doc = docWithSource();
+    const data = linkedData();
+
+    data.views.push({ id: 'lv2', name: 'Other', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: ['status'] });
+    buildDatabase(doc, 'db', sourceData());
+    const { tool, el } = buildDatabase(doc, 'linked', data);
+    const title = (): HTMLElement | null => el.querySelector<HTMLElement>('[data-blok-database-title]');
+
+    expect(title()?.hidden).toBe(false);
+    (tool as unknown as { controls: { openSettings: (a: HTMLElement, p: string) => void } }).controls.openSettings(el, 'root');
+    panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-layout"]')?.click();
+    panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-data-source-title"]')?.click();
+
+    expect(title()?.hidden).toBe(true);
+    expect(tool.save(document.createElement('div')).views.find((view) => view.id === 'lv')?.showDataSourceTitle).toBe(false);
+
+    el.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="lv2"]')?.click();
+    expect(title()?.hidden).toBe(false);
+    el.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="lv"]')?.click();
+    expect(title()?.hidden).toBe(true);
+  });
+
   it('the source keeps "Lock database"', () => {
     const doc = docWithSource();
     const { tool, el } = buildDatabase(doc, 'db', sourceData());

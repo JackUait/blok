@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "سمورو مواد ويڙهيو",
   "tools.database.settingsVerticalLines": "عمودي ليڪون ڏيکاريو",
   "tools.database.settingsShowPageIcon": "صفحي جو آئڪن ڏيکاريو",
+  "tools.database.settingsShowDataSourceTitle": "ڊيٽا ماخذ جو عنوان ڏيکاريو",
   "tools.database.settingsOpenPagesIn": "صفحا ڪٿي کولجن",
   "tools.database.settingsLoadLimit": "لوڊ جي حد",
   "tools.database.settingsLoadLimitPages": "{count} صفحا",

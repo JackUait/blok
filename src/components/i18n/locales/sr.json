@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Преломи сав садржај",
   "tools.database.settingsVerticalLines": "Прикажи вертикалне линије",
   "tools.database.settingsShowPageIcon": "Прикажи икону странице",
+  "tools.database.settingsShowDataSourceTitle": "Прикажи наслов извора података",
   "tools.database.settingsOpenPagesIn": "Отварај странице у",
   "tools.database.settingsLoadLimit": "Ограничење учитавања",
   "tools.database.settingsLoadLimitPages": "{count} страница",

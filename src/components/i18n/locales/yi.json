@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "אומוויקלען גאַנצן אינהאַלט",
   "tools.database.settingsVerticalLines": "ווײַזן ווערטיקאַלע ליניעס",
   "tools.database.settingsShowPageIcon": "ווײַזן בלאט־איקאָן",
+  "tools.database.settingsShowDataSourceTitle": "ווײַזן דעם טיטל פֿונעם דאַטן־מקור",
   "tools.database.settingsOpenPagesIn": "עפֿענען בלעטער אין",
   "tools.database.settingsLoadLimit": "לאָד־גרענעץ",
   "tools.database.settingsLoadLimitPages": "{count} בלעטער",

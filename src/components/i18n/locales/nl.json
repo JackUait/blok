@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Alle inhoud laten teruglopen",
   "tools.database.settingsVerticalLines": "Verticale lijnen tonen",
   "tools.database.settingsShowPageIcon": "Paginapictogram tonen",
+  "tools.database.settingsShowDataSourceTitle": "Titel van gegevensbron tonen",
   "tools.database.settingsOpenPagesIn": "Pagina's openen in",
   "tools.database.settingsLoadLimit": "Laadlimiet",
   "tools.database.settingsLoadLimitPages": "{count} pagina's",

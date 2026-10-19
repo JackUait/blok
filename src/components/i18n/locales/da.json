@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Ombryd alt indhold",
   "tools.database.settingsVerticalLines": "Vis lodrette linjer",
   "tools.database.settingsShowPageIcon": "Vis sideikon",
+  "tools.database.settingsShowDataSourceTitle": "Vis datakildens titel",
   "tools.database.settingsOpenPagesIn": "Åbn sider i",
   "tools.database.settingsLoadLimit": "Indlæsningsgrænse",
   "tools.database.settingsLoadLimitPages": "{count} sider",

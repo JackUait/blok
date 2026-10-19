@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "सबै सामग्री र्‍याप गर्नुहोस्",
   "tools.database.settingsVerticalLines": "ठाडो रेखाहरू देखाउनुहोस्",
   "tools.database.settingsShowPageIcon": "पृष्ठ आइकन देखाउनुहोस्",
+  "tools.database.settingsShowDataSourceTitle": "डेटा स्रोतको शीर्षक देखाउनुहोस्",
   "tools.database.settingsOpenPagesIn": "पृष्ठहरू यसमा खोल्नुहोस्",
   "tools.database.settingsLoadLimit": "लोड सीमा",
   "tools.database.settingsLoadLimitPages": "{count} पृष्ठ",

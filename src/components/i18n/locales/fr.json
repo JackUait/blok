@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Renvoyer tout le contenu à la ligne",
   "tools.database.settingsVerticalLines": "Afficher les lignes verticales",
   "tools.database.settingsShowPageIcon": "Afficher l’icône de page",
+  "tools.database.settingsShowDataSourceTitle": "Afficher le titre de la source de données",
   "tools.database.settingsOpenPagesIn": "Ouvrir les pages en",
   "tools.database.settingsLoadLimit": "Limite de chargement",
   "tools.database.settingsLoadLimitPages": "{count} pages",

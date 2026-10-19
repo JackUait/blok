@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Mbështill gjithë përmbajtjen",
   "tools.database.settingsVerticalLines": "Shfaq vijat vertikale",
   "tools.database.settingsShowPageIcon": "Shfaq ikonën e faqes",
+  "tools.database.settingsShowDataSourceTitle": "Shfaq titullin e burimit të të dhënave",
   "tools.database.settingsOpenPagesIn": "Hap faqet në",
   "tools.database.settingsLoadLimit": "Kufiri i ngarkimit",
   "tools.database.settingsLoadLimitPages": "{count} faqe",

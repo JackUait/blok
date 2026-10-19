@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "ټوله منځپانګه ونغاړئ",
   "tools.database.settingsVerticalLines": "عمودي کرښې وښایئ",
   "tools.database.settingsShowPageIcon": "د پاڼې آیکون وښایئ",
+  "tools.database.settingsShowDataSourceTitle": "د ډیټا سرچینې سرلیک وښایئ",
   "tools.database.settingsOpenPagesIn": "پاڼې پرانیستل په",
   "tools.database.settingsLoadLimit": "د بارولو حد",
   "tools.database.settingsLoadLimitPages": "{count} پاڼې",

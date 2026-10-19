@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "A capo automatico ovunque",
   "tools.database.settingsVerticalLines": "Mostra linee verticali",
   "tools.database.settingsShowPageIcon": "Mostra icona pagina",
+  "tools.database.settingsShowDataSourceTitle": "Mostra titolo dell’origine dati",
   "tools.database.settingsOpenPagesIn": "Apri le pagine in",
   "tools.database.settingsLoadLimit": "Limite di caricamento",
   "tools.database.settingsLoadLimitPages": "{count} pagine",

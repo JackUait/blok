@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "모든 내용 줄 바꿈",
   "tools.database.settingsVerticalLines": "세로선 표시",
   "tools.database.settingsShowPageIcon": "페이지 아이콘 표시",
+  "tools.database.settingsShowDataSourceTitle": "데이터 소스 제목 표시",
   "tools.database.settingsOpenPagesIn": "페이지 열기 방식",
   "tools.database.settingsLoadLimit": "불러오기 제한",
   "tools.database.settingsLoadLimitPages": "페이지 {count}개",

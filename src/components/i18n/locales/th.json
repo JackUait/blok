@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "ตัดบรรทัดเนื้อหาทั้งหมด",
   "tools.database.settingsVerticalLines": "แสดงเส้นแนวตั้ง",
   "tools.database.settingsShowPageIcon": "แสดงไอคอนหน้า",
+  "tools.database.settingsShowDataSourceTitle": "แสดงชื่อแหล่งข้อมูล",
   "tools.database.settingsOpenPagesIn": "เปิดหน้าใน",
   "tools.database.settingsLoadLimit": "จำนวนที่โหลด",
   "tools.database.settingsLoadLimitPages": "{count} หน้า",

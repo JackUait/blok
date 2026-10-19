@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Radbryt allt innehåll",
   "tools.database.settingsVerticalLines": "Visa lodräta linjer",
   "tools.database.settingsShowPageIcon": "Visa sidikon",
+  "tools.database.settingsShowDataSourceTitle": "Visa datakällans titel",
   "tools.database.settingsOpenPagesIn": "Öppna sidor i",
   "tools.database.settingsLoadLimit": "Inläsningsgräns",
   "tools.database.settingsLoadLimitPages": "{count} sidor",

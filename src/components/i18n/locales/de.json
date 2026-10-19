@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Gesamten Inhalt umbrechen",
   "tools.database.settingsVerticalLines": "Vertikale Linien anzeigen",
   "tools.database.settingsShowPageIcon": "Seitensymbol anzeigen",
+  "tools.database.settingsShowDataSourceTitle": "Titel der Datenquelle anzeigen",
   "tools.database.settingsOpenPagesIn": "Seiten öffnen in",
   "tools.database.settingsLoadLimit": "Ladelimit",
   "tools.database.settingsLoadLimitPages": "{count} Seiten",

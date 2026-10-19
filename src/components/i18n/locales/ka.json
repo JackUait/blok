@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "მთელი შიგთავსის გადატანა",
   "tools.database.settingsVerticalLines": "ვერტიკალური ხაზების ჩვენება",
   "tools.database.settingsShowPageIcon": "გვერდის ხატულის ჩვენება",
+  "tools.database.settingsShowDataSourceTitle": "მონაცემთა წყაროს სათაურის ჩვენება",
   "tools.database.settingsOpenPagesIn": "გვერდების გახსნის ადგილი",
   "tools.database.settingsLoadLimit": "ჩატვირთვის ლიმიტი",
   "tools.database.settingsLoadLimitPages": "{count} გვერდი",

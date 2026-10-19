@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Încadrează tot conținutul",
   "tools.database.settingsVerticalLines": "Afișează liniile verticale",
   "tools.database.settingsShowPageIcon": "Afișează pictograma paginii",
+  "tools.database.settingsShowDataSourceTitle": "Afișează titlul sursei de date",
   "tools.database.settingsOpenPagesIn": "Deschide paginile în",
   "tools.database.settingsLoadLimit": "Limită de încărcare",
   "tools.database.settingsLoadLimitPages": "Pagini: {count}",

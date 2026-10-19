@@ -794,7 +794,12 @@ export class DatabaseTool implements BlockTool {
   private paintLinkedTitle(): void {
     const titleEl = this.titleElement;
 
-    if (titleEl === null || !this.linked || this.source === undefined) return;
+    if (titleEl === null) return;
+    const saved = this.model.getView(this.activeViewId);
+
+    // "Show data source title" (research/20 §1f, R-2022-03-15). The title row stays: it can hold the add-view "+".
+    titleEl.hidden = this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false;
+    if (!this.linked || this.source === undefined) return;
     const missing = this.sourceMissing();
     const live = missing || this.source.documentId !== undefined ? undefined : this.databaseTitleOf(this.source.databaseId);
 

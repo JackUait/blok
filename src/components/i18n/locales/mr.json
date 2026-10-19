@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "सर्व मजकूर रॅप करा",
   "tools.database.settingsVerticalLines": "उभ्या रेषा दाखवा",
   "tools.database.settingsShowPageIcon": "पृष्ठ चिन्ह दाखवा",
+  "tools.database.settingsShowDataSourceTitle": "डेटा स्रोताचे शीर्षक दाखवा",
   "tools.database.settingsOpenPagesIn": "पृष्ठे कुठे उघडावी",
   "tools.database.settingsLoadLimit": "लोड मर्यादा",
   "tools.database.settingsLoadLimitPages": "{count} पृष्ठे",

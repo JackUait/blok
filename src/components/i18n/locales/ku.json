@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "پەچانەوەی هەموو ناوەڕۆک",
   "tools.database.settingsVerticalLines": "پیشاندانی هێڵە ستوونییەکان",
   "tools.database.settingsShowPageIcon": "پیشاندانی ئایکۆنی پەڕە",
+  "tools.database.settingsShowDataSourceTitle": "پیشاندانی ناونیشانی سەرچاوەی داتا",
   "tools.database.settingsOpenPagesIn": "کردنەوەی پەڕەکان لە",
   "tools.database.settingsLoadLimit": "سنووری بارکردن",
   "tools.database.settingsLoadLimitPages": "{count} پەڕە",

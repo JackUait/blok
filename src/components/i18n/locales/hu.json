@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Teljes tartalom tördelése",
   "tools.database.settingsVerticalLines": "Függőleges vonalak megjelenítése",
   "tools.database.settingsShowPageIcon": "Oldalikon megjelenítése",
+  "tools.database.settingsShowDataSourceTitle": "Adatforrás címének megjelenítése",
   "tools.database.settingsOpenPagesIn": "Oldalak megnyitása",
   "tools.database.settingsLoadLimit": "Betöltési korlát",
   "tools.database.settingsLoadLimitPages": "{count} oldal",

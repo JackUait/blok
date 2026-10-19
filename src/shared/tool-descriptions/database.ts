@@ -733,6 +733,7 @@ export const DATABASE_DATA = {
             },
           },
           showPageIcon: { type: 'boolean', description: 'Default true.' },
+          showDataSourceTitle: { type: 'boolean', description: 'Linked views only: show the source title. Default true.' },
           subItemsDisplay: {
             type: 'string',
             enum: ['nested', 'card', 'flattened'],

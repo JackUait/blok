@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "ຕັດແຖວເນື້ອຫາທັງໝົດ",
   "tools.database.settingsVerticalLines": "ສະແດງເສັ້ນຕັ້ງ",
   "tools.database.settingsShowPageIcon": "ສະແດງໄອຄອນໜ້າ",
+  "tools.database.settingsShowDataSourceTitle": "ສະແດງຊື່ແຫຼ່ງຂໍ້ມູນ",
   "tools.database.settingsOpenPagesIn": "ເປີດໜ້າໃນ",
   "tools.database.settingsLoadLimit": "ຈຳນວນທີ່ໂຫຼດ",
   "tools.database.settingsLoadLimitPages": "{count} ໜ້າ",

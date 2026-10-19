@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Murra kogu sisu",
   "tools.database.settingsVerticalLines": "Kuva vertikaalsed jooned",
   "tools.database.settingsShowPageIcon": "Kuva lehe ikoon",
+  "tools.database.settingsShowDataSourceTitle": "Kuva andmeallika pealkiri",
   "tools.database.settingsOpenPagesIn": "Ava lehed",
   "tools.database.settingsLoadLimit": "Laadimispiirang",
   "tools.database.settingsLoadLimitPages": "{count} lehte",

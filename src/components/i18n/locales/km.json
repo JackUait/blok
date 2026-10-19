@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "រុំខ្លឹមសារទាំងអស់",
   "tools.database.settingsVerticalLines": "បង្ហាញបន្ទាត់បញ្ឈរ",
   "tools.database.settingsShowPageIcon": "បង្ហាញរូបតំណាងទំព័រ",
+  "tools.database.settingsShowDataSourceTitle": "បង្ហាញចំណងជើងប្រភពទិន្នន័យ",
   "tools.database.settingsOpenPagesIn": "បើកទំព័រក្នុង",
   "tools.database.settingsLoadLimit": "ដែនកំណត់ផ្ទុក",
   "tools.database.settingsLoadLimitPages": "{count} ទំព័រ",

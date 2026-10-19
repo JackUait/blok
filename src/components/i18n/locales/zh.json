@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "所有内容自动换行",
   "tools.database.settingsVerticalLines": "显示竖线",
   "tools.database.settingsShowPageIcon": "显示页面图标",
+  "tools.database.settingsShowDataSourceTitle": "显示数据源标题",
   "tools.database.settingsOpenPagesIn": "页面打开方式",
   "tools.database.settingsLoadLimit": "加载上限",
   "tools.database.settingsLoadLimitPages": "{count} 个页面",

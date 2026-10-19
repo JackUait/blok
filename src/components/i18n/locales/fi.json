@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Rivitä kaikki sisältö",
   "tools.database.settingsVerticalLines": "Näytä pystyviivat",
   "tools.database.settingsShowPageIcon": "Näytä sivun kuvake",
+  "tools.database.settingsShowDataSourceTitle": "Näytä tietolähteen otsikko",
   "tools.database.settingsOpenPagesIn": "Avaa sivut",
   "tools.database.settingsLoadLimit": "Latausraja",
   "tools.database.settingsLoadLimitPages": "{count} sivua",

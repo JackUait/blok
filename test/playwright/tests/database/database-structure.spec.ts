@@ -387,6 +387,27 @@ test.describe('linked view, research 20', () => {
     expect(((await savedRow(page, 'db-1')).schema as Array<{ type: string; databaseLocked?: boolean }>).find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
   });
 
+  test('"Show data source title" off hides the "↗ Tasks" title, keeps the add-view "+", and saves on the view', async ({ page }) => {
+    await mount(page, [...source(), linkedBlock()]);
+    const link = page.getByRole('link', { name: 'Tasks' });
+
+    await expect(link).toBeVisible();
+    await page.getByTestId('database-toolbar-settings').nth(1).click();
+    const settings = page.getByTestId('database-view-settings');
+
+    await settings.getByTestId('database-settings-layout').click();
+    const toggle = settings.getByRole('switch', { name: 'Show data source title' });
+
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+
+    await expect(link).toBeHidden();
+    await expect(page.locator('[data-blok-database-add-view]').nth(1)).toBeAttached();
+    await expect.poll(async () => ((await savedRow(page, 'linked-1')).views as Array<{ showDataSourceTitle?: boolean }>)[0].showDataSourceTitle).toBe(false);
+    // The source's own title stays.
+    await expect(page.locator('[data-blok-database-title][contenteditable="true"]')).toBeVisible();
+  });
+
   test('the add-view menu of a linked view has no Form', async ({ page }) => {
     await mount(page, [...source(), linkedBlock()]);
     await page.locator('[data-blok-database-add-view]').nth(1).click({ force: true });

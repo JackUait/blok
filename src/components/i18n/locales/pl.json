@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Zawijaj całą zawartość",
   "tools.database.settingsVerticalLines": "Pokaż linie pionowe",
   "tools.database.settingsShowPageIcon": "Pokaż ikonę strony",
+  "tools.database.settingsShowDataSourceTitle": "Pokaż tytuł źródła danych",
   "tools.database.settingsOpenPagesIn": "Otwieraj strony w",
   "tools.database.settingsLoadLimit": "Limit wczytywania",
   "tools.database.settingsLoadLimitPages": "{count} stron",

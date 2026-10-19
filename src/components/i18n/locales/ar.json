@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "التفاف كل المحتوى",
   "tools.database.settingsVerticalLines": "إظهار الخطوط العمودية",
   "tools.database.settingsShowPageIcon": "إظهار أيقونة الصفحة",
+  "tools.database.settingsShowDataSourceTitle": "إظهار عنوان مصدر البيانات",
   "tools.database.settingsOpenPagesIn": "فتح الصفحات في",
   "tools.database.settingsLoadLimit": "حد التحميل",
   "tools.database.settingsLoadLimitPages": "{count} صفحة",

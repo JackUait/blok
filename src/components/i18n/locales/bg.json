@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Пренасяй цялото съдържание",
   "tools.database.settingsVerticalLines": "Показвай вертикални линии",
   "tools.database.settingsShowPageIcon": "Показвай иконата на страницата",
+  "tools.database.settingsShowDataSourceTitle": "Показвай заглавието на източника на данни",
   "tools.database.settingsOpenPagesIn": "Отваряй страниците в",
   "tools.database.settingsLoadLimit": "Лимит на зареждане",
   "tools.database.settingsLoadLimitPages": "{count} страници",

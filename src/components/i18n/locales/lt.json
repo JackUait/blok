@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Laužyti visą turinį",
   "tools.database.settingsVerticalLines": "Rodyti vertikalias linijas",
   "tools.database.settingsShowPageIcon": "Rodyti puslapio piktogramą",
+  "tools.database.settingsShowDataSourceTitle": "Rodyti duomenų šaltinio pavadinimą",
   "tools.database.settingsOpenPagesIn": "Atidaryti puslapius",
   "tools.database.settingsLoadLimit": "Įkėlimo riba",
   "tools.database.settingsLoadLimitPages": "Puslapių: {count}",

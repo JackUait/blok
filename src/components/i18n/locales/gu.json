@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "બધી સામગ્રી વાળો",
   "tools.database.settingsVerticalLines": "ઊભી રેખાઓ બતાવો",
   "tools.database.settingsShowPageIcon": "પૃષ્ઠ આઇકન બતાવો",
+  "tools.database.settingsShowDataSourceTitle": "ડેટા સ્રોતનું શીર્ષક બતાવો",
   "tools.database.settingsOpenPagesIn": "પૃષ્ઠો આમાં ખોલો",
   "tools.database.settingsLoadLimit": "લોડ મર્યાદા",
   "tools.database.settingsLoadLimitPages": "{count} પૃષ્ઠો",

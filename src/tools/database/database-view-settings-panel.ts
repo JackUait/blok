@@ -605,6 +605,16 @@ export class ViewSettingsPages {
             panel.refresh();
           },
         }));
+        // Linked views only: a database that holds its rows shows its own title (R-2022-03-15).
+        const sourceTitle = this.ctx.linked?.() === true
+          ? [panelSwitch({
+            label: this.t('settingsShowDataSourceTitle'),
+            testId: 'database-settings-data-source-title',
+            checked: view.showDataSourceTitle !== false,
+            disabled: !this.shared,
+            onToggle: (next) => this.ctx.updateView({ showDataSourceTitle: next }),
+          })]
+          : [];
         const pageIcon = panelSwitch({
           label: this.t('settingsShowPageIcon'),
           testId: 'database-settings-page-icon',
@@ -632,6 +642,7 @@ export class ViewSettingsPages {
           return [
             ...tiles,
             panelSeparator(),
+            ...sourceTitle,
             pageIcon,
             panelRow({
               label: this.t('settingsMapBy'),
@@ -668,6 +679,7 @@ export class ViewSettingsPages {
         return [
           ...tiles,
           panelSeparator(),
+          ...sourceTitle,
           openPages,
           loadLimit,
           ...switches,

@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "ሁሉንም ይዘት ጠቅልል",
   "tools.database.settingsVerticalLines": "ቋሚ መስመሮችን አሳይ",
   "tools.database.settingsShowPageIcon": "የገጽ አዶ አሳይ",
+  "tools.database.settingsShowDataSourceTitle": "የውሂብ ምንጭ ርዕስ አሳይ",
   "tools.database.settingsOpenPagesIn": "ገጾች የሚከፈቱበት",
   "tools.database.settingsLoadLimit": "የመጫን ገደብ",
   "tools.database.settingsLoadLimitPages": "{count} ገጾች",

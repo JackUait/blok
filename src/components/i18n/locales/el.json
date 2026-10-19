@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Αναδίπλωση όλου του περιεχομένου",
   "tools.database.settingsVerticalLines": "Εμφάνιση κάθετων γραμμών",
   "tools.database.settingsShowPageIcon": "Εμφάνιση εικονιδίου σελίδας",
+  "tools.database.settingsShowDataSourceTitle": "Εμφάνιση τίτλου πηγής δεδομένων",
   "tools.database.settingsOpenPagesIn": "Άνοιγμα σελίδων σε",
   "tools.database.settingsLoadLimit": "Όριο φόρτωσης",
   "tools.database.settingsLoadLimitPages": "{count} σελίδες",

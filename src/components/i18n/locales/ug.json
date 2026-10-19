@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "بارلىق مەزمۇننى ئوراش",
   "tools.database.settingsVerticalLines": "تىك سىزىقلارنى كۆرسىتىش",
   "tools.database.settingsShowPageIcon": "بەت سىنبەلگىسىنى كۆرسىتىش",
+  "tools.database.settingsShowDataSourceTitle": "سانلىق مەلۇمات مەنبەسىنىڭ ماۋزۇسىنى كۆرسىتىش",
   "tools.database.settingsOpenPagesIn": "بەتلەرنى ئېچىش ئورنى",
   "tools.database.settingsLoadLimit": "يۈكلەش چېكى",
   "tools.database.settingsLoadLimitPages": "{count} بەت",

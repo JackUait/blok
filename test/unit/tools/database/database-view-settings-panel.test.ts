@@ -191,6 +191,41 @@ describe('view settings panel', () => {
     expect(text).toContain('tools.database.openPagesSideDescriptiontools.database.openPagesDefaultFor');
   });
 
+  describe('"Show data source title" on a linked view (research/20 §1f, §2b; R-2022-03-15)', () => {
+    /** Test ids of the Layout page rows after the layout tiles, top to bottom. */
+    const rowsAfterTiles = (): string[] => {
+      const ids = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] [data-blok-testid^="database-"]')]
+        .map((el) => el.getAttribute('data-blok-testid') ?? '')
+        .filter((id) => id.startsWith('database-settings-') || id.startsWith('database-layout-'));
+
+      const lastTile = ids.map((id) => id.startsWith('database-layout-')).lastIndexOf(true);
+
+      return ids.slice(lastTile + 1);
+    };
+
+    it.each(['table', 'map'] as const)('is the first row after the tiles on a linked %s, on by default, and turns off', (type) => {
+      const h = harness({ type });
+
+      h.ctx.linked = () => true;
+      h.open();
+      click('database-settings-layout');
+
+      expect(rowsAfterTiles()[0]).toBe('database-settings-data-source-title');
+      expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.getAttribute('aria-checked')).toBe('true');
+      click('database-settings-data-source-title');
+      expect(h.ctx.updateView).toHaveBeenCalledWith({ showDataSourceTitle: false });
+    });
+
+    it('is not offered on a database that holds its own rows', () => {
+      const h = harness();
+
+      h.open();
+      click('database-settings-layout');
+
+      expect(exists('database-settings-data-source-title')).toBe(false);
+    });
+  });
+
   it('sets the load limit, where pages open, and the layout switches', () => {
     const h = harness();
 

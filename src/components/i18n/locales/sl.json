@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Prelomi vso vsebino",
   "tools.database.settingsVerticalLines": "Prikaži navpične črte",
   "tools.database.settingsShowPageIcon": "Prikaži ikono strani",
+  "tools.database.settingsShowDataSourceTitle": "Prikaži naslov vira podatkov",
   "tools.database.settingsOpenPagesIn": "Odpiraj strani v",
   "tools.database.settingsLoadLimit": "Omejitev nalaganja",
   "tools.database.settingsLoadLimitPages": "{count} strani",

@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "మొత్తం కంటెంట్‌ను చుట్టు",
   "tools.database.settingsVerticalLines": "నిలువు గీతలను చూపు",
   "tools.database.settingsShowPageIcon": "పేజీ చిహ్నాన్ని చూపు",
+  "tools.database.settingsShowDataSourceTitle": "డేటా మూలం శీర్షికను చూపు",
   "tools.database.settingsOpenPagesIn": "పేజీలు తెరుచుకునే చోటు",
   "tools.database.settingsLoadLimit": "లోడ్ పరిమితి",
   "tools.database.settingsLoadLimitPages": "{count} పేజీలు",

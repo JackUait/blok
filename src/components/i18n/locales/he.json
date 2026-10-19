@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "גלישת כל התוכן",
   "tools.database.settingsVerticalLines": "הצג קווים אנכיים",
   "tools.database.settingsShowPageIcon": "הצג סמל דף",
+  "tools.database.settingsShowDataSourceTitle": "הצג את כותרת מקור הנתונים",
   "tools.database.settingsOpenPagesIn": "פתח דפים ב",
   "tools.database.settingsLoadLimit": "מגבלת טעינה",
   "tools.database.settingsLoadLimitPages": "{count} דפים",

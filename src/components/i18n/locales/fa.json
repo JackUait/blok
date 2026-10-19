@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "شکستن همه محتوا",
   "tools.database.settingsVerticalLines": "نمایش خطوط عمودی",
   "tools.database.settingsShowPageIcon": "نمایش نماد صفحه",
+  "tools.database.settingsShowDataSourceTitle": "نمایش عنوان منبع داده",
   "tools.database.settingsOpenPagesIn": "باز کردن صفحه‌ها در",
   "tools.database.settingsLoadLimit": "محدودیت بارگیری",
   "tools.database.settingsLoadLimitPages": "{count} صفحه",

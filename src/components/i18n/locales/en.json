@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Wrap all content",
   "tools.database.settingsVerticalLines": "Show vertical lines",
   "tools.database.settingsShowPageIcon": "Show page icon",
+  "tools.database.settingsShowDataSourceTitle": "Show data source title",
   "tools.database.settingsOpenPagesIn": "Open pages in",
   "tools.database.settingsLoadLimit": "Load limit",
   "tools.database.settingsLoadLimitPages": "{count} pages",

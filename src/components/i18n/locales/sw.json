@@ -1067,6 +1067,7 @@
   "tools.database.settingsWrapAll": "Kunja maudhui yote",
   "tools.database.settingsVerticalLines": "Onyesha mistari wima",
   "tools.database.settingsShowPageIcon": "Onyesha aikoni ya ukurasa",
+  "tools.database.settingsShowDataSourceTitle": "Onyesha kichwa cha chanzo cha data",
   "tools.database.settingsOpenPagesIn": "Fungua kurasa kwenye",
   "tools.database.settingsLoadLimit": "Kikomo cha kupakia",
   "tools.database.settingsLoadLimitPages": "Kurasa {count}",

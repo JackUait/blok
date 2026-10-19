@@ -192,3 +192,25 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(buttons).not.toContain('opacity: 0');
   });
 });
+
+describe('row page tab bar "N more…" (research/13 §3a)', () => {
+  // A shrunk tab would wrap its name and measure narrower than it reads.
+  it('keeps every tab on one line at its own width, so the fit measures what shows', () => {
+    const body = ruleBody('[data-blok-database-drawer-tabs] > [role="tablist"] > [role="tab"]');
+
+    expect(body).toContain('flex: none');
+    expect(body).toContain('white-space: nowrap');
+  });
+
+  it('hides a tab that moved into the list', () => {
+    expect(ruleBody('[data-blok-database-drawer-tabs] [role="tab"][hidden]')).toContain('display: none');
+  });
+
+  it('draws its "N more…" as a bare control that never shrinks', () => {
+    const body = ruleBody('[data-blok-database-drawer-tabs] > [data-blok-database-tab-more]');
+
+    expect(body).toContain('flex: none');
+    expect(body).toContain('border: none');
+    expect(body).toContain('background: none');
+  });
+});

@@ -859,6 +859,53 @@ test.describe('row page layout', () => {
     await expect(peek(page).getByRole('tab', { name: 'Roadmap' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  // research/13 §3a: view tabs that do not fit collapse into "N more…", a searchable list of every tab.
+  test('moves the row page tabs that do not fit into "N more…", whose list switches tabs', async ({ page }) => {
+    const names = Array.from({ length: 10 }, (_, i) => `Roadmap view ${i + 1}`);
+    const data = blocks({ pageLayoutStructure: 'tabbed', pageLayoutTabsId: 'lt' });
+
+    (data[0] as { content: string[] }).content.push('lt');
+    data.push(
+      { id: 'lt', type: 'tabs', parent: 'db-1', data: {}, content: ['tc', ...names.map((_, i) => `tv${i}`)] },
+      { id: 'tc', type: 'tab', parent: 'lt', data: { title: '' } },
+      ...names.flatMap((name, i): OutputBlockData[] => [
+        { id: `tv${i}`, type: 'tab', parent: 'lt', data: { title: name }, content: [`lv${i}`] },
+        {
+          id: `lv${i}`,
+          type: 'database',
+          parent: `tv${i}`,
+          data: {
+            title: '',
+            schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+            views: [{ id: `lvv${i}`, name, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+            activeViewId: `lvv${i}`,
+            source: { databaseId: 'db-1' },
+          },
+        },
+      ]),
+    );
+    await mount(page, data);
+    const row = page.locator('[data-blok-database-table-row][data-row-id="r2"]').filter({ visible: true });
+
+    await row.hover();
+    await row.locator('[data-blok-database-table-open]').click();
+
+    const more = peek(page).getByRole('button', { name: /^\d+ more…$/ });
+
+    await expect(more).toBeVisible();
+    await expect(peek(page).getByRole('tab', { name: 'Roadmap view 10' })).toBeHidden();
+
+    await more.click();
+    await expect(page.getByPlaceholder('Search for a view...')).toBeFocused();
+    await page.getByPlaceholder('Search for a view...').fill('view 10');
+    await page.getByText('Roadmap view 10', { exact: true }).filter({ visible: true }).click();
+
+    await expect(page.getByPlaceholder('Search for a view...')).toHaveCount(0);
+    // The lent tabs block keeps its own (hidden) pills, so look in the row page's bar.
+    await expect(peek(page).locator('[data-blok-database-drawer-tabs]').getByRole('tab', { name: 'Roadmap view 10', includeHidden: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(peek(page)).toBeVisible();
+  });
+
   // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.
   // research/13 §1b-1c: a relation is a one-click tab of the related database, filtered to the row page shown.
   test('adds a Related to tab that lists each row page\'s own related rows', async ({ page }) => {

@@ -7005,6 +7005,27 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   opacity: 1;
 }
 
+[data-blok-database-drawer-tabs] [role="tab"][hidden] {
+  display: none;
+}
+
+[data-blok-database-drawer-tabs] > [role="tablist"] > [role="tab"] {
+  flex: none;
+  white-space: nowrap;
+}
+
+[data-blok-database-drawer-tabs] > [data-blok-database-tab-more] {
+  flex: none;
+  align-self: center;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+[data-blok-database-drawer-tabs] > [data-blok-database-tab-more]:hover, [data-blok-database-drawer-tabs] > [data-blok-database-tab-more][aria-expanded="true"] {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
 [data-blok-database-drawer-tabs] > [role="tablist"] {
   display: flex;
   gap: var(--blok-space-1);

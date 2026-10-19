@@ -3518,6 +3518,29 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 @media (hover: none) { [data-blok-database-layout-add-tab] { opacity: 1; } }
 
+/* Moved into the "N more…" list (research/13 §3a). */
+[data-blok-database-drawer-tabs] [role="tab"][hidden] {
+  display: none;
+}
+
+[data-blok-database-drawer-tabs] > [role="tablist"] > [role="tab"] {
+  flex: none;
+  white-space: nowrap;
+}
+
+[data-blok-database-drawer-tabs] > [data-blok-database-tab-more] {
+  flex: none;
+  align-self: center;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+[data-blok-database-drawer-tabs] > [data-blok-database-tab-more]:hover,
+[data-blok-database-drawer-tabs] > [data-blok-database-tab-more][aria-expanded="true"] {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
 [data-blok-database-drawer-tabs] > [role="tablist"] {
   display: flex;
   gap: var(--blok-space-1);

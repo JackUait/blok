@@ -93,6 +93,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/leave-banner.ts': 'Modal banner pinned to the top centre of the viewport by fixed CSS classes; no live element anchor, JS coordinates or collision calculation.',
   'components/utils/link-hover-card.ts': 'Tracked fixed root surface registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/notifier/index.ts': 'Viewport toast region with no live element anchor or collision calculation.',
+  'components/utils/overflow-list.ts': 'Shared anchored "N more…" list registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/popover/popover-abstract.ts': 'Root mount primitive whose desktop subclass owns positioning and tracking.',
   'components/utils/popover/popover-desktop.ts': 'Shared root implementation registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/tooltip.ts': 'Dismiss-on-scroll fixed surface registered in ROOT_SURFACE_CONTRACTS.',
@@ -106,7 +107,6 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-property-menu.ts': 'Mount owner for the tracked emoji-picker root surface (property icon).',
   'tools/database/database-card-drawer.ts': 'Mount owner for the tracked emoji-picker root surface (row page icon).',
   'tools/database/index.ts': 'Mount owner for the tracked emoji-picker root surface (feed reactions).',
-  'tools/database/database-tab-bar.ts': 'Shared anchored overflow menu plus a tracked drag ghost and popover consumer.',
   'tools/image/darkroom/motion.ts': 'Fixed fly-out clone springs once from the frame to the measured block box, then is removed.',
   'tools/image/download.ts': 'Transient styleless download anchor clicked and removed synchronously.',
   'tools/image/tone-sampler.ts': 'Synchronous zero-size probe that reads the root Canvas colour, removed before control returns.',
@@ -150,7 +150,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-list-row-drag.ts': 'Fixed pointer-following row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-table-column-drag.ts': 'Fixed pointer-following table header ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-table-row-drag.ts': 'Fixed pointer-following table row ghost refreshes coordinates on every drag pointer move.',
-  'tools/database/database-tab-bar.ts': 'Overflow menu uses shared fixed placement; its separate ghost follows pointer movement.',
+  'tools/database/database-tab-bar.ts': 'The tab drag ghost follows pointer movement; the overflow list lives in overflow-list.ts.',
   'tools/spacer/alignment-guide.ts': 'Fixed alignment guide receives fresh viewport coordinates throughout pointer dragging.',
   'tools/table/table-add-controls.ts': 'Add controls convert measured table geometry into offsets local to the table wrapper.',
   'tools/table/table-cell-selection.ts': 'Selection overlay and pill convert cell rects into the table grid local coordinate space.',
@@ -181,10 +181,10 @@ const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
 
 const SHARED_POSITION_CALL_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/anchored-position.ts': 'Defines the shared document and fixed coordinate-space placement adapters.',
+  'components/utils/overflow-list.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'components/utils/popover/popover-desktop.ts': 'Uses shared boundary resolution and position tracking for root popovers.',
   'tools/audio/cover-picker.ts': 'Uses shared absolute anchored placement and continuous position tracking.',
   'tools/database/database-property-type-popover.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
-  'tools/database/database-tab-bar.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/image/alt-popover.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/image/darkroom/markup-panel.ts': 'Shape picker uses shared fixed placement above its rail button and a position tracker while open.',
   'tools/page/hover-preview.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
@@ -202,12 +202,12 @@ type SurfaceContract = 'shared' | 'popover-core' | 'tracked-manual' | 'dismiss-o
 
 const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
   'components/utils/link-hover-card.ts': 'tracked-manual',
+  'components/utils/overflow-list.ts': 'shared',
   'components/utils/popover/popover-desktop.ts': 'popover-core',
   'components/utils/tooltip.ts': 'dismiss-on-scroll',
   'tools/audio/cover-picker.ts': 'shared',
   'tools/callout/emoji-picker/index.ts': 'tracked-manual',
   'tools/database/database-property-type-popover.ts': 'shared',
-  'tools/database/database-tab-bar.ts': 'shared',
   'tools/image/alt-popover.ts': 'shared',
   'tools/page/hover-preview.ts': 'shared',
 };

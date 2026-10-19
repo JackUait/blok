@@ -45,6 +45,7 @@ import {
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
+import { OverflowList } from '../../components/utils/overflow-list';
 import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
@@ -442,6 +443,9 @@ export class DatabaseCardDrawer {
   private builder: PageLayoutBuilder | null = null;
   /** Watches the pins scroller for overflow. Replaced on every redraw. */
   private pinsObserver: ResizeObserver | null = null;
+  /** Fits the tab bar into its width. Replaced on every redraw. */
+  private tabsObserver: ResizeObserver | null = null;
+  private tabsOverflow: OverflowList | null = null;
   /** The resolved layout's "Property icons", read while drawing property rows. */
   private propertyIcons = true;
   /** The layout's "Property labels". Off drops the pins' labels (research/10 §4). */
@@ -768,6 +772,11 @@ export class DatabaseCardDrawer {
        * close the drawer before switchView() runs.
        */
       if (target instanceof Element && target.closest('[data-blok-database-tab-bar]') !== null) {
+        return;
+      }
+
+      // The tab bar's "N more…" list mounts on body too.
+      if (target !== null && this.tabsOverflow?.contains(target) === true) {
         return;
       }
 
@@ -2272,6 +2281,11 @@ export class DatabaseCardDrawer {
     if (editable) {
       bar.appendChild(builder.addTabButton(this.builderTabs()));
     }
+    if (typeof ResizeObserver !== 'undefined') {
+      this.tabsObserver?.disconnect();
+      this.tabsObserver = new ResizeObserver(() => this.fitTabs(bar, list, editable));
+      this.tabsObserver.observe(bar);
+    }
 
     return bar;
   }
@@ -2413,6 +2427,98 @@ export class DatabaseCardDrawer {
   private stopWatchingPins(): void {
     this.pinsObserver?.disconnect();
     this.pinsObserver = null;
+    this.tabsObserver?.disconnect();
+    this.tabsObserver = null;
+    this.tabsOverflow?.close();
+  }
+
+  /**
+   * research/13 §3a: tabs that do not fit leave the bar for a "N more…"
+   * list. As in the database view tabs, the trailing ones go.
+   */
+  private fitTabs(bar: HTMLElement, list: HTMLElement, editable: boolean): void {
+    const all = [...list.querySelectorAll<HTMLElement>('[role="tab"]')];
+
+    all.forEach((tab) => tab.toggleAttribute('hidden', false));
+    bar.querySelector('[data-blok-database-tab-more]')?.remove();
+
+    const width = bar.clientWidth;
+    const px = (value: string): number => Number.parseFloat(value) || 0;
+    const barGap = px(getComputedStyle(bar).columnGap);
+    const gap = px(getComputedStyle(list).columnGap);
+    const add = bar.querySelector<HTMLElement>('[data-blok-database-layout-add-tab]');
+    const reserved = add === null ? 0 : add.offsetWidth + barGap;
+    const widths = all.map((tab) => tab.offsetWidth);
+    const span = (count: number): number => widths.slice(0, count).reduce((sum, w) => sum + w, 0) + gap * Math.max(0, count - 1);
+
+    // Zero: a bar that mounts hidden measures nothing yet.
+    if (width === 0 || reserved + span(all.length) <= width) {
+      return;
+    }
+
+    const more = document.createElement('button');
+
+    more.type = 'button';
+    more.setAttribute('data-blok-database-tab-more', '');
+    more.setAttribute('aria-haspopup', 'dialog');
+    // Measured with the widest count it can show.
+    more.textContent = this.label('tools.database.moreViews').replace('{count}', () => String(all.length));
+    list.after(more);
+
+    const budget = width - reserved - more.offsetWidth - barGap;
+    const kept = widths.filter((_, index) => span(index + 1) <= budget).length;
+
+    all.slice(kept).forEach((tab) => tab.toggleAttribute('hidden', true));
+    more.textContent = this.label('tools.database.moreViews').replace('{count}', () => String(all.length - kept));
+    more.addEventListener('click', () => {
+      if (this.tabsOverflow === null) {
+        this.openTabsOverflow(more, all, editable);
+      } else {
+        this.tabsOverflow.close();
+      }
+    });
+  }
+
+  /** On a row page the rows only switch tabs (research/13 §3b): no rename, duplicate or delete there. */
+  private openTabsOverflow(anchor: HTMLElement, tabs: HTMLElement[], editable: boolean): void {
+    const builder = this.builder;
+    const add = anchor.parentElement?.querySelector<HTMLElement>('[data-blok-database-layout-add-tab]') ?? null;
+    const titles = new Map(tabs.map((tab) => [tab.getAttribute('data-tab-id') ?? '', tab.textContent ?? '']));
+    const overflow: OverflowList = new OverflowList({
+      anchor,
+      prefix: 'data-blok-database-tab-overflow',
+      idAttribute: 'data-view-id',
+      rows: [...titles].map(([id, name]) => ({ id, name, icon: { text: '' }, active: id === this.shownTab })),
+      labels: {
+        search: this.label('tools.database.searchViews'),
+        handle: this.label('tools.database.settingsDragToReorder'),
+        menu: this.label('tools.database.tableMoreActions'),
+        newItem: this.label('tools.database.newView'),
+      },
+      readOnly: !editable || builder === null,
+      onSelect: (id) => {
+        if (id === this.shownTab) return;
+        this.activeTab = id;
+        this.rerender();
+      },
+      // The tab is hidden, so its menu hangs from "N more…".
+      onMenu: (_button, id) => {
+        overflow.close();
+        builder?.openTabMenu(anchor, { id, title: titles.get(id) ?? '', content: id === 'content' }, this.builderTabs());
+      },
+      ...(add === null ? {} : { onNew: () => add.click() }),
+      ownsNode: () => false,
+      closeLayer: () => false,
+      ownsEscape: () => false,
+      onClose: () => {
+        anchor.removeAttribute('aria-expanded');
+        if (this.tabsOverflow === overflow) this.tabsOverflow = null;
+      },
+    });
+
+    this.tabsOverflow = overflow;
+    anchor.setAttribute('aria-expanded', 'true');
+    overflow.open();
   }
 
   /** Pins in the heading, or single-property modules in the page or the panel. */

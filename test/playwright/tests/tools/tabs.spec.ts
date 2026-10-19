@@ -274,6 +274,29 @@ test.describe('Tabs tool', () => {
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toHaveCount(0);
   });
 
+  test('a plain tabs block that does not fit scrolls, with no "more" button', async ({ page }) => {
+    const names = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta'];
+
+    await createBlok(page, [
+      { id: 'tabs1', type: 'tabs', data: {}, content: names.map((_, i) => `t${i}`) },
+      ...names.flatMap((name, i): Blocks => [
+        { id: `t${i}`, type: 'tab', data: { title: name }, parent: 'tabs1', content: [`p${i}`] },
+        { id: `p${i}`, type: 'paragraph', data: { text: `${name} body` }, parent: `t${i}` },
+      ]),
+    ]);
+    await page.evaluate((holder) => {
+      document.getElementById(holder)?.style.setProperty('width', '420px');
+    }, HOLDER_ID);
+
+    const tablist = page.getByRole('tablist');
+
+    await expect(tablist).toHaveAttribute('data-overflow-end', '');
+    await expect(page.getByRole('button', { name: /more…$/ })).toHaveCount(0);
+    await tab(page, 'Theta').click();
+    await expect(tab(page, 'Theta')).toBeInViewport();
+    await expect(tab(page, 'Theta')).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('find-in-page opens the tab that holds a hidden match', async ({ page }) => {
     await createBlok(page, [
       { id: 'tabs1', type: 'tabs', data: {}, content: ['t1', 't2'] },

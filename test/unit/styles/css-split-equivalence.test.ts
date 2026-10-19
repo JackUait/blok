@@ -869,6 +869,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GALLERY_CARD_ACTIONS_BYTES = 163;
     // database.css: the list row's ⋮⋮ gutter and its gray fill while the row menu is up (research/12 §3).
     const DATABASE_LIST_ROW_HANDLE_BYTES = 1_050;
+    // database.css: a filled autofill cell's Autofill joins the Comment/Copy pill (research/12 §2).
+    const DATABASE_AUTOFILL_CELL_PILL_BYTES = 567;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -974,7 +976,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_LINKED_VIEW_BYTES
       + DATABASE_GALLERY_CARD_ACTIONS_BYTES
       + DATABASE_LIST_ROW_HANDLE_BYTES
-      + DATABASE_FORM_QUESTION_NAME_CLASH_BYTES;
+      + DATABASE_FORM_QUESTION_NAME_CLASH_BYTES
+      + DATABASE_AUTOFILL_CELL_PILL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

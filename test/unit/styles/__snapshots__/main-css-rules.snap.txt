@@ -8805,6 +8805,18 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   color: var(--blok-text-secondary);
 }
 
+[data-blok-database-table-cell-actions] > [data-blok-database-table-autofill] {
+  position: static;
+  display: inline-flex;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+[data-blok-database-table-cell][data-blok-database-table-cell-anchor] > [data-blok-database-table-cell-actions="autofill"] {
+  display: flex;
+}
+
 [data-blok-database-table-autofill-open] {
   display: inline-flex;
   flex: none;

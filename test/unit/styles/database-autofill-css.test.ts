@@ -50,6 +50,23 @@ describe('AI Autofill setup css', () => {
       .toContain('display: inline-flex');
   });
 
+  // research/12 §2: on a filled cell Autofill sits first in the Comment/Copy pill, not in the corner.
+  it('lays the in-pill Autofill button out like the pill\'s other buttons', () => {
+    const inPill = rulesFor('[data-blok-database-table-cell-actions] > [data-blok-database-table-autofill]').join(' ');
+
+    expect(inPill).toContain('position: static');
+    expect(inPill).toContain('display: inline-flex');
+    expect(inPill).toContain('box-shadow: none');
+    expect(inPill).toContain('background-color: transparent');
+    expect(inPill).not.toMatch(/blue|--blok-link|--blok-focus/);
+  });
+
+  // Mod+Enter presses that Autofill button, so the keyboard-selected cell must show it.
+  it('shows the autofill cell\'s pill on the keyboard-selected cell too', () => {
+    expect(rulesFor('[data-blok-database-table-cell][data-blok-database-table-cell-anchor] > [data-blok-database-table-cell-actions="autofill"]').join(' '))
+      .toContain('display: flex');
+  });
+
   // Cmd/Ctrl+Enter presses the selected title cell's Open button, so sighted keyboard users must see it.
   it('shows the title cell Open button on the keyboard-selected cell too', () => {
     expect(rulesFor('[data-blok-database-table-cell][data-blok-database-table-cell-anchor] [data-blok-database-table-open]').join(' '))

@@ -5479,6 +5479,20 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-text-secondary);
 }
 
+/* A filled cell: Autofill leads the Comment/Copy pill (research/12 §2), so it drops its own corner box. */
+[data-blok-database-table-cell-actions] > [data-blok-database-table-autofill] {
+  position: static;
+  display: inline-flex;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+/* Mod+Enter presses that Autofill, so the keyboard-selected cell shows the pill. */
+[data-blok-database-table-cell][data-blok-database-table-cell-anchor] > [data-blok-database-table-cell-actions="autofill"] {
+  display: flex;
+}
+
 [data-blok-database-table-autofill-open] {
   display: inline-flex;
   flex: none;

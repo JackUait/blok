@@ -23,6 +23,7 @@ import {
   withPropertySetting,
 } from './view-settings';
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
+import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
 import { pageIconElement, showsPageIcon } from './page-icon';
 
@@ -886,17 +887,25 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       open.append(icon, label);
       cell.appendChild(open);
     }
-    this.fillAutofill(cell, column.property, rowId, value);
-    // The autofill button takes the same corner; it wins.
-    if (LINK_TYPES.has(column.property.type) && cell.contains(value) && !value.hasAttribute('data-empty')
-      && cell.querySelector('[data-blok-database-table-autofill]') === null) {
+    const run = this.createAutofillButton(cell, column.property, rowId, value);
+    const filled = cell.contains(value) && !value.hasAttribute('data-empty');
+
+    // A title cell's corner belongs to OPEN, so its Autofill stays alone.
+    if (run !== null && filled && column.property.type !== 'title') {
+      cell.appendChild(this.createCellActions(run));
+    } else if (run !== null) {
+      cell.appendChild(run);
+    } else if (LINK_TYPES.has(column.property.type) && filled) {
       cell.appendChild(this.createCellActions());
     }
     if (fillHandle !== null) cell.appendChild(fillHandle);
   }
 
-  /** research/16 §4: a filled url, email or phone cell's hover pill, "Comment" and "Copy to Clipboard". */
-  private createCellActions(): HTMLElement {
+  /**
+   * research/16 §4: a filled url, email or phone cell's hover pill, "Comment" and "Copy to Clipboard".
+   * research/12 §2: a filled autofill cell puts its Autofill button first.
+   */
+  private createCellActions(autofill?: HTMLElement): HTMLElement {
     const pill = document.createElement('span');
     const entries: Array<[action: string, key: string, icon: string]> = [['copy', 'tools.database.cellCopy', IconCopy]];
 
@@ -904,7 +913,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       entries.unshift(['comment', 'tools.database.tableComment', IconMessage]);
     }
 
-    pill.setAttribute('data-blok-database-table-cell-actions', '');
+    pill.setAttribute('data-blok-database-table-cell-actions', autofill === undefined ? '' : 'autofill');
+    if (autofill !== undefined) pill.appendChild(autofill);
     for (const [action, key, icon] of entries) {
       const button = document.createElement('button');
 
@@ -921,11 +931,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   /** A link click follows the link; a pill button acts. Either way the cell neither selects nor edits. */
-  private clickLinkCell(target: Element): boolean {
+  private clickCellAction(target: Element): boolean {
     const cellEl = target.closest<HTMLElement>('[role="gridcell"]');
     const rowId = cellEl?.closest('[data-row-id]')?.getAttribute('data-row-id');
 
-    if (cellEl === null || cellEl === undefined || rowId === null || rowId === undefined || !LINK_TYPES.has(cellEl.getAttribute('data-type') ?? '')) {
+    if (cellEl === null || cellEl === undefined || rowId === null || rowId === undefined) {
       return false;
     }
     const propertyId = cellEl.getAttribute('data-property-id') ?? '';
@@ -937,25 +947,27 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       this.copyCellValue(rowId, propertyId);
     }
 
-    return action !== undefined || target.closest('a[data-blok-database-cell-link]') !== null;
+    return action !== undefined
+      || (LINK_TYPES.has(cellEl.getAttribute('data-type') ?? '') && target.closest('a[data-blok-database-cell-link]') !== null);
   }
 
   private copyCellValue(rowId: string, propertyId: string): void {
     const property = this.columns.find((column) => column.property.id === propertyId)?.property;
     const row = this.rowMap.get(rowId);
-    const value = property === undefined || row === undefined ? undefined : readPropertyValue(row, property);
+    const text = property === undefined || row === undefined ? '' : cellText(property, readPropertyValue(row, property), this.options.cellContext);
 
-    if (typeof value !== 'string' || value === '') return;
-    void navigator.clipboard?.writeText(value).then(
+    if (text === '') return;
+    void navigator.clipboard?.writeText(text).then(
       () => this.options.notify?.(this.t('tools.database.cellCopied')),
       () => undefined
     );
   }
 
-  private fillAutofill(cell: HTMLElement, property: PropertyDefinition, rowId: string, value: HTMLElement): void {
+  /** Swaps in Thinking… while a run is in flight; otherwise returns the cell's Autofill button, not yet placed. */
+  private createAutofillButton(cell: HTMLElement, property: PropertyDefinition, rowId: string, value: HTMLElement): HTMLElement | null {
     const autofill = this.options.autofill;
 
-    if (autofill === undefined || property.autofill === undefined) return;
+    if (autofill === undefined || property.autofill === undefined) return null;
     if (autofill.filling(rowId, property.id)) {
       const thinking = document.createElement('span');
 
@@ -963,7 +975,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       thinking.textContent = this.t('tools.database.aiAutofillThinking');
       value.replaceWith(thinking);
 
-      return;
+      return null;
     }
     const run = document.createElement('button');
 
@@ -974,7 +986,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     run.setAttribute('aria-label', this.t('tools.database.aiAutofillCell'));
     run.innerHTML = IconWand;
     onHover(run, this.t('tools.database.aiAutofillCell'));
-    cell.appendChild(run);
+
+    return run;
   }
 
   private createSubItemToggle(nested: { hasChildren: boolean; expanded: boolean }): HTMLElement {
@@ -1347,7 +1360,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (target === null) {
       return;
     }
-    if (this.clickLinkCell(target)) {
+    if (this.clickCellAction(target)) {
       return;
     }
     const closest = (selector: string): HTMLElement | null => target.closest<HTMLElement>(selector);

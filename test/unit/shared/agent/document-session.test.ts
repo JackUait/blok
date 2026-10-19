@@ -323,6 +323,24 @@ describe('stored document session', () => {
     expect(session.output().blocks.find(block => block.id === 'p')).toMatchObject({ lastEditedBy: 'owner', lastEditedAt: 1 });
   });
 
+  it('hashes each document state once across a write, a failed write and the reads after them', async () => {
+    const session = track(open());
+    const before = session.revision();
+    const toOutput = vi.spyOn(DocSnapshot.prototype, 'toOutput');
+
+    expect(session.revision()).toBe(before);
+    const written = await session.execute({ commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'new' } } }] });
+    const failed = await session.execute({ commands: [{ name: 'block.update', args: { id: 'missing', data: { text: 'x' } } }] });
+    const read = await session.read();
+
+    expect(written.ok).toBe(true);
+    expect(failed).toMatchObject({ ok: false, error: { code: 'BLOCK_NOT_FOUND' } });
+    expect(toOutput).toHaveBeenCalledTimes(1);
+    expect(read.revision).not.toBe(before);
+    expect(session.revision()).toBe(read.revision);
+    expect(read.revision).toBe(contentRevision(session.output()));
+  });
+
   it('exposes exactly the edits applied by the last successful stored batch', async () => {
     const session = track(open());
     const text: RichText = [{ text: 'P', marks: { bold: true } }];

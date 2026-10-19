@@ -26,6 +26,8 @@ describe('openStoredSession', () => {
     log: () => [],
     close: () => undefined,
     output: () => ({ blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'x' } }] }),
+    // Differs from okResult.revision, so a write counts as a change.
+    revision: () => 'r0',
   });
 
   beforeEach(() => {

@@ -81,6 +81,7 @@ export const createDocumentAgentSession = (input: {
   runtime?: 'node' | 'jint';
 }): AgentSession & {
   output(): OutputData;
+  revision(): string;
   lastEdits(): readonly Edit[];
   execute(batch: unknown, options?: { signal?: AbortSignal }): Promise<AgentResult>;
   planHost(batch: unknown, options?: { signal?: AbortSignal }): Promise<HostBatchPlan & { view?: DocumentView }>;
@@ -95,6 +96,7 @@ export const createDocumentAgentSession = (input: {
     closed: false,
     batchNo: 0,
   };
+  const hashed: { snapshot: DocSnapshot | null; revision: string } = { snapshot: null, revision: '' };
   const services: Partial<Record<string, unknown>> = { ...(input.services ?? {}) };
 
   if (input.pageTitles === 'page-map' && input.ports.openPageDocument !== undefined) {
@@ -106,7 +108,16 @@ export const createDocumentAgentSession = (input: {
     runtime: input.runtime ?? 'node',
     isReadOnly: () => state.closed,
     snapshot: () => state.current,
-    revision: () => contentRevision(state.current.toOutput()),
+    // A snapshot is never changed once it is state.current (planning and views work on clones),
+    // so its hash holds until state.current is replaced.
+    revision: () => {
+      if (hashed.snapshot !== state.current) {
+        hashed.revision = contentRevision(state.current.toOutput());
+        hashed.snapshot = state.current;
+      }
+
+      return hashed.revision;
+    },
     apply: (plan, draft) => {
       past.push(state.current);
       future.length = 0;
@@ -179,6 +190,7 @@ export const createDocumentAgentSession = (input: {
       state.closed = true;
     },
     output: () => state.current.toOutput(),
+    revision: () => applier.revision(),
     lastEdits: () => applied.edits,
   };
 };

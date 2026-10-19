@@ -141,16 +141,44 @@ describe('ToolbarPositioner — recorded mutants', () => {
       expect(positioner.calculateToolbarY(options({ isMobile: true }), plusButton)).toBe(10);
     });
 
-    it('does not ask the tool for an anchor when the hovered target is a list item', () => {
+    it('centers on the tool anchor, not on a hovered list item with no text to edit (a database list row or card)', () => {
+      const anchor = document.createElement('div');
+      const listItem = document.createElement('div');
+
+      listItem.setAttribute('role', 'listitem');
+      pluginsContent.append(anchor, listItem);
+      anchorSpy.mockReturnValue(anchor);
+      setRect(anchor, 50);
+      setRect(listItem, 140);
+
+      expect(positioner.calculateToolbarY(options({ hoveredTarget: listItem }), plusButton)).toBe(42);
+    });
+
+    it('centers on a hovered list item with no text to edit when the tool names no anchor', () => {
       const listItem = document.createElement('div');
 
       listItem.setAttribute('role', 'listitem');
       pluginsContent.appendChild(listItem);
-      setRect(listItem, 40);
+      setRect(listItem, 140);
 
-      positioner.calculateToolbarY(options({ hoveredTarget: listItem }), plusButton);
+      expect(positioner.calculateToolbarY(options({ hoveredTarget: listItem }), plusButton)).toBe(132);
+    });
 
-      expect(anchorSpy).not.toHaveBeenCalled();
+    it('still centers on a hovered list item\'s text over the tool anchor', () => {
+      const anchor = document.createElement('div');
+      const listItem = document.createElement('div');
+      const text = document.createElement('div');
+
+      listItem.setAttribute('role', 'listitem');
+      text.setAttribute('contenteditable', 'true');
+      listItem.appendChild(text);
+      pluginsContent.append(anchor, listItem);
+      anchorSpy.mockReturnValue(anchor);
+      setRect(anchor, 50);
+      setRect(listItem, 140);
+      setRect(text, 150);
+
+      expect(positioner.calculateToolbarY(options({ hoveredTarget: listItem }), plusButton)).toBe(142);
     });
 
     it('prefers the list item text element over the list item itself', () => {

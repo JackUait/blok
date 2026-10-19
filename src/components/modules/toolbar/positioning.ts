@@ -107,8 +107,10 @@ export class ToolbarPositioner {
      * for a contenteditable descendant. This allows tools with deeply nested
      * editable areas (e.g., code block with a header above the code) to control
      * where the toolbar centers vertically.
+     * It also beats a hovered list item with no text: a database's list rows and
+     * cards are list items, and their own gutter sits where the toolbar would go.
      */
-    const toolbarAnchor = !textElement && !listItemElement
+    const toolbarAnchor = !textElement
       ? targetBlock.getToolbarAnchorElement()
       : undefined;
     /**
@@ -119,7 +121,7 @@ export class ToolbarPositioner {
       !toolbarAnchor && !pluginsContent.matches('[contenteditable]')
         ? (pluginsContent.querySelector('[contenteditable]:not([data-blok-mutation-free])') ?? null)
         : null;
-    const contentElement = textElement ?? listItemElement ?? toolbarAnchor ?? editableDescendant ?? pluginsContent;
+    const contentElement = textElement ?? toolbarAnchor ?? listItemElement ?? editableDescendant ?? pluginsContent;
     const contentRect = contentElement.getBoundingClientRect();
     const contentOffset = contentRect.top - holderRect.top;
 

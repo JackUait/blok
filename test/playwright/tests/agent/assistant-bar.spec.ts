@@ -145,7 +145,7 @@ test.describe('in-editor assistant', () => {
     await expect(bar).toHaveCount(0);
     expect(await savedTexts(page)).toEqual(['The quick brown fox', 'Second', 'Written by Claude']);
     // The model was told where the caret was.
-    expect(String((await page.evaluate(() => window.assistantPrompts))?.[0])).toContain('p2');
+    expect(String((await page.evaluate(() => window.assistantPrompts))?.[0])).toContain('caret is in block p2');
   });
 
   test('Ask AI in the inline toolbar sends the selected text with the request', async ({ page }) => {

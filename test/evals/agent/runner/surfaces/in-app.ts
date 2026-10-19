@@ -1,3 +1,4 @@
+import { composeFirstMessage } from '../../../../../src/agent/first-message';
 import { composeGuidance } from '../../../../../src/agent/guidance';
 import { renderAgentTools } from '../../../../../src/agent/render-tools';
 import { AgentFailure } from '../../../../../src/shared/agent/errors';
@@ -36,6 +37,8 @@ export const openInApp: OpenSurface = async (task, schema) => {
   return {
     tools,
     system: composeGuidance(contract),
+    // The eval sets no caret, so the editor context is empty (agent.ts editorContext).
+    firstMessage: (prompt) => composeFirstMessage(prompt, '', (args) => session.read(args)),
     // Same contract as agent-turn.ts call(): a failure goes back to the model, it does not end the trial.
     execute: async (name, input) => {
       try {

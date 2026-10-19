@@ -30,7 +30,7 @@ const busy = (): Error => new Error('editor.agent: this run is still answering. 
  * @param prompt - the first user message, with any editor context already added
  * @param deps - the open turn and the model
  */
-export function createAgentRun(prompt: string, deps: AgentRunDeps): AgentRun {
+export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunDeps): AgentRun {
   const messages: AgentModelMessage[] = [];
   const setup = deps.prepare();
   const state: { controller: AbortController | null; result: Promise<AgentRunResult>; closed: boolean } = {
@@ -39,15 +39,15 @@ export function createAgentRun(prompt: string, deps: AgentRunDeps): AgentRun {
     closed: false,
   };
 
-  const answer = (text: string): Promise<AgentRunResult> => {
+  const answer = (text: string | Promise<string>): Promise<AgentRunResult> => {
     const controller = new AbortController();
     const thinking = deps.thinking();
 
     state.controller = controller;
-    messages.push({ role: 'user', content: text });
 
     state.result = (async (): Promise<AgentRunResult> => {
       try {
+        messages.push({ role: 'user', content: await text });
         const { system, tools } = await setup;
         const outcome = await runAssistantLoop({
           model: deps.model,

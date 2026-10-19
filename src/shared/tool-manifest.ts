@@ -19,6 +19,7 @@ import type {
 } from '../../types';
 import { deepEqual } from './deep-equal';
 import { ownEntry } from './own-entry';
+import { validPattern } from './schema/validate';
 import { richText } from './tool-descriptions/rich-text';
 
 export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'history'] as const;
@@ -65,7 +66,7 @@ const acceptsField = (schema: BlokSchema, key: string): boolean => {
 
   return schema.additionalProperties !== false
     || (isRecord(schema.properties) && Object.hasOwn(schema.properties, key))
-    || patterns.some(pattern => new RegExp(pattern, 'u').test(key));
+    || patterns.some(pattern => validPattern(pattern) && new RegExp(pattern, 'u').test(key));
 };
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> => {
@@ -126,7 +127,7 @@ const isBlockDescription = (value: unknown): value is BlockToolDescription =>
   && (value.guidance === undefined || typeof value.guidance === 'string')
   && (value.defaultData === undefined || isPlainRecord(value.defaultData))
   && (value.examples === undefined || (Array.isArray(value.examples) && value.examples.every(isPlainRecord)))
-  && ['summaryFields', 'inputFields', 'viewState'].every(key => value[key] === undefined || isStringArray(value[key]))
+  && ['summaryFields', 'fillMissing', 'inputFields', 'viewState'].every(key => value[key] === undefined || isStringArray(value[key]))
   && (value.guardedFields === undefined || (isPlainRecord(value.guardedFields) && Object.values(value.guardedFields).every(command => typeof command === 'string')))
   && (value.actions === undefined || (Array.isArray(value.actions) && value.actions.every(isAction)));
 
@@ -234,6 +235,7 @@ const blockEntry = (
     selfPlacesChildren: statics.selfPlacesChildren,
     restrictedInTableCell: statics.restrictedInTableCell,
     ...(description?.summaryFields === undefined ? {} : { summaryFields: description.summaryFields }),
+    ...(description?.fillMissing === undefined ? {} : { fillMissing: description.fillMissing }),
     ...(description?.inputFields === undefined ? {} : { inputFields: description.inputFields }),
     convertsTo: statics.convertible.export
       ? visibleBlocks

@@ -40,6 +40,8 @@ export interface BlockToolManifestEntry {
   selfPlacesChildren: boolean;
   restrictedInTableCell: boolean;
   summaryFields?: string[];
+  /** Required fields the planner fills from defaultData when a write leaves them out. */
+  fillMissing?: string[];
   inputFields?: string[];
   convertsTo: string[];
   conversion: { import?: string; export?: string };

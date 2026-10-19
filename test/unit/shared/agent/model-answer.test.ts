@@ -30,6 +30,13 @@ describe('modelAnswer', () => {
     expect(Object.keys(answer)).toEqual(['ok', 'revision', 'results', 'refs', 'changed', 'blocks']);
   });
 
+  it('puts warnings right after ok, so a long blocks list cannot bury them', () => {
+    const warning = { code: 'CORRECTED' as const, message: 'm', commandIndex: 0 };
+    const answer = modelAnswer(success({ refs: { a: 'p' }, changed: { created: ['p'], updated: [], moved: [], removed: [] }, blocks: [], warnings: [warning] }));
+
+    expect(Object.keys(answer)).toEqual(['ok', 'warnings', 'revision', 'results', 'refs', 'changed', 'blocks']);
+  });
+
   it('leaves out changed when the batch changed nothing', () => {
     expect(modelAnswer(success())).toEqual({ ok: true, revision: 'r1', results: [{}] });
   });

@@ -39,6 +39,11 @@ export interface BlockToolDescription {
   defaultData?: Record<string, unknown>;
   examples?: Array<Record<string, unknown>>;
   summaryFields?: string[];
+  /**
+   * Required fields an agent may leave out: Blok fills them from defaultData and warns.
+   * List only a field whose default changes no meaning, like a code language.
+   */
+  fillMissing?: string[];
   /** Entry i maps DOM input i; absent: one rich field maps to input 0, else block-level. */
   inputFields?: string[];
   /** Per-person fields agents must never write. */

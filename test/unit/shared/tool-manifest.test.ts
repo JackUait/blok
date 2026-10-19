@@ -191,6 +191,28 @@ describe('buildToolManifest', () => {
     expect(onWarning).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/Tool "broken".*describe\(\).*JSON.*structural/));
   });
 
+  it('carries a description\'s fillMissing into the manifest entry', () => {
+    const description: BlockToolDescription = { ...tableDescription, defaultData: { language: 'plain text' }, fillMissing: ['language'] };
+    const manifest = buildToolManifest(snapshot([block('described', { description }), block('plain')]));
+
+    expect(entryFor(manifest, 'described').fillMissing).toEqual(['language']);
+    expect(entryFor(manifest, 'plain')).not.toHaveProperty('fillMissing');
+  });
+
+  it('builds the manifest when a custom tool\'s patternProperties key is not a valid pattern', () => {
+    const description: BlockToolDescription = {
+      summary: 'Bad pattern.',
+      data: { type: 'object', additionalProperties: false, patternProperties: { '^a\\_': {} } },
+    };
+    const registry = snapshot([
+      block('broken', { description, statics: statics({ toolbox: [{ name: 'x', title: 'X', data: { a_b: 1 } }] }) }),
+      block('fine'),
+    ]);
+
+    expect(() => buildToolManifest(registry)).not.toThrow();
+    expect(entryFor(buildToolManifest(registry), 'fine').name).toBe('fine');
+  });
+
   it.each(badDescriptions)('warns independently for $name', ({ description }) => {
     const onWarning = vi.fn<(message: string) => void>();
 

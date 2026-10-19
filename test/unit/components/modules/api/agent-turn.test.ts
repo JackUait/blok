@@ -5,6 +5,7 @@ import { createAgentTurn, type AgentTurnHooks } from '../../../../../src/compone
 import { COMMANDS } from '../../../../../src/shared/agent/commands';
 import { createDocumentAgentSession } from '../../../../../src/shared/agent/document-session';
 import { AgentFailure } from '../../../../../src/shared/agent/errors';
+import { modelAnswer } from '../../../../../src/shared/agent/model-answer';
 import { buildToolRuntimes } from '../../../../../src/shared/tool-actions/runtime';
 import { buildAgentContract } from '../../../../../src/shared/tool-manifest';
 import { makeContract } from '../../../agent/fixtures/contract';
@@ -87,7 +88,7 @@ afterEach(() => {
 });
 
 describe('createAgentTurn dispatch', () => {
-  it.each(['object', 'JSON string'])('executes %s arguments with the turn signal and reports the full result', async format => {
+  it.each(['object', 'JSON string'])('executes %s arguments with the turn signal; the host gets the full result, the model a trimmed one', async format => {
     const session = makeSession();
     const hooks = makeHooks();
     const turn = createAgentTurn(session, hooks);
@@ -95,7 +96,7 @@ describe('createAgentTurn dispatch', () => {
 
     const result = await turn.call('blok_execute', input);
 
-    expect(result).toEqual({ content: JSON.stringify(ok()), isError: false });
+    expect(result).toEqual({ content: JSON.stringify({ ...ok(), changed: { created: ['b1'] } }), isError: false });
     expect(session.execute).toHaveBeenCalledExactlyOnceWith(BATCH, { signal: turn.signal });
     expect(hooks.onExecuted).toHaveBeenCalledExactlyOnceWith(ok());
     expect(session.read).not.toHaveBeenCalled();
@@ -321,7 +322,7 @@ describe('createAgentTurn lifecycle', () => {
     }
     pending.resolve(ok());
 
-    expect(await running).toEqual({ content: JSON.stringify(ok()), isError: false });
+    expect(await running).toEqual({ content: JSON.stringify(modelAnswer(ok())), isError: false });
     expect(hooks.onExecuted).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(session.close).toHaveBeenCalledTimes(1));
   });
@@ -396,7 +397,7 @@ describe('createAgentTurn with real session validation', () => {
     const result = await createAgentTurn(session, hooks).call('blok_execute', { commands: [null] });
 
     expect(parseContent(result.content)).toMatchObject({
-      ok: false, revision: before.revision, error: { code: 'INVALID_ARGS' }, warnings: [],
+      ok: false, revision: before.revision, error: { code: 'INVALID_ARGS' },
     });
     expect(result.isError).toBe(true);
     expect(session.output()).toMatchObject({ title: 'Original', blocks: [] });
@@ -414,7 +415,7 @@ describe('createAgentTurn with real session validation', () => {
     const hooks = makeHooks();
     const result = await createAgentTurn(session, hooks).call(name, input);
 
-    expect(parseContent(result.content)).toMatchObject({ ok: false, error: { code, retryable: false }, warnings: [] });
+    expect(parseContent(result.content)).toMatchObject({ ok: false, error: { code, retryable: false } });
     expect(result.isError).toBe(true);
     expect(session.output()).toMatchObject({ title: 'Original', blocks: [] });
     expect(hooks.onExecuted).not.toHaveBeenCalled();
@@ -428,7 +429,7 @@ describe('createAgentTurn with real session validation', () => {
 
     expect(session.output()).toMatchObject({ title: 'Changed', blocks: [] });
     expect(written.isError).toBe(false);
-    expect(parseContent(written.content)).toMatchObject({ ok: true, changed: { created: [], updated: [], moved: [], removed: [] } });
+    expect(parseContent(written.content)).toEqual(expect.not.objectContaining({ changed: expect.anything() }));
     expect(read.isError).toBe(false);
     expect(parseContent(read.content)).toMatchObject({ rootId: null, page: { title: 'Changed' }, blocks: [] });
   });
@@ -523,10 +524,10 @@ describe('createAgentTurn — queue and stop', () => {
     await Promise.race([secondEntered, secondCall]);
     expect(order).toEqual(['first:start', 'first:end', 'describe', 'read', 'second:start']);
     expect(await Promise.all(calls)).toEqual([
-      { content: JSON.stringify(firstResult), isError: false },
+      { content: JSON.stringify(modelAnswer(firstResult)), isError: false },
       { content: JSON.stringify(INDEX), isError: false },
       { content: JSON.stringify(VIEW), isError: false },
-      { content: JSON.stringify(secondResult), isError: false },
+      { content: JSON.stringify(modelAnswer(secondResult)), isError: false },
     ]);
     expect(session.execute).toHaveBeenNthCalledWith(1, BATCH, { signal: turn.signal });
     expect(session.describe).toHaveBeenCalledExactlyOnceWith({ command: 'block.insert' });
@@ -548,7 +549,7 @@ describe('createAgentTurn — queue and stop', () => {
 
     expect(next).toEqual({
       status: 'fulfilled',
-      value: { content: JSON.stringify(nextResult), isError: false },
+      value: { content: JSON.stringify(modelAnswer(nextResult)), isError: false },
     });
     expect(session.execute).toHaveBeenNthCalledWith(2, BATCH, { signal: turn.signal });
     expect(session.execute).toHaveBeenCalledTimes(2);
@@ -615,7 +616,7 @@ describe('createAgentTurn — queue and stop', () => {
         await drained;
       }
 
-      expect(await execute).toEqual(result);
+      expect(await execute).toEqual(surface === 'tool' ? modelAnswer(result) : result);
       expect(await read).toEqual(editedView);
       expect(observed.closeBeforeRelease).toBe(0);
       expect(turn.signal.aborted).toBe(false);
@@ -684,7 +685,7 @@ describe('createAgentTurn — queue and stop', () => {
     const result = await running;
 
     expect(hooks.onExecuted).not.toHaveBeenCalled();
-    expect(result).toEqual({ content: JSON.stringify(enteredResult), isError: false });
+    expect(result).toEqual({ content: JSON.stringify(modelAnswer(enteredResult)), isError: false });
   });
 
   it('stop cancels queued execute and read but preserves the entered result', async () => {
@@ -716,11 +717,11 @@ describe('createAgentTurn — queue and stop', () => {
     const executeResult = await queuedExecute;
     const readResult = await queuedRead;
 
-    expect(parseContent(executeResult.content)).toMatchObject({ ok: false, error: { code: 'CANCELLED' }, warnings: [] });
+    expect(parseContent(executeResult.content)).toMatchObject({ ok: false, error: { code: 'CANCELLED' } });
     expect(parseContent(readResult.content)).toMatchObject({ ok: false, error: { code: 'CANCELLED' }, warnings: [] });
     expect(executeResult.isError).toBe(true);
     expect(readResult.isError).toBe(true);
-    expect(await running).toEqual({ content: JSON.stringify(enteredResult), isError: false });
+    expect(await running).toEqual({ content: JSON.stringify(modelAnswer(enteredResult)), isError: false });
     expect(session.execute).toHaveBeenCalledExactlyOnceWith(BATCH, { signal: turn.signal });
     expect(session.read).not.toHaveBeenCalled();
     expect(hooks.onExecuted).not.toHaveBeenCalled();

@@ -1,6 +1,7 @@
 import type { AgentBatch, AgentError, AgentResult, AgentSession, DocumentView, ViewArgs } from '../../../../types/agent';
 import type { AgentToolResult, AgentTurn } from '../../../../types/api';
 import { AgentFailure } from '../../../shared/agent/errors';
+import { modelAnswer } from '../../../shared/agent/model-answer';
 
 export const AGENT_TOOL_NAMES = ['blok_read', 'blok_describe', 'blok_execute'] as const;
 
@@ -199,7 +200,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
       }
       const result = await execute(batch.value);
 
-      return { content: JSON.stringify(result), isError: !result.ok };
+      return { content: JSON.stringify(modelAnswer(result)), isError: !result.ok };
     } catch (error) {
       if (error instanceof AgentFailure) {
         return asToolError(error.error);

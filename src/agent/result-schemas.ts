@@ -84,13 +84,30 @@ const FAILURE = {
 
 export const AGENT_RESULT_SCHEMA = { type: 'object', oneOf: [SUCCESS, FAILURE] };
 
-export const withDelivery = (branch: typeof SUCCESS | typeof FAILURE): Schema => ({
+// What a model sees (src/shared/agent/model-answer.ts): empty fields left out, long id lists capped with a count.
+const ANSWER_CHANGED = {
+  type: 'object',
+  properties: {
+    ...CHANGED.properties,
+    moreCreated: INTEGER, moreUpdated: INTEGER, moreMoved: INTEGER, moreRemoved: INTEGER,
+  },
+};
+
+const SUCCESS_ANSWER = {
+  ...SUCCESS,
+  properties: { ...SUCCESS.properties, changed: ANSWER_CHANGED },
+  required: ['ok', 'revision', 'results'],
+};
+
+const FAILURE_ANSWER = { ...FAILURE, required: ['ok', 'error'] };
+
+export const withDelivery = (branch: { properties: Schema; required: string[] }): Schema => ({
   ...branch,
   properties: { ...branch.properties, delivery: DELIVERY_SCHEMA },
   required: [...branch.required, 'delivery'],
 });
 
-export const EXECUTE_OUTPUT_SCHEMA = { type: 'object', oneOf: [withDelivery(SUCCESS), withDelivery(FAILURE)] };
+export const EXECUTE_OUTPUT_SCHEMA = { type: 'object', oneOf: [withDelivery(SUCCESS_ANSWER), withDelivery(FAILURE_ANSWER)] };
 
 export const orError = (success: Schema): Schema => ({
   type: 'object',

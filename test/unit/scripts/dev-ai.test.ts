@@ -237,6 +237,39 @@ describe('anthropicCreateMessage', () => {
     expect(message.stop_reason).toBe('tool_use');
   });
 
+  // The SDK's own parser repairs these: it drops the bad value or the cut-off end, and the edit would run.
+  it.each([
+    ['a stray quote', '{"commands": [{"name": "text.insert", "args": {"id": "a", "text": "a"b"}}]}'],
+    ['a misspelled literal', '{"commands": [{"name": "block.delete", "args": {"id": "a", "force": tru}}]}'],
+    ['trailing text', '{"commands": []} and more'],
+    ['a cut-off end', '{"commands": [{"name": "block.delete", "args": {"id": "a"}}'],
+    ['a value that is not an object', '[]'],
+    ['null', 'null'],
+    ['a string', '"commands"'],
+  ])('hands back %s as invalidJson, not a repaired guess', async (_case, text) => {
+    const events = [messageStart, ...toolBlock(0, 'toolu_1', [text]), ...messageEnd('tool_use')];
+    const create = await anthropicCreateMessage({ apiKey: 'k', baseURL: 'http://model.test', fetch: sseFetch(events) });
+
+    const message = await create(PARAMS, new AbortController().signal, () => {});
+
+    expect(message.content).toEqual([{ type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: { invalidJson: text } }]);
+  });
+
+  it('keeps the arguments of a tool block the stream never stops', async () => {
+    const text = '{"commands": [{"name": "block.delete", "args": {"id": "a"}}]}';
+    const events = [
+      messageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: {} } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: text } },
+      ...messageEnd('tool_use'),
+    ];
+    const create = await anthropicCreateMessage({ apiKey: 'k', baseURL: 'http://model.test', fetch: sseFetch(events) });
+
+    const message = await create(PARAMS, new AbortController().signal, () => {});
+
+    expect(message.content).toEqual([{ type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: JSON.parse(text) }]);
+  });
+
   it('builds the same message as the SDK when the stream is valid', async () => {
     const events = [
       messageStart,
@@ -248,9 +281,7 @@ describe('anthropicCreateMessage', () => {
       ...textBlock(1, ['Trans', 'lating.']),
       ...toolBlock(2, 'toolu_1', ['{"commands": [{"name": "text.replace", ', '"args": {"id": "a"}}]}']),
       ...toolBlock(3, 'toolu_2', []),
-      // Cut off by max_tokens: the SDK keeps what parses so far.
-      ...toolBlock(4, 'toolu_3', ['{"commands": [{"name": "block.delete"']),
-      ...messageEnd('max_tokens'),
+      ...messageEnd('tool_use'),
     ];
     const fetch = sseFetch(events);
     const expected = await new Anthropic({ apiKey: 'k', baseURL: 'http://model.test', fetch }).beta.messages.stream(PARAMS).finalMessage();

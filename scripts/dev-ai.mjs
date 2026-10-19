@@ -166,22 +166,29 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
 export async function anthropicCreateMessage({ apiKey, baseURL, fetch }) {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const { BetaMessageStream } = await import('@anthropic-ai/sdk/lib/BetaMessageStream');
-  const { partialParse } = await import('@anthropic-ai/sdk/_vendor/partial-json-parser/parser');
   const state = { client: null };
 
-  // Arguments the SDK cannot parse become { invalidJson }, as in parseArguments
+  // Arguments that are not a JSON object become { invalidJson }, as in parseArguments
   // (src/agent-models/shared.ts): the run reports them and the model retries.
-  // The SDK would instead fail the whole answer. Tool use is not strict here,
-  // so a model can send broken JSON. partialParse is the SDK's own check.
+  // Tool use is not strict here, so a model can send broken JSON. The SDK would
+  // fail the whole answer, or repair it with partialParse and run a damaged edit.
   const safeArguments = (text) => {
     try {
-      partialParse(text);
+      const value = JSON.parse(text);
 
-      return text;
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return text;
+      }
     } catch {
-      return JSON.stringify({ invalidJson: text });
+      // Falls through to invalidJson.
     }
+
+    return JSON.stringify({ invalidJson: text });
   };
+
+  const release = (index, text) => ({
+    type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json: text === '' ? text : safeArguments(text) },
+  });
 
   async function* withSafeToolInput(events) {
     const held = new Map();
@@ -192,10 +199,15 @@ export async function anthropicCreateMessage({ apiKey, baseURL, fetch }) {
         continue;
       }
       if (event.type === 'content_block_stop' && held.has(event.index)) {
-        const text = held.get(event.index);
-
+        yield release(event.index, held.get(event.index));
         held.delete(event.index);
-        yield { type: 'content_block_delta', index: event.index, delta: { type: 'input_json_delta', partial_json: text === '' ? text : safeArguments(text) } };
+      }
+      // A block the stream never stopped still gets its arguments, as the SDK would give them.
+      if (event.type === 'message_delta' || event.type === 'message_stop') {
+        for (const [index, text] of held) {
+          yield release(index, text);
+        }
+        held.clear();
       }
       yield event;
     }

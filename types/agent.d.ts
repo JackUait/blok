@@ -211,10 +211,14 @@ export interface RichTextHelpers {
   canonicalize(value: RichText): RichText;
 }
 
+/** A command as describe() shows it: with the plain-text conditions its handler enforces. */
+export type DescribedCommand = CommandEntry & { preconditions?: string[] };
+
 export type ContractSlice =
   | { index: { tools: { name: string; summary: string }[]; commands: { name: CommandName; summary: string }[]; guidance: string } }
-  | { tool: BlockToolManifestEntry; commands: CommandEntry[] }
-  | { command: CommandEntry };
+  /** The tool's actions are its commands, listed once under commands. */
+  | { tool: Omit<BlockToolManifestEntry, 'actions'>; commands: DescribedCommand[] }
+  | { command: DescribedCommand };
 
 export interface AgentSession {
   readonly id: string;

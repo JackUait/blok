@@ -542,7 +542,9 @@ describe('stored document session', () => {
       },
     });
     expect(describeContract(contract)).toEqual(session.describe());
-    expect(session.describe({ tool: 'page' })).toEqual({ tool: contract.manifest.blocks.find(tool => tool.name === 'page'), commands: pageCommands });
+    const { actions: _actions, ...page } = contract.manifest.blocks.find(tool => tool.name === 'page') ?? { actions: [] };
+
+    expect(session.describe({ tool: 'page' })).toEqual({ tool: page, commands: pageCommands });
     expect(session.describe({ command: 'page.rename' })).toEqual({ command: pageCommands.find(command => command.name === 'page.rename') });
     expect(session.describe({ command: 'text.format' })).toEqual({ command: contract.commands.find(command => command.name === 'text.format') });
     expect(session.describe({ command: 'page.rename' })).toMatchObject({ command: { available: false, unavailableReason: 'service' } });

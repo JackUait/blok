@@ -79,4 +79,26 @@ describe('in-app surface, shipped setup', () => {
       await surface.close();
     }
   });
+
+  it('sends the model the trimmed answer, like agent-turn.ts call()', async () => {
+    const task = ALL_TASKS.find((t) => t.surfaces.includes('in-app'));
+
+    if (task === undefined) {
+      throw new Error('no in-app task');
+    }
+
+    const surface = await openInApp(task, 'shipped');
+
+    try {
+      const executed = await surface.execute('blok_execute', { commands: [{ name: 'doc.read', args: {} }] });
+      const answer: unknown = JSON.parse(executed.content);
+
+      expect(executed.isError).toBe(false);
+      expect(answer).toMatchObject({ ok: true });
+      expect(answer).not.toHaveProperty('warnings');
+      expect(answer).not.toHaveProperty('changed');
+    } finally {
+      await surface.close();
+    }
+  });
 });

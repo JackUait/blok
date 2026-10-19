@@ -7,7 +7,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
 import type { OutputData } from '../../../../../types';
 import { isSeed } from '../../../../unit/agent/parity/corpus';
-import type { ExecuteResult } from '../../types';
+import type { ChangedSet, ExecuteResult } from '../../types';
 import type { EvalSchema, OpenSurface } from '../run-task';
 import { asAnthropicTool, logFromExecuteCalls } from '../run-task';
 
@@ -43,8 +43,19 @@ const commandsOf = (input: unknown): Array<{ name: string; args: unknown }> =>
 
 const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
 
+// The answer leaves out empty lists (src/shared/agent/model-answer.ts); a missing list is an empty one.
+const changedOf = (changed: unknown): ChangedSet => {
+  const list = (key: keyof ChangedSet): string[] => {
+    const value = isRecord(changed) ? changed[key] : undefined;
+
+    return isStrings(value) ? value : [];
+  };
+
+  return { created: list('created'), updated: list('updated'), moved: list('moved'), removed: list('removed') };
+};
+
 /** Keeps the fields graders read; anything malformed is dropped, not trusted. */
-const executeResultOf = (text: string): ExecuteResult => {
+export const executeResultOf = (text: string): ExecuteResult => {
   const value: unknown = JSON.parse(text);
 
   if (!isRecord(value) || typeof value.ok !== 'boolean') {
@@ -55,8 +66,7 @@ const executeResultOf = (text: string): ExecuteResult => {
 
   return {
     ok: value.ok,
-    ...(isRecord(changed) && isStrings(changed.created) && isStrings(changed.updated) && isStrings(changed.moved) && isStrings(changed.removed)
-      && { changed: { created: changed.created, updated: changed.updated, moved: changed.moved, removed: changed.removed } }),
+    ...(value.ok && { changed: changedOf(changed) }),
     ...(Array.isArray(warnings) && {
       warnings: warnings.filter(isRecord).flatMap((w) => typeof w.code === 'string'
         ? [{ code: w.code, ...(typeof w.blockId === 'string' && { blockId: w.blockId }) }]

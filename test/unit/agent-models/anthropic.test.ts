@@ -292,7 +292,8 @@ describe('anthropicModel', () => {
         { type: 'content_block_stop', index: 0 },
         { type: 'content_block_start', index: 1, content_block: { type: 'tool_use', input: {} } },
         { type: 'content_block_stop', index: 1 },
-        { type: 'message_delta', delta: { stop_reason: 'tool_use' } }
+        { type: 'message_delta', delta: { stop_reason: 'tool_use' } },
+        { type: 'message_stop' }
       );
       const events: AgentModelStreamEvent[] = [];
 
@@ -312,10 +313,24 @@ describe('anthropicModel', () => {
         .rejects.toThrow('Anthropic: Overloaded');
     });
 
-    it('throws when the stream holds no message, as the non-streamed reply does', async () => {
+    it('throws the provider\'s message for an HTTP error response', async () => {
       const stream = async (): Promise<Response> => new Response('{"type":"error","error":{"message":"Bad key"}}', { status: 401 });
 
-      await expect(anthropicModel({ model: 'm', stream })(request())).rejects.toThrow('Anthropic: the reply has no content.');
+      await expect(anthropicModel({ model: 'm', stream })(request())).rejects.toThrow('Anthropic: Bad key');
+    });
+
+    it('throws the HTTP status for an error response whose body is not JSON', async () => {
+      const stream = async (): Promise<Response> => new Response('<html>Bad gateway</html>', { status: 502 });
+
+      await expect(anthropicModel({ model: 'm', stream })(request())).rejects.toThrow('Anthropic: HTTP 502.');
+    });
+
+    it('throws when the connection drops before message_stop', async () => {
+      const cut = FIXTURE.slice(0, FIXTURE.indexOf('event: message_stop'));
+      const stream = async (): Promise<ReadableStream<Uint8Array>> => sseStream(FIXTURE.slice(0, FIXTURE.lastIndexOf('event: content_block_delta')));
+
+      await expect(anthropicModel({ model: 'm', stream })(request())).rejects.toThrow('Anthropic: the stream ended early.');
+      await expect(anthropicModel({ model: 'm', stream: fakeStream(cut).stream })(request())).rejects.toThrow('Anthropic: the stream ended early.');
     });
 
     it('throws instead of returning half a message when the run stops mid-stream', async () => {

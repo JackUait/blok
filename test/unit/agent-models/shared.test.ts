@@ -78,4 +78,10 @@ describe('adapter helpers', () => {
     expect(() => openaiCompatibleModel({ model: 'm' })).toThrow(new TypeError('OpenAI-compatible: pass send or stream.'));
     expect(() => geminiModel({ model: 'm' })).toThrow(new TypeError('Gemini: pass send or stream.'));
   });
+
+  it('names the provider when an adapter that cannot stream yet gets only stream', async () => {
+    const stream = async (): Promise<Response> => new Response('');
+
+    await expect(openaiModel({ model: 'm', stream })(request())).rejects.toThrow('OpenAI: this adapter cannot stream yet. Pass send.');
+  });
 });

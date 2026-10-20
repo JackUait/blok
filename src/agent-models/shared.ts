@@ -109,22 +109,21 @@ export const stepOf = (request: AgentModelRequest): number =>
  * Hands send its own copy of the body: the body shares objects with the run's history,
  * tools and the level tables, and the docs invite hosts to edit it.
  */
-export const post = (body: Body, request: AgentModelRequest, options: AdapterOptions): Promise<unknown> => {
+export const post = (body: Body, request: AgentModelRequest, options: AdapterOptions, provider: string): Promise<unknown> => {
   if (options.send === undefined) {
-    return Promise.reject(new TypeError('This adapter cannot stream yet. Pass send.'));
+    return Promise.reject(new TypeError(`${provider}: this adapter cannot stream yet. Pass send.`));
   }
 
   return options.send(structuredClone(body), sendContext(request, options));
 };
 
 /** As post, for the host's stream. */
-export const postStream = (body: Body, request: AgentModelRequest, options: AdapterOptions): Promise<Response | ReadableStream<Uint8Array>> => {
-  if (options.stream === undefined) {
-    return Promise.reject(new TypeError('Pass stream.'));
-  }
-
-  return options.stream(structuredClone(body), sendContext(request, options));
-};
+export const postStream = (
+  stream: NonNullable<AdapterOptions['stream']>,
+  body: Body,
+  request: AgentModelRequest,
+  options: AdapterOptions
+): Promise<Response | ReadableStream<Uint8Array>> => stream(structuredClone(body), sendContext(request, options));
 
 /** Thrown when the adapter is made, so a missing transport shows at setup, not at the first prompt. */
 export const requireTransport = (options: AdapterOptions, provider: string): void => {
@@ -147,4 +146,22 @@ export const errorOf = (reply: unknown, provider: string): Error | null => {
   }
 
   return new Error(`${provider}: ${errorMessage(reply.error)}`);
+};
+
+/** A failed streaming request answers with the provider's JSON error, not SSE, so readSse would find no events. */
+export const httpError = async (source: Response | ReadableStream<Uint8Array>, provider: string): Promise<Error | null> => {
+  if ('getReader' in source || source.ok) {
+    return null;
+  }
+
+  const text = await source.text().catch(() => '');
+  const body = ((): unknown => {
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      return undefined;
+    }
+  })();
+
+  return errorOf(body, provider) ?? new Error(`${provider}: HTTP ${source.status}.`);
 };

@@ -3,7 +3,7 @@ import type {
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, callId, errorOf, isRecord, parseArguments, post, postStream, requireTransport, stepOf, withLevel,
+  DEFAULT_MAX_TOKENS, callId, errorOf, httpError, isRecord, parseArguments, post, postStream, requireTransport, stepOf, withLevel,
   type AdapterOptions, type Body,
 } from './shared';
 import { readSse } from './sse';
@@ -86,8 +86,14 @@ const finished = ({ block, json }: Building): AgentModelContentBlock => ('input'
 
 /** Builds the same response readReply gives for the JSON reply, and reports tool calls as they stream. */
 const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
+  const failed = await httpError(source, 'Anthropic');
+
+  if (failed !== null) {
+    throw failed;
+  }
+
   const blocks = new Map<number, Building>();
-  const state: { started: boolean; stop: string | null; calls: number } = { started: false, stop: null, calls: 0 };
+  const state: { stopped: boolean; stop: string | null; calls: number } = { stopped: false, stop: null, calls: 0 };
 
   const onEvent = (event: Record<string, unknown>): void => {
     const error = errorOf(event, 'Anthropic');
@@ -99,8 +105,8 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     const index = typeof event.index === 'number' ? event.index : -1;
     const building = blocks.get(index);
 
-    if (event.type === 'message_start') {
-      state.started = true;
+    if (event.type === 'message_stop') {
+      state.stopped = true;
     }
     if (event.type === 'message_delta' && isRecord(event.delta) && typeof event.delta.stop_reason === 'string') {
       state.stop = event.delta.stop_reason;
@@ -141,8 +147,9 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
   if (request.signal.aborted) {
     throw new Error('Anthropic: the run stopped mid-stream.');
   }
-  if (!state.started) {
-    throw new Error('Anthropic: the reply has no content.');
+  // A dropped connection ends the stream too; its half message must not pass as a reply.
+  if (!state.stopped) {
+    throw new Error('Anthropic: the stream ended early.');
   }
 
   const content = [...blocks.entries()].sort(([a], [b]) => a - b).map(([, entry]) => finished(entry));
@@ -169,10 +176,12 @@ export function anthropicModel(options: AdapterOptions): AgentModel {
       cache_control: { type: 'ephemeral' },
     }, request, LEVELS, options);
 
-    if (options.stream !== undefined) {
-      return readStream(await postStream({ ...body, stream: true }, request, options), request, stepOf(request));
+    const { stream } = options;
+
+    if (stream !== undefined) {
+      return readStream(await postStream(stream, { ...body, stream: true }, request, options), request, stepOf(request));
     }
 
-    return readReply(await post(body, request, options), stepOf(request));
+    return readReply(await post(body, request, options, 'Anthropic'), stepOf(request));
   };
 }

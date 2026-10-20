@@ -131,7 +131,7 @@ export function geminiModel(options: AdapterOptions): AgentModel {
     }, request, LEVELS, options);
 
     const ask = async (tries: number): Promise<AgentModelResponse> => {
-      const reply = await post(body, request, options);
+      const reply = await post(body, request, options, 'Gemini');
 
       try {
         return readReply(reply, step);

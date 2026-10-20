@@ -125,6 +125,6 @@ export function openaiModel(options: AdapterOptions): AgentModel {
       })),
     }, request, LEVELS, options);
 
-    return readReply(await post(body, request, options), stepOf(request));
+    return readReply(await post(body, request, options, 'OpenAI'), stepOf(request));
   };
 }

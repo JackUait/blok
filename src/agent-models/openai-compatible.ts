@@ -122,6 +122,6 @@ export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
       })),
     }, request, LEVELS, options);
 
-    return readReply(await post(body, request, options), stepOf(request));
+    return readReply(await post(body, request, options, 'OpenAI-compatible'), stepOf(request));
   };
 }

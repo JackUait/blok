@@ -84,6 +84,12 @@ const STRAY_LIMIT = 64_000;
 
 const isStray = (line: string): boolean => line !== '' && !line.startsWith(':') && !/^(data|event|id|retry)(:|$)/.test(line);
 
+const keepStray = (stray: string[] | undefined, lines: string[]): void => {
+  if (stray !== undefined && stray.join('\n').length < STRAY_LIMIT) {
+    stray.push(...lines.filter(isStray));
+  }
+};
+
 /**
  * Reads server-sent events from a streaming response. Ends at `data: [DONE]`, at the end of
  * the stream, or when `signal` aborts (the read is cancelled then).
@@ -115,9 +121,7 @@ export async function* readSse(source: Response | ReadableStream<Uint8Array>, si
       const { lines, rest } = takeLines(text, chunk.done);
       const read = eventsOf(lines, state.pending);
 
-      if (stray !== undefined && stray.join('\n').length < STRAY_LIMIT) {
-        stray.push(...lines.filter(isStray));
-      }
+      keepStray(stray, lines);
 
       state.buffer = rest;
       state.pending = read.pending;

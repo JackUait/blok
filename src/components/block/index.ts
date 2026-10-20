@@ -1038,6 +1038,18 @@ export class Block extends EventsDispatcher<BlockEvents> {
     return this.selectionManager.selected;
   }
 
+  /** The tool's own read-only answer (BlockTool.isReadOnly). Ancestors are not asked here. */
+  public get toolReadOnly(): boolean {
+    if (!isFunction(this.toolInstance.isReadOnly)) {
+      return false;
+    }
+    try {
+      return this.toolInstance.isReadOnly();
+    } catch {
+      return true;
+    }
+  }
+
   /**
    * Set stretched state
    * @param {boolean} state - 'true' to enable, 'false' to disable stretched state

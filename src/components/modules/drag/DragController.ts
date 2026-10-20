@@ -30,6 +30,7 @@ import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
 import { linkToBlock } from '../../utils/copy-as-link';
 import { isPagePointer } from '../../../shared/page-pointer';
+import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -253,6 +254,10 @@ export class DragController extends Module {
     const initialBlocks = isBlockSelected
       ? this.Blok.BlockSelection.selectedBlocks
       : [block];
+
+    if (this.anyReadOnly(initialBlocks)) {
+      return;
+    }
 
     // For single-block drags, include all descendants (list items via depth, toggles via contentIds)
     const listDescendants = !isBlockSelected && this.listItemDescendants
@@ -1566,6 +1571,11 @@ export class DragController extends Module {
    * @param block - the block the shortcut fired on (or a selected block)
    * @returns the duplicated blocks (empty when nothing was duplicated)
    */
+  /** A block that acts read-only (BlockTool.isReadOnly) is never dragged or duplicated, like in a read-only editor. */
+  private anyReadOnly(blocks: Block[]): boolean {
+    return blocks.some((member) => isBlockReadOnly(member, (id) => this.Blok.BlockManager.getBlockById(id)));
+  }
+
   public async duplicateBlocksInPlace(block: Block): Promise<Block[]> {
     // Drag internals initialize lazily on the first drag; Cmd+D can fire before
     // any drag has happened, so ensure operations/descendant helpers exist.
@@ -1598,7 +1608,7 @@ export class DragController extends Module {
         return true;
       });
 
-    if (sourceBlocks.length === 0) {
+    if (sourceBlocks.length === 0 || this.anyReadOnly(sourceBlocks)) {
       return [];
     }
 

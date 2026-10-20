@@ -144,6 +144,17 @@ export interface BlockTool extends BaseTool {
    * fallback when read-only mode is toggled.
    */
   setReadOnly?(state: boolean): void;
+
+  /**
+   * True when this block and every block under it must act read-only while
+   * the editor stays editable, for example a database whose host denies
+   * editing. The block menu then shows its read-only items, a selection
+   * delete skips these blocks, and agent writes to them fail with
+   * `READ_ONLY`. Direct `api.blocks` calls still write.
+   *
+   * Asked on each gesture, so it may change at any time. A throw counts as true.
+   */
+  isReadOnly?(): boolean;
 }
 
 /**

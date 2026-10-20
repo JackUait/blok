@@ -23,6 +23,7 @@ import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popo
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
 import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
+import { isBlockReadOnly } from '../../utils/read-only-blocks';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -454,7 +455,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const items = [] as MenuConfigItem[];
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
-    const isReadOnly = this.Blok.ReadOnly.isEnabled;
+    const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
+    const isReadOnly = this.Blok.ReadOnly.isEnabled
+      || [currentBlock, ...selectedBlocks].some((block) => isBlockReadOnly(block, getById));
 
     const allBlockTools = Array.from(this.Blok.Tools.blockTools.values());
 

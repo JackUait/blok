@@ -1139,6 +1139,15 @@ export class DatabaseTool implements BlockTool {
     this.structureDenied = !this.permits('editStructure');
   }
 
+  /**
+   * Core asks this for its block menu, selection deletes and agent writes,
+   * here and on every row and row page body block. Only the host gate counts:
+   * a linked view's own read-only must not stop deleting the view block.
+   */
+  isReadOnly(): boolean {
+    return !this.permits('editContent');
+  }
+
   /** The host's comments for a row or a cell, else the built-in ones, unless permissions deny `comment`. */
   private commentLever(): { comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void; commentBadges?: CommentBadges } {
     const comments = this.config.comments;

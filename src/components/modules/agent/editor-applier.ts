@@ -14,6 +14,7 @@ import { adjustCaretOffset, captureCaretAcrossRewrite } from '../blockManager/re
 import { readCaretPosition, resolveCaretRange } from '../collaboration/caret-position';
 import type { CaretHistoryEntry } from '../yjs/types';
 import { createRevisionCounter, editorSnapshot } from './editor-snapshot';
+import { isBlockReadOnly, removalTouchesReadOnly } from '../../utils/read-only-blocks';
 
 // A peer edit can make the rollback refuse. Partial writes stay, so the
 // error must not promise an unchanged document (no retryable code).
@@ -121,6 +122,8 @@ export class EditorApplier implements AgentApplier {
     if (plan.edits.length === 0) {
       return;
     }
+    // Before any write, so a refused plan leaves nothing to roll back.
+    this.refuseReadOnlyTargets(plan.edits);
 
     const { BlockManager, YjsManager } = this.Blok;
     const tag = { actorId: this.options.actor.id, sessionId: this.options.sessionId };
@@ -165,6 +168,34 @@ export class EditorApplier implements AgentApplier {
         && YjsManager.mergeTopUndoSteps(previous, token, { ...tag, gestureCount: gesturesAtOpen })
         ? previous : token;
       this.gesturesAtClose = YjsManager.gestureCount();
+    }
+  }
+
+  /** Agent writes stop at a block that acts read-only (BlockTool.isReadOnly), and a delete at one it would take along. */
+  private refuseReadOnlyTargets(edits: readonly Edit[]): void {
+    const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
+    const checks = (edit: Exclude<Edit, { op: 'setPageField' }>): Array<[string | null, typeof isBlockReadOnly]> => {
+      switch (edit.op) {
+        case 'insert':
+          return [[edit.parentId, isBlockReadOnly]];
+        case 'move':
+          return [[edit.id, isBlockReadOnly], [edit.parentId, isBlockReadOnly]];
+        case 'remove':
+        case 'replaceType':
+          return [[edit.id, removalTouchesReadOnly]];
+        case 'setData':
+        case 'setRichText':
+        case 'setTunes':
+          return [[edit.id, isBlockReadOnly]];
+      }
+    };
+    const locked = edits
+      .filter((edit): edit is Exclude<Edit, { op: 'setPageField' }> => edit.op !== 'setPageField')
+      .flatMap(checks)
+      .find(([id, check]) => id !== null && check(getById(id), getById));
+
+    if (locked !== undefined) {
+      throw failure('READ_ONLY', `Block "${locked[0] ?? ''}" is read-only here. Reads still work.`);
     }
   }
 

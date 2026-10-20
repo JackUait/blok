@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconDatabase, IconPlus, IconUpload } from '../../components/icons';
+import { IconArrowDiagonal, IconArrowUp, IconDatabase, IconEmojiSparkles, IconPlus, IconUpload } from '../../components/icons';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSeparator } from './database-panel';
 import type { LinkedPickerSource } from './database-linked-picker';
 
@@ -7,25 +7,103 @@ export interface NewSourcePanelOptions {
   t: (key: string, vars?: Record<string, string>) => string;
   /** Databases the new view may show instead of its own empty source. */
   sources: () => LinkedPickerSource[];
-  /** This database's other sources, under "Suggested" (research/26 §2). Empty titles read "New data source". */
-  suggested: () => Array<{ id: string; title: string }>;
-  importCsv: () => void;
-  /** `New “<query>” data source`: the new source takes the query as its title. */
-  nameSource: (title: string) => void;
+  /**
+   * This database's other sources, under "Suggested" (research/26 §2). Empty titles read "New data source".
+   * A new database leaves it out: its link page shows Existing only, as measured.
+   */
+  suggested?: () => Array<{ id: string; title: string }>;
+  /** Without it there is no Import CSV row. */
+  importCsv?: () => void;
+  /** `New “<query>” data source`: the new source takes the query as its title. Only the search variant has a query. */
+  nameSource?: (title: string) => void;
   linkExisting: (id: string) => void;
+  /**
+   * A new database (research/26 §2): the top slot is an AI prompt box instead
+   * of the search, and the title is "New database". `submit` resolves true
+   * when the database was set up, which closes the panel.
+   */
+  prompt?: { submit: (text: string) => Promise<boolean> };
   onClose?: () => void;
 }
+
+/** The AI prompt box. Enter sends, Shift+Enter breaks the line: Notion's keys were not measured. */
+const promptBox = (
+  t: NewSourcePanelOptions['t'],
+  text: { read: () => string; write: (value: string) => void },
+  submit: (text: string) => Promise<boolean>,
+  done: () => void
+): HTMLElement => {
+  const wrap = document.createElement('div');
+  const icon = document.createElement('span');
+  const field = document.createElement('textarea');
+  const send = document.createElement('button');
+  const label = t('tools.database.aiSetupPlaceholder');
+  const flags = { busy: false };
+  const sync = (): void => {
+    const off = flags.busy || text.read().trim() === '';
+
+    field.disabled = flags.busy;
+    wrap.toggleAttribute('aria-busy', flags.busy);
+    if (off) send.setAttribute('aria-disabled', 'true');
+    else send.removeAttribute('aria-disabled');
+  };
+  const go = (): void => {
+    const prompt = text.read().trim();
+
+    if (flags.busy || prompt === '') return;
+    flags.busy = true;
+    sync();
+    void submit(prompt).catch(() => false).then((made) => {
+      flags.busy = false;
+      if (made) {
+        done();
+
+        return;
+      }
+      sync();
+      field.focus();
+    });
+  };
+
+  wrap.setAttribute('data-blok-database-ai-prompt', '');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = IconEmojiSparkles;
+  field.rows = 1;
+  field.value = text.read();
+  field.placeholder = label;
+  field.setAttribute('aria-label', label);
+  field.setAttribute('data-blok-testid', 'database-new-database-ai-prompt');
+  field.addEventListener('input', () => {
+    text.write(field.value);
+    sync();
+  });
+  field.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    go();
+  });
+  send.type = 'button';
+  send.innerHTML = IconArrowUp;
+  send.setAttribute('aria-label', t('assistant.send'));
+  send.setAttribute('data-blok-testid', 'database-new-database-ai-submit');
+  // aria-disabled, not disabled: the button keeps its place in the tab order, as Notion's does.
+  send.addEventListener('click', go);
+  wrap.append(icon, field, send);
+  sync();
+
+  return wrap;
+};
 
 /**
  * The panel "New data source" opens on its new tab (research/23 §10, shot 121).
  * The source already exists, so "New empty data source" only closes it.
- * Not built: "Suggested" templates (Blok has no database templates) and the
- * AI prompt (no host lever sets up a database).
+ * With `prompt` it is the "New database" panel of a fresh insert instead.
+ * Not built: "Suggested" templates (Blok has no database templates).
  */
 export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePanel => {
   const { t } = options;
   const untitled = t('tools.database.relationUntitledDatabase');
-  const state = { query: '', linkQuery: '' };
+  const state = { query: '', linkQuery: '', prompt: '' };
   const list = document.createElement('div');
   const linkList = document.createElement('div');
   const matches = (label: string, query: string): boolean => label.toLowerCase().includes(query.trim().toLowerCase());
@@ -33,7 +111,7 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
   const fillLink = (panel: DatabasePanel): void => {
     const shown = options.sources().filter((source) => matches(source.title === '' ? untitled : source.title, state.linkQuery));
     const sourceName = (title: string): string => (title.trim() === '' ? t('tools.database.newDataSource') : title);
-    const suggested = options.suggested().filter((source) => matches(sourceName(source.title), state.linkQuery));
+    const suggested = (options.suggested?.() ?? []).filter((source) => matches(sourceName(source.title), state.linkQuery));
 
     linkList.replaceChildren(...(suggested.length === 0 ? [] : [panelLabel(t('tools.database.linkedSuggested'))]), ...suggested.map((source) => panelRow({
       label: sourceName(source.title),
@@ -81,59 +159,68 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
     const link = t('tools.database.linkedLinkExisting');
     const rows: HTMLElement[] = [];
     const query = state.query.trim();
+    const nameSource = options.nameSource;
 
     // research/26 §2: a query replaces the first row and never hides Import CSV.
     if (query === '') {
       rows.push(panelRow({ label: empty, testId: 'database-new-source-empty', icon: IconPlus, onClick: () => panel.close() }));
-    } else {
+    } else if (nameSource !== undefined) {
       rows.push(panelRow({
         label: t('tools.database.newDataSourceNamed', { query }),
         testId: 'database-new-source-named',
         icon: IconPlus,
         onClick: () => {
           panel.close();
-          options.nameSource(query);
+          nameSource(query);
         },
       }));
     }
-    rows.push(panelRow({
-      label: csv,
-      testId: 'database-new-source-csv',
-      icon: IconUpload,
-      onClick: () => {
-        panel.close();
-        options.importCsv();
-      },
-    }));
+    if (options.importCsv !== undefined) {
+      const importCsv = options.importCsv;
+
+      rows.push(panelRow({
+        label: csv,
+        testId: 'database-new-source-csv',
+        icon: IconUpload,
+        onClick: () => {
+          panel.close();
+          importCsv();
+        },
+      }));
+    }
     if (matches(link, state.query)) {
-      rows.push(panelSeparator(), panelRow({ label: link, testId: 'database-new-source-link', icon: IconArrowDiagonal, onClick: () => panel.push(linkPage) }));
+      if (rows.length > 0) rows.push(panelSeparator());
+      rows.push(panelRow({ label: link, testId: 'database-new-source-link', icon: IconArrowDiagonal, onClick: () => panel.push(linkPage) }));
     }
     list.replaceChildren(...rows);
   };
 
+  const prompt = options.prompt;
   const panel = new DatabasePanel({
     anchor: options.anchor,
     root: {
-      title: t('tools.database.newDataSource'),
+      title: t(prompt === undefined ? 'tools.database.newDataSource' : 'tools.database.linkedPanelTitle'),
       build: (current) => {
-        const search = panelInput({
-          value: state.query,
-          placeholder: t('tools.database.newDataSourceSearch'),
-          label: t('tools.database.newDataSourceSearch'),
-          testId: 'database-new-source-search',
-          // Only the list redraws, so the field keeps its caret.
-          onInput: (value) => {
-            state.query = value;
-            fill(current);
-          },
-        });
+        const top = prompt === undefined
+          ? panelInput({
+            value: state.query,
+            placeholder: t('tools.database.newDataSourceSearch'),
+            label: t('tools.database.newDataSourceSearch'),
+            testId: 'database-new-source-search',
+            // Only the list redraws, so the field keeps its caret.
+            onInput: (value) => {
+              state.query = value;
+              fill(current);
+            },
+          })
+          : promptBox(t, { read: () => state.prompt, write: (value) => { state.prompt = value; } }, prompt.submit, () => current.close());
 
         fill(current);
 
-        return [search, list];
+        return [top, list];
       },
     },
-    testId: 'database-new-source-panel',
+    testId: prompt === undefined ? 'database-new-source-panel' : 'database-new-database-panel',
     width: 290,
     backLabel: t('tools.database.peekBack'),
     ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),

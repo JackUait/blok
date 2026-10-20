@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "De oorspronkelijke database is verwijderd en kan niet worden bewerkt",
   "tools.database.linkedLinkSource": "Gegevensbron koppelen",
   "tools.database.linkedPanelTitle": "Nieuwe database",
+  "tools.database.aiSetupPlaceholder": "Beschrijf wat je wilt bouwen",
   "tools.database.linkedSearch": "Gegevensbron toevoegen of koppelen…",
   "tools.database.linkedNewEmpty": "Nieuwe lege gegevensbron",
   "tools.database.linkedNewNamed": "Nieuwe gegevensbron ‘{name}’",

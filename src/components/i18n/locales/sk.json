@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Pôvodná databáza bola odstránená a nedá sa upravovať",
   "tools.database.linkedLinkSource": "Prepojiť zdroj údajov",
   "tools.database.linkedPanelTitle": "Nová databáza",
+  "tools.database.aiSetupPlaceholder": "Opíšte, čo chcete vytvoriť",
   "tools.database.linkedSearch": "Pridať alebo prepojiť zdroj údajov…",
   "tools.database.linkedNewEmpty": "Nový prázdny zdroj údajov",
   "tools.database.linkedNewNamed": "Nový zdroj údajov „{name}“",

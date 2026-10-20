@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Algne andmebaas kustutati ja seda ei saa muuta",
   "tools.database.linkedLinkSource": "Lingi andmeallikas",
   "tools.database.linkedPanelTitle": "Uus andmebaas",
+  "tools.database.aiSetupPlaceholder": "Kirjelda, mida soovid luua",
   "tools.database.linkedSearch": "Lisa või lingi andmeallikas…",
   "tools.database.linkedNewEmpty": "Uus tühi andmeallikas",
   "tools.database.linkedNewNamed": "Uus andmeallikas „{name}“",

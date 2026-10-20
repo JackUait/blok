@@ -1899,6 +1899,7 @@
   "tools.database.linkedSourceMissing": "تم حذف قاعدة البيانات الأصلية ولا يمكن تعديلها",
   "tools.database.linkedLinkSource": "ربط مصدر بيانات",
   "tools.database.linkedPanelTitle": "قاعدة بيانات جديدة",
+  "tools.database.aiSetupPlaceholder": "صِف ما تريد إنشاءه",
   "tools.database.linkedSearch": "إضافة مصدر بيانات أو ربطه…",
   "tools.database.linkedNewEmpty": "مصدر بيانات فارغ جديد",
   "tools.database.linkedNewNamed": "مصدر بيانات جديد «{name}»",

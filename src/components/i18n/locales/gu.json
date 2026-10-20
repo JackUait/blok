@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "મૂળ ડેટાબેઝ કાઢી નાખવામાં આવ્યું છે અને તેમાં ફેરફાર કરી શકાતો નથી",
   "tools.database.linkedLinkSource": "ડેટા સ્રોત લિંક કરો",
   "tools.database.linkedPanelTitle": "નવું ડેટાબેઝ",
+  "tools.database.aiSetupPlaceholder": "તમે શું બનાવવા માંગો છો તેનું વર્ણન કરો",
   "tools.database.linkedSearch": "ડેટા સ્રોત ઉમેરો અથવા લિંક કરો…",
   "tools.database.linkedNewEmpty": "નવો ખાલી ડેટા સ્રોત",
   "tools.database.linkedNewNamed": "નવો “{name}” ડેટા સ્રોત",

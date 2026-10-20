@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Oryginalna baza danych została usunięta i nie można jej edytować",
   "tools.database.linkedLinkSource": "Połącz źródło danych",
   "tools.database.linkedPanelTitle": "Nowa baza danych",
+  "tools.database.aiSetupPlaceholder": "Opisz, co chcesz zbudować",
   "tools.database.linkedSearch": "Dodaj lub połącz źródło danych…",
   "tools.database.linkedNewEmpty": "Nowe puste źródło danych",
   "tools.database.linkedNewNamed": "Nowe źródło danych „{name}”",

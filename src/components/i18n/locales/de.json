@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Die ursprüngliche Datenbank wurde gelöscht und kann nicht bearbeitet werden",
   "tools.database.linkedLinkSource": "Datenquelle verknüpfen",
   "tools.database.linkedPanelTitle": "Neue Datenbank",
+  "tools.database.aiSetupPlaceholder": "Beschreibe, was du erstellen möchtest",
   "tools.database.linkedSearch": "Datenquelle hinzufügen oder verknüpfen…",
   "tools.database.linkedNewEmpty": "Neue leere Datenquelle",
   "tools.database.linkedNewNamed": "Neue Datenquelle „{name}“",

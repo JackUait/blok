@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "មូលដ្ឋានទិន្នន័យដើមត្រូវបានលុប ហើយមិនអាចកែសម្រួលបានទេ",
   "tools.database.linkedLinkSource": "ភ្ជាប់ប្រភពទិន្នន័យ",
   "tools.database.linkedPanelTitle": "មូលដ្ឋានទិន្នន័យថ្មី",
+  "tools.database.aiSetupPlaceholder": "ពិពណ៌នាអំពីអ្វីដែលអ្នកចង់បង្កើត",
   "tools.database.linkedSearch": "បន្ថែម ឬភ្ជាប់ប្រភពទិន្នន័យ…",
   "tools.database.linkedNewEmpty": "ប្រភពទិន្នន័យទទេថ្មី",
   "tools.database.linkedNewNamed": "ប្រភពទិន្នន័យ “{name}” ថ្មី",

@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Исходная база данных удалена, её нельзя редактировать",
   "tools.database.linkedLinkSource": "Связать источник данных",
   "tools.database.linkedPanelTitle": "Новая база данных",
+  "tools.database.aiSetupPlaceholder": "Опишите, что хотите создать",
   "tools.database.linkedSearch": "Добавить или связать источник данных…",
   "tools.database.linkedNewEmpty": "Новый пустой источник данных",
   "tools.database.linkedNewNamed": "Новый источник данных «{name}»",

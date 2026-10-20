@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "اصل ڈیٹابیس حذف کر دیا گیا ہے اور اس میں ترمیم نہیں کی جا سکتی",
   "tools.database.linkedLinkSource": "ڈیٹا ماخذ منسلک کریں",
   "tools.database.linkedPanelTitle": "نیا ڈیٹابیس",
+  "tools.database.aiSetupPlaceholder": "بیان کریں کہ آپ کیا بنانا چاہتے ہیں",
   "tools.database.linkedSearch": "ڈیٹا ماخذ شامل یا منسلک کریں…",
   "tools.database.linkedNewEmpty": "نیا خالی ڈیٹا ماخذ",
   "tools.database.linkedNewNamed": "نیا “{name}” ڈیٹا ماخذ",

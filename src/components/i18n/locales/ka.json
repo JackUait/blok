@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "ორიგინალი მონაცემთა ბაზა წაიშალა და მისი რედაქტირება შეუძლებელია",
   "tools.database.linkedLinkSource": "მონაცემთა წყაროს დაკავშირება",
   "tools.database.linkedPanelTitle": "ახალი მონაცემთა ბაზა",
+  "tools.database.aiSetupPlaceholder": "აღწერეთ, რისი შექმნა გსურთ",
   "tools.database.linkedSearch": "მონაცემთა წყაროს დამატება ან დაკავშირება…",
   "tools.database.linkedNewEmpty": "ახალი ცარიელი მონაცემთა წყარო",
   "tools.database.linkedNewNamed": "ახალი მონაცემთა წყარო „{name}“",

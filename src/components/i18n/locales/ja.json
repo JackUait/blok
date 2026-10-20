@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "元のデータベースは削除されたため、編集できません",
   "tools.database.linkedLinkSource": "データソースをリンク",
   "tools.database.linkedPanelTitle": "新しいデータベース",
+  "tools.database.aiSetupPlaceholder": "作りたいものを説明してください",
   "tools.database.linkedSearch": "データソースを追加またはリンク…",
   "tools.database.linkedNewEmpty": "新しい空のデータソース",
   "tools.database.linkedNewNamed": "新しいデータソース「{name}」",

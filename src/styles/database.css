@@ -63,6 +63,8 @@
   --blok-database-property-icon-button-hover-bg: rgb(249, 248, 247);
   --blok-database-panel-close-bg: rgba(42, 28, 0, 0.07);
   --blok-database-panel-close-hover-bg: rgba(42, 28, 0, 0.106);
+  /* research/26 §2: the AI prompt box placeholder. Dark is unmeasured. */
+  --blok-database-ai-prompt-placeholder: rgba(21, 14, 0, 0.286);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-table-selection-shadow: var(--blok-database-table-open-shadow);
@@ -273,6 +275,7 @@
     --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
     --blok-database-panel-close-bg: rgba(255, 255, 235, 0.1);
     --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
+    --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
     --blok-database-table-open-bg: rgb(37, 37, 37);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -474,6 +477,7 @@
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
   --blok-database-panel-close-bg: rgba(255, 255, 235, 0.1);
   --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
+  --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -6818,6 +6822,82 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-panel-close]:focus-visible {
   outline: none;
+}
+
+/* research/26 §2: the "New database" AI prompt box, 268x56. On the white panel its
+   border is rgb(240, 239, 237), the table border's value. */
+[data-blok-database-ai-prompt] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+  /* 268 of the 282 a row takes. */
+  width: calc(100% - 14px);
+  min-height: 56px;
+  margin-block: var(--blok-space-1);
+  margin-inline: auto;
+  /* The hairline comes off the block padding: two 20px lines make 56. */
+  padding-block: calc(var(--blok-space-2) - var(--blok-border-width-hairline));
+  padding-inline: var(--blok-space-2);
+  border: var(--blok-border-width-hairline) solid var(--blok-database-table-border);
+  border-radius: var(--blok-radius-dialog);
+}
+
+[data-blok-database-ai-prompt] > span {
+  display: inline-flex;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-ai-prompt] > span svg {
+  width: 18px;
+  height: 18px;
+}
+
+[data-blok-database-ai-prompt] textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  /* Two lines: the placeholder wraps, and the box stays 56 tall. */
+  min-height: 40px;
+  resize: none;
+  outline: none;
+}
+
+[data-blok-database-ai-prompt] textarea::placeholder {
+  color: var(--blok-database-ai-prompt-placeholder);
+}
+
+[data-blok-database-ai-prompt] > button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-block-start: auto;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--blok-database-panel-close-bg);
+  color: var(--blok-database-table-gutter-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-ai-prompt] > button[aria-disabled="true"] {
+  cursor: default;
+}
+
+[data-blok-database-ai-prompt] > button svg {
+  width: 14px;
+  height: 14px;
 }
 
 [data-blok-database-panel-close] svg {

@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Nabura na ang orihinal na database at hindi na ito mae-edit",
   "tools.database.linkedLinkSource": "Mag-link ng data source",
   "tools.database.linkedPanelTitle": "Bagong database",
+  "tools.database.aiSetupPlaceholder": "Ilarawan kung ano ang gusto mong buuin",
   "tools.database.linkedSearch": "Magdagdag o mag-link ng data source…",
   "tools.database.linkedNewEmpty": "Bagong blangkong data source",
   "tools.database.linkedNewNamed": "Bagong “{name}” na data source",

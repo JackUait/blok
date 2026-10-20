@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Orijinal veritabanı silindi ve düzenlenemez",
   "tools.database.linkedLinkSource": "Bir veri kaynağı bağla",
   "tools.database.linkedPanelTitle": "Yeni veritabanı",
+  "tools.database.aiSetupPlaceholder": "Ne oluşturmak istediğinizi açıklayın",
   "tools.database.linkedSearch": "Veri kaynağı ekle veya bağla…",
   "tools.database.linkedNewEmpty": "Yeni boş veri kaynağı",
   "tools.database.linkedNewNamed": "Yeni “{name}” veri kaynağı",

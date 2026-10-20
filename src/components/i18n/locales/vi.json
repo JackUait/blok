@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Cơ sở dữ liệu gốc đã bị xóa và không thể chỉnh sửa",
   "tools.database.linkedLinkSource": "Liên kết nguồn dữ liệu",
   "tools.database.linkedPanelTitle": "Cơ sở dữ liệu mới",
+  "tools.database.aiSetupPlaceholder": "Mô tả những gì bạn muốn xây dựng",
   "tools.database.linkedSearch": "Thêm hoặc liên kết nguồn dữ liệu…",
   "tools.database.linkedNewEmpty": "Nguồn dữ liệu trống mới",
   "tools.database.linkedNewNamed": "Nguồn dữ liệu “{name}” mới",

@@ -67,6 +67,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-card-drawer.ts': cmds(['database.setRowValues', 'database.addProperty'], 'Row title, description and property edits.'),
   'ui-file:src/tools/database/database-column-controls.ts': cmds(['database.addOption', 'database.renameOption', 'database.deleteOption'], 'Board column (select option) controls.'),
   'ui-file:src/tools/database/database-column-drag.ts': cmds(['database.moveOption'], 'Reorder board columns.'),
+  'ui-file:src/tools/database/database-new-source-panel.ts': cmds(['database.addProperty', 'database.addView'], 'The New database AI prompt asks the host to set the database up; an agent adds the properties and views itself.'),
   'ui-file:src/tools/database/cells/cell-popover.ts': exempt('chrome', 'Closes the cell editor popover on Escape; the editors inside it have their own ids.'),
   'ui-file:src/tools/database/cells/date-editor.ts': cmds(['database.setRowValues'], CELL_EDIT),
   'ui-file:src/tools/database/cells/display.ts': exempt('view-only', 'Follows a link or opens a related row from a cell; the document does not change.'),

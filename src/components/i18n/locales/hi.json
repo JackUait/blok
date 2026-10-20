@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "मूल डेटाबेस हटा दिया गया है और इसे संपादित नहीं किया जा सकता",
   "tools.database.linkedLinkSource": "डेटा स्रोत लिंक करें",
   "tools.database.linkedPanelTitle": "नया डेटाबेस",
+  "tools.database.aiSetupPlaceholder": "बताएं कि आप क्या बनाना चाहते हैं",
   "tools.database.linkedSearch": "डेटा स्रोत जोड़ें या लिंक करें…",
   "tools.database.linkedNewEmpty": "नया खाली डेटा स्रोत",
   "tools.database.linkedNewNamed": "नया “{name}” डेटा स्रोत",

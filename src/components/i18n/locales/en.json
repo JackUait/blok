@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "The original database was deleted and can’t be edited",
   "tools.database.linkedLinkSource": "Link a data source",
   "tools.database.linkedPanelTitle": "New database",
+  "tools.database.aiSetupPlaceholder": "Describe what you want to build",
   "tools.database.linkedSearch": "Add or link data source…",
   "tools.database.linkedNewEmpty": "New empty data source",
   "tools.database.linkedNewNamed": "New “{name}” data source",

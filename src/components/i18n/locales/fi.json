@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Alkuperäinen tietokanta on poistettu, eikä sitä voi muokata",
   "tools.database.linkedLinkSource": "Linkitä tietolähde",
   "tools.database.linkedPanelTitle": "Uusi tietokanta",
+  "tools.database.aiSetupPlaceholder": "Kuvaile, mitä haluat rakentaa",
   "tools.database.linkedSearch": "Lisää tai linkitä tietolähde…",
   "tools.database.linkedNewEmpty": "Uusi tyhjä tietolähde",
   "tools.database.linkedNewNamed": "Uusi tietolähde ”{name}”",

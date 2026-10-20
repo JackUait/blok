@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Hifadhidata asili imefutwa na haiwezi kuhaririwa",
   "tools.database.linkedLinkSource": "Unganisha chanzo cha data",
   "tools.database.linkedPanelTitle": "Hifadhidata mpya",
+  "tools.database.aiSetupPlaceholder": "Eleza unachotaka kujenga",
   "tools.database.linkedSearch": "Ongeza au unganisha chanzo cha data…",
   "tools.database.linkedNewEmpty": "Chanzo kipya cha data kitupu",
   "tools.database.linkedNewNamed": "Chanzo kipya cha data “{name}”",

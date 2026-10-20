@@ -1283,9 +1283,35 @@ export interface DatabaseAutofillRequest {
   values: Record<string, PropertyValue>;
 }
 
+/** What the person typed in the "New database" panel, and the database as it is. */
+export interface DatabaseSetupRequest {
+  databaseId: string;
+  prompt: string;
+  schema: PropertyDefinition[];
+  views: DatabaseViewConfig[];
+}
+
+/**
+ * The database to build. The title property keeps its id. Blok drops
+ * properties of an unknown type, without a name or with a used id, and view
+ * references to properties that are not there.
+ */
+export interface DatabaseSetup {
+  schema: PropertyDefinition[];
+  /** Without usable views, one table shows every property. */
+  views?: DatabaseViewConfig[];
+  title?: string;
+}
+
 export interface DatabaseAI {
   /** The new value, or null or undefined to keep the old one. */
   autofill(request: DatabaseAutofillRequest): Promise<PropertyValue | null | undefined>;
+  /**
+   * Sets up a database the person just inserted from their prompt. With it,
+   * the insert opens the "New database" panel with a prompt box. Null or
+   * undefined changes nothing; a rejection shows its message.
+   */
+  setupDatabase?(request: DatabaseSetupRequest): Promise<DatabaseSetup | null | undefined>;
 }
 
 /**

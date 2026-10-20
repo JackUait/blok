@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "އަސްލު ޑޭޓާބޭސް ފޮހެލެވިއްޖެ، އަދި އެއަށް ބަދަލު ނުގެނެވޭނެ",
   "tools.database.linkedLinkSource": "ޑޭޓާ ސޯސެއް ގުޅުވާ",
   "tools.database.linkedPanelTitle": "އާ ޑޭޓާބޭސް",
+  "tools.database.aiSetupPlaceholder": "ތިބާ ބިނާކުރަން ބޭނުންވާ އެއްޗެއް ބަޔާންކުރައްވާ",
   "tools.database.linkedSearch": "ޑޭޓާ ސޯސެއް އިތުރުކުރޭ ނުވަތަ ގުޅުވާ…",
   "tools.database.linkedNewEmpty": "އާ ހުސް ޑޭޓާ ސޯސެއް",
   "tools.database.linkedNewNamed": "އާ \"{name}\" ޑޭޓާ ސޯސެއް",

@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Originali duomenų bazė ištrinta, jos redaguoti negalima",
   "tools.database.linkedLinkSource": "Susieti duomenų šaltinį",
   "tools.database.linkedPanelTitle": "Nauja duomenų bazė",
+  "tools.database.aiSetupPlaceholder": "Aprašykite, ką norite sukurti",
   "tools.database.linkedSearch": "Pridėti arba susieti duomenų šaltinį…",
   "tools.database.linkedNewEmpty": "Naujas tuščias duomenų šaltinis",
   "tools.database.linkedNewNamed": "Naujas duomenų šaltinis „{name}“",

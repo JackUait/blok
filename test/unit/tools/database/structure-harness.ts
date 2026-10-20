@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { API, BlockAPI } from '../../../../types';
+import type { API, BlockAPI, BlockOrigin } from '../../../../types';
 import type { DatabaseConfig, DatabaseData, DatabaseRowData, PropertyValue } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
@@ -169,13 +169,14 @@ export const rowSeed = (id: string, parentId: string, data: Partial<DatabaseRowD
   ({ id, name: 'database-row', parentId, data: { position: 'a0', ...data } });
 
 /** Builds and mounts a database tool for `blockId`. */
-export const buildDatabase = (doc: Doc, blockId: string, data: DatabaseData, config: DatabaseConfig = {}): { tool: DatabaseTool; el: HTMLElement } => {
+export const buildDatabase = (doc: Doc, blockId: string, data: DatabaseData, config: DatabaseConfig = {}, origin?: BlockOrigin): { tool: DatabaseTool; el: HTMLElement } => {
   const entry = doc.blocks.get(blockId);
   const tool = new DatabaseTool({
     data,
     config,
     api: doc.api,
     readOnly: false,
+    ...(origin !== undefined ? { origin } : {}),
     block: (entry?.block ?? { id: blockId, name: 'database', dispatchChange: vi.fn() }) as never,
   });
 

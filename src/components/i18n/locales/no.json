@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Den opprinnelige databasen ble slettet og kan ikke redigeres",
   "tools.database.linkedLinkSource": "Koble til en datakilde",
   "tools.database.linkedPanelTitle": "Ny database",
+  "tools.database.aiSetupPlaceholder": "Beskriv hva du vil bygge",
   "tools.database.linkedSearch": "Legg til eller koble til datakilde…",
   "tools.database.linkedNewEmpty": "Ny tom datakilde",
   "tools.database.linkedNewNamed": "Ny datakilde «{name}»",

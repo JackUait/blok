@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "මුල් දත්ත සමුදාය මකා දමා ඇති අතර එය සංස්කරණය කළ නොහැක",
   "tools.database.linkedLinkSource": "දත්ත මූලාශ්‍රයක් සම්බන්ධ කරන්න",
   "tools.database.linkedPanelTitle": "නව දත්ත ගබඩාව",
+  "tools.database.aiSetupPlaceholder": "ඔබට තැනීමට අවශ්‍ය දේ විස්තර කරන්න",
   "tools.database.linkedSearch": "දත්ත මූලාශ්‍රයක් එක් කරන්න හෝ සම්බන්ධ කරන්න…",
   "tools.database.linkedNewEmpty": "නව හිස් දත්ත මූලාශ්‍රය",
   "tools.database.linkedNewNamed": "නව “{name}” දත්ත මූලාශ්‍රය",

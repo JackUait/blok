@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Izvirna podatkovna baza je bila izbrisana in je ni mogoče urejati",
   "tools.database.linkedLinkSource": "Poveži vir podatkov",
   "tools.database.linkedPanelTitle": "Nova zbirka podatkov",
+  "tools.database.aiSetupPlaceholder": "Opišite, kaj želite ustvariti",
   "tools.database.linkedSearch": "Dodaj ali poveži vir podatkov…",
   "tools.database.linkedNewEmpty": "Nov prazen vir podatkov",
   "tools.database.linkedNewNamed": "Nov vir podatkov „{name}“",

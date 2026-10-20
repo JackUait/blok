@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Baza origjinale e të dhënave u fshi dhe nuk mund të redaktohet",
   "tools.database.linkedLinkSource": "Lidh një burim të dhënash",
   "tools.database.linkedPanelTitle": "Bazë të dhënash e re",
+  "tools.database.aiSetupPlaceholder": "Përshkruani çfarë doni të ndërtoni",
   "tools.database.linkedSearch": "Shto ose lidh një burim të dhënash…",
   "tools.database.linkedNewEmpty": "Burim i ri bosh të dhënash",
   "tools.database.linkedNewNamed": "Burim i ri të dhënash “{name}”",

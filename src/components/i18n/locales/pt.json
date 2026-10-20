@@ -1869,6 +1869,7 @@
   "tools.database.linkedSourceMissing": "O banco de dados original foi excluído e não pode ser editado",
   "tools.database.linkedLinkSource": "Vincular uma fonte de dados",
   "tools.database.linkedPanelTitle": "Novo banco de dados",
+  "tools.database.aiSetupPlaceholder": "Descreva o que você quer criar",
   "tools.database.linkedSearch": "Adicionar ou vincular fonte de dados…",
   "tools.database.linkedNewEmpty": "Nova fonte de dados vazia",
   "tools.database.linkedNewNamed": "Nova fonte de dados “{name}”",

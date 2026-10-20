@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "அசல் தரவுத்தளம் நீக்கப்பட்டது, அதைத் திருத்த முடியாது",
   "tools.database.linkedLinkSource": "தரவு மூலத்தை இணை",
   "tools.database.linkedPanelTitle": "புதிய தரவுத்தளம்",
+  "tools.database.aiSetupPlaceholder": "நீங்கள் என்ன உருவாக்க விரும்புகிறீர்கள் என்பதை விவரிக்கவும்",
   "tools.database.linkedSearch": "தரவு மூலத்தைச் சேர் அல்லது இணை…",
   "tools.database.linkedNewEmpty": "புதிய வெற்றுத் தரவு மூலம்",
   "tools.database.linkedNewNamed": "புதிய “{name}” தரவு மூலம்",

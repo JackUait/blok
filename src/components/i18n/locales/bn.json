@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "মূল ডেটাবেসটি মুছে ফেলা হয়েছে এবং এটি সম্পাদনা করা যাবে না",
   "tools.database.linkedLinkSource": "একটি ডেটা সোর্স লিঙ্ক করুন",
   "tools.database.linkedPanelTitle": "নতুন ডেটাবেস",
+  "tools.database.aiSetupPlaceholder": "আপনি কী তৈরি করতে চান তা বর্ণনা করুন",
   "tools.database.linkedSearch": "ডেটা সোর্স যোগ বা লিঙ্ক করুন…",
   "tools.database.linkedNewEmpty": "নতুন খালি ডেটা সোর্স",
   "tools.database.linkedNewNamed": "নতুন “{name}” ডেটা সোর্স",

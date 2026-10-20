@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "اصل ڊيٽابيس ختم ڪيو ويو ۽ ان ۾ ترميم نٿي ڪري سگهجي",
   "tools.database.linkedLinkSource": "ڪو ڊيٽا ماخذ ڳنڍيو",
   "tools.database.linkedPanelTitle": "نئون ڊيٽابيس",
+  "tools.database.aiSetupPlaceholder": "بيان ڪريو ته توهان ڇا ٺاهڻ چاهيو ٿا",
   "tools.database.linkedSearch": "ڊيٽا ماخذ شامل ڪريو يا ڳنڍيو…",
   "tools.database.linkedNewEmpty": "نئون خالي ڊيٽا ماخذ",
   "tools.database.linkedNewNamed": "نئون “{name}” ڊيٽا ماخذ",

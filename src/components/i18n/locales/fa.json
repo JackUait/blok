@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "پایگاه داده اصلی حذف شده است و قابل ویرایش نیست",
   "tools.database.linkedLinkSource": "پیوند دادن منبع داده",
   "tools.database.linkedPanelTitle": "پایگاه داده جدید",
+  "tools.database.aiSetupPlaceholder": "توضیح دهید چه چیزی می‌خواهید بسازید",
   "tools.database.linkedSearch": "افزودن یا پیوند دادن منبع داده…",
   "tools.database.linkedNewEmpty": "منبع داده خالی جدید",
   "tools.database.linkedNewNamed": "منبع داده جدید «{name}»",

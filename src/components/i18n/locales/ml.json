@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "യഥാർത്ഥ ഡാറ്റാബേസ് ഇല്ലാതാക്കി, അത് എഡിറ്റ് ചെയ്യാനാകില്ല",
   "tools.database.linkedLinkSource": "ഒരു ഡാറ്റാ ഉറവിടം ലിങ്ക് ചെയ്യുക",
   "tools.database.linkedPanelTitle": "പുതിയ ഡാറ്റാബേസ്",
+  "tools.database.aiSetupPlaceholder": "നിങ്ങൾ എന്താണ് നിർമ്മിക്കാൻ ആഗ്രഹിക്കുന്നതെന്ന് വിവരിക്കുക",
   "tools.database.linkedSearch": "ഡാറ്റാ ഉറവിടം ചേർക്കുക അല്ലെങ്കിൽ ലിങ്ക് ചെയ്യുക…",
   "tools.database.linkedNewEmpty": "പുതിയ ശൂന്യ ഡാറ്റാ ഉറവിടം",
   "tools.database.linkedNewNamed": "പുതിയ “{name}” ഡാറ്റാ ഉറവിടം",

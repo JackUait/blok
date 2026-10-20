@@ -1869,6 +1869,7 @@
   "tools.database.linkedSourceMissing": "Sākotnējā datubāze tika izdzēsta, un to nevar rediģēt",
   "tools.database.linkedLinkSource": "Saistīt datu avotu",
   "tools.database.linkedPanelTitle": "Jauna datubāze",
+  "tools.database.aiSetupPlaceholder": "Aprakstiet, ko vēlaties izveidot",
   "tools.database.linkedSearch": "Pievienot vai saistīt datu avotu…",
   "tools.database.linkedNewEmpty": "Jauns tukšs datu avots",
   "tools.database.linkedNewNamed": "Jauns datu avots „{name}”",

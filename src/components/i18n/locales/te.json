@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "అసలు డేటాబేస్ తొలగించబడింది, దాన్ని సవరించలేరు",
   "tools.database.linkedLinkSource": "డేటా మూలాన్ని లింక్ చేయండి",
   "tools.database.linkedPanelTitle": "కొత్త డేటాబేస్",
+  "tools.database.aiSetupPlaceholder": "మీరు ఏమి నిర్మించాలనుకుంటున్నారో వివరించండి",
   "tools.database.linkedSearch": "డేటా మూలాన్ని జోడించండి లేదా లింక్ చేయండి…",
   "tools.database.linkedNewEmpty": "కొత్త ఖాళీ డేటా మూలం",
   "tools.database.linkedNewNamed": "కొత్త “{name}” డేటా మూలం",

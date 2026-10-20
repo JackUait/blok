@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Originaldatabasen har tagits bort och kan inte redigeras",
   "tools.database.linkedLinkSource": "Länka en datakälla",
   "tools.database.linkedPanelTitle": "Ny databas",
+  "tools.database.aiSetupPlaceholder": "Beskriv vad du vill bygga",
   "tools.database.linkedSearch": "Lägg till eller länka datakälla…",
   "tools.database.linkedNewEmpty": "Ny tom datakälla",
   "tools.database.linkedNewNamed": "Ny datakälla ”{name}”",

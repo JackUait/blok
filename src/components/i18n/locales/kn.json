@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "ಮೂಲ ಡೇಟಾಬೇಸ್ ಅನ್ನು ಅಳಿಸಲಾಗಿದೆ ಮತ್ತು ಅದನ್ನು ಸಂಪಾದಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ",
   "tools.database.linkedLinkSource": "ಡೇಟಾ ಮೂಲವನ್ನು ಲಿಂಕ್ ಮಾಡಿ",
   "tools.database.linkedPanelTitle": "ಹೊಸ ಡೇಟಾಬೇಸ್",
+  "tools.database.aiSetupPlaceholder": "ನೀವು ಏನನ್ನು ನಿರ್ಮಿಸಲು ಬಯಸುತ್ತೀರಿ ಎಂದು ವಿವರಿಸಿ",
   "tools.database.linkedSearch": "ಡೇಟಾ ಮೂಲವನ್ನು ಸೇರಿಸಿ ಅಥವಾ ಲಿಂಕ್ ಮಾಡಿ…",
   "tools.database.linkedNewEmpty": "ಹೊಸ ಖಾಲಿ ಡೇಟಾ ಮೂಲ",
   "tools.database.linkedNewNamed": "ಹೊಸ “{name}” ಡೇಟಾ ಮೂಲ",

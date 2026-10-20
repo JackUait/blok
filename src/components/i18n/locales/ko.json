@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "원본 데이터베이스가 삭제되어 편집할 수 없습니다",
   "tools.database.linkedLinkSource": "데이터 소스 연결",
   "tools.database.linkedPanelTitle": "새 데이터베이스",
+  "tools.database.aiSetupPlaceholder": "만들고 싶은 것을 설명하세요",
   "tools.database.linkedSearch": "데이터 소스 추가 또는 연결…",
   "tools.database.linkedNewEmpty": "새 빈 데이터 소스",
   "tools.database.linkedNewNamed": "새 “{name}” 데이터 소스",

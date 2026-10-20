@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Az eredeti adatbázis törölve lett, és nem szerkeszthető",
   "tools.database.linkedLinkSource": "Adatforrás csatolása",
   "tools.database.linkedPanelTitle": "Új adatbázis",
+  "tools.database.aiSetupPlaceholder": "Írd le, mit szeretnél létrehozni",
   "tools.database.linkedSearch": "Adatforrás hozzáadása vagy csatolása…",
   "tools.database.linkedNewEmpty": "Új üres adatforrás",
   "tools.database.linkedNewNamed": "Új „{name}” adatforrás",

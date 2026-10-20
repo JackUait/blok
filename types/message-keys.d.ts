@@ -455,6 +455,7 @@ export type BlokMessageKey =
   | 'tools.database.aiAutofillTriggerOn'
   | 'tools.database.aiAutofillTriggerPropertyHeading'
   | 'tools.database.aiAutofillTriggerSpecific'
+  | 'tools.database.aiSetupPlaceholder'
   | 'tools.database.automationActive'
   | 'tools.database.automationAddTrigger'
   | 'tools.database.automationAll'

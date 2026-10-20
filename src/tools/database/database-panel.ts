@@ -29,7 +29,7 @@ export interface DatabasePanelOptions {
   onClose?: () => void;
 }
 
-const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [tabindex="0"]';
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
 
 /**
  * A popover that pages forward and back like Notion's view settings: a row
@@ -170,7 +170,7 @@ export class DatabasePanel {
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    if (event.target instanceof HTMLInputElement) return;
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
     const items = [...this.element.querySelectorAll<HTMLElement>(FOCUSABLE)];
     const index = items.indexOf(document.activeElement as HTMLElement);
     const next = items[(index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length];

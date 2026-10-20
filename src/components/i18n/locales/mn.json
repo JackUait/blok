@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Эх мэдээллийн сан устсан тул засах боломжгүй",
   "tools.database.linkedLinkSource": "Өгөгдлийн эх сурвалж холбох",
   "tools.database.linkedPanelTitle": "Шинэ мэдээллийн сан",
+  "tools.database.aiSetupPlaceholder": "Юу бүтээхийг хүсэж буйгаа тайлбарлана уу",
   "tools.database.linkedSearch": "Өгөгдлийн эх сурвалж нэмэх эсвэл холбох…",
   "tools.database.linkedNewEmpty": "Шинэ хоосон өгөгдлийн эх сурвалж",
   "tools.database.linkedNewNamed": "Шинэ «{name}» өгөгдлийн эх сурвалж",

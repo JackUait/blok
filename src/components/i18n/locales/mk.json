@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Оригиналната база на податоци е избришана и не може да се уредува",
   "tools.database.linkedLinkSource": "Поврзи извор на податоци",
   "tools.database.linkedPanelTitle": "Нова база на податоци",
+  "tools.database.aiSetupPlaceholder": "Опишете што сакате да создадете",
   "tools.database.linkedSearch": "Додај или поврзи извор на податоци…",
   "tools.database.linkedNewEmpty": "Нов празен извор на податоци",
   "tools.database.linkedNewNamed": "Нов извор на податоци „{name}“",

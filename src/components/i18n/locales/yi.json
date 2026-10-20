@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "דער אָריגינעלער דאַטאַבאַנק איז אויסגעמעקט געוואָרן און מע קען אים נישט רעדאַגירן",
   "tools.database.linkedLinkSource": "פֿאַרבינדן אַ דאַטן־מקור",
   "tools.database.linkedPanelTitle": "נײַער דאַטאַבאַנק",
+  "tools.database.aiSetupPlaceholder": "באַשרייבט וואָס איר ווילט בויען",
   "tools.database.linkedSearch": "צולייגן אָדער פֿאַרבינדן אַ דאַטן־מקור…",
   "tools.database.linkedNewEmpty": "נײַער ליידיקער דאַטן־מקור",
   "tools.database.linkedNewNamed": "נײַער דאַטן־מקור „{name}“",

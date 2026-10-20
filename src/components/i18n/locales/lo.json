@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "ຖານຂໍ້ມູນຕົ້ນສະບັບຖືກລຶບແລ້ວ ແລະ ບໍ່ສາມາດແກ້ໄຂໄດ້",
   "tools.database.linkedLinkSource": "ເຊື່ອມໂຍງແຫຼ່ງຂໍ້ມູນ",
   "tools.database.linkedPanelTitle": "ຖານຂໍ້ມູນໃໝ່",
+  "tools.database.aiSetupPlaceholder": "ອະທິບາຍສິ່ງທີ່ທ່ານຕ້ອງການສ້າງ",
   "tools.database.linkedSearch": "ເພີ່ມ ຫຼື ເຊື່ອມໂຍງແຫຼ່ງຂໍ້ມູນ…",
   "tools.database.linkedNewEmpty": "ແຫຼ່ງຂໍ້ມູນຫວ່າງເປົ່າໃໝ່",
   "tools.database.linkedNewNamed": "ແຫຼ່ງຂໍ້ມູນ “{name}” ໃໝ່",

@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "داتابەیسی ڕەسەن سڕاوەتەوە و ناتوانرێت دەستکاری بکرێت",
   "tools.database.linkedLinkSource": "بەستنەوەی سەرچاوەیەکی داتا",
   "tools.database.linkedPanelTitle": "داتابەیسی نوێ",
+  "tools.database.aiSetupPlaceholder": "Binivîse ka tu dixwazî çi ava bikî",
   "tools.database.linkedSearch": "زیادکردن یان بەستنەوەی سەرچاوەی داتا…",
   "tools.database.linkedNewEmpty": "سەرچاوەی داتای بەتاڵی نوێ",
   "tools.database.linkedNewNamed": "سەرچاوەی داتای نوێی «{name}»",

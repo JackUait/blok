@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "اصلي ډیټابیس ړنګ شوی او سمون یې نه شي کېدای",
   "tools.database.linkedLinkSource": "ډیټا سرچینه وتړئ",
   "tools.database.linkedPanelTitle": "نوی ډیټابیس",
+  "tools.database.aiSetupPlaceholder": "تشریح کړئ چې څه جوړول غواړئ",
   "tools.database.linkedSearch": "ډیټا سرچینه اضافه کړئ یا وتړئ…",
   "tools.database.linkedNewEmpty": "نوې تشه ډیټا سرچینه",
   "tools.database.linkedNewNamed": "نوې «{name}» ډیټا سرچینه",

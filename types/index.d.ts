@@ -215,6 +215,10 @@ export {
   DatabaseBacklink,
   DatabaseBacklinks,
   DatabaseFavorites,
+  DatabaseAI,
+  DatabaseAutofillRequest,
+  DatabaseSetupRequest,
+  DatabaseSetup,
   SubItemsDisplay,
   SubItemsFilter,
 } from './tools/database';

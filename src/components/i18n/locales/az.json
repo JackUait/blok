@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Orijinal verilənlər bazası silinib və redaktə edilə bilməz",
   "tools.database.linkedLinkSource": "Verilənlər mənbəyini bağla",
   "tools.database.linkedPanelTitle": "Yeni verilənlər bazası",
+  "tools.database.aiSetupPlaceholder": "Nə qurmaq istədiyinizi təsvir edin",
   "tools.database.linkedSearch": "Verilənlər mənbəyi əlavə et və ya bağla…",
   "tools.database.linkedNewEmpty": "Yeni boş verilənlər mənbəyi",
   "tools.database.linkedNewNamed": "Yeni «{name}» verilənlər mənbəyi",

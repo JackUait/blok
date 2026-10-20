@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "原始数据库已被删除，无法编辑",
   "tools.database.linkedLinkSource": "链接数据源",
   "tools.database.linkedPanelTitle": "新数据库",
+  "tools.database.aiSetupPlaceholder": "描述你想要构建的内容",
   "tools.database.linkedSearch": "添加或链接数据源…",
   "tools.database.linkedNewEmpty": "新的空白数据源",
   "tools.database.linkedNewNamed": "新的“{name}”数据源",

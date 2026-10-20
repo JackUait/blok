@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "မူရင်း ဒေတာဘေ့စ်ကို ဖျက်လိုက်ပြီဖြစ်၍ တည်းဖြတ်၍မရပါ",
   "tools.database.linkedLinkSource": "ဒေတာရင်းမြစ်ကို ချိတ်ဆက်ရန်",
   "tools.database.linkedPanelTitle": "ဒေတာဘေ့စ်အသစ်",
+  "tools.database.aiSetupPlaceholder": "သင်တည်ဆောက်လိုသည့်အရာကို ဖော်ပြပါ",
   "tools.database.linkedSearch": "ဒေတာရင်းမြစ် ထည့်ရန် သို့မဟုတ် ချိတ်ဆက်ရန်…",
   "tools.database.linkedNewEmpty": "ဒေတာရင်းမြစ်အလွတ် အသစ်",
   "tools.database.linkedNewNamed": "“{name}” ဒေတာရင်းမြစ်အသစ်",

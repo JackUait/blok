@@ -1869,6 +1869,7 @@
   "tools.database.linkedSourceMissing": "Originalna baza podataka je obrisana i ne može se uređivati",
   "tools.database.linkedLinkSource": "Poveži izvor podataka",
   "tools.database.linkedPanelTitle": "Nova baza podataka",
+  "tools.database.aiSetupPlaceholder": "Opišite šta želite napraviti",
   "tools.database.linkedSearch": "Dodaj ili poveži izvor podataka…",
   "tools.database.linkedNewEmpty": "Novi prazan izvor podataka",
   "tools.database.linkedNewNamed": "Novi izvor podataka „{name}“",

@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Вихідну базу даних видалено, її не можна редагувати",
   "tools.database.linkedLinkSource": "Зв’язати джерело даних",
   "tools.database.linkedPanelTitle": "Нова база даних",
+  "tools.database.aiSetupPlaceholder": "Опишіть, що хочете створити",
   "tools.database.linkedSearch": "Додати або зв’язати джерело даних…",
   "tools.database.linkedNewEmpty": "Нове порожнє джерело даних",
   "tools.database.linkedNewNamed": "Нове джерело даних «{name}»",

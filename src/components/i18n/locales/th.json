@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "ฐานข้อมูลต้นฉบับถูกลบแล้วและไม่สามารถแก้ไขได้",
   "tools.database.linkedLinkSource": "ลิงก์แหล่งข้อมูล",
   "tools.database.linkedPanelTitle": "ฐานข้อมูลใหม่",
+  "tools.database.aiSetupPlaceholder": "อธิบายสิ่งที่คุณต้องการสร้าง",
   "tools.database.linkedSearch": "เพิ่มหรือลิงก์แหล่งข้อมูล…",
   "tools.database.linkedNewEmpty": "แหล่งข้อมูลว่างใหม่",
   "tools.database.linkedNewNamed": "แหล่งข้อมูล “{name}” ใหม่",

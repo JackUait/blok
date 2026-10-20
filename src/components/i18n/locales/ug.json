@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "ئەسلى ساندان ئۆچۈرۈلدى، ئۇنى تەھرىرلىگىلى بولمايدۇ",
   "tools.database.linkedLinkSource": "سانلىق مەلۇمات مەنبەسى ئۇلاش",
   "tools.database.linkedPanelTitle": "يېڭى ساندان",
+  "tools.database.aiSetupPlaceholder": "نېمە قۇرماقچى ئىكەنلىكىڭىزنى تەسۋىرلەڭ",
   "tools.database.linkedSearch": "سانلىق مەلۇمات مەنبەسى قوشۇش ياكى ئۇلاش…",
   "tools.database.linkedNewEmpty": "يېڭى قۇرۇق سانلىق مەلۇمات مەنبەسى",
   "tools.database.linkedNewNamed": "يېڭى «{name}» سانلىق مەلۇمات مەنبەسى",

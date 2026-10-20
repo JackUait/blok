@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Оригиналната база данни е изтрита и не може да се редактира",
   "tools.database.linkedLinkSource": "Свържи източник на данни",
   "tools.database.linkedPanelTitle": "Нова база данни",
+  "tools.database.aiSetupPlaceholder": "Опишете какво искате да създадете",
   "tools.database.linkedSearch": "Добави или свържи източник на данни…",
   "tools.database.linkedNewEmpty": "Нов празен източник на данни",
   "tools.database.linkedNewNamed": "Нов източник на данни „{name}“",

@@ -1869,6 +1869,7 @@
   "tools.database.linkedSourceMissing": "Baza de date originală a fost ștearsă și nu poate fi editată",
   "tools.database.linkedLinkSource": "Leagă o sursă de date",
   "tools.database.linkedPanelTitle": "Bază de date nouă",
+  "tools.database.aiSetupPlaceholder": "Descrie ce vrei să creezi",
   "tools.database.linkedSearch": "Adaugă sau leagă o sursă de date…",
   "tools.database.linkedNewEmpty": "Sursă de date nouă goală",
   "tools.database.linkedNewNamed": "Sursă de date nouă „{name}”",

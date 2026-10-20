@@ -1869,6 +1869,7 @@
   "tools.database.linkedSourceMissing": "מסד הנתונים המקורי נמחק ולא ניתן לערוך אותו",
   "tools.database.linkedLinkSource": "קשר מקור נתונים",
   "tools.database.linkedPanelTitle": "מסד נתונים חדש",
+  "tools.database.aiSetupPlaceholder": "תארו מה תרצו לבנות",
   "tools.database.linkedSearch": "הוספה או קישור של מקור נתונים…",
   "tools.database.linkedNewEmpty": "מקור נתונים ריק חדש",
   "tools.database.linkedNewNamed": "מקור נתונים חדש \"{name}\"",

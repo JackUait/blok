@@ -1879,6 +1879,7 @@
   "tools.database.linkedSourceMissing": "Původní databáze byla smazána a nelze ji upravit",
   "tools.database.linkedLinkSource": "Propojit zdroj dat",
   "tools.database.linkedPanelTitle": "Nová databáze",
+  "tools.database.aiSetupPlaceholder": "Popište, co chcete vytvořit",
   "tools.database.linkedSearch": "Přidat nebo propojit zdroj dat…",
   "tools.database.linkedNewEmpty": "Nový prázdný zdroj dat",
   "tools.database.linkedNewNamed": "Nový zdroj dat „{name}“",

@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "ዋናው የውሂብ ጎታ ተሰርዟል እና ሊስተካከል አይችልም",
   "tools.database.linkedLinkSource": "የውሂብ ምንጭ አገናኝ",
   "tools.database.linkedPanelTitle": "አዲስ የውሂብ ጎታ",
+  "tools.database.aiSetupPlaceholder": "ምን መገንባት እንደሚፈልጉ ይግለጹ",
   "tools.database.linkedSearch": "የውሂብ ምንጭ አክል ወይም አገናኝ…",
   "tools.database.linkedNewEmpty": "አዲስ ባዶ የውሂብ ምንጭ",
   "tools.database.linkedNewNamed": "አዲስ «{name}» የውሂብ ምንጭ",

@@ -44,6 +44,7 @@ import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
+import { planAiSetup } from './database-ai-setup';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, rowOrderKey, sortRows } from './database-query';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
@@ -406,6 +407,8 @@ export class DatabaseTool implements BlockTool {
   private savedAutomations: DatabaseSavedAutomations | undefined;
   /** Set when the insert data carried the toolbox seed, which the document still holds. */
   private seeded: boolean;
+  /** A user just inserted this database and the host can set it up from a prompt: rendered() opens the "New database" panel once. */
+  private offerAiSetup: boolean;
   private activeViewId: string;
   private model: DatabaseModel;
   /** Linked database: the block whose rows and schema this one shows. */
@@ -536,7 +539,7 @@ export class DatabaseTool implements BlockTool {
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
-  constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
+  constructor({ data, config, api, block, readOnly, origin }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
     this.block = block;
     this.config = config ?? {};
@@ -557,6 +560,8 @@ export class DatabaseTool implements BlockTool {
     this.source = sourceRefOf(data);
     this.stubSchema = Array.isArray(data?.schema) ? structuredClone(data.schema) : [];
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
+    // Only a user's insert: a load, undo, redo or a peer's insert never opens it.
+    this.offerAiSetup = origin === 'user' && this.seeded && !this.linkPicker && this.config.ai?.setupDatabase !== undefined;
     // An adapter that does not store a view's own order keeps the shared one.
     const viewRowOrder = this.config.adapter === undefined || this.config.adapter.viewRowOrder === true;
 
@@ -822,6 +827,76 @@ export class DatabaseTool implements BlockTool {
         this.sourcePicker = null;
       },
     });
+  }
+
+  /** research/26 §2: a new database's panel, with the AI prompt box on top. Closing it keeps the empty database. */
+  private openNewDatabasePanel(): void {
+    const anchor = this.titleRowElement ?? this.element;
+
+    if (this.readOnly || this.structureLocked() || this.sourcePicker !== null || anchor === null) return;
+    const panel = openNewSourcePanel({
+      anchor,
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      sources: () => this.pickerSources(),
+      linkExisting: (id) => this.linkTo(id),
+      prompt: { submit: (text) => this.setupFromPrompt(text) },
+      onClose: () => {
+        if (this.sourcePicker === panel) this.sourcePicker = null;
+      },
+    });
+
+    this.sourcePicker = panel;
+  }
+
+  /** Asks the host to set this database up. True when it did. */
+  private async setupFromPrompt(prompt: string): Promise<boolean> {
+    const setup = this.config.ai?.setupDatabase;
+
+    if (setup === undefined) return false;
+    const answer = await setup({
+      databaseId: this.block.id,
+      prompt,
+      schema: structuredClone(this.model.getSchema()),
+      views: structuredClone(this.model.getViews()),
+    }).catch((error: unknown) => {
+      this.api.notifier.show({ message: this.api.i18n.t('assistant.failed', { error: error instanceof Error ? error.message : String(error) }), style: 'error' });
+
+      return null;
+    });
+
+    if (this.destroyed || this.readOnly || this.structureLocked()) return false;
+    const plan = planAiSetup({ schema: this.model.getSchema(), views: this.model.getViews() }, answer, () => nanoid());
+
+    if (plan === null) return false;
+    const oldTitle = this.model.getSchema().find((p) => p.type === 'title');
+    const oldViews = this.model.getViews();
+
+    this.inOneStep(() => {
+      this.model.replaceDefinition({ schema: plan.schema, views: plan.views });
+      this.activeViewId = plan.activeViewId;
+      if (plan.title !== undefined) {
+        this.title = plan.title;
+        if (this.titleElement !== null) {
+          this.titleElement.textContent = plan.title;
+          DatabaseTool.syncTitleDirection(this.titleElement);
+        }
+      }
+      this.block.dispatchChange();
+    });
+    const title = plan.schema.find((p) => p.type === 'title');
+
+    if (title !== undefined && oldTitle !== undefined && title.name !== oldTitle.name) {
+      void this.sync.syncUpdateProperty({ propertyId: title.id, changes: { name: title.name } });
+    }
+    for (const p of plan.schema.filter((candidate) => candidate.type !== 'title')) {
+      void this.sync.syncCreateProperty({ id: p.id, name: p.name, type: p.type, position: p.position, ...(p.config !== undefined ? { config: p.config } : {}) });
+    }
+    for (const view of oldViews) void this.sync.syncDeleteView({ viewId: view.id });
+    for (const view of plan.views) void this.sync.syncCreateView(structuredClone(view));
+    this.rebuildTabBar();
+    this.rerenderView();
+
+    return true;
   }
 
   /** The host's databases in other documents, for the picker. */
@@ -1581,6 +1656,13 @@ export class DatabaseTool implements BlockTool {
     this.offerDue();
     this.openLinkedRow();
     if (this.linkPicker) this.openSourcePicker();
+    if (this.offerAiSetup) {
+      this.offerAiSetup = false;
+      // The insert puts the caret in the title after rendered(); the prompt box takes focus after it.
+      requestAnimationFrame(() => {
+        if (!this.destroyed) this.openNewDatabasePanel();
+      });
+    }
 
     if ((initialProjection || !hadRows) && this.model.getOrderedRows().length > 0) {
       this.rerenderView();

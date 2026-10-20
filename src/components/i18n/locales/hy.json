@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Սկզբնական տվյալների բազան ջնջվել է և հնարավոր չէ խմբագրել",
   "tools.database.linkedLinkSource": "Կապել տվյալների աղբյուր",
   "tools.database.linkedPanelTitle": "Նոր տվյալների բազա",
+  "tools.database.aiSetupPlaceholder": "Նկարագրեք, թե ինչ եք ուզում ստեղծել",
   "tools.database.linkedSearch": "Ավելացնել կամ կապել տվյալների աղբյուր…",
   "tools.database.linkedNewEmpty": "Նոր դատարկ տվյալների աղբյուր",
   "tools.database.linkedNewNamed": "Նոր «{name}» տվյալների աղբյուր",

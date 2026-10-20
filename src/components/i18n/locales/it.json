@@ -1869,6 +1869,7 @@
   "tools.database.linkedSourceMissing": "Il database originale è stato eliminato e non può essere modificato",
   "tools.database.linkedLinkSource": "Collega un’origine dati",
   "tools.database.linkedPanelTitle": "Nuovo database",
+  "tools.database.aiSetupPlaceholder": "Descrivi cosa vuoi creare",
   "tools.database.linkedSearch": "Aggiungi o collega un’origine dati…",
   "tools.database.linkedNewEmpty": "Nuova origine dati vuota",
   "tools.database.linkedNewNamed": "Nuova origine dati «{name}»",

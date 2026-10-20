@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Η αρχική βάση δεδομένων διαγράφηκε και δεν μπορεί να επεξεργαστεί",
   "tools.database.linkedLinkSource": "Σύνδεση πηγής δεδομένων",
   "tools.database.linkedPanelTitle": "Νέα βάση δεδομένων",
+  "tools.database.aiSetupPlaceholder": "Περιγράψτε τι θέλετε να δημιουργήσετε",
   "tools.database.linkedSearch": "Προσθήκη ή σύνδεση πηγής δεδομένων…",
   "tools.database.linkedNewEmpty": "Νέα κενή πηγή δεδομένων",
   "tools.database.linkedNewNamed": "Νέα πηγή δεδομένων «{name}»",

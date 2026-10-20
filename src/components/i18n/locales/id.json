@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Basis data asli telah dihapus dan tidak dapat diedit",
   "tools.database.linkedLinkSource": "Tautkan sumber data",
   "tools.database.linkedPanelTitle": "Basis data baru",
+  "tools.database.aiSetupPlaceholder": "Jelaskan apa yang ingin Anda buat",
   "tools.database.linkedSearch": "Tambah atau tautkan sumber data…",
   "tools.database.linkedNewEmpty": "Sumber data kosong baru",
   "tools.database.linkedNewNamed": "Sumber data “{name}” baru",

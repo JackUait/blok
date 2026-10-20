@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "原始資料庫已被刪除，無法編輯",
   "tools.database.linkedLinkSource": "連結資料來源",
   "tools.database.linkedPanelTitle": "新資料庫",
+  "tools.database.aiSetupPlaceholder": "描述你想建立的內容",
   "tools.database.linkedSearch": "新增或連結資料來源…",
   "tools.database.linkedNewEmpty": "新的空白資料來源",
   "tools.database.linkedNewNamed": "新的「{name}」資料來源",

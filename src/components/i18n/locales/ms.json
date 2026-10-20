@@ -1859,6 +1859,7 @@
   "tools.database.linkedSourceMissing": "Pangkalan data asal telah dipadamkan dan tidak boleh diedit",
   "tools.database.linkedLinkSource": "Pautkan sumber data",
   "tools.database.linkedPanelTitle": "Pangkalan data baharu",
+  "tools.database.aiSetupPlaceholder": "Terangkan apa yang anda mahu bina",
   "tools.database.linkedSearch": "Tambah atau pautkan sumber data…",
   "tools.database.linkedNewEmpty": "Sumber data kosong baharu",
   "tools.database.linkedNewNamed": "Sumber data “{name}” baharu",

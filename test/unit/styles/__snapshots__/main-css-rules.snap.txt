@@ -4041,6 +4041,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-bg: #ffffff;
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
+  --blok-database-reminder-text: rgb(39, 131, 222);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: #ffffff;
   --blok-database-timeline-bar-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -4193,6 +4194,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
+  --blok-database-reminder-text: var(--blok-color-accent);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
   --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4345,6 +4347,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
+  --blok-database-reminder-text: var(--blok-color-accent);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
   --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4993,11 +4996,6 @@ span[data-blok-slash-search] {
   margin-inline-end: 0;
   font-size: 23.4px;
   line-height: 23.4px;
-}
-
-[data-blok-database-page-icon] + [data-blok-database-calendar-event-title], [data-blok-database-page-icon] + [data-blok-database-timeline-bar-title] {
-  flex: 0 1 auto;
-  min-inline-size: 0;
 }
 
 [data-blok-database-drawer-page-head] {
@@ -8188,6 +8186,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   color: var(--blok-text-tertiary);
 }
 
+[data-blok-database-calendar-event-property] > [data-blok-database-cell] {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 [data-blok-database-date-day] {
   width: 32px;
   height: 32px;
@@ -8347,7 +8350,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-cell="date"][data-reminder] {
   display: inline;
   white-space: nowrap;
-  color: var(--blok-color-accent);
+  color: var(--blok-database-reminder-text);
 }
 
 [data-blok-database-date-reminder] {
@@ -10066,8 +10069,9 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-calendar] {
   --blok-database-calendar-number-row: 32px;
-  --blok-database-calendar-lane-pitch: 30px;
+  --blok-database-calendar-lane-pitch: calc(30px + var(--blok-database-calendar-event-lines, 0) * 24px);
   --blok-database-calendar-columns: 7;
+  --blok-database-calendar-event-lines: 0;
   --blok-database-calendar-lanes: 0;
   --blok-database-calendar-lane: 0;
   --blok-database-calendar-span: 1;
@@ -10246,11 +10250,13 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   inset-block-start: calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lane, 0) * var(--blok-database-calendar-lane-pitch));
   inset-inline-start: 4px;
   inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 8px);
-  height: 28px;
+  min-block-size: 28px;
   box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--blok-space-1-5);
+  align-content: flex-start;
+  column-gap: var(--blok-space-1-5);
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
   overflow: hidden;
   white-space: nowrap;
@@ -10293,8 +10299,9 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-calendar-event-title] {
-  flex: none;
-  max-inline-size: 100%;
+  flex: 1 1 0;
+  min-inline-size: 0;
+  block-size: 24px;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 14px;
@@ -10308,11 +10315,13 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-calendar-event-property] {
+  flex: 1 0 100%;
   min-inline-size: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-overflow: clip;
   font-size: 12px;
-  line-height: 18px;
+  line-height: 24px;
   color: var(--blok-database-calendar-muted-text);
 }
 
@@ -10637,8 +10646,9 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  padding-inline: var(--blok-space-6) var(--blok-space-2);
-  overflow: hidden;
+  padding-inline: var(--blok-space-1-5);
+  padding-block-end: var(--blok-space-1);
+  overflow: visible;
   white-space: nowrap;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-timeline-bar-bg);
@@ -10663,9 +10673,6 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-timeline-bar-title] {
   flex: none;
-  max-inline-size: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 14px;
   line-height: 21px;
   font-weight: 500;
@@ -10677,11 +10684,15 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-timeline-bar-property] {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 13px;
+  flex: none;
+  margin-inline-start: var(--blok-space-1);
+  font-size: 12px;
   line-height: 18px;
+}
+
+[data-blok-database-timeline-bar-property] > [data-blok-database-cell] {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 [data-blok-database-timeline-resize] {
@@ -11807,10 +11818,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   opacity: 0;
   cursor: crosshair;
   transition: opacity 0.1s ease;
-}
-
-[data-blok-database-timeline-bar]:has([data-blok-database-timeline-link-handle]) {
-  overflow: visible;
 }
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle], [data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle] {

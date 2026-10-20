@@ -116,6 +116,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     root.setAttribute('data-range', this.range);
     root.setAttribute('role', 'region');
     root.setAttribute('aria-label', this.t('tools.database.calendarLabel'));
+    root.style.setProperty('--blok-database-calendar-event-lines', String(this.visibleProperties().length));
     this.root = root;
 
     root.appendChild(this.createToolbar());

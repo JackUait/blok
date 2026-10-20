@@ -55,6 +55,27 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-title]')).toMatch(/font-weight:\s*500/);
   });
 
+  // 80-alarm-timeline.png: a one-day bar keeps its title whole and runs it, then the properties, past its end.
+  it('never clips the title or properties of a short bar', () => {
+    const bar = ruleBody('[data-blok-database-timeline-bar]');
+    const title = ruleBody('[data-blok-database-timeline-bar-title]');
+    const property = ruleBody('[data-blok-database-timeline-bar-property]');
+
+    expect(bar).toMatch(/overflow:\s*visible/);
+    expect(bar).toContain('padding-inline: var(--blok-space-1-5)');
+    // Measured cap top 11px into the 34px bar, 2px above centre.
+    expect(bar).toContain('padding-block-end: var(--blok-space-1)');
+    expect(title).toMatch(/flex:\s*none/);
+    expect(title).not.toMatch(/text-overflow|max-inline-size/);
+    expect(ruleBody('[data-blok-database-page-icon] + [data-blok-database-timeline-bar-title]')).toBe('');
+    expect(property).toMatch(/flex:\s*none/);
+    expect(property).not.toMatch(/text-overflow/);
+    expect(property).toMatch(/font-size:\s*12px/);
+    expect(property).toContain('margin-inline-start: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
+    expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell]')).toMatch(/flex-wrap:\s*nowrap/);
+  });
+
   it('draws the measured today marker and off-screen arrow', () => {
     expect(ruleBody('[data-blok-database-timeline-today-dot]')).toMatch(/inline-size:\s*22px/);
     expect(ruleBody('[data-blok-database-timeline-today-dot]')).toContain('background-color: var(--blok-database-today)');

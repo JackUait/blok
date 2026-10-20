@@ -24,6 +24,13 @@ describe('database date reminder css', () => {
 
     expect(date).toContain('display: inline');
     expect(date).toContain('white-space: nowrap');
-    expect(date).toContain('color: var(--blok-color-accent)');
+    expect(date).toContain('color: var(--blok-database-reminder-text)');
+  });
+
+  // Measured rgb(39, 131, 222), not the global accent #2383e2. Dark is unmeasured, so it keeps the dark accent.
+  it('paints the date in its own database token, not the global accent', () => {
+    const values = [ ...database.matchAll(/--blok-database-reminder-text:\s*([^;]+);/g) ].map((m) => m[1].trim());
+
+    expect(values).toEqual(['rgb(39, 131, 222)', 'var(--blok-color-accent)', 'var(--blok-color-accent)']);
   });
 });

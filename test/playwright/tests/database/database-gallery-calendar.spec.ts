@@ -34,6 +34,7 @@ interface RowSeed {
   id: string;
   properties: Record<string, unknown>;
   cover?: string;
+  reminders?: Record<string, unknown>;
 }
 
 const ROWS: RowSeed[] = [
@@ -56,7 +57,12 @@ const blocks = (view: Record<string, unknown>, rows: RowSeed[] = ROWS): OutputBl
   ...rows.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: rowKey(i), properties: row.properties, ...(row.cover !== undefined ? { cover: row.cover } : {}) },
+    data: {
+      position: rowKey(i),
+      properties: row.properties,
+      ...(row.cover !== undefined ? { cover: row.cover } : {}),
+      ...(row.reminders !== undefined ? { reminders: row.reminders } : {}),
+    },
   })),
 ];
 
@@ -444,6 +450,36 @@ test.describe('calendar', () => {
     const oneDay = (await day(page, '2026-10-12').boundingBox())?.width ?? 0;
 
     expect(trip).toBeGreaterThan(oneDay * 2);
+  });
+
+  // 78-alarm-calendar.png: 28px card, +24px per shown property, each on its own line and cut at the edge.
+  test('gives each shown property its own line and grows the card', async ({ page }) => {
+    const longTitle = 'A title far too long for one day';
+
+    await mount(page, blocks({ type: 'calendar', visibleProperties: ['p-due', 'p-notes'] }, [
+      { id: 'r1', properties: { 'p-title': 'Launch', 'p-due': '2026-10-09', 'p-notes': 'Bring cake, candles and a card for the whole office' }, reminders: { 'p-due': { remind: '1_day_before' } } },
+      { id: 'r2', properties: { 'p-title': longTitle, 'p-due': '2026-10-09' } },
+      { id: 'r3', properties: { 'p-title': 'Quiet', 'p-due': '2026-10-21' } },
+    ]));
+    await page.emulateMedia({ colorScheme: 'light' });
+
+    const card = (id: string): Locator => page.locator(`[data-blok-database-calendar-event][data-row-id="${id}"]`);
+    const lines = await card('r1').evaluate((el) => [...el.querySelectorAll('[data-blok-database-calendar-event-property]')].map((line) => {
+      const box = line.getBoundingClientRect();
+
+      return { height: box.height, top: box.top - el.getBoundingClientRect().top, cut: line.scrollWidth > line.clientWidth };
+    }));
+
+    expect(lines).toEqual([{ height: 24, top: 26, cut: false }, { height: 24, top: 50, cut: true }]);
+    expect((await card('r1').boundingBox())?.height).toBe(76);
+    expect((await card('r2').boundingBox())?.height).toBe(52);
+    expect((await card('r3').boundingBox())?.height).toBe(52);
+    await expect(card('r1').locator('[data-blok-database-calendar-event-property]').last()).toHaveCSS('text-overflow', 'clip');
+    await expect(card('r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(39, 131, 222)');
+
+    const [first, second] = await Promise.all([card('r1').boundingBox(), card('r2').boundingBox()]);
+
+    expect((second?.y ?? 0) - (first?.y ?? 0)).toBeGreaterThanOrEqual(first?.height ?? Infinity);
   });
 
   test('hides weekends and shows one week on request', async ({ page }) => {

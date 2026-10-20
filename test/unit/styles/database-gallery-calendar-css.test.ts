@@ -70,9 +70,27 @@ describe('database gallery and calendar styles', () => {
 
   it('uses the measured calendar sizes: 140px day cells, 28px event cards, 24px today circle', () => {
     expect(ruleBody('[data-blok-database-calendar-day]')).toMatch(/140px/);
-    expect(ruleBody('[data-blok-database-calendar-event]')).toMatch(/height:\s*28px/);
+    expect(ruleBody('[data-blok-database-calendar-event]')).toMatch(/min-block-size:\s*28px/);
     expect(ruleBody('[data-blok-database-calendar-event-title]')).toMatch(/font-weight:\s*600/);
     expect(ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]')).toContain('var(--blok-database-today)');
+  });
+
+  // 78-alarm-calendar.png: a card grows from 28px to 52px with one shown property, and the date is cut, not ellipsized.
+  it('gives each shown property its own 24px line, clipped at the card edge', () => {
+    const event = ruleBody('[data-blok-database-calendar-event]');
+    const property = ruleBody('[data-blok-database-calendar-event-property]');
+
+    expect(event).not.toMatch(/(?:^|;)\s*height:/);
+    expect(event).toMatch(/flex-wrap:\s*wrap/);
+    expect(ruleBody('[data-blok-database-calendar-event-title]')).toMatch(/block-size:\s*24px/);
+    expect(property).toMatch(/flex:\s*1 0 100%/);
+    expect(property).toMatch(/line-height:\s*24px/);
+    expect(property).toMatch(/white-space:\s*nowrap/);
+    expect(property).toMatch(/text-overflow:\s*clip/);
+    // The base cell wraps (pre-wrap flex): a plain date would take two lines and spill out of the card.
+    expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
+    expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell]')).toMatch(/flex-wrap:\s*nowrap/);
+    expect(css).toMatch(/--blok-database-calendar-lane-pitch:\s*calc\(30px \+ var\(--blok-database-calendar-event-lines, 0\) \* 24px\)/);
   });
 
   it('paints a drop target gray, never blue (D3)', () => {

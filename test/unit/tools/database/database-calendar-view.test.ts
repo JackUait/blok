@@ -203,6 +203,15 @@ describe('DatabaseCalendarView', () => {
       expect(events(root, 'r2')[0].querySelector('[data-blok-database-calendar-event-property]')).toBeNull();
     });
 
+    // Each shown property is its own card line, so lanes must grow by that many lines.
+    it('tells the grid how many property lines a card can have', () => {
+      const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];
+      const lines = (root: HTMLElement): string => root.style.getPropertyValue('--blok-database-calendar-event-lines');
+
+      expect(lines(mount({ view: calendarView({ properties }) }).root)).toBe('1');
+      expect(lines(mount({ view: calendarView({ properties: [{ id: 'p-title', visible: true }] }) }).root)).toBe('0');
+    });
+
     it('opens an event on click', () => {
       const { root, handlers } = mount();
 

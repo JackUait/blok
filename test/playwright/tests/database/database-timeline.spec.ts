@@ -39,6 +39,7 @@ const SCHEMA = [
 interface RowSeed {
   id: string;
   properties: Record<string, unknown>;
+  reminders?: Record<string, unknown>;
 }
 
 const ROWS: RowSeed[] = [
@@ -61,7 +62,7 @@ const blocks = (view: Record<string, unknown>, rows: RowSeed[] = ROWS): OutputBl
   ...rows.map((row, i) => ({
     id: row.id,
     type: 'database-row',
-    data: { position: rowKey(i), properties: row.properties },
+    data: { position: rowKey(i), properties: row.properties, ...(row.reminders !== undefined ? { reminders: row.reminders } : {}) },
   })),
 ];
 
@@ -132,6 +133,40 @@ test.describe('timeline', () => {
     expect(three?.width).toBeCloseTo(120, 0);
     await expect(bar(page, 'r1')).toHaveCSS('border-radius', '6px');
     expect((await page.locator('[data-blok-database-timeline-row]').first().boundingBox())?.height).toBeCloseTo(36, 0);
+  });
+
+  // 80-alarm-timeline.png: a one-day bar keeps its whole title and runs the shown properties after it, past the bar.
+  test('a one-day bar draws its title whole and its properties after it', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', visibleProperties: ['p-due', 'p-notes'] }, [
+      { id: 'r1', properties: { 'p-title': 'Launch party', 'p-due': '2026-10-09', 'p-notes': 'Bring cake' }, reminders: { 'p-due': { remind: '1_day_before' } } },
+    ]));
+    await page.emulateMedia({ colorScheme: 'light' });
+
+    const layout = await bar(page, 'r1').evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const title = el.querySelector('[data-blok-database-timeline-bar-title]');
+      const props = [...el.querySelectorAll('[data-blok-database-timeline-bar-property]')].map((p) => p.getBoundingClientRect());
+      const titleBox = title?.getBoundingClientRect();
+
+      return {
+        titleStart: (titleBox?.left ?? 0) - box.left,
+        titleWhole: title !== null && title.scrollWidth <= title.clientWidth,
+        titleEnd: titleBox?.right ?? 0,
+        barEnd: box.right,
+        propStarts: props.map((p) => p.left),
+        sameLine: props.every((p) => Math.abs(p.top + p.height / 2 - (box.top + box.height / 2)) < 4),
+      };
+    });
+
+    expect(layout.titleStart).toBeCloseTo(6, 0);
+    expect(layout.titleWhole).toBe(true);
+    expect(layout.titleEnd).toBeGreaterThan(layout.barEnd);
+    expect(layout.propStarts).toHaveLength(2);
+    expect(layout.propStarts[0] - layout.titleEnd).toBeCloseTo(10, 0);
+    expect(layout.propStarts[1]).toBeGreaterThan(layout.propStarts[0]);
+    expect(layout.sameLine).toBe(true);
+    await expect(bar(page, 'r1').locator('[data-blok-database-timeline-bar-property]').first()).toHaveCSS('font-size', '12px');
+    await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(39, 131, 222)');
   });
 
   test('shows today on screen with a dot and a line', async ({ page }) => {

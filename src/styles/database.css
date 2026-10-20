@@ -103,6 +103,9 @@
   --blok-database-builder-canvas-bg: #ffffff;
   --blok-database-builder-tile-bg: #ffffff;
   --blok-database-builder-tile-ring: var(--blok-database-drawer-border);
+  /* Structure tile labels: research/10 §2. */
+  --blok-database-builder-tile-text: rgb(115, 114, 110);
+  --blok-database-builder-tile-text-active: rgb(29, 27, 22);
   --blok-database-calendar-muted-text: rgb(161, 158, 153);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
@@ -124,6 +127,9 @@
   /* Center peek (research/07 and 08): 60% backdrop and the side peek's shadow. */
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-peek-bg: var(--blok-popover-bg);
+  /* Light peek title ink and value hover are unmeasured (research/21): Blok's own values. */
+  --blok-database-peek-title: var(--blok-text-primary);
+  --blok-database-peek-value-hover-bg: var(--blok-item-hover-bg);
   /* Fill handle: white in light, rgb(25,25,25) in dark (research/08). */
   --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -277,6 +283,8 @@
     --blok-database-builder-canvas-bg: rgb(25, 25, 25);
     --blok-database-builder-tile-bg: rgb(32, 32, 32);
     --blok-database-builder-tile-ring: rgb(55, 55, 55);
+  --blok-database-builder-tile-text: rgb(90, 90, 90);
+  --blok-database-builder-tile-text-active: rgb(255, 255, 255);
     --blok-database-calendar-muted-text: rgb(125, 122, 117);
     --blok-database-calendar-day-text: rgb(240, 239, 237);
     --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -299,6 +307,9 @@
     /* Peek panel, shadow and center backdrop: research/21 §1m. */
     --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-peek-bg: rgb(32, 32, 32);
+  /* research/21 §1m: title ink, and no fill on a hovered value. */
+  --blok-database-peek-title: rgb(240, 239, 237);
+  --blok-database-peek-value-hover-bg: transparent;
     --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
     --blok-database-chart-blue: #3987e5;
     --blok-database-chart-orange: #d95926;
@@ -441,6 +452,8 @@
   --blok-database-builder-canvas-bg: rgb(25, 25, 25);
   --blok-database-builder-tile-bg: rgb(32, 32, 32);
   --blok-database-builder-tile-ring: rgb(55, 55, 55);
+  --blok-database-builder-tile-text: rgb(90, 90, 90);
+  --blok-database-builder-tile-text-active: rgb(255, 255, 255);
   --blok-database-calendar-muted-text: rgb(125, 122, 117);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -462,6 +475,9 @@
   /* Peek panel, shadow and center backdrop: research/21 §1m. */
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
+  /* research/21 §1m: title ink, and no fill on a hovered value. */
+  --blok-database-peek-title: rgb(240, 239, 237);
+  --blok-database-peek-value-hover-bg: transparent;
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-chart-blue: #3987e5;
@@ -900,9 +916,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-inline-start: 1px solid var(--blok-popover-border);
+  /* The shadow carries the 1px ring (research/08:329, research/21 §1m), so no border. */
   background-color: var(--blok-database-peek-bg);
-  box-shadow: var(--blok-shadow-drawer-side);
+  box-shadow: var(--blok-database-peek-shadow);
   transform: translateX(100%);
   transition: transform 200ms ease;
 }
@@ -1164,7 +1180,7 @@
   border: none;
   outline: none;
   background-color: transparent;
-  color: inherit;
+  color: var(--blok-database-peek-title);
   padding: 0;
   margin-bottom: var(--blok-space-3);
   line-height: 1.2;
@@ -1412,6 +1428,37 @@
   min-width: 100px;
   flex-shrink: 0;
   color: var(--blok-database-peek-label);
+}
+
+/*
+ * research/21 §1m: the hover box is the whole 160x34 label cell, radius 6px (read in dark;
+ * the value column sits at the same x in the light side peek). Padding is unmeasured.
+ * Pins stack label over value, so they keep their own head.
+ */
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] {
+  position: relative;
+  box-sizing: border-box;
+  min-inline-size: 160px;
+  min-height: 34px;
+  border-radius: var(--blok-radius-control);
+}
+
+/* The details panel's width is unmeasured: it keeps Blok's narrower label column. */
+[data-blok-database-drawer-details] [data-blok-database-drawer-prop-row] > [data-blok-database-drawer-prop-head] {
+  min-inline-size: 100px;
+}
+
+/* The label is the button: its hit area covers the cell, icon included, so box and target match. */
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-label][role="button"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+@media (hover: hover) {
+  [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]:has(> [data-blok-database-drawer-prop-label][role="button"]:hover) {
+    background-color: var(--blok-item-hover-bg);
+  }
 }
 
 [data-blok-database-drawer-prop-icon] {
@@ -3202,7 +3249,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-builder-tile-bg);
   box-shadow: inset 0 0 0 1px var(--blok-database-builder-tile-ring);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-builder-tile-text);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -3210,6 +3257,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 [data-blok-database-layout-structure-card][aria-pressed="true"] {
   box-shadow: inset 0 0 0 1px var(--blok-database-builder-tile-ring), 0 0 0 1px var(--blok-database-card-border-active);
+  color: var(--blok-database-builder-tile-text-active);
   font-weight: 600;
 }
 
@@ -4314,7 +4362,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 @media (hover: hover) {
   [data-blok-database-drawer-prop-value][role="button"]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-peek-value-hover-bg);
   }
 }
 
@@ -4533,7 +4581,6 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   [data-blok-database-person-option]:hover,
   [data-blok-database-relation-option]:hover,
   [data-blok-database-files-upload]:hover,
-  [data-blok-database-drawer-prop-label][role="button"]:hover,
   [data-blok-database-select-create]:hover {
     background-color: var(--blok-item-hover-bg);
   }

@@ -169,6 +169,37 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(tokenValues('--blok-database-peek-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
   });
 
+  it('inks the title rgb(240, 239, 237) in dark with its own token; light keeps the primary ink (unmeasured)', () => {
+    expect(ruleBody('[data-blok-database-drawer-title]')).toContain('color: var(--blok-database-peek-title)');
+    expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-text-primary)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
+  });
+
+  it('shows no fill on a hovered value in dark; light keeps the hover fill (unmeasured)', () => {
+    expect(ruleBody('[data-blok-database-drawer-prop-value][role="button"]:hover')).toContain('background-color: var(--blok-database-peek-value-hover-bg)');
+    expect(tokenValues('--blok-database-peek-value-hover-bg')).toEqual(['var(--blok-item-hover-bg)', 'transparent', 'transparent']);
+  });
+
+  it('gives the side peek the measured shadow, ring included, and no border (research/08:329)', () => {
+    const body = ruleBody('[data-blok-database-drawer]');
+
+    expect(body).toContain('box-shadow: var(--blok-database-peek-shadow)');
+    expect(body).not.toContain('border-inline-start');
+    expect(tokenValues('--blok-database-peek-shadow')[0]).toBe('rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px');
+  });
+
+  it('hovers the whole 160x34 label cell, radius 6px, not the label text (pins excluded)', () => {
+    const head = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]';
+    const cell = ruleBody(head);
+
+    expect(cell).toContain('min-inline-size: 160px');
+    expect(cell).toContain('min-height: 34px');
+    expect(cell).toContain('border-radius: var(--blok-radius-control)');
+    expect(ruleBody(`${head}:has(> [data-blok-database-drawer-prop-label][role="button"]:hover)`)).toContain('background-color: var(--blok-item-hover-bg)');
+    expect(ruleBody('[data-blok-database-drawer-prop-label][role="button"]:hover')).toBe('');
+    // The label's hit area stretches over the cell, icon included, so the box and the click target match.
+    expect(ruleBody(`${head} > [data-blok-database-drawer-prop-label][role="button"]::before`)).toContain('inset: 0');
+  });
+
   it('inks labels and the "Comments" heading rgb(173, 169, 163) in dark', () => {
     expect(tokenValues('--blok-database-peek-label').slice(1)).toEqual(['rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
     expect(ruleBody('[data-blok-database-comments-label]')).toContain('color: var(--blok-database-peek-label)');

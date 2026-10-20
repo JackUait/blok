@@ -206,6 +206,58 @@ test('side peek: labels in Notion secondary ink, 34px rows (research/08:329)', a
   expect((await style(row.locator('[data-blok-database-drawer-prop-label]'), ['color'])).color).toBe('rgb(125, 122, 117)');
 });
 
+test('side peek: measured shadow with its ring, a 160x34 label hover cell, value hover kept (research/08:329, 21 §1m)', async ({ page }) => {
+  await tab(page, 'v2').click();
+  await page.locator('[data-blok-database-card][data-row-id="r2"] [data-blok-database-card-title]').click();
+  const drawer = page.locator('[data-blok-database-drawer]');
+  const label = drawer.locator('[data-blok-database-drawer-prop-label][role="button"]', { hasText: 'Mail' });
+  const head = drawer.locator('[data-blok-database-drawer-prop-head]', {
+    has: page.locator('[data-blok-database-drawer-prop-label][role="button"]', { hasText: 'Mail' }),
+  });
+  const value = drawer.locator('[data-blok-database-drawer-prop-value][data-property-id="p-mail"]');
+
+  await expect(drawer).toHaveCSS('transform', 'none');
+  await expect(drawer).toHaveCSS('box-shadow', 'rgba(25, 25, 25, 0.027) 0px 8px 12px 0px, rgba(25, 25, 25, 0.027) 0px 2px 6px 0px, rgba(42, 28, 0, 0.07) 0px 0px 0px 1px');
+  await expect(drawer).toHaveCSS('border-left-width', '0px');
+  // Light title ink is unmeasured: it keeps the ink the panel already has.
+  const title = drawer.locator('[data-blok-database-drawer-title]');
+
+  expect((await style(title, ['color'])).color).toBe((await style(drawer, ['color'])).color);
+
+  await label.hover();
+  await expect(head).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(head).toHaveCSS('border-radius', '6px');
+  const box = await head.boundingBox();
+
+  expect(box?.width).toBe(160);
+  expect(box?.height).toBe(34);
+
+  // The hover box is the click target: a click over the icon, at the cell's start, opens the property menu.
+  const icon = await head.locator('[data-blok-database-drawer-prop-icon]').boundingBox();
+
+  expect(icon).not.toBeNull();
+  await page.mouse.click((icon?.x ?? 0) + 4, (icon?.y ?? 0) + 4);
+  await expect(page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]')).toHaveValue('Mail');
+  await page.keyboard.press('Escape');
+
+  // Light value hover is unmeasured: Blok keeps its fill.
+  await value.hover();
+  await expect(value).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+});
+
+test('builder Structure tiles: unselected label rgb(115, 114, 110), selected rgb(29, 27, 22) 600 (research/10 §2)', async ({ page }) => {
+  await tab(page, 'v2').click();
+  await page.locator('[data-blok-database-card][data-row-id="r2"] [data-blok-database-card-title]').click();
+  const drawer = page.locator('[data-blok-database-drawer]');
+
+  await drawer.hover();
+  await drawer.getByRole('button', { name: 'Customize layout' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Customize page layout' });
+
+  await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="true"]')).toHaveCSS('color', 'rgb(29, 27, 22)');
+  await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="false"]')).toHaveCSS('color', 'rgb(115, 114, 110)');
+});
+
 test('"Display as" Icon only hides tab names visually, keeps them named, and survives a remount (research/03 §1.2)', async ({ page }) => {
   const documentId = `look-parity-${Date.now()}`;
 

@@ -61,6 +61,13 @@ const openRow = async (page: Page): Promise<void> => {
 const peek = (page: Page): Locator => page.locator('[data-blok-database-drawer]');
 const label = (page: Page, name: string): Locator =>
   peek(page).locator('[data-blok-database-drawer-prop-label][role="button"]', { hasText: name });
+/** The whole label column cell: Notion's hover box (research/21 §1m). */
+const labelCell = (page: Page, name: string): Locator =>
+  peek(page).locator('[data-blok-database-drawer-prop-head]', {
+    has: page.locator('[data-blok-database-drawer-prop-label][role="button"]', { hasText: name }),
+  });
+const value = (page: Page, propertyId: string): Locator =>
+  peek(page).locator(`[data-blok-database-drawer-prop-value][data-property-id="${propertyId}"]`);
 
 /** Both dark copies: the OS media query, and the theme attribute over a light OS. */
 const DARK_MODES = [
@@ -101,9 +108,21 @@ for (const mode of DARK_MODES) {
       await expect(peek(page)).toHaveCSS('transform', 'none');
 
       await expect(peek(page)).toHaveCSS('background-color', 'rgb(32, 32, 32)');
+      await expect(peek(page)).toHaveCSS('box-shadow', 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
+      await expect(peek(page)).toHaveCSS('border-left-width', '0px');
+      await expect(peek(page).locator('[data-blok-database-drawer-title]')).toHaveCSS('color', 'rgb(240, 239, 237)');
       await expect(label(page, 'Notes')).toHaveCSS('color', 'rgb(173, 169, 163)');
+
       await label(page, 'Notes').hover();
-      await expect(label(page, 'Notes')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.055)');
+      await expect(labelCell(page, 'Notes')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.055)');
+      await expect(labelCell(page, 'Notes')).toHaveCSS('border-radius', '6px');
+      const box = await labelCell(page, 'Notes').boundingBox();
+
+      expect(box?.width).toBe(160);
+      expect(box?.height).toBe(34);
+
+      await value(page, 'p-notes').hover();
+      await expect(value(page, 'p-notes')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     });
 
     test('center peek: rgb(32, 32, 32) panel, measured shadow, 0.8 backdrop', async ({ page }) => {
@@ -116,7 +135,7 @@ for (const mode of DARK_MODES) {
       await expect(dialog).toHaveCSS('box-shadow', 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
       await expect(page.locator('[data-blok-database-peek-backdrop]')).toHaveCSS('background-color', 'rgba(15, 15, 15, 0.8)');
       await label(page, 'Notes').hover();
-      await expect(label(page, 'Notes')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.055)');
+      await expect(labelCell(page, 'Notes')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.055)');
     });
   });
 }
@@ -133,6 +152,9 @@ test('the layout builder paints the measured dark surfaces (research/21 §1n)', 
   await expect(dialog.locator('[data-blok-database-layout-canvas]')).toHaveCSS('background-color', 'rgb(25, 25, 25)');
   await expect(dialog.locator('[data-blok-database-layout-module="heading"]')).toHaveCSS('background-color', 'rgb(25, 25, 25)');
   await expect(dialog.locator('[data-blok-database-layout-structure-card]').first()).toHaveCSS('background-color', 'rgb(32, 32, 32)');
+  // Selected "Simple" label white, unselected "Tabbed" rgb(90, 90, 90).
+  await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="true"]')).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="false"]')).toHaveCSS('color', 'rgb(90, 90, 90)');
 });
 
 test('light keeps the 0.6 backdrop and the white panel (research/08)', async ({ page }) => {

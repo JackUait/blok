@@ -247,16 +247,20 @@ describe('database row page layout css', () => {
   });
 
   // research/10 §2: 117x80 cards. Notion rings the selected one blue; the blue law makes it neutral.
-  it('marks the selected Structure card with primary ink and no blue', () => {
+  // Labels as measured: light 115,114,110 / 29,27,22 (research/10 §2), dark 90,90,90 / white (research/21 §1n).
+  it('marks the selected Structure card with the measured label inks and no blue', () => {
     const card = ruleBody('[data-blok-database-layout-structure-card]');
     const selected = ruleBody('[data-blok-database-layout-structure-card][aria-pressed="true"]');
     const ink = (body: string): string | undefined => body.match(/(?:^|;)\s*color: ([^;]+);/)?.[1];
+    const values = (name: string): string[] => [...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g'))].map((m) => m[1].trim());
 
     expect(card).toContain('inline-size: 117px');
     expect(card).toContain('block-size: 80px');
-    expect(ink(card)).toBe('var(--blok-text-primary)');
+    expect(ink(card)).toBe('var(--blok-database-builder-tile-text)');
+    expect(ink(selected)).toBe('var(--blok-database-builder-tile-text-active)');
+    expect(values('--blok-database-builder-tile-text')).toEqual(['rgb(115, 114, 110)', 'rgb(90, 90, 90)', 'rgb(90, 90, 90)']);
+    expect(values('--blok-database-builder-tile-text-active')).toEqual(['rgb(29, 27, 22)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)']);
     expect(selected).not.toMatch(/background/);
-    expect(ink(selected) ?? ink(card)).toBe(ink(card));
     expect(selected).toContain('font-weight: 600');
     expect(selected).toContain('var(--blok-database-card-border-active)');
     expect(selected).not.toMatch(/accent|blue|focus-ring|#2383e2|toggle-on/i);

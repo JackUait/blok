@@ -884,6 +884,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DARK_TABLE_CHROME_BYTES = 1_021;
     // database.css: a reminder date stays inline with its alarm in cards and timeline columns (research/21 §6).
     const DATABASE_DATE_REMINDER_INLINE_BYTES = 140;
+    // database.css: peek title ink, value hover, 160x34 label cell, side peek shadow, Structure tile labels (research/21 §1m-§1n, research/10 §2).
+    const DATABASE_PEEK_POLISH_BYTES = 2_372;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -996,7 +998,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DARK_VIEWS_BYTES
       + DATABASE_ROW_PAGE_FAVORITE_BYTES
       + DATABASE_DARK_TABLE_CHROME_BYTES
-      + DATABASE_DATE_REMINDER_INLINE_BYTES;
+      + DATABASE_DATE_REMINDER_INLINE_BYTES
+      + DATABASE_PEEK_POLISH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

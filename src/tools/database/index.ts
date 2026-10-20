@@ -8165,15 +8165,17 @@ export class DatabaseTool implements BlockTool {
     } else if (!mod && (key === 'backspace' || key === 'delete')) {
       act(() => this.trashSelectionFromKeys());
     } else if (mod && key === '/') {
+      // A calendar pick has no bar; the key keeps its own meaning then.
+      const bar = (this.selectionBarSlot() ?? this.boardContainer)?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');
+
+      if (bar === null || bar === undefined) {
+        return;
+      }
       act(() => {
-        const bar = (this.selectionBarSlot() ?? this.boardContainer)?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');
         const view = this.model.getView(this.activeViewId);
         const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
         const properties = bulkEditableProperties(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id)));
 
-        if (bar === null || bar === undefined) {
-          return;
-        }
         openMenu(bar, properties.map((property) => ({
           name: `database-bulk-edit-${property.id}`,
           title: property.name,

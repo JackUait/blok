@@ -129,6 +129,17 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
     expect(selected(el)).toEqual([]);
   });
 
+  it('leaves Cmd+/ alone: there is no bulk bar to edit from', () => {
+    const { el } = buildTool(doc(), {}, calendarData());
+
+    click(eventOf(el, 'delta'), { shiftKey: true });
+    const key = new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(key);
+
+    expect(key.defaultPrevented).toBe(false);
+  });
+
   it('read-only: Shift-click selects nothing', () => {
     const { el } = buildTool(doc(), {}, calendarData(), true);
 

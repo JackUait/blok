@@ -36,8 +36,8 @@ export interface LivePreview {
   clear(): void;
   /** Re-place every box on the next frame, after a scroll, resize or committed batch. */
   relayout(): void;
-  /** Blocks this call would rewrite but did not draw, because their child blocks show. */
-  skipped(callId: string): string[];
+  /** Blocks this call drew a rewrite over, kept after it ends. Its other rewrites need the fallback reveal. */
+  framed(callId: string): string[];
   /** Whether a frame has painted one of this call's words. A call sent whole in one tick never is. */
   shown(callId: string): boolean;
 }
@@ -506,7 +506,12 @@ class RewriteBox {
 
 type RewriteRange = 'all' | { start: number; end: number } | { find: string; occurrence: number };
 
-interface RewriteSpec { id: string; field?: string; strictField: boolean; range: RewriteRange; text: string; complete: boolean }
+/** `drawable: false`: the new text holds an embed, which plain overlay text cannot show. */
+interface RewriteSpec { id: string; field?: string; strictField: boolean; range: RewriteRange; text: string; complete: boolean; drawable: boolean }
+
+const hasEmbed = (value: unknown): boolean => Array.isArray(value) && value.some((segment) => isRecord(segment) && 'embed' in segment);
+
+const isRich = (value: unknown): boolean => typeof value === 'string' || Array.isArray(value);
 
 const rangeOf = (value: unknown): RewriteRange | null => {
   if (value === undefined || value === 'all') {
@@ -567,13 +572,14 @@ const rewriteOf = (command: PartialCommand): RewriteSpec | null => {
     }
     const complete = settled(args, 'with', done);
 
-    return { id: args.id, field, strictField: field !== undefined, range, text: richText(args.with, complete), complete };
+    return { id: args.id, field, strictField: field !== undefined, range, text: richText(args.with, complete), complete, drawable: !hasEmbed(args.with) };
   }
-  if (name === 'block.update' && isRecord(args.data) && typeof args.data.text === 'string') {
+  if (name === 'block.update' && isRecord(args.data) && isRich(args.data.text)) {
     const complete = settled(args, 'data', done) || settled(args.data, 'text', done);
+    const { text } = args.data;
 
     // Only `text`: another string field (a list style, a url) is not shown text.
-    return { id: args.id, field: 'text', strictField: false, range: 'all', text: richText(args.data.text, complete), complete };
+    return { id: args.id, field: 'text', strictField: false, range: 'all', text: richText(text, complete), complete, drawable: !hasEmbed(text) };
   }
 
   return null;
@@ -740,8 +746,7 @@ class CallPreview {
 
   constructor(
     private readonly id: string,
-    private readonly deps: LivePreviewDeps,
-    private readonly onSkip: (blockId: string) => void
+    private readonly deps: LivePreviewDeps
   ) {}
 
   private get key(): string {
@@ -870,10 +875,10 @@ class CallPreview {
     if (spec === null) {
       return;
     }
-    const target = known?.frame?.target ?? this.target(spec);
+    const target = spec.drawable ? known?.frame?.target ?? this.target(spec) : null;
     const at = target ? locate(target.original, spec.range) : null;
 
-    // A find that misses: commit decides, so nothing shows.
+    // A find that misses: commit decides, so nothing shows. Undrawable text gets the reveal after commit.
     if (target === null || at === null) {
       if (known) {
         this.dropFrame(known);
@@ -913,12 +918,14 @@ class CallPreview {
     }
     // A longer box would cover shown child blocks: the old text stays until commit.
     if (showsChildren(holder)) {
-      this.onSkip(spec.id);
-
       return null;
     }
 
     return { id: spec.id, holder, input, original: input.textContent ?? '' };
+  }
+
+  public framedIds(): string[] {
+    return [...this.items.values()].flatMap((item) => (item.frame === null ? [] : [item.frame.target.id]));
   }
 
   private dropFrame(item: Item): void {
@@ -952,16 +959,16 @@ class CallPreview {
 export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
   const calls = new Map<string, CallPreview>();
   const finished = new Set<string>();
-  const skips = new Map<string, Set<string>>();
+  const framed = new Map<string, string[]>();
   const frame: { id: number | null } = { id: null };
-  const skip = (callId: string) => (blockId: string): void => {
-    skips.set(callId, (skips.get(callId) ?? new Set<string>()).add(blockId));
-  };
   const end = (callId: string): CallPreview | undefined => {
     const call = calls.get(callId);
 
     finished.add(callId);
     calls.delete(callId);
+    if (call !== undefined) {
+      framed.set(callId, call.framedIds());
+    }
 
     return call;
   };
@@ -971,7 +978,7 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
       if (finished.has(callId)) {
         return;
       }
-      const call = calls.get(callId) ?? new CallPreview(callId, deps, skip(callId));
+      const call = calls.get(callId) ?? new CallPreview(callId, deps);
 
       calls.set(callId, call);
       call.render(readPartialCommands(json));
@@ -991,7 +998,7 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
         call.remove();
       });
       calls.clear();
-      skips.clear();
+      framed.clear();
       if (frame.id !== null) {
         cancelAnimationFrame(frame.id);
         frame.id = null;
@@ -1008,8 +1015,8 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
       });
     },
 
-    skipped(callId) {
-      return [...(skips.get(callId) ?? [])];
+    framed(callId) {
+      return framed.get(callId) ?? [];
     },
 
     shown(callId) {

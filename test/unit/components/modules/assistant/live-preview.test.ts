@@ -592,19 +592,23 @@ describe('createLivePreview', () => {
       expect(b1.hasAttribute('data-blok-ai-gap')).toBe(false);
     });
 
-    it('names a rewrite it skipped, even after the call settles', () => {
+    it('names the blocks it framed, even after the call settles, and not one it skipped', () => {
       const preview = make();
       const b1 = state.holders[0];
       const child = document.createElement('div');
 
       field(b1, 'Title').after(child);
       child.setAttribute('data-blok-element', '');
-      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A new title' } }));
+      field(state.holders[1], 'Plain');
+      preview.update('c1', execute(
+        { name: 'text.replace', args: { id: 'b1', with: 'A new title' } },
+        { name: 'text.replace', args: { id: 'b2', with: 'New plain' } }
+      ));
       preview.settle('c1');
       runFrames();
 
-      expect(preview.skipped('c1')).toEqual(['b1']);
-      expect(preview.skipped('c2')).toEqual([]);
+      expect(preview.framed('c1')).toEqual(['b2']);
+      expect(preview.framed('c2')).toEqual([]);
     });
 
     it('previews a block whose child blocks are collapsed', () => {
@@ -636,14 +640,47 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector(PREVIEW)).toBeNull();
     });
 
-    it('block.update with rich segments in data.text leaves the block alone', () => {
+    it('block.update with rich segments in data.text streams their plain text', () => {
       const preview = make();
       const b2 = state.holders[1];
+      const json = execute({ name: 'block.update', args: { id: 'b2', data: { text: [{ text: 'After ' }, { text: 'this <b>', marks: { bold: true } }, { text: ' now' }] } } });
 
       field(b2, 'Before');
-      preview.update('c1', execute({ name: 'block.update', args: { id: 'b2', data: { text: [{ text: 'After' }] } } }));
+      preview.update('c1', open(json, 'After '));
+      vi.advanceTimersByTime(35 * 3);
+      expect(b2.hasAttribute(REWRITING)).toBe(true);
+      expect(words(state.layer)).toEqual(['After']);
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 5);
+      // Segment text is plain text: a "<b>" in it is shown, not read as a tag.
+      expect(boxText()).toBe('After this <b> now');
+      preview.settle('c1');
+      expect(preview.framed('c1')).toEqual(['b2']);
+    });
+
+    it.each([
+      ['block.update', (embed: unknown[]) => ({ name: 'block.update', args: { id: 'b2', data: { text: embed } } })],
+      ['text.replace', (embed: unknown[]) => ({ name: 'text.replace', args: { id: 'b2', with: embed } })],
+    ])('%s with an embed segment draws no overlay, even after words landed, and does not count the block as framed', (_name, command) => {
+      const preview = make();
+      const b2 = state.holders[1];
+      const segments = [{ text: 'Sum of these words ' }, { embed: { equation: { expression: 'x^2' } } }, { text: ' end' }];
+      const json = execute(command(segments));
+
+      field(b2, 'Before');
+      preview.update('c1', open(json, 'these '));
+      vi.advanceTimersByTime(35 * 3);
+      expect(b2.hasAttribute(REWRITING)).toBe(true);
+
+      preview.update('c1', json);
 
       expect(b2.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+      expect(b2.hasAttribute('data-blok-ai-gap')).toBe(false);
+      preview.settle('c1');
+      runFrames();
+      expect(preview.framed('c1')).toEqual([]);
     });
 
     it('block.update with data.text previews like a whole replace', () => {

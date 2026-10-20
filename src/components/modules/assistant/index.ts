@@ -500,9 +500,11 @@ export class Assistant extends Module {
     if (changed === null) {
       return;
     }
-    // A call with no stream, or a rewrite the preview had to skip, replays its words now.
+    // A call with no stream, or a rewrite the preview did not draw, replays its words now.
+    const framed = this.preview?.framed(id) ?? [];
+
     this.reveal(streamed
-      ? this.preview?.skipped(id).filter((blockId) => changed.updated.includes(blockId)) ?? []
+      ? changed.updated.filter((blockId) => !framed.includes(blockId))
       : [...changed.created, ...changed.updated]);
   }
 

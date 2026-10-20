@@ -691,6 +691,35 @@ describe('in-editor assistant bar', () => {
       expect(await texts(editor)).toEqual(['Hello', 'First words here', 'Second words here']);
     });
 
+    it('a streamed call that painted an insert still plays the reveal on a rewrite it did not draw', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      fakeLayout();
+      // An embed cannot show as overlay text, so this rewrite is never framed.
+      const call = executeCall('c1', [
+        ...insert('Fresh words here'),
+        { name: 'block.update', args: { id: 'p1', data: { text: [{ text: 'Area ' }, { embed: { equation: { expression: 'x^2' } } }] } } },
+      ]);
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('here')) });
+      await waitFor(() => expect(previewText()).toBe('Fresh words'));
+      // A frame paints the words, so the call counts as seen.
+      await settle(50);
+      live.emit({ type: 'tool_input', index: 0, json: call.json });
+      live.emit({ type: 'tool_end', index: 0 });
+
+      await waitFor(() => expect(revealed()).toEqual([holderOf('p1').textContent ?? '']));
+      expect(revealed()).not.toContain('Fresh words here');
+      live.finish(call.use);
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
     it('an error result cancels its preview', async () => {
       const live = streaming();
       const editor = await createEditor(live.model);

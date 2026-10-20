@@ -28,18 +28,15 @@ describe('assistant bar: the note after an edit', () => {
     vi.restoreAllMocks();
   });
 
-  it('cuts a note longer than 10 words to its first 10, with an ellipsis', async () => {
-    bar.render({
-      kind: 'answered',
-      reply: 'Готово: сразу под вашим курсором появился короткий абзац о том, что водный дефицит в Европе чаще сезонный.',
-      changed: true,
-      edited: true,
-    });
+  it('shows a long note whole: the model keeps it short, the bar never cuts it', async () => {
+    const reply = 'Готово: сразу под вашим курсором появился короткий абзац о том, что водный дефицит в Европе чаще сезонный.';
 
-    await waitFor(() => expect(summaryOf(bar)).toBe('Готово: сразу под вашим курсором появился короткий абзац о том…'));
+    bar.render({ kind: 'answered', reply, changed: true, edited: true });
+
+    await waitFor(() => expect(summaryOf(bar)).toBe(reply));
   });
 
-  it('keeps a note of 10 words or fewer as written', async () => {
+  it('shows a short note as written', async () => {
     bar.render({ kind: 'answered', reply: 'Added a paragraph and a callout about saving water.', changed: true, edited: true });
 
     await waitFor(() => expect(summaryOf(bar)).toBe('Added a paragraph and a callout about saving water.'));

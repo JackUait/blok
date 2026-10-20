@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Åpne som hel side",
   "tools.database.peekPrevious": "Forrige side",
   "tools.database.peekNext": "Neste side",
+  "tools.database.peekFavorite": "Favoritt",
+  "tools.database.peekFavoriteHint": "Legg til i favoritter",
   "tools.database.defaultTitleProperty": "Tittel",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Ikke startet",

@@ -1165,6 +1165,8 @@ export type BlokMessageKey =
   | 'tools.database.pageVisibility.hideWhenEmpty'
   | 'tools.database.peekBack'
   | 'tools.database.peekExpand'
+  | 'tools.database.peekFavorite'
+  | 'tools.database.peekFavoriteHint'
   | 'tools.database.peekNext'
   | 'tools.database.peekPrevious'
   | 'tools.database.personDefault'

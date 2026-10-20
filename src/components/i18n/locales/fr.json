@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Ouvrir en pleine page",
   "tools.database.peekPrevious": "Page précédente",
   "tools.database.peekNext": "Page suivante",
+  "tools.database.peekFavorite": "Favori",
+  "tools.database.peekFavoriteHint": "Ajouter aux favoris",
   "tools.database.defaultTitleProperty": "Titre",
   "tools.database.defaultStatusProperty": "Statut",
   "tools.database.defaultStatusNotStarted": "Non commencé",

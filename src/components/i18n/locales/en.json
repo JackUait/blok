@@ -831,6 +831,8 @@
   "tools.database.peekExpand": "Open as full page",
   "tools.database.peekPrevious": "Previous page",
   "tools.database.peekNext": "Next page",
+  "tools.database.peekFavorite": "Favorite",
+  "tools.database.peekFavoriteHint": "Add to your favorites",
   "tools.database.defaultTitleProperty": "Title",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Not started",

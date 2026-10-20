@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "සම්පූර්ණ පිටුවක් ලෙස විවෘත කරන්න",
   "tools.database.peekPrevious": "පෙර පිටුව",
   "tools.database.peekNext": "ඊළඟ පිටුව",
+  "tools.database.peekFavorite": "ප්‍රියතම",
+  "tools.database.peekFavoriteHint": "ප්‍රියතමවලට එක් කරන්න",
   "tools.database.defaultTitleProperty": "මාතෘකාව",
   "tools.database.defaultStatusProperty": "තත්ත්වය",
   "tools.database.defaultStatusNotStarted": "අරඹා නොමැත",

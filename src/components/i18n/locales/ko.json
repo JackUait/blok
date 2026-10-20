@@ -726,6 +726,8 @@
   "tools.database.peekExpand": "전체 페이지로 열기",
   "tools.database.peekPrevious": "이전 페이지",
   "tools.database.peekNext": "다음 페이지",
+  "tools.database.peekFavorite": "즐겨찾기",
+  "tools.database.peekFavoriteHint": "즐겨찾기에 추가",
   "tools.database.defaultTitleProperty": "제목",
   "tools.database.defaultStatusProperty": "상태",
   "tools.database.defaultStatusNotStarted": "시작 전",

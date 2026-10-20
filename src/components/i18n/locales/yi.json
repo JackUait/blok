@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "עפֿן אויף אַ גאַנצן בלאַט",
   "tools.database.peekPrevious": "פֿריערדיקער בלאַט",
   "tools.database.peekNext": "נעקסטער בלאַט",
+  "tools.database.peekFavorite": "פֿאַוואָריט",
+  "tools.database.peekFavoriteHint": "צולייגן צו פֿאַוואָריטן",
   "tools.database.defaultTitleProperty": "טיטל",
   "tools.database.defaultStatusProperty": "סטאטוס",
   "tools.database.defaultStatusNotStarted": "נישט אנגעהויבן",

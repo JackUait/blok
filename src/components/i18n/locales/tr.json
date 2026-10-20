@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Tam sayfa olarak aç",
   "tools.database.peekPrevious": "Önceki sayfa",
   "tools.database.peekNext": "Sonraki sayfa",
+  "tools.database.peekFavorite": "Favori",
+  "tools.database.peekFavoriteHint": "Favorilere ekle",
   "tools.database.defaultTitleProperty": "Başlık",
   "tools.database.defaultStatusProperty": "Durum",
   "tools.database.defaultStatusNotStarted": "Başlanmadı",

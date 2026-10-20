@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Otevřít na celé stránce",
   "tools.database.peekPrevious": "Předchozí stránka",
   "tools.database.peekNext": "Další stránka",
+  "tools.database.peekFavorite": "Oblíbené",
+  "tools.database.peekFavoriteHint": "Přidat do oblíbených",
   "tools.database.defaultTitleProperty": "Název",
   "tools.database.defaultStatusProperty": "Stav",
   "tools.database.defaultStatusNotStarted": "Nezahájeno",

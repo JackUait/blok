@@ -724,6 +724,8 @@
   "tools.database.peekExpand": "Buka sebagai halaman penuh",
   "tools.database.peekPrevious": "Halaman sebelumnya",
   "tools.database.peekNext": "Halaman seterusnya",
+  "tools.database.peekFavorite": "Kegemaran",
+  "tools.database.peekFavoriteHint": "Tambah ke Kegemaran",
   "tools.database.defaultTitleProperty": "Tajuk",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Belum bermula",

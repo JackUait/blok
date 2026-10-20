@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Avaa koko sivuna",
   "tools.database.peekPrevious": "Edellinen sivu",
   "tools.database.peekNext": "Seuraava sivu",
+  "tools.database.peekFavorite": "Suosikki",
+  "tools.database.peekFavoriteHint": "Lisää suosikkeihin",
   "tools.database.defaultTitleProperty": "Otsikko",
   "tools.database.defaultStatusProperty": "Tila",
   "tools.database.defaultStatusNotStarted": "Aloittamatta",

@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "পূর্ণ পৃষ্ঠা হিসেবে খুলুন",
   "tools.database.peekPrevious": "আগের পৃষ্ঠা",
   "tools.database.peekNext": "পরবর্তী পৃষ্ঠা",
+  "tools.database.peekFavorite": "পছন্দের",
+  "tools.database.peekFavoriteHint": "পছন্দের তালিকায় যোগ করুন",
   "tools.database.defaultTitleProperty": "শিরোনাম",
   "tools.database.defaultStatusProperty": "অবস্থা",
   "tools.database.defaultStatusNotStarted": "শুরু হয়নি",

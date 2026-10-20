@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "სრულ გვერდზე გახსნა",
   "tools.database.peekPrevious": "წინა გვერდი",
   "tools.database.peekNext": "შემდეგი გვერდი",
+  "tools.database.peekFavorite": "რჩეული",
+  "tools.database.peekFavoriteHint": "რჩეულებში დამატება",
   "tools.database.defaultTitleProperty": "სათაური",
   "tools.database.defaultStatusProperty": "სტატუსი",
   "tools.database.defaultStatusNotStarted": "არ დაწყებულა",

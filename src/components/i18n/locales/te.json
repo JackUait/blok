@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "పూర్తి పేజీగా తెరవండి",
   "tools.database.peekPrevious": "మునుపటి పేజీ",
   "tools.database.peekNext": "తదుపరి పేజీ",
+  "tools.database.peekFavorite": "ఇష్టమైనది",
+  "tools.database.peekFavoriteHint": "ఇష్టమైనవాటికి జోడించు",
   "tools.database.defaultTitleProperty": "శీర్షిక",
   "tools.database.defaultStatusProperty": "స్థితి",
   "tools.database.defaultStatusNotStarted": "ప్రారంభం కాలేదు",

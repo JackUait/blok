@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Als ganze Seite öffnen",
   "tools.database.peekPrevious": "Vorherige Seite",
   "tools.database.peekNext": "Nächste Seite",
+  "tools.database.peekFavorite": "Favorit",
+  "tools.database.peekFavoriteHint": "Zu Favoriten hinzufügen",
   "tools.database.defaultTitleProperty": "Titel",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Nicht begonnen",

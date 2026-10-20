@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "فتح كصفحة كاملة",
   "tools.database.peekPrevious": "الصفحة السابقة",
   "tools.database.peekNext": "الصفحة التالية",
+  "tools.database.peekFavorite": "المفضلة",
+  "tools.database.peekFavoriteHint": "إضافة إلى المفضلة",
   "tools.database.defaultTitleProperty": "العنوان",
   "tools.database.defaultStatusProperty": "الحالة",
   "tools.database.defaultStatusNotStarted": "لم يبدأ",

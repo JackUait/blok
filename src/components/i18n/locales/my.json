@@ -724,6 +724,8 @@
   "tools.database.peekExpand": "စာမျက်နှာအပြည့်ဖြင့် ဖွင့်ရန်",
   "tools.database.peekPrevious": "ယခင်စာမျက်နှာ",
   "tools.database.peekNext": "နောက်စာမျက်နှာ",
+  "tools.database.peekFavorite": "အကြိုက်ဆုံး",
+  "tools.database.peekFavoriteHint": "အကြိုက်ဆုံးများသို့ ထည့်ရန်",
   "tools.database.defaultTitleProperty": "ခေါင်းစဉ်",
   "tools.database.defaultStatusProperty": "အခြေအနေ",
   "tools.database.defaultStatusNotStarted": "မစတင်ရသေး",

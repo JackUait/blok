@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Ava täislehena",
   "tools.database.peekPrevious": "Eelmine leht",
   "tools.database.peekNext": "Järgmine leht",
+  "tools.database.peekFavorite": "Lemmik",
+  "tools.database.peekFavoriteHint": "Lisa lemmikutesse",
   "tools.database.defaultTitleProperty": "Pealkiri",
   "tools.database.defaultStatusProperty": "Olek",
   "tools.database.defaultStatusNotStarted": "Alustamata",

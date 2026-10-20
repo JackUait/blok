@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Megnyitás teljes oldalon",
   "tools.database.peekPrevious": "Előző oldal",
   "tools.database.peekNext": "Következő oldal",
+  "tools.database.peekFavorite": "Kedvenc",
+  "tools.database.peekFavoriteHint": "Hozzáadás a kedvencekhez",
   "tools.database.defaultTitleProperty": "Cím",
   "tools.database.defaultStatusProperty": "Állapot",
   "tools.database.defaultStatusNotStarted": "Nem kezdődött el",

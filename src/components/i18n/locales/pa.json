@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "ਪੂਰੇ ਪੰਨੇ ਵਜੋਂ ਖੋਲ੍ਹੋ",
   "tools.database.peekPrevious": "ਪਿਛਲਾ ਪੰਨਾ",
   "tools.database.peekNext": "ਅਗਲਾ ਪੰਨਾ",
+  "tools.database.peekFavorite": "ਮਨਪਸੰਦ",
+  "tools.database.peekFavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.database.defaultTitleProperty": "ਸਿਰਲੇਖ",
   "tools.database.defaultStatusProperty": "ਸਥਿਤੀ",
   "tools.database.defaultStatusNotStarted": "ਸ਼ੁਰੂ ਨਹੀਂ ਹੋਇਆ",

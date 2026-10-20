@@ -15,6 +15,9 @@ declare global {
   interface Window {
     Blok: new (...args: unknown[]) => Blok;
     blokInstance?: Blok;
+    BlokDatabase: unknown;
+    BlokDatabaseRow: unknown;
+    favoriteRows?: string[];
   }
 }
 
@@ -1129,5 +1132,47 @@ test.describe('row page layout', () => {
 
     await page.keyboard.press('Escape');
     await expect(peek(page)).toHaveCount(0);
+  });
+  // research/21 §5: Favorite is a star right before "•••", with the hint "Add to your favorites".
+  test('shows the host\'s Favorite star before Actions and toggles it', async ({ page }) => {
+    await page.evaluate(async (input) => {
+      await window.blokInstance?.destroy?.();
+      document.getElementById('blok')?.remove();
+      const holder = document.createElement('div');
+
+      holder.id = 'blok';
+      document.body.appendChild(holder);
+      window.favoriteRows = [];
+      const favorites = {
+        isFavorite: ({ rowId }: { rowId: string }) => window.favoriteRows?.includes(rowId) === true,
+        onToggle: ({ rowId, favorite }: { rowId: string; favorite: boolean }) => {
+          window.favoriteRows = favorite ? [...(window.favoriteRows ?? []), rowId] : (window.favoriteRows ?? []).filter((id) => id !== rowId);
+        },
+      };
+
+      window.blokInstance = new window.Blok({
+        holder,
+        data: { blocks: input },
+        tools: { database: { class: window.BlokDatabase, config: { favorites } }, 'database-row': { class: window.BlokDatabaseRow } },
+      });
+      await window.blokInstance.isReady;
+    }, blocks());
+    await openRow(page, 'r1');
+    const star = peek(page).getByRole('button', { name: 'Favorite' });
+    const actions = peek(page).getByRole('button', { name: 'Actions' });
+
+    await expect(star).toHaveAttribute('aria-pressed', 'false');
+    const starBox = await star.boundingBox();
+    const actionsBox = await actions.boundingBox();
+
+    expect((starBox?.x ?? 0) + (starBox?.width ?? 0)).toBeLessThanOrEqual(actionsBox?.x ?? 0);
+    expect((actionsBox?.x ?? 0) - ((starBox?.x ?? 0) + (starBox?.width ?? 0))).toBeLessThan(16);
+
+    await star.hover();
+    await expect(page.getByText('Add to your favorites')).toBeVisible();
+
+    await star.click();
+    await expect(star).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.evaluate(() => window.favoriteRows)).toEqual(['r1']);
   });
 });

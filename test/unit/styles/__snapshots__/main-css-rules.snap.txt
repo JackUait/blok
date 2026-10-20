@@ -4752,7 +4752,7 @@ span[data-blok-slash-search] {
   margin-inline: auto;
 }
 
-[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-page-info], [data-blok-database-peek-actions] {
+[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4766,19 +4766,15 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
-[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-actions][hidden] {
+[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-favorite][hidden], [data-blok-database-peek-actions][hidden] {
   display: none;
 }
 
-[data-blok-database-peek-page-info] {
+[data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
   margin-inline-start: auto;
 }
 
-[data-blok-database-peek-actions] {
-  margin-inline-start: auto;
-}
-
-[data-blok-database-peek-page-info]:not([hidden]) + [data-blok-database-peek-actions] {
+[data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-favorite], [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-actions], [data-blok-database-peek-favorite]:not([hidden]) ~ [data-blok-database-peek-actions] {
   margin-inline-start: 0;
 }
 
@@ -4787,7 +4783,7 @@ span[data-blok-slash-search] {
   color: var(--blok-icon-active-text);
 }
 
-[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-actions] svg {
+[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-favorite] svg, [data-blok-database-peek-actions] svg {
   width: 16px;
   height: 16px;
 }
@@ -4805,7 +4801,7 @@ span[data-blok-slash-search] {
   cursor: default;
 }
 
-[@media (hover: hover)] [data-blok-database-peek-expand]:hover, [data-blok-database-peek-mode]:hover, [data-blok-database-peek-prev]:not(:disabled):hover, [data-blok-database-peek-next]:not(:disabled):hover, [data-blok-database-peek-page-info]:hover, [data-blok-database-peek-actions]:hover {
+[@media (hover: hover)] [data-blok-database-peek-expand]:hover, [data-blok-database-peek-mode]:hover, [data-blok-database-peek-prev]:not(:disabled):hover, [data-blok-database-peek-next]:not(:disabled):hover, [data-blok-database-peek-page-info]:hover, [data-blok-database-peek-favorite]:hover, [data-blok-database-peek-actions]:hover {
   background-color: var(--blok-database-drawer-border);
 }
 

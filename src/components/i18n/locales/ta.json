@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "முழுப் பக்கமாகத் திற",
   "tools.database.peekPrevious": "முந்தைய பக்கம்",
   "tools.database.peekNext": "அடுத்த பக்கம்",
+  "tools.database.peekFavorite": "பிடித்தது",
+  "tools.database.peekFavoriteHint": "பிடித்தவையில் சேர்",
   "tools.database.defaultTitleProperty": "தலைப்பு",
   "tools.database.defaultStatusProperty": "நிலை",
   "tools.database.defaultStatusNotStarted": "தொடங்கவில்லை",

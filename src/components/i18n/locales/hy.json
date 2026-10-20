@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Բացել ամբողջ էջով",
   "tools.database.peekPrevious": "Նախորդ էջ",
   "tools.database.peekNext": "Հաջորդ էջ",
+  "tools.database.peekFavorite": "Ընտրյալ",
+  "tools.database.peekFavoriteHint": "Ավելացնել ընտրյալներում",
   "tools.database.defaultTitleProperty": "Վերնագիր",
   "tools.database.defaultStatusProperty": "Կարգավիճակ",
   "tools.database.defaultStatusNotStarted": "Չի սկսվել",

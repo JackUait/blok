@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "פתח כדף מלא",
   "tools.database.peekPrevious": "הדף הקודם",
   "tools.database.peekNext": "הדף הבא",
+  "tools.database.peekFavorite": "מועדף",
+  "tools.database.peekFavoriteHint": "הוספה למועדפים",
   "tools.database.defaultTitleProperty": "כותרת",
   "tools.database.defaultStatusProperty": "סטטוס",
   "tools.database.defaultStatusNotStarted": "לא התחיל",

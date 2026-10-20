@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "تولۇق بەتتە ئېچىش",
   "tools.database.peekPrevious": "ئالدىنقى بەت",
   "tools.database.peekNext": "كېيىنكى بەت",
+  "tools.database.peekFavorite": "ياقتۇرغان",
+  "tools.database.peekFavoriteHint": "ياقتۇرغانلارغا قوشۇش",
   "tools.database.defaultTitleProperty": "ماۋزۇ",
   "tools.database.defaultStatusProperty": "ھالەت",
   "tools.database.defaultStatusNotStarted": "باشلانمىدى",

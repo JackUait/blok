@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Hape në faqe të plotë",
   "tools.database.peekPrevious": "Faqja e mëparshme",
   "tools.database.peekNext": "Faqja tjetër",
+  "tools.database.peekFavorite": "E preferuar",
+  "tools.database.peekFavoriteHint": "Shto te të preferuarat",
   "tools.database.defaultTitleProperty": "Titull",
   "tools.database.defaultStatusProperty": "Statusi",
   "tools.database.defaultStatusNotStarted": "E pafilluar",

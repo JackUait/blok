@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Odpri na celotni strani",
   "tools.database.peekPrevious": "Prejšnja stran",
   "tools.database.peekNext": "Naslednja stran",
+  "tools.database.peekFavorite": "Priljubljeno",
+  "tools.database.peekFavoriteHint": "Dodaj med priljubljene",
   "tools.database.defaultTitleProperty": "Naslov",
   "tools.database.defaultStatusProperty": "Stanje",
   "tools.database.defaultStatusNotStarted": "Ni začeto",

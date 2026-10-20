@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "フルページで開く",
   "tools.database.peekPrevious": "前のページ",
   "tools.database.peekNext": "次のページ",
+  "tools.database.peekFavorite": "お気に入り",
+  "tools.database.peekFavoriteHint": "お気に入りに追加",
   "tools.database.defaultTitleProperty": "タイトル",
   "tools.database.defaultStatusProperty": "ステータス",
   "tools.database.defaultStatusNotStarted": "未着手",

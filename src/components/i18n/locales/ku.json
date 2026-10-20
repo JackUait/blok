@@ -726,6 +726,8 @@
   "tools.database.peekExpand": "وەک پەڕەی تەواو بیکەرەوە",
   "tools.database.peekPrevious": "پەڕەی پێشوو",
   "tools.database.peekNext": "پەڕەی دواتر",
+  "tools.database.peekFavorite": "Bijarte",
+  "tools.database.peekFavoriteHint": "Li bijartiyan zêde bike",
   "tools.database.defaultTitleProperty": "ناونیشان",
   "tools.database.defaultStatusProperty": "دۆخ",
   "tools.database.defaultStatusNotStarted": "دەستی پێ نەکردووە",

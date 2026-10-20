@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "د بشپړې پاڼې په توګه یې پرانیزئ",
   "tools.database.peekPrevious": "پخوانۍ پاڼه",
   "tools.database.peekNext": "بله پاڼه",
+  "tools.database.peekFavorite": "خوښه",
+  "tools.database.peekFavoriteHint": "خوښو ته ورزیات کړئ",
   "tools.database.defaultTitleProperty": "سرلیک",
   "tools.database.defaultStatusProperty": "حالت",
   "tools.database.defaultStatusNotStarted": "نه دی پیل شوی",

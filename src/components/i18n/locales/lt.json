@@ -726,6 +726,8 @@
   "tools.database.peekExpand": "Atidaryti visame puslapyje",
   "tools.database.peekPrevious": "Ankstesnis puslapis",
   "tools.database.peekNext": "Kitas puslapis",
+  "tools.database.peekFavorite": "Mėgstamas",
+  "tools.database.peekFavoriteHint": "Pridėti prie mėgstamiausių",
   "tools.database.defaultTitleProperty": "Pavadinimas",
   "tools.database.defaultStatusProperty": "Būsena",
   "tools.database.defaultStatusNotStarted": "Nepradėta",

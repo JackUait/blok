@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Tam səhifə kimi aç",
   "tools.database.peekPrevious": "Əvvəlki səhifə",
   "tools.database.peekNext": "Növbəti səhifə",
+  "tools.database.peekFavorite": "Seçilmiş",
+  "tools.database.peekFavoriteHint": "Seçilmişlərə əlavə et",
   "tools.database.defaultTitleProperty": "Başlıq",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Başlanmayıb",

@@ -724,6 +724,8 @@
   "tools.database.peekExpand": "पूर्ण पृष्ठ म्हणून उघडा",
   "tools.database.peekPrevious": "मागील पृष्ठ",
   "tools.database.peekNext": "पुढील पृष्ठ",
+  "tools.database.peekFavorite": "आवडते",
+  "tools.database.peekFavoriteHint": "आवडींमध्ये जोडा",
   "tools.database.defaultTitleProperty": "शीर्षक",
   "tools.database.defaultStatusProperty": "स्थिती",
   "tools.database.defaultStatusNotStarted": "सुरू झाले नाही",

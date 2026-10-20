@@ -878,6 +878,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DARK_PEEK_BUILDER_BYTES = 1_688;
     // database.css: dark board, list, gallery, calendar, timeline, feed and form tokens (research/21 §1f-§1k).
     const DATABASE_DARK_VIEWS_BYTES = 2_137;
+    // database.css: the row page's Favorite star in the header button lists and end-of-bar margins (research/21 §5).
+    const DATABASE_ROW_PAGE_FAVORITE_BYTES = 451;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -987,7 +989,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_AUTOFILL_CELL_PILL_BYTES
       + DATABASE_ROW_PAGE_TAB_OVERFLOW_BYTES
       + DATABASE_DARK_PEEK_BUILDER_BYTES
-      + DATABASE_DARK_VIEWS_BYTES;
+      + DATABASE_DARK_VIEWS_BYTES
+
+      + DATABASE_ROW_PAGE_FAVORITE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

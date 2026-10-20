@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Deschide ca pagină întreagă",
   "tools.database.peekPrevious": "Pagina anterioară",
   "tools.database.peekNext": "Pagina următoare",
+  "tools.database.peekFavorite": "Favorit",
+  "tools.database.peekFavoriteHint": "Adaugă la favorite",
   "tools.database.defaultTitleProperty": "Titlu",
   "tools.database.defaultStatusProperty": "Stare",
   "tools.database.defaultStatusNotStarted": "Neînceput",

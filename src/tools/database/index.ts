@@ -7235,6 +7235,8 @@ export class DatabaseTool implements BlockTool {
             onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
           };
         },
+        // A template's page is not a row, so it has no star.
+        favorite: (rowId) => (this.model.getRow(rowId) === undefined ? undefined : this.favoriteFor(rowId)),
         onFullWidthChange: (rowId, fullWidth) => {
           if (!writable()) return;
           const row = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);

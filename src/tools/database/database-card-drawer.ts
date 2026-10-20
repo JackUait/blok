@@ -6,14 +6,15 @@ import type { DatabaseRow, DatabaseRowPages, DateReminderOffset, OpenPagesIn, Pa
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconArrowDiagonal, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { rowActionItems } from './database-table-menus';
-import type { RowActionContext } from './database-table-menus';
+import type { RowActionContext, RowFavorite } from './database-table-menus';
+import { onHover } from '../../components/utils/tooltip';
 import { createHeadingToggle } from '../table/table-heading-toggle';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { EmojiPicker } from '../callout/emoji-picker';
@@ -256,6 +257,8 @@ export interface CardDrawerOptions {
    * page they cannot act on, such as a template.
    */
   rowActions?: (rowId: string) => Omit<RowActionContext, 'i18n'> | undefined;
+  /** The host's favorites, asked on each open. Undefined: no star (no lever, or a template's page). */
+  favorite?: (rowId: string) => RowFavorite | undefined;
   /** The page's own Full width set, or null to follow the layout again. */
   onFullWidthChange?: (rowId: string, fullWidth: boolean | null) => void;
   /** The row before (-1) or after (1) the open one in the view, if any. */
@@ -426,6 +429,7 @@ export class DatabaseCardDrawer {
   /** What the drawn "N backlinks" lists, to skip a redraw that changes nothing. */
   private backlinksShown: string | null = null;
   private readonly rowActions: CardDrawerOptions['rowActions'];
+  private readonly favorite: CardDrawerOptions['favorite'];
   private readonly onFullWidthChange: CardDrawerOptions['onFullWidthChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
   private readonly onCoverChange: CardDrawerOptions['onCoverChange'];
@@ -529,6 +533,7 @@ export class DatabaseCardDrawer {
     this.backlinks = options.backlinks;
     this.comments = options.comments;
     this.rowActions = options.rowActions;
+    this.favorite = options.favorite;
     this.onFullWidthChange = options.onFullWidthChange;
     this.onEscapeClose = options.onEscapeClose;
     this.onCoverChange = options.onCoverChange;
@@ -803,6 +808,7 @@ export class DatabaseCardDrawer {
     this.updateActiveCard(row.id);
     this.syncStepButtons();
     this.syncActionsButton();
+    this.syncFavoriteButton();
 
     const title = (row.properties[this.titlePropertyId] as string) ?? '';
 
@@ -1299,9 +1305,35 @@ export class DatabaseCardDrawer {
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
       button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSidebarRight, () => this.setDetailsOpen(!this.detailsOpen)),
+      // research/21 §5: Favorite is a star right before "•••", not an item in its menu.
+      this.favoriteButton(button),
       // research/09 §1b: "•••" ends the bar, in a peek too (side peek: 30-row-page-actions-menu.png).
       button('data-blok-database-peek-actions', 'popover.actions', IconDotsHorizontal, (el) => this.openActionsMenu(el)),
     ];
+  }
+
+  private favoriteButton(button: (attr: string, labelKey: string, icon: string, onClick: (el: HTMLButtonElement) => void) => HTMLButtonElement): HTMLButtonElement {
+    const el = button('data-blok-database-peek-favorite', 'tools.database.peekFavorite', IconEmojiStar, () => {
+      const rowId = this.currentRowId;
+
+      if (rowId !== null) this.favorite?.(rowId)?.onToggle();
+      // Re-ask the host: its answer, not a guess, sets the state.
+      this.syncFavoriteButton();
+    });
+
+    // Only the "Add" wording is measured (research/21 §5), so it does not change when pressed.
+    onHover(el, this.label('tools.database.peekFavoriteHint'));
+
+    return el;
+  }
+
+  private syncFavoriteButton(): void {
+    const button = this.drawer?.querySelector<HTMLElement>('[data-blok-database-peek-favorite]');
+    const rowId = this.currentRowId;
+    const favorite = rowId === null ? undefined : this.favorite?.(rowId);
+
+    button?.toggleAttribute('hidden', favorite === undefined);
+    button?.setAttribute('aria-pressed', String(favorite?.on === true));
   }
 
   /** Shows the row before or after the open one, keeping the mode. */
@@ -1583,6 +1615,7 @@ export class DatabaseCardDrawer {
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
     this.syncStepButtons();
     this.syncActionsButton();
+    this.syncFavoriteButton();
     this.syncDetailsDock();
   }
 

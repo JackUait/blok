@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Άνοιγμα σε πλήρη σελίδα",
   "tools.database.peekPrevious": "Προηγούμενη σελίδα",
   "tools.database.peekNext": "Επόμενη σελίδα",
+  "tools.database.peekFavorite": "Αγαπημένο",
+  "tools.database.peekFavoriteHint": "Προσθήκη στα αγαπημένα",
   "tools.database.defaultTitleProperty": "Τίτλος",
   "tools.database.defaultStatusProperty": "Κατάσταση",
   "tools.database.defaultStatusNotStarted": "Δεν ξεκίνησε",

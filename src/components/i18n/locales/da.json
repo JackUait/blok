@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "Åbn som hel side",
   "tools.database.peekPrevious": "Forrige side",
   "tools.database.peekNext": "Næste side",
+  "tools.database.peekFavorite": "Favorit",
+  "tools.database.peekFavoriteHint": "Føj til favoritter",
   "tools.database.defaultTitleProperty": "Titel",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Ikke startet",

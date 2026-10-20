@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Відкрити на повній сторінці",
   "tools.database.peekPrevious": "Попередня сторінка",
   "tools.database.peekNext": "Наступна сторінка",
+  "tools.database.peekFavorite": "Обране",
+  "tools.database.peekFavoriteHint": "Додати до обраного",
   "tools.database.defaultTitleProperty": "Назва",
   "tools.database.defaultStatusProperty": "Статус",
   "tools.database.defaultStatusNotStarted": "Не розпочато",

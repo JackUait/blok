@@ -724,6 +724,8 @@
   "tools.database.peekExpand": "പൂർണ്ണ പേജായി തുറക്കുക",
   "tools.database.peekPrevious": "മുൻ പേജ്",
   "tools.database.peekNext": "അടുത്ത പേജ്",
+  "tools.database.peekFavorite": "പ്രിയപ്പെട്ടത്",
+  "tools.database.peekFavoriteHint": "പ്രിയപ്പെട്ടവയിലേക്ക് ചേർക്കുക",
   "tools.database.defaultTitleProperty": "ശീർഷകം",
   "tools.database.defaultStatusProperty": "സ്ഥിതി",
   "tools.database.defaultStatusNotStarted": "ആരംഭിച്ചിട്ടില്ല",

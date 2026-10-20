@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "باز کردن به‌صورت تمام‌صفحه",
   "tools.database.peekPrevious": "صفحه قبلی",
   "tools.database.peekNext": "صفحه بعدی",
+  "tools.database.peekFavorite": "علاقه‌مندی",
+  "tools.database.peekFavoriteHint": "افزودن به علاقه‌مندی‌ها",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultStatusProperty": "وضعیت",
   "tools.database.defaultStatusNotStarted": "شروع نشده",

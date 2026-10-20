@@ -960,12 +960,13 @@
   margin-inline: auto;
 }
 
-/* Header controls: expand, mode menu, previous and next row, Page info and Actions. */
+/* Header controls: expand, mode menu, previous and next row, Page info, Favorite and Actions. */
 [data-blok-database-peek-expand],
 [data-blok-database-peek-mode],
 [data-blok-database-peek-prev],
 [data-blok-database-peek-next],
 [data-blok-database-peek-page-info],
+[data-blok-database-peek-favorite],
 [data-blok-database-peek-actions] {
   display: inline-flex;
   align-items: center;
@@ -982,20 +983,24 @@
 
 [data-blok-database-peek-expand][hidden],
 [data-blok-database-peek-page-info][hidden],
+[data-blok-database-peek-favorite][hidden],
 [data-blok-database-peek-actions][hidden] {
   display: none;
 }
 
-/* research/10 §10: Page info sits at the bar's inline end, with "•••" after it (research/09 §1b). */
-[data-blok-database-peek-page-info] {
-  margin-inline-start: auto;
-}
-
+/*
+ * Page info (research/10 §10), the Favorite star (research/21 §5) and "•••" (research/09 §1b)
+ * sit at the bar's inline end. The first one shown takes the auto margin; `~` skips a hidden one.
+ */
+[data-blok-database-peek-page-info],
+[data-blok-database-peek-favorite],
 [data-blok-database-peek-actions] {
   margin-inline-start: auto;
 }
 
-[data-blok-database-peek-page-info]:not([hidden]) + [data-blok-database-peek-actions] {
+[data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-favorite],
+[data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-actions],
+[data-blok-database-peek-favorite]:not([hidden]) ~ [data-blok-database-peek-actions] {
   margin-inline-start: 0;
 }
 
@@ -1010,6 +1015,7 @@
 [data-blok-database-peek-prev] svg,
 [data-blok-database-peek-next] svg,
 [data-blok-database-peek-page-info] svg,
+[data-blok-database-peek-favorite] svg,
 [data-blok-database-peek-actions] svg {
   width: 16px;
   height: 16px;
@@ -1036,6 +1042,7 @@
   [data-blok-database-peek-prev]:not(:disabled):hover,
   [data-blok-database-peek-next]:not(:disabled):hover,
   [data-blok-database-peek-page-info]:hover,
+  [data-blok-database-peek-favorite]:hover,
   [data-blok-database-peek-actions]:hover {
     background-color: var(--blok-database-drawer-border);
   }

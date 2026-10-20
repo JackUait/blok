@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "پورے صفحے کے طور پر کھولیں",
   "tools.database.peekPrevious": "پچھلا صفحہ",
   "tools.database.peekNext": "اگلا صفحہ",
+  "tools.database.peekFavorite": "پسندیدہ",
+  "tools.database.peekFavoriteHint": "پسندیدہ میں شامل کریں",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultStatusProperty": "حالت",
   "tools.database.defaultStatusNotStarted": "شروع نہیں ہوا",

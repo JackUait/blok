@@ -713,6 +713,8 @@
   "tools.database.peekExpand": "Fungua kama ukurasa mzima",
   "tools.database.peekPrevious": "Ukurasa uliotangulia",
   "tools.database.peekNext": "Ukurasa unaofuata",
+  "tools.database.peekFavorite": "Kipendwa",
+  "tools.database.peekFavoriteHint": "Ongeza kwenye Vipendwa",
   "tools.database.defaultTitleProperty": "Kichwa",
   "tools.database.defaultStatusProperty": "Hali",
   "tools.database.defaultStatusNotStarted": "Haijaanza",

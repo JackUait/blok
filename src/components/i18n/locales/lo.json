@@ -726,6 +726,8 @@
   "tools.database.peekExpand": "ເປີດແບບເຕັມໜ້າ",
   "tools.database.peekPrevious": "ໜ້າກ່ອນໜ້າ",
   "tools.database.peekNext": "ໜ້າຕໍ່ໄປ",
+  "tools.database.peekFavorite": "ລາຍການທີ່ມັກ",
+  "tools.database.peekFavoriteHint": "ເພີ່ມໃສ່ລາຍການທີ່ມັກ",
   "tools.database.defaultTitleProperty": "ຫົວຂໍ້",
   "tools.database.defaultStatusProperty": "ສະຖານະ",
   "tools.database.defaultStatusNotStarted": "ຍັງບໍ່ໄດ້ເລີ່ມ",

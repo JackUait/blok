@@ -715,6 +715,8 @@
   "tools.database.peekExpand": "پوري صفحي طور کوليو",
   "tools.database.peekPrevious": "پويون صفحو",
   "tools.database.peekNext": "ايندڙ صفحو",
+  "tools.database.peekFavorite": "پسنديده",
+  "tools.database.peekFavoriteHint": "پسنديده ۾ شامل ڪريو",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultStatusProperty": "حالت",
   "tools.database.defaultStatusNotStarted": "شروع نه ٿيو",

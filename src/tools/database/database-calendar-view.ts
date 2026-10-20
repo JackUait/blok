@@ -22,6 +22,8 @@ import {
 import type { PlacedEvent } from './calendar-dates';
 import { resolveCalendarRange, resolveShowWeekends, resolveViewProperties } from './view-settings';
 import { isHistoryKey } from './database-keyboard';
+import { syncCommentBadge } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconChevronLeft, IconChevronRight, IconPlus } from '../../components/icons';
 
@@ -33,6 +35,8 @@ export interface CalendarHandlers {
   setDate: (rowId: string, value: string) => void;
   /** Show the range around `anchor`, then focus `focusDay` when given. */
   navigate: (anchor: string, focusDay?: string) => void;
+  /** Shift-click: select the event without opening it. Absent when read-only. */
+  pickRow?: (rowId: string) => void;
 }
 
 export interface DatabaseCalendarViewOptions {
@@ -57,6 +61,7 @@ export interface DatabaseCalendarViewOptions {
   cellContext?: Partial<CellContext>;
   /** A day to focus once drawn: keyboard navigation that crossed into a new range. */
   focusDay?: string;
+  commentBadges?: CommentBadges;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -397,6 +402,10 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       el.appendChild(icon);
     }
     el.appendChild(titleEl);
+    // Day cells are gridcells: refreshCommentBadges gives them tabIndex -1 too.
+    if (this.options.commentBadges !== undefined) {
+      syncCommentBadge(titleEl, placed.id, this.options.commentBadges, this.options.i18n, { tabIndex: -1 });
+    }
 
     for (const property of this.visibleProperties()) {
       const cell = renderCellValue(property, row === undefined ? undefined : readPropertyValue(row, property), {
@@ -504,9 +513,19 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
 
     const rowId = target.closest('[data-blok-database-calendar-event]')?.getAttribute('data-row-id');
 
-    if (rowId !== null && rowId !== undefined) {
-      handlers.openRow(rowId);
+    if (rowId === null || rowId === undefined) {
+      return;
     }
+    // research/22 §1: Shift selects without opening; Cmd/Ctrl-click does nothing.
+    if (event.shiftKey) {
+      handlers.pickRow?.(rowId);
+
+      return;
+    }
+    if (event.metaKey || event.ctrlKey) {
+      return;
+    }
+    handlers.openRow(rowId);
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -598,6 +617,10 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       this.drag = { rowId: undated, mode: 'place', grabDay: '', startX: event.clientX, startY: event.clientY, active: false, overDay: null };
       this.listenForDrag();
 
+      return;
+    }
+
+    if (event.target.closest('[data-blok-database-comment-badge]') !== null) {
       return;
     }
 

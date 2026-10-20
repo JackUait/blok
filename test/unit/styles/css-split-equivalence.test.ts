@@ -827,6 +827,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CELL_BUTTON_KEYBOARD_BYTES = 92;
     // database.css: the comment count badge after a row title (research/12 §3).
     const DATABASE_COMMENT_BADGE_BYTES = 1_131;
+    // database.css: a calendar event title gives way to its comment badge (research/22 §11).
+    const DATABASE_CALENDAR_EVENT_BADGE_BYTES = 218;
     // database.css: the view overflow list's search, row handle and "•••", and New view (research/13 §3a).
     // +292: its keyboard highlight (moved off the current row) and the "No results" line (research/21 §2).
     const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352 + 292;
@@ -983,6 +985,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_LAYOUT_BUILDER_BYTES
       + DATABASE_CELL_BUTTON_KEYBOARD_BYTES
       + DATABASE_COMMENT_BADGE_BYTES
+      + DATABASE_CALENDAR_EVENT_BADGE_BYTES
       + DATABASE_VIEW_OVERFLOW_LIST_BYTES
       + DATABASE_PROPERTY_NAME_CLASH_BYTES
       + DATABASE_VIEW_PAGE_ICON_BYTES

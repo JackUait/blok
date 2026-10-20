@@ -651,6 +651,95 @@ test.describe('calendar', () => {
     await expect(day(page, '2026-10-09')).toHaveAttribute('data-today', '');
   });
 
+  test.describe('selection (research/22 §1)', () => {
+    const SAME_DAY: RowSeed[] = [
+      ...ROWS,
+      { id: 'r4', properties: { 'p-title': 'Review', 'p-due': '2026-10-09' } },
+    ];
+    const picked = async (page: Page): Promise<string[]> => page.evaluate(() =>
+      [...document.querySelectorAll('[data-blok-database-calendar-event][data-blok-database-row-selected]')]
+        .map((el) => el.getAttribute('data-row-id') ?? '').sort());
+
+    test('Shift-click selects without opening: same day adds, another day replaces, Escape clears, no bulk bar', async ({ page }) => {
+      await mount(page, blocks({ type: 'calendar' }, SAME_DAY));
+
+      await event(page, 'r1').click({ modifiers: ['Shift'] });
+      await event(page, 'r4').click({ modifiers: ['Shift'] });
+
+      expect(await picked(page)).toEqual(['r1', 'r4']);
+      await expect(drawer(page)).toHaveCount(0);
+      await expect(page.locator('[data-blok-database-table-selection-bar]')).toHaveCount(0);
+
+      await event(page, 'r2').click({ modifiers: ['Shift'] });
+      expect(await picked(page)).toEqual(['r2']);
+
+      await page.keyboard.press('Escape');
+      expect(await picked(page)).toEqual([]);
+    });
+
+    test('a picked event is gray over its own card, never blue, with the same ink', async ({ page }) => {
+      await mount(page, blocks({ type: 'calendar' }, SAME_DAY));
+      await event(page, 'r1').click({ modifiers: ['Shift'] });
+
+      const look = async (rowId: string): Promise<{ image: string; color: string; bg: string; radius: string }> =>
+        event(page, rowId).evaluate((el) => {
+          const style = getComputedStyle(el);
+
+          return { image: style.backgroundImage, color: style.color, bg: style.backgroundColor, radius: style.borderRadius };
+        });
+      // Away from the cards, so neither is hovered; then let the hover fade finish.
+      await page.mouse.move(5, 5);
+      await expect.poll(async () => (await look('r1')).bg).toBe((await look('r4')).bg);
+      const on = await look('r1');
+      const off = await look('r4');
+      const isBlue = (value: string): boolean => [...value.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)]
+        .some(([, r, g, b]) => Number(b) > Number(r) + 40 && Number(b) > Number(g) + 20);
+
+      expect(on.image).not.toBe('none');
+      expect(isBlue(on.image)).toBe(false);
+      expect(on.bg).toBe(off.bg);
+      expect(on.color).toBe(off.color);
+      expect(on.radius).toBe('6px');
+    });
+
+    test('Cmd/Ctrl-click neither selects nor opens', async ({ page }) => {
+      await mount(page, blocks({ type: 'calendar' }));
+
+      await event(page, 'r1').click({ modifiers: ['ControlOrMeta'] });
+
+      expect(await picked(page)).toEqual([]);
+      await expect(drawer(page)).toHaveCount(0);
+    });
+
+    test('a plain click opens the row in a center peek', async ({ page }) => {
+      await mount(page, blocks({ type: 'calendar' }));
+
+      await event(page, 'r1').click();
+
+      await expect(drawer(page)).toBeVisible();
+      await expect(drawer(page)).toHaveAttribute('data-peek-mode', 'center');
+      expect(await picked(page)).toEqual([]);
+    });
+  });
+
+  test('the event right-click menu has Comment ⌘⇧M, and a posted comment shows a badge on the event (research/22 §11)', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+
+    await event(page, 'r1').click({ button: 'right' });
+    const item = page.getByRole('menuitem', { name: /Comment/ });
+
+    await expect(item).toBeVisible();
+    await expect(item).toContainText('⇧');
+    await item.click();
+    const composer = page.getByRole('textbox', { name: 'Add a comment…' });
+
+    await expect(composer).toBeFocused();
+    await composer.fill('Bring plates');
+    await page.keyboard.press('Enter');
+
+    await expect(event(page, 'r1').getByRole('button', { name: 'Open comments' })).toHaveText('1');
+  });
+
   test('read-only shows events but offers no "+" and no drag', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }), true);
 

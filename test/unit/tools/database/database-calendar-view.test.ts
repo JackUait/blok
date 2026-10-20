@@ -220,6 +220,43 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.openRow).toHaveBeenCalledWith('r1');
     });
 
+    // research/22 §1: Shift picks, Cmd/Ctrl does nothing.
+    it('picks an event on Shift-click instead of opening it, and ignores Cmd/Ctrl-click', () => {
+      const pickRow = vi.fn();
+      const { root, handlers } = mount();
+
+      handlers.pickRow = pickRow;
+      events(root, 'r1')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+      events(root, 'r1')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+      events(root, 'r1')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
+
+      expect(pickRow).toHaveBeenCalledTimes(1);
+      expect(pickRow).toHaveBeenCalledWith('r1');
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('shows a comment badge after the title, out of the tab order', () => {
+      const { root } = mount({ commentBadges: { databaseId: 'db', count: (rowId) => (rowId === 'r1' ? 3 : 0), open: vi.fn() } });
+      const badge = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-calendar-event-title] + [data-blok-database-comment-badge]');
+
+      expect(badge?.querySelector('[data-blok-database-comment-count]')?.textContent).toBe('3');
+      expect(badge?.tabIndex).toBe(-1);
+      expect(events(root, 'r2')[0].querySelector('[data-blok-database-comment-badge]')).toBeNull();
+    });
+
+    it('does not start a move from the comment badge', () => {
+      const { root, handlers } = mount({ commentBadges: { databaseId: 'db', count: () => 1, open: vi.fn() } });
+      const badge = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-comment-badge]');
+
+      if (badge === null) throw new Error('no badge');
+      layOut(root);
+      pointer('pointerdown', badge, 550, 110);
+      pointer('pointermove', document, 650, 110);
+      pointer('pointerup', document, 650, 110);
+
+      expect(handlers.setDate).not.toHaveBeenCalled();
+    });
+
     it('shows a message instead of a grid when the database has no date property', () => {
       const { root } = mount({ datePropertyId: undefined });
 

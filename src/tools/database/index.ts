@@ -56,6 +56,7 @@ import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
+import { eventSpan } from './calendar-dates';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
@@ -4241,9 +4242,11 @@ export class DatabaseTool implements BlockTool {
       weekStart,
       locale,
       cellContext: this.cellContext(),
+      ...this.commentBadgeLever(),
       ...(focusDay !== undefined ? { focusDay } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
+        ...(this.readOnly || dateId === undefined ? {} : { pickRow: (rowId: string) => this.pickCalendarEvent(rowId, dateId) }),
         addRow: (day) => {
           if (dateId !== undefined) {
             this.addCalendarRow(dateId, day);
@@ -6577,7 +6580,7 @@ export class DatabaseTool implements BlockTool {
     boardEl.addEventListener('contextmenu', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const rowEl = target?.closest<HTMLElement>('[data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-list-row], '
-        + '[data-blok-database-timeline-bar], [data-blok-database-timeline-table-row]');
+        + '[data-blok-database-timeline-bar], [data-blok-database-timeline-table-row], [data-blok-database-calendar-event]');
       const rowId = rowEl?.getAttribute('data-row-id');
 
       // A field being edited keeps the native menu, for copy and paste.
@@ -7959,6 +7962,20 @@ export class DatabaseTool implements BlockTool {
     this.paintRowSelection();
   }
 
+  /**
+   * Calendar Shift-click (research/22 §1): adds an event on the same start day
+   * as the picked ones, replaces them when it starts on another day.
+   */
+  private pickCalendarEvent(rowId: string, dateId: string): void {
+    const startOf = (id: string): string | undefined => eventSpan(this.model.getRow(id)?.properties[dateId])?.start;
+    const day = startOf(rowId);
+
+    if ([...this.rowSelection].some((id) => startOf(id) !== day)) {
+      this.rowSelection.clear();
+    }
+    this.pickRow(rowId, false, []);
+  }
+
   /** Gallery arrow keys: the selection becomes exactly these rows. */
   private selectRows(rowIds: string[]): void {
     this.rowSelection.clear();
@@ -7988,7 +8005,7 @@ export class DatabaseTool implements BlockTool {
     const present = new Set(this.model.getOrderedRows().map((row) => row.id));
 
     [...this.rowSelection].filter((id) => !present.has(id)).forEach((id) => this.rowSelection.delete(id));
-    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-timeline-row], [data-blok-database-timeline-table-row]').forEach((el) => {
+    container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-timeline-row], [data-blok-database-timeline-table-row], [data-blok-database-calendar-event]').forEach((el) => {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
       el.toggleAttribute('data-blok-database-row-selected', selected);
@@ -8009,6 +8026,11 @@ export class DatabaseTool implements BlockTool {
     }
     document.addEventListener('keydown', this.handleSelectionKeys, true);
     const view = this.model.getView(this.activeViewId);
+
+    // research/22 §1: Notion shows no bulk bar for picked calendar events.
+    if (view?.type === 'calendar') {
+      return;
+    }
     const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id));
 
@@ -8053,9 +8075,10 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  /** ⌘⇧M and ⌘⇧P on one picked card or list row: its Comment and its Move to, as the row menu shows. */
+  /** ⌘⇧M and ⌘⇧P on one picked card, list row or calendar event: its Comment and its Move to, as the row menu shows. */
   private rowShortcut(rowId: string, command: 'comment' | 'moveTo', act: (run: () => void) => void): void {
-    const rowEl = this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-card][data-row-id="${CSS.escape(rowId)}"], [data-blok-database-list-row][data-row-id="${CSS.escape(rowId)}"]`);
+    const id = CSS.escape(rowId);
+    const rowEl = this.boardContainer?.querySelector<HTMLElement>(`:is([data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event])[data-row-id="${id}"]`);
     const { comment } = this.commentLever();
 
     if (rowEl === null || rowEl === undefined) return;

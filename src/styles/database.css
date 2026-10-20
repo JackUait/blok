@@ -7194,6 +7194,12 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   font-weight: 600;
 }
 
+/* With a comment badge the title gives way, so the badge stays inside the 28px card. */
+[data-blok-database-calendar-event-title]:has(+ [data-blok-database-comment-badge]) {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
 [data-blok-database-calendar-event-title]:empty::before {
   content: attr(data-placeholder);
   color: var(--blok-database-calendar-muted-text);

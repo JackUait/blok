@@ -100,6 +100,21 @@ describe('database gallery and calendar styles', () => {
     expect(drop).not.toMatch(/focus-ring|rgb\(39,\s*131,\s*222\)/);
   });
 
+  // research/22 §1: the picked event's overlay is the card's own 6px shape, in the gray selected token (no blue).
+  it('paints a picked calendar event with the shared gray selected token', () => {
+    const picked = ruleBody('[data-blok-database-row-selected]');
+
+    expect(picked).toContain('var(--blok-icon-active-bg)');
+    expect(ruleBody('[data-blok-database-calendar-event]')).toContain('border-radius: var(--blok-radius-control)');
+  });
+
+  it('lets an event title shrink so its comment badge stays in the card', () => {
+    const title = ruleBody('[data-blok-database-calendar-event-title]:has(+ [data-blok-database-comment-badge])');
+
+    expect(title).toMatch(/flex:\s*0 1 auto/);
+    expect(title).toMatch(/min-inline-size:\s*0/);
+  });
+
   it('rounds only through role tokens', () => {
     const radii = [...`${galleryCss}${calendarCss}`.matchAll(/border-radius:\s*([^;]+);/g)].map((match) => match[1].trim());
 

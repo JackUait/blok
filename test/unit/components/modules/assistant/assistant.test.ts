@@ -317,6 +317,8 @@ describe('in-editor assistant bar', () => {
     vi.clearAllMocks();
     // Ask AI follows its edits; jsdom has no scrolling.
     scrolls.spy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    // A bar opened below jsdom's window scrolls itself into view.
+    vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -1197,6 +1199,72 @@ describe('in-editor assistant bar', () => {
       await settle(50);
       observer.disconnect();
       expect(writes.count).toBe(1);
+    });
+
+    it('a hidden sibling does not make a block share its row, even when the block starts above the window', async () => {
+      await createEditor(scripted(), undefined, {
+        tools: { paragraph: Paragraph, column_list: ColumnList, column: Column },
+        data: {
+          blocks: [
+            { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+            { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['left'] },
+            { id: 'left', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+            { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['right'] },
+            { id: 'right', type: 'paragraph', data: { text: 'Right' }, parent: 'c2' },
+          ],
+        },
+      });
+      // c1 is hidden (display:none: an all-zero rect); c2 straddles the window's top.
+      fakeLayout({ c1: new DOMRect(0, 0, 0, 0), c2: new DOMRect(410, -20, 290, 60) });
+      select('right', 1, 'right', 1);
+      pressModJ(inputOf('right'));
+
+      expect(gapped()).toEqual(['right']);
+    });
+
+    it('scrolls the bar into view at once under reduced motion', async () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query.includes('reduce'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: () => false,
+      }));
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(250);
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+
+      expect(scrollBy).toHaveBeenCalledWith({ top: 276 - 250 + 16, behavior: 'instant' });
+    });
+
+    it.each(['close', 'destroy'] as const)('%s cancels a re-place frame still pending', async (end) => {
+      const editor = await createEditor(scripted(), undefined, THREE_BLOCKS);
+
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+
+      // Frames never come by themselves here: only a cancel can drop this one.
+      vi.stubGlobal('requestAnimationFrame', () => 4242);
+      const cancel = vi.fn();
+
+      vi.stubGlobal('cancelAnimationFrame', cancel);
+      document.dispatchEvent(new Event('scroll'));
+      if (end === 'close') {
+        within(bar()).getByRole('textbox').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      } else {
+        editors.splice(editors.indexOf(editor), 1);
+        editor.destroy();
+      }
+
+      expect(cancel).toHaveBeenCalledWith(4242);
     });
 
     it('close releases the gap', async () => {

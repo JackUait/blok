@@ -580,7 +580,7 @@ export class Assistant extends Module {
     return outermostInRow === -1 ? caret : chain[outermostInRow + 1] ?? caret;
   }
 
-  /** Side by side, from layout: a sibling overlaps it vertically and not horizontally. */
+  /** Side by side, from layout: a shown sibling overlaps it vertically and not horizontally. */
   private sharesRow(block: Block): boolean {
     if (block.parentId === null) {
       return false;
@@ -594,6 +594,11 @@ export class Assistant extends Module {
       }
 
       const near = other.holder.getBoundingClientRect();
+
+      // A hidden sibling (a closed tab, display:none) is all zeros: it would "overlap" any block across y 0.
+      if (near.width === 0 || near.height === 0) {
+        return false;
+      }
 
       return near.top < rect.bottom && rect.top < near.bottom && (near.right <= rect.left || rect.right <= near.left);
     });

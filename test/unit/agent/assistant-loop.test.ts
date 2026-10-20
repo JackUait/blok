@@ -97,6 +97,48 @@ describe('runAssistantLoop', () => {
     vi.restoreAllMocks();
   });
 
+  it('joins a web-search answer split at its citations back into one sentence', async () => {
+    const citation = { type: 'web_search_result_location', url: 'https://example.org/a', title: 'A', encrypted_index: 'i', cited_text: 'won' };
+    const model = scripted(reply([
+      { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'nobel' } },
+      { type: 'web_search_tool_result', tool_use_id: 's1', content: [] },
+      { type: 'text', text: 'Based on the search results, ' },
+      { type: 'text', text: 'Halzen won', citations: [citation] },
+      { type: 'text', text: '.' },
+    ], 'end_turn'));
+
+    const result = await runAssistantLoop({
+      model, system: 'sys', tools: [], messages: [{ role: 'user', content: 'Who won?' }], call: vi.fn(), signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(result).toEqual({ status: 'done', reply: 'Based on the search results, Halzen won.' });
+  });
+
+  it('keeps two plain text blocks in a row on separate lines', async () => {
+    const model = scripted(reply([{ type: 'text', text: 'Reading.' }, { type: 'text', text: 'Done.' }], 'end_turn'));
+
+    const result = await runAssistantLoop({
+      model, system: 'sys', tools: [], messages: [{ role: 'user', content: 'Go' }], call: vi.fn(), signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(result).toEqual({ status: 'done', reply: 'Reading.\nDone.' });
+  });
+
+  it('keeps text written before and after a tool call on separate lines', async () => {
+    const model = scripted(reply([
+      { type: 'text', text: 'Searching.' },
+      { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'nobel' } },
+      { type: 'web_search_tool_result', tool_use_id: 's1', content: [] },
+      { type: 'text', text: 'Halzen won.' },
+    ], 'end_turn'));
+
+    const result = await runAssistantLoop({
+      model, system: 'sys', tools: [], messages: [{ role: 'user', content: 'Who won?' }], call: vi.fn(), signal: new AbortController().signal, maxSteps: 5,
+    });
+
+    expect(result).toEqual({ status: 'done', reply: 'Searching.\nHalzen won.' });
+  });
+
   it('runs each tool call, sends every result back in one user message, and returns the final text', async () => {
     const model = scripted(
       reply([

@@ -43,9 +43,20 @@ type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
 const isToolUse = (block: AgentModelContentBlock): block is ToolUse =>
   block.type === 'tool_use' && typeof block.id === 'string' && typeof block.name === 'string';
 
+const isCited = (block: AgentModelContentBlock | undefined): boolean => Array.isArray(block?.citations);
+
+// Anthropic web search splits one sentence into adjacent text blocks around each cited block.
 const textOf = (content: AgentModelContentBlock[]): string => content
-  .flatMap((block) => (block.type === 'text' && typeof block.text === 'string' ? [block.text] : []))
-  .join('\n')
+  .reduce((text, block, index) => {
+    if (block.type !== 'text' || typeof block.text !== 'string') {
+      return text;
+    }
+
+    const previous = content[index - 1];
+    const sameSentence = previous?.type === 'text' && (isCited(previous) || isCited(block));
+
+    return text === '' || sameSentence ? text + block.text : `${text}\n${block.text}`;
+  }, '')
   .trim();
 
 const isResponse = (value: unknown): value is AgentModelResponse =>

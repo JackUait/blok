@@ -5,6 +5,7 @@
  * Present only when `agent.assistant.model` is configured.
  */
 import type { ChangedSet } from '../../../../types/agent';
+import type { Block } from '../../block';
 import type { AgentModelStreamEvent, AgentRun, AgentRunResult, AgentThinkingLevel, AgentToolResult } from '../../../../types/api';
 import type { ThinkingChoice } from '../../../agent/thinking';
 import type { UserPlace } from '../api/agent';
@@ -14,7 +15,8 @@ import { getUserOS } from '../../utils/browser';
 import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 
-import { AssistantBar } from './assistant-bar';
+import { AssistantBar, type AssistantBarColumn } from './assistant-bar';
+import { onGapChange } from './gap';
 import { createLivePreview, type LivePreview } from './live-preview';
 import { stepStatusKey } from './step-status';
 
@@ -37,6 +39,13 @@ const EXECUTE_TOOL = 'blok_execute';
 const contentOf = (holder: HTMLElement): HTMLElement | undefined =>
   [...holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.elementContent}]`)]
     .find((content) => content.closest(`[${DATA_ATTR.element}]`) === holder);
+
+/** The top-level holder around a (maybe nested) holder. */
+const outermost = (holder: HTMLElement): HTMLElement => {
+  const parent = holder.parentElement?.closest<HTMLElement>(`[${DATA_ATTR.element}]`);
+
+  return parent ? outermost(parent) : holder;
+};
 
 const isOpenShortcut = (event: KeyboardEvent): boolean => {
   const mac = getUserOS().mac;
@@ -71,14 +80,21 @@ export class Assistant extends Module {
   /** The batch the running call applied, until that call reports done. Calls run one at a time. */
   private applied: ChangedSet | null = null;
   private readonly reveals = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
+  /** The block the bar sits under, and its neighbours when last placed: where it goes if the block is removed. */
+  private anchor: { id: string; next?: string; prev?: string } | null = null;
+  private placing = false;
+  /** Watches the bar and its anchor for size changes, and the page for removed blocks, while open. */
+  private watchers: { resize: ResizeObserver | null; mutations: MutationObserver; gaps: () => void } | null = null;
+  /** Set by the first stream event ever seen: from then on the model streams, so the bar shows no slots. */
+  private streams = false;
 
   public get isOpen(): boolean {
     return this.bar?.isOpen === true;
   }
 
-  /** Whether an event target is inside the prompt bar. */
+  /** Whether an event target is inside the prompt bar, or a menu it opened. */
   public contains(target: EventTarget | null): boolean {
-    return target instanceof Node && this.bar?.element.contains(target) === true;
+    return target instanceof Node && this.bar?.contains(target) === true;
   }
 
   public prepare(): void {
@@ -92,14 +108,9 @@ export class Assistant extends Module {
         this.open();
       }
     });
-    this.listeners.on(window, 'resize', () => {
-      if (this.isOpen) {
-        this.bar?.place(this.Blok.UI.nodes.wrapper);
-      }
-      this.preview?.relayout();
-    });
+    this.listeners.on(window, 'resize', () => this.relayout());
     // Capture: a scrolling ancestor's scroll does not bubble to window.
-    this.listeners.on(window, 'scroll', () => this.preview?.relayout(), { capture: true, passive: true });
+    this.listeners.on(window, 'scroll', () => this.relayout(), { capture: true, passive: true });
   }
 
   /**
@@ -115,10 +126,25 @@ export class Assistant extends Module {
     if (!bar.isOpen) {
       this.context = this.Blok.AgentAPI.describeUserPlace();
       this.returnPoint = this.captureReturnPoint();
+
+      const id = this.selectionEndBlockId() ?? this.context.blockIds[0];
+      const block = (id === undefined ? undefined : this.Blok.BlockManager.getBlockById(id))
+        ?? this.Blok.BlockManager.currentBlock
+        ?? this.Blok.BlockManager.lastBlock;
+
+      this.anchor = block === undefined ? null : { id: block.id };
     }
     syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
     this.syncThinking();
-    bar.open(this.Blok.UI.nodes.wrapper);
+
+    const block = this.anchorBlock();
+
+    if (block === undefined) {
+      return;
+    }
+    bar.open(block.holder, this.columnOf(block.holder));
+    this.remember(block);
+    this.watch();
   }
 
   /**
@@ -133,7 +159,9 @@ export class Assistant extends Module {
     this.run?.end();
     this.run = null;
     this.changed = false;
+    this.unwatch();
     this.bar?.close();
+    this.anchor = null;
 
     const back = this.returnPoint;
 
@@ -155,6 +183,7 @@ export class Assistant extends Module {
 
   public destroy(): void {
     this.close({ restoreFocus: false });
+    this.unwatch();
     this.reveals.forEach((timer, content) => {
       clearTimeout(timer);
       content.classList.remove(REVEAL_CLASS);
@@ -194,6 +223,7 @@ export class Assistant extends Module {
 
     this.listening = true;
     this.bar?.render({ kind: 'working', status: this.activityStatus('thinking') });
+    this.setSlots(!this.streams);
     void pending.then((result) => {
       if (id === this.answerId) {
         this.show(result);
@@ -340,6 +370,7 @@ export class Assistant extends Module {
 
   /** Stop drawing: whatever is still previewed will not commit from here. */
   private endStream(): void {
+    this.setSlots(false);
     this.listening = false;
     this.streamCalls.clear();
     this.streamed.clear();
@@ -351,6 +382,9 @@ export class Assistant extends Module {
     if (!this.listening) {
       return;
     }
+    // The model streams: the preview shows where edits land, so the slots go.
+    this.streams = true;
+    this.setSlots(false);
     if (event.type === 'tool_start') {
       if (event.name === EXECUTE_TOOL) {
         this.streamCalls.set(event.index, event.id);
@@ -375,6 +409,7 @@ export class Assistant extends Module {
       return;
     }
     this.applied = changed;
+    this.setSlots(false);
     // Block heights changed, so boxes of other calls move.
     this.preview?.relayout();
   }
@@ -446,13 +481,151 @@ export class Assistant extends Module {
     return id === undefined ? null : manager.getBlockById(id)?.holder ?? null;
   }
 
-  /** The block the bar opened at, else the current one, else the last. */
+  /** The bar's anchor while open; else the block the bar opened at, else the current one, else the last. */
   private anchorHolder(): HTMLElement | null {
+    const open = this.bar?.anchorHolder;
+
+    if (open !== null && open !== undefined) {
+      return open;
+    }
+
     const manager = this.Blok.BlockManager;
     const captured = this.context.blockIds[0];
     const block = (captured === undefined ? undefined : manager.getBlockById(captured)) ?? manager.currentBlock ?? manager.lastBlock;
 
     return block?.holder ?? null;
+  }
+
+  /**
+   * The last block a selection covers. A range that ends at offset 0 (a
+   * triple-click) ends at the start of the next block, which it does not cover.
+   */
+  private selectionEndBlockId(): string | undefined {
+    const selection = window.getSelection();
+
+    if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) {
+      return undefined;
+    }
+
+    const manager = this.Blok.BlockManager;
+    const range = selection.getRangeAt(0);
+    const start = manager.getBlockByChildNode(range.startContainer);
+    const end = manager.getBlockByChildNode(range.endContainer);
+
+    if (start === undefined || end === undefined) {
+      return undefined;
+    }
+
+    return range.endOffset === 0 && end !== start
+      ? (manager.blocks[manager.getBlockIndex(end) - 1] ?? end).id
+      : end.id;
+  }
+
+  /**
+   * The anchor block if its holder is still on the page. Else the block after
+   * it when last placed, else the one before, else the last block.
+   */
+  private anchorBlock(): Block | undefined {
+    const manager = this.Blok.BlockManager;
+    const anchor = this.anchor;
+    const ids = anchor === null ? [] : [anchor.id, anchor.next, anchor.prev];
+    const live = ids
+      .map((id) => (id === undefined ? undefined : manager.getBlockById(id)))
+      .find((block) => block?.holder.isConnected === true);
+
+    return live ?? manager.lastBlock;
+  }
+
+  private remember(block: Block): void {
+    const manager = this.Blok.BlockManager;
+    const index = manager.getBlockIndex(block);
+
+    this.anchor = { id: block.id, next: manager.blocks[index + 1]?.id, prev: manager.blocks[index - 1]?.id };
+  }
+
+  /** The page's content column at the anchor: a nested block's bar still spans the page column. */
+  private columnOf(holder: HTMLElement): AssistantBarColumn {
+    const top = outermost(holder);
+    const rect = (contentOf(top) ?? top).getBoundingClientRect();
+
+    return { left: rect.left, width: rect.width };
+  }
+
+  /** Re-place the bar at its anchor, re-anchoring if the block is gone. */
+  private placeBar(): void {
+    const bar = this.bar;
+
+    if (bar === null || !bar.isOpen || this.placing) {
+      return;
+    }
+
+    const block = this.anchorBlock();
+
+    if (block === undefined) {
+      return;
+    }
+
+    const moved = bar.anchorHolder !== block.holder;
+
+    this.placing = true;
+    try {
+      bar.place(block.holder, this.columnOf(block.holder));
+    } finally {
+      this.placing = false;
+    }
+    this.remember(block);
+    if (moved) {
+      this.watchers?.resize?.disconnect();
+      this.watchers?.resize?.observe(bar.element);
+      this.watchers?.resize?.observe(block.holder);
+      // Inserts waiting under the bar follow it to its new block.
+      this.preview?.relayout();
+    }
+  }
+
+  /** The page moved or resized: the bar and the preview follow. */
+  private relayout(): void {
+    this.placeBar();
+    this.preview?.relayout();
+  }
+
+  private setSlots(shown: boolean): void {
+    if (this.bar === null || this.bar.slotsShown === shown) {
+      return;
+    }
+    this.bar.setSlots(shown);
+    this.relayout();
+  }
+
+  private watch(): void {
+    const bar = this.bar;
+
+    if (bar === null || this.watchers !== null) {
+      return;
+    }
+
+    const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.relayout()) : null;
+    // childList only: the bar's own gap writes are attributes, and would loop.
+    const mutations = new MutationObserver(() => this.placeBar());
+    const gaps = onGapChange((holder) => {
+      if (holder === bar.anchorHolder) {
+        this.placeBar();
+      }
+    });
+
+    resize?.observe(bar.element);
+    if (bar.anchorHolder !== null) {
+      resize?.observe(bar.anchorHolder);
+    }
+    mutations.observe(this.Blok.UI.nodes.redactor, { childList: true, subtree: true });
+    this.watchers = { resize, mutations, gaps };
+  }
+
+  private unwatch(): void {
+    this.watchers?.resize?.disconnect();
+    this.watchers?.mutations.disconnect();
+    this.watchers?.gaps();
+    this.watchers = null;
   }
 
   /** The input that edits `field`, from the same field map the agent caret uses. No field: the first input. */

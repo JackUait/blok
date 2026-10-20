@@ -558,6 +558,14 @@ export const IconReturn = `
 </svg>
 `;
 
+// Undo — the return icon's arrowhead on a hook that turns back (Ask AI bar)
+export const IconUndo = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M8.5 4L4.5 8L8.5 12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 8H12a3.5 3.5 0 0 1 0 7H9.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Quote icon — solid round quotation marks: a ball with a thin hook that ends
 // in a round cap. The second mark is the first moved right by 5.4.
 export const IconQuote = `

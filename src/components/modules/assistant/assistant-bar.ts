@@ -1,10 +1,12 @@
 import type { AgentThinkingLevel } from '../../../../types/api';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { IconArrowUp, IconCheck, IconEmojiSparkles, IconPlayerSpeed } from '../../icons';
+import { IconArrowUp, IconCheck, IconChevronDown, IconEmojiSparkles, IconPlayerSpeed, IconUndo } from '../../icons';
 import { PopoverDesktop } from '../../utils/popover';
 import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
+
+import { releaseGap, reserveGap } from './gap';
 
 export interface AssistantBarCallbacks {
   onSubmit(prompt: string): void;
@@ -30,18 +32,40 @@ export type AssistantBarView =
 const ATTR = {
   dock: 'data-blok-assistant',
   reply: 'data-blok-assistant-reply',
+  more: 'data-blok-assistant-more',
   status: 'data-blok-assistant-status',
+  summary: 'data-blok-assistant-summary',
   alert: 'data-blok-assistant-alert',
   row: 'data-blok-assistant-row',
+  field: 'data-blok-assistant-field',
   icon: 'data-blok-assistant-icon',
   send: 'data-blok-assistant-send',
   thinking: 'data-blok-assistant-thinking',
   thinkingMenu: 'data-blok-assistant-thinking-menu',
-  actions: 'data-blok-assistant-actions',
   button: 'data-blok-assistant-button',
-  primary: 'data-blok-assistant-primary',
+  undo: 'data-blok-assistant-undo',
+  keep: 'data-blok-assistant-keep',
+  slots: 'data-blok-assistant-slots',
   working: 'data-blok-assistant-working',
+  covered: 'data-blok-assistant-covered',
 } as const;
+
+/** Gap keys on the anchor holder: the bar, then the shimmer slots under it. */
+const BAR_GAP = 'bar';
+const SLOTS_GAP = 'bar-slots';
+
+/** Space above and below the bar inside its gap (the approved mockup's margins). */
+const SPACE_BEFORE = 6;
+const SPACE_AFTER = 10;
+
+/** How far the bar reaches past the content column on each side. */
+const OVERHANG = 12;
+
+/** Where the bar sits: the content column it spans, in viewport px. */
+export interface AssistantBarColumn {
+  left: number;
+  width: number;
+}
 
 const build = <K extends keyof HTMLElementTagNameMap>(tag: K, attributes: Record<string, string> = {}): HTMLElementTagNameMap[K] => {
   const element = document.createElement(tag);
@@ -49,6 +73,32 @@ const build = <K extends keyof HTMLElementTagNameMap>(tag: K, attributes: Record
   Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
 
   return element;
+};
+
+/** Split a reply into its first line and the rest. */
+const splitReply = (reply: string): { summary: string; rest: string } => {
+  const text = reply.trim();
+  const end = text.indexOf('\n');
+
+  return end === -1
+    ? { summary: text, rest: '' }
+    : { summary: text.slice(0, end).trim(), rest: text.slice(end + 1).trim() };
+};
+
+const BLOCK_WRAPPERS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'BLOCKQUOTE']);
+
+/** The inline content of a one-line rendering: a lone paragraph, heading or list item is unwrapped. */
+const inlineOf = (fragment: DocumentFragment): Node[] => {
+  const unwrap = (node: ParentNode): Node[] => {
+    const elements = [...node.children];
+    const loose = [...node.childNodes].some((child) => child.nodeType === Node.TEXT_NODE && (child.textContent ?? '').trim() !== '');
+
+    return elements.length === 1 && !loose && BLOCK_WRAPPERS.has(elements[0].tagName)
+      ? unwrap(elements[0])
+      : [...node.childNodes];
+  };
+
+  return unwrap(fragment);
 };
 
 /**
@@ -71,26 +121,30 @@ const withoutImages = (html: string): DocumentFragment => {
   return template.content;
 };
 
-/** Widest the bar grows, so a long line of prompt stays readable. */
-const MAX_WIDTH = 720;
-
 /**
- * The "Ask AI" prompt bar, docked to the bottom of the editor.
+ * The "Ask AI" prompt bar, in the page under its anchor block.
  *
- * It lives in the top layer, outside the editor's DOM. Keys typed in it belong
- * to it (data-blok-keyboard-owner), so Blok's block handlers stand down.
+ * It lives in the top layer, outside the editor's DOM, and sits over a gap it
+ * holds open under the anchor holder (gap.ts). Keys typed in it belong to it
+ * (data-blok-keyboard-owner), so Blok's block handlers stand down.
  */
 export class AssistantBar {
   public readonly element: HTMLElement;
 
   private readonly field: HTMLTextAreaElement;
+  private readonly summary: HTMLElement;
   private readonly reply: HTMLElement;
+  private readonly more: HTMLButtonElement;
   private readonly status: HTMLElement;
   private readonly alert: HTMLElement;
   private readonly send: HTMLButtonElement;
   private readonly stop: HTMLButtonElement;
-  private readonly actions: HTMLElement;
+  private readonly undo: HTMLButtonElement;
+  private readonly keep: HTMLButtonElement;
   private readonly thinking: HTMLButtonElement;
+  private readonly slots: HTMLElement;
+  private view: AssistantBarView = { kind: 'prompt' };
+  private anchor: HTMLElement | null = null;
   private thinkingView: AssistantThinkingView | null = null;
   private thinkingMenu: PopoverDesktop | null = null;
   private replyToken = 0;
@@ -108,12 +162,10 @@ export class AssistantBar {
     });
     // Scopes Blok's preflight and utilities to the bar in a host page; Find skips it too.
     this.element.setAttribute('data-blok-interface', 'assistant');
-    this.reply = build('div', { [ATTR.reply]: '' });
-    this.alert = build('p', { [ATTR.alert]: '', role: 'alert' });
-    this.status = build('p', { [ATTR.status]: '', role: 'status' });
 
     const row = build('div', { [ATTR.row]: '' });
     const icon = build('span', { [ATTR.icon]: '', 'aria-hidden': 'true' });
+    const field = build('div', { [ATTR.field]: '' });
 
     icon.innerHTML = IconEmojiSparkles;
     this.field = build('textarea', {
@@ -122,6 +174,12 @@ export class AssistantBar {
       'aria-label': t('assistant.prompt'),
       placeholder: t('assistant.placeholder'),
     });
+    // These lie over the empty field, so focus stays in it and a follow-up is one keystroke away.
+    this.status = build('p', { [ATTR.status]: '', role: 'status' });
+    this.summary = build('p', { [ATTR.summary]: '' });
+    this.alert = build('p', { [ATTR.alert]: '', role: 'alert' });
+    field.append(this.field, this.status, this.summary, this.alert);
+
     this.send = build('button', { type: 'button', [ATTR.send]: '', 'aria-label': t('assistant.send') });
     this.send.innerHTML = IconArrowUp;
     this.stop = build('button', { type: 'button', [ATTR.button]: '' });
@@ -135,26 +193,35 @@ export class AssistantBar {
     });
     this.thinking.innerHTML = IconPlayerSpeed;
     this.thinking.hidden = true;
-    row.append(icon, this.field, this.thinking, this.send, this.stop);
+    this.undo = this.iconButton(ATTR.undo, IconUndo, t('assistant.discard'));
+    this.keep = this.iconButton(ATTR.keep, IconCheck, t('assistant.keep'));
+    row.append(icon, field, this.thinking, this.send, this.stop, this.undo, this.keep);
 
-    this.actions = build('div', { [ATTR.actions]: '' });
+    this.reply = build('div', { [ATTR.reply]: '', id: `blok-assistant-reply-${Math.random().toString(36).slice(2)}` });
+    // The database's "Show more" string: the same words, so no new key in every locale.
+    this.more = build('button', {
+      type: 'button',
+      [ATTR.more]: '',
+      'aria-expanded': 'false',
+      'aria-controls': this.reply.id,
+    });
+    this.more.textContent = t('tools.database.linkedShowMore');
+    this.more.insertAdjacentHTML('beforeend', IconChevronDown);
 
-    const keep = build('button', { type: 'button', [ATTR.button]: '', [ATTR.primary]: '' });
-    const discard = build('button', { type: 'button', [ATTR.button]: '' });
+    this.slots = build('div', { [ATTR.slots]: '', 'aria-hidden': 'true' });
+    this.slots.append(...['', 'short'].map((size) => build('div', { [DATA_ATTR.aiSlot]: size, class: 'blok-ai-shimmer' })));
+    this.slots.hidden = true;
 
-    keep.textContent = t('assistant.keep');
-    discard.textContent = t('assistant.discard');
-    this.actions.append(keep, discard);
-
-    this.element.append(this.reply, this.alert, this.status, row, this.actions);
+    this.element.append(row, this.more, this.reply, this.slots);
 
     this.field.addEventListener('keydown', (event) => this.onKeydown(event));
-    this.field.addEventListener('input', () => this.syncSend());
+    this.field.addEventListener('input', () => this.sync());
     this.send.addEventListener('click', () => this.submit());
     this.thinking.addEventListener('click', () => this.toggleThinkingMenu());
     this.stop.addEventListener('click', () => callbacks.onStop());
-    keep.addEventListener('click', () => callbacks.onKeep());
-    discard.addEventListener('click', () => callbacks.onDiscard());
+    this.keep.addEventListener('click', () => callbacks.onKeep());
+    this.undo.addEventListener('click', () => callbacks.onDiscard());
+    this.more.addEventListener('click', () => this.setExpanded(this.more.getAttribute('aria-expanded') !== 'true'));
 
     this.element.hidden = true;
     this.render({ kind: 'prompt' });
@@ -164,17 +231,28 @@ export class AssistantBar {
     return !this.element.hidden;
   }
 
+  /** The anchor holder the bar sits under, while open. */
+  public get anchorHolder(): HTMLElement | null {
+    return this.anchor;
+  }
+
+  /** Whether a node is in the bar or in a menu the bar opened. */
+  public contains(node: Node): boolean {
+    return this.element.contains(node) || this.thinkingMenu?.hasNode(node) === true;
+  }
+
   /**
-   * Show the bar across the editor's width.
-   * @param editor - the editor's wrapper, to line the bar up with
+   * Show the bar under `anchor`, across `column`.
+   * @param anchor - the block holder to sit under
+   * @param column - the content column, in viewport px
    */
-  public open(editor: HTMLElement): void {
+  public open(anchor: HTMLElement, column: AssistantBarColumn): void {
     if (!this.element.isConnected) {
       document.body.appendChild(this.element);
     }
     this.element.hidden = false;
     promoteToTopLayer(this.element);
-    this.place(editor);
+    this.place(anchor, column);
     this.field.focus({ preventScroll: true });
   }
 
@@ -184,40 +262,61 @@ export class AssistantBar {
     this.field.value = '';
     removeFromTopLayer(this.element);
     this.render({ kind: 'prompt' });
+    this.release();
   }
 
   /**
-   * @param editor - the editor's wrapper
+   * Hold a gap under `anchor` as tall as the bar (and its slots), and sit in it.
+   * @param anchor - the block holder to sit under
+   * @param column - the content column, in viewport px
    */
-  public place(editor: HTMLElement): void {
-    const rect = editor.getBoundingClientRect();
-    const width = Math.min(rect.width, MAX_WIDTH);
-
-    // A zero-width rect (detached, jsdom) leaves the stylesheet's centering alone.
-    if (width > 0) {
-      this.element.style.left = `${rect.left + (rect.width - width) / 2}px`;
-      this.element.style.width = `${width}px`;
+  public place(anchor: HTMLElement, column: AssistantBarColumn): void {
+    if (this.anchor !== anchor) {
+      this.release();
+      this.anchor = anchor;
     }
+
+    const height = this.element.getBoundingClientRect().height;
+    const offset = reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER);
+
+    if (this.slots.hidden) {
+      releaseGap(anchor, SLOTS_GAP);
+    } else {
+      // Slots use em, like the preview: size them as a block here would be.
+      this.slots.style.fontSize = getComputedStyle(anchor).fontSize;
+      reserveGap(anchor, SLOTS_GAP, this.slots.getBoundingClientRect().height);
+    }
+    this.element.style.top = `${anchor.getBoundingClientRect().bottom + offset + SPACE_BEFORE}px`;
+    this.element.style.left = `${column.left - OVERHANG}px`;
+    this.element.style.width = `${column.width + 2 * OVERHANG}px`;
+  }
+
+  /**
+   * Shimmer slots under the bar, for a model whose edits Blok cannot see coming.
+   * The caller re-places the bar after this.
+   * @param shown - draw the slots or remove them
+   */
+  public setSlots(shown: boolean): void {
+    this.slots.hidden = !shown;
+  }
+
+  public get slotsShown(): boolean {
+    return !this.slots.hidden;
   }
 
   public render(view: AssistantBarView): void {
     const working = view.kind === 'working';
 
+    this.view = view;
     this.element.toggleAttribute(ATTR.working, working);
-    this.showReply((view.kind === 'answered' && view.reply) || '');
+    this.showReply(view.kind === 'answered' ? view.reply : '');
     this.alert.textContent = view.kind === 'error' ? view.message : '';
-    this.alert.hidden = this.alert.textContent === '';
     this.status.textContent = working ? view.status : '';
-    this.stop.hidden = !working;
-    this.send.hidden = working;
     if (working) {
       this.thinkingMenu?.hide();
     }
-    this.thinking.hidden = working || this.thinkingView === null;
     this.field.readOnly = working;
-    this.field.placeholder = this.t(view.kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
-    this.actions.hidden = !((view.kind === 'answered' || view.kind === 'error') && view.changed);
-    this.syncSend();
+    this.sync();
   }
 
   /**
@@ -226,7 +325,7 @@ export class AssistantBar {
    */
   public setThinking(view: AssistantThinkingView | null): void {
     this.thinkingView = view !== null && view.levels.length >= 2 ? view : null;
-    this.thinking.hidden = this.thinkingView === null || this.element.hasAttribute(ATTR.working);
+    this.sync();
     if (this.thinkingView === null) {
       this.thinkingMenu?.hide();
 
@@ -305,32 +404,83 @@ export class AssistantBar {
   }
 
   /**
-   * Show the reply as plain text at once, then swap in its markdown rendering.
-   * The renderer is imported lazily so the core bundle does not carry it.
+   * Show the reply's first line as the summary and the rest in the collapsed
+   * panel: plain text at once, then the markdown rendering. The renderer is
+   * imported lazily so the core bundle does not carry it.
    * @param reply - the model's final message, in markdown
    */
   private showReply(reply: string): void {
     const token = this.replyToken + 1;
+    const { summary, rest } = splitReply(reply);
 
     this.replyToken = token;
-    this.reply.textContent = reply;
-    this.reply.hidden = reply === '';
-    if (reply === '') {
+    this.summary.textContent = summary;
+    this.reply.textContent = rest;
+    this.more.hidden = rest === '';
+    this.setExpanded(false);
+    if (reply.trim() === '') {
       return;
     }
     void import('../../../markdown/markdownToHtml')
-      .then(({ markdownToHtml }) => markdownToHtml(reply))
-      .then((html) => {
+      .then(({ markdownToHtml }) => Promise.all([markdownToHtml(summary), rest === '' ? '' : markdownToHtml(rest)]))
+      .then(([summaryHtml, restHtml]) => {
         // A later render (a new prompt, close) owns the reply now.
-        if (this.replyToken === token) {
-          this.reply.replaceChildren(withoutImages(html));
+        if (this.replyToken !== token) {
+          return;
+        }
+        this.summary.replaceChildren(...inlineOf(withoutImages(summaryHtml)));
+        if (rest !== '') {
+          this.reply.replaceChildren(withoutImages(restHtml));
         }
       })
       .catch(() => undefined);
   }
 
-  private syncSend(): void {
-    this.send.disabled = this.field.value.trim() === '';
+  private setExpanded(expanded: boolean): void {
+    this.reply.hidden = !expanded;
+    this.more.setAttribute('aria-expanded', String(expanded));
+  }
+
+  /** Show what fits the view and the field: a typed follow-up hides the summary and its actions. */
+  private sync(): void {
+    const { kind } = this.view;
+    const working = kind === 'working';
+    const empty = this.field.value.trim() === '';
+    const typing = this.field.value !== '';
+    const changed = this.view.kind === 'answered' || this.view.kind === 'error' ? this.view.changed : false;
+    const actions = changed && !typing;
+
+    this.summary.hidden = kind !== 'answered' || typing || this.summary.textContent === '';
+    this.alert.hidden = kind !== 'error' || typing || this.alert.textContent === '';
+    this.element.toggleAttribute(ATTR.covered, working || !this.summary.hidden || !this.alert.hidden);
+    this.field.placeholder = working || !this.summary.hidden || !this.alert.hidden
+      ? ''
+      : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
+    this.stop.hidden = !working;
+    this.undo.hidden = !actions;
+    this.keep.hidden = !actions;
+    this.send.hidden = working || actions;
+    this.send.disabled = empty;
+    this.thinking.hidden = working || actions || this.thinkingView === null;
+  }
+
+  /** Drop the gap the bar holds. */
+  private release(): void {
+    if (this.anchor !== null) {
+      releaseGap(this.anchor, BAR_GAP);
+      releaseGap(this.anchor, SLOTS_GAP);
+    }
+    this.anchor = null;
+  }
+
+  /** An icon button: the label is its name and its hover hint. */
+  private iconButton(attribute: string, icon: string, label: string): HTMLButtonElement {
+    const button = build('button', { type: 'button', [attribute]: '', 'aria-label': label });
+
+    button.innerHTML = icon;
+    onHover(button, label);
+
+    return button;
   }
 
   private submit(): void {
@@ -340,7 +490,7 @@ export class AssistantBar {
       return;
     }
     this.field.value = '';
-    this.syncSend();
+    this.sync();
     this.callbacks.onSubmit(prompt);
   }
 

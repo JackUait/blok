@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/dom';
 
 import { Blok } from '../../../../../src/blok';
+import { releaseGap, reserveGap } from '../../../../../src/components/modules/assistant/gap';
 import { getUserOS } from '../../../../../src/components/utils/browser';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { BlokConfig, OutputData } from '../../../../../types';
@@ -20,6 +21,7 @@ interface TestEditor {
   save: () => Promise<OutputData>;
   agent: Agent;
   readOnly: { toggle(state?: boolean): Promise<boolean> };
+  blocks: { delete(index?: number): Promise<void> };
 }
 
 const settle = (ms = 0): Promise<void> => new Promise((resolve) => {
@@ -201,6 +203,97 @@ const submit = (prompt: string): void => {
 
 const scrolls = { spy: vi.fn() };
 
+const BAR_HEIGHT = 46;
+const PREVIEW_HEIGHT = 40;
+const SLOTS_HEIGHT = 60;
+/** The bar's gap: 6px above it and 10px below, as in the approved mockup. */
+const BAR_GAP = BAR_HEIGHT + 16;
+
+/**
+ * jsdom lays nothing out. Holder n (document order) is a 24px row at 100 + 100n,
+ * with its content column and fields at x 140..660. The bar is 46px tall, a preview
+ * box 40px, the bar's shimmer slots 60px.
+ */
+const fakeLayout = (): void => {
+  const measure = HTMLElement.prototype.getBoundingClientRect;
+
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+    if (this.getAttribute('data-blok-testid') === 'assistant-bar') {
+      return new DOMRect(0, 0, 600, BAR_HEIGHT);
+    }
+    if (this.hasAttribute('data-blok-assistant-slots')) {
+      return new DOMRect(0, 0, 600, SLOTS_HEIGHT);
+    }
+    if (this.hasAttribute('data-blok-ai-preview')) {
+      return new DOMRect(0, 0, 520, PREVIEW_HEIGHT);
+    }
+
+    const holder = this.closest('[data-blok-element]');
+
+    if (!(holder instanceof HTMLElement)) {
+      return measure.call(this);
+    }
+
+    const top = 100 + 100 * [...document.querySelectorAll('[data-blok-element]')].indexOf(holder);
+
+    return this === holder ? new DOMRect(100, top, 600, 24) : new DOMRect(140, top, 520, 24);
+  });
+};
+
+const holderOf = (id: string): HTMLElement => {
+  const holder = document.querySelector<HTMLElement>(`[data-blok-id="${id}"]`);
+
+  if (holder === null) {
+    throw new Error(`no holder ${id}`);
+  }
+
+  return holder;
+};
+
+const gapOf = (id: string): string => holderOf(id).style.getPropertyValue('--blok-ai-gap');
+
+/** Ids of the holders that hold any Ask AI gap. */
+const gapped = (): string[] => [...document.querySelectorAll('[data-blok-ai-gap]')].map((holder) => holder.getAttribute('data-blok-id') ?? '');
+
+const inputOf = (id: string): HTMLElement => {
+  const input = document.querySelector<HTMLElement>(`[data-blok-id="${id}"] [data-blok-tool="paragraph"]`);
+
+  if (input === null) {
+    throw new Error(`no input in ${id}`);
+  }
+
+  return input;
+};
+
+/** Selects from (startId, startOffset) to (endId, endOffset) in the blocks' text. */
+const select = (startId: string, startOffset: number, endId: string, endOffset: number): void => {
+  const start = inputOf(startId);
+  const end = inputOf(endId);
+  const range = document.createRange();
+
+  start.focus();
+  range.setStart(start.firstChild ?? start, startOffset);
+  range.setEnd(end.firstChild ?? end, endOffset);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+};
+
+const THREE_BLOCKS: Partial<BlokConfig> = {
+  data: {
+    blocks: [
+      { id: 'p1', type: 'paragraph', data: { text: 'Hello' } },
+      { id: 'p2', type: 'paragraph', data: { text: 'Second' } },
+      { id: 'p3', type: 'paragraph', data: { text: 'Third' } },
+    ],
+  },
+};
+
+const barStyle = (): { top: string; left: string; width: string } => {
+  const { top, left, width } = bar().style;
+
+  return { top, left, width };
+};
+
 describe('in-editor assistant bar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -276,6 +369,9 @@ describe('in-editor assistant bar', () => {
 
     editor.agent.openAssistant();
     submit('Add a table');
+    // The first line is the summary; the rest waits in the collapsed panel.
+    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Show more' })).toBeVisible());
+    within(bar()).getByRole('button', { name: 'Show more' }).click();
     await waitFor(() => expect(within(bar()).getByRole('table')).toBeVisible());
 
     const table = within(bar()).getByRole('table');
@@ -503,6 +599,8 @@ describe('in-editor assistant bar', () => {
     it('stream events drive the preview: update on tool_input, settle on success', async () => {
       const live = streaming();
       const editor = await createEditor(live.model);
+
+      fakeLayout();
       const call = executeCall('c1', insert('Fresh words here'));
 
       editor.agent.openAssistant();
@@ -520,7 +618,9 @@ describe('in-editor assistant bar', () => {
       // The call commits at its tool_end, before the model's answer, and the preview hands off.
       await waitFor(async () => expect(await texts(editor)).toEqual(['Hello', 'Fresh words here']));
       await waitFor(() => expect(document.querySelector(PREVIEW)).toBeNull());
-      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      // Only the bar's own space is left: the preview's share of the gap is gone.
+      expect(gapped()).toEqual(['p1']);
+      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
       expect(revealed()).toEqual([]);
 
       live.finish(call.use);
@@ -530,6 +630,8 @@ describe('in-editor assistant bar', () => {
     it('an error result cancels its preview', async () => {
       const live = streaming();
       const editor = await createEditor(live.model);
+
+      fakeLayout();
       const call = executeCall('c1', [{ name: 'block.insert', args: { type: 'no-such-tool', position: 'end', data: { text: 'Never lands here' } } }]);
 
       editor.agent.openAssistant();
@@ -546,14 +648,18 @@ describe('in-editor assistant bar', () => {
 
       // Gone while the model still holds its answer: the failed call removed it.
       await waitFor(() => expect(document.querySelector(PREVIEW)).toBeNull());
-      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      // Only the bar's own space is left: the preview's share of the gap is gone.
+      expect(gapped()).toEqual(['p1']);
+      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
       expect(await texts(editor)).toEqual(['Hello']);
       live.finish(call.use);
     });
 
-    it('stop clears the preview and leaves no gap on any holder', async () => {
+    it('stop clears the preview and leaves only the bar\'s gap', async () => {
       const live = streaming();
       const editor = await createEditor(live.model);
+
+      fakeLayout();
       const call = executeCall('c1', insert('Half written words'));
 
       editor.agent.openAssistant();
@@ -567,7 +673,9 @@ describe('in-editor assistant bar', () => {
       within(bar()).getByRole('button', { name: 'Stop' }).click();
 
       expect(document.querySelector(PREVIEW)).toBeNull();
-      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      // Only the bar's own space is left: the preview's share of the gap is gone.
+      expect(gapped()).toEqual(['p1']);
+      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
 
       // A late event of the stopped answer draws nothing.
       live.emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
@@ -575,7 +683,9 @@ describe('in-editor assistant bar', () => {
       await settle(50);
 
       expect(document.querySelector(PREVIEW)).toBeNull();
-      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      // Only the bar's own space is left: the preview's share of the gap is gone.
+      expect(gapped()).toEqual(['p1']);
+      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
       await waitFor(() => expect(within(bar()).queryByRole('button', { name: 'Stop' })).toBeNull());
       expect(await texts(editor)).toEqual(['Hello']);
     });
@@ -706,6 +816,265 @@ describe('in-editor assistant bar', () => {
       expect(await texts(editor)).toEqual(['Hello', 'From AI']);
       expect(document.querySelector('[data-blok-presence-caret], [data-blok-agent-marker]')).toBeNull();
       expect(document.querySelector('.blok-block--target')).toBeNull();
+    });
+  });
+
+  describe('in the page', () => {
+    it('opens anchored under the caret block and reserves a gap there', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      select('p2', 2, 'p2', 2);
+
+      pressModJ(inputOf('p2'));
+
+      expect(gapped()).toEqual(['p2']);
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+      // 6px under p2 (top 200, 24 tall), across the content column (140, 520 wide) plus 12px a side.
+      expect(barStyle()).toEqual({ top: '230px', left: '128px', width: '544px' });
+    });
+
+    it('opens under the selection\'s block from the inline toolbar', async () => {
+      const editor = await createEditor(scripted(), undefined, THREE_BLOCKS);
+
+      fakeLayout();
+      select('p1', 1, 'p2', 3);
+      editor.agent.openAssistant();
+
+      expect(gapped()).toEqual(['p2']);
+      expect(barStyle().top).toBe('230px');
+    });
+
+    it('a selection that ends at the very start of a block anchors to the block before', async () => {
+      const editor = await createEditor(scripted(), undefined, THREE_BLOCKS);
+
+      fakeLayout();
+      // A triple-click on p1 ends the range at offset 0 of p2.
+      select('p1', 0, 'p2', 0);
+      editor.agent.openAssistant();
+
+      expect(gapped()).toEqual(['p1']);
+      expect(barStyle().top).toBe('130px');
+    });
+
+    it('re-anchors when its block is removed: to the next block, else the one before', async () => {
+      const editor = await createEditor(scripted(), undefined, THREE_BLOCKS);
+
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      expect(gapped()).toEqual(['p2']);
+
+      await editor.blocks.delete(1);
+
+      await waitFor(() => expect(gapped()).toEqual(['p3']));
+      expect(gapOf('p3')).toBe(`${BAR_GAP}px`);
+      // p3 is now the second holder: top 200.
+      expect(barStyle().top).toBe('230px');
+
+      await editor.blocks.delete(1);
+
+      await waitFor(() => expect(gapped()).toEqual(['p1']));
+      expect(barStyle().top).toBe('130px');
+    });
+
+    it('answered state shows the first reply line with Undo and Keep', async () => {
+      await createEditor(scripted(insertBatch('From AI'), answer('Added a paragraph.')));
+
+      pressModJ(paragraphInput());
+      submit('Add a line');
+      await waitFor(() => expect(within(bar()).getByText('Added a paragraph.')).toBeVisible());
+
+      const undo = within(bar()).getByRole('button', { name: 'Discard' });
+      const keep = within(bar()).getByRole('button', { name: 'Keep' });
+
+      // Icon buttons: the label is for assistive tech and the hover hint.
+      [undo, keep].forEach((button) => {
+        expect(button).toBeVisible();
+        expect(button.textContent?.trim()).toBe('');
+        expect(button.querySelector('svg')).not.toBeNull();
+      });
+      // One line: nothing more to show.
+      expect(within(bar()).queryByRole('button', { name: 'Show more' })).toBeNull();
+      // The field still takes a follow-up.
+      expect(within(bar()).getByRole('textbox')).toHaveFocus();
+    });
+
+    it('a long reply opens in a collapsed panel', async () => {
+      await createEditor(scripted(answer('Added two lines.\n\nThe first one says hello.\n\n- one\n- two')));
+
+      pressModJ(paragraphInput());
+      submit('Write');
+      await waitFor(() => expect(within(bar()).getByText('Added two lines.')).toBeVisible());
+
+      const more = within(bar()).getByRole('button', { name: 'Show more' });
+
+      expect(more).toHaveAttribute('aria-expanded', 'false');
+      await waitFor(() => expect(within(bar()).getByText('The first one says hello.', { ignore: false })).not.toBeVisible());
+      expect(within(bar()).queryByRole('listitem')).toBeNull();
+
+      more.click();
+
+      expect(more).toHaveAttribute('aria-expanded', 'true');
+      expect(within(bar()).getByText('The first one says hello.')).toBeVisible();
+      expect(within(bar()).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['one', 'two']);
+      // The summary is not repeated in the panel.
+      expect(within(bar()).getAllByText('Added two lines.')).toHaveLength(1);
+    });
+
+    it('typing a follow-up hides the summary and shows send', async () => {
+      await createEditor(scripted(insertBatch('From AI'), answer('Added a paragraph.')));
+
+      pressModJ(paragraphInput());
+      submit('Add a line');
+      await waitFor(() => expect(within(bar()).getByText('Added a paragraph.')).toBeVisible());
+
+      const field = within(bar()).getByRole('textbox');
+
+      if (!(field instanceof HTMLTextAreaElement)) {
+        throw new Error('prompt field is not a textarea');
+      }
+      field.value = 'Shorter';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(within(bar()).getByText('Added a paragraph.')).not.toBeVisible();
+      expect(within(bar()).getByRole('button', { name: 'Send' })).toBeVisible();
+
+      field.value = '';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(within(bar()).getByText('Added a paragraph.')).toBeVisible();
+    });
+
+    it('close releases the gap', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      expect(gapped()).toEqual(['p2']);
+
+      within(bar()).getByRole('textbox').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(screen.queryByRole('dialog', { name: 'Ask AI' })).toBeNull();
+      expect(gapped()).toEqual([]);
+      expect(gapOf('p2')).toBe('');
+    });
+
+    it('an insert with no position yet previews under the bar, and the bar moves under space held ahead of it', async () => {
+      const live = streaming();
+
+      await createEditor(live.model, undefined, THREE_BLOCKS);
+      fakeLayout();
+      // The context names p1; the bar sits under p2, where the selection ends.
+      select('p1', 1, 'p2', 3);
+      pressModJ(inputOf('p2'));
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: '{"commands":[{"name":"block.insert","args":{"type":"paragraph","data":{"text":"Under the bar' });
+
+      await waitFor(() => expect(previewText()).toBe('Under the'));
+      expect(gapped()).toEqual(['p2']);
+      expect(gapOf('p2')).toBe(`${BAR_GAP + PREVIEW_HEIGHT}px`);
+      expect(barStyle().top).toBe('230px');
+
+      // A rewrite of p2 holds its extra height nearest the holder, ahead of the bar
+      // (live-preview.ts RewriteBox; jsdom finds no block inputs to draw one here).
+      reserveGap(holderOf('p2'), 'rewrite:test', 16, 'end', true);
+
+      expect(barStyle().top).toBe('246px');
+      expect(gapOf('p2')).toBe(`${16 + BAR_GAP + PREVIEW_HEIGHT}px`);
+
+      releaseGap(holderOf('p2'), 'rewrite:test');
+
+      expect(barStyle().top).toBe('230px');
+      live.finish(answer('Done.'));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      // The answer cleared the preview, so the bar is back under its block.
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+      expect(barStyle().top).toBe('230px');
+    });
+
+    it('a model that does not stream shows shimmer slots under the bar until its batch commits', async () => {
+      const { model, release } = gated(insertBatch('From AI'));
+      const calls = { count: 0 };
+      const editor = await createEditor(
+        async (request) => (calls.count++ === 0 ? model(request) : answer('Done.')),
+        undefined,
+        THREE_BLOCKS
+      );
+
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      submit('Write');
+      await settle();
+
+      const slots = bar().querySelector('[data-blok-assistant-slots]');
+
+      expect(slots).not.toBeNull();
+      expect(slots?.querySelectorAll('[data-blok-ai-slot]').length).toBeGreaterThan(0);
+      expect(slots).toHaveAttribute('aria-hidden', 'true');
+      expect(gapOf('p2')).toBe(`${BAR_GAP + SLOTS_HEIGHT}px`);
+
+      release();
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+      expect(await texts(editor)).toEqual(['Hello', 'Second', 'Third', 'From AI']);
+    });
+
+    it('a streaming model drops the slots at its first stream event', async () => {
+      const live = streaming();
+
+      await createEditor(live.model);
+      fakeLayout();
+      pressModJ(paragraphInput());
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
+      live.finish(answer('Done.'));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('picking a thinking level in the bar\'s menu keeps following on', async () => {
+      const editor = await createEditor(
+        scripted(insertBatch('One'), answer('Done one.'), insertBatch('Two'), answer('Done two.')),
+        { levels: ['low', 'high'], default: 'low' }
+      );
+      const measure = HTMLElement.prototype.getBoundingClientRect;
+
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+        return this.hasAttribute('data-blok-element') ? new DOMRect(0, 2000, 600, 24) : measure.call(this);
+      });
+      editor.agent.openAssistant();
+      submit('Write one');
+      await waitFor(() => expect(within(bar()).getByText('Done one.')).toBeVisible());
+      expect(scrolls.spy).toHaveBeenCalledTimes(1);
+
+      // Typing a follow-up brings the picker back in place of Undo and Keep.
+      const field = within(bar()).getByRole('textbox');
+
+      if (!(field instanceof HTMLTextAreaElement)) {
+        throw new Error('prompt field is not a textarea');
+      }
+      field.value = 'Write two';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      within(bar()).getByRole('button', { name: 'Thinking: Low' }).click();
+
+      const high = screen.getByRole('menuitemradio', { name: 'High' });
+
+      high.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      high.click();
+      submit('Write two');
+      await waitFor(() => expect(within(bar()).getByText('Done two.')).toBeVisible());
+
+      expect(scrolls.spy).toHaveBeenCalledTimes(2);
     });
   });
 

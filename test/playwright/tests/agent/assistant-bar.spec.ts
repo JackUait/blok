@@ -148,6 +148,45 @@ test.describe('in-editor assistant', () => {
     expect(String((await page.evaluate(() => window.assistantPrompts))?.[0])).toContain('caret is in block p2');
   });
 
+  test('opens in the page under the caret block, moving the next block down, and gives the space back on close', async ({ page }) => {
+    await setup(page, []);
+
+    const first = page.locator('[data-blok-id="p1"]');
+    const column = page.locator('[data-blok-id="p1"] [data-blok-element-content]');
+    const second = page.locator('[data-blok-id="p2"]');
+    const secondTop = (await second.boundingBox())?.y ?? 0;
+
+    await page.getByText('The quick brown fox').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    // The entrance scales the bar a little; measure where it lands.
+    await bar.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+
+    const box = await bar.boundingBox();
+    const above = await first.boundingBox();
+    const text = await column.boundingBox();
+    const below = await second.boundingBox();
+
+    if (box === null || above === null || text === null || below === null) {
+      throw new Error('no layout');
+    }
+    // Between the two blocks, in the page, with no overlap.
+    expect(box.y).toBeGreaterThanOrEqual(above.y + above.height);
+    expect(below.y).toBeGreaterThanOrEqual(box.y + box.height);
+    expect(below.y).toBeGreaterThan(secondTop);
+    // 12px past the content column on each side.
+    expect(Math.round(box.x)).toBe(Math.round(text.x - 12));
+    expect(Math.round(box.width)).toBe(Math.round(text.width + 24));
+
+    await page.keyboard.press('Escape');
+
+    await expect(bar).toHaveCount(0);
+    await expect.poll(async () => (await second.boundingBox())?.y).toBe(secondTop);
+  });
+
   test('Ask AI in the inline toolbar sends the selected text with the request', async ({ page }) => {
     await setup(page, [reply('Done.')]);
 

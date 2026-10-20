@@ -16,9 +16,23 @@
   to { opacity: 1; filter: none }
 }
 
-@keyframes blok-assistant-breathe {
-  0%, 100% { opacity: 1 }
-  50% { opacity: 0.35 }
+@keyframes blok-assistant-fade {
+  from { opacity: 0; transform: translateY(2px) }
+}
+
+@keyframes blok-assistant-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.99) }
+}
+
+@keyframes blok-assistant-shine {
+  from { background-position: 100% 0 }
+  to { background-position: -150% 0 }
+}
+
+@keyframes blok-assistant-wobble {
+  0%, 100% { transform: rotate(0) }
+  30% { transform: rotate(-12deg) translateY(-1px) }
+  60% { transform: rotate(12deg) }
 }
 
 @keyframes blok-audio-cover-picker-in {

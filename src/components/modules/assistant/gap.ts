@@ -27,6 +27,18 @@ const keysOf = (holder: HTMLElement): Record<GapSide, Map<string, number>> => {
   return fresh;
 };
 
+/** Shared by every editor on the page; a listener filters by holder. */
+const listeners = new Set<(holder: HTMLElement) => void>();
+
+/** Calls `listener` after any holder's gap changes size or order. Returns the unsubscribe. */
+export const onGapChange = (listener: (holder: HTMLElement) => void): (() => void) => {
+  listeners.add(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
 const sum = (keys: Map<string, number>): number => [...keys.values()].reduce((total, px) => total + px, 0);
 
 const paint = (holder: HTMLElement): void => {
@@ -46,6 +58,7 @@ const paint = (holder: HTMLElement): void => {
   } else {
     holder.removeAttribute(DATA_ATTR.aiGap);
   }
+  listeners.forEach((listener) => listener(holder));
 };
 
 /** Total px held on one side of a holder. */
@@ -59,11 +72,16 @@ export const gapSize = (holder: HTMLElement, side: GapSide = 'end'): number => s
 export const reserveGap = (holder: HTMLElement, key: string, px: number, side: GapSide = 'end', first = false): number => {
   const all = keysOf(holder);
   const known = all[side];
+  const size = Math.max(0, px);
+  const unchanged = known.get(key) === size;
   const keys = first && !known.has(key) ? new Map([[key, 0], ...known]) : known;
 
   all[side] = keys;
-  keys.set(key, Math.max(0, px));
-  paint(holder);
+  keys.set(key, size);
+  // No repaint for a repeat: a listener that re-reserves on change would loop.
+  if (!unchanged) {
+    paint(holder);
+  }
 
   const before = [...keys.keys()].indexOf(key);
 

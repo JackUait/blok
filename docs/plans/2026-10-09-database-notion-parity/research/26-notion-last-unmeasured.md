@@ -26,7 +26,8 @@ Opened from the database toolbar's settings button (`aria-label="Settings"`, too
 | Sub-page title with a Back arrow (e.g. **"Layout"**) | **14px / 21px, weight 600, rgb(44, 44, 43)** (`SPAN`) | not re-read |
 | Creation panel title (**"New database"**, **"Link to existing data source"**, section 2) | **14px / 21px, weight 600, rgb(44, 44, 43)** | not re-read |
 
-- So research 08's "14px/21px weight 600" is the title of a **sub-page or a creation panel** ("New view" / "New database"). The **root** "View settings" title is a 12px/500 label in secondary ink, in both themes. Same font size in both themes; only the ink differs.
+- Research 08's "14px/21px weight 600" came from the **"New view" creation panel**: its cited shot `shots-08/41-board-created.png` shows the panel titled "New view" (no Back arrow, layout tiles), and its other cited shot `45-board-by-stage.png` shows no panel. Neither shot shows the root "View settings" page, so whether that page was ever 14/600 is not known.
+- Today the **root** "View settings" title is a 12px/500 label in secondary ink, in both themes. Same font size in both themes; only the ink differs. Creation panels and sub-pages use 14/600.
 - Root panel: 290x574 at x 1210, white, radius 10px, menu shadow `rgba(25,25,25,0.05) 0 20px 24px, rgba(25,25,25,0.027) 0 5px 8px, rgba(42,28,0,0.07) 0 0 0 1px`.
 - Root rows, in order (14px/16.8px rgb(44, 44, 43); values rgb(161, 158, 153)): **Layout** "Table", **Property visibility** "3", **Filter**, **Sort**, **Group**, **Conditional color**, **Copy link to view**, section label **"Data source settings"**, **Source** "New database", **Edit properties**, **Automations**, **AI Autofill**, **Turn into**, **More settings**, then **Manage data sources**, **Lock database**, **Manage in Calendar**.
 - **"Data source settings" label:** 12px/14.4px weight 500, rgb(125, 122, 117); its row is 274x19 with padding `4px 8px 0`. A "Loading..." status spinner (16x16) sits at its right end while the panel loads.
@@ -72,7 +73,8 @@ Opened from the database toolbar's settings button (`aria-label="Settings"`, too
 | Property header menu › Edit property › **Date format** | same six options | **250** |
 | Property header menu › Edit property (the submenu itself: Date format / Time format / Notifications) | | 300 |
 
-- So Blok's 250 (`database.css:5180`) matches the **property menu** path and the picker's **Remind** submenu. The picker's own Date format / Time format menus are 180.
+- Rule: **picker Date format and Time format: 180. Picker Remind: 250. Property menu › Edit property › Date format: 250.**
+- Blok uses 250 (`database.css:5180`). That is right for the property menu and for Remind, and **wrong for the picker's Date format and Time format**, which should be 180.
 - Escape in a picker submenu closes only that submenu; a second Escape closes the picker.
 
 ## 2. The "New database" / "New data source" side panel (`00-…`, `01-…`, `02-…`, `20-…`, `21-…`, `22-…`)
@@ -115,7 +117,7 @@ The first row is highlighted on open (`New empty data source`, keyboard focus lo
 - **Import CSV**: a centred modal 1000x637 (radius 12px, **bg rgb(249, 248, 247)**, shadow `rgba(25,25,25,0.24) 0 24px 48px, rgba(25,25,25,0.14) 0 4px 12px, rgba(42,28,0,0.07) 0 0 0 1px`, backdrop rgba(15, 15, 15, 0.6)). Left column: title **"Import CSV into Notion"** 26px/36px weight 600; text **"Create a new database with your CSV or merge it into an existing one"** 14px/20px rgb(125, 122, 117); label **"Upload CSV"** 12px/20px weight 500; button **"Choose file"** (`paperClip`, 322x32, bg rgba(42, 28, 0, 0.07), radius 6px, 14px weight 500); primary **"Map CSV headers"** (322x36, bg rgb(39, 131, 222), **disabled: `aria-disabled`, opacity 0.4** until a file is picked); **"Learn about imports"** (`questionMarkCircleSmall`, rgb(142, 139, 134)). Right column: a grey skeleton preview titled **"New table"** (22px/26px weight 600 rgb(125, 122, 117), bars rgb(166, 166, 166) radius 5px). Close: an 18x18 round `xMarkFill` button at the top left, **focused on open**. Escape closed the modal and left the panel open. No file chosen.
 - **More templates**: a centred 1000x637 modal with a focused **"Search"** field (296x36, radius 10px, bg rgba(249, 249, 248, 0.8)), then **"Empty database"** card (576x81, border 1px solid rgb(230, 229, 227), radius 12px, padding 16px 18px), section **"Existing data sources"** (the user's own databases as 280x174 preview cards, bg rgba(66, 35, 3, 0.03), border 1px rgb(230, 229, 227), radius 12px, title 14px/20px weight 500 + page name 12px), section **"Templates"** (Tasks Tracker, Projects, Skills, Document Hub, Brainstorm Session, Meeting Notes, each with a one-line description and a coloured preview), and a **"More templates"** link at the end. Closed with Escape; nothing clicked inside.
 - **Link to existing data source**: a page in the same panel, title "Link to existing data source" (14px/21px/600) with a Back button (24x22). Search **"Link…"** (focused, 266x28, same input look). From a new database: section **"Existing data sources"** only (4 rows, the user's databases, names not recorded). From "New data source": section **"Suggested"** (both sources of *this* database, each "New data source" with breadcrumb "Blok measure scratch 14 2026-10-20 / New data source and New data source") then **"Existing data sources"** (the user's other databases; 3 rows seen, names not recorded). Row shape: `collection` icon 20x20 + title 14px/16.8px + breadcrumb 12px/16.8px **rgb(161, 158, 153)** with a "/" separator (padding 0 4px); rows with a breadcrumb are 45 tall, a top-level one 28. Nothing picked.
-- **Back from "Link to existing data source"** (entered from "New data source") returned to a panel titled **"New database" with the AI prompt box**, not to "New data source" with the search field. One sample.
+- **Back from "Link to existing data source"** (entered from "New data source") returned to a panel titled **"New database" with the AI prompt box**, not to "New data source" with the search field. Two samples: one in light, one in dark.
 - The database title became **"New data source and New data source"** once the second source existed (both sources untitled), as research 23 saw.
 
 **Source picker** (View settings › Source on the second source's view, `22-source-picker.png`): panel 290x331, title **"Source"** (14px/21px/600) with Back, search **"Link to a data source…"**, section **"Suggested"** (the *other* source of this database, 1 row), section **"Existing data sources"** (the user's other databases, 3 rows). The current source is not listed. Labels 12px weight 500 rgb(125, 122, 117), each with a "Loading..." spinner while it fills.
@@ -152,7 +154,7 @@ Click on the "Due" header. Menu 220x498 at (813, 207).
 
 - Top row: **icon button `aria-label="Change icon"`: 28x28, radius 6px, border 1px solid rgba(28, 19, 1, 0.11), no fill**, padding 0. Glyph is a 17x17 mask filled rgb(85, 83, 78). **Hover bg rgb(249, 248, 247)**. No tooltip.
 - Name input beside it: wrapper 168x28, radius 6px, bg rgba(66, 35, 3, 0.03), ring `rgba(28, 19, 1, 0.11) 0 0 0 1px`, padding 3px 6px; input 14px/20px. At its right end an **(i) button `aria-label="Add property description"`** (15x20, glyph fill rgb(142, 139, 134)).
-- Menu items, in order: Edit property ›, Property access, Change type ›, AI Autofill ›, Filter, Sort ›, Group, Calculate ›, Freeze, Hide, Unwrap content, Insert left, Insert right, Duplicate property, Delete property. Edit property opens at once (300 wide).
+- Menu items, in order: Edit property ›, Property access, Change type ›, AI Autofill ›, Filter, Sort ›, Group, Calculate ›, Freeze, Hide, Unwrap content, Insert left, Insert right, Duplicate property, Delete property. The Edit property submenu (300 wide) was open right after the click, but the pointer was resting on the Edit property row, so it probably opened on hover. Whether it opens without hover: UNMEASURED.
 
 ### 3d. "Manage in Calendar" (`15-manage-in-calendar-hover.png`)
 
@@ -212,7 +214,7 @@ Property text is primary ink in both themes, not secondary.
 |---|---|---|
 | Body | rgb(253, 253, 253), bottom border 1px rgb(230, 229, 227) | rgb(25, 25, 25), bottom border 1px rgb(56, 56, 54) |
 | Weekend columns (80 wide at Month zoom) | rgb(247, 247, 247) | rgba(255, 255, 255, 0.03) |
-| Per-day vertical lines | **none found** (only the weekend fills mark columns) | none found |
+| Per-day vertical lines (Month zoom) | **none found** (only the weekend fills mark columns) | none found |
 | Header bottom line | `box-shadow: rgb(230, 229, 227) 0 -1px 0 0 inset` | `rgb(56, 56, 54) 0 -1px 0 0 inset` |
 | Day numbers | 12px/28px rgb(161, 158, 153) | rgb(125, 122, 117) |
 | Today line | 1px rgb(229, 100, 88); chip 22x22 rgb(229, 100, 88), digit 12px/500 white | same |
@@ -263,7 +265,7 @@ First Table view had the sort "Due ↑" (View settings row "Sort | Due"). View s
 - The Sort row went blank ("Sort"), the toolbar Sort icon lost its blue, no pill; headers became "Name" only.
 - Switching the view **back** to the original source: rows came back in manual order, **the sort did not come back** (Sort row still blank).
 
-So **Notion drops the view's sorts when its source changes.** Blok keeps them and lets unknown ids match nothing (34f20350). Filters: not tested (the view had none): UNMEASURED.
+So **a sort on a property the new source lacks is dropped, and it does not come back** when the view returns to the old source. Blok keeps it and lets unknown ids match nothing (34f20350). A sort on a property both sources share: UNMEASURED. Filters: not tested (the view had none): UNMEASURED.
 
 ### 5c. How a Range grouping switches back to Unique (`53-range-page.png`)
 
@@ -279,10 +281,14 @@ So the way back is the Group page's "Number by" row, not the Range page. Blok ke
 |---|---|---|
 | empty (today shown), research 23 | 5:49 AM | 6:00 AM |
 | empty (today shown), Charlie | 1:58 PM | **2:00 PM** |
-| a set date, no time (Oct 12, Alpha) | ≈ 1:10 PM | **9:00 AM** |
+| a set date, no time (Oct 12, Alpha) | not read (the session ran 12:53–13:58, so a next-hour rule would give 1 or 2 PM) | **9:00 AM** |
 | a set date, no time, with a "1 day before (9:00 AM)" reminder (Oct 25, Bravo) | 1:58 PM | **9:00 AM** |
 
-So an empty cell takes **the next whole hour** (or the nearest: both samples fit both rules; UNMEASURED which), and a cell that **already has a date** takes **9:00 AM**.
+Two readings fit these samples, because "empty cell vs set date" moved together with "today vs another day" in every sample:
+- an empty cell takes the next (or nearest) whole hour, and a cell with a set date takes 9:00 AM; or
+- today takes the next (or nearest) whole hour, and any other day takes 9:00 AM.
+
+Which variable decides: UNMEASURED. Next vs nearest hour: UNMEASURED (both samples fit both). What is measured: a set date on another day gets **9:00 AM**, not the current hour.
 
 ### 5e. Short date for another year
 
@@ -301,7 +307,10 @@ Board card › side peek (`?pm=s`), panel bg white, shadow `rgba(25,25,25,0.027)
 - **Manage in Calendar**: what it opens (not clicked; it leaves for Notion Calendar).
 - **Dark favorite star**: needs favoriting a page, which the task forbids.
 - **"Now" button hover** and dark Today/Now box: not read (same class as Today; light only).
-- Default time rule: "next whole hour" vs "nearest hour" (samples fit both).
+- Default time rule: "next whole hour" vs "nearest hour", and whether "empty vs set date" or "today vs another day" picks 9:00 AM (§5d).
+- Picking another source: a sort on a property **both** sources share.
+- Whether the property menu's Edit property submenu opens without hover.
+- Whether the root "View settings" title was ever 14/600 (research 08's shots show only the "New view" panel).
 - Short date for a **future** year.
 - Picking another source: what happens to **filters**.
 - AI prompt box: what typing or submitting does (would spend AI credits); Import CSV after choosing a file (already in research 21); template rows (Tasks Tracker…) when clicked.

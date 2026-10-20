@@ -261,8 +261,31 @@ export class BlockYjsSync {
    * Blocks whose change the host was already told about in a window still
    * open. A rewrite reaches `blockDidMutated` twice: through the DOM echo and
    * through `onBlockChanged`, in either order. See `claimChangeAnnouncement`.
+   * Holds the data a replay announced (null for a DOM mutation) and the task
+   * it was announced in.
    */
-  private readonly announcedChanges = new Set<string>();
+  private readonly announcedChanges = new Map<string, { data: BlockToolData | null; task: number }>();
+
+  /**
+   * Counts tasks that announced a change. A later task is a new user action
+   * (the next Mod+Z), even while the RAF-extended window is still open.
+   * A key or pointer press also starts one: the browser can run input before
+   * the timer that ends the task.
+   */
+  private announceTask = 0;
+  private announceTaskEnding = false;
+  private readonly startAnnounceTask = (event: Event): void => {
+    if (event.isTrusted) {
+      this.announceTask++;
+    }
+  };
+
+  /**
+   * The replay being announced right now and the data it applied. Not read
+   * from `rewrittenFromDocument`: a later rewrite of the same block can
+   * overwrite that before this one's setData resolves.
+   */
+  private replayAnnouncement: { blockId: string; data: BlockToolData } | null = null;
 
   // Captured before setData awaits, not inferred from live block data.
   private readonly replayParticipation = new Map<string, 'history' | 'remote'>();
@@ -378,9 +401,12 @@ export class BlockYjsSync {
 
   /**
    * Whether a change of `block` should be announced to the host now. Inside a
-   * reconcile window only the first announcement per block goes out, so one
-   * undo or one remote update is one onChange. A keystroke in the window is
-   * the user's own change and always goes out.
+   * reconcile window only the first announcement per block and task goes out,
+   * so one undo or one remote update is one onChange, and so is an undo and a
+   * peer update landing in the same task. A rewrite with other data in a LATER
+   * task (a second Mod+Z before the window's frame) goes out too: a parent
+   * that redraws from the first one would never see it. A keystroke in the
+   * window is the user's own change and always goes out.
    *
    * A block rewritten from the document is announced by the reconciler
    * alone. Its DOM mutations stay silent here, because a paste or a tool's
@@ -398,13 +424,32 @@ export class BlockYjsSync {
       return false;
     }
 
-    if (this.announcedChanges.has(block.id)) {
+    const applied = source === 'replay' && this.replayAnnouncement?.blockId === block.id ? this.replayAnnouncement.data : null;
+
+    const announced = this.announcedChanges.get(block.id);
+
+    if (announced !== undefined && (
+      applied === null || announced.data === null || announced.task === this.announceTask || equals(applied, announced.data)
+    )) {
       return false;
     }
 
-    this.announcedChanges.add(block.id);
+    this.announcedChanges.set(block.id, { data: applied, task: this.announceTask });
+    this.endAnnounceTaskLater();
 
     return true;
+  }
+
+  private endAnnounceTaskLater(): void {
+    if (this.announceTaskEnding) {
+      return;
+    }
+    this.announceTaskEnding = true;
+    // A macrotask: every microtask of this task (setData's awaits, onChange) still counts as this task.
+    setTimeout(() => {
+      this.announceTaskEnding = false;
+      this.announceTask++;
+    }, 0);
   }
 
   /**
@@ -495,7 +540,7 @@ export class BlockYjsSync {
    * nothing is consumed and the record survives to be replayed when it closes.
    */
   private drainSuppressedMutations(): void {
-    this.announcedChanges.forEach((blockId) => {
+    this.announcedChanges.forEach((_data, blockId) => {
       const block = this.repository.getBlockById(blockId);
 
       if (block === undefined || !this.isReconciling(block)) {
@@ -917,6 +962,8 @@ export class BlockYjsSync {
    * @returns unsubscribe function
    */
   public subscribe(): () => void {
+    window.addEventListener('keydown', this.startAnnounceTask, true);
+    window.addEventListener('pointerdown', this.startAnnounceTask, true);
     this.unsubscribeFromYjs = this.dependencies.YjsManager.onBlocksChanged((event: BlockChangeEvent) => {
       if (
         event.origin === 'undo' ||
@@ -942,6 +989,8 @@ export class BlockYjsSync {
    */
   public destroy(): void {
     this.destroyed = true;
+    window.removeEventListener('keydown', this.startAnnounceTask, true);
+    window.removeEventListener('pointerdown', this.startAnnounceTask, true);
     this.unsubscribeFromYjs?.();
     this.unsubscribeFromYjs = null;
 
@@ -1338,7 +1387,7 @@ export class BlockYjsSync {
       if (success) {
         restoreCaret?.();
         rebaseHistory?.();
-        this.handlers.onBlockChanged?.(block, this.replayParticipation.get(blockId) ?? replaySource);
+        this.announceReplay(block, data, this.replayParticipation.get(blockId) ?? replaySource);
       } else {
         // After an await, so outside `syncBlockFromYjs`'s mark.
         this.asPeerChange(origin, () => {
@@ -1433,6 +1482,22 @@ export class BlockYjsSync {
   }
 
   /**
+   * Tell the host about a block the reconciler just rewrote.
+   * @param block - the rewritten block
+   * @param data - the data the rewrite applied
+   * @param replaySource - whose change it was
+   */
+  private announceReplay(block: Block, data: BlockToolData, replaySource?: 'history' | 'remote'): void {
+    this.replayAnnouncement = { blockId: block.id, data };
+
+    try {
+      this.handlers.onBlockChanged?.(block, replaySource);
+    } finally {
+      this.replayAnnouncement = null;
+    }
+  }
+
+  /**
    * Replace `block` in place with a freshly composed one carrying the doc's
    * current record. Everything this reconciler builds is a RE-MATERIALISATION
    * — an undo/redo replay or a remote peer's change — never a creation: a
@@ -1492,8 +1557,9 @@ export class BlockYjsSync {
 
     this.handlers.replaceBlock(blockIndex, newBlock);
     this.remountDescendantsLeftIn(oldHolder, target.id);
-    this.handlers.onBlockChanged?.(
+    this.announceReplay(
       newBlock,
+      record.data,
       record.replaySource === 'history'
         ? 'history'
         : this.replayParticipation.get(target.id) ?? record.replaySource,

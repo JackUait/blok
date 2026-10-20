@@ -10,6 +10,8 @@ interface TestEditor {
   isReady: Promise<unknown>;
   destroy: () => void;
   history: { undo: () => void };
+  blocks: { update: (id: string, data: Record<string, unknown>) => Promise<unknown>; isSyncingFromYjs: boolean };
+  events: { on: (name: string, callback: (payload: { event: { detail: { target: { id: string } } } }) => void) => void };
 }
 
 const drain = async (): Promise<void> => {
@@ -126,5 +128,59 @@ describe('onChange for a change applied from the shared document', () => {
     await settle();
 
     expect(eventTypes(onChange.mock.calls)).toEqual(['block-changed']);
+  });
+
+  /** Ids the low-level 'block changed' bus reports: what a parent tool redraws from. */
+  const listen = (): string[] => {
+    const heard: string[] = [];
+
+    editor?.events.on('block changed', (payload) => heard.push(payload.event.detail.target.id));
+
+    return heard;
+  };
+
+  /** The next task, before the frame that closes the reconcile window. */
+  const nextTask = async (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+  // A rewrite in a later task of the same open window is a new change, not an echo.
+  it('announces each of two undos of one block pressed back to back', async () => {
+    if (editor === undefined) {
+      throw new Error('editor not created');
+    }
+    await editor.blocks.update('shared', { text: 'first' });
+    await settle();
+    await editor.blocks.update('shared', { text: 'second' });
+    await settle();
+    const heard = listen();
+
+    editor.history.undo();
+    await drain();
+    await nextTask();
+    expect(editor.blocks.isSyncingFromYjs).toBe(true);
+    editor.history.undo();
+    await settle();
+
+    expect(holder?.querySelector('[data-blok-tool="paragraph"]')?.textContent).toBe('before');
+    expect(heard).toEqual(['shared', 'shared']);
+  });
+
+  it('announces each of two remote updates of one block arriving back to back', async () => {
+    if (peer === undefined || editor === undefined) {
+      throw new Error('peer not created');
+    }
+    const local = requireYjs();
+    const heard = listen();
+
+    peer.updateBlockData('shared', 'text', 'peer one');
+    local.applyRemoteUpdate(peer.encodeStateAsUpdate(local.getStateVector()));
+    await drain();
+    await nextTask();
+    expect(editor.blocks.isSyncingFromYjs).toBe(true);
+    peer.updateBlockData('shared', 'text', 'peer two');
+    local.applyRemoteUpdate(peer.encodeStateAsUpdate(local.getStateVector()));
+    await settle();
+
+    expect(holder?.querySelector('[data-blok-tool="paragraph"]')?.textContent).toBe('peer two');
+    expect(heard).toEqual(['shared', 'shared']);
   });
 });

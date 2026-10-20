@@ -667,6 +667,8 @@ test.describe('calendar', () => {
       await event(page, 'r4').click({ modifiers: ['Shift'] });
 
       expect(await picked(page)).toEqual(['r1', 'r4']);
+      // Core's Shift-click block range must not take the whole database block.
+      await expect(page.locator('[data-blok-id="db-1"]')).not.toHaveAttribute('data-blok-selected', 'true');
       await expect(drawer(page)).toHaveCount(0);
       await expect(page.locator('[data-blok-database-table-selection-bar]')).toHaveCount(0);
 

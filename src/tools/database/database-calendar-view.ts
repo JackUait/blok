@@ -140,6 +140,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeyDown);
     root.addEventListener('pointerdown', this.onPointerDown);
+    root.addEventListener('mousedown', this.onMouseDown);
 
     if (this.options.focusDay !== undefined) {
       const focusDay = this.options.focusDay;
@@ -526,6 +527,14 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return;
     }
     handlers.openRow(rowId);
+  };
+
+  /** Core's document mousedown turns a Shift-click into a block range, which would select this whole database. */
+  private readonly onMouseDown = (event: MouseEvent): void => {
+    if (event.shiftKey && event.target instanceof Element && event.target.closest('[data-blok-database-calendar-event]') !== null) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {

@@ -235,6 +235,21 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.openRow).not.toHaveBeenCalled();
     });
 
+    it('keeps a Shift-press on an event from the editor, whose Shift-click selects whole blocks', () => {
+      const { root } = mount();
+      const reached = vi.fn();
+
+      document.addEventListener('mousedown', reached);
+      const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true, shiftKey: true });
+
+      events(root, 'r1')[0].dispatchEvent(press);
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, shiftKey: true }));
+      document.removeEventListener('mousedown', reached);
+
+      expect(reached).toHaveBeenCalledTimes(1);
+      expect(press.defaultPrevented).toBe(true);
+    });
+
     it('shows a comment badge after the title, out of the tab order', () => {
       const { root } = mount({ commentBadges: { databaseId: 'db', count: (rowId) => (rowId === 'r1' ? 3 : 0), open: vi.fn() } });
       const badge = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-calendar-event-title] + [data-blok-database-comment-badge]');

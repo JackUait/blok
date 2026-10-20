@@ -945,6 +945,42 @@ describe('in-editor assistant bar', () => {
       expect(within(bar()).getByText('Added a paragraph.')).toBeVisible();
     });
 
+    it('moves down when a block above its anchor grows', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+
+      const measure = HTMLElement.prototype.getBoundingClientRect;
+      const holders = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-element]')];
+      const gapPx = (holder: HTMLElement): number => parseFloat(holder.style.getPropertyValue('--blok-ai-gap') || '0');
+
+      // Like fakeLayout, but a holder sits lower by every gap held above it.
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+        if (this.getAttribute('data-blok-testid') === 'assistant-bar') {
+          return new DOMRect(0, 0, 600, BAR_HEIGHT);
+        }
+
+        const holder = this.closest('[data-blok-element]');
+
+        if (!(holder instanceof HTMLElement)) {
+          return measure.call(this);
+        }
+
+        const before = holders().slice(0, holders().indexOf(holder));
+        const top = 100 + 100 * before.length + before.reduce((total, above) => total + gapPx(above), 0);
+
+        return this === holder ? new DOMRect(100, top, 600, 24) : new DOMRect(140, top, 520, 24);
+      });
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      expect(barStyle().top).toBe('230px');
+
+      // A preview box opening under p1 pushes p2, and the bar with it.
+      reserveGap(holderOf('p1'), 'insert:test', 40);
+
+      expect(barStyle().top).toBe('270px');
+      releaseGap(holderOf('p1'), 'insert:test');
+      expect(barStyle().top).toBe('230px');
+    });
+
     it('close releases the gap', async () => {
       await createEditor(scripted(), undefined, THREE_BLOCKS);
       fakeLayout();

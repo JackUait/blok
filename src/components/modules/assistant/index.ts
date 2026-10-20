@@ -577,6 +577,7 @@ export class Assistant extends Module {
     if (moved) {
       this.watchers?.resize?.disconnect();
       this.watchers?.resize?.observe(bar.element);
+      this.watchers?.resize?.observe(this.Blok.UI.nodes.redactor);
       this.watchers?.resize?.observe(block.holder);
       // Inserts waiting under the bar follow it to its new block.
       this.preview?.relayout();
@@ -607,13 +608,17 @@ export class Assistant extends Module {
     const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.relayout()) : null;
     // childList only: the bar's own gap writes are attributes, and would loop.
     const mutations = new MutationObserver(() => this.placeBar());
+    const redactor = this.Blok.UI.nodes.redactor;
+    // Any gap in this editor: one above the anchor moves it too.
     const gaps = onGapChange((holder) => {
-      if (holder === bar.anchorHolder) {
+      if (redactor.contains(holder)) {
         this.placeBar();
       }
     });
 
     resize?.observe(bar.element);
+    // The page: a block above that grows (an image loads, a toggle opens) moves the anchor.
+    resize?.observe(redactor);
     if (bar.anchorHolder !== null) {
       resize?.observe(bar.anchorHolder);
     }

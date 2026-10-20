@@ -61,6 +61,9 @@ const SPACE_AFTER = 10;
 /** How far the bar reaches past the content column on each side. */
 const OVERHANG = 12;
 
+/** Least room kept between the bar and the window's sides on a narrow screen. */
+const WINDOW_EDGE = 16;
+
 /** Where the bar sits: the content column it spans, in viewport px. */
 export interface AssistantBarColumn {
   left: number;
@@ -287,8 +290,12 @@ export class AssistantBar {
       reserveGap(anchor, SLOTS_GAP, this.slots.getBoundingClientRect().height);
     }
     this.element.style.top = `${anchor.getBoundingClientRect().bottom + offset + SPACE_BEFORE}px`;
-    this.element.style.left = `${column.left - OVERHANG}px`;
-    this.element.style.width = `${column.width + 2 * OVERHANG}px`;
+    // Centred on the column; a narrow window trims the overhang first, then the column.
+    const width = Math.max(0, Math.min(column.width + 2 * OVERHANG, window.innerWidth - 2 * WINDOW_EDGE));
+    const left = Math.min(Math.max(column.left + column.width / 2 - width / 2, WINDOW_EDGE), window.innerWidth - WINDOW_EDGE - width);
+
+    this.element.style.left = `${left}px`;
+    this.element.style.width = `${width}px`;
   }
 
   /**

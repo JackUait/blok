@@ -187,6 +187,48 @@ test.describe('in-editor assistant', () => {
     await expect.poll(async () => (await second.boundingBox())?.y).toBe(secondTop);
   });
 
+  test('follows its block when a block above it grows', async ({ page }) => {
+    await setup(page, []);
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    await bar.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+
+    const before = (await bar.boundingBox())?.y ?? 0;
+
+    // Not a gap and not a childList change: only the page's ResizeObserver sees it.
+    await page.locator('[data-blok-id="p1"]').evaluate((holder) => holder.style.setProperty('padding-bottom', '80px'));
+
+    // Within a pixel: the holder's own box rounds.
+    await expect.poll(async () => Math.abs(((await bar.boundingBox())?.y ?? 0) - before - 80) <= 1).toBe(true);
+  });
+
+  test('stays inside a phone-width window and still spans the column start', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 700 });
+    await setup(page, []);
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    await bar.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+
+    const box = await bar.boundingBox();
+    const text = await page.locator('[data-blok-id="p2"] [data-blok-element-content]').boundingBox();
+
+    if (box === null || text === null) {
+      throw new Error('no layout');
+    }
+    expect(box.x).toBeGreaterThanOrEqual(16);
+    expect(box.x + box.width).toBeLessThanOrEqual(375 - 16);
+    // This page's column runs to the window's right edge, so the window wins there.
+    expect(box.x).toBeLessThanOrEqual(text.x);
+  });
+
   test('Ask AI in the inline toolbar sends the selected text with the request', async ({ page }) => {
     await setup(page, [reply('Done.')]);
 

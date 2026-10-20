@@ -3,7 +3,7 @@
 /*
   In the page, under its anchor block: assistant-bar.ts holds a gap on the anchor
   holder (gap.ts) and writes `top`, `left` and `width` to sit in it, 12px past the
-  content column on each side. It sits in the top layer, so every rule repeats the
+  content column on each side and 16px inside the window. It sits in the top layer, so every rule repeats the
   [data-blok-top-layer][popover] compound to outrank the shared top-layer reset
   (main.css sets `inset: auto`).
 */
@@ -15,7 +15,6 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  max-width: calc(100vw - 2 * var(--blok-space-4));
   margin: 0;
   padding: 0;
   border: 1px solid var(--blok-popover-border);

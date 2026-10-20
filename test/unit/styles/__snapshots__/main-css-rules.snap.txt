@@ -23426,7 +23426,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  max-width: calc(100vw - 2 * var(--blok-space-4));
   margin: 0;
   padding: 0;
   border: 1px solid var(--blok-popover-border);

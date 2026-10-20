@@ -1,6 +1,7 @@
 import { IconCheck, IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../../../components/utils/top-layer';
+import { helpLink } from '../database-help-link';
 import { reminderFits, reminderLabel, remindersFor } from '../reminders';
 import type { DateDisplay, DateReminderOffset, PropertyDefinition, PropertyValue } from '../types';
 import { CellPopover } from './cell-popover';
@@ -112,6 +113,31 @@ interface ZoneEntry {
   /** Lower-case city, zone id and offset: what the search matches. */
   search: string;
 }
+
+/** Fewest letters that differ between `query` and a same-length run of `text`. */
+const closestRun = (query: string, text: string): number => {
+  const runs = Math.max(text.length - query.length + 1, 0);
+
+  return Array.from({ length: runs }, (_, at) => [...query].filter((letter, i) => letter !== text[at + i]).length)
+    .reduce((best, misses) => Math.min(best, misses), query.length);
+};
+
+/**
+ * 0 exact, 1 one letter off in the city, 2 every letter somewhere, else null.
+ * Fitted to one Notion sample (research/23 §1: "tok" → Vostok, Tokyo,
+ * Vladivostok, Khartoum, Atikokan…; "zzqx" → nothing), not a known rule.
+ */
+const zoneRank = (query: string, entry: ZoneEntry): number | null => {
+  if (entry.search.includes(query)) {
+    return 0;
+  }
+  // Near matches on one or two letters would list almost every zone.
+  if (query.length < 3 || ![...query].every((letter) => entry.search.includes(letter))) {
+    return null;
+  }
+
+  return closestRun(query, entry.city.toLocaleLowerCase()) <= 1 ? 1 : 2;
+};
 
 const offsetFormats = new Map<string, Intl.DateTimeFormat>();
 
@@ -639,6 +665,18 @@ class DateEditor {
       this.finish(true);
     });
     options.appendChild(clear);
+    // research/23 §1: only a picker with reminders links to their help.
+    const help = this.ctx.onReminderChange === undefined
+      ? null
+      : helpLink(this.ctx.helpLinks?.reminders, this.t('tools.database.dateRemindersHelp'), 'data-blok-database-date-help');
+
+    if (help !== null) {
+      const footer = document.createElement('div');
+
+      footer.setAttribute('data-blok-database-date-help-footer', '');
+      footer.appendChild(help);
+      options.appendChild(footer);
+    }
 
     return options;
   }
@@ -830,7 +868,7 @@ class DateEditor {
 
     const renderRows = (): void => {
       const query = search.value.trim().toLocaleLowerCase();
-      const matches = (entry: ZoneEntry): boolean => query === '' || entry.search.includes(query);
+      const rank = (entry: ZoneEntry): number | null => query === '' ? 0 : zoneRank(query, entry);
       const heading = (key: string): HTMLElement => {
         const el = document.createElement('div');
 
@@ -870,11 +908,16 @@ class DateEditor {
 
         return el;
       };
-      const shown = zones.filter(matches);
+      // Stable sort: equal ranks keep the list's order.
+      const shown = zones
+        .map((entry) => ({ entry, rank: rank(entry) }))
+        .filter((hit): hit is { entry: ZoneEntry; rank: number } => hit.rank !== null)
+        .sort((a, b) => a.rank - b.rank)
+        .map((hit) => hit.entry);
 
       state.rows = [];
       list.replaceChildren(
-        ...(matches(local) ? [heading('tools.database.timeZoneCurrent'), option(local)] : []),
+        ...(rank(local) !== null ? [heading('tools.database.timeZoneCurrent'), option(local)] : []),
         heading('tools.database.timeZoneSelect'),
         ...shown.map(option)
       );

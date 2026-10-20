@@ -449,6 +449,45 @@ describe('date cell editor', () => {
       expect(editorRoot()?.querySelector('[data-blok-database-date-remind]')).toBeNull();
     });
 
+    describe('"Learn about reminders" (research/23 §1)', () => {
+      const help = (): HTMLAnchorElement | null => editorRoot()?.querySelector<HTMLAnchorElement>('[data-blok-database-date-help]') ?? null;
+      const url = 'https://example.com/help/reminders';
+
+      it('is the last row, a link that opens the host URL in a new tab', () => {
+        openRemind('2026-10-09', undefined, { helpLinks: { reminders: url } });
+
+        const link = help();
+        const options = [...q('[data-blok-database-date-options]').children];
+
+        expect(link?.tagName).toBe('A');
+        expect(options.at(-1)?.hasAttribute('data-blok-database-date-help-footer')).toBe(true);
+        expect(link?.parentElement).toBe(options.at(-1));
+        expect(link?.getAttribute('href')).toBe(url);
+        expect(link?.target).toBe('_blank');
+        expect(link?.rel).toBe('noopener noreferrer');
+        expect(text(link)).toBe('Learn about reminders');
+        expect(link?.querySelector('svg')).not.toBeNull();
+      });
+
+      it('shows nothing without the host URL', () => {
+        openRemind('2026-10-09', undefined, { helpLinks: {} });
+
+        expect(help()).toBeNull();
+      });
+
+      it('shows nothing when the picker has no Remind row', () => {
+        openDate('2026-10-09', { helpLinks: { reminders: url } });
+
+        expect(help()).toBeNull();
+      });
+
+      it('shows nothing for a script URL', () => {
+        openRemind('2026-10-09', undefined, { helpLinks: { reminders: 'javascript:alert(1)' } });
+
+        expect(help()).toBeNull();
+      });
+    });
+
     it('sits just above Clear and reads None by default', () => {
       openRemind('2026-10-09');
 
@@ -900,6 +939,67 @@ describe('date cell editor', () => {
         typeInto(search(), 'zzqx');
         expect(zoneMenu()?.querySelectorAll('[data-blok-database-date-setting-option]')).toHaveLength(0);
         expect(text(zoneMenu()?.querySelector('[data-blok-database-date-zone-empty]'))).toBe('No results');
+      });
+
+      describe('fuzzy search (research/23 §1)', () => {
+        // A fixed list: the engine's own zone names change between ICU versions (Kanton was Enderbury).
+        const ZONES = [
+          'Africa/Freetown', 'Africa/Khartoum', 'Africa/Nouakchott', 'America/Atikokan', 'America/Kentucky/Louisville',
+          'America/Toronto', 'Antarctica/Vostok', 'Asia/Tokyo', 'Asia/Tomsk', 'Asia/Vladivostok', 'Australia/Broken_Hill',
+          'Europe/Berlin', 'Europe/Stockholm', 'Pacific/Kanton',
+        ];
+        const rows = (): string[] => [...(zoneMenu()?.querySelectorAll('[data-blok-database-date-setting-option]') ?? [])]
+          .map((row) => row.getAttribute('data-blok-database-date-setting-option') ?? '');
+
+        beforeEach(() => {
+          const real = Intl.DateTimeFormat.prototype.resolvedOptions;
+
+          vi.spyOn(Intl, 'supportedValuesOf').mockReturnValue(ZONES);
+          vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+            return { ...real.call(this), timeZone: 'Europe/Berlin' };
+          });
+        });
+
+        it('"tok" lists exact matches first, then near ones, each in list order, as Notion did', () => {
+          openRows('2026-10-09T14:00');
+          setting('timeZone').click();
+          typeInto(search(), 'tok');
+
+          expect(rows()).toEqual([
+            'Antarctica/Vostok', 'Asia/Tokyo', 'Asia/Vladivostok',
+            'Africa/Khartoum', 'America/Atikokan', 'Asia/Tomsk', 'Australia/Broken_Hill', 'Europe/Stockholm', 'Pacific/Kanton',
+            'Africa/Nouakchott', 'America/Kentucky/Louisville',
+          ]);
+          expect(headings()).toEqual(['Select a timezone']);
+        });
+
+        it('a near match needs every letter of the search somewhere in the zone', () => {
+          openRows('2026-10-09T14:00');
+          setting('timeZone').click();
+          typeInto(search(), 'tok');
+
+          expect(rows()).not.toContain('America/Toronto');
+          expect(rows()).not.toContain('Africa/Freetown');
+        });
+
+        it('the current timezone stays in its own section with its check while it matches', () => {
+          openRows('2026-10-09T14:00');
+          setting('timeZone').click();
+          typeInto(search(), 'berln');
+
+          expect(headings()).toEqual(['Current timezone', 'Select a timezone']);
+          expect(selected()).toEqual(['local']);
+          expect(text(zoneRow('local')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Berlin');
+        });
+
+        // Short searches were not measured; near matches there would list almost every zone.
+        it('a search under three letters matches exactly', () => {
+          openRows('2026-10-09T14:00');
+          setting('timeZone').click();
+          typeInto(search(), 'tk');
+
+          expect(rows()).toEqual([]);
+        });
       });
 
       it('arrows move through the list while focus stays in the search, and Enter picks', () => {

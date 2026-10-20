@@ -1,6 +1,6 @@
 import type { I18n } from '../../../../types';
 import type { DateDisplayChange } from './date-format';
-import type { DatabaseMap, DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
+import type { DatabaseHelpLinks, DatabaseMap, DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
 /**
  * What every cell renderer and editor needs from its host: the table, a board
@@ -80,6 +80,8 @@ export interface CellContext {
   geocode?: DatabaseMap['geocode'];
   /** The host's "Current Location" (`config.map.currentLocation`). Without it the row is hidden. */
   currentLocation?: DatabaseMap['currentLocation'];
+  /** The host's help URLs (`config.helpLinks`). The date picker links to `reminders`. */
+  helpLinks?: DatabaseHelpLinks;
   /** Every editor `openCellEditor` opens joins this set while open, so the host can close them all at once. */
   openEditors?: Set<CellEditorHandle>;
 }

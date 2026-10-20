@@ -4459,6 +4459,25 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   opacity: 0.4;
 }
 
+/* research/26 §2: under Map CSV headers. */
+[data-blok-database-csv-help] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 32px;
+  margin-top: var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-calendar-nav-icon);
+  text-decoration: none;
+}
+
+[data-blok-database-csv-help] svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-database-csv-secondary] {
   justify-content: center;
   width: 100%;
@@ -5248,7 +5267,9 @@ textarea[data-blok-database-cell-input] {
     background-color: var(--blok-item-hover-bg);
   }
 
-  [data-blok-database-date-today]:hover {
+  [data-blok-database-date-today]:hover,
+  [data-blok-database-date-help]:hover,
+  [data-blok-database-csv-help]:hover {
     background-color: var(--blok-database-date-today-hover-bg);
   }
 }
@@ -5568,6 +5589,32 @@ textarea[data-blok-database-cell-input] {
   border-top: 1px solid var(--blok-database-drawer-border);
   border-radius: 0;
   padding-top: var(--blok-space-1);
+}
+
+/* research/23 §1: "Learn about reminders", the picker's last row. */
+[data-blok-database-date-help-footer] {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--blok-database-drawer-border);
+  padding-top: var(--blok-space-1);
+}
+
+[data-blok-database-date-help] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-height: 28px;
+  padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-text-primary);
+  text-decoration: none;
+}
+
+[data-blok-database-date-help] svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--blok-database-calendar-nav-icon);
 }
 
 /* Outranks the top-layer reset in main.css, which zeroes width and padding. */

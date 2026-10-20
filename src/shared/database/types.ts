@@ -504,6 +504,17 @@ export interface DatabaseCalendar {
   label?: string;
 }
 
+/**
+ * Host lever for help links. Each URL opens in a new tab. Without a URL its
+ * link does not show.
+ */
+export interface DatabaseHelpLinks {
+  /** "Learn about reminders": the date picker's last row, when it has Remind. */
+  reminders?: string;
+  /** "Learn about imports": under "Map CSV headers" in the CSV import dialog. */
+  imports?: string;
+}
+
 // ─── Computed properties (Phase 6) ───
 
 /** Relation stores row ids; formula and rollup are computed and never stored in `properties`. */
@@ -1558,4 +1569,6 @@ export interface DatabaseConfig {
   favorites?: DatabaseFavorites;
   /** "Manage in Calendar" in View settings and on the timeline toolbar. */
   calendar?: DatabaseCalendar;
+  /** "Learn about reminders" and "Learn about imports". */
+  helpLinks?: DatabaseHelpLinks;
 }

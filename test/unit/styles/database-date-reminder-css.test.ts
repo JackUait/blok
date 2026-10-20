@@ -52,4 +52,30 @@ describe('database date reminder css', () => {
     expect(rulesFor('[data-blok-database-date-remind-check]')).toContain('margin-inline-start: auto');
     expect(database).not.toMatch(/\[data-blok-database-date-(setting|remind)-option\]\[aria-(checked|selected)="true"\]/);
   });
+
+  // research/23 §1: a 36-tall footer under a line, holding a 28-tall link; 20px (?) icon in rgb(142, 139, 134).
+  it('"Learn about reminders" is a 28px row in a footer under a line, gray icon, measured hover', () => {
+    const footer = rulesFor('[data-blok-database-date-help-footer]');
+    const link = rulesFor('[data-blok-database-date-help]');
+
+    expect(footer).toContain('border-top: 1px solid var(--blok-database-drawer-border)');
+    expect(footer).toContain('padding-top: var(--blok-space-1)');
+    expect(link).toContain('min-height: 28px');
+    expect(link).toContain('color: var(--blok-text-primary)');
+    expect(link).toContain('text-decoration: none');
+    expect(rulesFor('[data-blok-database-date-help] svg')).toContain('color: var(--blok-database-calendar-nav-icon)');
+    expect(rulesFor('[data-blok-database-date-help]:hover')).toContain('background-color: var(--blok-database-date-today-hover-bg)');
+  });
+
+  // research/26 §2: 322x32, centred, 8px under Map CSV headers, 14px, rgb(142, 139, 134), gap 6px.
+  it('"Learn about imports" is a centred gray 32px link under the primary button', () => {
+    const link = rulesFor('[data-blok-database-csv-help]');
+
+    expect(link).toContain('justify-content: center');
+    expect(link).toContain('height: 32px');
+    expect(link).toContain('margin-top: var(--blok-space-2)');
+    expect(link).toContain('gap: var(--blok-space-1-5)');
+    expect(link).toContain('color: var(--blok-database-calendar-nav-icon)');
+    expect(link).toContain('text-decoration: none');
+  });
 });

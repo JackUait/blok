@@ -11,6 +11,7 @@ import {
   IconMoveRight,
   IconPlus,
 } from '../../components/icons';
+import { helpLink } from './database-help-link';
 import { csvColumns, parseCsv, type CsvColumn, type CsvColumnTarget } from './database-csv';
 import { propertyTypeMeta } from './database-property-types';
 import { openMenu } from './database-table-menus';
@@ -23,6 +24,8 @@ export interface CsvImportDialogOptions {
   onImport: (file: { name: string; text: string }, targets: CsvColumnTarget[]) => void;
   onClose?: () => void;
   directionSource?: Element | null;
+  /** "Learn about imports" under Map CSV headers (`config.helpLinks.imports`). Without it no link. */
+  helpUrl?: string;
 }
 
 /** "Add new property" in Notion's order (research/27 §2). */
@@ -219,6 +222,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
       slot,
       el('div', 'data-blok-database-csv-spacer'),
       map,
+      ...[helpLink(options.helpUrl, t('tools.database.csvImportsHelp'), 'data-blok-database-csv-help')].filter((link) => link !== null),
       input
     );
   }

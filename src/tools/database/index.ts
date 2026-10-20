@@ -5345,6 +5345,7 @@ export class DatabaseTool implements BlockTool {
       hasPeople: this.hasPeople,
       directionSource: this.element,
       onImport: then,
+      ...(this.config.helpLinks?.imports !== undefined ? { helpUrl: this.config.helpLinks.imports } : {}),
     });
   }
 
@@ -10166,6 +10167,7 @@ export class DatabaseTool implements BlockTool {
       relationCandidates: (property) => this.relationCandidates(property),
       openRelated: (property, rowId) => this.openRelated(property, rowId),
       ...this.mapCellContext(),
+      ...(this.config.helpLinks !== undefined ? { helpLinks: this.config.helpLinks } : {}),
       ...(this.people !== undefined ? { people: this.people } : {}),
       ...(typeof me === 'string' ? { me } : {}),
       ...(canUpload

@@ -54,6 +54,36 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
     vi.restoreAllMocks();
   });
 
+  describe('"Learn about imports" (research/26 §2)', () => {
+    const help = (): HTMLAnchorElement | null => document.querySelector<HTMLAnchorElement>('[data-blok-database-csv-help]');
+
+    it('sits right under Map CSV headers on the file step and opens the host URL in a new tab', () => {
+      openCsvImportDialog({ t, hasPeople: false, onImport, helpUrl: 'https://example.com/help/imports' });
+
+      expect(help()?.previousElementSibling).toBe(byTestId('database-csv-map'));
+      expect(help()?.getAttribute('href')).toBe('https://example.com/help/imports');
+      expect(help()?.target).toBe('_blank');
+      expect(help()?.rel).toBe('noopener noreferrer');
+      expect(help()?.textContent?.trim()).toBe('tools.database.csvImportsHelp');
+    });
+
+    it('shows nothing without the host URL', () => {
+      open();
+
+      expect(help()).toBeNull();
+    });
+
+    // The Setup step was not measured.
+    it('is not on the Setup step', async () => {
+      openCsvImportDialog({ t, hasPeople: false, onImport, helpUrl: 'https://example.com/help/imports' });
+      await choose(R27, 'blok-r27.csv');
+      byTestId('database-csv-map')?.click();
+
+      expect(byTestId('database-csv-import')).not.toBeNull();
+      expect(help()).toBeNull();
+    });
+  });
+
   it('opens on the file step: Map CSV headers is disabled until a file is chosen, the close button has focus', async () => {
     open();
 

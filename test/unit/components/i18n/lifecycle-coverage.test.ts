@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1404 + 126 + 487 + 4 closure for all 2021 keys', () => {
+  it('rebuilds a disjoint 1406 + 126 + 487 + 4 closure for all 2023 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2021);
+    expect(lifecycle.size).toBe(2023);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -419,7 +419,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +24: research/28's "/" Database entries: their toolNames.* labels, toolbox.preview.* hints and
       // tools.database.seed* names are called by literal.
       // +4: the template "Undo … database" rows and the "New task" / "New project" templates.
-      'executable-literal': 1404,
+      // +2: "Learn about reminders" and "Learn about imports" call their keys by literal.
+      'executable-literal': 1406,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

@@ -216,6 +216,7 @@ export {
   DatabaseBacklinks,
   DatabaseFavorites,
   DatabaseCalendar,
+  DatabaseHelpLinks,
   DatabaseAI,
   DatabaseAutofillRequest,
   DatabaseSetupRequest,

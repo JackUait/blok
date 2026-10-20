@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "จุดสิ้นสุดช่วง",
   "tools.database.groupRangeEvery": "จัดกลุ่มทุก",
   "tools.database.groupRangeBucket": "{start} ถึง {end}",
+  "tools.database.groupOutOfRange": "นอกช่วง",
   "tools.database.groupRangeExample": "{start} ถึง {middle}, {middle} ถึง {end}, ...",
   "tools.database.groupTextBy": "จัดกลุ่มข้อความตาม",
   "tools.database.groupTextExact": "ตรงทุกตัว",

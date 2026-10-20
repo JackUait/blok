@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Akhir rentang",
   "tools.database.groupRangeEvery": "Kelompokkan setiap",
   "tools.database.groupRangeBucket": "{start} sampai {end}",
+  "tools.database.groupOutOfRange": "Di luar rentang",
   "tools.database.groupRangeExample": "{start} sampai {middle}, {middle} sampai {end}, ...",
   "tools.database.groupTextBy": "Teks menurut",
   "tools.database.groupTextExact": "Persis",

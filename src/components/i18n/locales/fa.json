@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "پایان بازه",
   "tools.database.groupRangeEvery": "گروه‌بندی هر",
   "tools.database.groupRangeBucket": "{start} تا {end}",
+  "tools.database.groupOutOfRange": "خارج از بازه",
   "tools.database.groupRangeExample": "{start} تا {middle}، {middle} تا {end}، ...",
   "tools.database.groupTextBy": "متن بر اساس",
   "tools.database.groupTextExact": "دقیق",

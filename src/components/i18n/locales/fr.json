@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "Fin de la plage",
   "tools.database.groupRangeEvery": "Regrouper par tranche de",
   "tools.database.groupRangeBucket": "De {start} à {end}",
+  "tools.database.groupOutOfRange": "Hors de la plage",
   "tools.database.groupRangeExample": "De {start} à {middle}, de {middle} à {end}, ...",
   "tools.database.groupTextBy": "Texte par",
   "tools.database.groupTextExact": "Texte exact",

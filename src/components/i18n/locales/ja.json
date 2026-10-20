@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "範囲の終了",
   "tools.database.groupRangeEvery": "グループの間隔",
   "tools.database.groupRangeBucket": "{start}～{end}",
+  "tools.database.groupOutOfRange": "範囲外",
   "tools.database.groupRangeExample": "{start}～{middle}、{middle}～{end}、…",
   "tools.database.groupTextBy": "テキストの分け方",
   "tools.database.groupTextExact": "完全一致",

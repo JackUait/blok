@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "පරාසයේ අවසානය",
   "tools.database.groupRangeEvery": "සෑම සමූහයකටම",
   "tools.database.groupRangeBucket": "{start} සිට {end}",
+  "tools.database.groupOutOfRange": "පරාසයෙන් පිටත",
   "tools.database.groupRangeExample": "{start} සිට {middle}, {middle} සිට {end}, ...",
   "tools.database.groupTextBy": "පෙළ අනුව",
   "tools.database.groupTextExact": "නිශ්චිත",

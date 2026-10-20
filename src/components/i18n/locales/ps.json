@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "د وقفې پای",
   "tools.database.groupRangeEvery": "هر ګروپ",
   "tools.database.groupRangeBucket": "له {start} څخه تر {end}",
+  "tools.database.groupOutOfRange": "له وقفې بهر",
   "tools.database.groupRangeExample": "له {start} څخه تر {middle}، له {middle} څخه تر {end}، ...",
   "tools.database.groupTextBy": "متن پر بنسټ",
   "tools.database.groupTextExact": "دقیق",

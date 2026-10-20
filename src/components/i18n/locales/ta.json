@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "இடைவெளி முடிவு",
   "tools.database.groupRangeEvery": "ஒவ்வொரு குழுவிலும்",
   "tools.database.groupRangeBucket": "{start} முதல் {end}",
+  "tools.database.groupOutOfRange": "இடைவெளிக்கு வெளியே",
   "tools.database.groupRangeExample": "{start} முதல் {middle}, {middle} முதல் {end}, ...",
   "tools.database.groupTextBy": "உரையின்படி",
   "tools.database.groupTextExact": "சரியான பொருத்தம்",

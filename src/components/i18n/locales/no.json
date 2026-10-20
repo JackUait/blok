@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Intervallslutt",
   "tools.database.groupRangeEvery": "Grupper for hver",
   "tools.database.groupRangeBucket": "{start} til {end}",
+  "tools.database.groupOutOfRange": "Utenfor intervallet",
   "tools.database.groupRangeExample": "{start} til {middle}, {middle} til {end}, ...",
   "tools.database.groupTextBy": "Tekst etter",
   "tools.database.groupTextExact": "Nøyaktig",

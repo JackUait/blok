@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "סוף הטווח",
   "tools.database.groupRangeEvery": "קבץ כל",
   "tools.database.groupRangeBucket": "{start} עד {end}",
+  "tools.database.groupOutOfRange": "מחוץ לטווח",
   "tools.database.groupRangeExample": "{start} עד {middle}, {middle} עד {end}, ...",
   "tools.database.groupTextBy": "טקסט לפי",
   "tools.database.groupTextExact": "מדויק",

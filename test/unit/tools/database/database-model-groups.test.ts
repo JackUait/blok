@@ -59,7 +59,7 @@ describe('DatabaseModel — grouping by any type', () => {
   it('buckets numbers into ranges', () => {
     const v = view({ groupBy: 'num', groupSettings: { numberBy: 'range', rangeStart: 0, rangeEnd: 1000, rangeSize: 100 } });
 
-    expect(model().listGroups(v).map((g) => g.key)).toEqual([NO_VALUE_GROUP_KEY, 'range:below', 'range:0', 'range:above']);
+    expect(model().listGroups(v).map((g) => g.key)).toEqual([NO_VALUE_GROUP_KEY, 'range:0', 'range:out']);
   });
 
   it('lists every select option, empty ones too, with the no-value group last', () => {

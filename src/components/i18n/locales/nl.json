@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Einde van bereik",
   "tools.database.groupRangeEvery": "Groeperen per",
   "tools.database.groupRangeBucket": "{start} tot {end}",
+  "tools.database.groupOutOfRange": "Buiten bereik",
   "tools.database.groupRangeExample": "{start} tot {middle}, {middle} tot {end}, ...",
   "tools.database.groupTextBy": "Tekst per",
   "tools.database.groupTextExact": "Precies",

@@ -82,8 +82,24 @@ describe('group-keys', () => {
     it('groups numbers by value or by range', () => {
       expect(groupKeysFor(prop('number'), 35.5, {}, NOW)).toEqual(['35.5']);
       expect(groupKeysFor(prop('number'), 135, { numberBy: 'range' }, NOW)).toEqual(['range:100']);
-      expect(groupKeysFor(prop('number'), 135, { numberBy: 'range', rangeStart: 0, rangeEnd: 100, rangeSize: 10 }, NOW)).toEqual(['range:above']);
-      expect(groupKeysFor(prop('number'), -5, { numberBy: 'range' }, NOW)).toEqual(['range:below']);
+      expect(groupKeysFor(prop('number'), 135, { numberBy: 'range', rangeStart: 0, rangeEnd: 100, rangeSize: 10 }, NOW)).toEqual(['range:out']);
+    });
+
+    // research/23 §2d, Notion's defaults 0 to 1000 every 100.
+    it.each([
+      [-5, 'range:out'],
+      [0, 'range:0'],
+      [100, 'range:100'],
+      [999, 'range:900'],
+      [1000, 'range:1000'],
+      [1500, 'range:out'],
+    ])('puts %s in the %s range group', (value, key) => {
+      expect(groupKeysFor(prop('number'), value, { numberBy: 'range' }, NOW)).toEqual([key]);
+    });
+
+    it('lists the one "Out of range" group after the buckets', () => {
+      expect(orderGroupKeys(prop('number'), ['range:out', 'range:1000', NO_VALUE_GROUP_KEY, 'range:0'], { numberBy: 'range' }, NOW))
+        .toEqual([NO_VALUE_GROUP_KEY, 'range:0', 'range:1000', 'range:out']);
     });
 
     it('groups text by the whole value or its first letter', () => {

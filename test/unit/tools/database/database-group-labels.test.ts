@@ -21,6 +21,15 @@ describe('groupLabel', () => {
     expect(groupLabel(amount, 'range:900', i18n, { numberBy: 'range', rangeSize: 100 })).toBe('tools.database.groupRangeBucket:{"start":"900","end":"1000"}');
   });
 
+  // research/23 §2d: values below the start and past the last bucket share one group.
+  it('names the one group outside the range "Out of range"', () => {
+    expect(groupLabel(amount, 'range:out', i18n, { numberBy: 'range' })).toBe('tools.database.groupOutOfRange');
+  });
+
+  it('names the bucket at the range end "<end> to <end + size>"', () => {
+    expect(groupLabel(amount, 'range:1000', i18n, { numberBy: 'range' })).toBe('tools.database.groupRangeBucket:{"start":"1000","end":"1100"}');
+  });
+
   // A size below 1 is saved as typed, but the groups fall back to 100; the names must follow.
   it('names a bucket with the size the groups use when the saved size is invalid', () => {
     expect(groupLabel(amount, 'range:100', i18n, { numberBy: 'range', rangeSize: 0 })).toBe('tools.database.groupRangeBucket:{"start":"100","end":"200"}');

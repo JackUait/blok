@@ -1209,6 +1209,7 @@
   "tools.database.groupRangeEnd": "Intervalo pabaiga",
   "tools.database.groupRangeEvery": "Grupuoti kas",
   "tools.database.groupRangeBucket": "Nuo {start} iki {end}",
+  "tools.database.groupOutOfRange": "Už intervalo ribų",
   "tools.database.groupRangeExample": "Nuo {start} iki {middle}, nuo {middle} iki {end}, ...",
   "tools.database.groupTextBy": "Teksto grupavimas",
   "tools.database.groupTextExact": "Tikslus tekstas",

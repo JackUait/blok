@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "અંતરાલનો અંત",
   "tools.database.groupRangeEvery": "દરેક જૂથમાં",
   "tools.database.groupRangeBucket": "{start} થી {end}",
+  "tools.database.groupOutOfRange": "અંતરાલની બહાર",
   "tools.database.groupRangeExample": "{start} થી {middle}, {middle} થી {end}, ...",
   "tools.database.groupTextBy": "ટેક્સ્ટ મુજબ",
   "tools.database.groupTextExact": "ચોક્કસ",

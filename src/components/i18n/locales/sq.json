@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Fundi i intervalit",
   "tools.database.groupRangeEvery": "Grupo çdo",
   "tools.database.groupRangeBucket": "Nga {start} deri në {end}",
+  "tools.database.groupOutOfRange": "Jashtë intervalit",
   "tools.database.groupRangeExample": "Nga {start} deri në {middle}, nga {middle} deri në {end}, ...",
   "tools.database.groupTextBy": "Teksti sipas",
   "tools.database.groupTextExact": "I saktë",

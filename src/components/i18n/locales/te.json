@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "అంతరం ముగింపు",
   "tools.database.groupRangeEvery": "ప్రతి సమూహంలో",
   "tools.database.groupRangeBucket": "{start} నుండి {end}",
+  "tools.database.groupOutOfRange": "అంతరం వెలుపల",
   "tools.database.groupRangeExample": "{start} నుండి {middle}, {middle} నుండి {end}, ...",
   "tools.database.groupTextBy": "టెక్స్ట్ ప్రకారం",
   "tools.database.groupTextExact": "ఖచ్చితమైనది",

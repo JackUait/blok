@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Penghujung julat",
   "tools.database.groupRangeEvery": "Kumpulkan setiap",
   "tools.database.groupRangeBucket": "{start} hingga {end}",
+  "tools.database.groupOutOfRange": "Di luar julat",
   "tools.database.groupRangeExample": "{start} hingga {middle}, {middle} hingga {end}, ...",
   "tools.database.groupTextBy": "Teks mengikut",
   "tools.database.groupTextExact": "Tepat",

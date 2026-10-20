@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Vahemiku lõpp",
   "tools.database.groupRangeEvery": "Rühmita iga",
   "tools.database.groupRangeBucket": "{start} kuni {end}",
+  "tools.database.groupOutOfRange": "Vahemikust väljas",
   "tools.database.groupRangeExample": "{start} kuni {middle}, {middle} kuni {end}, ...",
   "tools.database.groupTextBy": "Teksti alusel",
   "tools.database.groupTextExact": "Täpne",

@@ -1211,6 +1211,7 @@
   "tools.database.groupRangeEnd": "نهاية النطاق",
   "tools.database.groupRangeEvery": "التجميع كل",
   "tools.database.groupRangeBucket": "من {start} إلى {end}",
+  "tools.database.groupOutOfRange": "خارج النطاق",
   "tools.database.groupRangeExample": "من {start} إلى {middle}، من {middle} إلى {end}، ...",
   "tools.database.groupTextBy": "النص حسب",
   "tools.database.groupTextExact": "مطابق",

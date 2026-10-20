@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Cuối khoảng",
   "tools.database.groupRangeEvery": "Nhóm mỗi",
   "tools.database.groupRangeBucket": "Từ {start} đến {end}",
+  "tools.database.groupOutOfRange": "Ngoài khoảng",
   "tools.database.groupRangeExample": "Từ {start} đến {middle}, từ {middle} đến {end}, ...",
   "tools.database.groupTextBy": "Nhóm văn bản theo",
   "tools.database.groupTextExact": "Chính xác",

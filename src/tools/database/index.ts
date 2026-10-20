@@ -3773,7 +3773,7 @@ export class DatabaseTool implements BlockTool {
       : { ...view, groupBy: propertyId };
     const optionGroup = this.isOptionGroup(propertyId);
     const options = series ? this.groupOptions(propertyId, grouped) : this.shownGroupOptions(propertyId, grouped);
-    // Date and number keys do not collate in value order ("range:below", "rel:today"): rank them the way the model sorts them.
+    // Date and number keys do not collate in value order ("range:out", "rel:today"): rank them the way the model sorts them.
     const rank = optionGroup
       ? undefined
       : new Map(this.groupOptions(propertyId, { ...grouped, groupSettings: { ...grouped.groupSettings, sort: 'ascending', hideEmptyGroups: false } })

@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Край на интервала",
   "tools.database.groupRangeEvery": "Групирай през",
   "tools.database.groupRangeBucket": "От {start} до {end}",
+  "tools.database.groupOutOfRange": "Извън интервала",
   "tools.database.groupRangeExample": "От {start} до {middle}, от {middle} до {end}, ...",
   "tools.database.groupTextBy": "Групиране на текста",
   "tools.database.groupTextExact": "Точно съвпадение",

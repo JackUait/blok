@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Aralığın sonu",
   "tools.database.groupRangeEvery": "Hər addım",
   "tools.database.groupRangeBucket": "{start}-dən {end}-ə",
+  "tools.database.groupOutOfRange": "Aralıqdan kənar",
   "tools.database.groupRangeExample": "{start}-dən {middle}-ə, {middle}-dən {end}-ə, ...",
   "tools.database.groupTextBy": "Mətn meyarı",
   "tools.database.groupTextExact": "Dəqiq",

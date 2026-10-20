@@ -201,8 +201,9 @@ describe('board column calculation', () => {
   });
 
   describe('groupCalculationHint', () => {
-    it('reads "Count all" by default', () => {
-      expect(groupCalculationHint({ fn: 'count', capCounts: true }, SCHEMA, i18n)).toBe('tools.database.calcCountAll');
+    // research/23 §2a: Notion's Count all number has no hover hint.
+    it('gives Count all no hint', () => {
+      expect(groupCalculationHint({ fn: 'count', capCounts: true }, SCHEMA, i18n)).toBeUndefined();
     });
 
     it('reads "<calculation> in <property>" for a property calculation', () => {

@@ -29,7 +29,7 @@ interface DatabaseBoardViewOptions {
   hideCounts?: boolean;
   /** The board calculation beside a group's name; without it, the card count. Read live: a card add or removal asks again. */
   aggregate?: (optionId: string) => string;
-  /** The count's hover hint. Default "Count all". */
+  /** The count's hover hint. None for Count all, as in Notion. */
   aggregateHint?: string;
   /** How many groups the view hides; above zero, a button after the columns shows them again. */
   hiddenGroupCount?: number;
@@ -519,7 +519,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     countEl.setAttribute('data-blok-testid', 'database-column-count');
     countEl.setAttribute('data-option-id', option.id);
     countEl.textContent = this.aggregate?.(option.id) ?? String(count);
-    onHover(countEl, this.aggregateHint ?? this.i18n.t('tools.database.calcCountAll'));
+    if (this.aggregateHint !== undefined) {
+      onHover(countEl, this.aggregateHint);
+    }
 
     countEl.hidden = this.hideCounts;
     header.appendChild(countEl);

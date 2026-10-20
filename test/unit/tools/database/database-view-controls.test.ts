@@ -77,6 +77,15 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
   });
 
+  // research/23 §2e: the column header's Group follows the same rule as the settings picker.
+  it('turns Hide empty groups on when a column header groups by a number', () => {
+    const { controls, host } = setup();
+
+    controls.groupBy('num', document.body.appendChild(document.createElement('button')));
+
+    expect(host.updateView).toHaveBeenCalledWith({ groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
+  });
+
   it('never offers a button property in "+ Filter"', () => {
     setup();
     click('database-toolbar-filter');

@@ -1,7 +1,7 @@
 import { parseDateValue } from './cells/date-value';
 import { toLocalDay } from './relative-dates';
 import { personIdsOf } from './property-values';
-import type { GroupSettings, GroupSort, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import type { DatabaseViewConfig, GroupSettings, GroupSort, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 
 /**
  * Group key for rows with no value. Not '' because card drag reads a missing
@@ -30,6 +30,23 @@ export const defaultGroupSort = (type: PropertyType): GroupSort =>
 
 /** Notion's Range defaults: 0 to 1000, every 100 (research/22 §7). */
 export const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
+
+/**
+ * The write when people pick what a view groups by. A switch to another
+ * property starts from that type's defaults (research/23 §2e): a number hides
+ * empty groups, a select does not. Re-picking the same property keeps them.
+ */
+export const groupByChange = (
+  view: DatabaseViewConfig | undefined,
+  property: PropertyDefinition
+): Pick<DatabaseViewConfig, 'groupBy' | 'groupSettings'> => {
+  if (property.id === view?.groupBy) return { groupBy: property.id };
+
+  return { groupBy: property.id, groupSettings: property.type === 'number' ? { hideEmptyGroups: true } : {} };
+};
+
+/** Values below the range start or past its end. */
+export const OUT_OF_RANGE_KEY = 'range:out';
 
 export const rangeOf = (settings: GroupSettings): { start: number; end: number; size: number } => {
   const size = typeof settings.rangeSize === 'number' && settings.rangeSize >= 1 ? settings.rangeSize : DEFAULT_RANGE.size;
@@ -102,8 +119,8 @@ const numberKey = (n: number, settings: GroupSettings): string => {
   if (settings.numberBy !== 'range') return String(n);
   const { start, end, size } = rangeOf(settings);
 
-  if (n < start) return 'range:below';
-  if (n >= end) return 'range:above';
+  // research/23 §2d: the end value still gets its own bucket; below and above share one group.
+  if (n < start || n > end) return OUT_OF_RANGE_KEY;
 
   return `range:${start + Math.floor((n - start) / size) * size}`;
 };
@@ -199,8 +216,7 @@ const dateRank = (key: string, now: Date): string => {
 };
 
 const numberRank = (key: string): number => {
-  if (key === 'range:below') return -Infinity;
-  if (key === 'range:above') return Infinity;
+  if (key === OUT_OF_RANGE_KEY) return Infinity;
 
   return Number(key.startsWith('range:') ? key.slice(6) : key);
 };

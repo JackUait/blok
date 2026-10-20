@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ინტერვალის დასასრული",
   "tools.database.groupRangeEvery": "დაჯგუფება ყოველ",
   "tools.database.groupRangeBucket": "{start}-დან {end}-მდე",
+  "tools.database.groupOutOfRange": "ინტერვალის გარეთ",
   "tools.database.groupRangeExample": "{start}-დან {middle}-მდე, {middle}-დან {end}-მდე, ...",
   "tools.database.groupTextBy": "ტექსტის დაჯგუფება",
   "tools.database.groupTextExact": "ზუსტი",

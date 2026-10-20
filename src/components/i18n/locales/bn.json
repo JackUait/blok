@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ব্যবধানের শেষ",
   "tools.database.groupRangeEvery": "প্রতি গোষ্ঠীতে",
   "tools.database.groupRangeBucket": "{start} থেকে {end}",
+  "tools.database.groupOutOfRange": "ব্যবধানের বাইরে",
   "tools.database.groupRangeExample": "{start} থেকে {middle}, {middle} থেকে {end}, ...",
   "tools.database.groupTextBy": "টেক্সটের ভিত্তি",
   "tools.database.groupTextExact": "হুবহু",

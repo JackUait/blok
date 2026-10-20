@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "کۆتایی مەودا",
   "tools.database.groupRangeEvery": "گرووپکردن هەر",
   "tools.database.groupRangeBucket": "لە {start} بۆ {end}",
+  "tools.database.groupOutOfRange": "دەرەوەی مەودا",
   "tools.database.groupRangeExample": "لە {start} بۆ {middle}، لە {middle} بۆ {end}، ...",
   "tools.database.groupTextBy": "دەق بەپێی",
   "tools.database.groupTextExact": "ورد",

@@ -89,10 +89,40 @@ test.beforeEach(async ({ page }) => {
   await expect(count(page, 'o-todo')).toHaveText('3');
 });
 
-test('the count hints "Count all" on a delayed hover', async ({ page }) => {
-  await count(page, 'o-todo').hover();
+// Longer than the 500ms hint delay.
+const outwaitHintDelay = (page: Page): Promise<void> => page.evaluate(() => new Promise<void>((resolve) => {
+  setTimeout(resolve, 900);
+}));
 
-  await expect(page.getByRole('tooltip')).toHaveText('Count all');
+// research/23 §2a: Notion's Count all number shows no tooltip.
+test('the Count all number shows no hint on hover', async ({ page }) => {
+  await count(page, 'o-todo').hover();
+  await outwaitHintDelay(page);
+
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+});
+
+// research/23 §2a: "99+" sits in a 38x20 button; with the switch off the full count shows.
+test('a count above 99 reads 99+ until "Show large counts as 99+" is turned off', async ({ page }) => {
+  const many = Array.from({ length: 136 }, (_, i) => ({ id: `m${i}`, properties: { 'p-name': `Row ${i}`, 'p-stage': 'o-todo' } }));
+
+  await mount(page, [
+    { ...blocks()[0], content: many.map((r) => r.id) },
+    ...many.map((r, i) => ({ id: r.id, type: 'database-row', parent: 'db-1', data: { position: `a${String(i).padStart(3, '0')}`, properties: r.properties } })),
+  ]);
+
+  await expect(count(page, 'o-todo')).toHaveText('99+');
+  const box = await count(page, 'o-todo').boundingBox();
+
+  // Notion's 38 holds 6px padding a side; the glyphs differ by a fraction of a pixel with the font.
+  expect(Math.abs((box?.width ?? 0) - 38)).toBeLessThan(1);
+  expect(box?.height).toBe(20);
+
+  await count(page, 'o-todo').click();
+  await menuItem(page, 'Count').click();
+  await page.getByRole('menuitemcheckbox', { name: /^Show large counts as 99\+/ }).click();
+
+  await expect(count(page, 'o-todo')).toHaveText('136');
 });
 
 test('Sum › Points shows the column sums on every column and keeps them after a reload', async ({ page }) => {
@@ -150,8 +180,6 @@ test('Hide aggregation hides every count; Show aggregation brings Count all back
   await menuItem(page, 'Show aggregation').click();
 
   await expect(count(page, 'o-todo')).toHaveText('3');
-  await count(page, 'o-todo').hover();
-  await expect(page.getByRole('tooltip')).toHaveText('Count all');
 });
 
 test('Escape closes one menu layer at a time', async ({ page }) => {

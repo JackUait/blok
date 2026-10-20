@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ئارىلىق ئاخىرى",
   "tools.database.groupRangeEvery": "ھەر گۇرۇپپىدا",
   "tools.database.groupRangeBucket": "{start} دىن {end} غىچە",
+  "tools.database.groupOutOfRange": "ئارىلىق سىرتىدا",
   "tools.database.groupRangeExample": "{start} دىن {middle} غىچە، {middle} دىن {end} غىچە، ...",
   "tools.database.groupTextBy": "تېكىست ئاساسى",
   "tools.database.groupTextExact": "ئېنىق",

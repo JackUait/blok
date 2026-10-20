@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { NO_VALUE_GROUP_KEY, rangeOf } from './group-keys';
+import { NO_VALUE_GROUP_KEY, OUT_OF_RANGE_KEY, rangeOf } from './group-keys';
 import type { GroupSettings, PropertyDefinition } from './types';
 
 const RELATIVE_KEYS: Record<string, string> = {
@@ -37,11 +37,9 @@ export const groupLabel = (
     case 'year': return rest;
     case 'alpha': return rest;
     case 'range': {
+      if (key === OUT_OF_RANGE_KEY) return i18n.t('tools.database.groupOutOfRange');
       // rangeOf, as the group keys use, so an invalid saved value names the groups they really are.
-      const { start, end, size } = rangeOf(settings);
-
-      if (rest === 'below') return `< ${start}`;
-      if (rest === 'above') return `≥ ${end}`;
+      const { size } = rangeOf(settings);
 
       return i18n.t('tools.database.groupRangeBucket', { start: rest, end: String(Number(rest) + size) });
     }

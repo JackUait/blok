@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Dulo ng saklaw",
   "tools.database.groupRangeEvery": "Pangkatin bawat",
   "tools.database.groupRangeBucket": "{start} hanggang {end}",
+  "tools.database.groupOutOfRange": "Labas sa saklaw",
   "tools.database.groupRangeExample": "{start} hanggang {middle}, {middle} hanggang {end}, ...",
   "tools.database.groupTextBy": "Teksto ayon sa",
   "tools.database.groupTextExact": "Eksakto",

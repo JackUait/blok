@@ -1209,6 +1209,7 @@
   "tools.database.groupRangeEnd": "Konec razpona",
   "tools.database.groupRangeEvery": "Združi na vsakih",
   "tools.database.groupRangeBucket": "Od {start} do {end}",
+  "tools.database.groupOutOfRange": "Zunaj razpona",
   "tools.database.groupRangeExample": "Od {start} do {middle}, od {middle} do {end}, ...",
   "tools.database.groupTextBy": "Združevanje besedila",
   "tools.database.groupTextExact": "Natančno",

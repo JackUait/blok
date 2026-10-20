@@ -1209,6 +1209,7 @@
   "tools.database.groupRangeEnd": "Кінець інтервалу",
   "tools.database.groupRangeEvery": "Крок групи",
   "tools.database.groupRangeBucket": "Від {start} до {end}",
+  "tools.database.groupOutOfRange": "Поза інтервалом",
   "tools.database.groupRangeExample": "Від {start} до {middle}, від {middle} до {end}, ...",
   "tools.database.groupTextBy": "Групування тексту",
   "tools.database.groupTextExact": "Точний збіг",

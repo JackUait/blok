@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ចំណុចបញ្ចប់ចន្លោះ",
   "tools.database.groupRangeEvery": "ដាក់ជាក្រុមរៀងរាល់",
   "tools.database.groupRangeBucket": "ពី {start} ដល់ {end}",
+  "tools.database.groupOutOfRange": "ក្រៅចន្លោះ",
   "tools.database.groupRangeExample": "ពី {start} ដល់ {middle}, ពី {middle} ដល់ {end}, ...",
   "tools.database.groupTextBy": "ដាក់អត្ថបទជាក្រុមតាម",
   "tools.database.groupTextExact": "ដូចបេះបិទ",

@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "Крај опсега",
   "tools.database.groupRangeEvery": "Групиши на сваких",
   "tools.database.groupRangeBucket": "Од {start} до {end}",
+  "tools.database.groupOutOfRange": "Ван опсега",
   "tools.database.groupRangeExample": "Од {start} до {middle}, од {middle} до {end}, ...",
   "tools.database.groupTextBy": "Груписање текста",
   "tools.database.groupTextExact": "Тачно",

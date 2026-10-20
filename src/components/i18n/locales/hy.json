@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Միջակայքի վերջ",
   "tools.database.groupRangeEvery": "Խմբավորել ամեն",
   "tools.database.groupRangeBucket": "{start}-ից {end}",
+  "tools.database.groupOutOfRange": "Միջակայքից դուրս",
   "tools.database.groupRangeExample": "{start}-ից {middle}, {middle}-ից {end}, ...",
   "tools.database.groupTextBy": "Տեքստն ըստ",
   "tools.database.groupTextExact": "Ճշգրիտ",

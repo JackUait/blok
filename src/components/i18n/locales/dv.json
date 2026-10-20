@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ރޭންޖް ނިމޭ ތަން",
   "tools.database.groupRangeEvery": "ކޮންމެ",
   "tools.database.groupRangeBucket": "{start} އިން {end} އަށް",
+  "tools.database.groupOutOfRange": "ރޭންޖުން ބޭރު",
   "tools.database.groupRangeExample": "{start} އިން {middle} އަށް, {middle} އިން {end} އަށް, ...",
   "tools.database.groupTextBy": "ޓެކްސްޓް ގްރޫޕްކުރާނީ",
   "tools.database.groupTextExact": "ސީދާ",

@@ -37,7 +37,7 @@ import {
   updateFilterRule,
   withEntryIds,
 } from './filter-tree';
-import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort, rangeOf } from './group-keys';
+import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort, groupByChange, rangeOf } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
@@ -1475,7 +1475,8 @@ export class ViewSettingsPages {
             opensPage: true,
             disabled,
             onClick: () => panel.push(this.pickProperty(this.t('groupBy'), GROUPABLE_TYPES, (picked) => {
-              this.ctx.updateView(sub ? { subGroupBy: picked.id } : { groupBy: picked.id });
+              // Sub-grouping by a number is unmeasured: it keeps its settings.
+              this.ctx.updateView(sub ? { subGroupBy: picked.id } : groupByChange(this.ctx.view(), picked));
               panel.back();
             })),
           }),

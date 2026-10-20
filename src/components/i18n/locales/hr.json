@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "Kraj raspona",
   "tools.database.groupRangeEvery": "Grupiraj svakih",
   "tools.database.groupRangeBucket": "Od {start} do {end}",
+  "tools.database.groupOutOfRange": "Izvan raspona",
   "tools.database.groupRangeExample": "Od {start} do {middle}, od {middle} do {end}, ...",
   "tools.database.groupTextBy": "Grupiranje teksta",
   "tools.database.groupTextExact": "Točno",

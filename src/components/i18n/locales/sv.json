@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Intervallslut",
   "tools.database.groupRangeEvery": "Gruppera var",
   "tools.database.groupRangeBucket": "{start} till {end}",
+  "tools.database.groupOutOfRange": "Utanför intervallet",
   "tools.database.groupRangeExample": "{start} till {middle}, {middle} till {end}, ...",
   "tools.database.groupTextBy": "Text efter",
   "tools.database.groupTextExact": "Exakt",

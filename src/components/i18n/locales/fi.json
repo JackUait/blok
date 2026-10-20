@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Välin loppu",
   "tools.database.groupRangeEvery": "Ryhmittele välein",
   "tools.database.groupRangeBucket": "{start}–{end}",
+  "tools.database.groupOutOfRange": "Välin ulkopuolella",
   "tools.database.groupRangeExample": "{start}–{middle}, {middle}–{end}, ...",
   "tools.database.groupTextBy": "Tekstin mukaan",
   "tools.database.groupTextExact": "Tarkka",

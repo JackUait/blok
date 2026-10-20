@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Aralık sonu",
   "tools.database.groupRangeEvery": "Gruplama adımı",
   "tools.database.groupRangeBucket": "{start} - {end} arası",
+  "tools.database.groupOutOfRange": "Aralık dışı",
   "tools.database.groupRangeExample": "{start} - {middle} arası, {middle} - {end} arası, ...",
   "tools.database.groupTextBy": "Metin ölçütü",
   "tools.database.groupTextExact": "Tam",

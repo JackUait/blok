@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "구간 끝",
   "tools.database.groupRangeEvery": "그룹 간격",
   "tools.database.groupRangeBucket": "{start}~{end}",
+  "tools.database.groupOutOfRange": "구간 밖",
   "tools.database.groupRangeExample": "{start}~{middle}, {middle}~{end}, ...",
   "tools.database.groupTextBy": "텍스트 그룹화 방식",
   "tools.database.groupTextExact": "정확히 일치",

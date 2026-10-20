@@ -940,6 +940,7 @@ export type BlokMessageKey =
   | 'tools.database.groupNumberBy'
   | 'tools.database.groupNumberRange'
   | 'tools.database.groupNumberUnique'
+  | 'tools.database.groupOutOfRange'
   | 'tools.database.groupRange'
   | 'tools.database.groupRangeBucket'
   | 'tools.database.groupRangeEnd'

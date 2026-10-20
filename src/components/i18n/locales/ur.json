@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "وقفے کا اختتام",
   "tools.database.groupRangeEvery": "ہر گروپ میں",
   "tools.database.groupRangeBucket": "{start} سے {end}",
+  "tools.database.groupOutOfRange": "وقفے سے باہر",
   "tools.database.groupRangeExample": "{start} سے {middle}، {middle} سے {end}، ...",
   "tools.database.groupTextBy": "متن بلحاظ",
   "tools.database.groupTextExact": "ہوبہو",

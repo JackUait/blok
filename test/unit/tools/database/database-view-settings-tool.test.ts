@@ -249,6 +249,41 @@ describe('DatabaseTool — view settings', () => {
       .toEqual(['r1']);
   });
 
+  // research/23 §2e, through the real view write: the old settings must not survive the switch.
+  it('saves fresh group settings with Hide empty groups on when the grouping switches to a number', () => {
+    const { tool, root } = mount({ type: 'board', groupBy: 'p-stage', groupSettings: { sort: 'manual', colorColumns: true } });
+
+    click('database-toolbar-settings');
+    click('database-settings-group');
+    click('database-group-by');
+    click('database-pick-property-p-num');
+
+    expect(tool.save(root).views[0].groupBy).toBe('p-num');
+    expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
+  });
+
+  // research/23 §2e: a select starts with Hide empty groups off.
+  it('resets the group settings when the grouping switches from a number to a select', () => {
+    const { tool, root } = mount({ type: 'board', groupBy: 'p-num', groupSettings: { hideEmptyGroups: true, numberBy: 'range' } });
+
+    click('database-toolbar-settings');
+    click('database-settings-group');
+    click('database-group-by');
+    click('database-pick-property-p-stage');
+
+    expect(tool.save(root).views[0].groupBy).toBe('p-stage');
+    expect(tool.save(root).views[0].groupSettings).toEqual({});
+  });
+
+  it('does the same from a column header\'s Group', () => {
+    const { tool, root } = mount({ groupSettings: { sort: 'manual' } });
+
+    headerAction(root, 'p-num', 'tools.database.tableGroup');
+
+    expect(tool.save(root).views[0].groupBy).toBe('p-num');
+    expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
+  });
+
   it('switches the layout from the settings panel', () => {
     const { tool, root } = mount();
 

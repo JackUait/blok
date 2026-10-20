@@ -1209,6 +1209,7 @@
   "tools.database.groupRangeEnd": "Konec intervalu",
   "tools.database.groupRangeEvery": "Seskupit po",
   "tools.database.groupRangeBucket": "Od {start} do {end}",
+  "tools.database.groupOutOfRange": "Mimo interval",
   "tools.database.groupRangeExample": "Od {start} do {middle}, od {middle} do {end}, ...",
   "tools.database.groupTextBy": "Text podle",
   "tools.database.groupTextExact": "Přesně",

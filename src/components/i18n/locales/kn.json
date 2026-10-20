@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ಅಂತರದ ಅಂತ್ಯ",
   "tools.database.groupRangeEvery": "ಪ್ರತಿ ಗುಂಪಿಗೆ",
   "tools.database.groupRangeBucket": "{start} ರಿಂದ {end}",
+  "tools.database.groupOutOfRange": "ಅಂತರದ ಹೊರಗೆ",
   "tools.database.groupRangeExample": "{start} ರಿಂದ {middle}, {middle} ರಿಂದ {end}, ...",
   "tools.database.groupTextBy": "ಪಠ್ಯದ ಪ್ರಕಾರ",
   "tools.database.groupTextExact": "ನಿಖರ",

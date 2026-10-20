@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ഇടവേളയുടെ അവസാനം",
   "tools.database.groupRangeEvery": "ഓരോ ഗ്രൂപ്പിലും",
   "tools.database.groupRangeBucket": "{start} മുതൽ {end} വരെ",
+  "tools.database.groupOutOfRange": "ഇടവേളയ്ക്ക് പുറത്ത്",
   "tools.database.groupRangeExample": "{start} മുതൽ {middle} വരെ, {middle} മുതൽ {end} വരെ, ...",
   "tools.database.groupTextBy": "ടെക്സ്റ്റ് അനുസരിച്ച്",
   "tools.database.groupTextExact": "കൃത്യം",

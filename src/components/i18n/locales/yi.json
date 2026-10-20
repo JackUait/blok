@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "אינטערוואַל־סוף",
   "tools.database.groupRangeEvery": "גרופּירן יעדע",
   "tools.database.groupRangeBucket": "פֿון {start} ביז {end}",
+  "tools.database.groupOutOfRange": "אַרויס פֿון אינטערוואַל",
   "tools.database.groupRangeExample": "פֿון {start} ביז {middle}, פֿון {middle} ביז {end}, ...",
   "tools.database.groupTextBy": "טעקסט לויט",
   "tools.database.groupTextExact": "פּינקטלעך",

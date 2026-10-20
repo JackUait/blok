@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "Intervāla beigas",
   "tools.database.groupRangeEvery": "Grupēt ik pa",
   "tools.database.groupRangeBucket": "No {start} līdz {end}",
+  "tools.database.groupOutOfRange": "Ārpus intervāla",
   "tools.database.groupRangeExample": "No {start} līdz {middle}, no {middle} līdz {end}, ...",
   "tools.database.groupTextBy": "Teksta grupēšana",
   "tools.database.groupTextExact": "Precīzi",

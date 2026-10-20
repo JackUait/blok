@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Range end",
   "tools.database.groupRangeEvery": "Group every",
   "tools.database.groupRangeBucket": "{start} to {end}",
+  "tools.database.groupOutOfRange": "Out of range",
   "tools.database.groupRangeExample": "{start} to {middle}, {middle} to {end}, ...",
   "tools.database.groupTextBy": "Text by",
   "tools.database.groupTextExact": "Exact",

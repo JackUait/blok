@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Τέλος διαστήματος",
   "tools.database.groupRangeEvery": "Ομαδοποίηση ανά",
   "tools.database.groupRangeBucket": "{start} έως {end}",
+  "tools.database.groupOutOfRange": "Εκτός διαστήματος",
   "tools.database.groupRangeExample": "{start} έως {middle}, {middle} έως {end}, ...",
   "tools.database.groupTextBy": "Κείμενο κατά",
   "tools.database.groupTextExact": "Ακριβές",

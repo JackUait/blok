@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "区间终点",
   "tools.database.groupRangeEvery": "分组间隔",
   "tools.database.groupRangeBucket": "{start} 至 {end}",
+  "tools.database.groupOutOfRange": "区间外",
   "tools.database.groupRangeExample": "{start} 至 {middle}、{middle} 至 {end}、…",
   "tools.database.groupTextBy": "文本分组方式",
   "tools.database.groupTextExact": "精确",

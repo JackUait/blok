@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "የክልል መጨረሻ",
   "tools.database.groupRangeEvery": "በየ",
   "tools.database.groupRangeBucket": "ከ{start} እስከ {end}",
+  "tools.database.groupOutOfRange": "ከክልል ውጭ",
   "tools.database.groupRangeExample": "ከ{start} እስከ {middle}, ከ{middle} እስከ {end}, ...",
   "tools.database.groupTextBy": "ጽሑፍን በ",
   "tools.database.groupTextExact": "ትክክለኛ",

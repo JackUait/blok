@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "ຈຸດສິ້ນສຸດຊ່ວງ",
   "tools.database.groupRangeEvery": "ຈັດກຸ່ມທຸກໆ",
   "tools.database.groupRangeBucket": "ຈາກ {start} ຫາ {end}",
+  "tools.database.groupOutOfRange": "ນອກຊ່ວງ",
   "tools.database.groupRangeExample": "ຈາກ {start} ຫາ {middle}, ຈາກ {middle} ຫາ {end}, ...",
   "tools.database.groupTextBy": "ຈັດກຸ່ມຂໍ້ຄວາມຕາມ",
   "tools.database.groupTextExact": "ກົງກັນທຸກຕົວ",

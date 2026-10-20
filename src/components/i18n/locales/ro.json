@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "Sfârșitul intervalului",
   "tools.database.groupRangeEvery": "Grupează din",
   "tools.database.groupRangeBucket": "De la {start} la {end}",
+  "tools.database.groupOutOfRange": "În afara intervalului",
   "tools.database.groupRangeExample": "De la {start} la {middle}, de la {middle} la {end}, ...",
   "tools.database.groupTextBy": "Text după",
   "tools.database.groupTextExact": "Text exact",

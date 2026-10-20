@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Intervallum vége",
   "tools.database.groupRangeEvery": "Csoportosítás lépésköze",
   "tools.database.groupRangeBucket": "{start}–{end}",
+  "tools.database.groupOutOfRange": "Intervallumon kívül",
   "tools.database.groupRangeExample": "{start}–{middle}, {middle}–{end}, ...",
   "tools.database.groupTextBy": "Szöveg szerint",
   "tools.database.groupTextExact": "Pontos",

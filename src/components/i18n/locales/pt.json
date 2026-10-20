@@ -1208,6 +1208,7 @@
   "tools.database.groupRangeEnd": "Fim do intervalo",
   "tools.database.groupRangeEvery": "Agrupar a cada",
   "tools.database.groupRangeBucket": "De {start} a {end}",
+  "tools.database.groupOutOfRange": "Fora do intervalo",
   "tools.database.groupRangeExample": "De {start} a {middle}, de {middle} a {end}, ...",
   "tools.database.groupTextBy": "Texto por",
   "tools.database.groupTextExact": "Exato",

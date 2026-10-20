@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "अंतराल का अंत",
   "tools.database.groupRangeEvery": "हर समूह में",
   "tools.database.groupRangeBucket": "{start} से {end}",
+  "tools.database.groupOutOfRange": "अंतराल से बाहर",
   "tools.database.groupRangeExample": "{start} से {middle}, {middle} से {end}, ...",
   "tools.database.groupTextBy": "पाठ के अनुसार",
   "tools.database.groupTextExact": "सटीक",

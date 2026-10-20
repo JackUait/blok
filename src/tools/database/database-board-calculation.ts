@@ -127,10 +127,11 @@ export const groupCalculationText = (
   return text === '' && NUMBER_FNS.includes(current.fn) ? '0' : text;
 };
 
-/** "Count all", or "<calculation> in <property>". */
-export const groupCalculationHint = (current: ResolvedGroupCalculation, schema: PropertyDefinition[], i18n: T): string => {
-  const label = i18n.t(CALCULATION_LABEL_KEYS[current.fn]);
+/** "<calculation> in <property>". Count all has none: Notion's count shows no hint (research/23 §2a). */
+export const groupCalculationHint = (current: ResolvedGroupCalculation, schema: PropertyDefinition[], i18n: T): string | undefined => {
   const property = schema.find((p) => p.id === current.propertyId);
 
-  return property === undefined ? label : i18n.t('tools.database.groupCalculationHint', { calculation: label, property: property.name });
+  if (property === undefined) return undefined;
+
+  return i18n.t('tools.database.groupCalculationHint', { calculation: i18n.t(CALCULATION_LABEL_KEYS[current.fn]), property: property.name });
 };

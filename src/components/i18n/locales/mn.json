@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "Завсрын төгсгөл",
   "tools.database.groupRangeEvery": "Бүлэглэх алхам",
   "tools.database.groupRangeBucket": "{start}-аас {end}",
+  "tools.database.groupOutOfRange": "Завсраас гадуур",
   "tools.database.groupRangeExample": "{start}-аас {middle}, {middle}-аас {end}, ...",
   "tools.database.groupTextBy": "Текстийг бүлэглэх арга",
   "tools.database.groupTextExact": "Яг таарах",

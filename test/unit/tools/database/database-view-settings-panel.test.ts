@@ -566,6 +566,76 @@ describe('view settings panel', () => {
     expect(helper()).toBe('0 to 50, 50 to 100, ...');
   });
 
+  // research/23 §2e: grouping by a number turns Hide empty groups on, sorts ascending, and drops Color columns.
+  describe('switching the grouping to a number', () => {
+    const hideEmpty = (): string | null | undefined =>
+      document.querySelector('[data-blok-testid="database-group-hide-empty"]')?.getAttribute('aria-checked');
+
+    it('leaves Hide empty groups off and Color columns on for a select', () => {
+      harness({ type: 'board', groupBy: 'stage' }).open('group');
+
+      expect(hideEmpty()).toBe('false');
+      expect(exists('database-group-color-columns')).toBe(true);
+    });
+
+    it('turns Hide empty groups on and sorts ascending in the same write', () => {
+      const h = harness({ type: 'board', groupBy: 'stage', groupSettings: { sort: 'manual', colorColumns: true } });
+
+      h.open('group');
+      click('database-group-by');
+      click('database-pick-property-num');
+
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
+      expect(hideEmpty()).toBe('true');
+      expect(document.querySelector('[data-blok-testid="database-group-sort"] [data-blok-database-panel-value]')?.textContent)
+        .toBe('tools.database.groupSortAscending');
+      expect(document.querySelector('[data-blok-testid="database-group-number-by"] [data-blok-database-panel-value]')?.textContent)
+        .toBe('tools.database.groupNumberUnique');
+      expect(exists('database-group-color-columns')).toBe(false);
+    });
+
+    it('resets the settings when a number grouping switches to a select', () => {
+      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
+
+      h.open('group');
+      click('database-group-by');
+      click('database-pick-property-stage');
+
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'stage', groupSettings: {} });
+      expect(hideEmpty()).toBe('false');
+    });
+
+    it('keeps the settings when the same number property is picked again', () => {
+      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range' } });
+
+      h.open('group');
+      click('database-group-by');
+      click('database-pick-property-num');
+
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'num' });
+    });
+
+    it('does not touch a view already grouped by a number when it opens', () => {
+      const h = harness({ type: 'board', groupBy: 'num' });
+
+      h.open('group');
+
+      expect(hideEmpty()).toBe('false');
+      expect(h.ctx.updateView).not.toHaveBeenCalled();
+    });
+
+    it('leaves the sub-group settings alone (unmeasured)', () => {
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.open('root');
+      click('database-settings-subgroup');
+      click('database-subgroup-by');
+      click('database-pick-property-num');
+
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'num' });
+    });
+  });
+
   it('groups a status by group or by option (research/08 "Status by")', () => {
     const h = harness({ type: 'board', groupBy: 'prog' });
 

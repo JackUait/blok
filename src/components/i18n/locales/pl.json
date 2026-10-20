@@ -1209,6 +1209,7 @@
   "tools.database.groupRangeEnd": "Koniec przedziału",
   "tools.database.groupRangeEvery": "Grupuj co",
   "tools.database.groupRangeBucket": "Od {start} do {end}",
+  "tools.database.groupOutOfRange": "Poza przedziałem",
   "tools.database.groupRangeExample": "Od {start} do {middle}, od {middle} do {end}, ...",
   "tools.database.groupTextBy": "Tekst według",
   "tools.database.groupTextExact": "Dokładnie",

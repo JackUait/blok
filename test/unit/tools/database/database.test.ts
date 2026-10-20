@@ -7011,7 +7011,7 @@ describe('DatabaseTool — property menu and insert placement', () => {
       tool.destroy();
     });
 
-    it('sorts number-range groups on the X axis by value, below-range first', () => {
+    it('sorts number-range groups on the X axis by value, out of range last', () => {
       const ranged = [
         createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'A', 'prop-points': 150 }, position: 'a0' }),
         createMockRowBlock({ id: 'row-b', properties: { 'prop-title': 'B', 'prop-points': -10 }, position: 'a1' }),
@@ -7025,7 +7025,7 @@ describe('DatabaseTool — property menu and insert placement', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
 
-      expect(queryAllByData(element, 'data-blok-database-chart-mark').map((m) => m.getAttribute('data-key'))).toEqual(['range:below', 'range:0', 'range:100']);
+      expect(queryAllByData(element, 'data-blok-database-chart-mark').map((m) => m.getAttribute('data-key'))).toEqual(['range:0', 'range:100', 'range:out']);
 
       tool.destroy();
     });

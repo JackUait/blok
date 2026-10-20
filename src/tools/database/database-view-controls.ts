@@ -10,6 +10,7 @@ import { openFilterPill, openViewSettings } from './database-view-settings-panel
 import type { AutofillPanelSettings, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
+import { groupByChange } from './group-keys';
 import type { AutomationSettings } from './database-automations-panel';
 import type {
   DatabaseViewConfig,
@@ -289,7 +290,9 @@ export class DatabaseViewControls {
 
   /** Group from a column header: groups by that property, then shows the group settings. */
   groupBy(propertyId: string, anchor: HTMLElement): void {
-    this.host.updateView({ groupBy: propertyId });
+    const property = this.host.schema().find((p) => p.id === propertyId);
+
+    this.host.updateView(property === undefined ? { groupBy: propertyId } : groupByChange(this.host.savedView(), property));
     this.openSettings(anchor, 'group');
   }
 

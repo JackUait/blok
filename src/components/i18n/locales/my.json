@@ -1207,6 +1207,7 @@
   "tools.database.groupRangeEnd": "အပိုင်းအခြား အဆုံး",
   "tools.database.groupRangeEvery": "အုပ်စုဖွဲ့ရန် အကွာ",
   "tools.database.groupRangeBucket": "{start} မှ {end}",
+  "tools.database.groupOutOfRange": "အပိုင်းအခြား ပြင်ပ",
   "tools.database.groupRangeExample": "{start} မှ {middle}, {middle} မှ {end}, ...",
   "tools.database.groupTextBy": "စာသား အုပ်စုဖွဲ့ပုံ",
   "tools.database.groupTextExact": "အတိအကျ",

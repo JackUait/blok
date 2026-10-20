@@ -4078,6 +4078,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-control-text: rgb(142, 139, 134);
   --blok-database-timeline-arrow-bg: rgb(142, 139, 134);
   --blok-database-timeline-arrow-icon: #ffffff;
+  --blok-database-timeline-arrow-hover-bg: rgb(56, 56, 54);
   --blok-database-timeline-arrow-border: #ffffff;
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-peek-bg: var(--blok-popover-bg);
@@ -4265,6 +4266,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
   --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
+  --blok-database-timeline-arrow-hover-bg: rgb(230, 229, 227);
   --blok-database-timeline-arrow-border: rgb(25, 25, 25);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4451,6 +4453,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
   --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
+  --blok-database-timeline-arrow-hover-bg: rgb(230, 229, 227);
   --blok-database-timeline-arrow-border: rgb(25, 25, 25);
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
@@ -11132,7 +11135,12 @@ textarea[data-blok-database-cell-input] {
   block-size: 20px;
 }
 
-[dir="rtl"] [data-blok-database-calendar-nav] svg {
+[data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[dir="rtl"] [data-blok-database-calendar-prev] svg, [dir="rtl"] [data-blok-database-calendar-next] svg {
   transform: scaleX(-1);
 }
 
@@ -11412,7 +11420,7 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-timeline-control-text);
 }
 
-[data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar] {
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar], [data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] {
   gap: var(--blok-space-1-5);
   border: 1px solid var(--blok-database-table-control-border);
   font-weight: 500;
@@ -11653,8 +11661,12 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
+[data-blok-database-timeline-offscreen]:hover {
+  background-color: var(--blok-database-timeline-arrow-hover-bg);
+}
+
 [data-blok-database-timeline-offscreen] svg {
-  inline-size: 12px;
+  inline-size: 14px;
   block-size: 12px;
 }
 

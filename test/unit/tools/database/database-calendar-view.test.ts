@@ -415,6 +415,25 @@ describe('DatabaseCalendarView', () => {
 
       expect(handlers.navigate).toHaveBeenCalledWith('2026-11-01');
     });
+
+    // research/28:129, pal/L-calendar.png: the button sits right before the previous arrow.
+    it('shows "Manage in Calendar" before the previous arrow when the host gives it, and calls it on click, read-only too', () => {
+      const manage = vi.fn();
+      const { root } = mount({ readOnly: true, handlers: undefined, manageInCalendar: { label: 'Manage in Calendar', onClick: manage } });
+      const button = root.querySelector<HTMLElement>('[data-blok-database-calendar-manage-calendar]');
+
+      expect(button?.textContent?.trim()).toBe('Manage in Calendar');
+      expect(button?.querySelector('svg')).not.toBeNull();
+      expect(button?.nextElementSibling?.hasAttribute('data-blok-database-calendar-prev')).toBe(true);
+      button?.click();
+      expect(manage).toHaveBeenCalledTimes(1);
+    });
+
+    it('has no "Manage in Calendar" without the host lever', () => {
+      const { root } = mount();
+
+      expect(root.querySelector('[data-blok-database-calendar-manage-calendar]')).toBeNull();
+    });
   });
 
   describe('adding a row on a day', () => {

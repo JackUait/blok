@@ -147,6 +147,8 @@
   --blok-database-timeline-control-text: rgb(142, 139, 134);
   --blok-database-timeline-arrow-bg: rgb(142, 139, 134);
   --blok-database-timeline-arrow-icon: #ffffff;
+  /* research/26 §4d. */
+  --blok-database-timeline-arrow-hover-bg: rgb(56, 56, 54);
   /* Off-screen chip border: page colour (research/21 §1i). */
   --blok-database-timeline-arrow-border: #ffffff;
   /* Center peek (research/07 and 08): 60% backdrop and the side peek's shadow. */
@@ -378,6 +380,7 @@
     --blok-database-timeline-control-text: rgb(173, 169, 163);
     --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
     --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
+    --blok-database-timeline-arrow-hover-bg: rgb(230, 229, 227);
     --blok-database-timeline-arrow-border: rgb(25, 25, 25);
     --blok-database-fill-handle-bg: rgb(25, 25, 25);
     /* Peek panel, shadow and center backdrop: research/21 §1m. */
@@ -590,6 +593,7 @@
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
   --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
+  --blok-database-timeline-arrow-hover-bg: rgb(230, 229, 227);
   --blok-database-timeline-arrow-border: rgb(25, 25, 25);
   /* Peek panel, shadow and center backdrop: research/21 §1m. */
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -8004,7 +8008,14 @@ textarea[data-blok-database-cell-input] {
   block-size: 20px;
 }
 
-[dir="rtl"] [data-blok-database-calendar-nav] svg {
+[data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+/* Arrows only: the calendar icon keeps its look in RTL. */
+[dir="rtl"] [data-blok-database-calendar-prev] svg,
+[dir="rtl"] [data-blok-database-calendar-next] svg {
   transform: scaleX(-1);
 }
 
@@ -8308,8 +8319,9 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-timeline-control-text);
 }
 
-/* research/26 §4d: bordered, 6px gap, label weight 500. */
-[data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar] {
+/* research/26 §4d: bordered, 6px gap, label weight 500. The calendar's is the same 167x24 (research/21 §1h). */
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar],
+[data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] {
   gap: var(--blok-space-1-5);
   border: 1px solid var(--blok-database-table-control-border);
   font-weight: 500;
@@ -8560,8 +8572,12 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
+[data-blok-database-timeline-offscreen]:hover {
+  background-color: var(--blok-database-timeline-arrow-hover-bg);
+}
+
 [data-blok-database-timeline-offscreen] svg {
-  inline-size: 12px;
+  inline-size: 14px;
   block-size: 12px;
 }
 

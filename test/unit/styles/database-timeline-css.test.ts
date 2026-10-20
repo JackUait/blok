@@ -32,6 +32,7 @@ const TOKENS = [
   '--blok-database-timeline-control-text',
   '--blok-database-timeline-arrow-bg',
   '--blok-database-timeline-arrow-icon',
+  '--blok-database-timeline-arrow-hover-bg',
 ];
 
 describe('database timeline styles', () => {
@@ -44,6 +45,14 @@ describe('database timeline styles', () => {
     expect(css).toContain('--blok-database-timeline-bar-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;');
     expect(css).toContain('--blok-database-timeline-weekend-bg: rgb(247, 247, 247);');
     expect(css).toContain('--blok-database-timeline-arrow-bg: rgb(142, 139, 134);');
+    expect(css).toContain('--blok-database-timeline-arrow-hover-bg: rgb(56, 56, 54);');
+  });
+
+  // research/26 §4d: the off-screen chip darkens on hover and draws a 14x12 icon.
+  it('fills the off-screen chip on hover and sizes its icon 14x12', () => {
+    expect(ruleBody('[data-blok-database-timeline-offscreen]:hover')).toContain('background-color: var(--blok-database-timeline-arrow-hover-bg)');
+    expect(ruleBody('[data-blok-database-timeline-offscreen] svg')).toMatch(/inline-size:\s*14px/);
+    expect(ruleBody('[data-blok-database-timeline-offscreen] svg')).toMatch(/block-size:\s*12px/);
   });
 
   it('draws 34px bars with a 6px radius in 36px rows', () => {
@@ -133,6 +142,7 @@ describe('timeline in dark (research/21 §1i)', () => {
     ['--blok-database-timeline-bar-bg', 'rgb(37, 37, 37)'],
     ['--blok-database-timeline-bar-shadow', 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px'],
     ['--blok-database-timeline-arrow-bg', 'rgb(173, 169, 163)'],
+    ['--blok-database-timeline-arrow-hover-bg', 'rgb(230, 229, 227)'],
   ])('%s is %s in both dark blocks', (token, value) => {
     expect(darkValues(token)).toEqual([value, value]);
   });

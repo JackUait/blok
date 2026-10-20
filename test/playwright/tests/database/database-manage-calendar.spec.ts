@@ -114,6 +114,48 @@ test.describe('Manage in Calendar', () => {
     expect(await page.evaluate(() => window.calendarCalls)).toEqual([{ databaseId: 'db-1', viewId: 'v1' }]);
   });
 
+  test('calendar toolbar: the same bordered button before the previous arrow, that calls the host (research/28:129)', async ({ page }) => {
+    await mount(page, 'calendar', true);
+    const button = timelineButton(page);
+
+    await expect(button).toBeVisible();
+    expect(await button.evaluate((el) => el.nextElementSibling?.hasAttribute('data-blok-database-calendar-prev'))).toBe(true);
+    expect(await css(button, [
+      'border-top-width', 'border-top-style', 'border-top-color', 'border-top-left-radius',
+      'padding-left', 'padding-right', 'column-gap', 'font-weight', 'font-size', 'background-color', 'color',
+    ])).toEqual({
+      'border-top-width': '1px',
+      'border-top-style': 'solid',
+      'border-top-color': 'rgba(28, 19, 1, 0.11)',
+      'border-top-left-radius': '6px',
+      'padding-left': '6px',
+      'padding-right': '6px',
+      'column-gap': '6px',
+      'font-weight': '500',
+      'font-size': '14px',
+      'background-color': 'rgba(0, 0, 0, 0)',
+      color: 'rgb(44, 44, 43)',
+    });
+    expect(await button.evaluate((el) => (el as HTMLElement).offsetHeight)).toBe(24);
+    expect(await button.evaluate((el) => {
+      const icon = el.querySelector('svg');
+
+      return icon === null ? null : [getComputedStyle(icon).width, getComputedStyle(icon).height];
+    })).toEqual(['16px', '16px']);
+
+    await button.click();
+    expect(await page.evaluate(() => window.calendarCalls)).toEqual([{ databaseId: 'db-1', viewId: 'v1' }]);
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect.poll(async () => (await css(button, ['border-top-color']))['border-top-color']).toBe('rgba(255, 255, 235, 0.1)');
+  });
+
+  test('calendar toolbar: no button without the host lever', async ({ page }) => {
+    await mount(page, 'calendar', false);
+    await expect(page.locator('[data-blok-database-calendar-toolbar]')).toBeVisible();
+    await expect(timelineButton(page)).toHaveCount(0);
+  });
+
   test('timeline toolbar: a bordered button before the zoom, as measured, that calls the host', async ({ page }) => {
     await mount(page, 'timeline', true);
     const button = timelineButton(page);

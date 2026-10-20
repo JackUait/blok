@@ -956,7 +956,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the radio cards of "Delete the last view for this data source?" (research/26 §5a).
     const DATABASE_LAST_VIEW_CHOICE_BYTES = 1_844;
     // database.css: the bordered timeline "Manage in Calendar" button and the panel's "leaves this app" arrow (research/26 §3d, §4d).
-    const DATABASE_MANAGE_CALENDAR_BYTES = 510;
+    // +378: the same button on the calendar toolbar, and only the calendar arrows flip in RTL (research/28:129).
+    const DATABASE_MANAGE_CALENDAR_BYTES = 510 + 378;
+    // database.css: the timeline off-screen chip hover fill, light and dark (research/26 §4d).
+    const DATABASE_TIMELINE_CHIP_HOVER_BYTES = 331;
     // database.css: the Suggested template tiles and the Customize modal (research/27 §1).
     const DATABASE_STARTER_TEMPLATES_BYTES = 6_886;
     // database.css: pressed View settings row and ×, Today/Now hover, light and dark (research/27 §6).
@@ -1103,6 +1106,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES
       + DATABASE_LAST_VIEW_CHOICE_BYTES
       + DATABASE_MANAGE_CALENDAR_BYTES
+      + DATABASE_TIMELINE_CHIP_HOVER_BYTES
       + DATABASE_STARTER_TEMPLATES_BYTES
       + DATABASE_PRESSED_FILLS_BYTES
       + DATABASE_CSV_IMPORT_BYTES

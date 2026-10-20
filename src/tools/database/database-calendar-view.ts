@@ -25,7 +25,7 @@ import { isHistoryKey } from './database-keyboard';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconChevronLeft, IconChevronRight, IconPlus } from '../../components/icons';
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconPlus } from '../../components/icons';
 
 export interface CalendarHandlers {
   openRow: (rowId: string) => void;
@@ -64,6 +64,8 @@ export interface DatabaseCalendarViewOptions {
   /** A day to focus once drawn: keyboard navigation that crossed into a new range. */
   focusDay?: string;
   commentBadges?: CommentBadges;
+  /** The host's "Manage in Calendar" (`config.calendar`), a toolbar button. Read-only keeps it. */
+  manageInCalendar?: { label: string; onClick: () => void };
 }
 
 const DRAG_THRESHOLD = 4;
@@ -187,6 +189,19 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return el;
     };
 
+    const calendar = this.options.manageInCalendar;
+
+    if (calendar !== undefined) {
+      const manage = document.createElement('button');
+
+      manage.type = 'button';
+      manage.setAttribute('data-blok-database-calendar-manage-calendar', '');
+      manage.innerHTML = IconCalendar;
+      manage.append(calendar.label);
+      // Its own listener: the root's click handling needs handlers, and read-only has none.
+      manage.addEventListener('click', () => calendar.onClick());
+      nav.appendChild(manage);
+    }
     button(
       'data-blok-database-calendar-prev',
       this.t(week ? 'tools.database.calendarPreviousWeek' : 'tools.database.calendarPreviousMonth'),

@@ -5389,6 +5389,7 @@ export class DatabaseTool implements BlockTool {
       locale,
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
+      ...this.calendarLever(this.dataId, viewConfig.id),
       ...(focusDay !== undefined ? { focusDay } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),

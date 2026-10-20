@@ -96,6 +96,8 @@ const THEMES = [
     divider: 'rgba(42, 28, 0, 0.07)',
     overlay: 'linear-gradient(rgba(33, 27, 23, 0.05), rgba(33, 27, 23, 0.05))',
     chipBorder: 'rgb(255, 255, 255)',
+    // research/26 §4d.
+    chipHover: 'rgb(56, 56, 54)',
     questionBg: 'rgb(255, 255, 255)',
     questionRing: 'rgb(182, 212, 243) 0px 0px 0px 0.5px inset',
     // Blok's border token; Notion's light ring rgb(240, 239, 237) is not copied.
@@ -109,6 +111,7 @@ const THEMES = [
     divider: 'rgba(255, 255, 243, 0.082)',
     overlay: 'linear-gradient(rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.055))',
     chipBorder: 'rgb(25, 25, 25)',
+    chipHover: 'rgb(230, 229, 227)',
     questionBg: 'rgb(25, 25, 25)',
     questionRing: 'rgb(53, 95, 139) 0px 0px 0px 0.5px inset',
     // research/21 §1k.
@@ -188,6 +191,20 @@ for (const theme of THEMES) {
       await expect(chip).toHaveCSS('border-top-color', theme.chipBorder);
       await expect(chip).toHaveCSS('border-top-width', '1px');
       expect(await size(chip)).toEqual({ width: 16, height: 16 });
+    });
+
+    test('timeline: the off-screen chip fills on hover and draws a 14x12 icon (research/26 §4d)', async ({ page }) => {
+      await mount(page, blocks({ type: 'timeline' }));
+      const chip = page.locator('[data-blok-database-timeline-row][data-row-id="r2"] [data-blok-database-timeline-offscreen="after"]');
+
+      await expect(chip).toBeVisible();
+      await chip.hover();
+      await expect(chip).toHaveCSS('background-color', theme.chipHover);
+      expect(await chip.evaluate((el) => {
+        const icon = el.firstElementChild?.getBoundingClientRect();
+
+        return { width: Math.round(icon?.width ?? 0), height: Math.round(icon?.height ?? 0) };
+      })).toEqual({ width: 14, height: 12 });
     });
 
     test('form builder: each question is a 12px card with a 0.5px inset ring and a 24px Edit question chip', async ({ page }) => {

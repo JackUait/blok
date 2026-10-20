@@ -137,6 +137,13 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-day]:focus-visible')).toContain('var(--blok-focus-ring)');
   });
 
+  // The "Manage in Calendar" icon sits in the nav too; only the arrows flip in RTL.
+  it('mirrors only the previous and next arrows in RTL', () => {
+    expect(ruleBody('[dir="rtl"] [data-blok-database-calendar-nav] svg')).toBe('');
+    expect(ruleBody('[dir="rtl"] [data-blok-database-calendar-prev] svg')).toContain('transform: scaleX(-1)');
+    expect(ruleBody('[dir="rtl"] [data-blok-database-calendar-next] svg')).toContain('transform: scaleX(-1)');
+  });
+
   it('turns every gallery and calendar transition off for reduced motion', () => {
     expect(galleryCss).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
     expect(calendarCss).toMatch(/@media \(prefers-reduced-motion: reduce\)/);

@@ -1065,7 +1065,14 @@ export class DatabaseTool implements BlockTool {
       }
     })();
 
-    return { on, onToggle: () => favorites.onToggle({ ...input, favorite: !on }) };
+    return {
+      on,
+      onToggle: () => {
+        favorites.onToggle({ ...input, favorite: !on });
+        // The open page's star may show this row.
+        this.cardDrawer?.syncFavoriteButton();
+      },
+    };
   }
 
   /** Row comment counts, when the host gives `count` or comments are built in. A throw counts as zero. */

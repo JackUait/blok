@@ -1327,7 +1327,8 @@ export class DatabaseCardDrawer {
     return el;
   }
 
-  private syncFavoriteButton(): void {
+  /** Asks the host again; the row menu calls it too, since its toggle can change the open page's star. */
+  public syncFavoriteButton(): void {
     const button = this.drawer?.querySelector<HTMLElement>('[data-blok-database-peek-favorite]');
     const rowId = this.currentRowId;
     const favorite = rowId === null ? undefined : this.favorite?.(rowId);

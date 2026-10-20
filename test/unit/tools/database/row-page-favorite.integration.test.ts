@@ -160,6 +160,15 @@ describe('row page Favorite star (research/21 §5)', () => {
     expect(star()?.getAttribute('aria-pressed')).toBe('false');
   });
 
+  it('follows a toggle made from the row\'s ⋮⋮ menu while the side peek is open', async () => {
+    await make({ favorites: host() });
+    await openRow('r1');
+    await click(q('[data-row-id="r1"] [data-blok-database-table-row-handle]'));
+    await click(document.querySelector('[data-blok-popover-opened] [data-blok-item-name="database-row-favorite"]'));
+
+    expect(star()?.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('shows on the full page too', async () => {
     await make({ favorites: host(), mode: 'full' });
     await openRow('r1');

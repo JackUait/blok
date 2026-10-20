@@ -287,6 +287,46 @@ describe('view settings panel', () => {
     expect(h.state.view.sorts[0].direction).toBe('desc');
   });
 
+  it('draws a sort as Notion\'s property button with its type icon and an icon-only remove × (research/26 §3a)', () => {
+    const h = harness({ sorts: [{ id: 's1', propertyId: 'due', direction: 'asc' }] });
+
+    h.open('sort');
+    const property = document.querySelector('[data-blok-testid="database-sort-property-s1"]');
+    const remove = document.querySelector('[data-blok-testid="database-sort-remove-s1"]');
+
+    expect(property?.querySelector('[data-blok-database-panel-icon] svg')).not.toBeNull();
+    expect(remove?.getAttribute('aria-label')).toBe('tools.database.sortRemove');
+    expect(remove?.querySelector('[data-blok-database-panel-label]')).toBeNull();
+    expect(remove?.textContent?.trim()).toBe('');
+
+    click('database-sort-remove-s1');
+
+    expect(h.state.view.sorts).toEqual([]);
+  });
+
+  it('puts a Close × at the end of the root header that closes the panel, and keeps first focus on the rows (research/26 §1b)', () => {
+    const h = harness();
+    const panel = h.open();
+    const close = panel.root.querySelector('[data-blok-database-panel-header] [data-blok-testid="database-panel-close"]');
+
+    expect(close?.getAttribute('aria-label')).toBe('tools.database.close');
+    expect(close?.parentElement?.lastElementChild).toBe(close);
+    expect(document.activeElement?.getAttribute('data-blok-testid')).not.toBe('database-panel-close');
+    expect(panel.root.isConnected).toBe(true);
+
+    click('database-panel-close');
+
+    expect(panel.root.isConnected).toBe(false);
+  });
+
+  it('has no Close × on a sub-page, which keeps its Back arrow', () => {
+    harness().open();
+    click('database-settings-sort');
+
+    expect(exists('database-panel-back')).toBe(true);
+    expect(exists('database-panel-close')).toBe(false);
+  });
+
   it('marks "Add sort" and "Delete sort" as muted rows, and the sort itself not (research/21 §1c)', () => {
     const h = harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] });
 

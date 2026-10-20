@@ -1,7 +1,8 @@
-import { IconCopy, IconDatabase, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
+import { IconCopy, IconCross, IconDatabase, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
+  panelCloseButton,
   panelInput,
   panelLabel,
   panelReorderList,
@@ -11,6 +12,7 @@ import {
   panelText,
 } from './database-panel';
 import type { PanelPage } from './database-panel';
+import { propertyTypeMeta } from './database-property-types';
 import {
   FILTERABLE_TYPES,
   WITHIN_OPERATORS,
@@ -250,6 +252,7 @@ export class ViewSettingsPages {
   root(): PanelPage {
     return {
       title: this.t('settingsTitle'),
+      headerAction: (panel) => panelCloseButton(panel, this.t('close')),
       build: (panel) => {
         const view = this.ctx.view();
         const group = this.property(view.groupBy);
@@ -1482,13 +1485,24 @@ export class ViewSettingsPages {
 
           if (property === undefined) return [];
           const line = document.createElement('div');
+          // Notion's "Remove sort rule" is an icon-only × (research/26 §3a).
+          const remove = panelRow({
+            label: this.t('sortRemove'),
+            testId: `database-sort-remove-${sort.id}`,
+            icon: IconCross,
+            onClick: () => write(sorts.filter((s) => s.id !== sort.id)),
+          });
 
+          remove.querySelector('[data-blok-database-panel-label]')?.remove();
+          remove.setAttribute('aria-label', this.t('sortRemove'));
+          remove.setAttribute('data-blok-database-sort-remove', '');
           line.setAttribute('data-blok-database-sort-row', '');
           line.setAttribute('data-blok-testid', `database-sort-row-${sort.id}`);
           line.append(
             panelRow({
               label: property.name,
               testId: `database-sort-property-${sort.id}`,
+              icon: propertyTypeMeta(property.type).icon,
               opensPage: true,
               onClick: () => panel.push(this.pickProperty(this.t('settingsSort'), GROUPABLE_TYPES, (picked) => {
                 this.ctx.updatePersonal({ sorts: withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)) });
@@ -1500,12 +1514,7 @@ export class ViewSettingsPages {
               testId: `database-sort-direction-${sort.id}`,
               onClick: () => write(sorts.map((s) => (s.id === sort.id ? { ...s, direction: s.direction === 'asc' ? 'desc' : 'asc' } : s))),
             }),
-            panelRow({
-              label: this.t('sortRemove'),
-              testId: `database-sort-remove-${sort.id}`,
-              icon: IconTrash,
-              onClick: () => write(sorts.filter((s) => s.id !== sort.id)),
-            })
+            remove
           );
 
           return [{ id: sort.id, element: line }];

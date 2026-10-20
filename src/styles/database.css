@@ -56,6 +56,13 @@
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   /* research/22 §3. Dark is unmeasured: the table control border's dark value. */
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
+  /* research/26 §3a-§3c, §1b, §4a: sort panel buttons, the property menu's icon button, the panel × fill. */
+  --blok-database-sort-button-bg: rgb(255, 255, 255);
+  --blok-database-sort-button-hover-bg: rgb(244, 243, 243);
+  --blok-database-property-icon-button-ink: rgb(85, 83, 78);
+  --blok-database-property-icon-button-hover-bg: rgb(249, 248, 247);
+  --blok-database-panel-close-bg: rgba(42, 28, 0, 0.07);
+  --blok-database-panel-close-hover-bg: rgba(42, 28, 0, 0.106);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-table-selection-shadow: var(--blok-database-table-open-shadow);
@@ -257,6 +264,13 @@
     --blok-database-table-gutter-icon: rgb(125, 122, 117);
     --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
     --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
+    /* research/26 §4a. */
+    --blok-database-sort-button-bg: rgb(25, 25, 25);
+    --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
+    --blok-database-property-icon-button-ink: rgb(211, 211, 211);
+    --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
+    --blok-database-panel-close-bg: rgba(255, 255, 235, 0.1);
+    --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
     --blok-database-table-open-bg: rgb(37, 37, 37);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -445,6 +459,13 @@
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
+  /* research/26 §4a. */
+  --blok-database-sort-button-bg: rgb(25, 25, 25);
+  --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
+  --blok-database-property-icon-button-ink: rgb(211, 211, 211);
+  --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
+  --blok-database-panel-close-bg: rgba(255, 255, 235, 0.1);
+  --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -4459,19 +4480,25 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-color-danger);
 }
 
+/* research/26 §3c, §4a: bordered, no fill. */
 [data-blok-database-property-menu-icon] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
+  box-sizing: border-box;
   width: 28px;
   height: 28px;
   padding: 0;
-  border: none;
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-property-icon-button-ink);
   cursor: pointer;
+}
+
+[data-blok-database-property-menu-icon]:hover {
+  background-color: var(--blok-database-property-icon-button-hover-bg);
 }
 
 [data-blok-database-property-description] {
@@ -6299,6 +6326,7 @@ textarea[data-blok-database-cell-input] {
   z-index: 5;
   display: inline-flex;
   align-items: center;
+  gap: var(--blok-space-0-25);
   height: 32px;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-open-bg);
@@ -6319,6 +6347,15 @@ textarea[data-blok-database-cell-input] {
   inset-block: 0;
   inset-inline-start: 0;
   margin-block: auto;
+}
+
+/* research/26 §3b, §4a: segments sit 1px apart; a shadow on the end side divides them. */
+[data-blok-database-table-selection-bar] > :not(:last-child) {
+  box-shadow: var(--blok-database-table-border) 1px 0 0 0;
+}
+
+[dir="rtl"] [data-blok-database-table-selection-bar] > :not(:last-child) {
+  box-shadow: var(--blok-database-table-border) -1px 0 0 0;
 }
 
 [data-blok-database-table-selection-count] {
@@ -6626,6 +6663,37 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
+/* research/26 §1b, §4a: a round × at the header's end, no hint. */
+[data-blok-database-panel-close] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--blok-database-panel-close-bg);
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-panel-close]:hover,
+[data-blok-database-panel-close]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  background-color: var(--blok-database-panel-close-hover-bg);
+}
+
+[data-blok-database-panel-close]:focus-visible {
+  outline: none;
+}
+
+[data-blok-database-panel-close] svg {
+  width: 14px;
+  height: 14px;
+}
+
 [dir="rtl"] [data-blok-database-panel-back] svg,
 [dir="rtl"] [data-blok-database-panel-chevron] svg {
   transform: scaleX(-1);
@@ -6871,13 +6939,45 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-2) 0;
 }
 
+[data-blok-database-sort-row] {
+  gap: var(--blok-space-2);
+}
+
 [data-blok-database-sort-row] > [data-blok-database-panel-row] {
   width: auto;
 }
 
-[data-blok-database-sort-row] > [data-blok-database-panel-row]:first-child {
-  flex: 1 1 auto;
+/* Notion's sort property and direction buttons size to their words (research/26 §3a, §4a). */
+[data-blok-database-sort-row] > [data-blok-database-panel-row]:not([data-blok-database-sort-remove]) {
+  flex: 0 1 auto;
   min-width: 0;
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-sort-button-bg);
+  color: var(--blok-database-table-cell-text);
+  font-weight: 500;
+}
+
+[data-blok-database-sort-row] > [data-blok-database-panel-row]:not([data-blok-database-sort-remove]):hover:not(:disabled),
+[data-blok-database-sort-row] > [data-blok-database-panel-row]:not([data-blok-database-sort-remove]):focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  background-color: var(--blok-database-sort-button-hover-bg);
+}
+
+[data-blok-database-sort-row] > [data-blok-database-sort-remove] {
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  margin-inline-start: auto;
+  padding: 0;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-sort-remove] svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Conditional color: unmeasured past green; option backgrounds stand in. */

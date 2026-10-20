@@ -1,4 +1,4 @@
-import { IconCheck, IconChevronLeft, IconChevronRight, IconMenu } from '../../components/icons';
+import { IconCheck, IconChevronLeft, IconChevronRight, IconCross, IconMenu } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
 import { hide as hideTooltip } from '../../components/utils/tooltip';
 
@@ -9,7 +9,7 @@ import { hide as hideTooltip } from '../../components/utils/tooltip';
 export interface PanelPage {
   title?: string;
   /** A control at the header's end, built on every render. */
-  headerAction?: () => HTMLElement;
+  headerAction?: (panel: DatabasePanel) => HTMLElement;
   /** `data-blok-testid` of the control that opened this page; leaving the page focuses it again. */
   returnFocus?: string;
   build: (panel: DatabasePanel) => HTMLElement[];
@@ -131,7 +131,7 @@ export class DatabasePanel {
     const children: HTMLElement[] = [];
 
     if (this.stack.length > 1 || page.title !== undefined) {
-      children.push(this.header(page.title ?? '', page.headerAction?.()));
+      children.push(this.header(page.title ?? '', page.headerAction?.(this)));
     }
     children.push(...page.build(this));
     this.element.replaceChildren(...children);
@@ -162,7 +162,8 @@ export class DatabasePanel {
   }
 
   private focusFirst(): void {
-    this.element.querySelector<HTMLElement>(`[data-blok-database-panel-row]:not([disabled]), ${FOCUSABLE}`)?.focus();
+    // The header × never takes first focus: opening lands on the first row.
+    this.element.querySelector<HTMLElement>(`[data-blok-database-panel-row]:not([disabled]), :is(${FOCUSABLE}):not([data-blok-database-panel-close])`)?.focus();
   }
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
@@ -178,6 +179,20 @@ export class DatabasePanel {
 }
 
 // ─── Row builders ───
+
+/** Notion's round header × (research/26 §1b): closes the panel, as Escape does on the first page. No hint. */
+export const panelCloseButton = (panel: DatabasePanel, label: string): HTMLButtonElement => {
+  const close = document.createElement('button');
+
+  close.type = 'button';
+  close.setAttribute('data-blok-database-panel-close', '');
+  close.setAttribute('data-blok-testid', 'database-panel-close');
+  close.setAttribute('aria-label', label);
+  close.innerHTML = IconCross;
+  close.addEventListener('click', () => panel.close());
+
+  return close;
+};
 
 export interface PanelRowOptions {
   label: string;

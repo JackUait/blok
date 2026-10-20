@@ -1,0 +1,82 @@
+/**
+ * The controls research/26 §3 and §1b measured that Blok lacked, light and
+ * dark (§4a). jsdom has no CSS, so these read the authored source; the
+ * computed look is pinned in test/playwright/tests/database/database-notion-elements.spec.ts.
+ */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const database = readFileSync(resolve(__dirname, '../../../src/styles/database.css'), 'utf8')
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/\s+/g, ' ');
+
+const ruleBody = (selector: string): string =>
+  [ ...database.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g) ]
+    .filter((rule) => rule[1].split(/,(?![^(]*\))/).map((part) => part.trim()).includes(selector))
+    .map((rule) => rule[2])
+    .join(';');
+
+/** A token's values in source order: light, system dark, forced dark. */
+const tokenValues = (name: string): string[] =>
+  [ ...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g')) ].map((m) => m[1].trim());
+
+const SORT_BUTTON = '[data-blok-database-sort-row] > [data-blok-database-panel-row]:not([data-blok-database-sort-remove])';
+const SORT_BUTTON_HOVER = '[data-blok-database-sort-row] > [data-blok-database-panel-row]:not([data-blok-database-sort-remove]):hover:not(:disabled)';
+
+describe('sort panel buttons (research/26 §3a, §4a)', () => {
+  it('are 32px tall, radius 6px, bordered with the measured control border', () => {
+    const body = ruleBody(SORT_BUTTON);
+
+    expect(body).toContain('height: 32px');
+    expect(body).toContain('border: 1px solid var(--blok-database-table-control-border)');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('font-weight: 500');
+    expect(tokenValues('--blok-database-table-control-border')).toEqual([ 'rgba(28, 19, 1, 0.11)', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)' ]);
+  });
+
+  it('sit on the measured rest fill and hover to the measured fill', () => {
+    expect(ruleBody(SORT_BUTTON)).toContain('background-color: var(--blok-database-sort-button-bg)');
+    expect(ruleBody(SORT_BUTTON_HOVER)).toContain('background-color: var(--blok-database-sort-button-hover-bg)');
+    expect(tokenValues('--blok-database-sort-button-bg')).toEqual([ 'rgb(255, 255, 255)', 'rgb(25, 25, 25)', 'rgb(25, 25, 25)' ]);
+    expect(tokenValues('--blok-database-sort-button-hover-bg')).toEqual([ 'rgb(244, 243, 243)', 'rgb(38, 38, 38)', 'rgb(38, 38, 38)' ]);
+  });
+});
+
+describe('selection bar dividers (research/26 §3b, §4a)', () => {
+  it('draw a 1px shadow on the end side of every segment but the last, 1px apart', () => {
+    expect(ruleBody('[data-blok-database-table-selection-bar]')).toContain('gap: var(--blok-space-0-25)');
+    expect(ruleBody('[data-blok-database-table-selection-bar] > :not(:last-child)')).toContain('box-shadow: var(--blok-database-table-border) 1px 0 0 0');
+    expect(ruleBody('[dir="rtl"] [data-blok-database-table-selection-bar] > :not(:last-child)')).toContain('box-shadow: var(--blok-database-table-border) -1px 0 0 0');
+    expect(tokenValues('--blok-database-table-border')).toEqual([ 'rgba(42, 28, 0, 0.07)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)' ]);
+  });
+});
+
+describe('property menu "Change icon" button (research/26 §3c, §4a)', () => {
+  it('is bordered with no fill and hovers to the measured fill', () => {
+    const body = ruleBody('[data-blok-database-property-menu-icon]');
+
+    expect(body).toContain('border: 1px solid var(--blok-database-table-control-border)');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('color: var(--blok-database-property-icon-button-ink)');
+    expect(ruleBody('[data-blok-database-property-menu-icon]:hover')).toContain('background-color: var(--blok-database-property-icon-button-hover-bg)');
+    expect(tokenValues('--blok-database-property-icon-button-ink')).toEqual([ 'rgb(85, 83, 78)', 'rgb(211, 211, 211)', 'rgb(211, 211, 211)' ]);
+    expect(tokenValues('--blok-database-property-icon-button-hover-bg')).toEqual([ 'rgb(249, 248, 247)', 'rgb(32, 32, 32)', 'rgb(32, 32, 32)' ]);
+  });
+});
+
+describe('view settings Close × (research/26 §1b, §4a)', () => {
+  it('is a 20px round button on the measured fills', () => {
+    const body = ruleBody('[data-blok-database-panel-close]');
+
+    expect(body).toContain('width: 20px');
+    expect(body).toContain('height: 20px');
+    expect(body).toContain('border-radius: 50%');
+    expect(body).toContain('background-color: var(--blok-database-panel-close-bg)');
+    expect(body).toContain('margin-inline-start: auto');
+    expect(ruleBody('[data-blok-database-panel-close]:hover')).toContain('background-color: var(--blok-database-panel-close-hover-bg)');
+    expect(tokenValues('--blok-database-panel-close-bg')).toEqual([ 'rgba(42, 28, 0, 0.07)', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)' ]);
+    expect(tokenValues('--blok-database-panel-close-hover-bg')).toEqual([ 'rgba(42, 28, 0, 0.106)', 'rgba(255, 255, 235, 0.153)', 'rgba(255, 255, 235, 0.153)' ]);
+  });
+});

@@ -927,6 +927,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DARK_LEFTOVERS_BYTES = 2_429;
     // database.css: the backlink title fills its row so the path sits at the right end (research/23 §4).
     const DATABASE_BACKLINK_RIGHT_PATH_BYTES = 192;
+    // database.css: bordered sort buttons, selection bar dividers, the property menu icon button, the panel × (research/26 §3, §1b).
+    const DATABASE_NOTION_ELEMENTS_BYTES = 3_845;
     // assistant.css + colors.css: the Ask AI live preview's holder gap, overlay box, heading parity rules,
     // shimmer slots, word blur-in and violet tail, plus their light and dark tokens (2026-10-20).
     const ASSISTANT_LIVE_PREVIEW_BYTES = 3_831;
@@ -1074,6 +1076,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES
       + DATABASE_BACKLINK_CRUMBS_BYTES
       + DATABASE_DARK_LEFTOVERS_BYTES + DATABASE_BACKLINK_RIGHT_PATH_BYTES
+      + DATABASE_NOTION_ELEMENTS_BYTES
       + ASSISTANT_LIVE_PREVIEW_BYTES
       + ASSISTANT_REWRITE_PREVIEW_BYTES
       + ASSISTANT_FALLBACK_REVEAL_BYTES

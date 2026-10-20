@@ -21,8 +21,9 @@ declare global {
   }
 }
 
-const setup = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holder }) => {
+/** @param more - blocks after p1 and p2 */
+const setup = async (page: Page, more: Array<Record<string, unknown>> = []): Promise<void> => {
+  await page.evaluate(async ({ holder, extra }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -40,6 +41,7 @@ const setup = async (page: Page): Promise<void> => {
       data: { blocks: [
         { id: 'p1', type: 'paragraph', data: { text: 'The quick brown fox' } },
         { id: 'p2', type: 'paragraph', data: { text: 'Second' } },
+        ...extra,
       ] },
       agent: {
         assistant: {
@@ -55,7 +57,7 @@ const setup = async (page: Page): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID });
+  }, { holder: HOLDER_ID, extra: more });
 };
 
 /** `blok_execute` input for one paragraph insert; `position` comes first so it is placed while words stream. */
@@ -408,6 +410,37 @@ test.describe('Ask AI live edits', () => {
       expect(Math.abs(((await next.boundingBox())?.y ?? 0) - nextBefore)).toBeLessThanOrEqual(2);
     });
   }
+
+  test('streamed words that land below the window scroll into view before the batch commits', async ({ page }) => {
+    const tail = Array.from({ length: 40 }, (_unused, index) => ({ id: `t${index}`, type: 'paragraph', data: { text: `Filler line ${index}` } }));
+    const text = 'Far below the window these words keep arriving one by one';
+    const input = insertInput(text, { after: 't39' });
+
+    await setup(page, tail);
+    await ask(page, 'The quick brown fox');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+
+    // Feed the text a few characters at a time, as a model streams it.
+    for (let chars = 4; chars < text.length; chars += 6) {
+      await emit(page, 0, { type: 'tool_input', index: 0, json: prefix(input, text, chars) });
+    }
+
+    const preview = page.getByTestId('ai-preview');
+    const viewport = page.viewportSize();
+
+    await expect(preview).toContainText('Far below the window');
+    // The newest drawn word is on screen, while the document still has none of it.
+    await expect.poll(async () => {
+      const box = await preview.getByText('one').last().boundingBox();
+
+      return box !== null && viewport !== null && box.y >= 0 && box.y + box.height <= viewport.height;
+    }).toBe(true);
+    expect((await savedTexts(page)).some((saved) => saved.startsWith('Far below'))).toBe(false);
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(input) });
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect.poll(async () => (await savedTexts(page)).at(-1)).toBe(text);
+  });
 
   test('an insert streams below the bar, not above it', async ({ page }) => {
     const text = 'Below the bar words';

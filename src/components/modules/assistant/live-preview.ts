@@ -22,6 +22,8 @@ export interface LivePreviewDeps {
    * Without it, a named field previews only when the block has a single input.
    */
   inputOf?(id: string, field?: string): HTMLElement | null;
+  /** A word just landed and is placed: the page may follow it. */
+  onWord?(word: HTMLElement): void;
 }
 
 export interface LivePreview {
@@ -271,6 +273,10 @@ class Line {
 
   public get pending(): boolean {
     return this.spans.length < landable(this.spec);
+  }
+
+  public get newest(): HTMLElement | undefined {
+    return this.spans[this.spans.length - 1];
   }
 
   public update(spec: LineSpec, ordinal: number): void {
@@ -806,7 +812,7 @@ class CallPreview {
           known.land();
         }
       });
-      this.landed();
+      this.landed(lines[lines.length - 1]);
 
       return;
     }
@@ -815,7 +821,7 @@ class CallPreview {
     if (wait <= 0) {
       line.land();
       this.lastLanded = Date.now();
-      this.landed();
+      this.landed(line);
     }
     this.timer = setTimeout(() => {
       this.timer = null;
@@ -823,8 +829,8 @@ class CallPreview {
     }, wait > 0 ? wait : WORD_GAP_MS);
   }
 
-  /** After a word lands: tails, layout, and a frame to mark the call shown. */
-  private landed(): void {
+  /** After a word lands: tails, layout, a frame to mark the call shown, then the page may follow it. */
+  private landed(line: Line): void {
     this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
     this.layout();
     if (this.painted === 'no') {
@@ -832,6 +838,12 @@ class CallPreview {
       requestAnimationFrame(() => {
         this.painted = 'yes';
       });
+    }
+
+    const word = line.newest;
+
+    if (word !== undefined) {
+      this.deps.onWord?.(word);
     }
   }
 

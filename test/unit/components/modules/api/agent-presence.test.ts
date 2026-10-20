@@ -56,6 +56,7 @@ const options = (overrides: Partial<AgentPresenceOptions> = {}): AgentPresenceOp
   isHidden: () => false,
   publish: vi.fn(),
   scrollTo: vi.fn(),
+  scrollIntoView: vi.fn(),
   ...overrides,
 });
 
@@ -326,6 +327,45 @@ describe('agent presence — follow', () => {
       return this === holder ? new DOMRect(0, top, 600, 24) : measure.call(this);
     });
   };
+
+  describe('reveal (a streamed word)', () => {
+    /** A drawn word at a viewport top; jsdom's window is 768px tall. */
+    const wordAt = (top: number): HTMLElement => {
+      const word = document.createElement('span');
+
+      vi.spyOn(word, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, top, 60, 24));
+
+      return word;
+    };
+
+    it('scrolls a word drawn outside the window into view while following', () => {
+      const scrollIntoView = vi.fn();
+      const presence = createAgentPresence(options({ scrollIntoView }));
+      const word = wordAt(2000);
+
+      presence.start(AGENT, { follow: true, outOfViewOnly: true });
+      presence.reveal(word);
+
+      expect(scrollIntoView).toHaveBeenCalledWith(word);
+      presence.stop();
+    });
+
+    it('leaves a word in view, a turn that does not follow, and a turn the user took over', () => {
+      const scrollIntoView = vi.fn();
+      const presence = createAgentPresence(options({ scrollIntoView }));
+
+      presence.start(AGENT, { follow: true, outOfViewOnly: true });
+      presence.reveal(wordAt(100));
+      window.dispatchEvent(new Event('wheel'));
+      presence.reveal(wordAt(2000));
+      presence.start(AGENT, { follow: false });
+      presence.reveal(wordAt(2000));
+      presence.stop();
+      presence.reveal(wordAt(2000));
+
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+  });
 
   it('outOfViewOnly: an in-view batch does not scroll', () => {
     addBlock('b1');

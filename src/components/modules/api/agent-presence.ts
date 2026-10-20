@@ -27,6 +27,8 @@ export interface AgentPresenceOptions {
   isHidden(): boolean;
   publish(cursor: AgentCursorField | null): void;
   scrollTo(blockId: string): void;
+  /** Scrolls just enough to bring an element (a streamed word) into the window. */
+  scrollIntoView(element: HTMLElement): void;
 }
 
 export interface AgentFollowOptions {
@@ -41,6 +43,8 @@ export interface AgentPresence {
   start(agent: AgentIdentity, options: AgentFollowOptions): void;
   /** `draw: false` still publishes the cursor and follows, but draws no caret, marker or pulse here. */
   show(result: { changed: ChangedSet; lastRange?: TextRangeRef }, showOptions?: { draw?: boolean }): void;
+  /** A live preview drew `element`: while following, bring it into view. */
+  reveal(element: HTMLElement): void;
   stop(): void;
 }
 
@@ -70,7 +74,7 @@ const cursorFor = (agent: { id: string; name: string; color: string }, target: A
 
 const lastOf = (ids: string[]): string | undefined => ids[ids.length - 1];
 
-/** Whether the block's holder sits fully inside the viewport, top to bottom. */
+/** Whether the element sits fully inside the viewport, top to bottom. */
 const isInView = (holder: HTMLElement | null): boolean => {
   if (holder === null) {
     return false;
@@ -220,6 +224,13 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
 
       if (state.following && !(state.outOfViewOnly && inView(target.blockId))) {
         options.scrollTo(target.blockId);
+      }
+    },
+
+    reveal(element: HTMLElement): void {
+      // The same stop rules as edits: a user scroll, key or click outside the bar ends following.
+      if (state.agent !== null && state.following && !isInView(element)) {
+        options.scrollIntoView(element);
       }
     },
 

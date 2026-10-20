@@ -36,6 +36,9 @@ export class AgentTurnOpenError extends Error {
   }
 }
 
+/** Room kept between a followed streamed word and the window's edge. */
+const LIVE_ROOM = 16;
+
 const IDLE: AgentState = { status: 'idle' };
 
 const DEFAULT_MAX_STEPS = 30;
@@ -146,6 +149,16 @@ export class AgentAPI extends Module {
    * @param thinking - the bar's current pick, read at each prompt
    * @param hooks - the run's activity, stream, finished calls and applied batches
    */
+  /**
+   * The Ask AI preview drew a word: while the run follows, scroll it into view.
+   * @param element - the word just drawn
+   */
+  public followLive(element: HTMLElement): void {
+    if (this.current.turn !== null) {
+      this.presenceLayer?.reveal(element);
+    }
+  }
+
   public startRun(
     prompt: string,
     place: UserPlace,
@@ -270,6 +283,13 @@ export class AgentAPI extends Module {
         const top = holder.getBoundingClientRect().top + window.scrollY - (this.config.scrollToBlock?.topOffset ?? 0);
 
         window.scrollTo({ top, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
+      },
+      scrollIntoView: (element) => {
+        const rect = element.getBoundingClientRect();
+        const above = rect.top - (this.config.scrollToBlock?.topOffset ?? 0) - LIVE_ROOM;
+        const delta = above < 0 ? above : Math.max(0, rect.bottom + LIVE_ROOM - window.innerHeight);
+
+        window.scrollTo({ top: window.scrollY + delta, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
       },
     });
 

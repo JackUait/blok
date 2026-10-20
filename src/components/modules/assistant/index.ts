@@ -533,6 +533,7 @@ export class Assistant extends Module {
       edgeHolder: (edge, parentId) => this.edgeHolder(edge, parentId),
       anchorHolder: () => this.anchorHolder(),
       inputOf: (id, field) => this.inputOf(id, field),
+      onWord: (word) => this.Blok.AgentAPI.followLive(word),
     });
 
     return this.preview;

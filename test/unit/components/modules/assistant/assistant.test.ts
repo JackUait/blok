@@ -908,6 +908,92 @@ describe('in-editor assistant bar', () => {
       expect(scrolls.spy).toHaveBeenCalledTimes(2);
     });
 
+    /** Holders and streamed words both at `top`: below jsdom's 768px window when it is large. */
+    const wordsAt = (top: number): void => {
+      const measure = HTMLElement.prototype.getBoundingClientRect;
+
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+        if (this.classList.contains('blok-ai-word') || this.hasAttribute('data-blok-element')) {
+          return new DOMRect(0, top, 60, 24);
+        }
+
+        return measure.call(this);
+      });
+    };
+
+    /** Streams a paragraph insert's first words into a held call. */
+    const streamWords = async (live: ReturnType<typeof streaming>): Promise<void> => {
+      const call = executeCall('c1', insert('Far away words land here'));
+
+      await waitFor(() => expect(live.started()).toBe(true));
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('here')) });
+      await waitFor(() => expect(previewText()).toBe('Far away words land'));
+    };
+
+    it('follows a streamed word drawn below the window before its batch commits', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      wordsAt(2000);
+      editor.agent.openAssistant();
+      submit('Write');
+      await streamWords(live);
+
+      expect(await texts(editor)).toEqual(['Hello']);
+      expect(scrolls.spy).toHaveBeenCalled();
+      // The word's bottom (2024) sits 16px above the window's bottom edge.
+      expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 2024 - window.innerHeight + 16, behavior: 'smooth' });
+    });
+
+    it('follows a streamed word at once under reduced motion', async () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query.includes('reduce'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: () => false,
+      }));
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      wordsAt(2000);
+      editor.agent.openAssistant();
+      submit('Write');
+      await streamWords(live);
+
+      expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 2024 - window.innerHeight + 16, behavior: 'instant' });
+    });
+
+    it('a user scroll ends following, so later streamed words do not scroll', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      wordsAt(2000);
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+      window.dispatchEvent(new WheelEvent('wheel', { deltaY: 40 }));
+      await streamWords(live);
+
+      expect(scrolls.spy).not.toHaveBeenCalled();
+    });
+
+    it('does not scroll for streamed words already in view', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      wordsAt(100);
+      editor.agent.openAssistant();
+      submit('Write');
+      await streamWords(live);
+
+      expect(scrolls.spy).not.toHaveBeenCalled();
+    });
+
     it('does not scroll to an edit already in view', async () => {
       const editor = await createEditor(scripted(insertBatch('One'), answer('Done.')));
 

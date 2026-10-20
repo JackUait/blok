@@ -99,6 +99,12 @@ export interface AgentModelMessage {
 /** How hard the model thinks. Each adapter maps it to its provider's setting. */
 export type AgentThinkingLevel = 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
+/** Progress of one tool call while the model streams. `index` counts calls within one model response. */
+export type AgentModelStreamEvent =
+  | { type: 'tool_start'; index: number; id: string; name: string }
+  | { type: 'tool_input'; index: number; json: string } // all input text so far for this call
+  | { type: 'tool_end'; index: number };
+
 /** What the assistant sends to the host's model function. */
 export interface AgentModelRequest {
   system: string;
@@ -108,6 +114,8 @@ export interface AgentModelRequest {
   signal: AbortSignal;
   /** The level for this prompt. Absent when the host set no `thinking` and the caller passed none. */
   thinking?: AgentThinkingLevel;
+  /** Set when the caller can show edits live. A model that streams calls it; one that does not ignores it. */
+  onStream?(event: AgentModelStreamEvent): void;
 }
 
 /** The model's reply. An Anthropic `Message` fits this shape as is. */

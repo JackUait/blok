@@ -1,7 +1,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
-import type { AgentModel, AgentModelMessage, AgentModelResponse, AgentToolResult } from '../../../types/api';
+import type {
+  AgentModel,
+  AgentModelMessage,
+  AgentModelResponse,
+  AgentModelStreamEvent,
+  AgentToolResult,
+} from '../../../types/api';
 
 const reply = (content: AgentModelResponse['content'], stop: AgentModelResponse['stop_reason']): AgentModelResponse => ({
   content,
@@ -29,6 +35,58 @@ const scripted = (...responses: AgentModelResponse[]): AgentModel & { requests: 
 };
 
 const ok = (content = '{"ok":true}'): AgentToolResult => ({ content, isError: false });
+
+/** A model that streams `events`, then waits until `open()` before it resolves with `response`. */
+const streaming = (events: AgentModelStreamEvent[], response: AgentModelResponse, before?: () => void): AgentModel & { open(): void } => {
+  const gate: { open: () => void } = { open: () => undefined };
+  const closed = new Promise<void>((resolve) => {
+    gate.open = resolve;
+  });
+  const model = async (request: Parameters<AgentModel>[0]): Promise<AgentModelResponse> => {
+    events.forEach((event) => {
+      if (event.type === 'tool_end') {
+        before?.();
+      }
+      request.onStream?.(event);
+    });
+    await closed;
+
+    return response;
+  };
+
+  return Object.assign(model, { open: () => gate.open() });
+};
+
+const streamOf = (index: number, id: string, name: string, input: unknown): AgentModelStreamEvent[] => {
+  const json = JSON.stringify(input);
+
+  return [
+    { type: 'tool_start', index, id, name },
+    { type: 'tool_input', index, json: json.slice(0, 5) },
+    { type: 'tool_input', index, json },
+    { type: 'tool_end', index },
+  ];
+};
+
+/** Model 1 streams; later requests come from `then`. */
+const thenScripted = (first: AgentModel, ...rest: AgentModelResponse[]): AgentModel => {
+  const used = { first: false };
+
+  return async (request) => {
+    if (!used.first) {
+      used.first = true;
+
+      return first(request);
+    }
+    const next = rest.shift();
+
+    if (next === undefined) {
+      throw new Error('model called more times than scripted');
+    }
+
+    return next;
+  };
+};
 
 describe('runAssistantLoop', () => {
   beforeEach(() => {
@@ -383,5 +441,269 @@ describe('runAssistantLoop', () => {
     });
 
     expect(steps).toEqual(['thinking']);
+  });
+  describe('streamed tool calls', () => {
+    const insert = { commands: [{ name: 'block.insert', args: { type: 'paragraph' } }] };
+
+    it('runs a streamed call at its tool_end, before the model response resolves', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok());
+      const model = streaming(
+        streamOf(0, 't1', 'blok_execute', insert),
+        reply([{ type: 'tool_use', id: 't1', name: 'blok_execute', input: insert }], 'end_turn')
+      );
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 1,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledWith('blok_execute', insert));
+
+      model.open();
+      await run;
+    });
+
+    it('does not run a streamed call twice when the response arrives', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok('{"applied":1}'));
+      const model = streaming(
+        streamOf(0, 't1', 'blok_execute', insert),
+        reply([{ type: 'tool_use', id: 't1', name: 'blok_execute', input: insert }], 'tool_use')
+      );
+      const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+      const run = runAssistantLoop({
+        model: thenScripted(model, reply([{ type: 'text', text: 'Done' }], 'end_turn')),
+        system: '', tools: [], messages, call, signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      model.open();
+
+      expect(await run).toEqual({ status: 'done', reply: 'Done' });
+      expect(call).toHaveBeenCalledTimes(1);
+      expect(messages[2]).toEqual({
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 't1', content: '{"applied":1}', is_error: false }],
+      });
+    });
+
+    it('runs a call whose streamed JSON does not parse only from the final response', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok());
+      const model = streaming(
+        [
+          { type: 'tool_start', index: 0, id: 't1', name: 'blok_execute' },
+          { type: 'tool_input', index: 0, json: '{"commands":[' },
+          { type: 'tool_end', index: 0 },
+          ...streamOf(1, 't2', 'blok_execute', insert),
+        ],
+        reply([
+          { type: 'tool_use', id: 't1', name: 'blok_execute', input: { commands: [] } },
+          { type: 'tool_use', id: 't2', name: 'blok_execute', input: insert },
+        ], 'end_turn')
+      );
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 1,
+      });
+
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      // A later call waits too, so calls still run in stream order.
+      expect(call).not.toHaveBeenCalled();
+
+      model.open();
+      await run;
+
+      expect(call.mock.calls).toEqual([['blok_execute', { commands: [] }], ['blok_execute', insert]]);
+    });
+
+    it('answers early-run calls with their real result on max_tokens, and the rest as cut off', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok('{"applied":1}'));
+      const model = streaming(
+        [...streamOf(0, 't1', 'blok_execute', insert), { type: 'tool_start', index: 1, id: 't2', name: 'blok_execute' }],
+        reply([
+          { type: 'tool_use', id: 't1', name: 'blok_execute', input: insert },
+          { type: 'tool_use', id: 't2', name: 'blok_execute', input: { commands: [{ name: 'blo' }] } },
+        ], 'max_tokens')
+      );
+      const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages, call, signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      model.open();
+
+      expect((await run).status).toBe('truncated');
+      expect(messages.at(-1)).toEqual({
+        role: 'user',
+        content: [
+          { type: 'tool_result', tool_use_id: 't1', content: '{"applied":1}', is_error: false },
+          expect.objectContaining({ type: 'tool_result', tool_use_id: 't2', is_error: true }),
+        ],
+      });
+      expect(call).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not start an early call after stop', async () => {
+      const controller = new AbortController();
+      const call = vi.fn(async (_name: string, _input: unknown) => ok());
+      const model = streaming(
+        streamOf(0, 't1', 'blok_execute', insert),
+        reply([{ type: 'tool_use', id: 't1', name: 'blok_execute', input: insert }], 'tool_use'),
+        () => controller.abort()
+      );
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: controller.signal, maxSteps: 5,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      model.open();
+
+      expect((await run).status).toBe('stopped');
+      expect(call).not.toHaveBeenCalled();
+    });
+
+    it('does not run an early call again when the user stops before the response arrives', async () => {
+      const controller = new AbortController();
+      const call = vi.fn(async (_name: string, _input: unknown) => ok('{"applied":1}'));
+      const model = streaming(
+        streamOf(0, 't1', 'blok_execute', insert),
+        reply([{ type: 'tool_use', id: 't1', name: 'blok_execute', input: insert }], 'tool_use')
+      );
+      const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages, call, signal: controller.signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      controller.abort();
+      model.open();
+
+      expect((await run).status).toBe('stopped');
+      expect(call).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for an early call still running before it returns refused', async () => {
+      const release: { done: () => void } = { done: () => undefined };
+      const applying = new Promise<void>((resolve) => {
+        release.done = resolve;
+      });
+      const call = vi.fn(async (_name: string, _input: unknown) => {
+        await applying;
+
+        return ok();
+      });
+      const model = streaming(
+        streamOf(0, 't1', 'blok_execute', insert),
+        reply([{ type: 'tool_use', id: 't1', name: 'blok_execute', input: insert }], 'refusal')
+      );
+      const settled = { value: false };
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 5,
+      }).finally(() => {
+        settled.value = true;
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      model.open();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(settled.value).toBe(false);
+
+      release.done();
+
+      expect((await run).status).toBe('refused');
+    });
+
+    it('fails the run when an early call throws, and does not start the streamed calls after it', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown): Promise<AgentToolResult> => {
+        throw new Error('the editor was destroyed');
+      });
+      const model = streaming(
+        [...streamOf(0, 't1', 'blok_execute', insert), ...streamOf(1, 't2', 'blok_execute', insert)],
+        reply([
+          { type: 'tool_use', id: 't1', name: 'blok_execute', input: insert },
+          { type: 'tool_use', id: 't2', name: 'blok_execute', input: insert },
+        ], 'tool_use')
+      );
+      const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages, call, signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      model.open();
+
+      expect(await run).toEqual({ status: 'failed', reply: '', error: 'the editor was destroyed' });
+      expect(call).toHaveBeenCalledTimes(1);
+      expect(messages.at(-1)).toEqual({
+        role: 'user',
+        content: [
+          expect.objectContaining({ tool_use_id: 't1', is_error: true }),
+          expect.objectContaining({ tool_use_id: 't2', is_error: true }),
+        ],
+      });
+    });
+
+    it('ignores stream events that arrive after the response', async () => {
+      const late: { send: (event: AgentModelStreamEvent) => void } = { send: () => undefined };
+      const call = vi.fn(async (_name: string, _input: unknown) => ok());
+      const onStream = vi.fn();
+
+      await runAssistantLoop({
+        model: async (request) => {
+          late.send = (event) => request.onStream?.(event);
+
+          return reply([{ type: 'tool_use', id: 't1', name: 'blok_execute', input: insert }], 'end_turn');
+        },
+        system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 1, onStream,
+      });
+      streamOf(0, 't1', 'blok_execute', insert).forEach((event) => late.send(event));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(call).toHaveBeenCalledTimes(1);
+      expect(onStream).not.toHaveBeenCalled();
+    });
+
+    it('forwards every stream event to onStream and reports onToolDone with the result', async () => {
+      const events = [
+        ...streamOf(0, 't1', 'blok_execute', insert),
+        { type: 'tool_start', index: 1, id: 't2', name: 'blok_read' } as const,
+        { type: 'tool_input', index: 1, json: '{"' } as const,
+        { type: 'tool_end', index: 1 } as const,
+      ];
+      const model = streaming(events, reply([
+        { type: 'tool_use', id: 't1', name: 'blok_execute', input: insert },
+        { type: 'tool_use', id: 't2', name: 'blok_read', input: {} },
+      ], 'end_turn'));
+      const seen: AgentModelStreamEvent[] = [];
+      const done: Array<[string, string, AgentToolResult]> = [];
+      const activity: string[] = [];
+      const run = runAssistantLoop({
+        model,
+        system: '',
+        tools: [],
+        messages: [{ role: 'user', content: 'x' }],
+        call: async (name) => ok(`{"tool":"${name}"}`),
+        signal: new AbortController().signal,
+        maxSteps: 1,
+        onStream: (event) => {
+          seen.push(event);
+          throw new Error('a listener must not stop an edit');
+        },
+        onToolDone: (id, name, result) => {
+          done.push([id, name, result]);
+        },
+        onActivity: (name) => activity.push(name),
+      });
+
+      model.open();
+      await run;
+
+      expect(seen).toEqual(events);
+      expect(done).toEqual([
+        ['t1', 'blok_execute', ok('{"tool":"blok_execute"}')],
+        ['t2', 'blok_read', ok('{"tool":"blok_read"}')],
+      ]);
+      // Each call is reported once, early or not.
+      expect(activity).toEqual(['thinking', 'blok_execute', 'blok_read']);
+    });
   });
 });

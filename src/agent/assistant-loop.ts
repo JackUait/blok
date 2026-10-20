@@ -4,6 +4,7 @@ import type {
   AgentModelContentBlock,
   AgentModelMessage,
   AgentModelResponse,
+  AgentModelStreamEvent,
   AgentThinkingLevel,
   AgentToolResult,
 } from '../../types/api';
@@ -31,6 +32,10 @@ export interface AssistantLoopOptions {
   thinking?: AgentThinkingLevel;
   /** 'thinking' before each model request, then each tool called with its input. Silent after the run stops. */
   onActivity?(activity: string, input?: unknown): void;
+  /** Every stream event of the model, after the loop has handled it. */
+  onStream?(event: AgentModelStreamEvent): void;
+  /** After each tool call finishes, whether it ran early from the stream or not. */
+  onToolDone?(id: string, name: string, result: AgentToolResult): void;
 }
 
 type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
@@ -63,17 +68,128 @@ const report = (options: AssistantLoopOptions, activity: string, input?: unknown
   }
 };
 
+/** Tool id → the call started from the stream. Null when the user stopped the run before its turn came. */
+type Early = Map<string, Promise<AgentToolResult | null>>;
+
+const runCall = async (options: AssistantLoopOptions, id: string, name: string, input: unknown): Promise<AgentToolResult> => {
+  const result = await options.call(name, input);
+
+  try {
+    options.onToolDone?.(id, name, result);
+  } catch {
+    // A listener must not stop an edit.
+  }
+
+  return result;
+};
+
+const parse = (json: string): { ok: true; value: unknown } | { ok: false } => {
+  try {
+    return { ok: true, value: JSON.parse(json) as unknown };
+  } catch {
+    return { ok: false };
+  }
+};
+
+/**
+ * Starts each streamed call at its tool_end, chained in stream order.
+ * A call that throws rejects the calls queued after it, as answerAll does.
+ */
+const streamStep = (options: AssistantLoopOptions): { early: Early; handle(event: AgentModelStreamEvent): void; close(): void } => {
+  const open = new Map<number, { id: string; name: string; json: string }>();
+  const early: Early = new Map();
+  const state: { chain: Promise<unknown>; ordered: boolean; closed: boolean } = { chain: Promise.resolve(), ordered: true, closed: false };
+
+  const end = (index: number): void => {
+    const entry = open.get(index);
+
+    open.delete(index);
+
+    if (entry === undefined) {
+      return;
+    }
+
+    const input = parse(entry.json);
+
+    if (!input.ok) {
+      // Later calls wait for the final response too, so calls keep stream order.
+      state.ordered = false;
+
+      return;
+    }
+    if (!state.ordered || options.signal.aborted || early.has(entry.id)) {
+      return;
+    }
+
+    report(options, entry.name, input.value);
+
+    const run = state.chain.then(() => (options.signal.aborted ? null : runCall(options, entry.id, entry.name, input.value)));
+
+    // Read later by answerAll; this only keeps an early throw from being reported as unhandled.
+    run.catch(() => undefined);
+    state.chain = run;
+    early.set(entry.id, run);
+  };
+
+  const own = (event: AgentModelStreamEvent): void => {
+    if (event.type === 'tool_start') {
+      open.set(event.index, { id: event.id, name: event.name, json: '' });
+    }
+
+    const entry = open.get(event.index);
+
+    if (event.type === 'tool_input' && entry !== undefined) {
+      entry.json = event.json;
+    }
+    if (event.type === 'tool_end') {
+      end(event.index);
+    }
+  };
+
+  return {
+    early,
+    handle: (event) => {
+      // A late event must not start a call answerAll already ran.
+      if (state.closed) {
+        return;
+      }
+
+      try {
+        own(event);
+        options.onStream?.(event);
+      } catch {
+        // A stream listener must not stop an edit.
+      }
+    },
+    close: () => {
+      state.closed = true;
+    },
+  };
+};
+
+/** A call that started early keeps its real result, even after a stop. */
+const outcomeOf = (use: ToolUse, options: AssistantLoopOptions, early: Early): Promise<AgentToolResult | null> => {
+  const started = early.get(use.id);
+
+  if (started !== undefined) {
+    return started;
+  }
+  if (options.signal.aborted) {
+    return Promise.resolve(null);
+  }
+
+  report(options, use.name, use.input);
+
+  return runCall(options, use.id, use.name, use.input);
+};
+
 /** A call that throws answers itself and the calls after it, then ends the run. */
-const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promise<{ results: AgentModelContentBlock[]; error?: string }> => {
+const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions, early: Early): Promise<{ results: AgentModelContentBlock[]; error?: string }> => {
   const results: AgentModelContentBlock[] = [];
 
   for (const [index, use] of uses.entries()) {
-    if (!options.signal.aborted) {
-      report(options, use.name, use.input);
-    }
-
     try {
-      const outcome = options.signal.aborted ? null : await options.call(use.name, use.input);
+      const outcome = await outcomeOf(use, options, early);
 
       results.push(outcome === null
         ? unanswered(use, 'The user stopped the run.')
@@ -92,12 +208,31 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions): Promis
 
 type Step = { next: 'continue'; reply: string } | { next: 'return'; result: AssistantLoopResult };
 
-const ask = (options: AssistantLoopOptions): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> => {
+/** On max_tokens, a call that already ran early is answered with its real result. */
+const cutOff = async (use: ToolUse, early: Early): Promise<AgentModelContentBlock> => {
+  const started = early.get(use.id);
+
+  try {
+    const outcome = started === undefined ? null : await started;
+
+    return outcome === null
+      ? unanswered(use, 'The output was cut off. This call was not run.')
+      : { type: 'tool_result', tool_use_id: use.id, content: outcome.content, is_error: outcome.isError };
+  } catch (thrown) {
+    return unanswered(use, `The run failed: ${messageOf(thrown)}`);
+  }
+};
+
+const ask = (
+  options: AssistantLoopOptions,
+  onStream: (event: AgentModelStreamEvent) => void
+): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> => {
   return options.model({
     system: options.system,
     messages: options.messages,
     tools: options.tools,
     signal: options.signal,
+    onStream,
     ...(options.thinking === undefined ? {} : { thinking: options.thinking }),
   }).then(
     (value) => ({ ok: true as const, value }),
@@ -119,7 +254,12 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
 
   report(options, 'thinking');
 
-  const response = await ask(options);
+  const stream = streamStep(options);
+  const response = await ask(options, stream.handle);
+
+  stream.close();
+  // The run may return below; no early edit may still be applying then.
+  await Promise.allSettled(stream.early.values());
 
   if (signal.aborted) {
     return finish('stopped');
@@ -147,7 +287,7 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
 
   if (stop === 'max_tokens') {
     if (uses.length > 0) {
-      messages.push({ role: 'user', content: uses.map((use) => unanswered(use, 'The output was cut off. This call was not run.')) });
+      messages.push({ role: 'user', content: await Promise.all(uses.map((use) => cutOff(use, stream.early))) });
     }
 
     return finish('truncated');
@@ -159,7 +299,7 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
     return finish('done');
   }
 
-  const answered = await answerAll(uses, options);
+  const answered = await answerAll(uses, options, stream.early);
 
   messages.push({ role: 'user', content: answered.results });
 

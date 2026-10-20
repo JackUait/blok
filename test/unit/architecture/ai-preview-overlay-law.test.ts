@@ -28,6 +28,7 @@ const ALLOWED_RECEIVERS: Record<string, string> = {
   listItem: 'A list item element makeBlock just created, not yet mounted.',
   listRow: 'A list row makeBlock just created, not yet mounted.',
   previewText: 'The text element makeBlock just returned, not yet mounted.',
+  rewriteFrame: 'A rewrite preview line makeBlock just created, not yet mounted; it holds the text around the range.',
   landedWord: 'A word span this module created; it only gets its text reset.',
 };
 

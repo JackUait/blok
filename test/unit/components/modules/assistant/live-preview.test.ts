@@ -367,6 +367,226 @@ describe('createLivePreview', () => {
     expect(state.holders.every((holder) => holder.childElementCount === 0)).toBe(true);
   });
 
+  it('finds a content column wrapped by a tune', () => {
+    const preview = make();
+    const b1 = state.holders[0];
+    const tune = document.createElement('div');
+    const content = document.createElement('div');
+
+    content.setAttribute('data-blok-element-content', '');
+    tune.appendChild(content);
+    b1.appendChild(tune);
+    rects.set(state.layer, new DOMRect(10, 0, 900, 300));
+    rects.set(content, new DOMRect(66, 0, 650, HOLDER_HEIGHT));
+
+    preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'x' } } }));
+
+    const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+
+    expect(box?.style.left).toBe('56px');
+    expect(box?.style.width).toBe('650px');
+  });
+
+  it('never takes a nested child block\'s content column', () => {
+    const preview = make();
+    const b1 = state.holders[0];
+    const child = document.createElement('div');
+    const childContent = document.createElement('div');
+
+    child.setAttribute('data-blok-element', '');
+    childContent.setAttribute('data-blok-element-content', '');
+    child.appendChild(childContent);
+    b1.appendChild(child);
+    rects.set(state.layer, new DOMRect(10, 0, 900, 300));
+    rects.set(b1, new DOMRect(10, 0, 900, HOLDER_HEIGHT));
+    rects.set(childContent, new DOMRect(100, 0, 300, HOLDER_HEIGHT));
+
+    preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'x' } } }));
+
+    const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+
+    expect(box?.style.left).toBe('0px');
+    expect(box?.style.width).toBe('900px');
+  });
+
+  describe('rewrites', () => {
+    const REWRITING = 'data-blok-ai-rewriting';
+
+    /** Gives a holder a content column with one editable field. */
+    const field = (holder: HTMLElement, text: string): HTMLElement => {
+      const content = document.createElement('div');
+      const input = document.createElement('div');
+
+      content.setAttribute('data-blok-element-content', '');
+      input.setAttribute('contenteditable', 'true');
+      input.textContent = text;
+      content.appendChild(input);
+      holder.appendChild(content);
+
+      return input;
+    };
+
+    const boxText = (): string => state.layer.querySelector(PREVIEW)?.textContent ?? '';
+
+    it('whole-field replace hides the block and streams the new text', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const input = field(b1, 'Old text here');
+      const json = execute({ name: 'text.replace', args: { id: 'b1', with: 'New words land' } });
+
+      rects.set(state.layer, new DOMRect(10, 0, 900, 300));
+      rects.set(input, new DOMRect(66, 30, 650, BOX_HEIGHT));
+
+      preview.update('c1', open(json, 'land'));
+      vi.advanceTimersByTime(35 * 5);
+
+      const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+
+      expect(b1.hasAttribute(REWRITING)).toBe(true);
+      expect(words(state.layer)).toEqual(['New', 'words']);
+      expect(tails(state.layer)).toEqual(['New', 'words']);
+      expect(boxText()).not.toContain('Old');
+      expect(state.container.contains(box)).toBe(false);
+      expect(box?.style.left).toBe('56px');
+      expect(box?.style.top).toBe('30px');
+      expect(box?.style.width).toBe('650px');
+      // The real text is untouched; only the overlay changes.
+      expect(input.textContent).toBe('Old text here');
+
+      preview.update('c1', json);
+      preview.settle('c1');
+      expect(words(state.layer)).toEqual(['New', 'words', 'land']);
+      // The block stays hidden until the overlay goes, so the old text never flashes.
+      expect(b1.hasAttribute(REWRITING)).toBe(true);
+
+      runFrames();
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('waits for the target id to finish streaming', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'Old');
+      // "b1" may still grow into "b12".
+      preview.update('c1', '{"commands":[{"name":"text.replace","args":{"id":"b1');
+
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('range replace keeps the text outside the range visible', () => {
+      const preview = make();
+
+      field(state.holders[0], 'Hello brave world');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { start: 6, end: 11 }, with: 'kind' } }));
+      vi.advanceTimersByTime(35 * 3);
+
+      expect(boxText()).toBe('Hello kind world');
+      expect(words(state.layer)).toEqual(['kind']);
+    });
+
+    it('find replace previews at the second occurrence', () => {
+      const preview = make();
+
+      field(state.holders[0], 'one cat two cat three');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'cat', occurrence: 2 }, with: 'dog' } }));
+      vi.advanceTimersByTime(35 * 3);
+
+      expect(boxText()).toBe('one cat two dog three');
+    });
+
+    it('a find that is not in the text shows no preview', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'one cat');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'zebra' }, with: 'dog' } }));
+
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('drops the preview when a late range misses, and draws no insert for it', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'one cat');
+      // `range` after `with`: the preview starts as a whole replace.
+      preview.update('c1', '{"commands":[{"name":"text.replace","args":{"id":"b1","with":"dog"');
+      expect(b1.hasAttribute(REWRITING)).toBe(true);
+
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'dog', range: { find: 'zebra' } } }));
+
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+      expect(state.holders.some((holder) => holder.hasAttribute('data-blok-ai-gap'))).toBe(false);
+    });
+
+    it('block.update with data.text previews like a whole replace', () => {
+      const preview = make();
+      const b2 = state.holders[1];
+
+      field(b2, 'Before');
+      preview.update('c1', execute({ name: 'block.update', args: { id: 'b2', data: { text: 'After <b>this</b>' } } }));
+      vi.advanceTimersByTime(35 * 3);
+
+      expect(b2.hasAttribute(REWRITING)).toBe(true);
+      expect(boxText()).toBe('After this');
+    });
+
+    it('block.update without text leaves the block alone', () => {
+      const preview = make();
+      const b2 = state.holders[1];
+
+      field(b2, 'Before');
+      preview.update('c1', execute({ name: 'block.update', args: { id: 'b2', data: { style: 'ordered' } } }));
+
+      expect(b2.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('cancel shows the original block again', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'Old');
+      preview.update('c1', open(execute({ name: 'text.replace', args: { id: 'b1', with: 'New text' } }), 'New '));
+      preview.cancel('c1');
+
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('clear shows the original block again', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'Old');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'New' } }));
+      preview.clear();
+
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('holds the extra height of a longer rewrite in the gap, and frees it', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const input = field(b1, 'Short');
+
+      rects.set(input, new DOMRect(0, 0, 600, HOLDER_HEIGHT));
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A much longer text' } }));
+
+      expect(gapOf(b1)).toBe(BOX_HEIGHT - HOLDER_HEIGHT);
+
+      preview.settle('c1');
+      runFrames();
+      expect(b1.hasAttribute('data-blok-ai-gap')).toBe(false);
+    });
+  });
+
   it('reduced motion skips the shimmer class', () => {
     const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: '' } } });
 

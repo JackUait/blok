@@ -23701,6 +23701,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin-block-start: var(--blok-ai-gap-start);
 }
 
+[data-blok-element][data-blok-ai-rewriting] [data-blok-element-content] {
+  visibility: hidden;
+}
+
+[data-blok-element][data-blok-ai-rewriting] [data-blok-element]:not([data-blok-ai-rewriting]) [data-blok-element-content] {
+  visibility: visible;
+}
+
 [data-blok-ai-preview] {
   position: absolute;
   pointer-events: none;

@@ -333,6 +333,19 @@
   margin-block-start: var(--blok-ai-gap-start);
 }
 
+/*
+  A block being rewritten: its content hides but keeps its box, so nothing
+  moves; live-preview.ts draws the new text over it. Visibility inherits, so a
+  nested child block (a toggle's body) is turned back on by the longer rule.
+*/
+[data-blok-element][data-blok-ai-rewriting] [data-blok-element-content] {
+  visibility: hidden;
+}
+
+[data-blok-element][data-blok-ai-rewriting] [data-blok-element]:not([data-blok-ai-rewriting]) [data-blok-element-content] {
+  visibility: visible;
+}
+
 /* A wrapper child, never inside the redactor. live-preview.ts writes top, left and width from the anchor holder. */
 [data-blok-ai-preview] {
   position: absolute;

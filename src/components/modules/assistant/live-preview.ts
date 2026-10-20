@@ -17,6 +17,11 @@ export interface LivePreviewDeps {
   edgeHolder(edge: 'start' | 'end', parentId?: string): HTMLElement | null;
   /** The bar's block. */
   anchorHolder(): HTMLElement | null;
+  /**
+   * The input that shows a block's rich-text field (`field` missing: the first).
+   * Without it, a named field previews only when the block has a single input.
+   */
+  inputOf?(id: string, field?: string): HTMLElement | null;
 }
 
 export interface LivePreview {
@@ -34,10 +39,11 @@ const WORD_GAP_MS = 35;
 
 const INSERTS = new Set(['block.insert', 'markdown.insert']);
 
-type Kind = 'paragraph' | 'header' | 'list';
+type Kind = 'paragraph' | 'header' | 'list' | 'rewrite';
 type ListStyle = 'unordered' | 'ordered' | 'checklist';
 
-interface LineSpec { kind: Kind; level: number; style: ListStyle; text: string; complete: boolean }
+/** `before` / `after`: a rewrite's text outside the replaced range. */
+interface LineSpec { kind: Kind; level: number; style: ListStyle; text: string; complete: boolean; before?: string; after?: string }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -186,7 +192,7 @@ const landable = (spec: LineSpec): number => {
   return spec.complete ? tokens.length : tokens.filter((token) => /\s$/.test(token)).length;
 };
 
-const SLOTS: Record<Kind, string[]> = { header: ['heading'], list: ['short'], paragraph: ['line', 'short'] };
+const SLOTS: Record<Kind, string[]> = { header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'] };
 
 const makeSlots = (kind: Kind): HTMLElement[] => {
   const shimmer = !prefersReducedMotion();
@@ -205,6 +211,15 @@ const makeSlots = (kind: Kind): HTMLElement[] => {
 
 /** The real tool's markup and classes, so the hand-off to the real block does not jump. */
 const makeBlock = (spec: LineSpec, ordinal: number): { block: HTMLElement; text: HTMLElement } => {
+  if (spec.kind === 'rewrite') {
+    // The box already copies the field's own type, so plain text nodes match it.
+    const rewriteFrame = document.createElement('div');
+    const rewriteText = document.createElement('span');
+
+    rewriteFrame.append(spec.before ?? '', rewriteText, spec.after ?? '');
+
+    return { block: rewriteFrame, text: rewriteText };
+  }
   if (spec.kind === 'header') {
     const heading = document.createElement(`h${spec.level}`);
 
@@ -300,11 +315,13 @@ class Line {
 
   private draw(): void {
     const shape = `${this.spec.kind}:${this.spec.level}:${this.spec.style}:${this.ordinal}`;
+    // A range rewrite shows the text around the range at once.
+    const framed = this.spans.length > 0 || Boolean(this.spec.before) || Boolean(this.spec.after);
 
-    if (this.spans.length === 0 && (this.text !== null || this.shape !== shape)) {
+    if (!framed && (this.text !== null || this.shape !== shape)) {
       this.el.replaceChildren(...makeSlots(this.spec.kind));
       this.text = null;
-    } else if (this.spans.length > 0 && (this.text === null || this.shape !== shape)) {
+    } else if (framed && (this.text === null || this.shape !== shape)) {
       const { block, text: previewText } = makeBlock(this.spec, this.ordinal);
 
       previewText.append(...this.spans);
@@ -321,11 +338,19 @@ class Item {
   public readonly lines: Line[] = [];
   public ref?: string;
   public group: Group | null = null;
+  /** Set for a rewrite: the box drawn over the block it rewrites. */
+  public frame: RewriteBox | null = null;
 
   constructor(public readonly index: number) {}
 
   public join(group: Group): void {
     this.group = group;
+  }
+
+  /** Shows the rewritten block again. */
+  public unframe(key: string): void {
+    this.frame?.remove(key);
+    this.frame = null;
   }
 
   /** Forgets a group that no longer exists. */
@@ -359,6 +384,22 @@ class Item {
   }
 }
 
+const isOwn = (holder: HTMLElement, node: Element): boolean => node.closest(`[${DATA_ATTR.element}]`) === holder;
+
+/** The holder's own first match, never one inside a nested child block. */
+const ownFirst = (holder: HTMLElement, selector: string): HTMLElement | null =>
+  [...holder.querySelectorAll<HTMLElement>(selector)].find((node) => isOwn(holder, node)) ?? null;
+
+/** A tune may wrap the content column, so it is not always a direct child. */
+const contentColumn = (holder: HTMLElement): HTMLElement => ownFirst(holder, `[${DATA_ATTR.elementContent}]`) ?? holder;
+
+const markPreviewBox = (box: HTMLElement): void => {
+  box.setAttribute(DATA_ATTR.aiPreview, '');
+  box.setAttribute('data-blok-testid', 'ai-preview');
+  box.setAttribute('aria-hidden', 'true');
+  box.setAttribute('inert', '');
+};
+
 /** The items of one call that sit in one gap, drawn in one overlay box. */
 class Group {
   public readonly box = document.createElement('div');
@@ -366,10 +407,7 @@ class Group {
   constructor(public readonly holder: HTMLElement, public readonly side: GapSide) {
     const computed = getComputedStyle(holder);
 
-    this.box.setAttribute(DATA_ATTR.aiPreview, '');
-    this.box.setAttribute('data-blok-testid', 'ai-preview');
-    this.box.setAttribute('aria-hidden', 'true');
-    this.box.setAttribute('inert', '');
+    markPreviewBox(this.box);
     // The tools size text with `inherit`, so take what a real block would inherit here (a callout's size, say).
     this.box.style.fontSize = computed.fontSize;
     this.box.style.fontFamily = computed.fontFamily;
@@ -393,7 +431,7 @@ class Group {
     const offset = reserveGap(this.holder, key, height, this.side);
     const rect = this.holder.getBoundingClientRect();
     // The real column: the alignment rules move it inside a wider holder.
-    const column = ([...this.holder.children].find((child) => child.hasAttribute(DATA_ATTR.elementContent)) ?? this.holder).getBoundingClientRect();
+    const column = contentColumn(this.holder).getBoundingClientRect();
     const top = this.side === 'end'
       ? rect.bottom - layer.top + offset
       : rect.top - layer.top - gapSize(this.holder, 'start') + offset;
@@ -408,6 +446,129 @@ class Group {
     releaseGap(this.holder, key, this.side);
   }
 }
+
+/** Copied from the field, so the overlay text sits exactly over the hidden text. */
+const FIELD_TYPE = [
+  'font-size', 'font-family', 'font-weight', 'font-style', 'line-height', 'letter-spacing', 'color', 'text-align',
+  'padding-block-start', 'padding-block-end', 'padding-inline-start', 'padding-inline-end',
+];
+
+interface RewriteTarget { id: string; holder: HTMLElement; input: HTMLElement; original: string }
+
+/** One rewrite: the holder's content is hidden, and this box draws the new text over its field. */
+class RewriteBox {
+  public readonly box = document.createElement('div');
+
+  constructor(public readonly target: RewriteTarget, root: HTMLElement) {
+    const computed = getComputedStyle(target.input);
+
+    markPreviewBox(this.box);
+    FIELD_TYPE.forEach((property) => this.box.style.setProperty(property, computed.getPropertyValue(property)));
+    this.box.append(root);
+    target.holder.setAttribute(DATA_ATTR.aiRewriting, '');
+  }
+
+  /** Puts the box over the field; text longer than the field holds the extra height in the gap. */
+  public place(key: string, layer: DOMRect): void {
+    const field = this.target.input.getBoundingClientRect();
+    const height = this.box.getBoundingClientRect().height;
+
+    reserveGap(this.target.holder, key, height - field.height);
+    this.box.style.top = `${field.top - layer.top}px`;
+    this.box.style.left = `${field.left - layer.left}px`;
+    this.box.style.width = `${field.width}px`;
+  }
+
+  public remove(key: string): void {
+    this.box.remove();
+    releaseGap(this.target.holder, key);
+    this.target.holder.removeAttribute(DATA_ATTR.aiRewriting);
+  }
+}
+
+type RewriteRange = 'all' | { start: number; end: number } | { find: string; occurrence: number };
+
+interface RewriteSpec { id: string; field?: string; strictField: boolean; range: RewriteRange; text: string; complete: boolean }
+
+const rangeOf = (value: unknown): RewriteRange | null => {
+  if (value === undefined || value === 'all') {
+    return 'all';
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+  if (typeof value.start === 'number' && typeof value.end === 'number') {
+    return { start: value.start, end: value.end };
+  }
+  if (typeof value.find === 'string' && value.find.trim() !== '') {
+    return { find: value.find, occurrence: typeof value.occurrence === 'number' ? value.occurrence : 1 };
+  }
+
+  return null;
+};
+
+/** Same search as the executor's findRange, so the preview marks the span commit will replace. */
+const locate = (text: string, range: RewriteRange): { start: number; end: number } | null => {
+  if (range === 'all') {
+    return { start: 0, end: text.length };
+  }
+  if ('start' in range) {
+    return range.start >= 0 && range.start <= range.end && range.end <= text.length ? range : null;
+  }
+  const search = { at: -1, count: 0 };
+
+  while (search.count < range.occurrence) {
+    search.at = text.indexOf(range.find, search.at + 1);
+    if (search.at < 0) {
+      return null;
+    }
+    search.count += 1;
+  }
+
+  return { start: search.at, end: search.at + range.find.length };
+};
+
+/** A rewrite whose target and range are final; null while they may still change, or for no rewrite. */
+const rewriteOf = (command: PartialCommand): RewriteSpec | null => {
+  const { name, args, done } = command;
+  const fieldReady = args.field === undefined || (typeof args.field === 'string' && settled(args, 'field', done));
+
+  if (typeof args.id !== 'string' || !settled(args, 'id', done) || !fieldReady) {
+    return null;
+  }
+  const field = typeof args.field === 'string' ? args.field : undefined;
+
+  if (name === 'text.replace') {
+    const range = args.range === undefined || settled(args, 'range', done) ? rangeOf(args.range) : null;
+
+    if (!('with' in args) || range === null) {
+      return null;
+    }
+    const complete = settled(args, 'with', done);
+
+    return { id: args.id, field, strictField: field !== undefined, range, text: richText(args.with, complete), complete };
+  }
+  if (name === 'block.update' && isRecord(args.data) && 'text' in args.data) {
+    const complete = settled(args, 'data', done) || settled(args.data, 'text', done);
+
+    // Only `text`: another string field (a list style, a url) is not shown text.
+    return { id: args.id, field: 'text', strictField: false, range: 'all', text: richText(args.data.text, complete), complete };
+  }
+
+  return null;
+};
+
+const EDITABLE = '[contenteditable]:not([contenteditable="false"])';
+
+const fieldInput = (deps: LivePreviewDeps, holder: HTMLElement, spec: RewriteSpec): HTMLElement | null => {
+  if (deps.inputOf) {
+    return deps.inputOf(spec.id, spec.field);
+  }
+  const inputs = [...holder.querySelectorAll<HTMLElement>(EDITABLE)].filter((input) => isOwn(holder, input));
+
+  // No DOM hook names a field: with several inputs, a named one cannot be told apart.
+  return !spec.strictField || inputs.length === 1 ? inputs[0] ?? null : null;
+};
 
 type Plan = Map<HTMLElement, Partial<Record<GapSide, Item[]>>>;
 
@@ -551,6 +712,11 @@ class CallPreview {
 
   public render(commands: PartialCommand[]): void {
     commands.forEach((command, index) => {
+      if (command.name === 'text.replace' || command.name === 'block.update') {
+        this.rewrite(index, command);
+
+        return;
+      }
       if (command.name === undefined || !INSERTS.has(command.name)) {
         return;
       }
@@ -562,8 +728,9 @@ class CallPreview {
     });
 
     const groups: Group[] = [];
+    const inserts = new Map([...this.items].filter(([, item]) => item.frame === null));
 
-    plan(this.deps, this.items, commands).forEach((sides, holder) => {
+    plan(this.deps, inserts, commands).forEach((sides, holder) => {
       (['end', 'start'] as const).forEach((side) => {
         const items = sides[side];
 
@@ -593,7 +760,7 @@ class CallPreview {
     if (this.timer !== null) {
       return;
     }
-    const line = this.ordered().flatMap((item) => (item.group ? item.lines : [])).find((known) => known.pending);
+    const line = this.ordered().flatMap((item) => (item.group || item.frame ? item.lines : [])).find((known) => known.pending);
 
     if (line === undefined) {
       this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
@@ -626,6 +793,67 @@ class CallPreview {
     this.stop();
     this.groups.forEach((group) => group.remove(this.key));
     this.groups = [];
+    this.items.forEach((item) => this.dropFrame(item));
+  }
+
+  private rewrite(index: number, command: PartialCommand): void {
+    const spec = rewriteOf(command);
+    const known = this.items.get(index);
+
+    // Target or range may still change: keep what is drawn.
+    if (spec === null) {
+      return;
+    }
+    const target = known?.frame?.target ?? this.target(spec);
+    const at = target ? locate(target.original, spec.range) : null;
+
+    // A find that misses: commit decides, so nothing shows.
+    if (target === null || at === null) {
+      if (known) {
+        this.dropFrame(known);
+        this.items.delete(index);
+      }
+
+      return;
+    }
+    const item = known ?? new Item(index);
+
+    this.items.set(index, item);
+    if (item.frame === null) {
+      item.frame = new RewriteBox(target, item.root);
+      this.deps.layer.appendChild(item.frame.box);
+    }
+    item.sync([{
+      kind: 'rewrite',
+      level: 2,
+      style: 'unordered',
+      text: spec.text,
+      complete: spec.complete,
+      before: target.original.slice(0, at.start),
+      after: target.original.slice(at.end),
+    }]);
+  }
+
+  /** The block to rewrite, its input, and its text as it is now. */
+  private target(spec: RewriteSpec): RewriteTarget | null {
+    const holder = this.deps.holderOf(spec.id);
+    const input = holder ? fieldInput(this.deps, holder, spec) : null;
+    // A second rewrite of one block in a call would draw over stale text.
+    const taken = [...this.items.values()].some((item) => item.frame?.target.holder === holder);
+
+    if (holder === null || input === null || taken) {
+      return null;
+    }
+
+    return { id: spec.id, holder, input, original: input.textContent ?? '' };
+  }
+
+  private dropFrame(item: Item): void {
+    item.unframe(this.frameKey(item));
+  }
+
+  private frameKey(item: Item): string {
+    return `rewrite:${this.id}:${item.index}`;
   }
 
   private stop(): void {
@@ -638,6 +866,8 @@ class CallPreview {
   private layout(): void {
     const layer = this.deps.layer.getBoundingClientRect();
 
+    // Rewrites first: their extra height sits right under their block, above any insert gap.
+    this.items.forEach((item) => item.frame?.place(this.frameKey(item), layer));
     this.groups.forEach((group) => group.place(this.key, layer));
   }
 

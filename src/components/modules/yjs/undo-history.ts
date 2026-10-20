@@ -66,6 +66,8 @@ interface PoppedEntryScan {
   resurrected: Set<string>;
   /** Every block the entry writes: its own key, a field below it, or its contentIds. */
   touched: Set<string>;
+  /** The blocks whose `data` or `type` the entry writes. */
+  dataWritten: Set<string>;
 }
 
 /** The step a gesture start closed, and where it ends on both stacks. */
@@ -661,7 +663,8 @@ export class UndoHistory {
     const blocks = this.blocksScope;
     const scan: PoppedEntryScan = { born: new Set<string>(),
       resurrected: new Set<string>(),
-      touched: new Set<string>() };
+      touched: new Set<string>(),
+      dataWritten: new Set<string>() };
 
     if (top === undefined || blocks === null || blocks.doc === null) {
       return scan;
@@ -683,6 +686,12 @@ export class UndoHistory {
       if (owner !== null) {
         scan.touched.add(owner);
       }
+
+      const dataOwner = this.blockOwningDataItem(struct);
+
+      if (dataOwner !== null) {
+        scan.dataWritten.add(dataOwner);
+      }
     };
 
     blocks.doc.transact((transaction) => {
@@ -699,7 +708,42 @@ export class UndoHistory {
    * @param scan - the blocks the entry creates, removes and writes
    */
   private isRefused(scan: PoppedEntryScan): boolean {
-    return this.wouldResurrectBesideASparedBlock(scan) || [...scan.touched].some((id) => this.isReadOnlyNow(id));
+    return this.wouldResurrectBesideASparedBlock(scan) || this.writesReadOnly(scan);
+  }
+
+  /**
+   * Whether the entry writes a read-only block, or the data of a block whose
+   * data is frozen. A block the entry created does not count: undoing it is a
+   * delete, which frozen data allows.
+   */
+  private writesReadOnly(scan: PoppedEntryScan): boolean {
+    const manager = this.blok?.BlockManager;
+
+    return [...scan.touched].some((id) => this.isReadOnlyNow(id))
+      || [...scan.dataWritten].some((id) => !scan.born.has(id) && manager?.getBlockById(id)?.toolDataReadOnly === true);
+  }
+
+  /**
+   * The block whose `data` or `type` key holds this item, else null. Its
+   * contentIds and parentId do not count: a frozen database still takes rows.
+   * @param item - an item of the entry
+   */
+  private blockOwningDataItem(item: Y.Item): string | null {
+    const blocks = this.blocksScope;
+    const step = (cursor: Y.Item, seen: Set<Y.Item>): string | null => {
+      const { parent } = cursor;
+
+      if (!(parent instanceof Y.AbstractType) || parent === blocks || parent._item === null || seen.has(cursor)) {
+        return null;
+      }
+      if (parent._item.parent === blocks) {
+        return cursor.parentSub === 'data' || cursor.parentSub === 'type' ? parent._item.parentSub : null;
+      }
+
+      return step(parent._item, seen.add(cursor));
+    };
+
+    return blocks === null ? null : step(item, new Set());
   }
 
   /**
@@ -745,7 +789,7 @@ export class UndoHistory {
   private holdsReadOnlyStep(): boolean {
     return this.walkOrder('undo').some(({ group, item }) => group !== undefined
       ? this.movesReadOnly(group)
-      : item !== undefined && [...this.scanTopEntry([item]).touched].some((id) => this.isReadOnlyNow(id)));
+      : item !== undefined && this.writesReadOnly(this.scanTopEntry([item])));
   }
 
   /**

@@ -744,4 +744,105 @@ describe('database permissions reach core block actions', () => {
       expect(await run(instance, { commands: [{ name: 'block.update', args: { id: 'body1', data: { text: 'agent' } } }] })).toBeNull();
     });
   });
+
+  describe('undo and redo after editStructure is denied', () => {
+    /** One step of history, closed so the next write starts its own. */
+    const step = async (instance: Core, write: () => unknown): Promise<void> => {
+      const { YjsManager } = instance.moduleInstances;
+
+      YjsManager.stopCapturing();
+      await write();
+      await quiet();
+      YjsManager.stopCapturing();
+    };
+
+    const saved = async (instance: Core, id: string): Promise<OutputBlockData | undefined> =>
+      (await instance.moduleInstances.Saver.save())?.blocks.find((b) => b.id === id);
+
+    const propertyNames = async (instance: Core): Promise<string[]> => {
+      const data: unknown = (await saved(instance, 'db'))?.data;
+      const list: unknown = typeof data === 'object' && data !== null && 'schema' in data ? data.schema : [];
+
+      return Array.isArray(list) ? list.map((property: unknown) => typeof property === 'object' && property !== null && 'name' in property ? String(property.name) : '') : [];
+    };
+
+    it('a schema change made before the deny waits, and an older step still undoes', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied);
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.update('p0', { text: 'older' }));
+      await step(instance, () => run(instance, { commands: [{ name: 'database.addProperty', args: { id: 'db', name: 'Size', type: 'number' } }] }));
+      expect(await propertyNames(instance)).toContain('Size');
+      denied.push('editStructure');
+
+      YjsManager.undo();
+      await quiet();
+
+      expect(await propertyNames(instance)).toContain('Size');
+      expect((await saved(instance, 'p0'))?.data.text).toEqual([{ text: 'before' }]);
+
+      denied.length = 0;
+      YjsManager.undo();
+      await quiet();
+
+      expect(await propertyNames(instance)).not.toContain('Size');
+    });
+
+    it('redo does not bring a schema change back while editStructure is denied', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied);
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => run(instance, { commands: [{ name: 'database.addProperty', args: { id: 'db', name: 'Size', type: 'number' } }] }));
+      YjsManager.undo();
+      await quiet();
+      expect(await propertyNames(instance)).not.toContain('Size');
+      denied.push('editStructure');
+
+      YjsManager.redo();
+      await quiet();
+      expect(await propertyNames(instance)).not.toContain('Size');
+
+      denied.length = 0;
+      expect(API.methods.history.canRedo()).toBe(true);
+      YjsManager.redo();
+      await quiet();
+      expect(await propertyNames(instance)).toContain('Size');
+    });
+
+    it('a database inserted before the deny still goes away on undo', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied);
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.insertAt('database', { title: 'Copy', schema, views: [view], activeViewId: 'v1' }, { position: 'end', id: 'db2' }));
+      expect(await ids(instance)).toContain('db2');
+      denied.push('editStructure');
+
+      YjsManager.undo();
+      await quiet();
+
+      expect(await ids(instance)).not.toContain('db2');
+    });
+
+    it('a row added and a row edited before the deny still undo: rows stay open', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied);
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.update('r1', { properties: { t: 'Row', notes: 'edited' }, position: 'a0', bodyBlocks: true }));
+      await step(instance, () => API.methods.blocks.insertAt('database-row', { properties: { t: 'New' }, position: 'a1' }, { parentId: 'db', position: 'end', id: 'r2' }));
+      expect(block(instance, 'db').contentIds).toEqual(['r1', 'r2']);
+      denied.push('editStructure');
+
+      YjsManager.undo();
+      await quiet();
+      expect(block(instance, 'db').contentIds).toEqual(['r1']);
+
+      YjsManager.undo();
+      await quiet();
+      expect((await saved(instance, 'r1'))?.data.properties).toEqual({ t: 'Row', notes: 'n' });
+    });
+  });
 });

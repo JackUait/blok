@@ -1,7 +1,7 @@
 import { parseDateValue } from './cells/date-value';
 import { addToDate, parseIsoDate, wallTime, zonedToEpoch } from './formula/dates';
 import { resolveDynamicValue } from './dynamic-values';
-import type { DateReminder, DateReminderOffset, PropertyValue } from './types';
+import type { DatabaseRow, DateReminder, DateReminderOffset, PropertyValue } from './types';
 
 /** Notion's lists, in order (research/17 §1b). None is the absence of a reminder. */
 const DATE_ONLY: readonly DateReminderOffset[] = ['on_day_of_event', '1_day_before', '2_days_before', '1_week_before'];
@@ -74,6 +74,13 @@ export const reminderDueAt = (value: PropertyValue | undefined, remind: DateRemi
   const day = wallTime(addToDate(event.start, -(MORNING_DAYS[remind] ?? 0), 'days', zone), zone);
 
   return zonedToEpoch({ ...day, hour: REMINDER_HOUR, minute: 0, second: 0, ms: 0 }, zone);
+};
+
+/** The display context for a row's date: with a reminder the date shows the alarm in every view. */
+export const reminderContext = (row: DatabaseRow | undefined, propertyId: string): { reminder?: DateReminderOffset } => {
+  const remind = row?.reminders?.[propertyId]?.remind;
+
+  return remind === undefined ? {} : { reminder: remind };
 };
 
 /** The viewer's IANA zone, read on each call: a reminder records it when set. */

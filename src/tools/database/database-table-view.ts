@@ -4,6 +4,7 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, DateReminderOffset, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
 import { renderCellValue, createOptionPill, openCellEditor } from './cells';
+import { reminderContext } from './reminders';
 import type { CellContext, CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { formatDateText, resolveLocale } from './cells/date-format';
@@ -843,13 +844,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (column === undefined || row === undefined) {
       return;
     }
-    const reminder = row.reminders?.[column.property.id]?.remind;
     const value = renderCellValue(column.property, readPropertyValue(row, column.property), {
       ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: this.options.readOnly,
       followLinks: true,
-      ...(reminder !== undefined ? { reminder } : {}),
+      ...reminderContext(row, column.property.id),
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
     });
 

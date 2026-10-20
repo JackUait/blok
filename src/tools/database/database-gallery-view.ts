@@ -3,6 +3,7 @@ import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
 import { createOptionPill, renderCellValue } from './cells';
+import { reminderContext } from './reminders';
 import type { CellContext } from './cells';
 import { createCardPreview } from './database-card-preview';
 import { readPropertyValue } from './property-values';
@@ -263,7 +264,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       }
 
       const cell = renderCellValue(property, readPropertyValue(row, property), {
-        ...this.options.cellContext, i18n: this.options.i18n, readOnly: true, locale: this.options.locale,
+        ...this.options.cellContext, i18n: this.options.i18n, readOnly: true, locale: this.options.locale, ...reminderContext(row, property.id),
       });
 
       if (cell.hasAttribute('data-empty')) {

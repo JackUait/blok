@@ -4939,7 +4939,10 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 /* A set reminder (research/17 §1c): the date in the accent, a 1.2em alarm after it. Not a selected state. */
+/* Inline, so the base cell's wrapping flex never drops the alarm onto its own line in a card. */
 [data-blok-database-cell="date"][data-reminder] {
+  display: inline;
+  white-space: nowrap;
   color: var(--blok-color-accent);
 }
 

@@ -4,6 +4,7 @@ import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } fro
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { readPropertyValue } from './property-values';
 import { renderCellValue } from './cells';
+import { reminderContext } from './reminders';
 import type { CellContext } from './cells';
 import { IconChevronDown, IconMenu } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -536,7 +537,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
         continue;
       }
 
-      const badge = this.createPropertyBadge(propDef, readPropertyValue(row, propDef));
+      const badge = this.createPropertyBadge(propDef, readPropertyValue(row, propDef), row);
 
       if (badge !== null) {
         propertiesEl.appendChild(badge);
@@ -566,11 +567,12 @@ export class DatabaseListView implements DatabaseViewRenderer {
    * One property slot: the shared cell display, or null when it shows
    * nothing (the list shows only filled properties, as the board does).
    */
-  private createPropertyBadge(propDef: PropertyDefinition, value: PropertyValue | undefined): HTMLSpanElement | null {
+  private createPropertyBadge(propDef: PropertyDefinition, value: PropertyValue | undefined, row: DatabaseRow): HTMLSpanElement | null {
     const cell = renderCellValue(propDef, value, {
       ...this.settings.cellContext,
       i18n: this.i18n,
       readOnly: true,
+      ...reminderContext(row, propDef.id),
       ...(this.settings.locale !== undefined ? { locale: this.settings.locale } : {}),
     });
 

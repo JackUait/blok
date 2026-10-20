@@ -8286,6 +8286,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-cell="date"][data-reminder] {
+  display: inline;
+  white-space: nowrap;
   color: var(--blok-color-accent);
 }
 

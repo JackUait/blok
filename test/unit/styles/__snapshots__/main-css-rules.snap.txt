@@ -4052,6 +4052,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-control-text: rgb(142, 139, 134);
   --blok-database-timeline-arrow-bg: rgb(142, 139, 134);
   --blok-database-timeline-arrow-icon: #ffffff;
+  --blok-database-timeline-arrow-border: #ffffff;
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-peek-bg: var(--blok-popover-bg);
   --blok-database-peek-title: var(--blok-text-primary);
@@ -4070,6 +4071,12 @@ span[data-blok-slash-search] {
   --blok-database-feed-card-bg: #ffffff;
   --blok-database-feed-card-shadow: rgba(0, 0, 0, 0.02) 0 12px 32px, rgba(0, 0, 0, 0.05) 0 0 0 1px;
   --blok-database-feed-reaction-bg: rgb(249, 248, 247);
+  --blok-database-feed-card-hover-shadow: rgba(0, 0, 0, 0.03) 0 12px 32px, rgba(0, 0, 0, 0.086) 0 0 0 1px;
+  --blok-database-feed-actions-bg: #ffffff;
+  --blok-database-feed-actions-border: rgb(240, 239, 237);
+  --blok-database-feed-actions-shadow: rgba(29, 27, 22, 0.06) 0 2px 12px;
+  --blok-database-form-question-bg: #ffffff;
+  --blok-database-form-question-ring: rgb(182, 212, 243);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(24, 96, 172);
   --blok-database-new-text: rgb(243, 249, 253);
@@ -4197,6 +4204,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
   --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
+  --blok-database-timeline-arrow-border: rgb(25, 25, 25);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
@@ -4215,6 +4223,11 @@ span[data-blok-slash-search] {
   --blok-database-feed-card-bg: rgb(32, 32, 32);
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
   --blok-database-feed-reaction-bg: rgb(32, 32, 32);
+  --blok-database-feed-card-hover-shadow: rgba(255, 255, 255, 0.1) 0 0 0 1px inset;
+  --blok-database-feed-actions-bg: rgb(47, 47, 47);
+  --blok-database-feed-actions-border: rgb(44, 44, 43);
+  --blok-database-form-question-bg: rgb(25, 25, 25);
+  --blok-database-form-question-ring: rgb(53, 95, 139);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(36, 115, 201);
   --blok-database-new-text: rgb(243, 249, 253);
@@ -4343,6 +4356,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
   --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
+  --blok-database-timeline-arrow-border: rgb(25, 25, 25);
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
   --blok-database-peek-title: rgb(240, 239, 237);
@@ -4361,6 +4375,11 @@ span[data-blok-slash-search] {
   --blok-database-feed-card-bg: rgb(32, 32, 32);
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
   --blok-database-feed-reaction-bg: rgb(32, 32, 32);
+  --blok-database-feed-card-hover-shadow: rgba(255, 255, 255, 0.1) 0 0 0 1px inset;
+  --blok-database-feed-actions-bg: rgb(47, 47, 47);
+  --blok-database-feed-actions-border: rgb(44, 44, 43);
+  --blok-database-form-question-bg: rgb(25, 25, 25);
+  --blok-database-form-question-ring: rgb(53, 95, 139);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(36, 115, 201);
   --blok-database-new-text: rgb(243, 249, 253);
@@ -4508,6 +4527,12 @@ span[data-blok-slash-search] {
 
 [data-blok-database-edit-card]:hover, [data-blok-database-card-menu]:hover {
   background: var(--blok-database-card-menu-hover-bg);
+}
+
+[data-blok-database-edit-card] {
+  box-sizing: border-box;
+  width: 29px;
+  border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
 [data-blok-database-card-title-input] {
@@ -10583,10 +10608,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   inline-size: 16px;
   block-size: 16px;
   padding: 0;
-  border: none;
+  border: 1px solid var(--blok-database-timeline-arrow-border);
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-database-timeline-arrow-bg);
   color: var(--blok-database-timeline-arrow-icon);
@@ -10625,6 +10651,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-timeline-bar]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
+}
+
+[data-blok-database-timeline-bar]:hover {
+  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
 [data-blok-database-timeline-bar][data-dragging] {
@@ -11267,6 +11297,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-shadow: var(--blok-database-feed-card-shadow);
 }
 
+[data-blok-database-feed-card]:hover {
+  box-shadow: var(--blok-database-feed-card-hover-shadow);
+}
+
 [data-blok-database-feed-byline] {
   display: flex;
   align-items: baseline;
@@ -11313,15 +11347,19 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   inset-inline-end: var(--blok-space-4);
   display: flex;
   gap: var(--blok-space-0-25);
-}
-
-[data-blok-database-feed-card-actions] > button {
+  padding: var(--blok-space-0-5);
+  border: 1px solid var(--blok-database-feed-actions-border);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-feed-actions-bg);
+  box-shadow: var(--blok-database-feed-actions-shadow);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 120ms ease;
 }
 
-[data-blok-database-feed-card]:hover > [data-blok-database-feed-card-actions] > button, [data-blok-database-feed-card][data-popover-open] > [data-blok-database-feed-card-actions] > button, [data-blok-database-feed-card-actions] > button:focus-visible {
+[data-blok-database-feed-card]:hover > [data-blok-database-feed-card-actions], [data-blok-database-feed-card][data-popover-open] > [data-blok-database-feed-card-actions], [data-blok-database-feed-card-actions]:has(:focus-visible) {
   opacity: 1;
+  pointer-events: auto;
 }
 
 [data-blok-database-feed-react], [data-blok-database-feed-more-actions] {
@@ -11847,6 +11885,13 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-text-primary);
 }
 
+[data-blok-database-form-question]:has(> [data-blok-database-form-question-header]) {
+  padding: var(--blok-space-3);
+  border-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-database-form-question-bg);
+  box-shadow: var(--blok-database-form-question-ring) 0 0 0 0.5px inset;
+}
+
 [data-blok-database-form-question-header] {
   display: flex;
   align-items: center;
@@ -11856,7 +11901,11 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-form-question-menu] {
   display: inline-flex;
-  padding: var(--blok-space-1);
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
@@ -11869,8 +11918,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-form-question-menu] svg {
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 [data-blok-database-form-provider-answer] {

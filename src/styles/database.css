@@ -278,7 +278,7 @@
     --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
     --blok-database-calendar-today-text: #ffffff;
-    /* Timeline: research/21 §1i. Grid line and arrow icon are unmeasured. */
+    /* Timeline: research/21 §1i. Grid line is unmeasured. The arrow icon is too: page ink, since white on the chip is 2.3:1. */
     --blok-database-timeline-bar-bg: rgb(37, 37, 37);
     --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
@@ -288,7 +288,7 @@
     --blok-database-timeline-text: rgb(240, 239, 237);
     --blok-database-timeline-control-text: rgb(173, 169, 163);
     --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
-    --blok-database-timeline-arrow-icon: #ffffff;
+    --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
     --blok-database-fill-handle-bg: rgb(25, 25, 25);
     /* Peek panel, shadow and center backdrop: research/21 §1m. */
     --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -320,6 +320,7 @@
     --blok-database-tab-text: rgb(173, 169, 163);
     --blok-database-tab-text-active: rgb(240, 239, 237);
     --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  /* Card action pill shadow: research/21 §1f. */
   --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-card-actions-icon: rgb(173, 169, 163);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
@@ -437,7 +438,7 @@
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
   --blok-database-calendar-today-text: #ffffff;
-  /* Timeline: research/21 §1i. Grid line and arrow icon are unmeasured. */
+  /* Timeline: research/21 §1i. Grid line is unmeasured. The arrow icon is too: page ink, since white on the chip is 2.3:1. */
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
   --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
@@ -447,7 +448,7 @@
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
-  --blok-database-timeline-arrow-icon: #ffffff;
+  --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
   /* Peek panel, shadow and center backdrop: research/21 §1m. */
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
@@ -479,6 +480,7 @@
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  /* Card action pill shadow: research/21 §1f. */
   --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-card-actions-icon: rgb(173, 169, 163);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);

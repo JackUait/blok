@@ -4186,7 +4186,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
-  --blok-database-timeline-arrow-icon: #ffffff;
+  --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
@@ -4325,7 +4325,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
-  --blok-database-timeline-arrow-icon: #ffffff;
+  --blok-database-timeline-arrow-icon: rgb(25, 25, 25);
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-peek-bg: rgb(32, 32, 32);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);

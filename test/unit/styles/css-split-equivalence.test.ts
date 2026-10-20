@@ -876,7 +876,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: dark peek panel, backdrop, builder surfaces and comment badge ink, as measured (research/21 §1m-§1o).
     const DATABASE_DARK_PEEK_BUILDER_BYTES = 1_688;
     // database.css: dark board, list, gallery, calendar, timeline, feed and form tokens (research/21 §1f-§1k).
-    const DATABASE_DARK_VIEWS_BYTES = 1_945;
+    const DATABASE_DARK_VIEWS_BYTES = 2_137;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

@@ -98,6 +98,11 @@ describe('timeline in dark (research/21 §1i)', () => {
     expect(darkValues(token)).toEqual([value, value]);
   });
 
+  // The dark icon ink is unmeasured. White on the measured chip is 2.3:1, under the 3:1 icon minimum; page ink is 7.5:1.
+  it('draws the off-screen arrow in page ink on the light chip, so it stays readable', () => {
+    expect(darkValues('--blok-database-timeline-arrow-icon')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
+  });
+
   it('keeps the today chip digit white in dark', () => {
     expect(ruleBody('[data-blok-database-timeline-today-dot]')).toContain('color: var(--blok-database-calendar-today-text)');
     expect(darkValues('--blok-database-calendar-today-text')).toEqual(['#ffffff', '#ffffff']);

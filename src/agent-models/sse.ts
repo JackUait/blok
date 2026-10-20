@@ -167,7 +167,9 @@ export async function* readJsonEvents(
   }
 
   // A bare stream has no HTTP status, so its error body is all there is to report.
-  if (seen.events === 0 && stray.length > 0 && !signal.aborted) {
-    throw errorOf(parseJson(stray.join('\n')), provider) ?? new Error(`${provider}: the reply was not an event stream.`);
+  // No events at all is not "ended early": an HTTP error can send an empty body.
+  if (seen.events === 0 && !signal.aborted) {
+    throw errorOf(parseJson(stray.join('\n')), provider)
+      ?? new Error(stray.length > 0 ? `${provider}: the reply was not an event stream.` : `${provider}: the reply held no events.`);
   }
 }

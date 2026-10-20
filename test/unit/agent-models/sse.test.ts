@@ -137,8 +137,9 @@ describe('readJsonEvents', () => {
     await expect(read).rejects.toThrow('P: the reply was not an event stream.');
   });
 
-  it('yields nothing and does not throw for an empty stream; the adapter decides', async () => {
-    expect(await collectJson(streamOf(''))).toEqual([]);
+  it('does not claim a stream ended early when an empty body held no events at all', async () => {
+    // A bare stream of a 401 or 504 can be empty, and has no status to report.
+    await expect(collectJson(streamOf(''))).rejects.toThrow('P: the reply held no events.');
   });
 
   it('reads an ok Response body', async () => {

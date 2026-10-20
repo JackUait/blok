@@ -248,6 +248,20 @@ describe('DatabaseMapView', () => {
     expect(search()).toBeNull();
   });
 
+  it('a pin opening another row drops the waiting list', async () => {
+    const render = vi.fn();
+    const { root, mapView } = mount({ render, writable: true });
+
+    await flush();
+    root.querySelector<HTMLButtonElement>('[data-blok-database-map-no-place]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-database-map-no-place-row]')?.click();
+    (render.mock.calls[0][2] as DatabaseMapContext).open('r1');
+    mapView.rowPageClosed();
+    await flush();
+
+    expect(document.querySelector('[data-blok-database-map-no-place-search]')).toBeNull();
+  });
+
   it('a row page closing with no list under it opens nothing', async () => {
     const { mapView } = mount({ render: vi.fn(), writable: true });
 

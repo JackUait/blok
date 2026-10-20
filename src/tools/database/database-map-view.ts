@@ -99,7 +99,10 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     }
     root.appendChild(frame);
     const ctx: DatabaseMapContext = {
-      open: (rowId) => this.options.open(rowId),
+      open: (rowId) => {
+        this.underPage = null;
+        this.options.open(rowId);
+      },
       height,
       addingPin: () => this.addingPin,
       onAddPin: (lngLat) => {

@@ -230,6 +230,29 @@ test.describe('map view', () => {
     await expect(page.locator('[data-blok-database-map-empty="no-style"]')).toHaveText('A map style is needed to show this map.');
   });
 
+  // research/23 §5b: a green rule paints the pin rgb(70, 161, 113); an uncoloured pin stays #2383E2.
+  test('paints a green rule\'s pin the measured green, in light and dark', async ({ page }) => {
+    await mount(page, blocks({ type: 'map' }), 'map');
+    const fills = (): Promise<string[]> => page.locator('[data-blok-database-map]').evaluate((map) => ['green', null].map((color) => {
+      const pin = document.createElement('span');
+
+      pin.setAttribute('data-blok-database-map-pin', '');
+      if (color !== null) pin.setAttribute('data-color', color);
+      map.appendChild(pin);
+      const fill = getComputedStyle(pin, '::after').backgroundColor;
+
+      pin.remove();
+
+      return fill;
+    }));
+
+    await page.emulateMedia({ colorScheme: 'light' });
+    expect(await fills()).toEqual(['rgb(70, 161, 113)', 'rgb(35, 131, 226)']);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    expect((await fills())[0]).toBe('rgb(70, 161, 113)');
+    await page.emulateMedia({ colorScheme: 'light' });
+  });
+
   test('the host draws the pins, and a pin opens its page in a center peek', async ({ page }) => {
     await mount(page, blocks({ type: 'map' }), 'map');
 

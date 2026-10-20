@@ -24,10 +24,13 @@ import type { DateDisplayChange } from './date-format';
 import { formatDateValue, parseDateValue } from './date-value';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
-/** Time a set date takes when "Include time" turns on (research/26 §5d). */
+/** Time a date on another day than today takes when "Include time" turns on (research/27 §4b). */
 const DEFAULT_TIME = '09:00';
 
-/** The next whole hour, for an empty cell (research/26 §5d). Past 23:00 it wraps to 00:00 and leaves the day alone. */
+/**
+ * The next whole hour, for today or an empty cell (research/27 §4b). On the hour and past 23:00 are
+ * unmeasured: it still moves one hour, and past 23:00 wraps to 00:00 and leaves the day alone.
+ */
 const nextWholeHour = (): string => `${String((new Date().getHours() + 1) % 24).padStart(2, '0')}:00`;
 
 const DAYS_SHOWN = 42;
@@ -601,7 +604,9 @@ class DateEditor {
     options.appendChild(createSwitch('data-blok-database-date-time-toggle', this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
       this.timeOn = !this.timeOn;
       if (this.timeOn) {
-        this.defaultTime = this.start === null ? nextWholeHour() : DEFAULT_TIME;
+        const today = toIsoDay(new Date());
+
+        this.defaultTime = (this.start?.day ?? today) === today ? nextWholeHour() : DEFAULT_TIME;
       } else {
         this.start = this.start === null ? null : { ...this.start, time: null };
         this.end = this.end === null ? null : { ...this.end, time: null };

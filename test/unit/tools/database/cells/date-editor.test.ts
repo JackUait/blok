@@ -192,14 +192,34 @@ describe('date cell editor', () => {
 
   describe('time', () => {
     it('Include time adds a time to the value', () => {
-      const ctx = openDate('2026-10-09');
+      const ctx = openDate('2026-10-12');
 
       q('[data-blok-database-date-time-toggle]').click();
 
-      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-09T09:00');
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-12T09:00');
     });
 
-    // research/26 §5d: a set date on another day gets 9:00 AM.
+    // research/27 §4b: today decides, not empty vs set. A set date that is today got 8:00 PM at 19:01.
+    it('Include time gives a set date that is today the next whole hour', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 49));
+      const ctx = openDate('2026-10-20');
+
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-20T20:00');
+    });
+
+    it('Include time on an empty cell at 19:01 takes 20:00', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+      const ctx = openDate(null);
+
+      q('[data-blok-database-date-time-toggle]').click();
+      day('2026-10-20').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-20T20:00');
+    });
+
+    // research/26 §5d, 27 §4b: a set date on another day gets 9:00 AM.
     it('Include time gives a set date on another day 9:00', () => {
       vi.setSystemTime(new Date(2026, 9, 20, 13, 58));
       const ctx = openDate('2026-10-12');
@@ -231,7 +251,7 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-22T06:00');
     });
 
-    // Unmeasured edges: on the hour still moves to the next one; after 23:00 it wraps to 00:00 on the picked day.
+    // Unmeasured edges (research/27 §4b): on the hour still moves to the next one; after 23:00 it wraps to 00:00 on the picked day.
     it('the next whole hour after 14:00 is 15:00, and after 23:30 is 00:00 on the picked day', () => {
       vi.setSystemTime(new Date(2026, 9, 20, 14, 0));
       const onHour = openDate(null);
@@ -248,9 +268,16 @@ describe('date cell editor', () => {
       q('[data-blok-database-date-time-toggle]').click();
       day('2026-10-20').click();
       expect(late.onCommit).toHaveBeenLastCalledWith('2026-10-20T00:00');
+
+      document.body.innerHTML = '';
+      PopoverRegistry.resetForTests();
+      const lateSet = openDate('2026-10-20');
+
+      q('[data-blok-database-date-time-toggle]').click();
+      expect(lateSet.onCommit).toHaveBeenLastCalledWith('2026-10-20T00:00');
     });
 
-    // The bulk picker opens on the first selected row's value: an empty one takes the next hour, a set one 9:00.
+    // The bulk picker opens on the first selected row's value: an empty one counts as today, another day takes 9:00.
     it('the bulk picker follows the first row: empty takes the next hour, a set date 9:00', () => {
       vi.setSystemTime(new Date(2026, 9, 20, 13, 58));
       const empty = openDate(null, { bulk: true });

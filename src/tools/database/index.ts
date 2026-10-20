@@ -627,7 +627,7 @@ export class DatabaseTool implements BlockTool {
   private readonly handleBodyEdit = (payload: unknown): void => {
     const event = (payload as { event?: { type?: unknown; detail?: { origin?: unknown; replaySource?: unknown; target?: ChangedBlock } } } | undefined)?.event;
 
-    if (this.linked || this.destroyed || this.config.ai === undefined || event?.type !== 'block-changed'
+    if (this.linked || this.destroyed || this.config.ai?.autofill === undefined || event?.type !== 'block-changed'
       || event.detail?.origin !== 'local' || event.detail.replaySource !== undefined
       || !this.model.getSchema().some((property) => property.autofill?.onEditContent === true)) return;
     // A comment is not page content (18-comments-design §4).
@@ -5454,7 +5454,7 @@ export class DatabaseTool implements BlockTool {
           return true;
         },
       },
-      ...(this.config.ai === undefined ? {} : {
+      ...(this.config.ai?.autofill === undefined ? {} : {
         autofill: {
           properties: () => localizeDatabaseSchema(data().model.getSchema(), this.api.i18n),
           writable: () => !data().destroyed && !data().readOnly && !data().structureLocked() && (context === undefined || context.writable()),
@@ -10355,7 +10355,7 @@ export class DatabaseTool implements BlockTool {
         ...(this.config.people === undefined ? {} : { people: () => this.people ?? [] }),
         onEditButtonFilter: (id, actionId) => { if (parentWritable()) this.openButtonFilter(id, actionId, anchor); },
       },
-      ...(this.config.ai === undefined ? {} : {
+      ...(this.config.ai?.autofill === undefined ? {} : {
         autofill: {
           hasDraft: (id: string) => this.autofillDrafts.has(id),
           open: (id: string) => { if (parentWritable()) this.openAutofillSetup(id, property.name, anchor, context); },
@@ -10488,9 +10488,9 @@ export class DatabaseTool implements BlockTool {
     this.autofillSetup = setup;
   }
 
-  /** The table's AI Autofill run actions: none when read-only, locked or without `config.ai`. */
+  /** The table's AI Autofill run actions: none when read-only, locked or without `config.ai.autofill`. */
   private autofillLever(readOnly: boolean, context?: NativeWidgetContext): { autofill?: TableAutofill } {
-    if (this.config.ai === undefined || readOnly || this.structureLocked()) return {};
+    if (this.config.ai?.autofill === undefined || readOnly || this.structureLocked()) return {};
     const writable = (): boolean => !this.destroyed && !this.readOnly && !this.structureLocked()
       && (context === undefined || context.writable());
 

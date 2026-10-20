@@ -1304,8 +1304,8 @@ export interface DatabaseSetup {
 }
 
 export interface DatabaseAI {
-  /** The new value, or null or undefined to keep the old one. */
-  autofill(request: DatabaseAutofillRequest): Promise<PropertyValue | null | undefined>;
+  /** The new value, or null or undefined to keep the old one. Without it there is no AI Autofill UI. */
+  autofill?(request: DatabaseAutofillRequest): Promise<PropertyValue | null | undefined>;
   /**
    * Sets up a database the person just inserted from their prompt. With it,
    * the insert opens the "New database" panel with a prompt box. Null or

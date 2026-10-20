@@ -64,7 +64,7 @@ export interface ViewControlsHost {
   /** "Customize page layout" in More settings. */
   customizeLayout?: () => ViewSettingsAction | undefined;
   automations?: AutomationSettings;
-  /** AI Autofill: only when the host gave `config.ai`. */
+  /** AI Autofill: only when the host gave `config.ai.autofill`. */
   autofill?: AutofillPanelSettings;
   /** View settings "Source". */
   dataSources?: DataSourceSettings;

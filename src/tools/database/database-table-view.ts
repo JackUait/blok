@@ -154,7 +154,7 @@ export interface DatabaseTableViewOptions {
   favorite?: (rowId: string) => RowFavorite | undefined;
   /** Where the selection bar goes: the view toolbar row, which it replaces (research/08). Else the table's top. */
   selectionBarSlot?: () => HTMLElement | null;
-  /** AI Autofill run actions. The tool leaves it out when read-only, locked or without `config.ai`. */
+  /** AI Autofill run actions. The tool leaves it out when read-only, locked or without `config.ai.autofill`. */
   autofill?: TableAutofill;
   /** Shows a toast: "Copied property to clipboard". */
   notify?: (message: string) => void;

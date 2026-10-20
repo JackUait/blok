@@ -130,7 +130,7 @@ export interface ViewSettingsContext {
   /** "Customize page layout": the last row of More settings (research/09 §1). */
   customizeLayout?: () => ViewSettingsAction | undefined;
   automations?: AutomationSettings;
-  /** The host gave `config.ai`. Without it there is no AI Autofill row. */
+  /** The host gave `config.ai.autofill`. Without it there is no AI Autofill row. */
   autofill?: AutofillPanelSettings;
   /** The database's data sources. With only one, the Source row is greyed (research/09 §1). */
   dataSources?: DataSourceSettings;

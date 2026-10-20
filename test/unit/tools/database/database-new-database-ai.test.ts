@@ -82,7 +82,7 @@ const insert = async (setupDatabase?: (request: DatabaseSetupRequest) => Promise
     { id: 'other', name: 'database', parentId: null, data: { title: 'Tasks' } },
     { id: 'db', name: 'database', parentId: null, data: {} },
   ]);
-  const config: DatabaseConfig = setupDatabase === undefined ? {} : { ai: { autofill: vi.fn(async () => undefined), setupDatabase } };
+  const config: DatabaseConfig = setupDatabase === undefined ? {} : { ai: { setupDatabase } };
 
   const built = buildDatabase(doc, 'db', data, config, origin);
 

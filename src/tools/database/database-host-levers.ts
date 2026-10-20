@@ -63,7 +63,7 @@ export class DatabaseHostLevers implements RowWriteObserver {
     const fill = this.target.schema().filter((property) => property.autofill?.onCreate === true);
 
     // The tool reads the new row back from its block after this call returns.
-    if (this.ai !== undefined && fill.length > 0) {
+    if (this.ai?.autofill !== undefined && fill.length > 0) {
       queueMicrotask(() => fill.forEach((property) => this.autofill(params.id, property)));
     }
   }
@@ -240,7 +240,7 @@ export class DatabaseHostLevers implements RowWriteObserver {
   }
 
   private autofillSoon(rowId: string, propertyId: string): void {
-    if (this.ai === undefined) return;
+    if (this.ai?.autofill === undefined) return;
     const key = `${rowId}\u0000${propertyId}`;
 
     clearTimeout(this.editTimers.get(key));
@@ -256,7 +256,7 @@ export class DatabaseHostLevers implements RowWriteObserver {
     const ai = this.ai;
     const values = this.target.rowValues(rowId);
 
-    if (ai === undefined || settings === undefined || values === undefined) return;
+    if (ai?.autofill === undefined || settings === undefined || values === undefined) return;
     const before = JSON.stringify(values[property.id] ?? null);
     const key = `${rowId}\u0000${property.id}`;
     const mine = ++this.fillSeq;
@@ -284,7 +284,7 @@ export class DatabaseHostLevers implements RowWriteObserver {
     this.target.fillingChanged?.(rowId, property.id);
     const request = (() => {
       try {
-        return ai.autofill({ databaseId: this.target.databaseId, rowId, propertyId: property.id, settings, values });
+        return ai.autofill?.({ databaseId: this.target.databaseId, rowId, propertyId: property.id, settings, values });
       } catch {
         return undefined;
       }

@@ -717,6 +717,7 @@
   "tools.database.peekNext": "ايندڙ صفحو",
   "tools.database.peekFavorite": "پسنديده",
   "tools.database.peekFavoriteHint": "پسنديده ۾ شامل ڪريو",
+  "tools.database.peekUnfavoriteHint": "پسنديده مان هٽايو",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultStatusProperty": "حالت",
   "tools.database.defaultStatusNotStarted": "شروع نه ٿيو",

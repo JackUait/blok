@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Következő oldal",
   "tools.database.peekFavorite": "Kedvenc",
   "tools.database.peekFavoriteHint": "Hozzáadás a kedvencekhez",
+  "tools.database.peekUnfavoriteHint": "Eltávolítás a kedvencek közül",
   "tools.database.defaultTitleProperty": "Cím",
   "tools.database.defaultStatusProperty": "Állapot",
   "tools.database.defaultStatusNotStarted": "Nem kezdődött el",

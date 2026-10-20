@@ -715,6 +715,7 @@
   "tools.database.peekNext": "הדף הבא",
   "tools.database.peekFavorite": "מועדף",
   "tools.database.peekFavoriteHint": "הוספה למועדפים",
+  "tools.database.peekUnfavoriteHint": "הסרה מהמועדפים",
   "tools.database.defaultTitleProperty": "כותרת",
   "tools.database.defaultStatusProperty": "סטטוס",
   "tools.database.defaultStatusNotStarted": "לא התחיל",

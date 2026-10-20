@@ -717,6 +717,7 @@
   "tools.database.peekNext": "ދެން އޮތް ޞަފްޙާ",
   "tools.database.peekFavorite": "ފޭވަރިޓް",
   "tools.database.peekFavoriteHint": "ފޭވަރިޓްސްއަށް އިތުރުކުރޭ",
+  "tools.database.peekUnfavoriteHint": "ފޭވަރިޓްސްއިން ނައްތާލާ",
   "tools.database.defaultTitleProperty": "ސުރުޚީ",
   "tools.database.defaultStatusProperty": "ހާލަތް",
   "tools.database.defaultStatusNotStarted": "ފަށާފައެއް ނެތް",

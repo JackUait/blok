@@ -8,7 +8,7 @@ import type { CellContext , CellEditorHandle } from './cells';
 import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { cellText } from './database-table-clipboard';
-import { IconArrowDiagonal, IconCheck, IconCopy, IconMessage, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconCopy, IconMessage, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconStarFilled, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -1457,9 +1457,6 @@ export class DatabaseCardDrawer {
       this.syncFavoriteButton();
     });
 
-    // Only the "Add" wording is measured (research/21 §5), so it does not change when pressed.
-    onHover(el, this.label('tools.database.peekFavoriteHint'));
-
     return el;
   }
 
@@ -1469,8 +1466,14 @@ export class DatabaseCardDrawer {
     const rowId = this.currentRowId;
     const favorite = rowId === null ? undefined : this.favorite?.(rowId);
 
+    const on = favorite?.on === true;
+
     button?.toggleAttribute('hidden', favorite === undefined);
-    button?.setAttribute('aria-pressed', String(favorite?.on === true));
+    button?.setAttribute('aria-pressed', String(on));
+    if (button === null || button === undefined) return;
+    // research/22 §14: a filled star and the "Remove" hint once favorited.
+    button.innerHTML = on ? IconStarFilled : IconEmojiStar;
+    onHover(button, this.label(on ? 'tools.database.peekUnfavoriteHint' : 'tools.database.peekFavoriteHint'));
   }
 
   /** Shows the row before or after the open one, keeping the mode. */

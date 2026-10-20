@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Sljedeća stranica",
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Dodaj u favorite",
+  "tools.database.peekUnfavoriteHint": "Ukloni iz favorita",
   "tools.database.defaultTitleProperty": "Naslov",
   "tools.database.defaultStatusProperty": "Stanje",
   "tools.database.defaultStatusNotStarted": "Nije započeto",

@@ -20,9 +20,22 @@ declare global {
 const SCHEMA = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
   { id: 'p-amount', name: 'Amount', type: 'number', position: 'a1' },
+  {
+    id: 'p-stage',
+    name: 'Stage',
+    type: 'select',
+    position: 'a2',
+    config: {
+      options: [
+        { id: 'o-default', label: 'Idea', color: 'default', position: 'a0' },
+        { id: 'o-brown', label: 'Build', color: 'brown', position: 'a1' },
+        { id: 'o-red', label: 'Ship', color: 'red', position: 'a2' },
+      ],
+    },
+  },
 ];
 
-const ROWS = [ [ 'r1', 'Alpha', 3 ], [ 'r2', 'Bravo', 5 ] ] as const;
+const ROWS = [ [ 'r1', 'Alpha', 3, 'o-default' ], [ 'r2', 'Bravo', 5, 'o-brown' ], [ 'r3', 'Charlie', 7, 'o-red' ] ] as const;
 
 const blocks = (): OutputBlockData[] => [
   {
@@ -47,11 +60,11 @@ const blocks = (): OutputBlockData[] => [
     },
     content: ROWS.map(([ id ]) => id),
   },
-  ...ROWS.map(([ id, title, amount ], i) => ({
+  ...ROWS.map(([ id, title, amount, stage ], i) => ({
     id,
     type: 'database-row',
     parent: 'db-1',
-    data: { position: `a${i}`, properties: { 'p-title': title, 'p-amount': amount } },
+    data: { position: `a${i}`, properties: { 'p-title': title, 'p-amount': amount, 'p-stage': stage } },
   })),
 ];
 
@@ -180,6 +193,44 @@ for (const path of paths) {
 
       await expect(bar).toHaveCSS('background-color', 'rgb(37, 37, 37)');
       await expect(bar).toHaveCSS('box-shadow', 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
+    });
+
+    test('OPEN button: the dark menu fill, the measured dark shadow, secondary ink and the dark hover (research/22 §12)', async ({ page }) => {
+      await row(page).hover();
+      const open = row(page).locator('[data-blok-database-table-open]');
+
+      await expect(open).toBeVisible();
+      await expect(open).toHaveCSS('background-color', 'rgb(37, 37, 37)');
+      await expect(open).toHaveCSS('box-shadow', 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
+      await expect(open).toHaveCSS('color', 'rgb(173, 169, 163)');
+      await open.hover();
+      await expect(open).toHaveCSS('background-image', `linear-gradient(${HOVER_FILL}, ${HOVER_FILL})`);
+    });
+
+    test('"+ New page": dark ink, and the hover fills only the button (research/22 §12)', async ({ page }) => {
+      const add = page.locator('[data-blok-database-table-add-row]').first();
+
+      await expect(add).toHaveCSS('color', 'rgb(125, 122, 117)');
+      // The plus icon's wrapper is the button's first child.
+      expect(await add.evaluate((el) => (el.firstElementChild === null ? null : getComputedStyle(el.firstElementChild).color))).toBe('rgb(125, 122, 117)');
+      await add.hover();
+      await expect(add).toHaveCSS('background-color', HOVER_FILL);
+      const box = await add.boundingBox();
+      const rowBox = await row(page).boundingBox();
+
+      expect(box?.height).toBe(28);
+      expect(box?.width ?? 0).toBeLessThan((rowBox?.width ?? 0) / 2);
+    });
+
+    test('select pills: the measured dark default, brown and red (research/22 §12)', async ({ page }) => {
+      const pill = (label: string): Locator => page.locator('[data-blok-database-option-pill]', { hasText: label }).first();
+
+      await expect(pill('Idea')).toHaveCSS('background-color', 'rgba(255, 255, 243, 0.082)');
+      await expect(pill('Idea')).toHaveCSS('color', 'rgb(240, 239, 237)');
+      await expect(pill('Build')).toHaveCSS('background-color', 'rgba(255, 184, 132, 0.365)');
+      await expect(pill('Build')).toHaveCSS('color', 'rgb(245, 237, 233)');
+      await expect(pill('Ship')).toHaveCSS('background-color', 'rgba(255, 116, 105, 0.525)');
+      await expect(pill('Ship')).toHaveCSS('color', 'rgb(252, 233, 231)');
     });
 
     test('database menus: the dark menu fill (§1a)', async ({ page }) => {

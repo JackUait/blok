@@ -186,6 +186,8 @@
   --blok-database-card-menu-hover-bg: rgba(33, 27, 23, 0.05);
   /* Side peek property label (research/08:329). */
   --blok-database-peek-label: rgb(125, 122, 117);
+  /* Favorited row page star (research/22 §14). Dark is unmeasured, so it has no dark value. */
+  --blok-database-favorite-star: rgb(246, 192, 80);
   /* Comment badge count and icon (research/21 §1o). */
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
@@ -233,7 +235,7 @@
     --blok-database-column-bg: rgba(252, 252, 252, 0.03);
     --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
-    /* Table view (research/07, 08; research/21 §1a, §1d). Gutter, OPEN and the "+ New page" hover are unmeasured in dark. */
+    /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
     --blok-database-table-bg: var(--blok-bg-primary);
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
     --blok-database-table-header-text: rgb(173, 169, 163);
@@ -246,7 +248,7 @@
     --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
     --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
     --blok-database-table-open-bg: rgb(37, 37, 37);
-    --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+    --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
     --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-popover-bg: rgb(37, 37, 37);
@@ -411,7 +413,7 @@
   --blok-database-column-bg: rgba(252, 252, 252, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
-  /* Table view (research/07, 08; research/21 §1a, §1d). Gutter, OPEN and the "+ New page" hover are unmeasured in dark. */
+  /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
@@ -424,7 +426,7 @@
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-bg: rgb(37, 37, 37);
-  --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
@@ -1102,6 +1104,11 @@
 [data-blok-database-peek-page-info][aria-expanded="true"] {
   background-color: var(--blok-icon-active-bg);
   color: var(--blok-icon-active-text);
+}
+
+/* Favorited, not selected: yellow ink and no fill (research/22 §14). */
+[data-blok-database-peek-favorite][aria-pressed="true"] {
+  color: var(--blok-database-favorite-star);
 }
 
 [data-blok-database-peek-expand] svg,
@@ -5933,20 +5940,28 @@ textarea[data-blok-database-cell-input] {
 
 /* ─── "+ New page", Load more, empty state ─── */
 
+/* research/22 §12: the hover fills only the 28px button; the 4px margins keep the 36px row. */
 [data-blok-database-table-add-row] {
   display: flex;
   align-items: center;
-  width: 100%;
-  height: 36px;
+  width: fit-content;
+  height: 28px;
+  margin-block: var(--blok-space-1);
   padding: 0;
-  padding-inline-start: var(--blok-space-2);
+  padding-inline: var(--blok-space-2);
   border: none;
+  border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-database-table-muted-text);
   font-size: 14px;
   line-height: 20px;
   text-align: start;
   cursor: pointer;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-table-add-row]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
 }
 
 [data-blok-database-table-add-row] > span {

@@ -664,6 +664,13 @@ export const IconEmojiStar = `
 </svg>
 `;
 
+// IconEmojiStar filled: the favorited state (Notion's starFill).
+export const IconStarFilled = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M9.5 3.75Q10 2.75 10.5 3.75L12 6.8Q12.2 7.2 12.7 7.3L16 7.8Q17 8 16.3 8.7L13.9 11.05Q13.55 11.4 13.65 11.9L14.2 15.2Q14.4 16.3 13.4 15.75L10.45 14.2Q10 13.95 9.55 14.2L6.6 15.75Q5.6 16.3 5.8 15.2L6.35 11.9Q6.45 11.4 6.1 11.05L3.7 8.7Q3 8 4 7.8L7.3 7.3Q7.8 7.2 8 6.8Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Smiley face icon (People category)
 export const IconEmojiSmile = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

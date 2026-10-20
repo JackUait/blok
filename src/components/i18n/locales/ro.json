@@ -717,6 +717,7 @@
   "tools.database.peekNext": "Pagina următoare",
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Adaugă la favorite",
+  "tools.database.peekUnfavoriteHint": "Elimină din favorite",
   "tools.database.defaultTitleProperty": "Titlu",
   "tools.database.defaultStatusProperty": "Stare",
   "tools.database.defaultStatusNotStarted": "Neînceput",

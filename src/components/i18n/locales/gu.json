@@ -715,6 +715,7 @@
   "tools.database.peekNext": "આગલું પાનું",
   "tools.database.peekFavorite": "મનપસંદ",
   "tools.database.peekFavoriteHint": "મનપસંદમાં ઉમેરો",
+  "tools.database.peekUnfavoriteHint": "મનપસંદમાંથી દૂર કરો",
   "tools.database.defaultTitleProperty": "શીર્ષક",
   "tools.database.defaultStatusProperty": "સ્થિતિ",
   "tools.database.defaultStatusNotStarted": "શરૂ નથી થયું",

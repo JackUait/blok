@@ -715,6 +715,7 @@
   "tools.database.peekNext": "अगला पृष्ठ",
   "tools.database.peekFavorite": "पसंदीदा",
   "tools.database.peekFavoriteHint": "पसंदीदा में जोड़ें",
+  "tools.database.peekUnfavoriteHint": "पसंदीदा से हटाएं",
   "tools.database.defaultTitleProperty": "शीर्षक",
   "tools.database.defaultStatusProperty": "स्थिति",
   "tools.database.defaultStatusNotStarted": "प्रारंभ नहीं हुआ",

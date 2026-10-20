@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Järgmine leht",
   "tools.database.peekFavorite": "Lemmik",
   "tools.database.peekFavoriteHint": "Lisa lemmikutesse",
+  "tools.database.peekUnfavoriteHint": "Eemalda lemmikutest",
   "tools.database.defaultTitleProperty": "Pealkiri",
   "tools.database.defaultStatusProperty": "Olek",
   "tools.database.defaultStatusNotStarted": "Alustamata",

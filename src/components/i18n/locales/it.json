@@ -717,6 +717,7 @@
   "tools.database.peekNext": "Pagina successiva",
   "tools.database.peekFavorite": "Preferito",
   "tools.database.peekFavoriteHint": "Aggiungi ai preferiti",
+  "tools.database.peekUnfavoriteHint": "Rimuovi dai preferiti",
   "tools.database.defaultTitleProperty": "Titolo",
   "tools.database.defaultStatusProperty": "Stato",
   "tools.database.defaultStatusNotStarted": "Non iniziato",

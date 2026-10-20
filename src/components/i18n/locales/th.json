@@ -715,6 +715,7 @@
   "tools.database.peekNext": "หน้าถัดไป",
   "tools.database.peekFavorite": "รายการโปรด",
   "tools.database.peekFavoriteHint": "เพิ่มในรายการโปรด",
+  "tools.database.peekUnfavoriteHint": "นำออกจากรายการโปรด",
   "tools.database.defaultTitleProperty": "ชื่อ",
   "tools.database.defaultStatusProperty": "สถานะ",
   "tools.database.defaultStatusNotStarted": "ยังไม่เริ่ม",

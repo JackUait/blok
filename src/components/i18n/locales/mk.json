@@ -726,6 +726,7 @@
   "tools.database.peekNext": "Следна страница",
   "tools.database.peekFavorite": "Омилено",
   "tools.database.peekFavoriteHint": "Додај во омилени",
+  "tools.database.peekUnfavoriteHint": "Отстрани од омилени",
   "tools.database.defaultTitleProperty": "Наслов",
   "tools.database.defaultStatusProperty": "Статус",
   "tools.database.defaultStatusNotStarted": "Не е започнато",

@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Trang tiếp theo",
   "tools.database.peekFavorite": "Yêu thích",
   "tools.database.peekFavoriteHint": "Thêm vào mục yêu thích",
+  "tools.database.peekUnfavoriteHint": "Xóa khỏi mục yêu thích",
   "tools.database.defaultTitleProperty": "Tiêu đề",
   "tools.database.defaultStatusProperty": "Trạng thái",
   "tools.database.defaultStatusNotStarted": "Chưa bắt đầu",

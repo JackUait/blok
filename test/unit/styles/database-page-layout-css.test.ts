@@ -486,9 +486,12 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-favorite] svg, [data-blok-database-peek-actions] svg')).toContain('width: 16px');
   });
 
-  // The favorited state is unmeasured and no filled star exists: no pressed fill, aria-pressed alone carries it.
-  it('gives the pressed star no fill', () => {
-    expect(database).not.toContain('[data-blok-database-peek-favorite][aria-pressed');
+  // research/22 §14: favorited is a yellow star, not a selected state, so it gets ink but no button fill.
+  it('paints the favorited star Notion\'s yellow, with no button fill', () => {
+    const body = ruleBody('[data-blok-database-peek-favorite][aria-pressed="true"]');
+
+    expect(body).toBe(' color: var(--blok-database-favorite-star); ');
+    expect(database.match(/--blok-database-favorite-star: ([^;]+);/g)).toEqual(['--blok-database-favorite-star: rgb(246, 192, 80);']);
   });
 
   // The glyph's panel sits where the details panel opens: the inline end.

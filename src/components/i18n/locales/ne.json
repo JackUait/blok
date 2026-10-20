@@ -726,6 +726,7 @@
   "tools.database.peekNext": "अर्को पृष्ठ",
   "tools.database.peekFavorite": "मनपर्ने",
   "tools.database.peekFavoriteHint": "मनपर्नेमा थप्नुहोस्",
+  "tools.database.peekUnfavoriteHint": "मनपर्नेबाट हटाउनुहोस्",
   "tools.database.defaultTitleProperty": "शीर्षक",
   "tools.database.defaultStatusProperty": "स्थिति",
   "tools.database.defaultStatusNotStarted": "सुरु भएको छैन",

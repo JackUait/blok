@@ -728,6 +728,7 @@
   "tools.database.peekNext": "Kitas puslapis",
   "tools.database.peekFavorite": "Mėgstamas",
   "tools.database.peekFavoriteHint": "Pridėti prie mėgstamiausių",
+  "tools.database.peekUnfavoriteHint": "Pašalinti iš mėgstamiausių",
   "tools.database.defaultTitleProperty": "Pavadinimas",
   "tools.database.defaultStatusProperty": "Būsena",
   "tools.database.defaultStatusNotStarted": "Nepradėta",

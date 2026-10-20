@@ -715,6 +715,7 @@
   "tools.database.peekNext": "كېيىنكى بەت",
   "tools.database.peekFavorite": "ياقتۇرغان",
   "tools.database.peekFavoriteHint": "ياقتۇرغانلارغا قوشۇش",
+  "tools.database.peekUnfavoriteHint": "ياقتۇرغانلاردىن چىقىرىۋېتىش",
   "tools.database.defaultTitleProperty": "ماۋزۇ",
   "tools.database.defaultStatusProperty": "ھالەت",
   "tools.database.defaultStatusNotStarted": "باشلانمىدى",

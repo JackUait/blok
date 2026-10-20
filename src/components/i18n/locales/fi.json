@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Seuraava sivu",
   "tools.database.peekFavorite": "Suosikki",
   "tools.database.peekFavoriteHint": "Lisää suosikkeihin",
+  "tools.database.peekUnfavoriteHint": "Poista suosikeista",
   "tools.database.defaultTitleProperty": "Otsikko",
   "tools.database.defaultStatusProperty": "Tila",
   "tools.database.defaultStatusNotStarted": "Aloittamatta",

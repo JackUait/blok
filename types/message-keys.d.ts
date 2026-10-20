@@ -1175,6 +1175,7 @@ export type BlokMessageKey =
   | 'tools.database.peekFavoriteHint'
   | 'tools.database.peekNext'
   | 'tools.database.peekPrevious'
+  | 'tools.database.peekUnfavoriteHint'
   | 'tools.database.personDefault'
   | 'tools.database.personDefaultNone'
   | 'tools.database.personHint'

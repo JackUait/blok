@@ -717,6 +717,7 @@
   "tools.database.peekNext": "Επόμενη σελίδα",
   "tools.database.peekFavorite": "Αγαπημένο",
   "tools.database.peekFavoriteHint": "Προσθήκη στα αγαπημένα",
+  "tools.database.peekUnfavoriteHint": "Αφαίρεση από τα αγαπημένα",
   "tools.database.defaultTitleProperty": "Τίτλος",
   "tools.database.defaultStatusProperty": "Κατάσταση",
   "tools.database.defaultStatusNotStarted": "Δεν ξεκίνησε",

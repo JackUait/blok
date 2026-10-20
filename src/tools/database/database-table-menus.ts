@@ -446,7 +446,7 @@ const rowMenuHeading = (i18n: T): PopoverItemParams => {
  * research/19 §2e). Measured order: "Page", then Add to Favorites, Edit icon,
  * Edit property › (Layout, Property visibility on board and gallery); Open in ›,
  * Comment; Copy link, Duplicate, Move to, Move to Trash; footer.
- * "Remove from Favorites" and its icon are unmeasured.
+ * "Remove from Favorites" is measured (research/22 §14); its icon is not.
  */
 export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
   const { i18n, favorite, onEditIcon, onEditProperty, onLayout, onPropertyVisibility } = ctx;

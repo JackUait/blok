@@ -717,6 +717,7 @@
   "tools.database.peekNext": "შემდეგი გვერდი",
   "tools.database.peekFavorite": "რჩეული",
   "tools.database.peekFavoriteHint": "რჩეულებში დამატება",
+  "tools.database.peekUnfavoriteHint": "რჩეულებიდან წაშლა",
   "tools.database.defaultTitleProperty": "სათაური",
   "tools.database.defaultStatusProperty": "სტატუსი",
   "tools.database.defaultStatusNotStarted": "არ დაწყებულა",

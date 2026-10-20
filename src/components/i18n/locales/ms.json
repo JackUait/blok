@@ -726,6 +726,7 @@
   "tools.database.peekNext": "Halaman seterusnya",
   "tools.database.peekFavorite": "Kegemaran",
   "tools.database.peekFavoriteHint": "Tambah ke Kegemaran",
+  "tools.database.peekUnfavoriteHint": "Alih keluar daripada Kegemaran",
   "tools.database.defaultTitleProperty": "Tajuk",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Belum bermula",

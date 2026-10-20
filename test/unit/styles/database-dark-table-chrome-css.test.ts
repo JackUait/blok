@@ -112,3 +112,38 @@ describe('database menus in dark (research/21 §1a, §1l)', () => {
     expect(tokenValues('--blok-database-popover-shadow')).toEqual([MENU_SHADOW_DARK, MENU_SHADOW_DARK]);
   });
 });
+
+describe('OPEN button in dark (research/22 §12)', () => {
+  it('takes Notion\'s measured dark shadow and inner fill', () => {
+    const shadow = 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px';
+
+    expect(tokenValues('--blok-database-table-open-shadow').slice(1)).toEqual([shadow, shadow]);
+    expect(tokenValues('--blok-database-table-open-bg').slice(1)).toEqual([MENU_BG_DARK, MENU_BG_DARK]);
+  });
+});
+
+describe('"+ New page" in dark (research/22 §12)', () => {
+  it('fills only the button on hover, with the header hover fill', () => {
+    const hover = ruleBody('[data-blok-database-table-add-row]:hover');
+
+    expect(hover).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(ruleBody('[data-blok-database-table-add-row]')).toContain('width: fit-content');
+    expect(tokenValues('--blok-database-table-header-hover-bg')).toEqual(['rgba(33, 27, 23, 0.05)', 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
+  });
+
+  it('greys its words and plus to the measured dark ink', () => {
+    expect(tokenValues('--blok-database-table-muted-text').slice(1)).toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+    expect(tokenValues('--blok-database-table-gutter-icon').slice(1)).toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+  });
+});
+
+describe('select pills in dark (research/22 §12)', () => {
+  it.each([
+    ['default', 'rgba(255, 255, 243, 0.082)', 'rgb(240, 239, 237)'],
+    ['brown', 'rgba(255, 184, 132, 0.365)', 'rgb(245, 237, 233)'],
+    ['red', 'rgba(255, 116, 105, 0.525)', 'rgb(252, 233, 231)'],
+  ])('%s keeps the measured dark fill and ink', (color, bg, ink) => {
+    expect(tokenValues(`--blok-database-option-${color}-bg`).slice(1)).toEqual([bg, bg]);
+    expect(tokenValues(`--blok-database-option-${color}-text`).slice(1)).toEqual([ink, ink]);
+  });
+});

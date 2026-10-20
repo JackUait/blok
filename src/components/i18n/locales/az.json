@@ -717,6 +717,7 @@
   "tools.database.peekNext": "Növbəti səhifə",
   "tools.database.peekFavorite": "Seçilmiş",
   "tools.database.peekFavoriteHint": "Seçilmişlərə əlavə et",
+  "tools.database.peekUnfavoriteHint": "Seçilmişlərdən sil",
   "tools.database.defaultTitleProperty": "Başlıq",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Başlanmayıb",

@@ -715,6 +715,7 @@
   "tools.database.peekNext": "ਅਗਲਾ ਪੰਨਾ",
   "tools.database.peekFavorite": "ਮਨਪਸੰਦ",
   "tools.database.peekFavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚ ਸ਼ਾਮਲ ਕਰੋ",
+  "tools.database.peekUnfavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚੋਂ ਹਟਾਓ",
   "tools.database.defaultTitleProperty": "ਸਿਰਲੇਖ",
   "tools.database.defaultStatusProperty": "ਸਥਿਤੀ",
   "tools.database.defaultStatusNotStarted": "ਸ਼ੁਰੂ ਨਹੀਂ ਹੋਇਆ",

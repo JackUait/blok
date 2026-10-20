@@ -910,6 +910,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PEEK_VALUE_ROW_BYTES = 253;
     // database.css: the date picker's Date format, Time format and Time zone rows and their menus (notion-measure12/17-date-edit).
     const DATABASE_DATE_PICKER_ROWS_BYTES = 777;
+    // database.css: "+ New page" button hover and the favorited star (research/22 §12, §14).
+    const DATABASE_DARK_GAPS_STAR_BYTES = 612;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1035,7 +1037,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_LINK_CELL_UNDERLINE_BYTES
       + DATABASE_TEMPLATE_CADENCE_BYTES
       + DATABASE_PEEK_VALUE_ROW_BYTES
-      + DATABASE_DATE_PICKER_ROWS_BYTES;
+      + DATABASE_DATE_PICKER_ROWS_BYTES
+      + DATABASE_DARK_GAPS_STAR_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

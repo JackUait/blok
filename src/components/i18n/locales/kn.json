@@ -728,6 +728,7 @@
   "tools.database.peekNext": "ಮುಂದಿನ ಪುಟ",
   "tools.database.peekFavorite": "ಮೆಚ್ಚಿನದು",
   "tools.database.peekFavoriteHint": "ಮೆಚ್ಚಿನವುಗಳಿಗೆ ಸೇರಿಸಿ",
+  "tools.database.peekUnfavoriteHint": "ಮೆಚ್ಚಿನವುಗಳಿಂದ ತೆಗೆದುಹಾಕಿ",
   "tools.database.defaultTitleProperty": "ಶೀರ್ಷಿಕೆ",
   "tools.database.defaultStatusProperty": "ಸ್ಥಿತಿ",
   "tools.database.defaultStatusNotStarted": "ಪ್ರಾರಂಭವಾಗಿಲ್ಲ",

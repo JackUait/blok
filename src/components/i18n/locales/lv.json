@@ -726,6 +726,7 @@
   "tools.database.peekNext": "Nākamā lapa",
   "tools.database.peekFavorite": "Izlase",
   "tools.database.peekFavoriteHint": "Pievienot izlasei",
+  "tools.database.peekUnfavoriteHint": "Noņemt no izlases",
   "tools.database.defaultTitleProperty": "Nosaukums",
   "tools.database.defaultStatusProperty": "Statuss",
   "tools.database.defaultStatusNotStarted": "Nav sākts",

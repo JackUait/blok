@@ -717,6 +717,7 @@
   "tools.database.peekNext": "بله پاڼه",
   "tools.database.peekFavorite": "خوښه",
   "tools.database.peekFavoriteHint": "خوښو ته ورزیات کړئ",
+  "tools.database.peekUnfavoriteHint": "له خوښو لرې کړئ",
   "tools.database.defaultTitleProperty": "سرلیک",
   "tools.database.defaultStatusProperty": "حالت",
   "tools.database.defaultStatusNotStarted": "نه دی پیل شوی",

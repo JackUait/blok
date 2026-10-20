@@ -6,6 +6,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { DatabaseFavorites, OutputBlockData } from '../../../../types';
 import type * as Tooltip from '../../../../src/components/utils/tooltip';
+import { IconEmojiStar, IconStarFilled } from '../../../../src/components/icons';
 
 const hover = vi.hoisted(() => vi.fn());
 
@@ -86,6 +87,17 @@ const openRow = (rowId: string): Promise<void> =>
 
 const star = (): HTMLElement | null => q('[data-blok-database-peek-favorite]');
 
+/** The star's latest hover hint. */
+const hint = (): unknown => hover.mock.calls.filter(([el]) => el === star()).at(-1)?.[1];
+
+const svgOf = (markup: string): string => {
+  const box = document.createElement('div');
+
+  box.innerHTML = markup;
+
+  return box.innerHTML;
+};
+
 /** A host that keeps its list in a Set and answers at once. */
 const host = (initial: string[] = []): DatabaseFavorites & { list: Set<string> } => {
   const list = new Set(initial);
@@ -158,6 +170,34 @@ describe('row page Favorite star (research/21 §5)', () => {
     await click(star());
     expect(favorites.onToggle).toHaveBeenLastCalledWith({ databaseId: 'db', rowId: 'r1', favorite: false });
     expect(star()?.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('fills the star and says "Remove from your favorites" once favorited (research/22 §14)', async () => {
+    await make({ favorites: host(['r2']) });
+    await openRow('r1');
+    expect(star()?.innerHTML).toBe(svgOf(IconEmojiStar));
+    expect(hint()).toBe('Add to your favorites');
+
+    await click(q('[data-blok-database-peek-next]'));
+    expect(star()?.innerHTML).toBe(svgOf(IconStarFilled));
+    expect(hint()).toBe('Remove from your favorites');
+
+    await click(star());
+    expect(star()?.innerHTML).toBe(svgOf(IconEmojiStar));
+    expect(hint()).toBe('Add to your favorites');
+
+    await click(star());
+    expect(star()?.innerHTML).toBe(svgOf(IconStarFilled));
+    expect(hint()).toBe('Remove from your favorites');
+  });
+
+  it('flips the row\'s ⋮⋮ menu item to "Remove from Favorites" after the star is clicked', async () => {
+    await make({ favorites: host() });
+    await openRow('r1');
+    await click(star());
+    await click(q('[data-row-id="r1"] [data-blok-database-table-row-handle]'));
+
+    expect(document.querySelector('[data-blok-popover-opened] [data-blok-item-name="database-row-favorite"]')?.textContent).toContain('Remove from Favorites');
   });
 
   it('follows a toggle made from the row\'s ⋮⋮ menu while the side peek is open', async () => {

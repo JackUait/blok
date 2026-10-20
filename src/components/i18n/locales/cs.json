@@ -717,6 +717,7 @@
   "tools.database.peekNext": "Další stránka",
   "tools.database.peekFavorite": "Oblíbené",
   "tools.database.peekFavoriteHint": "Přidat do oblíbených",
+  "tools.database.peekUnfavoriteHint": "Odebrat z oblíbených",
   "tools.database.defaultTitleProperty": "Název",
   "tools.database.defaultStatusProperty": "Stav",
   "tools.database.defaultStatusNotStarted": "Nezahájeno",

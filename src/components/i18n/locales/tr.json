@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Sonraki sayfa",
   "tools.database.peekFavorite": "Favori",
   "tools.database.peekFavoriteHint": "Favorilere ekle",
+  "tools.database.peekUnfavoriteHint": "Favorilerden kaldır",
   "tools.database.defaultTitleProperty": "Başlık",
   "tools.database.defaultStatusProperty": "Durum",
   "tools.database.defaultStatusNotStarted": "Başlanmadı",

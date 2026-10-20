@@ -717,6 +717,7 @@
   "tools.database.peekNext": "ទំព័របន្ទាប់",
   "tools.database.peekFavorite": "ចំណូលចិត្ត",
   "tools.database.peekFavoriteHint": "បន្ថែមទៅចំណូលចិត្ត",
+  "tools.database.peekUnfavoriteHint": "ដកចេញពីចំណូលចិត្ត",
   "tools.database.defaultTitleProperty": "ចំណងជើង",
   "tools.database.defaultStatusProperty": "ស្ថានភាព",
   "tools.database.defaultStatusNotStarted": "មិនទាន់ចាប់ផ្ដើម",

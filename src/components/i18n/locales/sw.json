@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Ukurasa unaofuata",
   "tools.database.peekFavorite": "Kipendwa",
   "tools.database.peekFavoriteHint": "Ongeza kwenye Vipendwa",
+  "tools.database.peekUnfavoriteHint": "Ondoa kwenye Vipendwa",
   "tools.database.defaultTitleProperty": "Kichwa",
   "tools.database.defaultStatusProperty": "Hali",
   "tools.database.defaultStatusNotStarted": "Haijaanza",

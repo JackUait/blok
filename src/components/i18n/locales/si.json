@@ -717,6 +717,7 @@
   "tools.database.peekNext": "ඊළඟ පිටුව",
   "tools.database.peekFavorite": "ප්‍රියතම",
   "tools.database.peekFavoriteHint": "ප්‍රියතමවලට එක් කරන්න",
+  "tools.database.peekUnfavoriteHint": "ප්‍රියතමවලින් ඉවත් කරන්න",
   "tools.database.defaultTitleProperty": "මාතෘකාව",
   "tools.database.defaultStatusProperty": "තත්ත්වය",
   "tools.database.defaultStatusNotStarted": "අරඹා නොමැත",

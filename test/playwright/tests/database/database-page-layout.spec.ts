@@ -1181,14 +1181,19 @@ test.describe('row page layout', () => {
     }, blocks());
     await openRow(page, 'r1');
     const star = peek(page).getByRole('button', { name: 'Favorite' });
-    const actions = peek(page).getByRole('button', { name: 'Actions' });
 
     await expect(star).toHaveAttribute('aria-pressed', 'false');
-    const starBox = await star.boundingBox();
-    const actionsBox = await actions.boundingBox();
+    // One frame for both rects: the side peek is still sliding in, so two boundingBox calls read two positions.
+    const gap = await peek(page).evaluate((drawer) => {
+      const starRect = drawer.querySelector('[data-blok-database-peek-favorite]')?.getBoundingClientRect();
+      const actionsRect = drawer.querySelector('[data-blok-database-peek-actions]')?.getBoundingClientRect();
 
-    expect((starBox?.x ?? 0) + (starBox?.width ?? 0)).toBeLessThanOrEqual(actionsBox?.x ?? 0);
-    expect((actionsBox?.x ?? 0) - ((starBox?.x ?? 0) + (starBox?.width ?? 0))).toBeLessThan(16);
+      return starRect === undefined || actionsRect === undefined ? null : actionsRect.left - starRect.right;
+    });
+
+    expect(gap).not.toBeNull();
+    expect(gap ?? -1).toBeGreaterThanOrEqual(0);
+    expect(gap ?? 16).toBeLessThan(16);
 
     await star.hover();
     await expect(page.getByText('Add to your favorites')).toBeVisible();
@@ -1196,5 +1201,23 @@ test.describe('row page layout', () => {
     await star.click();
     await expect(star).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => window.favoriteRows)).toEqual(['r1']);
+
+    // research/22 §14: a filled yellow star, the "Remove" hint, and no button fill.
+    const starFill = (): Promise<string | undefined> => star.evaluate((el) => {
+      const path = el.querySelector('path');
+
+      return path === null ? undefined : getComputedStyle(path).fill;
+    });
+
+    await expect.poll(starFill).toBe('rgb(246, 192, 80)');
+    await page.mouse.move(0, 0);
+    await star.hover();
+    await expect(page.getByText('Remove from your favorites')).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(star).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
+    await star.click();
+    await expect(star).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(starFill).toBe('none');
   });
 });

@@ -322,10 +322,12 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
     await mount(page, undefined, ledgerBlocks());
   });
 
-  test('"+ New page" row: 36px, 8px start pad, 14px/20px tertiary ink, 16px icon at 1px/7px, no hover fill (research/08:262)', async ({ page }) => {
+  test('"+ New page" row: 36px row, 8px start pad, 14px/20px tertiary ink, 16px icon at 1px/7px; the hover fills the 28px button only (research/08:262, research/22 §12)', async ({ page }) => {
     const add = page.locator('[data-blok-database-table-add-row]').first();
+    const box = await add.boundingBox();
 
-    expect((await add.boundingBox())?.height).toBe(36);
+    expect(box?.height).toBe(28);
+    expect(await style(add, ['margin-top', 'margin-bottom', 'border-radius'])).toEqual({ 'margin-top': '4px', 'margin-bottom': '4px', 'border-radius': '6px' });
     expect(await style(add, ['padding-left', 'font-size', 'line-height', 'color'])).toEqual({
       'padding-left': '8px',
       'font-size': '14px',
@@ -344,8 +346,11 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
 
     expect(icon).toEqual({ color: 'rgb(173, 169, 163)', marginLeft: '1px', marginRight: '7px', size: [16, 16] });
 
+    // Notion: 105x28, the text's width, not the row's.
+    expect(Math.abs((box?.width ?? 0) - 105)).toBeLessThanOrEqual(8);
+
     await add.hover();
-    expect((await style(add, ['background-color']))['background-color']).toBe('rgba(0, 0, 0, 0)');
+    await expect(add).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
   });
 
   test('a number cell is right-aligned: its value ends at the cell\'s content edge (research/08:273)', async ({ page }) => {

@@ -90,6 +90,7 @@ export declare const IconEmojiGamepad: string;
 export declare const IconEmojiMap: string;
 export declare const IconEmojiHearts: string;
 export declare const IconEmojiStar: string;
+export declare const IconStarFilled: string;
 export declare const IconEmojiSmile: string;
 export declare const IconEmojiSprout: string;
 export declare const IconEmojiUtensils: string;

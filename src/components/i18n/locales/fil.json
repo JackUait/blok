@@ -715,6 +715,7 @@
   "tools.database.peekNext": "Susunod na pahina",
   "tools.database.peekFavorite": "Paborito",
   "tools.database.peekFavoriteHint": "Idagdag sa Mga Paborito",
+  "tools.database.peekUnfavoriteHint": "Alisin sa Mga Paborito",
   "tools.database.defaultTitleProperty": "Pamagat",
   "tools.database.defaultStatusProperty": "Katayuan",
   "tools.database.defaultStatusNotStarted": "Hindi pa nasisimulan",

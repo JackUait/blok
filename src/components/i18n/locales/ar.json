@@ -717,6 +717,7 @@
   "tools.database.peekNext": "الصفحة التالية",
   "tools.database.peekFavorite": "المفضلة",
   "tools.database.peekFavoriteHint": "إضافة إلى المفضلة",
+  "tools.database.peekUnfavoriteHint": "إزالة من المفضلة",
   "tools.database.defaultTitleProperty": "العنوان",
   "tools.database.defaultStatusProperty": "الحالة",
   "tools.database.defaultStatusNotStarted": "لم يبدأ",

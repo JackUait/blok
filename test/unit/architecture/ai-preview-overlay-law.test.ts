@@ -25,10 +25,10 @@ const ALLOWED_RECEIVERS: Record<string, string> = {
   'this.root': 'An Item\'s element (one insert command), created by this module inside a group box.',
   'this.el': 'A Line\'s content column (one preview block), created by this module inside an item.',
   'this.text': 'The text element of a preview block this module created.',
-  block: 'A list item element makeBlock just created, not yet mounted.',
-  row: 'A list row makeBlock just created, not yet mounted.',
-  text: 'The text element makeBlock just returned, not yet mounted.',
-  span: 'A word span this module created; it only gets its text reset.',
+  listItem: 'A list item element makeBlock just created, not yet mounted.',
+  listRow: 'A list row makeBlock just created, not yet mounted.',
+  previewText: 'The text element makeBlock just returned, not yet mounted.',
+  landedWord: 'A word span this module created; it only gets its text reset.',
 };
 
 const insertCalls = (fileName: string, code: string): Array<{ receiver: string; method: string; line: number }> => {

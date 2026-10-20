@@ -1,6 +1,5 @@
 import { readPartialCommands } from '../../../agent/partial-json';
 import type { PartialCommand } from '../../../agent/partial-json';
-import { BLOCK_CONTENT_CLASSES } from '../../../shared/block-scaffolding';
 import { headerClasses } from '../../../shared/tool-classes/header';
 import { LIST_CONTENT_CLASSES, LIST_ITEM_CLASSES, LIST_ITEM_ROW_CLASSES } from '../../../shared/tool-classes/list';
 import { PARAGRAPH_CLASSES } from '../../../shared/tool-classes/paragraph';
@@ -72,16 +71,16 @@ const withoutCutTail = (html: string): string => {
   return amp >= 0 && /^&#?\w*$/.test(tagless.slice(amp)) ? tagless.slice(0, amp) : tagless;
 };
 
-/** Plain text of streamed inline HTML. Never parsed as HTML. */
-const plainText = (html: string): string =>
-  withoutCutTail(html)
+/** Plain text of streamed inline HTML. Never parsed as HTML. A finished field keeps a literal `<` or `&`. */
+const plainText = (html: string, complete: boolean): string =>
+  (complete ? html : withoutCutTail(html))
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]*>/g, '')
     .replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, decodeEntity);
 
-const richText = (value: unknown): string => {
+const richText = (value: unknown, complete: boolean): string => {
   if (typeof value === 'string') {
-    return plainText(value);
+    return plainText(value, complete);
   }
   if (Array.isArray(value)) {
     return value.map((segment) => {
@@ -107,11 +106,20 @@ const blockLine = (command: PartialCommand): LineSpec => {
   const style = listStyle(data.style);
   const kind: Kind = type === 'header' || type === 'list' ? type : 'paragraph';
 
-  return { kind, level, style, text: richText(data.text), complete };
+  return { kind, level, style, text: richText(data.text, complete), complete };
 };
 
-const inlineMarkdown = (text: string): string =>
-  plainText(text.replace(/\[([^\]]*)\]\([^)]*\)?/g, '$1').replace(/\*\*|__|~~|`|\*/g, ''));
+/** Marks come off in pairs, so a lone `*` ("2 * 3") stays. */
+const EMPHASIS = [/\*\*([^*]+)\*\*/g, /__([^_]+)__/g, /~~([^~]+)~~/g, /`([^`]*)`/g, /\*(?=\S)([^*]*[^*\s])\*/g];
+
+/** While a line streams, an opening mark whose closer has not arrived yet. */
+const OPENER = /(^|\s)(\*\*|__|~~|\*|`|\[)(?=\S)/g;
+
+const inlineMarkdown = (text: string, complete: boolean): string => {
+  const unmarked = EMPHASIS.reduce((result, pattern) => result.replace(pattern, '$1'), text.replace(/\[([^\]]*)\]\([^)]*\)?/g, '$1'));
+
+  return plainText(complete ? unmarked : unmarked.replace(OPENER, '$1'), complete);
+};
 
 const listMatch = (check: RegExpExecArray | null, bullet: RegExpExecArray | null, number: RegExpExecArray | null): [ListStyle, string] => {
   if (check) {
@@ -137,7 +145,7 @@ const markdownLines = (command: PartialCommand): LineSpec[] => {
   const base = { level: 2, style: 'unordered' as ListStyle };
   const flush = (): void => {
     if (paragraph.texts.length > 0) {
-      specs.push({ ...base, kind: 'paragraph', text: inlineMarkdown(paragraph.texts.join(' ')), complete: paragraph.complete });
+      specs.push({ ...base, kind: 'paragraph', text: inlineMarkdown(paragraph.texts.join(' '), paragraph.complete), complete: paragraph.complete });
     }
     paragraph.texts = [];
   };
@@ -153,12 +161,12 @@ const markdownLines = (command: PartialCommand): LineSpec[] => {
       flush();
     } else if (heading) {
       flush();
-      specs.push({ ...base, kind: 'header', level: heading[1].length, text: inlineMarkdown(heading[2]), complete });
+      specs.push({ ...base, kind: 'header', level: heading[1].length, text: inlineMarkdown(heading[2], complete), complete });
     } else if (check ?? bullet ?? number) {
       const [style, match] = listMatch(check, bullet, number);
 
       flush();
-      specs.push({ ...base, kind: 'list', style, text: inlineMarkdown(match), complete });
+      specs.push({ ...base, kind: 'list', style, text: inlineMarkdown(match, complete), complete });
     } else {
       paragraph.texts.push(line.trim());
       paragraph.complete = complete;
@@ -206,22 +214,22 @@ const makeBlock = (spec: LineSpec, ordinal: number): { block: HTMLElement; text:
     return { block: heading, text: heading };
   }
   if (spec.kind === 'list') {
-    const block = document.createElement('div');
-    const row = document.createElement('div');
+    const listItem = document.createElement('div');
+    const listRow = document.createElement('div');
     const marker = createMarker(spec.style === 'ordered' ? 'ordered' : 'unordered', 0);
-    const text = document.createElement('div');
+    const listText = document.createElement('div');
 
-    block.className = LIST_ITEM_CLASSES.join(' ');
-    block.setAttribute('data-list-style', spec.style);
-    row.className = LIST_ITEM_ROW_CLASSES.join(' ');
-    text.className = LIST_CONTENT_CLASSES.join(' ');
+    listItem.className = LIST_ITEM_CLASSES.join(' ');
+    listItem.setAttribute('data-list-style', spec.style);
+    listRow.className = LIST_ITEM_ROW_CLASSES.join(' ');
+    listText.className = LIST_CONTENT_CLASSES.join(' ');
     if (spec.style === 'ordered') {
       marker.textContent = `${ordinal}.`;
     }
-    row.append(marker, text);
-    block.append(row);
+    listRow.append(marker, listText);
+    listItem.append(listRow);
 
-    return { block, text };
+    return { block: listItem, text: listText };
   }
   const paragraph = document.createElement('div');
 
@@ -238,9 +246,7 @@ class Line {
   private text: HTMLElement | null = null;
   private readonly spans: HTMLElement[] = [];
 
-  constructor(public spec: LineSpec, private ordinal: number) {
-    this.el.className = BLOCK_CONTENT_CLASSES.join(' ');
-  }
+  constructor(public spec: LineSpec, private ordinal: number) {}
 
   public get pending(): boolean {
     return this.spans.length < landable(this.spec);
@@ -253,8 +259,10 @@ class Line {
     this.ordinal = ordinal;
     // A landed word can still change: a soft-wrapped line gains a space, a link loses its bracket.
     this.spans.splice(tokens.length).forEach((span) => span.remove());
-    this.spans.filter((span, index) => span.textContent !== tokens[index]).forEach((span) => {
-      span.replaceChildren(tokens[this.spans.indexOf(span)]);
+    this.spans.forEach((landedWord, index) => {
+      if (landedWord.textContent !== tokens[index]) {
+        landedWord.replaceChildren(tokens[index]);
+      }
     });
     this.draw();
   }
@@ -297,11 +305,11 @@ class Line {
       this.el.replaceChildren(...makeSlots(this.spec.kind));
       this.text = null;
     } else if (this.spans.length > 0 && (this.text === null || this.shape !== shape)) {
-      const { block, text } = makeBlock(this.spec, this.ordinal);
+      const { block, text: previewText } = makeBlock(this.spec, this.ordinal);
 
-      text.append(...this.spans);
+      previewText.append(...this.spans);
       this.el.replaceChildren(block);
-      this.text = text;
+      this.text = previewText;
     }
     this.shape = shape;
   }
@@ -384,13 +392,15 @@ class Group {
     const height = this.box.getBoundingClientRect().height;
     const offset = reserveGap(this.holder, key, height, this.side);
     const rect = this.holder.getBoundingClientRect();
+    // The real column: the alignment rules move it inside a wider holder.
+    const column = ([...this.holder.children].find((child) => child.hasAttribute(DATA_ATTR.elementContent)) ?? this.holder).getBoundingClientRect();
     const top = this.side === 'end'
       ? rect.bottom - layer.top + offset
       : rect.top - layer.top - gapSize(this.holder, 'start') + offset;
 
     this.box.style.top = `${top}px`;
-    this.box.style.left = `${rect.left - layer.left}px`;
-    this.box.style.width = `${rect.width}px`;
+    this.box.style.left = `${column.left - layer.left}px`;
+    this.box.style.width = `${column.width}px`;
   }
 
   public remove(key: string): void {

@@ -31,6 +31,9 @@ describe('createLivePreview', () => {
     preview: null,
   };
 
+  /** Per-element rects that override the default layout below. */
+  const rects = new Map<HTMLElement, DOMRect>();
+
   const runFrames = (): void => {
     frames.splice(0).forEach((frame) => frame(0));
   };
@@ -69,7 +72,13 @@ describe('createLivePreview', () => {
     document.body.appendChild(state.layer);
 
     // jsdom has no layout: holders stack 24px apart, every preview box is 48px tall.
+    rects.clear();
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+      const fixed = rects.get(this);
+
+      if (fixed) {
+        return fixed;
+      }
       const index = state.holders.indexOf(this);
 
       if (index >= 0) {
@@ -175,6 +184,44 @@ describe('createLivePreview', () => {
     vi.advanceTimersByTime(35 * 10);
 
     expect(state.layer.querySelector('.blok-block')?.textContent).toBe('Hello world more the docs');
+  });
+
+  it('lines the preview up with the real content column, not the holder', () => {
+    const preview = make();
+    const b1 = state.holders[0];
+    const content = document.createElement('div');
+
+    state.layer.setAttribute('data-blok-content-align', 'left');
+    content.setAttribute('data-blok-element-content', '');
+    b1.appendChild(content);
+    rects.set(state.layer, new DOMRect(10, 0, 900, 300));
+    rects.set(b1, new DOMRect(10, 0, 900, HOLDER_HEIGHT));
+    rects.set(content, new DOMRect(66, 0, 650, HOLDER_HEIGHT));
+
+    preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'x' } } }));
+
+    const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+
+    expect(box?.style.left).toBe('56px');
+    expect(box?.style.width).toBe('650px');
+  });
+
+  it('keeps a literal < and & once the text is complete', () => {
+    const preview = make();
+
+    preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'if a < b AT&T' } } }));
+    vi.advanceTimersByTime(35 * 10);
+
+    expect(words(state.layer)).toEqual(['if', 'a', '<', 'b', 'AT&T']);
+  });
+
+  it('strips markdown emphasis but keeps a lone asterisk', () => {
+    const preview = make();
+
+    preview.update('c1', execute({ name: 'markdown.insert', args: { position: { after: 'b1' }, markdown: '**Bold** and *it* `code` 2 * 3' } }));
+    vi.advanceTimersByTime(35 * 20);
+
+    expect(words(state.layer)).toEqual(['Bold', 'and', 'it', 'code', '2', '*', '3']);
   });
 
   it('never shows markup from inline HTML text', () => {

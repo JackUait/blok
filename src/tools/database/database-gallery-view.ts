@@ -399,6 +399,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       handlers.pickRow(rowId, event.shiftKey, this.cardIds());
       this.cursor = rowId;
       this.anchor = rowId;
+      // Core blocks the Shift-click focus (selection owner), so the arrows would miss the gallery.
+      this.root?.focus({ preventScroll: true });
 
       return;
     }

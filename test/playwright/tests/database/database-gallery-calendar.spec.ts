@@ -416,6 +416,23 @@ test.describe('gallery', () => {
       await expect(drawer(page)).toHaveCount(0);
     });
 
+    for (const modifier of ['Shift', 'ControlOrMeta'] as const) {
+      test(`after a ${modifier}-click from a caret in text, Down moves the pick in reading order, with no ring (research/22 §2)`, async ({ page }) => {
+        await mount(page, [{ id: 'p1', type: 'paragraph', data: { text: 'Above' } }, ...blocks({ type: 'gallery' })]);
+        await page.getByText('Above').click();
+
+        await card(page, 'r1').click({ modifiers: [modifier] });
+        expect(await selectedIds(page)).toEqual(['r1']);
+
+        await page.keyboard.press('ArrowDown');
+        expect(await selectedIds(page)).toEqual(['r2']);
+        await page.keyboard.press('ArrowUp');
+        expect(await selectedIds(page)).toEqual(['r1']);
+        await expect(page.locator('[data-blok-database-gallery]')).toHaveCSS('outline-style', 'none');
+        await expect(card(page, 'r1')).toHaveCSS('outline-style', 'none');
+      });
+    }
+
     test('Home, End, PageUp and PageDown leave the selection where it is (research/22 §2)', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await clickBlank(page);

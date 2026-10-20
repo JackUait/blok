@@ -721,6 +721,42 @@ describe('DatabaseGalleryView', () => {
       expect(pickRow).toHaveBeenNthCalledWith(3, 'r1', false, ['r1', 'r2', 'r3', 'r4']);
     });
 
+    it('a Cmd, Ctrl or Shift-click pick takes focus from the text, so Down moves the pick next (research/22 §2)', () => {
+      for (const init of [{ shiftKey: true }, { metaKey: true }, { ctrlKey: true }]) {
+        const { root, view, pickRow } = mountSelectable();
+        const text = document.createElement('div');
+
+        text.contentEditable = 'true';
+        document.body.appendChild(text);
+        text.focus();
+        pickRow.mockImplementation((rowId) => {
+          cards(root).forEach((card) => card.toggleAttribute(SELECTED, card.getAttribute('data-row-id') === rowId));
+        });
+
+        cards(root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, ...init }));
+
+        expect(root).toHaveFocus();
+        press(root, 'ArrowDown');
+        expect(selected(root)).toEqual(['r3']);
+        view.destroy();
+        root.remove();
+        text.remove();
+      }
+    });
+
+    it('Enter after a single Cmd-click pick renames that card, as Enter on an arrow-selected card does', () => {
+      const { root, handlers, pickRow } = mountSelectable();
+
+      pickRow.mockImplementation((rowId) => {
+        cards(root).forEach((card) => card.toggleAttribute(SELECTED, card.getAttribute('data-row-id') === rowId));
+      });
+      cards(root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+      press(document.activeElement instanceof HTMLElement ? document.activeElement : document.body, 'Enter');
+
+      expect(cards(root)[1].querySelector('input')).not.toBeNull();
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
     it('selects nothing without the selection handlers (read-only)', () => {
       const { root } = mount({ readOnly: true });
 

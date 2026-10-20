@@ -77,6 +77,14 @@ describe('DatabaseFeedView', () => {
     expect([...el.querySelectorAll('[data-blok-database-feed-card]')].map((c) => c.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
   });
 
+  // research/23 §6: an anonymous form answer has no author; its byline says so.
+  it('names an anonymous form answer\'s author "Anonymous"', () => {
+    const anonymous: DatabaseRow = { id: 'r3', position: 'a2', properties: { 'p-title': 'Resp' }, meta: { anonymous: true, createdAt: Date.parse('2026-10-09T10:00:00Z') } };
+    const el = render({ rows: [anonymous], total: 1 });
+
+    expect(card(el, 'r3')?.querySelector('[data-blok-database-feed-author]')?.textContent).toBe('tools.database.personAnonymous');
+  });
+
   it('shows the title, the author byline and only the visible properties', () => {
     const first = card(render(), 'r1');
 

@@ -3894,6 +3894,10 @@
           "type": "boolean",
           "description": "A page template, not a row. Views and exports skip it."
         },
+        "anonymous": {
+          "type": "boolean",
+          "description": "An anonymous form answer: saved with no createdBy; Created by reads \"Anonymous\"."
+        },
         "repeat": {
           "type": "object",
           "description": "Templates only: a repeating schedule. The host runs it.",

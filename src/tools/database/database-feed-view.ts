@@ -311,14 +311,17 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
   /** Notion shows the author and when the page was made by default (research/08). */
   private createByline(row: DatabaseRow): HTMLElement | null {
     const author = row.meta?.createdBy;
+    const anonymous = row.meta?.anonymous === true;
 
-    if (author === undefined) return null;
+    if (author === undefined && !anonymous) return null;
     const byline = document.createElement('div');
     const name = document.createElement('span');
 
     byline.setAttribute('data-blok-database-feed-byline', '');
     name.setAttribute('data-blok-database-feed-author', '');
-    name.textContent = this.options.personName?.(author) ?? author;
+    name.textContent = author === undefined
+      ? this.options.i18n.t('tools.database.personAnonymous')
+      : this.options.personName?.(author) ?? author;
     byline.appendChild(name);
     const at = row.meta?.createdAt;
 

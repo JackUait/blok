@@ -322,6 +322,7 @@ describe('form Share panel (research/19 §3d)', () => {
       const row = await submitAndSave({ anonymous: true });
 
       expect(row?.createdBy).toBeUndefined();
+      expect(row?.lastEditedBy).toBeUndefined();
       expect(row?.data).toEqual(expect.objectContaining({ anonymous: true }));
       expect((row?.data as { properties: Record<string, unknown> }).properties.owner ?? []).toEqual([]);
     });

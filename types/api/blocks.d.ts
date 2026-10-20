@@ -68,8 +68,8 @@ export interface InsertAtOptions {
   replace?: string;
   /**
    * Store the new block with no author: it gets no `createdBy`, even when
-   * `user` is configured. Blocks the insert creates with it go the same way.
-   * Defaults to `false`.
+   * `user` is configured. Blocks the insert adds synchronously go the same
+   * way. Defaults to `false`.
    */
   anonymous?: boolean;
 }

@@ -348,9 +348,12 @@ test.describe('in-editor assistant', () => {
 
     const written = page.locator(`#${HOLDER_ID} [data-blok-element]`).filter({ hasText: 'Revealed line' });
 
-    await expect(written).toBeVisible();
-    // The words replay over the committed block.
-    expect(await written.evaluate((holder) => holder.getAnimations({ subtree: true }).length)).toBeGreaterThan(0);
+    // The words replay over the committed block. The reveal lasts under a second, so poll fast.
+    await expect.poll(
+      () => written.evaluate((holder) => holder.getAnimations({ subtree: true })
+        .some((animation) => animation instanceof CSSAnimation && animation.animationName === 'blok-ai-reveal')),
+      { intervals: [20] }
+    ).toBe(true);
     await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
 
     await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(2);

@@ -103,6 +103,7 @@ class SelectEditor {
 
     this.popover = new CellPopover({
       anchor,
+      cover: ctx.coverCell === true,
       content: this.root,
       // Notion: 300 wide beside a 200px cell (research/08:306).
       minWidth: `${Math.max(anchor.getBoundingClientRect().width, 300)}px`,

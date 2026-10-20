@@ -254,6 +254,7 @@ export class DatabaseTableGrid {
       ...this.cellContext,
       i18n: this.i18n,
       readOnly: false,
+      coverCell: true,
       options: property.config?.options ?? [],
       ...(reminder !== undefined ? { reminder } : {}),
       ...(property.type === 'date' && this.callbacks.commitReminder !== undefined

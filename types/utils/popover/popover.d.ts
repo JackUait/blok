@@ -159,11 +159,19 @@ export interface PopoverParamsBase {
 
   /**
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
-   * edges. Applied only together with placeLeftOfAnchor. Keeps the popover fully
+   * edges (every edge with `cover`). Applied only together with placeLeftOfAnchor or cover. Keeps the popover fully
    * inside the viewport — shifting it vertically when centered placement would
    * overflow either edge — so it stays visible and close to the trigger.
    */
   viewportMargin?: number;
+
+  /**
+   * When true, the popover covers its anchor: its start corner sits on the
+   * anchor's start corner (or the virtual `position`'s), and it slides only as
+   * far as needed to stay inside the viewport. It never flips. Used by an
+   * inline editor that opens over the value it edits, like a table cell.
+   */
+  cover?: boolean;
 
   /**
    * When true, the first item is focused when the popover opens (default behavior).

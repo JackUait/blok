@@ -73,6 +73,7 @@ class PersonEditor implements CellEditorHandle {
 
     this.popover = new CellPopover({
       anchor,
+      cover: ctx.coverCell === true,
       content: this.root,
       minWidth: `${Math.max(anchor.getBoundingClientRect().width, 240)}px`,
       onEscape: () => this.finish(true),

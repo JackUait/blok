@@ -4096,6 +4096,7 @@ span[data-blok-slash-search] {
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
   --blok-database-select-head-bg: rgba(242, 241, 238, 0.6);
+  --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
 }
 
 [@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
@@ -4249,6 +4250,7 @@ span[data-blok-slash-search] {
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
@@ -4402,6 +4404,7 @@ span[data-blok-slash-search] {
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
 }
 
 [data-blok-database-board] {
@@ -7862,6 +7865,17 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-peek-value-hover-bg);
 }
 
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container] {
+  --blok-popover-box-shadow: var(--blok-database-cell-editor-shadow);
+  --max-height: calc(100dvh - 2 * var(--blok-space-3));
+  border-radius: var(--blok-radius-control);
+  padding: 0;
+}
+
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-items] {
+  padding: 0;
+}
+
 [data-blok-database-cell-editor] {
   display: flex;
   flex-direction: column;
@@ -7872,14 +7886,24 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-cell-input] {
   width: 100%;
-  min-height: 32px;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  min-height: 39px;
+  padding: var(--blok-space-2) var(--blok-space-2-25);
   border: none;
   outline: none;
   background: transparent;
   font: inherit;
+  line-height: 21px;
   color: inherit;
   resize: none;
+}
+
+textarea[data-blok-database-cell-input] {
+  white-space: break-spaces;
+}
+
+[data-blok-database-cell-input="number"] {
+  min-height: 38px;
+  text-align: end;
 }
 
 [data-blok-database-cell-input][aria-invalid="true"] {

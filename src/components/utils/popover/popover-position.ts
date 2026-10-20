@@ -43,9 +43,14 @@ export interface PositionInput {
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
    * edges. Applied only when placeLeftOfAnchor is true. Keeps the popover
    * within the viewport — shifting it vertically when centered placement would
-   * overflow either edge. Has no effect when 0.
+   * overflow either edge. Has no effect when 0. Also applies to `cover`.
    */
   viewportMargin?: number;
+  /**
+   * When true, the popover's start corner sits on the anchor's start corner
+   * and slides only as far as needed to stay inside the viewport/scope.
+   */
+  cover?: boolean;
 }
 
 export interface ResolvedPosition {
@@ -95,6 +100,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     asideSide = 'left',
     viewportMargin = 0,
     direction = 'ltr',
+    cover = false,
   } = input;
 
   const boundaryBottom = Math.min(viewportSize.height, scopeBounds.bottom);
@@ -152,6 +158,15 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
       : Math.max(boundaryLeft + scrollOffset.x, rawLeft);
 
     return { top, left, openTop: false, openLeft: !asideOnRight };
+  }
+
+  if (cover) {
+    const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
+    const top = clamp(anchor.top, boundaryTop + viewportMargin, boundaryBottom - viewportMargin - popoverSize.height);
+    const start = direction === 'rtl' ? anchor.right - popoverSize.width : anchor.left;
+    const left = clamp(start, boundaryLeft + viewportMargin, boundaryRight - viewportMargin - popoverSize.width);
+
+    return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: false, openLeft: direction === 'rtl' };
   }
 
   // --- Vertical ---

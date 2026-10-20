@@ -70,6 +70,7 @@ export const openTextEditor = (
   const state = { open: true };
   const popover = new CellPopover({
     anchor,
+    cover: ctx.coverCell === true,
     content,
     minWidth: `${Math.max(anchor.getBoundingClientRect().width, 240)}px`,
     onEscape: () => finish({ kind: 'cancel' }),
@@ -98,7 +99,18 @@ export const openTextEditor = (
     ctx.onClose?.();
   };
 
-  field.addEventListener('input', () => field.removeAttribute('aria-invalid'));
+  // A textarea grows down with its text, as Notion's does.
+  const fit = (): void => {
+    if (field instanceof HTMLTextAreaElement) {
+      field.style.height = 'auto';
+      field.style.height = `${field.scrollHeight}px`;
+    }
+  };
+
+  field.addEventListener('input', () => {
+    field.removeAttribute('aria-invalid');
+    fit();
+  });
   field.addEventListener('keydown', (event: Event) => {
     if (!(event instanceof KeyboardEvent) || event.key !== 'Enter' || event.isComposing || (multiline && event.shiftKey)) {
       return;
@@ -115,6 +127,7 @@ export const openTextEditor = (
   });
 
   popover.show();
+  fit();
   field.focus();
   // An email input has no selection API: setSelectionRange throws there.
   if (!(field instanceof HTMLInputElement && field.type === 'email')) {

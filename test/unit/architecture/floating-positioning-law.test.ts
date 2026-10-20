@@ -237,6 +237,7 @@ const POPOVER_DESKTOP_CONSUMERS = [
 const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/toolbar/blockSettings.ts': 'Context-menu and keyboard rectangles track the active block holder.',
   'components/ui/toolbox.ts': 'Caret and slash-search rectangles track the current block holder.',
+  'tools/database/cells/cell-popover.ts': 'A table cell editor covers its cell: the 1px-grown cell rect tracks the cell element.',
   'tools/link/paste-menu/controller.ts': 'Link-end rectangles track the inserted link block holder while open.',
 };
 

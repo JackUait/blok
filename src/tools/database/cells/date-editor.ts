@@ -159,8 +159,10 @@ class DateEditor {
     this.root.setAttribute('aria-label', property.name);
     this.popover = new CellPopover({
       anchor,
+      cover: this.ctx.coverCell === true,
       content: this.root,
-      minWidth: '252px',
+      // research/22 §4: Notion's picker is 248 wide.
+      minWidth: '248px',
       onEscape: () => {
         if (this.remindMenu !== null) {
           this.closeRemindMenu(true);

@@ -305,6 +305,9 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private viewportMargin = 0;
 
+  /** Covers the anchor instead of opening beside it (see `PopoverParams.cover`). */
+  private cover = false;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -403,6 +406,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (typeof params.viewportMargin === 'number') {
       this.viewportMargin = params.viewportMargin;
+    }
+
+    if (params.cover === true) {
+      this.cover = true;
     }
 
     if (params.nestingLevel !== undefined) {
@@ -858,6 +865,7 @@ export class PopoverDesktop extends PopoverAbstract {
       placeLeftOfAnchor: this.placeLeftOfAnchor,
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
+      cover: this.cover,
     });
   }
 

@@ -76,4 +76,44 @@ describe('cell editor CSS', () => {
       '[data-blok-database-select-option-handle]', '[data-blok-database-select-option-menu]']
       .forEach((selector) => expect(reduced(selector), selector).toBe(true));
   });
+  describe('editor box (research/22 §4)', () => {
+    const BOX = "[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]";
+    const ITEMS = "[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-items]";
+
+    it('is a 6px box with the menu shadow and no padding of its own', () => {
+      expect(declared(BOX, 'border-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared(BOX, '--blok-popover-box-shadow')).toEqual(['var(--blok-database-cell-editor-shadow)']);
+      expect(declared(BOX, 'padding')).toEqual(['0']);
+      expect(declared(ITEMS, 'padding')).toEqual(['0']);
+    });
+
+    it('is never capped below the viewport, so the date picker does not scroll', () => {
+      expect(declared(BOX, '--max-height')).toEqual(['calc(100dvh - 2 * var(--blok-space-3))']);
+    });
+
+    it('takes the light menu shadow, and the dark database menu shadow in both dark blocks', () => {
+      const values = [...database.matchAll(/--blok-database-cell-editor-shadow: ?([^;]+);/g)].map((m) => m[1].trim());
+
+      expect(values).toEqual([
+        'var(--blok-inline-toolbar-shadow)',
+        'var(--blok-database-popover-shadow)',
+        'var(--blok-database-popover-shadow)',
+      ]);
+    });
+
+    it('pads every input 8px 9px on a 21px line, 39px tall at least', () => {
+      expect(declared('[data-blok-database-cell-input]', 'padding')).toEqual(['var(--blok-space-2) var(--blok-space-2-25)']);
+      expect(declared('[data-blok-database-cell-input]', 'line-height')).toEqual(['21px']);
+      expect(declared('[data-blok-database-cell-input]', 'min-height')).toEqual(['39px']);
+    });
+
+    it('draws a number 38px tall and right-aligned', () => {
+      expect(declared('[data-blok-database-cell-input="number"]', 'min-height')).toEqual(['38px']);
+      expect(declared('[data-blok-database-cell-input="number"]', 'text-align')).toEqual(['end']);
+    });
+
+    it('keeps typed spaces in a text editor', () => {
+      expect(declared('textarea[data-blok-database-cell-input]', 'white-space')).toEqual(['break-spaces']);
+    });
+  });
 });

@@ -189,6 +189,8 @@
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
   /* Select editor head (research/08:306). Dark is unmeasured: the dark tab fill stands in. */
   --blok-database-select-head-bg: rgba(242, 241, 238, 0.6);
+  /* Cell editor box, research/22 §4: Notion's menu shadow, light and dark. */
+  --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -366,6 +368,7 @@
     --blok-database-comment-badge-text: rgb(240, 239, 237);
     --blok-database-comment-badge-icon: rgb(173, 169, 163);
     --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   }
 }
 
@@ -542,6 +545,7 @@
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
 }
 
 /**
@@ -4450,7 +4454,19 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   }
 }
 
-/* Editors */
+/* Editors. The box is research/22 §4: radius 6px, Notion's menu shadow, no padding.
+   The container's inline box-shadow reads --blok-popover-box-shadow, so it is re-set here. */
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container] {
+  --blok-popover-box-shadow: var(--blok-database-cell-editor-shadow);
+  --max-height: calc(100dvh - 2 * var(--blok-space-3));
+  border-radius: var(--blok-radius-control);
+  padding: 0;
+}
+
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-items] {
+  padding: 0;
+}
+
 [data-blok-database-cell-editor] {
   display: flex;
   flex-direction: column;
@@ -4459,16 +4475,28 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-text-primary);
 }
 
+/* 21px line + 16px padding is 37; Notion's one-line box is 39, three lines 79. */
 [data-blok-database-cell-input] {
   width: 100%;
-  min-height: 32px;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  min-height: 39px;
+  padding: var(--blok-space-2) var(--blok-space-2-25);
   border: none;
   outline: none;
   background: transparent;
   font: inherit;
+  /* After `font`, which resets it. */
+  line-height: 21px;
   color: inherit;
   resize: none;
+}
+
+textarea[data-blok-database-cell-input] {
+  white-space: break-spaces;
+}
+
+[data-blok-database-cell-input="number"] {
+  min-height: 38px;
+  text-align: end;
 }
 
 [data-blok-database-cell-input][aria-invalid="true"] {

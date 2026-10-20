@@ -714,3 +714,82 @@ describe('resolvePosition — negative horizontal scroll (RTL documents)', () =>
     expect(result.openLeft).toBe(true);
   });
 });
+
+describe('resolvePosition — cover placement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('puts the popover top-left on the anchor top-left', () => {
+    const result = resolve({
+      anchor: rect(300, 200, 202, 39),
+      popoverSize: { width: 240, height: 39 },
+      cover: true,
+    });
+
+    expect(result).toEqual({ top: 200, left: 300, openTop: false, openLeft: false });
+  });
+
+  it('adds the scroll offset', () => {
+    const result = resolve({
+      anchor: rect(300, 200, 202, 39),
+      popoverSize: { width: 240, height: 39 },
+      scrollOffset: { x: 5, y: 120 },
+      cover: true,
+    });
+
+    expect(result.top).toBe(320);
+    expect(result.left).toBe(305);
+  });
+
+  it('slides up, never flips, when the popover runs past the bottom edge', () => {
+    const result = resolve({
+      anchor: rect(300, 600, 202, 39),
+      popoverSize: { width: 248, height: 500 },
+      viewportMargin: 12,
+      cover: true,
+    });
+
+    expect(result.top).toBe(800 - 12 - 500);
+    expect(result.openTop).toBe(false);
+  });
+
+  it('slides left when the popover runs past the right edge', () => {
+    const result = resolve({
+      anchor: rect(850, 200, 202, 39),
+      popoverSize: { width: 240, height: 39 },
+      viewportMargin: 12,
+      cover: true,
+    });
+
+    expect(result.left).toBe(1000 - 12 - 240);
+  });
+
+  it('never slides past the top or left edge', () => {
+    const result = resolve({
+      anchor: rect(-40, -10, 202, 39),
+      popoverSize: { width: 240, height: 900 },
+      viewportMargin: 12,
+      cover: true,
+    });
+
+    expect(result.top).toBe(12);
+    expect(result.left).toBe(12);
+  });
+
+  it('aligns the right edges in RTL', () => {
+    const result = resolve({
+      anchor: rect(300, 200, 202, 39),
+      popoverSize: { width: 240, height: 39 },
+      direction: 'rtl',
+      cover: true,
+    });
+
+    expect(result.left).toBe(502 - 240);
+    expect(result.openLeft).toBe(true);
+  });
+});

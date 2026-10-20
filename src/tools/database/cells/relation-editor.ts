@@ -74,6 +74,7 @@ class RelationEditor implements CellEditorHandle {
 
     this.popover = new CellPopover({
       anchor,
+      cover: ctx.coverCell === true,
       content: this.root,
       minWidth: `${Math.max(anchor.getBoundingClientRect().width, 300)}px`,
       onEscape: () => this.finish(true),

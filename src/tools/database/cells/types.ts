@@ -65,6 +65,8 @@ export interface CellContext {
    * click is left to the host, which edits the value.
    */
   followLinks?: boolean;
+  /** The table (research/22 §4): an editor opens over its cell, not below it. */
+  coverCell?: boolean;
   /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */
   reminder?: DateReminderOffset;
   /** The host's small map (`config.map.renderPlace`) for a place's hover card. Without it the card has no map. */

@@ -52,6 +52,7 @@ class FilesEditor implements CellEditorHandle {
 
     this.popover = new CellPopover({
       anchor,
+      cover: ctx.coverCell === true,
       content: this.root,
       minWidth: `${Math.max(anchor.getBoundingClientRect().width, 280)}px`,
       onEscape: () => this.finish(true),

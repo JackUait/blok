@@ -476,7 +476,6 @@ export class Assistant extends Module {
       return;
     }
     this.applied = changed;
-    this.setSlots(false);
     // Block heights changed, so boxes of other calls move.
     this.preview?.relayout();
   }

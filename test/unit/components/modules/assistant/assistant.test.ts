@@ -1541,7 +1541,7 @@ describe('in-editor assistant bar', () => {
       expect(barStyle().top).toBe('230px');
     });
 
-    it('a model that does not stream shows shimmer slots under the bar until its batch commits', async () => {
+    it('a model that does not stream shows shimmer slots under the bar until the run ends', async () => {
       const { model, release } = gated(insertBatch('From AI'));
       const calls = { count: 0 };
       const editor = await createEditor(
@@ -1568,6 +1568,33 @@ describe('in-editor assistant bar', () => {
       expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
       expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
       expect(await texts(editor)).toEqual(['Hello', 'Second', 'Third', 'From AI']);
+    });
+
+    it('a model that does not stream keeps the slots after a batch applies, while it still works', async () => {
+      const { model, release } = gated(answer('Done.'));
+      const calls = { count: 0 };
+      const editor = await createEditor(
+        async (request) => (calls.count++ === 0 ? insertBatch('From AI') : model(request)),
+        undefined,
+        THREE_BLOCKS
+      );
+
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      submit('Write');
+
+      await waitFor(async () => expect(await texts(editor)).toEqual(['Hello', 'Second', 'Third', 'From AI']));
+      await waitFor(() => expect(calls.count).toBe(2));
+      await settle();
+
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
+      expect(gapOf('p2')).toBe(`${BAR_GAP + SLOTS_HEIGHT}px`);
+
+      release();
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
     });
 
     it('a streaming model drops the slots at its first stream event', async () => {

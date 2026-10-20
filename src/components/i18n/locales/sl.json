@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Pogled seznama",
   "tools.database.formShowOptionsDropdown": "Spustni seznam",
   "tools.database.formAddQuestion": "Dodaj vprašanje",
+  "tools.database.formEditQuestion": "Uredi vprašanje",
   "tools.database.formChooseAnswer": "Izberi odgovor",
   "tools.database.formAutoCreateTitle": "Želite samodejno ustvariti vprašanja obrazca na podlagi obstoječih lastnosti?",
   "tools.database.formAutoCreateDescription": "Nova vprašanja bodo ustvarjena samo za podprte vrste lastnosti.",

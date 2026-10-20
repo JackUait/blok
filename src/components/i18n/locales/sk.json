@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Zobrazenie zoznamu",
   "tools.database.formShowOptionsDropdown": "Rozbaľovací zoznam",
   "tools.database.formAddQuestion": "Pridať otázku",
+  "tools.database.formEditQuestion": "Upraviť otázku",
   "tools.database.formChooseAnswer": "Vybrať odpoveď",
   "tools.database.formAutoCreateTitle": "Automaticky vytvoriť otázky formulára na základe existujúcich vlastností?",
   "tools.database.formAutoCreateDescription": "Nové otázky vzniknú iba z podporovaných typov vlastností.",

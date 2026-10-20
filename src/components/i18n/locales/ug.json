@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "تىزىملىك كۆرۈنۈشى",
   "tools.database.formShowOptionsDropdown": "چۈشۈرمە تىزىملىك",
   "tools.database.formAddQuestion": "سوئال قوشۇش",
+  "tools.database.formEditQuestion": "سوئالنى تەھرىرلەش",
   "tools.database.formChooseAnswer": "جاۋاب تاللاش",
   "tools.database.formAutoCreateTitle": "بار خاسلىقلارغا ئاساسەن ئانكېتا سوئاللىرىنى ئاپتوماتىك قۇرامسىز؟",
   "tools.database.formAutoCreateDescription": "پەقەت قوللىنىدىغان خاسلىق تىپلىرىلا يېڭى سوئال قۇرىدۇ.",

@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "তালিকা ভিউ",
   "tools.database.formShowOptionsDropdown": "ড্রপডাউন",
   "tools.database.formAddQuestion": "প্রশ্ন যোগ করুন",
+  "tools.database.formEditQuestion": "প্রশ্ন সম্পাদনা করুন",
   "tools.database.formChooseAnswer": "উত্তর নির্বাচন করুন",
   "tools.database.formAutoCreateTitle": "বিদ্যমান বৈশিষ্ট্যের ভিত্তিতে ফর্মের প্রশ্ন স্বয়ংক্রিয়ভাবে তৈরি করবেন?",
   "tools.database.formAutoCreateDescription": "শুধু সমর্থিত বৈশিষ্ট্যের ধরন থেকেই নতুন প্রশ্ন তৈরি হবে।",

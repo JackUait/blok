@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Saraksta skats",
   "tools.database.formShowOptionsDropdown": "Nolaižamais saraksts",
   "tools.database.formAddQuestion": "Pievienot jautājumu",
+  "tools.database.formEditQuestion": "Rediģēt jautājumu",
   "tools.database.formChooseAnswer": "Izvēlēties atbildi",
   "tools.database.formAutoCreateTitle": "Automātiski izveidot veidlapas jautājumus, pamatojoties uz esošajiem rekvizītiem?",
   "tools.database.formAutoCreateDescription": "Jaunus jautājumus izveidos tikai atbalstītie rekvizītu tipi.",

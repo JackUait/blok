@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Liste görünümü",
   "tools.database.formShowOptionsDropdown": "Açılır menü",
   "tools.database.formAddQuestion": "Soru ekle",
+  "tools.database.formEditQuestion": "Soruyu düzenle",
   "tools.database.formChooseAnswer": "Yanıt seç",
   "tools.database.formAutoCreateTitle": "Form soruları mevcut özelliklere göre otomatik oluşturulsun mu?",
   "tools.database.formAutoCreateDescription": "Yalnızca desteklenen özellik türleri yeni soru oluşturur.",

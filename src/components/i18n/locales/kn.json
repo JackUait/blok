@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "ಪಟ್ಟಿ ವೀಕ್ಷಣೆ",
   "tools.database.formShowOptionsDropdown": "ಡ್ರಾಪ್‌ಡೌನ್",
   "tools.database.formAddQuestion": "ಪ್ರಶ್ನೆ ಸೇರಿಸಿ",
+  "tools.database.formEditQuestion": "ಪ್ರಶ್ನೆ ಸಂಪಾದಿಸಿ",
   "tools.database.formChooseAnswer": "ಉತ್ತರ ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.formAutoCreateTitle": "ಈಗಿರುವ ಗುಣಲಕ್ಷಣಗಳ ಆಧಾರದಲ್ಲಿ ಫಾರ್ಮ್ ಪ್ರಶ್ನೆಗಳನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ರಚಿಸಬೇಕೆ?",
   "tools.database.formAutoCreateDescription": "ಬೆಂಬಲಿತ ಗುಣಲಕ್ಷಣ ಪ್ರಕಾರಗಳು ಮಾತ್ರ ಹೊಸ ಪ್ರಶ್ನೆಗಳನ್ನು ರಚಿಸುತ್ತವೆ.",

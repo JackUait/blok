@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "ਸੂਚੀ ਦ੍ਰਿਸ਼",
   "tools.database.formShowOptionsDropdown": "ਡ੍ਰੌਪਡਾਊਨ",
   "tools.database.formAddQuestion": "ਸਵਾਲ ਜੋੜੋ",
+  "tools.database.formEditQuestion": "ਸਵਾਲ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.database.formChooseAnswer": "ਜਵਾਬ ਚੁਣੋ",
   "tools.database.formAutoCreateTitle": "ਮੌਜੂਦਾ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਦੇ ਆਧਾਰ 'ਤੇ ਫਾਰਮ ਦੇ ਸਵਾਲ ਆਪਣੇ-ਆਪ ਬਣਾਉਣੇ ਹਨ?",
   "tools.database.formAutoCreateDescription": "ਸਿਰਫ਼ ਸਮਰਥਿਤ ਵਿਸ਼ੇਸ਼ਤਾ ਕਿਸਮਾਂ ਤੋਂ ਹੀ ਨਵੇਂ ਸਵਾਲ ਬਣਨਗੇ।",

@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Vizualizare listă",
   "tools.database.formShowOptionsDropdown": "Meniu derulant",
   "tools.database.formAddQuestion": "Adaugă întrebare",
+  "tools.database.formEditQuestion": "Editează întrebarea",
   "tools.database.formChooseAnswer": "Alege un răspuns",
   "tools.database.formAutoCreateTitle": "Creezi automat întrebări în formular pe baza proprietăților existente?",
   "tools.database.formAutoCreateDescription": "Doar tipurile de proprietăți acceptate vor crea întrebări noi.",

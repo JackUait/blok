@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "सूची दृश्य",
   "tools.database.formShowOptionsDropdown": "ड्रपडाउन",
   "tools.database.formAddQuestion": "प्रश्न थप्नुहोस्",
+  "tools.database.formEditQuestion": "प्रश्न सम्पादन गर्नुहोस्",
   "tools.database.formChooseAnswer": "जवाफ छान्नुहोस्",
   "tools.database.formAutoCreateTitle": "विद्यमान गुणहरूका आधारमा फारमका प्रश्नहरू स्वतः बनाउने?",
   "tools.database.formAutoCreateDescription": "समर्थित गुण प्रकारहरूबाट मात्र नयाँ प्रश्नहरू बनिनेछन्।",

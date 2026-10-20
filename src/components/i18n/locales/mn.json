@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Жагсаалтын харагдац",
   "tools.database.formShowOptionsDropdown": "Унжих цэс",
   "tools.database.formAddQuestion": "Асуулт нэмэх",
+  "tools.database.formEditQuestion": "Асуултыг засах",
   "tools.database.formChooseAnswer": "Хариулт сонгох",
   "tools.database.formAutoCreateTitle": "Одоо байгаа шинжүүд дээр үндэслэн маягтын асуултуудыг автоматаар үүсгэх үү?",
   "tools.database.formAutoCreateDescription": "Зөвхөн дэмжигдсэн төрлийн шинжүүдээс шинэ асуулт үүснэ.",

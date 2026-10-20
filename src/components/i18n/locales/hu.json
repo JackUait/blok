@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Listanézet",
   "tools.database.formShowOptionsDropdown": "Legördülő menü",
   "tools.database.formAddQuestion": "Kérdés hozzáadása",
+  "tools.database.formEditQuestion": "Kérdés szerkesztése",
   "tools.database.formChooseAnswer": "Válasz kiválasztása",
   "tools.database.formAutoCreateTitle": "Létrejöjjenek automatikusan az űrlap kérdései a meglévő tulajdonságok alapján?",
   "tools.database.formAutoCreateDescription": "Csak a támogatott tulajdonságtípusokból jönnek létre új kérdések.",

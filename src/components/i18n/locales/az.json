@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Siyahı görünüşü",
   "tools.database.formShowOptionsDropdown": "Açılan siyahı",
   "tools.database.formAddQuestion": "Sual əlavə et",
+  "tools.database.formEditQuestion": "Sualı redaktə et",
   "tools.database.formChooseAnswer": "Cavab seç",
   "tools.database.formAutoCreateTitle": "Forma sualları mövcud xüsusiyyətlər əsasında avtomatik yaradılsın?",
   "tools.database.formAutoCreateDescription": "Yalnız dəstəklənən xüsusiyyət növləri yeni suallar yaradacaq.",

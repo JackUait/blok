@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "યાદી દૃશ્ય",
   "tools.database.formShowOptionsDropdown": "ડ્રોપડાઉન",
   "tools.database.formAddQuestion": "પ્રશ્ન ઉમેરો",
+  "tools.database.formEditQuestion": "પ્રશ્ન સંપાદિત કરો",
   "tools.database.formChooseAnswer": "જવાબ પસંદ કરો",
   "tools.database.formAutoCreateTitle": "હાલના ગુણધર્મોના આધારે ફોર્મના પ્રશ્નો આપમેળે બનાવીએ?",
   "tools.database.formAutoCreateDescription": "ફક્ત સમર્થિત ગુણધર્મ પ્રકારો જ નવા પ્રશ્નો બનાવશે.",

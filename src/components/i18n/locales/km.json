@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "ទិដ្ឋភាពបញ្ជី",
   "tools.database.formShowOptionsDropdown": "បញ្ជីទម្លាក់ចុះ",
   "tools.database.formAddQuestion": "បន្ថែមសំណួរ",
+  "tools.database.formEditQuestion": "កែសម្រួលសំណួរ",
   "tools.database.formChooseAnswer": "ជ្រើសចម្លើយ",
   "tools.database.formAutoCreateTitle": "បង្កើតសំណួរទម្រង់ដោយស្វ័យប្រវត្តិ ដោយផ្អែកលើលក្ខណៈដែលមានស្រាប់ឬ?",
   "tools.database.formAutoCreateDescription": "មានតែប្រភេទលក្ខណៈដែលគាំទ្រប៉ុណ្ណោះ ដែលនឹងបង្កើតសំណួរថ្មី។",

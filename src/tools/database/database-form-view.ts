@@ -355,7 +355,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       menu.type = 'button';
       menu.setAttribute('data-blok-database-form-question-menu', '');
       menu.setAttribute('data-blok-testid', 'database-form-question-menu');
-      menu.setAttribute('aria-label', i18n.t('tools.database.tableMoreActions'));
+      menu.setAttribute('aria-label', i18n.t('tools.database.formEditQuestion'));
       menu.innerHTML = IconDotsHorizontal;
       menu.addEventListener('click', () => this.openQuestionMenu(property, menu));
       header.append(label, menu);

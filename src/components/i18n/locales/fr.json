@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Vue liste",
   "tools.database.formShowOptionsDropdown": "Menu déroulant",
   "tools.database.formAddQuestion": "Ajouter une question",
+  "tools.database.formEditQuestion": "Modifier la question",
   "tools.database.formChooseAnswer": "Choisir une réponse",
   "tools.database.formAutoCreateTitle": "Créer automatiquement les questions du formulaire à partir des propriétés existantes ?",
   "tools.database.formAutoCreateDescription": "Seuls les types de propriétés pris en charge créeront de nouvelles questions.",

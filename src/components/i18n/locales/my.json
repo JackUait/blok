@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "စာရင်းမြင်ကွင်း",
   "tools.database.formShowOptionsDropdown": "ဆွဲချမီနူး",
   "tools.database.formAddQuestion": "မေးခွန်းထည့်",
+  "tools.database.formEditQuestion": "မေးခွန်း တည်းဖြတ်ရန်",
   "tools.database.formChooseAnswer": "အဖြေ ရွေးပါ",
   "tools.database.formAutoCreateTitle": "ရှိပြီးသား ဂုဏ်သတ္တိများအပေါ် အခြေခံ၍ ဖောင်မေးခွန်းများကို အလိုအလျောက် ဖန်တီးမလား။",
   "tools.database.formAutoCreateDescription": "ပံ့ပိုးထားသော ဂုဏ်သတ္တိအမျိုးအစားများမှသာ မေးခွန်းအသစ်များ ဖန်တီးပါမည်။",

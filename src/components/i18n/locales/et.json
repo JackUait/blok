@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Loendivaade",
   "tools.database.formShowOptionsDropdown": "Rippmenüü",
   "tools.database.formAddQuestion": "Lisa küsimus",
+  "tools.database.formEditQuestion": "Muuda küsimust",
   "tools.database.formChooseAnswer": "Vali vastus",
   "tools.database.formAutoCreateTitle": "Kas luua vormi küsimused olemasolevate omaduste põhjal automaatselt?",
   "tools.database.formAutoCreateDescription": "Uusi küsimusi loovad ainult toetatud omadusetüübid.",

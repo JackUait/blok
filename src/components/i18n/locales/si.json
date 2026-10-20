@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "ලැයිස්තු දසුන",
   "tools.database.formShowOptionsDropdown": "පතන මෙනුව",
   "tools.database.formAddQuestion": "ප්‍රශ්නයක් එක් කරන්න",
+  "tools.database.formEditQuestion": "ප්‍රශ්නය සංස්කරණය කරන්න",
   "tools.database.formChooseAnswer": "පිළිතුරක් තෝරන්න",
   "tools.database.formAutoCreateTitle": "පවතින ගුණාංග මත පදනම්ව පෝරම ප්‍රශ්න ස්වයංක්‍රීයව සාදන්නද?",
   "tools.database.formAutoCreateDescription": "සහාය දක්වන ගුණාංග වර්ග පමණක් නව ප්‍රශ්න සාදනු ඇත.",

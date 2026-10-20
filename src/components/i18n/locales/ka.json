@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "სიის ხედი",
   "tools.database.formShowOptionsDropdown": "ჩამოსაშლელი სია",
   "tools.database.formAddQuestion": "კითხვის დამატება",
+  "tools.database.formEditQuestion": "კითხვის რედაქტირება",
   "tools.database.formChooseAnswer": "პასუხის არჩევა",
   "tools.database.formAutoCreateTitle": "შეიქმნას ფორმის კითხვები ავტომატურად არსებული თვისებების მიხედვით?",
   "tools.database.formAutoCreateDescription": "ახალ კითხვებს მხოლოდ მხარდაჭერილი ტიპის თვისებები შექმნის.",

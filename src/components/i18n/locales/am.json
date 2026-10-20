@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "የዝርዝር ዕይታ",
   "tools.database.formShowOptionsDropdown": "ተቆልቋይ ዝርዝር",
   "tools.database.formAddQuestion": "ጥያቄ ጨምር",
+  "tools.database.formEditQuestion": "ጥያቄን አርትዕ",
   "tools.database.formChooseAnswer": "መልስ ምረጥ",
   "tools.database.formAutoCreateTitle": "የቅጽ ጥያቄዎች ካሉት ንብረቶች በራስ-ሰር ይፈጠሩ?",
   "tools.database.formAutoCreateDescription": "አዲስ ጥያቄዎችን የሚፈጥሩት የሚደገፉ የንብረት አይነቶች ብቻ ናቸው።",

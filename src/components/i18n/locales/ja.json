@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "リストビュー",
   "tools.database.formShowOptionsDropdown": "ドロップダウン",
   "tools.database.formAddQuestion": "質問を追加",
+  "tools.database.formEditQuestion": "質問を編集",
   "tools.database.formChooseAnswer": "回答を選択",
   "tools.database.formAutoCreateTitle": "既存のプロパティからフォームの質問を自動作成しますか？",
   "tools.database.formAutoCreateDescription": "対応しているプロパティの種類からのみ、新しい質問が作成されます。",

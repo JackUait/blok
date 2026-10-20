@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Список",
   "tools.database.formShowOptionsDropdown": "Розкривний список",
   "tools.database.formAddQuestion": "Додати запитання",
+  "tools.database.formEditQuestion": "Редагувати запитання",
   "tools.database.formChooseAnswer": "Вибрати відповідь",
   "tools.database.formAutoCreateTitle": "Автоматично створити запитання форми на основі наявних властивостей?",
   "tools.database.formAutoCreateDescription": "Нові запитання буде створено лише для підтримуваних типів властивостей.",

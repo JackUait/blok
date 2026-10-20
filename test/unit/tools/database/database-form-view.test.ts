@@ -341,3 +341,21 @@ describe('DatabaseFormView question rename to a taken name', () => {
     expect(setQuestionSetting).toHaveBeenCalledWith('email', { questionName: 'Email' });
   });
 });
+
+describe('DatabaseFormView question chip name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('names the ••• chip "Edit question", as Notion does (research/21 form)', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn() });
+    const chip = question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]');
+
+    expect(chip?.getAttribute('aria-label')).toBe('tools.database.formEditQuestion');
+  });
+});

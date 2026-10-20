@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Listevisning",
   "tools.database.formShowOptionsDropdown": "Nedtrekksmeny",
   "tools.database.formAddQuestion": "Legg til spørsmål",
+  "tools.database.formEditQuestion": "Rediger spørsmål",
   "tools.database.formChooseAnswer": "Velg et svar",
   "tools.database.formAutoCreateTitle": "Vil du opprette skjemaspørsmål automatisk basert på eksisterende egenskaper?",
   "tools.database.formAutoCreateDescription": "Bare støttede egenskapstyper gir nye spørsmål.",

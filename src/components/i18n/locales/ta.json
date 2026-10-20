@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "பட்டியல் காட்சி",
   "tools.database.formShowOptionsDropdown": "கீழ்தோன்றும் பட்டியல்",
   "tools.database.formAddQuestion": "கேள்வியைச் சேர்",
+  "tools.database.formEditQuestion": "கேள்வியைத் திருத்து",
   "tools.database.formChooseAnswer": "பதிலைத் தேர்ந்தெடு",
   "tools.database.formAutoCreateTitle": "ஏற்கனவே உள்ள பண்புகளின் அடிப்படையில் படிவக் கேள்விகளைத் தானாக உருவாக்கவா?",
   "tools.database.formAutoCreateDescription": "ஆதரிக்கப்படும் பண்பு வகைகள் மட்டுமே புதிய கேள்விகளை உருவாக்கும்.",

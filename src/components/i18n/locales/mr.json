@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "यादी दृश्य",
   "tools.database.formShowOptionsDropdown": "ड्रॉपडाउन",
   "tools.database.formAddQuestion": "प्रश्न जोडा",
+  "tools.database.formEditQuestion": "प्रश्न संपादित करा",
   "tools.database.formChooseAnswer": "उत्तर निवडा",
   "tools.database.formAutoCreateTitle": "विद्यमान गुणधर्मांवर आधारित फॉर्मचे प्रश्न आपोआप तयार करायचे?",
   "tools.database.formAutoCreateDescription": "फक्त समर्थित गुणधर्म प्रकारांमधूनच नवीन प्रश्न तयार होतील.",

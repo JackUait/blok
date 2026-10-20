@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Listvy",
   "tools.database.formShowOptionsDropdown": "Rullgardinsmeny",
   "tools.database.formAddQuestion": "Lägg till fråga",
+  "tools.database.formEditQuestion": "Redigera fråga",
   "tools.database.formChooseAnswer": "Välj ett svar",
   "tools.database.formAutoCreateTitle": "Skapa formulärfrågor automatiskt utifrån befintliga egenskaper?",
   "tools.database.formAutoCreateDescription": "Endast egenskapstyper som stöds skapar nya frågor.",

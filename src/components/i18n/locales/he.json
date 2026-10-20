@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "תצוגת רשימה",
   "tools.database.formShowOptionsDropdown": "רשימה נפתחת",
   "tools.database.formAddQuestion": "הוסף שאלה",
+  "tools.database.formEditQuestion": "ערוך שאלה",
   "tools.database.formChooseAnswer": "בחר תשובה",
   "tools.database.formAutoCreateTitle": "ליצור באופן אוטומטי שאלות לטופס על סמך המאפיינים הקיימים?",
   "tools.database.formAutoCreateDescription": "רק סוגי מאפיינים נתמכים ייצרו שאלות חדשות.",

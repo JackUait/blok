@@ -91,9 +91,9 @@ describe('database board', () => {
     expect(radiusOf('database.css', '[data-blok-database-add-column]')).toEqual([role('control-lg')]);
   });
 
-  it('the card action pill is a 24px control and its buttons share its radius (research/07:135, 08:317)', () => {
-    expect(radiusOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control')]);
-    expect(innerOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control')]);
+  it('the card action pill is a 4px small control and its buttons share its radius (research/21 §1f)', () => {
+    expect(radiusOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control-sm')]);
+    expect(innerOf('database.css', '[data-blok-database-card-actions]')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-edit-card], [data-blok-database-card-menu]'))
       .toEqual([inner('control')]);
   });

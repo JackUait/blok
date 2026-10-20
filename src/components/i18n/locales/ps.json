@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "لست لید",
   "tools.database.formShowOptionsDropdown": "ښکته کېدونکی لست",
   "tools.database.formAddQuestion": "پوښتنه ورزیاته کړئ",
+  "tools.database.formEditQuestion": "پوښتنه سمه کړئ",
   "tools.database.formChooseAnswer": "ځواب وټاکئ",
   "tools.database.formAutoCreateTitle": "د شته ځانګړتیاوو پر بنسټ د فورمې پوښتنې په اوتومات ډول جوړې شي؟",
   "tools.database.formAutoCreateDescription": "یوازې د ملاتړ شویو ځانګړتیا ډولونو څخه نوې پوښتنې جوړېږي.",

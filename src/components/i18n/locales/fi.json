@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Luettelonäkymä",
   "tools.database.formShowOptionsDropdown": "Avattava valikko",
   "tools.database.formAddQuestion": "Lisää kysymys",
+  "tools.database.formEditQuestion": "Muokkaa kysymystä",
   "tools.database.formChooseAnswer": "Valitse vastaus",
   "tools.database.formAutoCreateTitle": "Luodaanko lomakkeen kysymykset automaattisesti olemassa olevista ominaisuuksista?",
   "tools.database.formAutoCreateDescription": "Uusia kysymyksiä luodaan vain tuetuista ominaisuustyypeistä.",

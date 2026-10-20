@@ -4500,8 +4500,8 @@ span[data-blok-slash-search] {
   transition: opacity 200ms ease;
   background: var(--blok-database-card-actions-bg);
   box-shadow: var(--blok-database-card-actions-shadow);
-  border-radius: var(--blok-radius-control);
-  --blok-radius-inner: var(--blok-radius-control);
+  border-radius: var(--blok-radius-control-sm);
+  --blok-radius-inner: var(--blok-radius-control-sm);
 }
 
 [data-blok-database-card]:hover [data-blok-database-card-actions], [data-blok-database-card][data-popover-open] [data-blok-database-card-actions], [data-blok-database-gallery-card]:hover [data-blok-database-card-actions], [data-blok-database-gallery-card][data-popover-open] [data-blok-database-card-actions], [data-blok-database-card-actions]:has(:focus-visible) {

@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Mwonekano wa orodha",
   "tools.database.formShowOptionsDropdown": "Orodha kunjuzi",
   "tools.database.formAddQuestion": "Ongeza swali",
+  "tools.database.formEditQuestion": "Hariri swali",
   "tools.database.formChooseAnswer": "Chagua jibu",
   "tools.database.formAutoCreateTitle": "Unda maswali ya fomu kiotomatiki kulingana na sifa zilizopo?",
   "tools.database.formAutoCreateDescription": "Ni aina za sifa zinazotumika pekee zitakazounda maswali mapya.",

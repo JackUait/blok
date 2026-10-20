@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Sąrašo rodinys",
   "tools.database.formShowOptionsDropdown": "Išskleidžiamasis sąrašas",
   "tools.database.formAddQuestion": "Pridėti klausimą",
+  "tools.database.formEditQuestion": "Redaguoti klausimą",
   "tools.database.formChooseAnswer": "Pasirinkti atsakymą",
   "tools.database.formAutoCreateTitle": "Automatiškai sukurti formos klausimus pagal esamas savybes?",
   "tools.database.formAutoCreateDescription": "Naujus klausimus sukurs tik palaikomų tipų savybės.",

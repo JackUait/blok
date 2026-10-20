@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "ލިސްޓް ވިއު",
   "tools.database.formShowOptionsDropdown": "ޑްރޮޕްޑައުން",
   "tools.database.formAddQuestion": "ސުވާލެއް އިތުރުކުރޭ",
+  "tools.database.formEditQuestion": "ސުވާލު ބަދަލުކުރޭ",
   "tools.database.formChooseAnswer": "ޖަވާބެއް ޚިޔާރުކުރޭ",
   "tools.database.formAutoCreateTitle": "މިހާރު ހުރި ޕްރޮޕަރޓީތަކުގެ މައްޗަށް ބިނާކޮށް ފޯމުގެ ސުވާލުތައް އަމިއްލައަށް ހަދަންތަ؟",
   "tools.database.formAutoCreateDescription": "އާ ސުވާލުތައް ހެދޭނީ ސަޕޯޓްކުރާ ޕްރޮޕަރޓީ ޓައިޕްތަކުން އެކަންޏެވެ.",

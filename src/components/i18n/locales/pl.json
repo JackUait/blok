@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Widok listy",
   "tools.database.formShowOptionsDropdown": "Lista rozwijana",
   "tools.database.formAddQuestion": "Dodaj pytanie",
+  "tools.database.formEditQuestion": "Edytuj pytanie",
   "tools.database.formChooseAnswer": "Wybierz odpowiedź",
   "tools.database.formAutoCreateTitle": "Czy automatycznie utworzyć pytania formularza na podstawie istniejących właściwości?",
   "tools.database.formAutoCreateDescription": "Nowe pytania powstaną tylko z obsługiwanych typów właściwości.",

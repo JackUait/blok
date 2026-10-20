@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Listevisning",
   "tools.database.formShowOptionsDropdown": "Rullemenu",
   "tools.database.formAddQuestion": "Tilføj spørgsmål",
+  "tools.database.formEditQuestion": "Rediger spørgsmål",
   "tools.database.formChooseAnswer": "Vælg et svar",
   "tools.database.formAutoCreateTitle": "Vil du oprette formularspørgsmål automatisk ud fra eksisterende egenskaber?",
   "tools.database.formAutoCreateDescription": "Kun understøttede egenskabstyper opretter nye spørgsmål.",

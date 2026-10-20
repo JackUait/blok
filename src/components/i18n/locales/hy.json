@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Ցանկի տեսք",
   "tools.database.formShowOptionsDropdown": "Բացվող ցանկ",
   "tools.database.formAddQuestion": "Ավելացնել հարց",
+  "tools.database.formEditQuestion": "Խմբագրել հարցը",
   "tools.database.formChooseAnswer": "Ընտրել պատասխան",
   "tools.database.formAutoCreateTitle": "Ստեղծե՞լ ձևի հարցերն ավտոմատ՝ առկա հատկությունների հիման վրա",
   "tools.database.formAutoCreateDescription": "Նոր հարցեր կստեղծվեն միայն աջակցվող հատկությունների տեսակներից։",

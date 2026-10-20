@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Список",
   "tools.database.formShowOptionsDropdown": "Раскрывающийся список",
   "tools.database.formAddQuestion": "Добавить вопрос",
+  "tools.database.formEditQuestion": "Изменить вопрос",
   "tools.database.formChooseAnswer": "Выбрать ответ",
   "tools.database.formAutoCreateTitle": "Автоматически создать вопросы формы на основе существующих свойств?",
   "tools.database.formAutoCreateDescription": "Новые вопросы будут созданы только для поддерживаемых типов свойств.",

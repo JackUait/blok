@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Paparan senarai",
   "tools.database.formShowOptionsDropdown": "Menu lungsur",
   "tools.database.formAddQuestion": "Tambah soalan",
+  "tools.database.formEditQuestion": "Sunting soalan",
   "tools.database.formChooseAnswer": "Pilih jawapan",
   "tools.database.formAutoCreateTitle": "Cipta soalan borang secara automatik berdasarkan sifat sedia ada?",
   "tools.database.formAutoCreateDescription": "Hanya jenis sifat yang disokong akan mencipta soalan baharu.",

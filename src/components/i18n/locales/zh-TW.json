@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "清單檢視",
   "tools.database.formShowOptionsDropdown": "下拉式選單",
   "tools.database.formAddQuestion": "新增問題",
+  "tools.database.formEditQuestion": "編輯問題",
   "tools.database.formChooseAnswer": "選擇回答",
   "tools.database.formAutoCreateTitle": "要依據現有屬性自動建立表單問題嗎？",
   "tools.database.formAutoCreateDescription": "只有支援的屬性類型會建立新問題。",

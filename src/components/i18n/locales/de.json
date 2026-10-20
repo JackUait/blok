@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Listenansicht",
   "tools.database.formShowOptionsDropdown": "Dropdown-Menü",
   "tools.database.formAddQuestion": "Frage hinzufügen",
+  "tools.database.formEditQuestion": "Frage bearbeiten",
   "tools.database.formChooseAnswer": "Antwort auswählen",
   "tools.database.formAutoCreateTitle": "Formularfragen automatisch aus vorhandenen Eigenschaften erstellen?",
   "tools.database.formAutoCreateDescription": "Nur unterstützte Eigenschaftstypen erzeugen neue Fragen.",

@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "List view",
   "tools.database.formShowOptionsDropdown": "Dropdown",
   "tools.database.formAddQuestion": "Add question",
+  "tools.database.formEditQuestion": "Edit question",
   "tools.database.formChooseAnswer": "Choose an answer",
   "tools.database.formAutoCreateTitle": "Auto-create form questions based on existing properties?",
   "tools.database.formAutoCreateDescription": "Only supported property types will create new questions.",

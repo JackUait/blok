@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "सूची दृश्य",
   "tools.database.formShowOptionsDropdown": "ड्रॉपडाउन",
   "tools.database.formAddQuestion": "प्रश्न जोड़ें",
+  "tools.database.formEditQuestion": "प्रश्न संपादित करें",
   "tools.database.formChooseAnswer": "उत्तर चुनें",
   "tools.database.formAutoCreateTitle": "मौजूदा प्रॉपर्टी के आधार पर फ़ॉर्म के प्रश्न अपने-आप बनाएँ?",
   "tools.database.formAutoCreateDescription": "केवल समर्थित प्रॉपर्टी प्रकारों से ही नए प्रश्न बनेंगे।",

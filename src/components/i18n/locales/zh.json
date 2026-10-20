@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "列表视图",
   "tools.database.formShowOptionsDropdown": "下拉菜单",
   "tools.database.formAddQuestion": "添加问题",
+  "tools.database.formEditQuestion": "编辑问题",
   "tools.database.formChooseAnswer": "选择回答",
   "tools.database.formAutoCreateTitle": "要根据现有属性自动创建表单问题吗？",
   "tools.database.formAutoCreateDescription": "只有受支持的属性类型才会创建新问题。",

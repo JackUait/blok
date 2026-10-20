@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "ມຸມມອງລາຍການ",
   "tools.database.formShowOptionsDropdown": "ເມນູແບບເລື່ອນລົງ",
   "tools.database.formAddQuestion": "ເພີ່ມຄຳຖາມ",
+  "tools.database.formEditQuestion": "ແກ້ໄຂຄຳຖາມ",
   "tools.database.formChooseAnswer": "ເລືອກຄຳຕອບ",
   "tools.database.formAutoCreateTitle": "ສ້າງຄຳຖາມຂອງແບບຟອມອັດຕະໂນມັດຈາກຄຸນສົມບັດທີ່ມີຢູ່ບໍ?",
   "tools.database.formAutoCreateDescription": "ມີແຕ່ປະເພດຄຸນສົມບັດທີ່ຮອງຮັບເທົ່ານັ້ນທີ່ຈະສ້າງຄຳຖາມໃໝ່.",

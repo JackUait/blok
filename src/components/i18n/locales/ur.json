@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "فہرست ویو",
   "tools.database.formShowOptionsDropdown": "ڈراپ ڈاؤن",
   "tools.database.formAddQuestion": "سوال شامل کریں",
+  "tools.database.formEditQuestion": "سوال میں ترمیم کریں",
   "tools.database.formChooseAnswer": "جواب منتخب کریں",
   "tools.database.formAutoCreateTitle": "موجودہ پراپرٹیز کی بنیاد پر فارم کے سوالات خودکار طور پر بنائیں؟",
   "tools.database.formAutoCreateDescription": "صرف معاون پراپرٹی اقسام سے ہی نئے سوالات بنیں گے۔",

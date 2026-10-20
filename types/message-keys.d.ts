@@ -833,6 +833,7 @@ export type BlokMessageKey =
   | 'tools.database.formChooseAnswer'
   | 'tools.database.formClosed'
   | 'tools.database.formCopyLink'
+  | 'tools.database.formEditQuestion'
   | 'tools.database.formExistingProperties'
   | 'tools.database.formFileSizeLimit'
   | 'tools.database.formLinkLabel'

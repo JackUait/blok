@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Prikaz liste",
   "tools.database.formShowOptionsDropdown": "Padajući meni",
   "tools.database.formAddQuestion": "Dodaj pitanje",
+  "tools.database.formEditQuestion": "Uredi pitanje",
   "tools.database.formChooseAnswer": "Odaberi odgovor",
   "tools.database.formAutoCreateTitle": "Automatski kreirati pitanja obrasca na osnovu postojećih svojstava?",
   "tools.database.formAutoCreateDescription": "Nova pitanja kreirat će samo podržane vrste svojstava.",

@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "نمای فهرست",
   "tools.database.formShowOptionsDropdown": "فهرست کشویی",
   "tools.database.formAddQuestion": "افزودن پرسش",
+  "tools.database.formEditQuestion": "ویرایش پرسش",
   "tools.database.formChooseAnswer": "انتخاب پاسخ",
   "tools.database.formAutoCreateTitle": "پرسش‌های فرم به‌طور خودکار از ویژگی‌های موجود ساخته شوند؟",
   "tools.database.formAutoCreateDescription": "فقط انواع ویژگی پشتیبانی‌شده پرسش جدید می‌سازند.",

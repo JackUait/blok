@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Приказ како список",
   "tools.database.formShowOptionsDropdown": "Паѓачко мени",
   "tools.database.formAddQuestion": "Додај прашање",
+  "tools.database.formEditQuestion": "Уреди прашање",
   "tools.database.formChooseAnswer": "Избери одговор",
   "tools.database.formAutoCreateTitle": "Автоматски да се создадат прашања во формуларот врз основа на постојните својства?",
   "tools.database.formAutoCreateDescription": "Нови прашања ќе се создадат само за поддржаните типови својства.",

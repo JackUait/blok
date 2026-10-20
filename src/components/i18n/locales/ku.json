@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "بینینی لیست",
   "tools.database.formShowOptionsDropdown": "لیستی داکەوتوو",
   "tools.database.formAddQuestion": "پرسیار زیاد بکە",
+  "tools.database.formEditQuestion": "دەستکاریکردنی پرسیار",
   "tools.database.formChooseAnswer": "وەڵام هەڵبژێرە",
   "tools.database.formAutoCreateTitle": "پرسیارەکانی فۆرم بە شێوەی خۆکار لەسەر بنەمای تایبەتمەندییە هەبووەکان دروست بکرێن؟",
   "tools.database.formAutoCreateDescription": "تەنها جۆرە پشتگیریکراوەکانی تایبەتمەندی پرسیاری نوێ دروست دەکەن.",

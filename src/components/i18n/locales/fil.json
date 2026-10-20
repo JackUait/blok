@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "View ng listahan",
   "tools.database.formShowOptionsDropdown": "Dropdown na menu",
   "tools.database.formAddQuestion": "Magdagdag ng tanong",
+  "tools.database.formEditQuestion": "I-edit ang tanong",
   "tools.database.formChooseAnswer": "Pumili ng sagot",
   "tools.database.formAutoCreateTitle": "Awtomatikong gumawa ng mga tanong sa pormularyo batay sa mga kasalukuyang property?",
   "tools.database.formAutoCreateDescription": "Ang mga suportadong uri ng property lang ang gagawa ng mga bagong tanong.",

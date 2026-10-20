@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1273 + 125 + 442 + 4 closure for all 1844 keys', () => {
+  it('rebuilds a disjoint 1274 + 125 + 442 + 4 closure for all 1845 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1844);
+    expect(lifecycle.size).toBe(1845);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -396,7 +396,8 @@ describe('current English catalog lifecycle coverage', () => {
       // the old inline picker's linkedPickSource and linkedNoSources are gone.
       // +5 / -1: the Ask AI status line calls its five assistant.status.* keys by literal; assistant.working is gone.
       // +19: the Ask AI status line names the block being written, by literal key in step-status.ts.
-      'executable-literal': 1273,
+      // +1: the form question chip calls tools.database.formEditQuestion by literal.
+      'executable-literal': 1274,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

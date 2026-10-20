@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Списъчен изглед",
   "tools.database.formShowOptionsDropdown": "Падащо меню",
   "tools.database.formAddQuestion": "Добави въпрос",
+  "tools.database.formEditQuestion": "Редактирай въпроса",
   "tools.database.formChooseAnswer": "Избери отговор",
   "tools.database.formAutoCreateTitle": "Да се създадат ли автоматично въпроси във формуляра въз основа на съществуващите свойства?",
   "tools.database.formAutoCreateDescription": "Нови въпроси ще се създадат само от поддържаните типове свойства.",

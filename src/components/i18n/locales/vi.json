@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Chế độ xem danh sách",
   "tools.database.formShowOptionsDropdown": "Menu thả xuống",
   "tools.database.formAddQuestion": "Thêm câu hỏi",
+  "tools.database.formEditQuestion": "Chỉnh sửa câu hỏi",
   "tools.database.formChooseAnswer": "Chọn câu trả lời",
   "tools.database.formAutoCreateTitle": "Tự động tạo câu hỏi biểu mẫu dựa trên các thuộc tính hiện có?",
   "tools.database.formAutoCreateDescription": "Chỉ các loại thuộc tính được hỗ trợ mới tạo câu hỏi mới.",

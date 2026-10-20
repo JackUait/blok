@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "فهرست وارو ڏيک",
   "tools.database.formShowOptionsDropdown": "ڊراپ ڊائون",
   "tools.database.formAddQuestion": "سوال شامل ڪريو",
+  "tools.database.formEditQuestion": "سوال تبديل ڪريو",
   "tools.database.formChooseAnswer": "جواب چونڊيو",
   "tools.database.formAutoCreateTitle": "موجوده پراپرٽين جي بنياد تي فارم جا سوال پاڻمرادو ٺاهيو؟",
   "tools.database.formAutoCreateDescription": "صرف سهڪار ٿيل پراپرٽي قسمن مان ئي نوان سوال ٺهندا.",

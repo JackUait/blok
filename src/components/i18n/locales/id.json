@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Tampilan daftar",
   "tools.database.formShowOptionsDropdown": "Menu tarik-turun",
   "tools.database.formAddQuestion": "Tambah pertanyaan",
+  "tools.database.formEditQuestion": "Edit pertanyaan",
   "tools.database.formChooseAnswer": "Pilih jawaban",
   "tools.database.formAutoCreateTitle": "Buat pertanyaan formulir otomatis berdasarkan properti yang ada?",
   "tools.database.formAutoCreateDescription": "Hanya tipe properti yang didukung yang akan membuat pertanyaan baru.",

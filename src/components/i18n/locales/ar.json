@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "عرض القائمة",
   "tools.database.formShowOptionsDropdown": "قائمة منسدلة",
   "tools.database.formAddQuestion": "إضافة سؤال",
+  "tools.database.formEditQuestion": "تعديل السؤال",
   "tools.database.formChooseAnswer": "اختيار إجابة",
   "tools.database.formAutoCreateTitle": "هل تريد إنشاء أسئلة النموذج تلقائيًا استنادًا إلى الخصائص الحالية؟",
   "tools.database.formAutoCreateDescription": "لن تُنشئ أسئلة جديدة إلا أنواع الخصائص المدعومة.",

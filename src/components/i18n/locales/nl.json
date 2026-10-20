@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Lijstweergave",
   "tools.database.formShowOptionsDropdown": "Vervolgkeuzelijst",
   "tools.database.formAddQuestion": "Vraag toevoegen",
+  "tools.database.formEditQuestion": "Vraag bewerken",
   "tools.database.formChooseAnswer": "Een antwoord kiezen",
   "tools.database.formAutoCreateTitle": "Formuliervragen automatisch maken op basis van bestaande eigenschappen?",
   "tools.database.formAutoCreateDescription": "Alleen ondersteunde eigenschapstypen leveren nieuwe vragen op.",

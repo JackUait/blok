@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "มุมมองรายการ",
   "tools.database.formShowOptionsDropdown": "ดรอปดาวน์",
   "tools.database.formAddQuestion": "เพิ่มคำถาม",
+  "tools.database.formEditQuestion": "แก้ไขคำถาม",
   "tools.database.formChooseAnswer": "เลือกคำตอบ",
   "tools.database.formAutoCreateTitle": "สร้างคำถามในฟอร์มโดยอัตโนมัติจากคุณสมบัติที่มีอยู่หรือไม่",
   "tools.database.formAutoCreateDescription": "เฉพาะประเภทคุณสมบัติที่รองรับเท่านั้นที่จะสร้างคำถามใหม่",

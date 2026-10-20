@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Vista elenco",
   "tools.database.formShowOptionsDropdown": "Menu a discesa",
   "tools.database.formAddQuestion": "Aggiungi domanda",
+  "tools.database.formEditQuestion": "Modifica domanda",
   "tools.database.formChooseAnswer": "Scegli una risposta",
   "tools.database.formAutoCreateTitle": "Creare automaticamente le domande del modulo in base alle proprietà esistenti?",
   "tools.database.formAutoCreateDescription": "Solo i tipi di proprietà supportati creeranno nuove domande.",

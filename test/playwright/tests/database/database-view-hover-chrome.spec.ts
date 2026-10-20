@@ -162,6 +162,16 @@ for (const theme of THEMES) {
       expect(await size(card.locator('[data-blok-database-card-actions]'))).toEqual({ width: 57, height: 24 });
     });
 
+    test('board: the card action pill and its buttons have 4px corners, as measured', async ({ page }) => {
+      await mount(page, blocks({ type: 'board', groupBy: 'p-stage' }));
+      const card = page.locator('[data-blok-database-card][data-row-id="r1"]');
+
+      await card.hover();
+      await expect(card.locator('[data-blok-database-card-actions]')).toHaveCSS('border-top-left-radius', '4px');
+      await expect(card.locator('[data-blok-database-edit-card]')).toHaveCSS('border-top-left-radius', '4px');
+      await expect(card.locator('[data-blok-database-card-menu]')).toHaveCSS('border-top-right-radius', '4px');
+    });
+
     test('timeline: a hovered bar takes the hover overlay, and the off-screen chip has a page-coloured border', async ({ page }) => {
       await mount(page, blocks({ type: 'timeline' }));
       const bar = page.locator('[data-blok-database-timeline-bar][data-row-id="r1"]');
@@ -185,6 +195,7 @@ for (const theme of THEMES) {
       await expect(question).toHaveCSS('box-shadow', theme.questionRing);
       await expect(question).toHaveCSS('border-top-left-radius', '12px');
       await expect(question).toHaveCSS('padding-top', '12px');
+      await expect(chip).toHaveAccessibleName('Edit question');
       expect(await size(chip)).toEqual({ width: 24, height: 24 });
       expect(await chip.evaluate((el) => {
         const icon = el.firstElementChild?.getBoundingClientRect();

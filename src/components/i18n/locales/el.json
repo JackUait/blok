@@ -1287,6 +1287,7 @@
   "tools.database.formShowOptionsList": "Προβολή λίστας",
   "tools.database.formShowOptionsDropdown": "Αναπτυσσόμενο μενού",
   "tools.database.formAddQuestion": "Προσθήκη ερώτησης",
+  "tools.database.formEditQuestion": "Επεξεργασία ερώτησης",
   "tools.database.formChooseAnswer": "Επιλογή απάντησης",
   "tools.database.formAutoCreateTitle": "Αυτόματη δημιουργία ερωτήσεων φόρμας από τις υπάρχουσες ιδιότητες;",
   "tools.database.formAutoCreateDescription": "Νέες ερωτήσεις θα δημιουργηθούν μόνο από υποστηριζόμενους τύπους ιδιοτήτων.",

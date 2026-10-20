@@ -6843,6 +6843,23 @@ describe('DatabaseTool — property menu and insert placement', () => {
       tool.destroy();
     });
 
+    // Research 21 §4: Notion names repeated headers "Tag", "Tag 1", "Tag 2" and keeps each column.
+    it('imports repeated headers as numbered properties, each keeping its own column, rows in file order', () => {
+      const { tool, options } = mount({});
+
+      Object.assign(options.api.blocks, { transact: vi.fn((fn: () => void) => fn()) });
+      tool.importCsv('Name,Tag,Tag,Tag\nRowA,a1,a2,a3\nRowB,b1,b2,b3', 'dup.csv');
+
+      const calls = vi.mocked(options.api.blocks.insertAt).mock.calls;
+      const database = calls[0][1] as DatabaseData;
+
+      expect(database.schema.map((p) => p.name)).toEqual(['Name', 'Tag', 'Tag 1', 'Tag 2']);
+      expect(calls.slice(1).map(([, rowData]) => database.schema.map((p) => (rowData as DatabaseRowData).properties[p.id])))
+        .toEqual([['RowA', 'a1', 'a2', 'a3'], ['RowB', 'b1', 'b2', 'b3']]);
+
+      tool.destroy();
+    });
+
     it('merges a CSV by adding rows only, matching headers to property names', () => {
       const { tool, options } = mount({});
 

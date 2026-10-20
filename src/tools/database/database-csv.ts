@@ -6,7 +6,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 
 import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
-import { newView } from '../../shared/database/schema-ops';
+import { freePropertyName, newView } from '../../shared/database/schema-ops';
 
 const BOM = '﻿';
 
@@ -305,12 +305,17 @@ const position = (index: number): string => `a${String(index).padStart(4, '0')}`
 export const buildCsvImport = (table: string[][], options: CsvImportOptions): CsvImport => {
   const [header = [], ...body] = table;
   const width = Math.max(header.length, ...body.map((row) => row.length), 1);
+  const names: string[] = [];
   const schema: PropertyDefinition[] = Array.from({ length: width }, (_, column) => {
-    const name = (header[column] ?? '').trim();
+    const typed = (header[column] ?? '').trim();
+    // Repeated headers become "Tag", "Tag 1", "Tag 2", as Notion does (research/21 §4).
+    const name = freePropertyName(names, typed === '' ? `${options.untitled} ${column + 1}` : typed);
+
+    names.push(name);
 
     return {
       id: options.newId(),
-      name: name === '' ? `${options.untitled} ${column + 1}` : name,
+      name,
       type: column === 0 ? 'title' : inferColumnType(body.map((row) => row[column] ?? '')),
       position: position(column),
     };

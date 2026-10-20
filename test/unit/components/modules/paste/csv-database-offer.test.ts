@@ -71,6 +71,22 @@ describe('offerCsvDatabase', () => {
     expect(d.blocks.delete).toHaveBeenCalledWith(1, false);
   });
 
+  it('numbers repeated headers, so each pasted column keeps its own property', async () => {
+    const d = deps();
+
+    offerCsvDatabase('Name\tTag\tTag\nRowA\ta1\ta2', ['b1', 'b2'], d);
+    vi.mocked(d.notify).mock.calls[0][0].actions?.[0]?.onClick();
+    await vi.waitFor(() => expect(d.order).toContain('end'));
+
+    const [, data] = vi.mocked(d.blocks.insertAt).mock.calls[0];
+    const [, row] = vi.mocked(d.blocks.insertAt).mock.calls[1];
+    const schema = (data as { schema: Array<{ id: string; name: string }> }).schema;
+    const properties = (row as { properties: Record<string, unknown> }).properties;
+
+    expect(schema.map((p) => p.name)).toEqual(['Name', 'Tag', 'Tag 1']);
+    expect(schema.map((p) => properties[p.id])).toEqual(['RowA', 'a1', 'a2']);
+  });
+
   it('keeps cell text as typed: markup and entities are text, not HTML', async () => {
     const d = deps();
 

@@ -134,6 +134,19 @@ describe('database CSV', () => {
       expect(result.schema.map((p) => p.name)).toEqual(['Column 1', 'B']);
       expect(Object.values(result.rows[0])).toEqual(['x', '']);
     });
+    // Not measured in Notion: a header that already looks numbered takes the next free number.
+    it('gives every column a unique name, even when a header already looks numbered', () => {
+      const result = buildCsvImport([['Tag', 'Tag 1', 'Tag'], ['a', 'b', 'c']], { newId: () => Math.random().toString(36), untitled: 'Column' });
+
+      expect(result.schema.map((p) => p.name)).toEqual(['Tag', 'Tag 1', 'Tag 2']);
+      expect(result.rows[0]).toEqual(Object.fromEntries(result.schema.map((p, i) => [p.id, ['a', 'b', 'c'][i]])));
+    });
+
+    it('numbers a header that clashes with a blank header\'s name', () => {
+      const result = buildCsvImport([['', 'Column 1'], ['x', 'y']], { newId: () => Math.random().toString(36), untitled: 'Column' });
+
+      expect(result.schema.map((p) => p.name)).toEqual(['Column 1', 'Column 1 1']);
+    });
   });
 
   describe('planCsvMerge', () => {

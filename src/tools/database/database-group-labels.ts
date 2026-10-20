@@ -42,7 +42,7 @@ export const groupLabel = (
       if (rest === 'below') return `< ${settings.rangeStart ?? 0}`;
       if (rest === 'above') return `≥ ${settings.rangeEnd ?? 1000}`;
 
-      return `${rest} – ${Number(rest) + size}`;
+      return i18n.t('tools.database.groupRangeBucket', { start: rest, end: String(Number(rest) + size) });
     }
     default: return key;
   }

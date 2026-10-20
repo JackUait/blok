@@ -28,6 +28,19 @@ describe('plural forms', () => {
     expect(i18n.t('tools.database.templateRepeatEveryDay', { count: 3 })).toBe('Every 3 days');
   });
 
+  it('counts feed replies as "1 reply" and "2 replies" (research/22 §6)', async () => {
+    const i18n = createI18n();
+
+    await i18n.prepare();
+
+    expect(i18n.t('tools.database.feedCommentReplies', { count: 1 })).toBe('1 reply');
+    expect(i18n.t('tools.database.feedCommentReplies', { count: 2 })).toBe('2 replies');
+
+    await i18n.setLocale('ru');
+
+    expect(i18n.t('tools.database.feedCommentReplies', { count: 5 })).toBe('5 ответов');
+  });
+
   it('picks the plural form a host override gives', async () => {
     const i18n = createI18n();
 

@@ -259,9 +259,13 @@ export const formatCalculation = (
     case 'date':
       return formatDateText(result.value, resolveLocale(locale)) ?? result.value;
     case 'dateRange': {
-      const days = Math.round((Date.parse(result.end) - Date.parse(result.start)) / 86_400_000);
+      const span = Date.parse(result.end) - Date.parse(result.start);
+      const days = Math.round(span / 86_400_000);
+      // Notion shows "8 days", and "0 minutes" for one item (research/22 §5).
+      // Spans under a day in hours or minutes are unmeasured; minutes it is.
+      const [value, unit] = days >= 1 ? [days, 'day'] : [Math.round(span / 60_000), 'minute'];
 
-      return String(days);
+      return new Intl.NumberFormat(resolveLocale(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(value);
     }
     case 'none':
       return '';

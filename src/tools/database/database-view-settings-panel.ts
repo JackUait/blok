@@ -37,7 +37,7 @@ import {
   updateFilterRule,
   withEntryIds,
 } from './filter-tree';
-import { GROUPABLE_TYPES, defaultGroupSort } from './group-keys';
+import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
@@ -1643,8 +1643,9 @@ export class ViewSettingsPages {
         const rows = [choice('database-group-number-by', 'groupNumberBy', 'numberBy', [['unique', 'groupNumberUnique'], ['range', 'groupNumberRange']], 'unique')];
 
         if (settings.numberBy === 'range') {
+          const defaults = { rangeStart: DEFAULT_RANGE.start, rangeEnd: DEFAULT_RANGE.end, rangeSize: DEFAULT_RANGE.size };
           const numberInput = (field: 'rangeStart' | 'rangeEnd' | 'rangeSize', labelKey: string): HTMLElement => panelInput({
-            value: typeof settings[field] === 'number' ? String(settings[field]) : '',
+            value: String(typeof settings[field] === 'number' ? settings[field] : defaults[field]),
             placeholder: this.t(labelKey),
             label: this.t(labelKey),
             testId: `database-group-${field}`,

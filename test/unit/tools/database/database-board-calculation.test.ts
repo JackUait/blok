@@ -178,6 +178,16 @@ describe('board column calculation', () => {
       expect(groupCalculationText({ fn: 'count', capCounts: true }, many, SCHEMA, 'en')).toBe('99+');
       expect(groupCalculationText({ fn: 'count', capCounts: false }, many, SCHEMA, 'en')).toBe('120');
     });
+
+    // research/22 §5: Percent not empty, Earliest date and Date range in Due.
+    it('shows Notion\'s results: whole percent, full date, date range as a duration', () => {
+      const due = [row('a', { 'p-when': '2026-10-20' }), row('b', { 'p-when': '2026-10-28' }), row('c', {})];
+
+      expect(groupCalculationText({ fn: 'percent_not_empty', propertyId: 'p-when', capCounts: false }, due.slice(0, 2), SCHEMA, 'en-US')).toBe('100%');
+      expect(groupCalculationText({ fn: 'earliest_date', propertyId: 'p-when', capCounts: false }, due, SCHEMA, 'en-US')).toBe('October 20, 2026');
+      expect(groupCalculationText({ fn: 'date_range', propertyId: 'p-when', capCounts: false }, due, SCHEMA, 'en-US')).toBe('8 days');
+      expect(groupCalculationText({ fn: 'date_range', propertyId: 'p-when', capCounts: false }, due.slice(0, 1), SCHEMA, 'en-US')).toBe('0 minutes');
+    });
   });
 
   describe('groupCalculationHint', () => {

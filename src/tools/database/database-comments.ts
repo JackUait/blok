@@ -199,9 +199,7 @@ export class BuiltInCommentsUi {
     initial.setAttribute('aria-hidden', 'true');
     initial.textContent = Array.from(this.nameOf(latest).trim())[0]?.toUpperCase() ?? '';
     count.setAttribute('data-blok-database-feed-comments-count', '');
-    count.textContent = comments.length === 1
-      ? t('tools.database.feedCommentReplyOne')
-      : t('tools.database.feedCommentReplies', { count: comments.length });
+    count.textContent = t('tools.database.feedCommentReplies', { count: comments.length });
     time.setAttribute('data-blok-database-feed-comments-time', '');
     // Notion shows the clock time (research/19 §2d); an older day shows its date.
     time.textContent = new Intl.DateTimeFormat(locale, today ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric' }).format(at);

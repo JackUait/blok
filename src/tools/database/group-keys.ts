@@ -28,8 +28,8 @@ const PERSON_LIKE: readonly PropertyType[] = ['person', 'createdBy', 'lastEdited
 export const defaultGroupSort = (type: PropertyType): GroupSort =>
   type === 'number' || type === 'checkbox' || type === 'status' || DATE_LIKE.includes(type) ? 'ascending' : 'manual';
 
-/** Notion's API default bucket is unknown; 0 to 1000 in steps of 100 is a guess. */
-const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
+/** Notion's Range defaults: 0 to 1000, every 100 (research/22 §7). */
+export const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
 
 const rangeOf = (settings: GroupSettings): { start: number; end: number; size: number } => {
   const size = typeof settings.rangeSize === 'number' && settings.rangeSize >= 1 ? settings.rangeSize : DEFAULT_RANGE.size;

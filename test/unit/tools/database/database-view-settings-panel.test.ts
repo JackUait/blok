@@ -512,6 +512,23 @@ describe('view settings panel', () => {
     expect(h.state.view.hiddenGroups).toEqual([{ id: 'o1' }, { id: 'none' }]);
   });
 
+  // research/22 §7: "Number by: Unique" by default; Range shows 0 – 1000, every 100.
+  it('groups a number by Unique, and Range starts at 0 to 1000 every 100', () => {
+    const h = harness({ groupBy: 'num' });
+
+    h.open('group');
+
+    expect(document.querySelector('[data-blok-testid="database-group-number-by"] [data-blok-database-panel-value]')?.textContent)
+      .toBe('tools.database.groupNumberUnique');
+
+    click('database-group-number-by');
+    click('database-group-number-by-range');
+
+    const value = (id: string): string | undefined => document.querySelector<HTMLInputElement>(`[data-blok-testid="${id}"]`)?.value;
+
+    expect([value('database-group-rangeStart'), value('database-group-rangeEnd'), value('database-group-rangeSize')]).toEqual(['0', '1000', '100']);
+  });
+
   it('groups a status by group or by option (research/08 "Status by")', () => {
     const h = harness({ type: 'board', groupBy: 'prog' });
 

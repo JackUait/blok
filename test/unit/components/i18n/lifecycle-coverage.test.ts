@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1274 + 125 + 465 + 4 closure for all 1868 keys', () => {
+  it('rebuilds a disjoint 1273 + 125 + 467 + 4 closure for all 1869 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1868);
+    expect(lifecycle.size).toBe(1869);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -397,7 +397,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +5 / -1: the Ask AI status line calls its five assistant.status.* keys by literal; assistant.working is gone.
       // +19: the Ask AI status line names the block being written, by literal key in step-status.ts.
       // +1: the form question chip calls tools.database.formEditQuestion by literal.
-      'executable-literal': 1274,
+      // -2 / +1: the feed summary's plural keys left (see below); the number range bucket calls
+      // tools.database.groupRangeBucket by literal.
+      'executable-literal': 1273,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -440,7 +442,8 @@ describe('current English catalog lifecycle coverage', () => {
       // all built from a short name.
       // +25 / -2: the template banner's "Duplicate every…" summary, presets, ↻ hints and Cancel recurrence
       // replace templateRepeat and templateRepeatOff, all built from a short name.
-      'registered-namespace-compatible': 465,
+      // +2: the feed summary's tools.database.feedCommentReplies_one/_other replace feedCommentReplyOne/feedCommentReplies.
+      'registered-namespace-compatible': 467,
       'catalog-only': 4,
     });
     expect(

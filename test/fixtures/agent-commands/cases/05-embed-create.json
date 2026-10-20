@@ -1,0 +1,19 @@
+{
+  "name": "05-embed-create",
+  "seed": {
+    "blocks": []
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "embed.create",
+          "args": {
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ]
+}

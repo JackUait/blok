@@ -2783,6 +2783,77 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "embed.create"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Parent block id. Omit or null for the document root."
+                      },
+                      "position": {
+                        "description": "Where the new block goes among its siblings. Default: the end.",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "embed.setUrl"
                   },
                   "args": {

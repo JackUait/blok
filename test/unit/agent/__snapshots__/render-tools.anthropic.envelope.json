@@ -121,6 +121,7 @@
                   "doc.read",
                   "doc.setIcon",
                   "doc.setTitle",
+                  "embed.create",
                   "embed.setUrl",
                   "file.setSource",
                   "history.redo",

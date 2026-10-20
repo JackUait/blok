@@ -1,5 +1,7 @@
+import { failure } from '../agent/errors';
 import { EMBED_SERVICES, matchEmbedService } from '../embed-registry';
 
+import type { EmbedMatch } from '../embed-registry';
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { BookmarkMeta } from '../../../types/tools/bookmark';
 import type { ToolActionImpl } from '../../../types/tools/tool-description';
@@ -9,24 +11,73 @@ import type { LinkMetadataService } from './services';
 const DEFAULT_WIDTH = 580;
 const DEFAULT_HEIGHT = 320;
 
+const NO_PROVIDER = 'No embed provider matches this URL. Use a bookmark (bookmark.create) or a link in text instead.';
+
+const providerFields = (match: EmbedMatch): Record<string, unknown> => ({
+  service: match.service,
+  embed: match.embedUrl,
+  kind: match.kind,
+});
+
 const setUrl: ToolActionImpl<{ url: string }> = {
   run: (ctx, args) => {
     const block = ctx.block ?? ctx.fail('INVALID_ARGS', 'Pass the id of an embed block.');
-    const match = matchEmbedService(args.url)
-      ?? ctx.fail('PRECONDITION_FAILED', 'No embed provider matches this URL. Use a bookmark (bookmark.create) or a link in text instead.');
+    const match = matchEmbedService(args.url) ?? ctx.fail('PRECONDITION_FAILED', NO_PROVIDER);
     const config = EMBED_SERVICES[match.service];
 
     ctx.update(block.id, {
-      service: match.service,
+      ...providerFields(match),
       source: args.url,
-      embed: match.embedUrl,
-      kind: match.kind,
       width: config?.width ?? DEFAULT_WIDTH,
       height: config?.height ?? DEFAULT_HEIGHT,
     });
 
     return undefined;
   },
+};
+
+interface CreateArgs {
+  url: string;
+  parentId?: string | null;
+  position?: BlockPosition;
+}
+
+const createEmbed: ToolActionImpl<CreateArgs, undefined, { id: string; childIds: string[] }> = {
+  run: (ctx, args) => {
+    const match = matchEmbedService(args.url) ?? ctx.fail('PRECONDITION_FAILED', NO_PROVIDER);
+    const config = EMBED_SERVICES[match.service];
+    const data = {
+      ...providerFields(match),
+      source: args.url,
+      width: config?.width ?? DEFAULT_WIDTH,
+      height: config?.height ?? DEFAULT_HEIGHT,
+    };
+
+    // The host's registry key, not 'embed'.
+    return { id: ctx.insert({ type: ctx.tool, data, parentId: args.parentId, position: args.position }), childIds: [] };
+  },
+};
+
+/**
+ * Agent writes only. The editor renders registry data whose source does not match as the empty
+ * "Paste a link" state (src/tools/link/embed/index.ts resolveEmbedRender), so such data is refused
+ * here, and a matching source decides service, embed and kind.
+ */
+export const normalizeEmbed = (data: Record<string, unknown>): Record<string, unknown> => {
+  const source = typeof data.source === 'string' ? data.source : '';
+  const match = matchEmbedService(source);
+
+  if (match !== null) {
+    return { ...data, ...providerFields(match) };
+  }
+  const service = typeof data.service === 'string' ? data.service : '';
+
+  // An unknown service with an http source still renders, as a link card or a host-allowed frame.
+  if (Object.hasOwn(EMBED_SERVICES, service) || !/^https?:\/\//i.test(source)) {
+    throw failure('DATA_REJECTED', `Embed source ${JSON.stringify(source)}: ${NO_PROVIDER} Create one with embed.create, or change its URL with embed.setUrl.`, { path: '/data/source' });
+  }
+
+  return data;
 };
 
 const PREVIEW_FIELDS = ['title', 'description', 'image', 'favicon', 'domain'] as const;
@@ -42,12 +93,6 @@ const previewOf = (meta: unknown): Partial<BookmarkMeta> => typeof meta === 'obj
     return typeof value === 'string' ? [[key, value]] : [];
   }))
   : {};
-
-interface CreateArgs {
-  url: string;
-  parentId?: string | null;
-  position?: BlockPosition;
-}
 
 const create: ToolActionImpl<CreateArgs, BookmarkMeta, { id: string; childIds: string[] }> = {
   prepare: async ({ services }, args) => {
@@ -68,4 +113,4 @@ const create: ToolActionImpl<CreateArgs, BookmarkMeta, { id: string; childIds: s
   }),
 };
 
-export const LINK_ACTION_HANDLERS = { embed: { setUrl }, bookmark: { create } } as const;
+export const LINK_ACTION_HANDLERS = { embed: { setUrl, create: createEmbed }, bookmark: { create } } as const;

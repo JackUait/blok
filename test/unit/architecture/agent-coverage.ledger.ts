@@ -184,7 +184,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'insert:video': cmd('block.insert'),
   ...Object.fromEntries([2, 3, 4, 5].map((n) => [`insert:column_list/column_list-${n}`, cmd('column_list.create')])),
   'insert:tabs': cmd('tabs.create'),
-  'insert:embed': cmd('block.insert'),
+  'insert:embed': cmd('embed.create'),
   'insert:bookmark': cmd('bookmark.create'),
   'insert:page': cmd('block.insert'),
 

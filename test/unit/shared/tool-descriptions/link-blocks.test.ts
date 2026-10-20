@@ -76,7 +76,7 @@ const LINK_DESCRIPTIONS: LinkDescriptionCase[] = [
     describeTool: describeEmbed,
     dataSchema: EMBED_DATA,
     summary: 'A live embed from a known provider (YouTube, Figma, …).',
-    guidance: 'Set or change the URL with embed.setUrl: it finds the provider and fills service, embed and kind. Never write embed yourself. caption is plain text.',
+    guidance: 'Create one with embed.create and change its URL with embed.setUrl: both find the provider and fill service, embed and kind. Never write those yourself. caption is plain text.',
     summaryFields: ['service', 'source'],
     starter: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x' },
     accepted: [

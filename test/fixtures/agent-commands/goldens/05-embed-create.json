@@ -1,0 +1,20 @@
+{
+  "reviewed": "Claude",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedBy": "agent-test",
+        "id": "b0",
+        "type": "embed",
+        "data": {
+          "service": "youtube",
+          "embed": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+          "kind": "iframe",
+          "source": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "width": 580,
+          "height": 320
+        }
+      }
+    ]
+  }
+}

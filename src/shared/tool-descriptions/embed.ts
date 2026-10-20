@@ -34,11 +34,29 @@ export const EMBED_ACTIONS: ToolActionDeclaration[] = [
     },
     mirrors: [],
   },
+  {
+    name: 'create',
+    summary: 'Create an embed from a URL. The provider is found from the URL.',
+    target: 'create',
+    preconditions: ['The URL belongs to a known provider. A profile or channel page is not a video: use bookmark.create for it.'],
+    args: {
+      type: 'object',
+      required: ['url'],
+      additionalProperties: false,
+      properties: { url: { type: 'string', pattern: '^https?://' } },
+    },
+    result: {
+      type: 'object',
+      required: ['id', 'childIds'],
+      properties: { id: { type: 'string' }, childIds: { type: 'array', items: { type: 'string' } } },
+    },
+    mirrors: [],
+  },
 ];
 
 export const describeEmbed = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A live embed from a known provider (YouTube, Figma, …).',
-  guidance: 'Set or change the URL with embed.setUrl: it finds the provider and fills service, embed and kind. Never write embed yourself. caption is plain text.',
+  guidance: 'Create one with embed.create and change its URL with embed.setUrl: both find the provider and fill service, embed and kind. Never write those yourself. caption is plain text.',
   data: EMBED_DATA,
   summaryFields: ['service', 'source'],
   actions: EMBED_ACTIONS,

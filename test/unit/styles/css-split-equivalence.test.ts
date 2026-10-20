@@ -953,6 +953,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_MANAGE_CALENDAR_BYTES = 510;
     // database.css: the Suggested template tiles and the Customize modal (research/27 §1).
     const DATABASE_STARTER_TEMPLATES_BYTES = 6_886;
+    // database.css: pressed View settings row and ×, Today/Now hover, light and dark (research/27 §6).
+    const DATABASE_PRESSED_FILLS_BYTES = 1_106;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1095,7 +1097,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES
       + DATABASE_LAST_VIEW_CHOICE_BYTES
       + DATABASE_MANAGE_CALENDAR_BYTES
-      + DATABASE_STARTER_TEMPLATES_BYTES;
+      + DATABASE_STARTER_TEMPLATES_BYTES
+      + DATABASE_PRESSED_FILLS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

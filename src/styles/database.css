@@ -63,6 +63,9 @@
   --blok-database-property-icon-button-hover-bg: rgb(249, 248, 247);
   --blok-database-panel-close-bg: rgba(42, 28, 0, 0.07);
   --blok-database-panel-close-hover-bg: rgba(42, 28, 0, 0.106);
+  /* research/27 §6: × pressed. A row's light press was not read: it keeps the hover fill. */
+  --blok-database-panel-close-active-bg: rgba(33, 27, 23, 0.102);
+  --blok-database-panel-row-active-bg: var(--blok-database-table-header-hover-bg);
   /* research/26 §2: the AI prompt box placeholder. Dark is unmeasured. */
   --blok-database-ai-prompt-placeholder: rgba(21, 14, 0, 0.286);
   --blok-database-table-open-bg: #ffffff;
@@ -216,6 +219,8 @@
   /* Panels and date picker (research/21 §1c, §1k, §1l): light uses Blok's token for the measured role. */
   --blok-database-date-weekday-text: var(--blok-text-tertiary);
   --blok-database-date-today-text: var(--blok-text-secondary);
+  /* research/27 §6: "Today" and "Now" hover. */
+  --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-date-setting-value-text: var(--blok-text-secondary);
   --blok-database-panel-value-text: var(--blok-text-secondary);
   --blok-database-panel-muted-text: var(--blok-text-secondary);
@@ -282,6 +287,8 @@
     --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
     --blok-database-panel-close-bg: rgba(255, 255, 235, 0.1);
     --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
+    --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
+    --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
     --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
     --blok-database-table-open-bg: rgb(37, 37, 37);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -426,6 +433,7 @@
     /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
     --blok-database-date-weekday-text: rgb(139, 152, 152);
     --blok-database-date-today-text: rgb(142, 139, 134);
+    --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-date-setting-value-text: rgb(173, 169, 163);
     --blok-database-panel-value-text: rgb(142, 139, 134);
     --blok-database-panel-muted-text: rgb(173, 169, 163);
@@ -491,6 +499,8 @@
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
   --blok-database-panel-close-bg: rgba(255, 255, 235, 0.1);
   --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
+  --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -635,6 +645,7 @@
   /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
   --blok-database-date-weekday-text: rgb(139, 152, 152);
   --blok-database-date-today-text: rgb(142, 139, 134);
+  --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
   --blok-database-panel-value-text: rgb(142, 139, 134);
   --blok-database-panel-muted-text: rgb(173, 169, 163);
@@ -5020,11 +5031,14 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-option-delete-cancel]:hover,
   [data-blok-database-option-color]:hover,
   [data-blok-database-date-clear]:hover,
-  [data-blok-database-date-today]:hover,
   [data-blok-database-date-prev]:hover,
   [data-blok-database-date-next]:hover,
   [data-blok-database-date-day]:hover {
     background-color: var(--blok-item-hover-bg);
+  }
+
+  [data-blok-database-date-today]:hover {
+    background-color: var(--blok-database-date-today-hover-bg);
   }
 }
 
@@ -6841,6 +6855,10 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-panel-close-hover-bg);
 }
 
+[data-blok-database-panel-close]:active {
+  background-color: var(--blok-database-panel-close-active-bg);
+}
+
 [data-blok-database-panel-close]:focus-visible {
   outline: none;
 }
@@ -7172,6 +7190,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-panel-row]:hover:not(:disabled),
 [data-blok-database-panel-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
   background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-panel-row]:active:not(:disabled):not([data-blok-database-layout-locked]) {
+  background-color: var(--blok-database-panel-row-active-bg);
 }
 
 [data-blok-database-panel-row]:focus-visible {

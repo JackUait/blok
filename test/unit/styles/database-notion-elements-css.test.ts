@@ -80,3 +80,27 @@ describe('view settings Close × (research/26 §1b, §4a)', () => {
     expect(tokenValues('--blok-database-panel-close-hover-bg')).toEqual([ 'rgba(42, 28, 0, 0.106)', 'rgba(255, 255, 235, 0.153)', 'rgba(255, 255, 235, 0.153)' ]);
   });
 });
+
+describe('pressed and hover fills, light and dark (research/27 §6)', () => {
+  const ROW_ACTIVE = '[data-blok-database-panel-row]:active:not(:disabled):not([data-blok-database-layout-locked])';
+
+  it('a View settings row presses to the measured dark fill; light press is unmeasured and keeps the hover fill', () => {
+    expect(ruleBody(ROW_ACTIVE)).toContain('background-color: var(--blok-database-panel-row-active-bg)');
+    expect(tokenValues('--blok-database-panel-row-active-bg')).toEqual([ 'var(--blok-database-table-header-hover-bg)', 'rgba(255, 255, 255, 0.11)', 'rgba(255, 255, 255, 0.11)' ]);
+    expect(tokenValues('--blok-database-table-header-hover-bg').slice(1)).toEqual([ 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)' ]);
+    // The press rule must come after the hover rule, which it ties on specificity while both match.
+    expect(database.indexOf(ROW_ACTIVE)).toBeGreaterThan(database.indexOf('[data-blok-database-panel-row]:hover:not(:disabled)'));
+  });
+
+  it('the panel × presses to the measured fills', () => {
+    expect(ruleBody('[data-blok-database-panel-close]:active')).toContain('background-color: var(--blok-database-panel-close-active-bg)');
+    expect(tokenValues('--blok-database-panel-close-active-bg')).toEqual([ 'rgba(33, 27, 23, 0.102)', 'rgba(255, 255, 255, 0.11)', 'rgba(255, 255, 255, 0.11)' ]);
+    expect(database.indexOf('[data-blok-database-panel-close]:active')).toBeGreaterThan(database.indexOf('[data-blok-database-panel-close]:hover'));
+  });
+
+  it('Today and Now hover to the measured fills', () => {
+    expect(ruleBody('[data-blok-database-date-today]:hover')).toContain('background-color: var(--blok-database-date-today-hover-bg)');
+    expect(ruleBody('[data-blok-database-date-today]:hover')).not.toContain('--blok-item-hover-bg');
+    expect(tokenValues('--blok-database-date-today-hover-bg')).toEqual([ 'rgba(33, 27, 23, 0.051)', 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)' ]);
+  });
+});

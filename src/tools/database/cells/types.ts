@@ -1,4 +1,5 @@
 import type { I18n } from '../../../../types';
+import type { DateDisplayChange } from './date-format';
 import type { DatabaseMap, DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
 /**
@@ -103,6 +104,12 @@ export interface CellEditorCallbacks {
    * property default (or a choice dropped because it no longer fits the time).
    */
   onReminderChange?: (reminder: DateReminderOffset | null, picked: boolean) => void;
+  /**
+   * Date: a Date format, Time format or Time zone pick. It changes the
+   * property, not the cell. Without it the picker has no format rows: pass it
+   * only where the user may edit the property.
+   */
+  onDateDisplayChange?: (change: DateDisplayChange) => void;
   /**
    * Date: a bulk edit (research/21 §6). The value is the first selected row's;
    * the Remind row still opens on the property default, and the first change

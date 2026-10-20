@@ -237,6 +237,64 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
+// notion-measure12/17-date-edit and notion-measure8/16-time-on: the rows under the grid, top to bottom.
+test.describe('date picker rows', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page);
+  });
+
+  const rows = (page: Page): Promise<string[]> => page.locator('[data-blok-database-date-options]').evaluate((el) =>
+    [...el.children].map((row) => (row.textContent ?? '').trim()));
+
+  test('End date, Date format › Full date, Include time, Remind, Clear', async ({ page }) => {
+    await open(page, 'p-due');
+
+    expect(await rows(page)).toEqual(['End date', 'Date formatFull date', 'Include time', 'RemindNone', 'Clear']);
+  });
+
+  test('a Date format pick saves on the property and keeps the picker open', async ({ page }) => {
+    await open(page, 'p-due');
+    await page.locator('[data-blok-database-date-setting="dateFormat"]').click();
+    await page.getByRole('menuitemradio', { name: 'Day/Month/Year' }).click();
+
+    await expect(page.locator('[data-blok-database-cell-editor]')).toHaveCount(1);
+    await expect(page.locator('[data-blok-database-date-setting="dateFormat"]')).toHaveText(/Day\/Month\/Year/);
+    const saved = await page.evaluate(async () => {
+      const out = await window.blokInstance?.save();
+      const db = out?.blocks.find((block) => block.type === 'database');
+      const schema = (db?.data as { schema?: Array<{ id: string; date?: { dateFormat?: string } }> } | undefined)?.schema;
+
+      return schema?.find((property) => property.id === 'p-due')?.date?.dateFormat;
+    });
+
+    expect(saved).toBe('day_month_year');
+    // The picked day shows in the new format once the picker closes.
+    await page.locator('[data-blok-database-date-today]').click();
+    await close(page);
+    const today = await page.evaluate(() => {
+      const now = new Date();
+      const pad = (n: number): string => String(n).padStart(2, '0');
+
+      return `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+    });
+
+    await expect(cell(page, 'p-due')).toHaveText(today);
+  });
+
+  test('Include time adds Time format and Time zone, and nothing scrolls inside', async ({ page }) => {
+    const { box: before } = await open(page, 'p-due');
+
+    await page.locator('[data-blok-database-date-time-toggle]').click();
+    expect(await rows(page)).toEqual(['End date', 'Date formatFull date', 'Include time', 'Time format12 hour', 'Time zoneYour time zone', 'RemindNone', 'Clear']);
+    const after = await measure(page);
+    const clear = await page.locator('[data-blok-database-date-clear]').boundingBox();
+
+    expect(after.height).toBeGreaterThan(before.height);
+    expect((clear?.y ?? Infinity) + (clear?.height ?? 0)).toBeLessThanOrEqual(after.y + after.height);
+  });
+});
+
 test('near the right edge the box slides left to stay on screen', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 717 });
   await mount(page, ['p-title', 'p-amount', 'p-link', 'p-stage', 'p-notes']);

@@ -8,6 +8,7 @@ import { reminderContext } from './reminders';
 import type { CellContext, CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { formatDateText, resolveLocale } from './cells/date-format';
+import type { DateDisplayChange } from './cells/date-format';
 import { formatNumberValue } from './cells/number-format';
 import { computeCalculation } from './database-calculations';
 import type { CalculationResult } from './database-calculations';
@@ -114,6 +115,8 @@ export interface TableHandlers {
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property": open that column's property menu. */
   editProperty?: (propertyId: string) => void;
+  /** The date picker's format rows. Returns undefined where the property may not change. Drawn on editEnded. */
+  dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
 }
 
 /** Sub-items "Nested in toggle": what the table asks about each shown row. */
@@ -411,6 +414,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         ...(this.handlers?.editProperty !== undefined
           ? { editProperty: (propertyId: string) => this.handlers?.editProperty?.(propertyId) }
           : {}),
+        dateDisplayChanger: (propertyId: string) => this.handlers?.dateDisplayChanger?.(propertyId),
       },
     });
     gridEl.addEventListener('click', this.handleNestingClick, true);
@@ -1306,6 +1310,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ?.dispatchEvent(new CustomEvent('blok-database-table-repaint', { bubbles: true })));
     // A date opens on the first selected row's (research/21 §6).
     const first = property.type === 'date' ? this.rowMap.get(rowIds[0]) : undefined;
+    const changeDisplay = property.type === 'date' ? handlers.dateDisplayChanger?.(propertyId) : undefined;
     const handle = openCellEditor(property, first === undefined ? null : readPropertyValue(first, property), anchor, {
       ...this.options.cellContext,
       i18n: this.options.i18n,
@@ -1317,6 +1322,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         : {}),
       ...(handlers.editProperty !== undefined ? { onEditProperty: () => handlers.editProperty?.(propertyId) } : {}),
       ...(property.type === 'date' ? { bulk: true } : {}),
+      ...(changeDisplay !== undefined
+        ? { onDateDisplayChange: (change: DateDisplayChange) => {
+          written.any = true;
+          changeDisplay(change);
+        } }
+        : {}),
       ...(property.type === 'date' && handlers.commitBulkReminder !== undefined
         ? { onReminderChange: (next: DateReminderOffset | null, picked: boolean) => {
           (handlers.commitBulkReminder?.(rowIds, propertyId, next, picked) ?? []).forEach((rowId) => {

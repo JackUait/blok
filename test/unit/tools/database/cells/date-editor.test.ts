@@ -450,4 +450,145 @@ describe('date cell editor', () => {
       });
     });
   });
+
+  // research/22 §4, notion-measure12/17-date-edit and notion-measure8/16-time-on: Notion's picker
+  // rows top to bottom are End date, Date format, Include time, [Time format, Timezone], Remind, Clear.
+  describe('format rows', () => {
+    const dict = en as Record<string, string>;
+    const i18n = { t: (key: string, vars?: Record<string, string | number>): string =>
+      Object.entries(vars ?? {}).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), dict[key] ?? key) };
+    const text = (el: Element | null | undefined): string => el?.textContent?.trim() ?? '';
+    const setting = (name: string): HTMLButtonElement => q<HTMLButtonElement>(`[data-blok-database-date-setting="${name}"]`);
+    const menu = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-date-setting-menu]');
+    const menuLabels = (): string[] => [...(menu()?.querySelectorAll('[role="menuitemradio"]') ?? [])].map((item) => text(item));
+    const checked = (): string[] => [...(menu()?.querySelectorAll('[aria-checked="true"]') ?? [])].map((item) => text(item));
+    const pick = (label: string): void => {
+      [...(menu()?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [])].find((item) => text(item) === label)?.click();
+    };
+    const rowNames = (): string[] => [...q('[data-blok-database-date-options]').children].map((row) =>
+      row.getAttribute('data-blok-database-date-setting')
+      ?? ['end-toggle', 'time-toggle', 'remind', 'clear'].find((name) => row.hasAttribute(`data-blok-database-date-${name}`))
+      ?? '?');
+    const openRows = (
+      value: string | null,
+      date: PropertyDefinition['date'] = undefined,
+      overrides: Partial<CellEditorContext> = {}
+    ): CellEditorContext => {
+      const ctx = makeEditorContext({ i18n, hourCycle: 'h12', onReminderChange: vi.fn(), onDateDisplayChange: vi.fn(), ...overrides });
+
+      openCellEditor({ ...makeProperty('date'), ...(date !== undefined ? { date } : {}) }, value, makeAnchor(), ctx);
+
+      return ctx;
+    };
+
+    it('has no format rows when the host cannot change the property (a form answer, a locked database)', () => {
+      openRows('2026-10-09', undefined, { onDateDisplayChange: undefined });
+
+      expect(editorRoot()?.querySelector('[data-blok-database-date-setting]')).toBeNull();
+    });
+
+    it('a date: End date, Date format, Include time, Remind, Clear', () => {
+      openRows('2026-10-09');
+
+      expect(rowNames()).toEqual(['end-toggle', 'dateFormat', 'time-toggle', 'remind', 'clear']);
+      expect(text(setting('dateFormat'))).toBe('Date formatFull date');
+    });
+
+    it('with a time: Time format and Time zone follow Include time', () => {
+      openRows('2026-10-09T14:00');
+
+      expect(rowNames()).toEqual(['end-toggle', 'dateFormat', 'time-toggle', 'timeFormat', 'timeZone', 'remind', 'clear']);
+      expect(text(setting('timeFormat'))).toBe('Time format12 hour');
+      expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+    });
+
+    it('turning Include time on shows the time rows', () => {
+      openRows('2026-10-09');
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(rowNames()).toContain('timeFormat');
+    });
+
+    it('Date format lists the property menu formats and checks the current one', () => {
+      openRows('2026-10-09', { dateFormat: 'day_month_year' });
+
+      expect(text(setting('dateFormat'))).toBe('Date formatDay/Month/Year');
+      setting('dateFormat').click();
+
+      expect(menuLabels()).toEqual(['Full date', 'Short date', 'Month/Day/Year', 'Day/Month/Year', 'Year/Month/Day', 'Relative']);
+      expect(checked()).toEqual(['Day/Month/Year']);
+    });
+
+    it('a format pick writes the property, closes the menu, keeps the picker open and writes no value', () => {
+      const ctx = openRows('2026-10-09');
+
+      setting('dateFormat').click();
+      pick('Relative');
+
+      expect(ctx.onDateDisplayChange).toHaveBeenCalledWith({ dateFormat: 'relative' });
+      expect(menu()).toBeNull();
+      expect(text(setting('dateFormat'))).toBe('Date formatRelative');
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(ctx.onClose).not.toHaveBeenCalled();
+      expect(setting('dateFormat')).toHaveFocus();
+    });
+
+    it('picking 24 hour writes it and shows the time and the reminder times on that clock', () => {
+      const ctx = openRows('2026-10-09T14:00');
+
+      expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('2:00 PM');
+      setting('timeFormat').click();
+      expect(menuLabels()).toEqual(['12 hour', '24 hour', 'Hidden']);
+      pick('24 hour');
+
+      expect(ctx.onDateDisplayChange).toHaveBeenCalledWith({ timeFormat: '24_hour' });
+      expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('14:00');
+      q('[data-blok-database-date-remind]').click();
+      expect(text(document.querySelector('[data-blok-database-date-remind-option="1_day_before"]'))).toBe('1 day before (09:00)');
+    });
+
+    it('the property time format wins over the host clock', () => {
+      openRows('2026-10-09T14:00', { timeFormat: '24_hour' });
+
+      expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('14:00');
+      expect(text(setting('timeFormat'))).toBe('Time format24 hour');
+    });
+
+    it('Time zone starts with your zone; a zone pick stores it, your zone removes it', () => {
+      const ctx = openRows('2026-10-09T14:00', { timeZone: 'Europe/Berlin' });
+
+      expect(text(setting('timeZone'))).toBe('Time zoneEurope/Berlin');
+      setting('timeZone').click();
+      expect(menuLabels()[0]).toBe('Your time zone');
+      expect(menuLabels()).toContain('Asia/Tokyo');
+      expect(checked()).toEqual(['Europe/Berlin']);
+      pick('Asia/Tokyo');
+      expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: 'Asia/Tokyo' });
+      setting('timeZone').click();
+      pick('Your time zone');
+      expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: null });
+      expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+    });
+
+    it('Escape closes the format menu first, then the picker', () => {
+      const ctx = openRows('2026-10-09');
+
+      setting('dateFormat').click();
+      press(document.activeElement ?? document.body, 'Escape');
+
+      expect(menu()).toBeNull();
+      expect(ctx.onClose).not.toHaveBeenCalled();
+      expect(setting('dateFormat')).toHaveFocus();
+    });
+
+    it('one menu at a time: opening Remind closes Date format', () => {
+      openRows('2026-10-09');
+
+      setting('dateFormat').click();
+      q('[data-blok-database-date-remind]').click();
+
+      expect(menu()).toBeNull();
+      expect(document.querySelector('[data-blok-database-date-remind-menu]')).not.toBeNull();
+    });
+  });
 });

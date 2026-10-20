@@ -17,10 +17,9 @@ import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
 import { SHOW_PAGE_ICON_ITEM } from './database-table-menus';
 import { reminderLabel, remindersFor } from './reminders';
-import { resolveHourCycle, resolveLocale } from './cells/date-format';
+import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import type {
   DateDisplay,
-  DateFormat,
   DateReminderOffset,
   NumberDisplay,
   NumberShowAs,
@@ -31,7 +30,6 @@ import type {
   PropertyType,
   RelationSettings,
   SelectOption,
-  TimeFormat,
 } from './types';
 
 export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'description' | 'visibility' | 'duplicate' | 'delete';
@@ -133,21 +131,8 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
   isNameTaken?: (propertyId: string, name: string) => boolean;
 }
 
-const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
-const TIME_FORMATS: readonly TimeFormat[] = ['12_hour', '24_hour', 'hidden'];
-const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 'h12', '24_hour': 'h23' };
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
 const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidden'];
-
-const timeZones = (): string[] => {
-  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
-
-  try {
-    return intl.supportedValuesOf?.('timeZone') ?? [];
-  } catch {
-    return [];
-  }
-};
 
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 

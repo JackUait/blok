@@ -5,6 +5,7 @@ import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseRow, DatabaseRowPages, DateReminderOffset, OpenPagesIn, PageVisibility, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
+import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { cellText } from './database-table-clipboard';
 import { IconArrowDiagonal, IconCheck, IconCopy, IconMessage, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
@@ -234,6 +235,8 @@ export interface CardDrawerOptions {
   onPropertyValueChange?: (rowId: string, propertyId: string, value: PropertyValue) => void;
   /** A date's Remind choice, null for None. Without it the date picker has no Remind row. */
   onReminderChange?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
+  /** The date picker's format rows. Returns undefined where the property may not change: no rows then. */
+  dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
   /** The whole new option list of a select property, with saved labels. */
   onOptionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /**
@@ -438,6 +441,7 @@ export class DatabaseCardDrawer {
   private readonly onPropertyValueChange: CardDrawerOptions['onPropertyValueChange'];
   private readonly onOptionsChange: CardDrawerOptions['onOptionsChange'];
   private readonly onReminderChange: CardDrawerOptions['onReminderChange'];
+  private readonly dateDisplayChanger: CardDrawerOptions['dateDisplayChanger'];
   private readonly savedOptionsOf: CardDrawerOptions['savedOptionsOf'];
   private readonly rowBody: CardDrawerOptions['rowBody'];
   private readonly adjacentRow: CardDrawerOptions['adjacentRow'];
@@ -554,6 +558,7 @@ export class DatabaseCardDrawer {
     this.onPropertyValueChange = options.onPropertyValueChange;
     this.onOptionsChange = options.onOptionsChange;
     this.onReminderChange = options.onReminderChange;
+    this.dateDisplayChanger = options.dateDisplayChanger;
     this.savedOptionsOf = options.savedOptionsOf;
     this.rowBody = options.rowBody;
     this.adjacentRow = options.adjacentRow;
@@ -3140,6 +3145,7 @@ export class DatabaseCardDrawer {
     const onOptionsChange = this.onOptionsChange;
     const onReminderChange = this.onReminderChange;
     const reminder = row.reminders?.[propertyId]?.remind;
+    const onDateDisplayChange = def.type === 'date' && !this.readOnly ? this.dateDisplayChanger?.(propertyId) : undefined;
 
     this.cellEditor = openCellEditor(def, readPropertyValue(row, def), slot, {
       ...this.cellContext(),
@@ -3147,6 +3153,7 @@ export class DatabaseCardDrawer {
       readOnly: this.readOnly,
       options: shownOptions.list,
       ...(reminder !== undefined ? { reminder } : {}),
+      ...(onDateDisplayChange !== undefined ? { onDateDisplayChange } : {}),
       ...(def.type === 'date' && onReminderChange !== undefined
         ? {
           onReminderChange: (next: DateReminderOffset | null): void => {

@@ -1,4 +1,4 @@
-import type { DateDisplay } from '../types';
+import type { DateDisplay, DateFormat, TimeFormat } from '../types';
 import { parseDateValue, toIsoDay, toIsoTime } from './date-value';
 
 /** Local wall-clock time of one stored date part. A part with a zone keeps its instant. */
@@ -153,7 +153,34 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
   }
 };
 
-const HOUR_CYCLES: Record<string, 'h12' | 'h23'> = { '12_hour': 'h12', '24_hour': 'h23' };
+export const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 'h12', '24_hour': 'h23' };
+
+/** The choices of Date format and Time format, shared by the property menu and the date picker. */
+export const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
+export const TIME_FORMATS: readonly TimeFormat[] = ['12_hour', '24_hour', 'hidden'];
+
+export const timeZones = (): string[] => {
+  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
+
+  try {
+    return intl.supportedValuesOf?.('timeZone') ?? [];
+  } catch {
+    return [];
+  }
+};
+
+/** One pick in the date picker's format rows. `timeZone: null` is "Your time zone". */
+export type DateDisplayChange = { dateFormat: DateFormat } | { timeFormat: TimeFormat } | { timeZone: string | null };
+
+/** The property's date settings after a picker pick. "Your time zone" drops the key, as the property menu does. */
+export const applyDateDisplayChange = (date: DateDisplay, change: DateDisplayChange): DateDisplay => {
+  if (!('timeZone' in change)) {
+    return { ...date, ...change };
+  }
+  const { timeZone: _old, ...rest } = date;
+
+  return change.timeZone === null ? rest : { ...rest, timeZone: change.timeZone };
+};
 
 const formatPart = (part: string, locale: string, display: DateDisplay, now: Date, hourCycle?: 'h12' | 'h23'): string => {
   const day = formatDay(part, locale, display, now);

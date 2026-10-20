@@ -5057,8 +5057,11 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* Remind row and its menu (research/17 §1a–b): the menu is 250px, rows 28px, a check on the current one. */
+/* Date format, Time format and Time zone rows look the same (notion-measure12/17-date-edit). */
 [data-blok-database-date-remind],
-[data-blok-database-date-remind-option] {
+[data-blok-database-date-setting],
+[data-blok-database-date-remind-option],
+[data-blok-database-date-setting-option] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
@@ -5077,7 +5080,8 @@ textarea[data-blok-database-cell-input] {
   margin-bottom: var(--blok-space-1);
 }
 
-[data-blok-database-date-remind-value] {
+[data-blok-database-date-remind-value],
+[data-blok-database-date-setting-value] {
   margin-inline-start: auto;
   color: var(--blok-text-secondary);
 }
@@ -5107,7 +5111,9 @@ textarea[data-blok-database-cell-input] {
 
 /* Outranks the top-layer reset in main.css, which zeroes width and padding. */
 [data-blok-database-date-remind-menu],
-[data-blok-database-date-remind-menu][data-blok-top-layer][popover] {
+[data-blok-database-date-remind-menu][data-blok-top-layer][popover],
+[data-blok-database-date-setting-menu],
+[data-blok-database-date-setting-menu][data-blok-top-layer][popover] {
   display: flex;
   flex-direction: column;
   width: 250px;
@@ -5123,14 +5129,23 @@ textarea[data-blok-database-cell-input] {
 
 @media (hover: hover) {
   [data-blok-database-date-remind]:hover,
-  [data-blok-database-date-remind-option]:hover {
+  [data-blok-database-date-setting]:hover,
+  [data-blok-database-date-remind-option]:hover,
+  [data-blok-database-date-setting-option]:hover {
     background-color: var(--blok-item-hover-bg);
   }
 }
 
-[data-blok-database-date-remind-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+[data-blok-database-date-remind-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
+[data-blok-database-date-setting-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
   outline: none;
   background-color: var(--blok-item-focus-bg);
+}
+
+/* The time zone list has hundreds of rows. Notion's submenu height is unmeasured. */
+[data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
+  max-height: min(320px, calc(100vh - var(--blok-space-4)));
+  overflow-y: auto;
 }
 
 /* A set reminder (research/17 §1c): the date in blue, a 1.2em alarm after it. Not a selected state. */

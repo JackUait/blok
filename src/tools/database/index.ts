@@ -64,7 +64,8 @@ import type { BarWrite } from './timeline-dates';
 import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { legacyBodyInserts, pageContentSourceBlocks, rowDescription } from './row-body';
-import { resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
+import { applyDateDisplayChange, resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
+import type { DateDisplayChange } from './cells/date-format';
 import type { TableAutofill, TableGroup, TableHandlers, TableNesting, TableState } from './database-table-view';
 import type { CellChange } from './database-table-grid';
 import type { TableRowDropResult } from './database-table-row-drag';
@@ -4916,6 +4917,7 @@ export class DatabaseTool implements BlockTool {
     else context.state.cellEditor?.close();
 
     const reminder = row.reminders?.[propertyId]?.remind;
+    const changeDisplay = property.type === 'date' ? this.dateDisplayChanger(propertyId, context) : undefined;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext(),
       i18n: this.api.i18n,
@@ -4925,6 +4927,7 @@ export class DatabaseTool implements BlockTool {
       ...(property.type === 'date'
         ? { onReminderChange: (next: DateReminderOffset | null) => { if (context === undefined || context.writable()) this.commitReminder(rowId, propertyId, next); } }
         : {}),
+      ...(changeDisplay !== undefined ? { onDateDisplayChange: changeDisplay } : {}),
       onOptionsChange: (options) => { if (context === undefined || context.writable()) this.handleTableOptionsChange(propertyId, options); },
       onCommit: (value) => { if (context === undefined || context.writable()) this.commitTableCell(rowId, propertyId, value); },
       onClose: () => {
@@ -5360,6 +5363,7 @@ export class DatabaseTool implements BlockTool {
       commitCell: (rowId, propertyId, value) => { if (writable()) this.commitTableCell(rowId, propertyId, value); },
       commitReminder: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder); },
       commitBulkReminder: (rowIds, propertyId, reminder, picked) => writable() ? this.commitBulkReminder(rowIds, propertyId, reminder, picked) : [],
+      dateDisplayChanger: (propertyId) => this.dateDisplayChanger(propertyId, context),
       editEnded: () => context === undefined ? this.redrawWhenIdle() : context.redraw(),
       addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId, context),
       deleteRows: (rowIds) => { if (writable()) this.deleteTableRows(rowIds); },
@@ -7279,6 +7283,7 @@ export class DatabaseTool implements BlockTool {
           this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },
         onReminderChange: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder, true); },
+        dateDisplayChanger: (propertyId) => writable() ? this.dateDisplayChanger(propertyId) : undefined,
         onOptionsChange: (propertyId, options) => {
           if (this.readOnly || this.destroyed || this.structureLocked()) return;
           this.clearRemovedOptions(propertyId, options);
@@ -8187,6 +8192,8 @@ export class DatabaseTool implements BlockTool {
     this.bulkEditor?.close();
     // A date opens on the first selected row's (research/21 §6).
     const first = property.type === 'date' ? this.model.getRow(rowIds[0]) : undefined;
+    const changeDisplay = property.type === 'date' ? this.dateDisplayChanger(propertyId) : undefined;
+    const displayChanged = { any: false };
 
     this.bulkEditor = openCellEditor(property, first === undefined ? null : readPropertyValue(first, property), anchor, {
       ...this.cellContext(),
@@ -8195,9 +8202,16 @@ export class DatabaseTool implements BlockTool {
       ...(property.type === 'date'
         ? { bulk: true, onReminderChange: (next: DateReminderOffset | null, picked: boolean) => { this.commitBulkReminder(rowIds, propertyId, next, picked); } }
         : {}),
+      ...(changeDisplay !== undefined
+        ? { onDateDisplayChange: (change: DateDisplayChange) => {
+          displayChanged.any = true;
+          changeDisplay(change);
+        } }
+        : {}),
       onCommit: (value) => this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
       onClose: () => {
         this.bulkEditor = null;
+        if (displayChanged.any) this.rerenderView({ keepDrawer: true });
       },
     });
   }
@@ -8957,6 +8971,30 @@ export class DatabaseTool implements BlockTool {
     this.model.updateProperty(propertyId, patch);
     void this.sync.syncUpdateProperty({ propertyId, changes: patch });
     this.commitSchema();
+  }
+
+  /**
+   * The date picker's Date format, Time format and Time zone rows write the
+   * property, as its property menu does. Undefined (no rows) wherever that
+   * menu could not open: read-only, locked, a read-only widget. The view
+   * redraws when the picker closes: a redraw now would take the picker's cell away.
+   */
+  private dateDisplayChanger(propertyId: string, context?: NativeWidgetContext): ((change: DateDisplayChange) => void) | undefined {
+    const writable = (): boolean => !this.readOnly && !this.destroyed && !this.structureLocked() && (context === undefined || context.writable());
+
+    if (!writable()) return undefined;
+
+    return (change) => {
+      const saved = this.model.getProperty(propertyId);
+
+      if (!writable() || saved === undefined) return;
+      const patch = { date: applyDateDisplayChange(saved.date ?? {}, change) };
+
+      this.model.updateProperty(propertyId, patch);
+      void this.sync.syncUpdateProperty({ propertyId, changes: patch });
+      this.writeSchema();
+      this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    };
   }
 
   /**

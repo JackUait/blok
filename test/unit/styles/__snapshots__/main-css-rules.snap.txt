@@ -8379,7 +8379,7 @@ textarea[data-blok-database-cell-input] {
   transition: none;
 }
 
-[data-blok-database-date-remind], [data-blok-database-date-remind-option] {
+[data-blok-database-date-remind], [data-blok-database-date-setting], [data-blok-database-date-remind-option], [data-blok-database-date-setting-option] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
@@ -8398,7 +8398,7 @@ textarea[data-blok-database-cell-input] {
   margin-bottom: var(--blok-space-1);
 }
 
-[data-blok-database-date-remind-value] {
+[data-blok-database-date-remind-value], [data-blok-database-date-setting-value] {
   margin-inline-start: auto;
   color: var(--blok-text-secondary);
 }
@@ -8424,7 +8424,7 @@ textarea[data-blok-database-cell-input] {
   padding-top: var(--blok-space-1);
 }
 
-[data-blok-database-date-remind-menu], [data-blok-database-date-remind-menu][data-blok-top-layer][popover] {
+[data-blok-database-date-remind-menu], [data-blok-database-date-remind-menu][data-blok-top-layer][popover], [data-blok-database-date-setting-menu], [data-blok-database-date-setting-menu][data-blok-top-layer][popover] {
   display: flex;
   flex-direction: column;
   width: 250px;
@@ -8438,13 +8438,18 @@ textarea[data-blok-database-cell-input] {
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 }
 
-[@media (hover: hover)] [data-blok-database-date-remind]:hover, [data-blok-database-date-remind-option]:hover {
+[@media (hover: hover)] [data-blok-database-date-remind]:hover, [data-blok-database-date-setting]:hover, [data-blok-database-date-remind-option]:hover, [data-blok-database-date-setting-option]:hover {
   background-color: var(--blok-item-hover-bg);
 }
 
-[data-blok-database-date-remind-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+[data-blok-database-date-remind-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *), [data-blok-database-date-setting-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
   outline: none;
   background-color: var(--blok-item-focus-bg);
+}
+
+[data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
+  max-height: min(320px, calc(100vh - var(--blok-space-4)));
+  overflow-y: auto;
 }
 
 [data-blok-database-cell="date"][data-reminder] {

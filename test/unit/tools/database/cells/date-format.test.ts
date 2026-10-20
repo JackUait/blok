@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { formatShortDatePart, resolveHourCycle, resolveWeekStart, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+import { applyDateDisplayChange, formatShortDatePart, resolveHourCycle, resolveWeekStart, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
 
 describe('date-format', () => {
   beforeEach(() => {
@@ -61,6 +61,20 @@ describe('date-format', () => {
 
     it('writes a part with no time as the short month and day', () => {
       expect(formatShortDatePart('2026-10-20', 'en-US')).toBe('Oct 20');
+    });
+  });
+
+  describe('applyDateDisplayChange', () => {
+    it('keeps the other settings, the default reminder included', () => {
+      expect(applyDateDisplayChange({ timeZone: 'Asia/Tokyo', defaultReminder: '1_day_before' }, { dateFormat: 'relative' }))
+        .toEqual({ timeZone: 'Asia/Tokyo', defaultReminder: '1_day_before', dateFormat: 'relative' });
+    });
+
+    it('"Your time zone" removes the key rather than storing undefined', () => {
+      const next = applyDateDisplayChange({ timeZone: 'Asia/Tokyo', timeFormat: '24_hour' }, { timeZone: null });
+
+      expect(next).toEqual({ timeFormat: '24_hour' });
+      expect('timeZone' in next).toBe(false);
     });
   });
 });

@@ -2,6 +2,7 @@ import type { I18n } from '../../../types';
 import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import type { DatabaseRow, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from './types';
+import type { DateDisplayChange } from './cells/date-format';
 import { cellText, gridToClipboard, parseClipboard, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { isPlaceValue, placeText } from './tier3-values';
@@ -64,6 +65,8 @@ export interface GridCallbacks {
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property" footer. */
   editProperty?: (propertyId: string) => void;
+  /** The date picker's format rows write the property. Undefined (or none returned): the user may not edit it, no rows. */
+  dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
   /** Selection changed: the view repaints checkboxes and the selection bar. */
   selectionChanged: () => void;
   /** A paste or fill: cell writes, then new rows (property values by id). One undo step. */
@@ -250,6 +253,7 @@ export class DatabaseTableGrid {
     window.addEventListener('keydown', this.recordKey, true);
 
     const reminder = row.reminders?.[property.id]?.remind;
+    const onDateDisplayChange = property.type === 'date' ? this.callbacks.dateDisplayChanger?.(property.id) : undefined;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext,
       i18n: this.i18n,
@@ -261,6 +265,7 @@ export class DatabaseTableGrid {
         ? { onReminderChange: (next: DateReminderOffset | null) => this.commitReminder(ref, next) }
         : {}),
       ...(initialText !== undefined ? { initialText } : {}),
+      ...(onDateDisplayChange !== undefined ? { onDateDisplayChange } : {}),
       ...(this.callbacks.optionsChange !== undefined
         ? { onOptionsChange: (next: SelectOption[]) => this.callbacks.optionsChange?.(ref.propertyId, next) }
         : {}),

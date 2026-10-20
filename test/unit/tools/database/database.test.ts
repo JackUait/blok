@@ -5646,7 +5646,7 @@ describe('DatabaseTool', () => {
       type Toast = { message: string; actions?: Array<{ label: string; onClick: () => void }> };
       type Step = API['history'] extends { latestStep: () => infer S } ? NonNullable<S> : never;
 
-      const trashTool = (): { tool: DatabaseTool; element: HTMLElement; show: Mock<(options: unknown) => void>; history: { undo: Mock<() => void>; latestStep: Mock<() => Step | undefined>; undoStep: Mock<(step: Step) => boolean> }; deleteStep: Step } => {
+      const trashTool = (): { tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>; show: Mock<(options: unknown) => void>; history: { undo: Mock<() => void>; latestStep: Mock<() => Step | undefined>; undoStep: Mock<(step: Step) => boolean> }; deleteStep: Step } => {
         const rows = rowsWithDates();
         const { tool, element, options } = galleryTool({}, rows);
         const before = Object.freeze({}) as Step;
@@ -5664,7 +5664,7 @@ describe('DatabaseTool', () => {
         });
         Object.assign(options.api, { history });
 
-        return { tool, element, show: vi.mocked(options.api.notifier.show) as Mock<(options: unknown) => void>, history, deleteStep };
+        return { tool, element, options, show: vi.mocked(options.api.notifier.show) as Mock<(options: unknown) => void>, history, deleteStep };
       };
       const select = (element: HTMLElement, rowIds: string[]): void => {
         rowIds.forEach((rowId) => {
@@ -5706,6 +5706,20 @@ describe('DatabaseTool', () => {
         expect(trashToast(show)).toBeDefined();
         expect(history.undoStep).not.toHaveBeenCalled();
         expect(history.undo).not.toHaveBeenCalled();
+
+        tool.destroy();
+      });
+
+      it('Restore never undoes an older step when the delete did not add one', () => {
+        const { tool, element, show, history, options } = trashTool();
+
+        vi.mocked(options.api.blocks.delete).mockImplementation(async () => {});
+        select(element, ['row-1']);
+        pressDelete('Delete');
+        trashToast(show)?.actions?.[0].onClick();
+
+        expect(history.undoStep).not.toHaveBeenCalled();
+        expect(trashToast(show)).toBeDefined();
 
         tool.destroy();
       });

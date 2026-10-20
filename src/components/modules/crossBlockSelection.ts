@@ -1,6 +1,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { DATA_ATTR } from '../constants';
+import { Dom } from '../dom';
 import { clearCrossBlockHighlight, isCrossBlockHighlightSupported, isNativeCrossHostPaintTrusted, paintCrossBlockHighlight } from '../selection/cross-block-highlight';
 import {
   applySpanningSelection,
@@ -731,6 +732,17 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
+    const target = event.target instanceof Element ? event.target : null;
+    const toolPicksItems = event.shiftKey && target !== null && target.closest(`[${DATA_ATTR.selectionOwner}]`) !== null;
+
+    /**
+     * The tool reads this Shift-click as picking one of its items. No block
+     * range, and no native caret extend from the caret's block into the item.
+     */
+    if (toolPicksItems && target.closest(Dom.allInputsSelector) === null) {
+      event.preventDefault();
+    }
+
     /**
      * Cmd/Ctrl+Shift+Click (or Alt+Shift+Click) TOGGLES the clicked block in/out
      * of the current selection, allowing a non-contiguous set — Notion parity.
@@ -739,6 +751,7 @@ export class CrossBlockSelection extends Module {
      */
     if (
       event.shiftKey &&
+      !toolPicksItems &&
       (event.metaKey || event.ctrlKey || event.altKey) &&
       event.button === mouseButtons.LEFT &&
       UI.nodes.redactor.contains(event.target as Node) &&
@@ -762,6 +775,7 @@ export class CrossBlockSelection extends Module {
      */
     if (
       event.shiftKey &&
+      !toolPicksItems &&
       event.button === mouseButtons.LEFT &&
       UI.nodes.redactor.contains(event.target as Node)
     ) {

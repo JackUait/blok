@@ -147,6 +147,52 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
 
     expect(selected(el)).toEqual([]);
   });
+
+  describe('a lasso from the page margin (blok-lasso from core)', () => {
+    const at = (target: HTMLElement, left: number, top: number): void => {
+      vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({
+        left, top, right: left + 80, bottom: top + 20, width: 80, height: 20, x: left, y: top, toJSON: () => ({}),
+      });
+    };
+    const lasso = (el: HTMLElement, rect: { left: number; top: number; right: number; bottom: number } | null): CustomEvent => {
+      const event = new CustomEvent('blok-lasso', { cancelable: true, detail: { rect } });
+
+      el.querySelector('[data-blok-database-calendar-grid]')?.dispatchEvent(event);
+
+      return event;
+    };
+    const layOut = (el: HTMLElement): void => {
+      at(eventOf(el, 'delta'), 200, 100);
+      at(eventOf(el, 'bravo'), 200, 130);
+      at(eventOf(el, 'charlie'), 400, 100);
+    };
+
+    it('selects every event the band touches, across days, with no bulk bar', () => {
+      const { el } = buildTool(doc(), {}, calendarData());
+
+      layOut(el);
+      const event = lasso(el, { left: 0, top: 90, right: 410, bottom: 115 });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(selected(el).sort()).toEqual(['charlie', 'delta']);
+      expect(el.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+
+      lasso(el, { left: 0, top: 90, right: 410, bottom: 140 });
+      expect(selected(el).sort()).toEqual(['bravo', 'charlie', 'delta']);
+
+      lasso(el, null);
+      expect(selected(el)).toEqual([]);
+    });
+
+    it('read-only: leaves the band to core', () => {
+      const { el } = buildTool(doc(), {}, calendarData(), true);
+
+      layOut(el);
+
+      expect(lasso(el, { left: 0, top: 90, right: 410, bottom: 115 }).defaultPrevented).toBe(false);
+      expect(selected(el)).toEqual([]);
+    });
+  });
 });
 
 describe('DatabaseTool — calendar event comments (research/22 §11)', () => {

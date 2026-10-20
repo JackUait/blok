@@ -235,19 +235,51 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.openRow).not.toHaveBeenCalled();
     });
 
-    it('keeps a Shift-press on an event from the editor, whose Shift-click selects whole blocks', () => {
+    it('marks its grid as picking its own items, so core leaves a Shift-click on an event to it', () => {
       const { root } = mount();
-      const reached = vi.fn();
 
-      document.addEventListener('mousedown', reached);
-      const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true, shiftKey: true });
+      expect(events(root, 'r1')[0].closest('[data-blok-selection-owner]')).toBe(root.querySelector('[data-blok-database-calendar-grid]'));
+    });
 
-      events(root, 'r1')[0].dispatchEvent(press);
-      day(root, '2026-10-20').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, shiftKey: true }));
-      document.removeEventListener('mousedown', reached);
+    describe('a lasso core hands over (blok-lasso)', () => {
+      const lasso = (root: HTMLElement, band: { left: number; top: number; right: number; bottom: number } | null): CustomEvent => {
+        const event = new CustomEvent('blok-lasso', { cancelable: true, detail: { rect: band } });
 
-      expect(reached).toHaveBeenCalledTimes(1);
-      expect(press.defaultPrevented).toBe(true);
+        root.querySelector('[data-blok-database-calendar-grid]')?.dispatchEvent(event);
+
+        return event;
+      };
+
+      it('picks every event the band touches, across days, and takes the band', () => {
+        const lassoRows = vi.fn();
+        const { root } = mount({ handlers: { ...makeHandlers(), lassoRows } });
+
+        rect(events(root, 'r1')[0], 0, 0, 90, 20);
+        events(root, 'r2').forEach((el) => rect(el, 300, 100, 290, 20));
+
+        const event = lasso(root, { left: -50, top: 10, right: 320, bottom: 110 });
+
+        expect(lassoRows).toHaveBeenLastCalledWith(['r1', 'r2']);
+        expect(event.defaultPrevented).toBe(true);
+
+        lasso(root, { left: -50, top: 10, right: 50, bottom: 15 });
+        expect(lassoRows).toHaveBeenLastCalledWith(['r1']);
+      });
+
+      it('drops its picks when the band leaves for other blocks', () => {
+        const lassoRows = vi.fn();
+        const { root } = mount({ handlers: { ...makeHandlers(), lassoRows } });
+
+        lasso(root, null);
+
+        expect(lassoRows).toHaveBeenLastCalledWith([]);
+      });
+
+      it('leaves the band to core when read-only', () => {
+        const { root } = mount();
+
+        expect(lasso(root, { left: 0, top: 0, right: 500, bottom: 500 }).defaultPrevented).toBe(false);
+      });
     });
 
     it('shows a comment badge after the title, out of the tab order', () => {

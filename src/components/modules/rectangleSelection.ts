@@ -18,6 +18,21 @@ import { throttle } from '../utils';
 
 import { CELL_BLOCKS_SELECTOR, CHILD_TOOLBAR_SELECTOR } from './uiControllers/hovered-block-resolution';
 
+/** Fired on a {@link DATA_ATTR.selectionOwner} element; see its doc. */
+const LASSO_EVENT = 'blok-lasso';
+
+/** The band in client coordinates. */
+interface LassoRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+interface LassoDetail {
+  rect: LassoRect | null;
+}
+
 /**
  *
  */
@@ -128,6 +143,11 @@ export class RectangleSelection extends Module {
    * Listener identifiers
    */
   private listenerIds: string[] = [];
+
+  /**
+   * The item area that took the band on the last move, if any.
+   */
+  private lassoTaker: HTMLElement | null = null;
 
   /**
    * Module Preparation
@@ -260,6 +280,7 @@ export class RectangleSelection extends Module {
     this.startX = 0;
     this.startY = 0;
     this.stackOfSelected = [];
+    this.lassoTaker = null;
     if (this.overlayRectangle !== null) {
       this.overlayRectangle.style.display = 'none';
     }
@@ -914,6 +935,13 @@ export class RectangleSelection extends Module {
 
     const previousStack = new Set(this.stackIndices(indexes));
 
+    if (this.handBandToItems(expectedIndices, { left: rubberBandMinX, top: minY, right: rubberBandMaxX, bottom: maxY })) {
+      previousStack.forEach((index) => this.Blok.BlockSelection.unSelectBlockByIndex(index));
+      this.stackOfSelected = [];
+
+      return;
+    }
+
     // Deselect blocks no longer in range
     for (const prevIndex of previousStack) {
       if (!expectedIndices.has(prevIndex) && this.rectCrossesBlocks) {
@@ -932,6 +960,43 @@ export class RectangleSelection extends Module {
     this.stackOfSelected = Array.from(expectedIndices)
       .sort((a, b) => a - b)
       .map((index) => blocks[index]);
+  }
+
+  /**
+   * Offers the band to a block whose items take the lasso
+   * ({@link DATA_ATTR.selectionOwner}), when it is the only block crossed and
+   * the band reaches its item area. A taker that stops getting the band hears
+   * `rect: null` once.
+   * @param expectedIndices - the blocks the band would select
+   * @param band - the band in client coordinates
+   * @returns true when the tool took the band, so no block is selected
+   */
+  private handBandToItems(expectedIndices: Set<number>, band: LassoRect): boolean {
+    const [index] = expectedIndices;
+    const holder = expectedIndices.size === 1 ? this.Blok.BlockManager.blocks[index]?.holder : undefined;
+    const area = holder === undefined
+      ? undefined
+      : Array.from(holder.querySelectorAll<HTMLElement>(createSelector(DATA_ATTR.selectionOwner)))
+        .find((el) => el.closest(createSelector(DATA_ATTR.element)) === holder && this.bandReaches(el, band));
+    const taken = area !== undefined && !area.dispatchEvent(new CustomEvent<LassoDetail>(LASSO_EVENT, { cancelable: true, detail: { rect: band } }));
+
+    if (this.lassoTaker !== null && (!taken || this.lassoTaker !== area)) {
+      this.lassoTaker.dispatchEvent(new CustomEvent<LassoDetail>(LASSO_EVENT, { detail: { rect: null } }));
+    }
+    this.lassoTaker = taken ? area : null;
+
+    return taken;
+  }
+
+  /**
+   * Whether the band overlaps an element's box.
+   * @param el - the element
+   * @param band - the band in client coordinates
+   */
+  private bandReaches(el: HTMLElement, band: LassoRect): boolean {
+    const rect = el.getBoundingClientRect();
+
+    return rect.right > band.left && rect.left < band.right && rect.bottom > band.top && rect.top < band.bottom;
   }
 
   /**

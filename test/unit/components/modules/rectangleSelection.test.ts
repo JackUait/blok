@@ -3393,4 +3393,134 @@ describe('RectangleSelection', () => {
     expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(2);
   });
 
+  describe('a block whose items take the lasso (data-blok-selection-owner)', () => {
+    const rect = (left: number, top: number, right: number, bottom: number): DOMRect => ({
+      left, top, right, bottom, width: right - left, height: bottom - top, x: left, y: top, toJSON: () => ({}),
+    });
+
+    /** A paragraph at 0-50 and a database at 50-450 whose item area spans 100-450. */
+    const setup = (): {
+      internal: { trySelectNextBlock: () => void; stackOfSelected: BlockType[]; rectCrossesBlocks: boolean; startX: number; startY: number; mouseX: number; mouseY: number };
+      area: HTMLElement;
+      blockSelection: BlockSelectionModuleMock;
+    } => {
+      const { rectangleSelection, blockManager, blockSelection } = createRectangleSelection();
+      const block = (id: string, top: number, bottom: number): BlockType => {
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-element', '');
+        holder.getBoundingClientRect = () => rect(100, top, 700, bottom);
+        document.body.appendChild(holder);
+
+        return { id, name: id, holder, parentId: null, tool: { ownsChildren: false } } as unknown as BlockType;
+      };
+      const paragraph = block('paragraph', 0, 50);
+      const database = block('database', 50, 450);
+      const area = document.createElement('div');
+
+      area.setAttribute('data-blok-selection-owner', '');
+      area.getBoundingClientRect = () => rect(100, 100, 700, 450);
+      database.holder.appendChild(area);
+      blockManager.blocks.push(paragraph, database);
+
+      const internal = rectangleSelection as unknown as {
+        trySelectNextBlock: () => void; stackOfSelected: BlockType[]; rectCrossesBlocks: boolean; startX: number; startY: number; mouseX: number; mouseY: number;
+      };
+
+      internal.rectCrossesBlocks = true;
+      internal.startX = 50;
+      internal.startY = 120;
+
+      return { internal, area, blockSelection };
+    };
+
+    const takeLasso = (area: HTMLElement): Array<{ left: number; top: number; right: number; bottom: number } | null> => {
+      const seen: Array<{ left: number; top: number; right: number; bottom: number } | null> = [];
+
+      area.addEventListener('blok-lasso', (event) => {
+        if (event instanceof CustomEvent) {
+          event.preventDefault();
+          seen.push((event as CustomEvent<{ rect: { left: number; top: number; right: number; bottom: number } | null }>).detail.rect);
+        }
+      });
+
+      return seen;
+    };
+
+    it('hands the band to the tool, in client coordinates, and selects no block', () => {
+      const { internal, area, blockSelection } = setup();
+      const seen = takeLasso(area);
+
+      internal.mouseX = 300;
+      internal.mouseY = 200;
+      internal.trySelectNextBlock();
+
+      expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
+      expect(seen).toEqual([{ left: 50, top: 120, right: 300, bottom: 200 }]);
+      expect(internal.stackOfSelected).toEqual([]);
+    });
+
+    it('selects the block as before when nothing inside takes the band', () => {
+      const { internal, blockSelection } = setup();
+
+      internal.mouseX = 300;
+      internal.mouseY = 200;
+      internal.trySelectNextBlock();
+
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+    });
+
+    it('selects the block when the band misses the item area', () => {
+      const { internal, area, blockSelection } = setup();
+      const seen = takeLasso(area);
+
+      internal.startY = 60;
+      internal.mouseX = 300;
+      internal.mouseY = 90;
+      internal.trySelectNextBlock();
+
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+      expect(seen).toEqual([]);
+    });
+
+    it('does not hand a container\'s band to the item area of a block nested inside it', () => {
+      const { internal, area, blockSelection } = setup();
+      const nested = document.createElement('div');
+      const seen = takeLasso(area);
+
+      nested.setAttribute('data-blok-element', '');
+      area.replaceWith(nested);
+      nested.appendChild(area);
+
+      internal.mouseX = 300;
+      internal.mouseY = 200;
+      internal.trySelectNextBlock();
+
+      expect(seen).toEqual([]);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+    });
+
+    it('takes the band back once it also crosses another block, then hands it over again', () => {
+      const { internal, area, blockSelection } = setup();
+      const seen = takeLasso(area);
+
+      internal.mouseX = 300;
+      internal.mouseY = 200;
+      internal.trySelectNextBlock();
+      internal.mouseY = 20;
+      internal.trySelectNextBlock();
+
+      expect(seen).toEqual([{ left: 50, top: 120, right: 300, bottom: 200 }, null]);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+
+      internal.mouseY = 200;
+      internal.trySelectNextBlock();
+
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(0);
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
+      expect(seen.at(-1)).toEqual({ left: 50, top: 120, right: 300, bottom: 200 });
+      expect(internal.stackOfSelected).toEqual([]);
+    });
+  });
 });

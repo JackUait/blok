@@ -492,6 +492,12 @@ describe('DatabaseGalleryView', () => {
       expect(root.hasAttribute('data-blok-keyboard-owner')).toBe(true);
     });
 
+    it('picks its own cards, so core leaves a Shift-click on a card to it', () => {
+      const { root } = mountSelectable();
+
+      expect(root.hasAttribute('data-blok-selection-owner')).toBe(true);
+    });
+
     it('ArrowDown with nothing selected selects the first card; Down and Up move one card in reading order and stop at the ends', () => {
       const { root } = mountSelectable();
 

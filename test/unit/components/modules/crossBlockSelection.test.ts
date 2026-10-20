@@ -588,6 +588,65 @@ describe('CrossBlockSelection', () => {
       expect(watchSpy).toHaveBeenCalledWith(event);
       expect(blocks[1].selected).toBe(false);
     });
+
+    describe('inside a tool that selects its own items (data-blok-selection-owner)', () => {
+      const ownedItem = (): HTMLElement => {
+        const area = document.createElement('div');
+        const card = document.createElement('div');
+
+        area.setAttribute('data-blok-selection-owner', '');
+        area.appendChild(card);
+        blocks[2].holder.appendChild(area);
+
+        return card;
+      };
+
+      it('a Shift-click selects no block range and keeps the caret from extending', () => {
+        const preventDefault = vi.fn();
+        const event = {
+          button: _.mouseButtons.LEFT,
+          shiftKey: true,
+          target: ownedItem(),
+          preventDefault,
+        } as unknown as MouseEvent;
+
+        enableCrossBlockSelection.call(crossBlockSelection, event);
+
+        expect(blocks.map((block) => block.selected)).toEqual([false, false, false, false]);
+        expect(preventDefault).toHaveBeenCalled();
+      });
+
+      it('a Cmd+Shift-click toggles no block either', () => {
+        const event = {
+          button: _.mouseButtons.LEFT,
+          shiftKey: true,
+          metaKey: true,
+          target: ownedItem(),
+          preventDefault: vi.fn(),
+        } as unknown as MouseEvent;
+
+        enableCrossBlockSelection.call(crossBlockSelection, event);
+
+        expect(blocks.map((block) => block.selected)).toEqual([false, false, false, false]);
+      });
+
+      it('a Shift-press in a field inside keeps its native selection', () => {
+        const input = document.createElement('input');
+
+        ownedItem().appendChild(input);
+        const preventDefault = vi.fn();
+
+        enableCrossBlockSelection.call(crossBlockSelection, {
+          button: _.mouseButtons.LEFT,
+          shiftKey: true,
+          target: input,
+          preventDefault,
+        } as unknown as MouseEvent);
+
+        expect(blocks[2].selected).toBe(false);
+        expect(preventDefault).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('Cmd/Ctrl/Alt + Shift + Click non-contiguous toggle', () => {

@@ -37,6 +37,8 @@ export interface CalendarHandlers {
   navigate: (anchor: string, focusDay?: string) => void;
   /** Shift-click: select the event without opening it. Absent when read-only. */
   pickRow?: (rowId: string) => void;
+  /** A margin lasso across the grid: these events become the selection. Absent when read-only. */
+  lassoRows?: (rowIds: string[]) => void;
 }
 
 export interface DatabaseCalendarViewOptions {
@@ -140,7 +142,6 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeyDown);
     root.addEventListener('pointerdown', this.onPointerDown);
-    root.addEventListener('mousedown', this.onMouseDown);
 
     if (this.options.focusDay !== undefined) {
       const focusDay = this.options.focusDay;
@@ -268,6 +269,9 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     grid.setAttribute('data-blok-database-calendar-grid', '');
     grid.setAttribute('role', 'grid');
     grid.setAttribute('data-blok-keyboard-owner', '');
+    // Core leaves Shift-click inside to pickRow and hands a margin lasso to onLasso.
+    grid.setAttribute('data-blok-selection-owner', '');
+    grid.addEventListener('blok-lasso', this.onLasso);
     grid.setAttribute('aria-label', this.t('tools.database.calendarLabel'));
     if (this.options.readOnly) {
       grid.setAttribute('aria-readonly', 'true');
@@ -529,12 +533,29 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     handlers.openRow(rowId);
   };
 
-  /** Core's document mousedown turns a Shift-click into a block range, which would select this whole database. */
-  private readonly onMouseDown = (event: MouseEvent): void => {
-    if (event.shiftKey && event.target instanceof Element && event.target.closest('[data-blok-database-calendar-event]') !== null) {
-      event.preventDefault();
-      event.stopPropagation();
+  /** research/22 §1: a lasso from the page margin picks every event it touches. */
+  private readonly onLasso = (event: Event): void => {
+    const lassoRows = this.options.handlers?.lassoRows;
+
+    if (!(event instanceof CustomEvent) || lassoRows === undefined) {
+      return;
     }
+    const detail: unknown = event.detail;
+    const band = typeof detail === 'object' && detail !== null && 'rect' in detail ? detail.rect : null;
+    const touched = new Set<string>();
+
+    if (isBand(band)) {
+      this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-event]').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const rowId = el.getAttribute('data-row-id');
+
+        if (rowId !== null && r.right > band.left && r.left < band.right && r.bottom > band.top && r.top < band.bottom) {
+          touched.add(rowId);
+        }
+      });
+      event.preventDefault();
+    }
+    lassoRows([...touched]);
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -826,3 +847,6 @@ const weekendSkip = (day: string, direction: number): number => {
 
   return ahead.findIndex((d) => !isWeekend(d)) + 1;
 };
+
+const isBand = (value: unknown): value is { left: number; top: number; right: number; bottom: number } =>
+  typeof value === 'object' && value !== null && 'left' in value && 'top' in value && 'right' in value && 'bottom' in value;

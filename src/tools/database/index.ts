@@ -4254,7 +4254,10 @@ export class DatabaseTool implements BlockTool {
       ...(focusDay !== undefined ? { focusDay } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
-        ...(this.readOnly || dateId === undefined ? {} : { pickRow: (rowId: string) => this.pickCalendarEvent(rowId, dateId) }),
+        ...(this.readOnly || dateId === undefined ? {} : {
+          pickRow: (rowId: string) => this.pickCalendarEvent(rowId, dateId),
+          lassoRows: (rowIds: string[]) => this.selectRows(rowIds),
+        }),
         addRow: (day) => {
           if (dateId !== undefined) {
             this.addCalendarRow(dateId, day);
@@ -8100,7 +8103,7 @@ export class DatabaseTool implements BlockTool {
     this.pickRow(rowId, false, []);
   }
 
-  /** Gallery arrow keys: the selection becomes exactly these rows. */
+  /** Gallery arrow keys and the calendar lasso: the selection becomes exactly these rows. */
   private selectRows(rowIds: string[]): void {
     this.rowSelection.clear();
     rowIds.forEach((id) => this.rowSelection.add(id));

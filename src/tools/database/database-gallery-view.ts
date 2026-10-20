@@ -141,6 +141,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       // Holds focus while the arrows select cards; core keys stand down inside.
       root.tabIndex = -1;
       root.setAttribute('data-blok-keyboard-owner', '');
+      // Core leaves a Shift-click on a card to pickRow, not a block range.
+      root.setAttribute('data-blok-selection-owner', '');
     }
     this.root = root;
 

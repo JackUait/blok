@@ -374,6 +374,15 @@ export const DATA_ATTR: {
    *  and link-click navigation stand down inside it. For a link the tool opens
    *  and previews itself (the page block). Public authoring hook. */
   readonly linkOwner: 'data-blok-link-owner';
+  /** Marks a subtree whose items the tool selects itself (cards, events).
+   *  A Shift-click inside it is not a block range. A lasso from the page
+   *  margin that crosses only this block and reaches the subtree fires a
+   *  cancelable `blok-lasso` CustomEvent on it, with `detail.rect` the band
+   *  in client coordinates `{ left, top, right, bottom }`. If the tool calls
+   *  preventDefault, the block is not selected; otherwise it is, as before.
+   *  `detail.rect` is null once the band grows past the block again.
+   *  Public authoring hook. */
+  readonly selectionOwner: 'data-blok-selection-owner';
 
   // Navigation
 

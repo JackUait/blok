@@ -99,7 +99,11 @@ export interface AgentModelMessage {
 /** How hard the model thinks. Each adapter maps it to its provider's setting. */
 export type AgentThinkingLevel = 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
-/** Progress of one tool call while the model streams. `index` counts calls within one model response. */
+/**
+ * Progress of one tool call while the model streams. `index` counts tool calls from 0 within one model response.
+ * A call runs at its `tool_end`, so the final response must carry the same calls in the same order,
+ * with the same ids and final input. A call is matched by id, then by index and name, so it never runs twice.
+ */
 export type AgentModelStreamEvent =
   | { type: 'tool_start'; index: number; id: string; name: string }
   | { type: 'tool_input'; index: number; json: string } // all input text so far for this call

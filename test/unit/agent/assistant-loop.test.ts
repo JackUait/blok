@@ -506,6 +506,75 @@ describe('runAssistantLoop', () => {
       });
     });
 
+    it('does not run an early call twice when the final reply gives it a different id', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok('{"applied":1}'));
+      const model = streaming(
+        [...streamOf(0, 'stream-1', 'blok_read', {}), ...streamOf(1, 'stream-2', 'blok_execute', insert)],
+        reply([
+          { type: 'text', text: 'Working' },
+          { type: 'tool_use', id: 'final-1', name: 'blok_read', input: {} },
+          { type: 'tool_use', id: 'final-2', name: 'blok_execute', input: insert },
+        ], 'tool_use')
+      );
+      const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+      const run = runAssistantLoop({
+        model: thenScripted(model, reply([{ type: 'text', text: 'Done' }], 'end_turn')),
+        system: '', tools: [], messages, call, signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(2));
+      model.open();
+      await run;
+
+      expect(call).toHaveBeenCalledTimes(2);
+      expect(messages[2]).toEqual({
+        role: 'user',
+        content: [
+          { type: 'tool_result', tool_use_id: 'final-1', content: '{"applied":1}', is_error: false },
+          { type: 'tool_result', tool_use_id: 'final-2', content: '{"applied":1}', is_error: false },
+        ],
+      });
+    });
+
+    it('runs a final call whose stream index holds a call of another name', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok());
+      const model = streaming(
+        streamOf(0, 'stream-1', 'blok_read', {}),
+        reply([{ type: 'tool_use', id: 'final-1', name: 'blok_execute', input: insert }], 'tool_use')
+      );
+      const run = runAssistantLoop({
+        model: thenScripted(model, reply([{ type: 'text', text: 'Done' }], 'end_turn')),
+        system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      model.open();
+      await run;
+
+      expect(call.mock.calls).toEqual([['blok_read', {}], ['blok_execute', insert]]);
+    });
+
+    it('answers an early call by stream index on max_tokens when the final id differs', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok('{"applied":1}'));
+      const model = streaming(
+        streamOf(0, 'stream-1', 'blok_execute', insert),
+        reply([{ type: 'tool_use', id: 'final-1', name: 'blok_execute', input: insert }], 'max_tokens')
+      );
+      const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages, call, signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+      model.open();
+      await run;
+
+      expect(messages.at(-1)).toEqual({
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 'final-1', content: '{"applied":1}', is_error: false }],
+      });
+    });
+
     it('runs a call whose streamed JSON does not parse only from the final response', async () => {
       const call = vi.fn(async (_name: string, _input: unknown) => ok());
       const model = streaming(

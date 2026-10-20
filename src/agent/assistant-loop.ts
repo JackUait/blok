@@ -68,8 +68,35 @@ const report = (options: AssistantLoopOptions, activity: string, input?: unknown
   }
 };
 
-/** Tool id → the call started from the stream. Null when the user stopped the run before its turn came. */
-type Early = Map<string, Promise<AgentToolResult | null>>;
+type Started = Promise<AgentToolResult | null>;
+
+/** Calls started from the stream. Null when the user stopped the run before its turn came. */
+type Early = {
+  byId: Map<string, Started>;
+  /** Stream index → call, for a final reply that renames the ids. */
+  byIndex: Map<number, { id: string; name: string; run: Started }>;
+};
+
+/**
+ * The early call behind the `position`-th tool_use of the final reply.
+ * Falls back to the stream index + name when the ids differ, so a call never runs twice.
+ */
+const earlyOf = (early: Early, uses: ToolUse[], position: number): Started | undefined => {
+  const use = uses[position];
+  const byId = early.byId.get(use.id);
+
+  if (byId !== undefined) {
+    return byId;
+  }
+
+  const byIndex = early.byIndex.get(position);
+
+  if (byIndex === undefined || byIndex.name !== use.name || uses.some((other) => other.id === byIndex.id)) {
+    return undefined;
+  }
+
+  return byIndex.run;
+};
 
 const runCall = async (options: AssistantLoopOptions, id: string, name: string, input: unknown): Promise<AgentToolResult> => {
   const result = await options.call(name, input);
@@ -97,7 +124,7 @@ const parse = (json: string): { ok: true; value: unknown } | { ok: false } => {
  */
 const streamStep = (options: AssistantLoopOptions): { early: Early; handle(event: AgentModelStreamEvent): void; close(): void } => {
   const open = new Map<number, { id: string; name: string; json: string }>();
-  const early: Early = new Map();
+  const early: Early = { byId: new Map(), byIndex: new Map() };
   const state: { chain: Promise<unknown>; ordered: boolean; closed: boolean } = { chain: Promise.resolve(), ordered: true, closed: false };
 
   const end = (index: number): void => {
@@ -118,7 +145,7 @@ const streamStep = (options: AssistantLoopOptions): { early: Early; handle(event
 
       return;
     }
-    if (!state.ordered || options.signal.aborted || early.has(entry.id)) {
+    if (!state.ordered || options.signal.aborted || early.byId.has(entry.id)) {
       return;
     }
 
@@ -129,7 +156,8 @@ const streamStep = (options: AssistantLoopOptions): { early: Early; handle(event
     // Read later by answerAll; this only keeps an early throw from being reported as unhandled.
     run.catch(() => undefined);
     state.chain = run;
-    early.set(entry.id, run);
+    early.byId.set(entry.id, run);
+    early.byIndex.set(index, { id: entry.id, name: entry.name, run });
   };
 
   const own = (event: AgentModelStreamEvent): void => {
@@ -169,8 +197,9 @@ const streamStep = (options: AssistantLoopOptions): { early: Early; handle(event
 };
 
 /** A call that started early keeps its real result, even after a stop. */
-const outcomeOf = (use: ToolUse, options: AssistantLoopOptions, early: Early): Promise<AgentToolResult | null> => {
-  const started = early.get(use.id);
+const outcomeOf = (uses: ToolUse[], position: number, options: AssistantLoopOptions, early: Early): Promise<AgentToolResult | null> => {
+  const use = uses[position];
+  const started = earlyOf(early, uses, position);
 
   if (started !== undefined) {
     return started;
@@ -190,7 +219,7 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions, early: 
 
   for (const [index, use] of uses.entries()) {
     try {
-      const outcome = await outcomeOf(use, options, early);
+      const outcome = await outcomeOf(uses, index, options, early);
 
       results.push(outcome === null
         ? unanswered(use, 'The user stopped the run.')
@@ -210,8 +239,9 @@ const answerAll = async (uses: ToolUse[], options: AssistantLoopOptions, early: 
 type Step = { next: 'continue'; reply: string } | { next: 'return'; result: AssistantLoopResult };
 
 /** On max_tokens, a call that already ran early is answered with its real result. */
-const cutOff = async (use: ToolUse, early: Early): Promise<AgentModelContentBlock> => {
-  const started = early.get(use.id);
+const cutOff = async (uses: ToolUse[], position: number, early: Early): Promise<AgentModelContentBlock> => {
+  const use = uses[position];
+  const started = earlyOf(early, uses, position);
 
   try {
     const outcome = started === undefined ? null : await started;
@@ -260,7 +290,7 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
 
   stream.close();
   // The run may return below; no early edit may still be applying then.
-  await Promise.allSettled(stream.early.values());
+  await Promise.allSettled(stream.early.byId.values());
 
   if (signal.aborted) {
     return finish('stopped');
@@ -288,7 +318,7 @@ const runStep = async (options: AssistantLoopOptions, previousReply: string): Pr
 
   if (stop === 'max_tokens') {
     if (uses.length > 0) {
-      messages.push({ role: 'user', content: await Promise.all(uses.map((use) => cutOff(use, stream.early))) });
+      messages.push({ role: 'user', content: await Promise.all(uses.map((_use, position) => cutOff(uses, position, stream.early))) });
     }
 
     return finish('truncated');

@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "ສີຕາມເງື່ອນໄຂ",
   "tools.database.settingsCopyLink": "ສຳເນົາລິ້ງໄປຫາມຸມມອງ",
   "tools.database.settingsLockDatabase": "ລັອກຖານຂໍ້ມູນ",
+  "tools.database.manageInCalendar": "ຈັດການໃນປະຕິທິນ",
   "tools.database.settingsLockViews": "ລັອກມຸມມອງ",
   "tools.database.settingsNone": "ບໍ່ມີ",
   "tools.database.settingsWrapAll": "ຕັດແຖວເນື້ອຫາທັງໝົດ",

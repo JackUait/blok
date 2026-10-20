@@ -1,4 +1,4 @@
-import { IconCopy, IconCross, IconDatabase, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
+import { IconCalendar, IconCopy, IconCross, IconDatabase, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -109,6 +109,8 @@ export interface ViewSettingsContext {
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
+  /** The host's "Manage in Calendar" (`config.calendar`). Without it there is no such row. */
+  manageInCalendar?: { label: string; onClick: () => void };
   /** The groups of the view's grouping (`sub` for the board's sub-grouping). */
   groups: (sub: boolean) => ViewGroupEntry[];
   /** People the host lists, for person filters. */
@@ -405,6 +407,8 @@ export class ViewSettingsPages {
             },
           }));
         }
+        const manageInCalendar = this.ctx.manageInCalendar;
+
         rows.push(
           panelRow({ label: this.t('settingsCopyLink'), testId: 'database-settings-copy-link', icon: IconLink, onClick: () => this.ctx.copyViewLink() }),
           panelSeparator(),
@@ -417,6 +421,16 @@ export class ViewSettingsPages {
               panel.refresh();
             },
           }),
+          ...(manageInCalendar === undefined ? [] : [panelRow({
+            label: manageInCalendar.label,
+            testId: 'database-settings-manage-calendar',
+            icon: IconCalendar,
+            external: true,
+            onClick: () => {
+              panel.close();
+              manageInCalendar.onClick();
+            },
+          })]),
           panelRow({
             label: this.t('duplicateView'),
             testId: 'database-settings-duplicate',

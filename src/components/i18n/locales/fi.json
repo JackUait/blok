@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Ehdollinen väri",
   "tools.database.settingsCopyLink": "Kopioi linkki näkymään",
   "tools.database.settingsLockDatabase": "Lukitse tietokanta",
+  "tools.database.manageInCalendar": "Hallitse kalenterissa",
   "tools.database.settingsLockViews": "Lukitse näkymät",
   "tools.database.settingsNone": "Ei mitään",
   "tools.database.settingsWrapAll": "Rivitä kaikki sisältö",

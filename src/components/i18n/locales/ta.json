@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "நிபந்தனை வண்ணம்",
   "tools.database.settingsCopyLink": "காட்சிக்கான இணைப்பை நகலெடு",
   "tools.database.settingsLockDatabase": "தரவுத்தளத்தைப் பூட்டு",
+  "tools.database.manageInCalendar": "நாட்காட்டியில் நிர்வகி",
   "tools.database.settingsLockViews": "காட்சிகளைப் பூட்டு",
   "tools.database.settingsNone": "எதுவுமில்லை",
   "tools.database.settingsWrapAll": "எல்லா உள்ளடக்கத்தையும் மடக்கு",

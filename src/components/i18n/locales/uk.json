@@ -1111,6 +1111,7 @@
   "tools.database.settingsConditionalColor": "Умовний колір",
   "tools.database.settingsCopyLink": "Копіювати посилання на подання",
   "tools.database.settingsLockDatabase": "Заблокувати базу даних",
+  "tools.database.manageInCalendar": "Керувати в Календарі",
   "tools.database.settingsLockViews": "Заблокувати подання",
   "tools.database.settingsNone": "Немає",
   "tools.database.settingsWrapAll": "Переносити весь вміст",

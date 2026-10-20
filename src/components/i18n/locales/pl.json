@@ -1111,6 +1111,7 @@
   "tools.database.settingsConditionalColor": "Kolor warunkowy",
   "tools.database.settingsCopyLink": "Kopiuj link do widoku",
   "tools.database.settingsLockDatabase": "Zablokuj bazę danych",
+  "tools.database.manageInCalendar": "Zarządzaj w Kalendarzu",
   "tools.database.settingsLockViews": "Zablokuj widoki",
   "tools.database.settingsNone": "Brak",
   "tools.database.settingsWrapAll": "Zawijaj całą zawartość",

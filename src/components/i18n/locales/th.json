@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "สีตามเงื่อนไข",
   "tools.database.settingsCopyLink": "คัดลอกลิงก์ไปยังมุมมอง",
   "tools.database.settingsLockDatabase": "ล็อกฐานข้อมูล",
+  "tools.database.manageInCalendar": "จัดการในปฏิทิน",
   "tools.database.settingsLockViews": "ล็อกมุมมอง",
   "tools.database.settingsNone": "ไม่มี",
   "tools.database.settingsWrapAll": "ตัดบรรทัดเนื้อหาทั้งหมด",

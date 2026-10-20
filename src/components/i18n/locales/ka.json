@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "პირობითი ფერი",
   "tools.database.settingsCopyLink": "ხედის ბმულის კოპირება",
   "tools.database.settingsLockDatabase": "მონაცემთა ბაზის დაბლოკვა",
+  "tools.database.manageInCalendar": "კალენდარში მართვა",
   "tools.database.settingsLockViews": "ხედების დაბლოკვა",
   "tools.database.settingsNone": "არცერთი",
   "tools.database.settingsWrapAll": "მთელი შიგთავსის გადატანა",

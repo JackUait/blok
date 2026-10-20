@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "സോപാധിക നിറം",
   "tools.database.settingsCopyLink": "കാഴ്ചയുടെ ലിങ്ക് പകർത്തുക",
   "tools.database.settingsLockDatabase": "ഡാറ്റാബേസ് ലോക്ക് ചെയ്യുക",
+  "tools.database.manageInCalendar": "കലണ്ടറിൽ നിയന്ത്രിക്കുക",
   "tools.database.settingsLockViews": "കാഴ്ചകൾ ലോക്ക് ചെയ്യുക",
   "tools.database.settingsNone": "ഒന്നുമില്ല",
   "tools.database.settingsWrapAll": "എല്ലാ ഉള്ളടക്കവും പൊതിയുക",

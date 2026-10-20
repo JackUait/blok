@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Bedingte Farbe",
   "tools.database.settingsCopyLink": "Link zur Ansicht kopieren",
   "tools.database.settingsLockDatabase": "Datenbank sperren",
+  "tools.database.manageInCalendar": "Im Kalender verwalten",
   "tools.database.settingsLockViews": "Ansichten sperren",
   "tools.database.settingsNone": "Keine",
   "tools.database.settingsWrapAll": "Gesamten Inhalt umbrechen",

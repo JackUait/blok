@@ -1111,6 +1111,7 @@
   "tools.database.settingsConditionalColor": "Sąlyginė spalva",
   "tools.database.settingsCopyLink": "Kopijuoti rodinio nuorodą",
   "tools.database.settingsLockDatabase": "Užrakinti duomenų bazę",
+  "tools.database.manageInCalendar": "Tvarkyti kalendoriuje",
   "tools.database.settingsLockViews": "Užrakinti rodinius",
   "tools.database.settingsNone": "Nėra",
   "tools.database.settingsWrapAll": "Laužyti visą turinį",

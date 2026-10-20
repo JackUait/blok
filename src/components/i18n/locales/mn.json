@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Нөхцөлт өнгө",
   "tools.database.settingsCopyLink": "Харагдацын холбоос хуулах",
   "tools.database.settingsLockDatabase": "Мэдээллийн санг түгжих",
+  "tools.database.manageInCalendar": "Хуанлид удирдах",
   "tools.database.settingsLockViews": "Харагдацуудыг түгжих",
   "tools.database.settingsNone": "Байхгүй",
   "tools.database.settingsWrapAll": "Бүх агуулгын мөр шилжүүлэх",

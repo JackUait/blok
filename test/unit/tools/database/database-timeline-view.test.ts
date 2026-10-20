@@ -314,6 +314,24 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.navigate).toHaveBeenCalledWith(CENTER);
     });
 
+    it('shows "Manage in Calendar" before the zoom when the host gives it, and calls it on click (research/26 §4d)', () => {
+      const manage = vi.fn();
+      const { root } = mount({ readOnly: true, handlers: undefined, manageInCalendar: { label: 'Manage in Calendar', onClick: manage } });
+      const button = root.querySelector<HTMLElement>('[data-blok-database-timeline-manage-calendar]');
+
+      expect(button?.textContent?.trim()).toBe('Manage in Calendar');
+      expect(button?.querySelector('svg')).not.toBeNull();
+      expect(button?.nextElementSibling?.hasAttribute('data-blok-database-timeline-zoom')).toBe(true);
+      button?.click();
+      expect(manage).toHaveBeenCalledTimes(1);
+    });
+
+    it('has no "Manage in Calendar" without the host lever', () => {
+      const { root } = mount();
+
+      expect(root.querySelector('[data-blok-database-timeline-manage-calendar]')).toBeNull();
+    });
+
     it('adds a row from "+ New"', () => {
       const { root, handlers } = mount();
 

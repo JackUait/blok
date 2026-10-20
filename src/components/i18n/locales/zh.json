@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "条件颜色",
   "tools.database.settingsCopyLink": "复制视图链接",
   "tools.database.settingsLockDatabase": "锁定数据库",
+  "tools.database.manageInCalendar": "在日历中管理",
   "tools.database.settingsLockViews": "锁定视图",
   "tools.database.settingsNone": "无",
   "tools.database.settingsWrapAll": "所有内容自动换行",

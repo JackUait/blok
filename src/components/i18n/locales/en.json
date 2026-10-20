@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Conditional color",
   "tools.database.settingsCopyLink": "Copy link to view",
   "tools.database.settingsLockDatabase": "Lock database",
+  "tools.database.manageInCalendar": "Manage in Calendar",
   "tools.database.settingsLockViews": "Lock views",
   "tools.database.settingsNone": "None",
   "tools.database.settingsWrapAll": "Wrap all content",

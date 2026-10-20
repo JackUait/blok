@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "条件付きカラー",
   "tools.database.settingsCopyLink": "ビューへのリンクをコピー",
   "tools.database.settingsLockDatabase": "データベースをロック",
+  "tools.database.manageInCalendar": "カレンダーで管理",
   "tools.database.settingsLockViews": "ビューをロック",
   "tools.database.settingsNone": "なし",
   "tools.database.settingsWrapAll": "すべての内容を折り返す",

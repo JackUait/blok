@@ -34,7 +34,7 @@ import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
-import { IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
 export interface TimelineGroup {
   /** '' when the timeline is not grouped. */
@@ -94,6 +94,8 @@ export interface DatabaseTimelineViewOptions {
   depthOf?: (rowId: string) => number;
   /** Comment counts. Only the table panel rows show a badge; bars never do (research/22 §11). */
   commentBadges?: CommentBadges;
+  /** The host's "Manage in Calendar" (`config.calendar`), a toolbar button. Read-only keeps it. */
+  manageInCalendar?: { label: string; onClick: () => void };
 }
 
 const DRAG_THRESHOLD = 4;
@@ -279,7 +281,22 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     today.type = 'button';
     today.setAttribute('data-blok-database-timeline-today', '');
     today.textContent = this.t('tools.database.timelineToday');
-    bar.append(toggle, spacer, zoom, today);
+    bar.append(toggle, spacer);
+
+    const calendar = this.options.manageInCalendar;
+
+    if (calendar !== undefined) {
+      const manage = document.createElement('button');
+
+      manage.type = 'button';
+      manage.setAttribute('data-blok-database-timeline-manage-calendar', '');
+      manage.innerHTML = IconCalendar;
+      manage.append(calendar.label);
+      // Its own listener: the root's click handling needs edit handlers, and read-only has none.
+      manage.addEventListener('click', () => calendar.onClick());
+      bar.append(manage);
+    }
+    bar.append(zoom, today);
 
     return bar;
   }

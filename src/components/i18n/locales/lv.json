@@ -1109,6 +1109,7 @@
   "tools.database.settingsConditionalColor": "Nosacījuma krāsa",
   "tools.database.settingsCopyLink": "Kopēt saiti uz skatu",
   "tools.database.settingsLockDatabase": "Bloķēt datu bāzi",
+  "tools.database.manageInCalendar": "Pārvaldīt kalendārā",
   "tools.database.settingsLockViews": "Bloķēt skatus",
   "tools.database.settingsNone": "Nav",
   "tools.database.settingsWrapAll": "Aplauzt visu saturu",

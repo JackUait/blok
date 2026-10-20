@@ -6992,10 +6992,16 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-panel-icon],
 [data-blok-database-panel-chevron],
+[data-blok-database-panel-external],
 [data-blok-database-panel-check] {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--blok-database-table-header-icon);
+}
+
+/* research/26 §3d: the "leaves this app" arrow is lighter than a chevron. */
+[data-blok-database-panel-external] {
+  color: var(--blok-database-table-gutter-icon);
 }
 
 /* A chosen row: a checkmark in primary ink, never a fill (no-blue law). */
@@ -7005,6 +7011,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-panel-icon] svg,
 [data-blok-database-panel-chevron] svg,
+[data-blok-database-panel-external] svg,
 [data-blok-database-panel-check] svg {
   width: 16px;
   height: 16px;
@@ -7830,6 +7837,13 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-timeline-new],
 [data-blok-database-timeline-load-more] {
   color: var(--blok-database-timeline-control-text);
+}
+
+/* research/26 §4d: bordered, 6px gap, label weight 500. */
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar] {
+  gap: var(--blok-space-1-5);
+  border: 1px solid var(--blok-database-table-control-border);
+  font-weight: 500;
 }
 
 [data-blok-database-timeline-toolbar] button:hover,

@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Χρώμα υπό όρους",
   "tools.database.settingsCopyLink": "Αντιγραφή συνδέσμου προβολής",
   "tools.database.settingsLockDatabase": "Κλείδωμα βάσης δεδομένων",
+  "tools.database.manageInCalendar": "Διαχείριση στο Ημερολόγιο",
   "tools.database.settingsLockViews": "Κλείδωμα προβολών",
   "tools.database.settingsNone": "Κανένα",
   "tools.database.settingsWrapAll": "Αναδίπλωση όλου του περιεχομένου",

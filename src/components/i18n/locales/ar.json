@@ -1115,6 +1115,7 @@
   "tools.database.settingsConditionalColor": "تلوين شرطي",
   "tools.database.settingsCopyLink": "نسخ رابط العرض",
   "tools.database.settingsLockDatabase": "قفل قاعدة البيانات",
+  "tools.database.manageInCalendar": "الإدارة في التقويم",
   "tools.database.settingsLockViews": "قفل العروض",
   "tools.database.settingsNone": "بلا",
   "tools.database.settingsWrapAll": "التفاف كل المحتوى",

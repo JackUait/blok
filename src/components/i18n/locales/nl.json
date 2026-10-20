@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Voorwaardelijke kleur",
   "tools.database.settingsCopyLink": "Link naar weergave kopiëren",
   "tools.database.settingsLockDatabase": "Database vergrendelen",
+  "tools.database.manageInCalendar": "Beheren in Agenda",
   "tools.database.settingsLockViews": "Weergaven vergrendelen",
   "tools.database.settingsNone": "Geen",
   "tools.database.settingsWrapAll": "Alle inhoud laten teruglopen",

@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Koşullu renk",
   "tools.database.settingsCopyLink": "Görünüm bağlantısını kopyala",
   "tools.database.settingsLockDatabase": "Veritabanını kilitle",
+  "tools.database.manageInCalendar": "Takvim'de yönet",
   "tools.database.settingsLockViews": "Görünümleri kilitle",
   "tools.database.settingsNone": "Yok",
   "tools.database.settingsWrapAll": "Tüm içeriği kaydır",

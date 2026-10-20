@@ -1109,6 +1109,7 @@
   "tools.database.settingsConditionalColor": "Couleur conditionnelle",
   "tools.database.settingsCopyLink": "Copier le lien vers la vue",
   "tools.database.settingsLockDatabase": "Verrouiller la base de données",
+  "tools.database.manageInCalendar": "Gérer dans Agenda",
   "tools.database.settingsLockViews": "Verrouiller les vues",
   "tools.database.settingsNone": "Aucun",
   "tools.database.settingsWrapAll": "Renvoyer tout le contenu à la ligne",

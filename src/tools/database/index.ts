@@ -1343,6 +1343,20 @@ export class DatabaseTool implements BlockTool {
     };
   }
 
+  /** "Manage in Calendar" for one view. It changes no document, so read-only gets it too. */
+  private calendarLever(databaseId: string, viewId: string): { manageInCalendar?: { label: string; onClick: () => void } } {
+    const calendar = this.config.calendar;
+
+    if (calendar === undefined) return {};
+
+    return {
+      manageInCalendar: {
+        label: calendar.label ?? this.api.i18n.t('tools.database.manageInCalendar'),
+        onClick: () => calendar.manage({ databaseId, viewId }),
+      },
+    };
+  }
+
   /**
    * The row menu's Add to Favorites, asked fresh on each open. It changes no
    * document, so read-only gets it too. A throw counts as not a favorite.
@@ -5194,6 +5208,7 @@ export class DatabaseTool implements BlockTool {
       locale: resolveLocale(undefined),
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
+      ...this.calendarLever(this.dataId, viewConfig.id),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly ? {} : { pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range) }),
@@ -5446,6 +5461,7 @@ export class DatabaseTool implements BlockTool {
       duplicateView: () => this.duplicateView(this.activeViewId),
       deleteView: () => this.requestDeleteView(this.activeViewId),
       copyViewLink: () => this.copyViewLink(),
+      ...this.calendarLever(owner.dataId, context?.viewId ?? this.activeViewId),
       ...(context === undefined ? {
         shareForm: (anchor: HTMLElement) => {
           if (this.view instanceof DatabaseFormView) this.view.openShare(anchor);

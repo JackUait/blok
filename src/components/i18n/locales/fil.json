@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Kondisyonal na kulay",
   "tools.database.settingsCopyLink": "Kopyahin ang link sa view",
   "tools.database.settingsLockDatabase": "I-lock ang database",
+  "tools.database.manageInCalendar": "Pamahalaan sa Kalendaryo",
   "tools.database.settingsLockViews": "I-lock ang mga view",
   "tools.database.settingsNone": "Wala",
   "tools.database.settingsWrapAll": "I-wrap ang lahat ng nilalaman",

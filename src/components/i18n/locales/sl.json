@@ -1111,6 +1111,7 @@
   "tools.database.settingsConditionalColor": "Pogojna barva",
   "tools.database.settingsCopyLink": "Kopiraj povezavo do pogleda",
   "tools.database.settingsLockDatabase": "Zakleni zbirko podatkov",
+  "tools.database.manageInCalendar": "Upravljaj v koledarju",
   "tools.database.settingsLockViews": "Zakleni poglede",
   "tools.database.settingsNone": "Brez",
   "tools.database.settingsWrapAll": "Prelomi vso vsebino",

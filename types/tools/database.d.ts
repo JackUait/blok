@@ -489,6 +489,17 @@ export interface DatabaseFavorites {
   onToggle(input: { databaseId: string; rowId: string; favorite: boolean }): void;
 }
 
+/**
+ * Host lever for "Manage in Calendar": a row in View settings and a button on
+ * the timeline toolbar. Notion's opens Notion Calendar; Blok has no calendar
+ * app, so the host decides what opens. Without it neither shows.
+ */
+export interface DatabaseCalendar {
+  manage(context: { databaseId: string; viewId: string }): void;
+  /** Shown in place of "Manage in Calendar". */
+  label?: string;
+}
+
 // ─── Computed properties (Phase 6) ───
 
 /** Relation stores row ids; formula and rollup are computed and never stored in `properties`. */
@@ -1505,6 +1516,8 @@ export interface DatabaseConfig {
   backlinks?: DatabaseBacklinks;
   /** "Add to Favorites" in the row menu. */
   favorites?: DatabaseFavorites;
+  /** "Manage in Calendar" in View settings and on the timeline toolbar. */
+  calendar?: DatabaseCalendar;
 }
 
 /**

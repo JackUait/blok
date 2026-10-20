@@ -54,6 +54,8 @@ export interface ViewControlsHost {
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
+  /** "Manage in Calendar": only when the host gave `config.calendar`. */
+  manageInCalendar?: { label: string; onClick: () => void };
   groups: (sub: boolean) => ViewGroupEntry[];
   /** Redraws the active view after a personal edit or a search. */
   rerender: () => void;
@@ -371,6 +373,7 @@ export class DatabaseViewControls {
       duplicateView: () => this.host.duplicateView(),
       deleteView: () => this.host.deleteView(),
       copyViewLink: () => this.host.copyViewLink(),
+      ...(this.host.manageInCalendar !== undefined ? { manageInCalendar: this.host.manageInCalendar } : {}),
       groups: (sub) => this.host.groups(sub),
       people: () => this.host.people?.() ?? [],
       ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),

@@ -1109,6 +1109,7 @@
   "tools.database.settingsConditionalColor": "Условна боја",
   "tools.database.settingsCopyLink": "Копирај везу до приказа",
   "tools.database.settingsLockDatabase": "Закључај базу података",
+  "tools.database.manageInCalendar": "Управљај у календару",
   "tools.database.settingsLockViews": "Закључај приказе",
   "tools.database.settingsNone": "Ништа",
   "tools.database.settingsWrapAll": "Преломи сав садржај",

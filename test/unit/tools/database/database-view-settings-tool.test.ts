@@ -284,6 +284,52 @@ describe('DatabaseTool — view settings', () => {
     expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
   });
 
+  describe('Manage in Calendar (research/26 §3d, research/27 §3)', () => {
+    const timelineSchema: PropertyDefinition[] = [...schema, { id: 'p-due', name: 'Due', type: 'date', position: 'a3' }];
+
+    it('has no row and no timeline button without config.calendar', () => {
+      const { root } = mount({ type: 'timeline' }, {}, { schema: timelineSchema });
+
+      click('database-toolbar-settings');
+      expect(q('database-settings-manage-calendar')).toBeNull();
+      expect(root.querySelector('[data-blok-database-timeline-manage-calendar]')).toBeNull();
+    });
+
+    it('shows the row right after the lock, with an arrow that leaves the app, and hands the host the database and view', () => {
+      const manage = vi.fn();
+
+      mount({}, { calendar: { manage } });
+      click('database-toolbar-settings');
+      const row = q('database-settings-manage-calendar');
+
+      expect(row?.textContent).toContain('tools.database.manageInCalendar');
+      expect(row?.previousElementSibling?.getAttribute('data-blok-testid')).toBe('database-settings-lock');
+      expect(row?.querySelector('[data-blok-database-panel-icon] svg')).not.toBeNull();
+      expect(row?.querySelector('[data-blok-database-panel-external] svg')).not.toBeNull();
+      click('database-settings-manage-calendar');
+      expect(manage).toHaveBeenCalledWith({ databaseId: 'db1', viewId: 'v1' });
+      expect(q('database-settings-manage-calendar')).toBeNull();
+    });
+
+    it('uses the host label, and puts the button on the timeline toolbar', () => {
+      const manage = vi.fn();
+      const { root } = mount({ type: 'timeline' }, { calendar: { manage, label: 'Open in Agenda' } }, { schema: timelineSchema });
+      const button = root.querySelector<HTMLElement>('[data-blok-database-timeline-manage-calendar]');
+
+      expect(button?.textContent?.trim()).toBe('Open in Agenda');
+      button?.click();
+      expect(manage).toHaveBeenCalledWith({ databaseId: 'db1', viewId: 'v1' });
+      click('database-toolbar-settings');
+      expect(q('database-settings-manage-calendar')?.textContent).toContain('Open in Agenda');
+    });
+
+    it('puts no button on a table view', () => {
+      const { root } = mount({}, { calendar: { manage: vi.fn() } });
+
+      expect(root.querySelector('[data-blok-database-timeline-manage-calendar]')).toBeNull();
+    });
+  });
+
   it('switches the layout from the settings panel', () => {
     const { tool, root } = mount();
 

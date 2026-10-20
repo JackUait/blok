@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Условен цвят",
   "tools.database.settingsCopyLink": "Копирай връзката към изгледа",
   "tools.database.settingsLockDatabase": "Заключи базата данни",
+  "tools.database.manageInCalendar": "Управление в календара",
   "tools.database.settingsLockViews": "Заключи изгледите",
   "tools.database.settingsNone": "Няма",
   "tools.database.settingsWrapAll": "Пренасяй цялото съдържание",

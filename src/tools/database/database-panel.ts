@@ -1,4 +1,4 @@
-import { IconCheck, IconChevronLeft, IconChevronRight, IconCross, IconMenu } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconChevronLeft, IconChevronRight, IconCross, IconMenu } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
 import { hide as hideTooltip } from '../../components/utils/tooltip';
 
@@ -206,6 +206,8 @@ export interface PanelRowOptions {
   value?: string;
   /** Shows a chevron: the row opens a page. */
   opensPage?: boolean;
+  /** Shows a diagonal arrow: the row leaves this app (research/26 §3d). */
+  external?: boolean;
   /** A checkmark marks the chosen option, never a fill (no-blue law). */
   checked?: boolean;
   danger?: boolean;
@@ -271,6 +273,13 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
     chevron.setAttribute('data-blok-database-panel-chevron', '');
     chevron.innerHTML = IconChevronRight;
     row.appendChild(chevron);
+  }
+  if (options.external === true) {
+    const arrow = document.createElement('span');
+
+    arrow.setAttribute('data-blok-database-panel-external', '');
+    arrow.innerHTML = IconArrowDiagonal;
+    row.appendChild(arrow);
   }
   row.addEventListener('click', () => options.onClick());
 

@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Feltételes színezés",
   "tools.database.settingsCopyLink": "Nézet hivatkozásának másolása",
   "tools.database.settingsLockDatabase": "Adatbázis zárolása",
+  "tools.database.manageInCalendar": "Kezelés a naptárban",
   "tools.database.settingsLockViews": "Nézetek zárolása",
   "tools.database.settingsNone": "Nincs",
   "tools.database.settingsWrapAll": "Teljes tartalom tördelése",

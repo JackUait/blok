@@ -1111,6 +1111,7 @@
   "tools.database.settingsConditionalColor": "Условный цвет",
   "tools.database.settingsCopyLink": "Копировать ссылку на представление",
   "tools.database.settingsLockDatabase": "Заблокировать базу данных",
+  "tools.database.manageInCalendar": "Управлять в Календаре",
   "tools.database.settingsLockViews": "Заблокировать представления",
   "tools.database.settingsNone": "Нет",
   "tools.database.settingsWrapAll": "Переносить всё содержимое",

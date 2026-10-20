@@ -1100,6 +1100,7 @@ export type BlokMessageKey =
   | 'tools.database.listView'
   | 'tools.database.loadMoreGroups'
   | 'tools.database.lockedLabel'
+  | 'tools.database.manageInCalendar'
   | 'tools.database.mapAddPin'
   | 'tools.database.mapAttribution'
   | 'tools.database.mapCancelAddPin'

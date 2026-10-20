@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "শর্তসাপেক্ষ রঙ",
   "tools.database.settingsCopyLink": "ভিউয়ের লিঙ্ক কপি করুন",
   "tools.database.settingsLockDatabase": "ডেটাবেস লক করুন",
+  "tools.database.manageInCalendar": "ক্যালেন্ডারে পরিচালনা করুন",
   "tools.database.settingsLockViews": "ভিউ লক করুন",
   "tools.database.settingsNone": "কোনোটি নয়",
   "tools.database.settingsWrapAll": "সব বিষয়বস্তু মোড়ান",

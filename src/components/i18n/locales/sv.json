@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Villkorsstyrd färg",
   "tools.database.settingsCopyLink": "Kopiera länk till vy",
   "tools.database.settingsLockDatabase": "Lås databas",
+  "tools.database.manageInCalendar": "Hantera i Kalender",
   "tools.database.settingsLockViews": "Lås vyer",
   "tools.database.settingsNone": "Ingen",
   "tools.database.settingsWrapAll": "Radbryt allt innehåll",

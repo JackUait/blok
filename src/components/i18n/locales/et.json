@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Tingimuslik värv",
   "tools.database.settingsCopyLink": "Kopeeri vaate link",
   "tools.database.settingsLockDatabase": "Lukusta andmebaas",
+  "tools.database.manageInCalendar": "Halda kalendris",
   "tools.database.settingsLockViews": "Lukusta vaated",
   "tools.database.settingsNone": "Puudub",
   "tools.database.settingsWrapAll": "Murra kogu sisu",

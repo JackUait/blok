@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Betinget farge",
   "tools.database.settingsCopyLink": "Kopier lenke til visning",
   "tools.database.settingsLockDatabase": "Lås database",
+  "tools.database.manageInCalendar": "Administrer i Kalender",
   "tools.database.settingsLockViews": "Lås visninger",
   "tools.database.settingsNone": "Ingen",
   "tools.database.settingsWrapAll": "Bryt alt innhold",

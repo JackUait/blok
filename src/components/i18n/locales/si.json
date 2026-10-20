@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "කොන්දේසිගත වර්ණය",
   "tools.database.settingsCopyLink": "දසුනට සබැඳිය පිටපත් කරන්න",
   "tools.database.settingsLockDatabase": "දත්ත ගබඩාව අගුළු දමන්න",
+  "tools.database.manageInCalendar": "දින දර්ශනයේ කළමනාකරණය කරන්න",
   "tools.database.settingsLockViews": "දසුන් අගුළු දමන්න",
   "tools.database.settingsNone": "කිසිවක් නැත",
   "tools.database.settingsWrapAll": "සියලු අන්තර්ගතය එතන්න",

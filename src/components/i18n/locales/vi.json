@@ -1107,6 +1107,7 @@
   "tools.database.settingsConditionalColor": "Màu theo điều kiện",
   "tools.database.settingsCopyLink": "Sao chép liên kết đến chế độ xem",
   "tools.database.settingsLockDatabase": "Khóa cơ sở dữ liệu",
+  "tools.database.manageInCalendar": "Quản lý trong Lịch",
   "tools.database.settingsLockViews": "Khóa chế độ xem",
   "tools.database.settingsNone": "Không có",
   "tools.database.settingsWrapAll": "Ngắt dòng mọi nội dung",

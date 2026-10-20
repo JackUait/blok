@@ -1109,6 +1109,7 @@
   "tools.database.settingsConditionalColor": "Culoare condiționată",
   "tools.database.settingsCopyLink": "Copiază linkul către vizualizare",
   "tools.database.settingsLockDatabase": "Blochează baza de date",
+  "tools.database.manageInCalendar": "Gestionează în Calendar",
   "tools.database.settingsLockViews": "Blochează vizualizările",
   "tools.database.settingsNone": "Niciunul",
   "tools.database.settingsWrapAll": "Încadrează tot conținutul",

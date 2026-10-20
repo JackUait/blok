@@ -5,7 +5,7 @@ import { destroy as destroyTooltip } from '../../../../src/components/utils/tool
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { Bookmark } from '../../../../src/tools/link/bookmark';
-import { Column, ColumnList, Toggle } from '../../../../src/tools';
+import { Column, ColumnList, TabsTool, TabTool, Toggle } from '../../../../src/tools';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { DatabaseCommentTool } from '../../../../src/tools/database-comment';
@@ -62,7 +62,7 @@ const boot = async (blocks: OutputBlockData[], live = false): Promise<Core> => {
     holder, tabSync: false, dataModel: 'hierarchical', i18n: { locale: 'en' },
     ...(live ? { server: 'https://sync.test/api/', collaboration: { doc: 'database-delete-peer' } } : {}),
     tools: {
-      paragraph: Paragraph, bookmark: Bookmark, toggle: Toggle, column_list: ColumnList, column: Column,
+      paragraph: Paragraph, bookmark: Bookmark, toggle: Toggle, column_list: ColumnList, column: Column, tabs: TabsTool, tab: TabTool,
       database: DatabaseTool, 'database-row': DatabaseRowTool, 'database-comment': DatabaseCommentTool,
     },
     ...(live ? {} : { data: { blocks } }),
@@ -339,6 +339,24 @@ describe('deleting a database deletes its rows, sources and comments', () => {
     expect(instance.moduleInstances.BlockManager.blocks.map((live) => live.name)).toEqual(['paragraph']);
     expect(instance.moduleInstances.YjsManager.toJSON().map((entry) => entry.type)).toEqual(['paragraph']);
     expect(holderIds()).toHaveLength(1);
+  });
+
+  it('Backspace on a selection of every block around a tabs block leaves one empty paragraph', async () => {
+    const instance = await boot([
+      { id: 'p0', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tabs', content: ['tp'] },
+      { id: 'tp', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'p1', type: 'paragraph', data: { text: 'After' } },
+    ]);
+    const { BlockSelection, BlockEvents } = instance.moduleInstances;
+
+    ['p0', 'tabs', 'p1'].forEach((id) => BlockSelection.selectBlock(block(instance, id)));
+    BlockEvents.keydown(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(instance.moduleInstances.BlockManager.blocks.map((live) => live.name)).toEqual(['paragraph']);
+    expect(instance.moduleInstances.YjsManager.toJSON().map((entry) => entry.type)).toEqual(['paragraph']);
   });
 
   it('cutting a selection of every block leaves one empty paragraph', async () => {

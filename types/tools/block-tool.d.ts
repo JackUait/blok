@@ -408,9 +408,10 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * Set to true when deleting this Tool's block must delete its whole subtree.
    *
    * By default Blok keeps a deleted container's body: its children move up one
-   * level into the container's slot (a toggle, a callout). A layout container
-   * whose children only make sense inside it — a column, a tab — declares this
-   * so its children are removed with it instead of leaking out.
+   * level into the container's slot (a toggle, a callout). A container whose
+   * children only make sense inside it — a column, a tab, a database and its
+   * rows — declares this so its children are removed with it instead of
+   * leaking out.
    */
   deletesChildren?: boolean;
 

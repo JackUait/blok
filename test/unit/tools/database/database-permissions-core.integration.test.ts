@@ -612,6 +612,46 @@ describe('database permissions reach core block actions', () => {
       expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
     });
 
+    it('a lone step that waited undoes again once the database opens', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied, false, withBody2());
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.update('body1', { text: 'edited' }));
+      denied.push('editContent');
+
+      expect(API.methods.history.canUndo()).toBe(false);
+      YjsManager.undo();
+      await quiet();
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'edited' }]);
+
+      denied.length = 0;
+
+      expect(API.methods.history.canUndo()).toBe(true);
+      API.methods.history.undo();
+      await quiet();
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'body text' }]);
+    });
+
+    it('a deleted row page body block does not come back while the database is read-only', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied, false, withBody2());
+      const { YjsManager, BlockManager } = instance.moduleInstances;
+
+      await step(instance, () => BlockManager.removeBlock(block(instance, 'body2')));
+      expect(await ids(instance)).not.toContain('body2');
+      denied.push('editContent');
+
+      YjsManager.undo();
+      await quiet();
+      expect(await ids(instance)).not.toContain('body2');
+
+      denied.length = 0;
+      YjsManager.undo();
+      await quiet();
+      expect(await ids(instance)).toContain('body2');
+    });
+
     it('redo does not write into the database either', async () => {
       const denied: DatabasePermissionAction[] = [];
       const instance = await boot(denied, false, withBody2());

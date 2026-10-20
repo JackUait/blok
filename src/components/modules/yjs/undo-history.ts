@@ -741,6 +741,13 @@ export class UndoHistory {
     });
   }
 
+  /** Whether an undo step waits only because it writes a block that is read-only now. */
+  private holdsReadOnlyStep(): boolean {
+    return this.walkOrder('undo').some(({ group, item }) => group !== undefined
+      ? this.movesReadOnly(group)
+      : item !== undefined && [...this.scanTopEntry([item]).touched].some((id) => this.isReadOnlyNow(id)));
+  }
+
   /**
    * Whether unwinding this entry would BRING A BLOCK BACK while leaving the
    * block that displaced it in place.
@@ -1656,7 +1663,9 @@ export class UndoHistory {
     if (applied && setAside.length > 0 && carried !== undefined && carried !== carriedBefore) {
       this.noteReachedPast(carried, setAside);
     }
-    if (!applied && expectedToken === undefined) {
+    // A step held back by a read-only block can apply once the host opens it,
+    // which is no doc change, so it must not mark the history as stuck.
+    if (!applied && expectedToken === undefined && !this.holdsReadOnlyStep()) {
       this.nothingUndoable = true;
     }
     this.restoreScrollIfJumped(savedScrollY);

@@ -392,6 +392,8 @@ describe('New data source: every layout on a second source', () => {
     Object.defineProperty(input, 'files', { value: [new File(['Name\nImported'], 'stock.csv', { type: 'text/csv' })] });
     input.dispatchEvent(new Event('change'));
     await quiet();
+    await click(document.querySelector('[data-blok-testid="database-csv-map"]'));
+    await click(document.querySelector('[data-blok-testid="database-csv-import"]'));
     const saved = (await api.save()).blocks.filter((b) => b.type === 'database');
 
     expect(saved.map((b) => b.id).filter((id) => id !== 'db' && id !== 'src-b')).toHaveLength(1);

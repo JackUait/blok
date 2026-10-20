@@ -270,16 +270,19 @@ test.describe('database New data source', () => {
       await expect(panel(page)).toContainText('New empty data source');
       await expect(panel(page)).not.toContainText('Suggested');
 
-      const chooser = page.waitForEvent('filechooser');
-
       await page.getByTestId('database-new-source-csv').click();
-      await (await chooser).setFiles({ name: 'stock.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Size\nNut,3\nBolt,5') });
+      const dialog = page.getByRole('dialog');
+
+      await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'stock.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Size\nNut,3\nBolt,5') });
+      await dialog.getByTestId('database-csv-map').click();
+      await dialog.getByTestId('database-csv-import').click();
 
       await expect(grid(page)).toContainText('Nut');
       await expect(grid(page)).toContainText('Bolt');
       await expect(grid(page)).not.toContainText('Alpha');
       await expect(grid(page).getByRole('columnheader')).toHaveCount(2);
-      await expect(page.locator('[data-blok-database-source-title]')).toHaveText('stock');
+      // research/27 §2: the title stays the placeholder, not the file name.
+      await expect(page.locator('[data-blok-database-source-title]')).toHaveText('');
       const saved = await save(page);
       const source = saved.find((block) => block.type === 'database' && block.parent === 'db-1');
 

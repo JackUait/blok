@@ -7,6 +7,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { freePropertyName, newView } from '../../shared/database/schema-ops';
+import { planTypeChange } from './property-conversion';
 
 const BOM = '﻿';
 
@@ -290,16 +291,29 @@ const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | u
   }
 };
 
+/** Where a CSV column goes: nowhere, the title, or a new property of a type. */
+export type CsvColumnTarget = 'skip' | PropertyType;
+
 export interface CsvImportOptions {
   newId: () => string;
   /** The name a blank header gets, numbered by its column. */
   untitled: string;
+  /** One target per column. Without it every column takes its detected type. */
+  targets?: CsvColumnTarget[];
+  /** The title's name when no column maps to it. */
+  titleName?: string;
 }
 
 export interface CsvImport {
   schema: PropertyDefinition[];
   /** Row values by property id, in file order. */
   rows: Array<Record<string, PropertyValue>>;
+}
+
+export interface CsvColumn {
+  name: string;
+  /** The first column is the title; the rest are inferred from their cells. */
+  detected: PropertyType;
 }
 
 const position = (index: number): string => `a${String(index).padStart(4, '0')}`;
@@ -312,25 +326,63 @@ const position = (index: number): string => `a${String(index).padStart(4, '0')}`
 const numberedHeaders = (headers: string[]): string[] =>
   headers.reduce<string[]>((names, header) => [...names, freePropertyName(names, header)], []);
 
-/** A new database from a CSV: the first row names the columns, the first column is the title. */
-export const buildCsvImport = (table: string[][], options: CsvImportOptions): CsvImport => {
+/** Each column's name and detected type, as the "Setup CSV columns" step lists them. */
+export const csvColumns = (table: string[][], untitled = 'Column'): CsvColumn[] => {
   const [header = [], ...body] = table;
   const width = Math.max(header.length, ...body.map((row) => row.length), 1);
   const names = numberedHeaders(Array.from({ length: width }, (_, column) => {
     const typed = (header[column] ?? '').trim();
 
-    return typed === '' ? `${options.untitled} ${column + 1}` : typed;
+    return typed === '' ? `${untitled} ${column + 1}` : typed;
   }));
-  const schema: PropertyDefinition[] = names.map((name, column) => ({
-    id: options.newId(),
-    name,
-    type: column === 0 ? 'title' : inferColumnType(body.map((row) => row[column] ?? '')),
-    position: position(column),
-  }));
-  const rows = body.map((row) => Object.fromEntries(schema.map((property, column) =>
-    [property.id, parseCell(property, row[column] ?? '') ?? null])));
 
-  return { schema, rows };
+  return names.map((name, column) => ({
+    name,
+    detected: column === 0 ? 'title' : inferColumnType(body.map((row) => row[column] ?? '')),
+  }));
+};
+
+/** Types whose values come from text through the type-change rules: options in first-appearance order. */
+const CONVERTED_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['select', 'multiSelect', 'status', 'person']);
+
+/** A new database from a CSV: the first row names the columns. Columns and rows keep file order. */
+export const buildCsvImport = (table: string[][], options: CsvImportOptions): CsvImport => {
+  const body = table.slice(1);
+  const columns = csvColumns(table, options.untitled);
+  const wanted = columns.map((column, index) => options.targets?.[index] ?? column.detected);
+  // One title: the first column that asks for it.
+  const titleAt = wanted.indexOf('title');
+  const demoted = (index: number): CsvColumnTarget => (columns[index].detected === 'title' ? 'text' : columns[index].detected);
+  const targets = wanted.map((target, index) => (target === 'title' && index !== titleAt ? demoted(index) : target));
+  const kept = columns.flatMap((column, index) => {
+    const type = targets[index];
+
+    return type === 'skip' ? [] : [{ column: index, name: column.name, type }];
+  });
+  const fields: Array<{ column: number; name: string; type: PropertyType }> = titleAt === -1 ? [{ column: -1, name: options.titleName ?? 'Name', type: 'title' }, ...kept] : kept;
+  const schema: PropertyDefinition[] = fields.map((field, index) => ({
+    id: options.newId(),
+    name: field.name,
+    type: CONVERTED_TYPES.has(field.type) ? 'text' : field.type,
+    position: position(index),
+  }));
+  const rows = body.map((row) => Object.fromEntries(schema.map((property, index) => {
+    const raw = fields[index].column === -1 ? '' : row[fields[index].column] ?? '';
+
+    return [property.id, parseCell(property, raw) ?? null];
+  })));
+  const ordered = rows.map((properties, index) => ({ id: String(index), position: position(index), properties }));
+  const finished = schema.map((property, index) => {
+    const type = fields[index].type;
+    const plan = CONVERTED_TYPES.has(type) ? planTypeChange(property, type, ordered, options.newId) : null;
+
+    if (plan === null) return property;
+    for (const write of plan.writes) rows[Number(write.rowId)][property.id] = write.value;
+
+    return plan.property;
+  });
+
+  return { schema: finished, rows };
 };
 
 export interface CsvMergePlan {
@@ -439,7 +491,7 @@ export const csvDatabaseBlocks = (
 ): CsvDatabaseBlocks => {
   const id = options.newId();
   const imported = buildCsvImport(table, options);
-  const [titleProperty] = imported.schema;
+  const titleProperty = imported.schema.find((property) => property.type === 'title');
   const viewId = options.newId();
   const positions = imported.rows.reduce<string[]>((list) => [...list, generateKeyBetween(list.at(-1) ?? null, null)], []);
 

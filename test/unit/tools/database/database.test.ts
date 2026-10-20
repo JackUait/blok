@@ -7206,7 +7206,8 @@ describe('DatabaseTool — property menu and insert placement', () => {
       expect(transact).toHaveBeenCalledTimes(1);
       expect(type).toBe('database');
       expect(placement).toMatchObject({ position: { after: 'test-block-id' } });
-      expect(database.title).toBe('tasks');
+      // research/27 §2: the title stays the placeholder, not the file name.
+      expect(database.title).toBe('');
       expect(database.schema.map((p) => [p.name, p.type])).toEqual([['Task', 'title'], ['Points', 'number']]);
       expect(database.views[0].type).toBe('table');
       expect(calls.slice(1).map(([rowType, rowData, rowPlacement]) => [rowType, (rowData as DatabaseRowData).title, (rowPlacement as { parentId?: string }).parentId]))
@@ -7228,6 +7229,36 @@ describe('DatabaseTool — property menu and insert placement', () => {
       expect(database.schema.map((p) => p.name)).toEqual(['Name', 'Tag', 'Tag 1', 'Tag 2']);
       expect(calls.slice(1).map(([, rowData]) => database.schema.map((p) => (rowData as DatabaseRowData).properties[p.id])))
         .toEqual([['RowA', 'a1', 'a2', 'a3'], ['RowB', 'b1', 'b2', 'b3']]);
+
+      tool.destroy();
+    });
+
+    it('imports each column as the type picked for it, dropping a column set to Don\'t import', () => {
+      const { tool, options } = mount({});
+
+      Object.assign(options.api.blocks, { transact: vi.fn((fn: () => void) => fn()) });
+      tool.importCsv('Task,Stage,Notes\nWrite,Todo,x\nShip,Doing,y\nPlan,Todo,z', 'tasks.csv', ['title', 'select', 'skip']);
+
+      const calls = vi.mocked(options.api.blocks.insertAt).mock.calls;
+      const database = calls[0][1] as DatabaseData;
+      const stage = database.schema[1];
+
+      expect(database.schema.map((p) => [p.name, p.type])).toEqual([['Task', 'title'], ['Stage', 'select']]);
+      expect(stage.config?.options.map((o) => o.label)).toEqual(['Todo', 'Doing']);
+      expect(calls.slice(1).map(([, rowData]) => (rowData as DatabaseRowData).title)).toEqual(['Write', 'Ship', 'Plan']);
+
+      tool.destroy();
+    });
+
+    it('names each row after the column picked as the title, even when it is not the first', () => {
+      const { tool, options } = mount({});
+
+      Object.assign(options.api.blocks, { transact: vi.fn((fn: () => void) => fn()) });
+      tool.importCsv('Code,Task\nA1,Write\nB2,Ship', 'tasks.csv', ['text', 'title']);
+
+      const calls = vi.mocked(options.api.blocks.insertAt).mock.calls;
+
+      expect(calls.slice(1).map(([, rowData]) => (rowData as DatabaseRowData).title)).toEqual(['Write', 'Ship']);
 
       tool.destroy();
     });

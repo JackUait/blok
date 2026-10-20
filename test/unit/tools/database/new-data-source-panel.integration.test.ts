@@ -139,6 +139,10 @@ const pickCsv = async (text: string, name: string): Promise<void> => {
   Object.defineProperty(input, 'files', { value: [new File([text], name, { type: 'text/csv' })] });
   input.dispatchEvent(new Event('change'));
   await quiet();
+  // The import dialog: map the headers, then import with the detected types.
+  document.querySelector<HTMLElement>('[data-blok-testid="database-csv-map"]')?.click();
+  document.querySelector<HTMLElement>('[data-blok-testid="database-csv-import"]')?.click();
+  await quiet();
 };
 
 const rowLabels = (): string[] => [...(panel()?.querySelectorAll<HTMLElement>('[data-blok-testid]') ?? [])]
@@ -262,7 +266,8 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     const source = await dataOf(api, sourceId);
 
     expect(source?.schema.map((p) => p.name)).toEqual(['Name', 'Size']);
-    expect(source?.title).toBe('stock');
+    // research/27 §2: the title stays the placeholder, not the file name.
+    expect(source?.title ?? '').toBe('');
     expect(api.blocks.getChildren(sourceId).filter((b) => b.name === 'database-row')).toHaveLength(2);
     expect(shownArea().textContent).toContain('Alpha');
     expect(shownArea().textContent).toContain('Beta');

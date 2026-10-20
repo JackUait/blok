@@ -159,7 +159,8 @@ import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
 import { rowReactions } from './row-reactions';
-import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv } from './database-csv';
+import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv, type CsvColumnTarget } from './database-csv';
+import { openCsvImportDialog } from './database-csv-import-dialog';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
 import { chartExportPage } from './database-chart-export';
@@ -3741,7 +3742,7 @@ export class DatabaseTool implements BlockTool {
       t: (key, vars) => this.api.i18n.t(key, vars),
       sources: () => this.linkableSources(),
       suggested: () => this.dataSourceChoices().filter((choice) => choice.id !== made.sourceId && choice.fits),
-      importCsv: () => this.pickCsvFile((file) => this.importCsvIntoSource(made.sourceId, file.text, file.name)),
+      importCsv: () => this.openCsvImport((file, targets) => this.importCsvIntoSource(made.sourceId, file.text, targets)),
       nameSource: (title) => this.nameNewSource(made.sourceId, title),
       linkExisting: (id) => this.linkNewSourceView(made, id),
       onClose: () => {
@@ -3767,8 +3768,8 @@ export class DatabaseTool implements BlockTool {
     return this.linkableSources().map((source) => ({ id: source.id, title: source.title, parent: source.parent, fits }));
   }
 
-  /** "Import CSV" from the panel: the new source takes the file's columns, title and rows. One undo empties it again. */
-  private importCsvIntoSource(sourceId: string, text: string, fileName: string): void {
+  /** "Import CSV" from the panel: the new source takes the file's columns and rows. One undo empties it again. */
+  private importCsvIntoSource(sourceId: string, text: string, targets?: CsvColumnTarget[]): void {
     const source = this.dashboardOwner(sourceId);
 
     if (this.readOnly || source === undefined || source === this || source.readOnly) return;
@@ -3779,12 +3780,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const built = csvDatabaseBlocks(table, {
-      newId: () => nanoid(),
-      untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
-      viewName: DATABASE_DEFAULT_TEXT.viewTypeTable,
-      title: fileName.replace(/\.(csv|tsv|txt)$/i, ''),
-    });
+    const built = this.csvBlocks(table, targets);
 
     // The source keeps its title property: its backend already has it.
     const oldTitle = source.model.getSchema().find((p) => p.type === 'title');
@@ -3801,7 +3797,6 @@ export class DatabaseTool implements BlockTool {
     this.inOneStep(() => {
       source.model.replaceDefinition({ schema, views });
       source.activeViewId = built.data.activeViewId;
-      source.renameAsSource(built.data.title ?? '');
       // Before the rows: a change dispatched inside a row insert's sync window is dropped as an echo.
       source.block.dispatchChange();
       for (const row of rows) {
@@ -4873,8 +4868,12 @@ export class DatabaseTool implements BlockTool {
     return serializeCsv([columns.map((p) => p.name), ...rows.map((row) => columns.map((p) => this.csvText(p, row)))]);
   }
 
-  /** A CSV as a new database block right after this one, in one undo step. The first column is the title. */
-  importCsv(text: string, fileName: string): void {
+  /**
+   * A CSV as a new database block right after this one, in one undo step.
+   * `targets` gives each column's type; without it the first column is the
+   * title and the rest are detected. The title stays the placeholder (research/27 §2).
+   */
+  importCsv(text: string, _fileName?: string, targets?: CsvColumnTarget[]): void {
     if (this.readOnly) return;
     const table = parseCsv(text);
 
@@ -4883,12 +4882,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const built = csvDatabaseBlocks(table, {
-      newId: () => nanoid(),
-      untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
-      viewName: DATABASE_DEFAULT_TEXT.viewTypeTable,
-      title: fileName.replace(/\.(csv|tsv|txt)$/i, ''),
-    });
+    const built = this.csvBlocks(table, targets);
     const insert = (): void => {
       this.api.blocks.insertAt('database', built.data, { position: { after: this.block.id }, id: built.id });
       for (const row of built.rows) {
@@ -5008,6 +5002,27 @@ export class DatabaseTool implements BlockTool {
     );
   }
 
+  private csvBlocks(table: string[][], targets: CsvColumnTarget[] | undefined): ReturnType<typeof csvDatabaseBlocks> {
+    return csvDatabaseBlocks(table, {
+      newId: () => nanoid(),
+      untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
+      viewName: DATABASE_DEFAULT_TEXT.viewTypeTable,
+      title: '',
+      titleName: DATABASE_DEFAULT_TEXT.titleProperty,
+      ...(targets === undefined ? {} : { targets }),
+    });
+  }
+
+  /** Notion's import dialog: the file, then a type per column (research/27 §2). */
+  private openCsvImport(then: (file: { name: string; text: string }, targets: CsvColumnTarget[]) => void): void {
+    openCsvImportDialog({
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      hasPeople: this.hasPeople,
+      directionSource: this.element,
+      onImport: then,
+    });
+  }
+
   /** A file picker for one CSV or TSV file. */
   private pickCsvFile(then: (file: { name: string; text: string }) => void): void {
     const input = document.createElement('input');
@@ -5075,7 +5090,7 @@ export class DatabaseTool implements BlockTool {
     if (!this.readOnly) {
       actions.push(
         // A new database goes beside the block on the page, never inside a holder as a stray source.
-        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, onClick: () => this.pickCsvFile((file) => this.viewOwner().importCsv(file.text, file.name)) },
+        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, onClick: () => this.openCsvImport((file, targets) => this.viewOwner().importCsv(file.text, file.name, targets)) },
         {
           testId: 'database-settings-csv-merge',
           label: t('csvMerge'),

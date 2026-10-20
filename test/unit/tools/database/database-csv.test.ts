@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   buildCsvImport,
   csvCellText,
+  csvColumns,
   inferColumnType,
   parseCsv,
   planCsvMerge,
@@ -146,6 +147,99 @@ describe('database CSV', () => {
       const result = buildCsvImport([['', 'Column 1'], ['x', 'y']], { newId: () => Math.random().toString(36), untitled: 'Column' });
 
       expect(result.schema.map((p) => p.name)).toEqual(['Column 1', 'Column 1 1']);
+    });
+  });
+
+  // research/27 §2: the file Notion's "Setup CSV columns" step was measured with.
+  const R27 = parseCsv([
+    'Name,Due,Amount,Site,Email,Done,Stage',
+    'Alpha,2026-03-04,12,https://example.com,a@example.com,Yes,Todo',
+    'Bravo,2026-03-05,7.5,https://example.org,b@example.com,No,Doing',
+    'Charlie,2026-03-06,100,https://example.net,c@example.com,Yes,Todo',
+  ].join('\n'));
+  const ids = (): (() => string) => {
+    const counter = { n: 0 };
+
+    return () => `id${counter.n++}`;
+  };
+
+  describe('csvColumns', () => {
+    it('detects the types Notion detected: title, date, number, URL, email, checkbox; repeated short strings stay text', () => {
+      expect(csvColumns(R27)).toEqual([
+        { name: 'Name', detected: 'title' },
+        { name: 'Due', detected: 'date' },
+        { name: 'Amount', detected: 'number' },
+        { name: 'Site', detected: 'url' },
+        { name: 'Email', detected: 'email' },
+        { name: 'Done', detected: 'checkbox' },
+        { name: 'Stage', detected: 'text' },
+      ]);
+    });
+
+    it('numbers repeated headers as the import does', () => {
+      expect(csvColumns([['Name', 'Tag', 'Tag'], ['a', 'b', 'c']]).map((c) => c.name)).toEqual(['Name', 'Tag', 'Tag 1']);
+    });
+  });
+
+  describe('buildCsvImport with a column mapping', () => {
+    const options = { untitled: 'Column', titleName: 'Name' };
+
+    it('drops a column set to Don\'t import from the schema and the rows', () => {
+      const result = buildCsvImport(R27, { ...options, newId: ids(), targets: ['title', 'skip', 'number', 'skip', 'skip', 'skip', 'skip'] });
+
+      expect(result.schema.map((p) => [p.name, p.type])).toEqual([['Name', 'title'], ['Amount', 'number']]);
+      expect(result.rows.map((row) => Object.keys(row).length)).toEqual([2, 2, 2]);
+    });
+
+    it('makes Select options in first-appearance order, rows and columns in file order', () => {
+      const result = buildCsvImport(R27, { ...options, newId: ids(), targets: ['title', 'date', 'number', 'url', 'email', 'checkbox', 'select'] });
+      const stage = result.schema.find((p) => p.name === 'Stage');
+      const title = result.schema[0];
+
+      expect(stage?.type).toBe('select');
+      expect(stage?.config?.options.map((o) => o.label)).toEqual(['Todo', 'Doing']);
+      expect(new Set(stage?.config?.options.map((o) => o.color)).size).toBe(2);
+      expect(result.schema.map((p) => p.name)).toEqual(['Name', 'Due', 'Amount', 'Site', 'Email', 'Done', 'Stage']);
+      expect(result.rows.map((row) => row[title.id])).toEqual(['Alpha', 'Bravo', 'Charlie']);
+      const todo = stage?.config?.options[0].id;
+
+      expect(result.rows.map((row) => row[stage?.id ?? ''])).toEqual([todo, stage?.config?.options[1].id, todo]);
+    });
+
+    it('splits multi-select labels and gives a status property its groups', () => {
+      const table = [['Name', 'Tags', 'State'], ['a', 'x, y', 'Open'], ['b', 'y', 'Shut']];
+      const result = buildCsvImport(table, { ...options, newId: ids(), targets: ['title', 'multiSelect', 'status'] });
+      const [, tags, state] = result.schema;
+
+      expect(tags.config?.options.map((o) => o.label)).toEqual(['x', 'y']);
+      expect((result.rows[0][tags.id] as string[]).length).toBe(2);
+      expect(state.type).toBe('status');
+      expect(state.status?.groups.length).toBeGreaterThan(0);
+      expect(state.config?.options.map((o) => o.label)).toEqual(['Open', 'Shut']);
+    });
+
+    it('maps any column to the title; the first column then imports as its own type', () => {
+      const result = buildCsvImport(R27, { ...options, newId: ids(), targets: ['text', 'skip', 'skip', 'skip', 'title', 'skip', 'skip'] });
+
+      expect(result.schema.map((p) => [p.name, p.type])).toEqual([['Name', 'text'], ['Email', 'title']]);
+      expect(result.rows[0][result.schema[1].id]).toBe('a@example.com');
+    });
+
+    it('adds an empty title when no column maps to it', () => {
+      const result = buildCsvImport(R27, { ...options, newId: ids(), targets: ['skip', 'skip', 'number', 'skip', 'skip', 'skip', 'skip'] });
+
+      expect(result.schema.map((p) => [p.name, p.type])).toEqual([['Name', 'title'], ['Amount', 'number']]);
+      expect(result.rows.map((row) => row[result.schema[0].id])).toEqual(['', '', '']);
+    });
+
+    it('reads phone as text and person as empty, since a name cannot name a person', () => {
+      const table = [['Name', 'Phone', 'Owner'], ['a', '+1 555', 'Ada']];
+      const result = buildCsvImport(table, { ...options, newId: ids(), targets: ['title', 'phone', 'person'] });
+      const [, phone, owner] = result.schema;
+
+      expect([phone.type, owner.type]).toEqual(['phone', 'person']);
+      expect(result.rows[0][phone.id]).toBe('+1 555');
+      expect(result.rows[0][owner.id]).toEqual([]);
     });
   });
 

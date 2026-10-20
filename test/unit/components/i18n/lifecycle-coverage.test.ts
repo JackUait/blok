@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1360 + 125 + 481 + 4 closure for all 1970 keys', () => {
+  it('rebuilds a disjoint 1373 + 125 + 480 + 4 closure for all 1982 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1970);
+    expect(lifecycle.size).toBe(1982);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -409,7 +409,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +6: the named-source row and the last-view question call their keys by literal.
       // +1: the New database AI prompt box calls tools.database.aiSetupPlaceholder by literal.
       // +60: the Suggested database templates (names, chips, views, options, sample rows) call their keys by literal.
-      'executable-literal': 1360,
+      // +13: the CSV import dialog calls its keys by literal.
+      'executable-literal': 1373,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -459,7 +460,7 @@ describe('current English catalog lifecycle coverage', () => {
       // Every-N plurals and Daily/Weekly/Monthly/Yearly, all built from a short name.
       // +2: the gallery trash toast's screen-reader plural tools.database.blocksDeleted_one/_other.
       // +1: the view settings "Source" row, tools.database.settingsSource.
-      'registered-namespace-compatible': 481,
+      'registered-namespace-compatible': 480,
       'catalog-only': 4,
     });
     expect(

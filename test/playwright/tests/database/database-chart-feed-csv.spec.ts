@@ -399,10 +399,12 @@ test.describe('CSV', () => {
 
   test('imports a CSV as a new database after this one', async ({ page }) => {
     await mount(page, blocks({ type: 'table' }));
-    const chooser = page.waitForEvent('filechooser');
-
     await openSettingsAction(page, 'database-settings-csv-import');
-    await (await chooser).setFiles({ name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from('Step,Hours,Due\nDraft,2,10/09/2026\nReview,1.5,2026-10-12\n') });
+    const dialog = page.getByRole('dialog');
+
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from('Step,Hours,Due\nDraft,2,10/09/2026\nReview,1.5,2026-10-12\n') });
+    await dialog.getByTestId('database-csv-map').click();
+    await dialog.getByTestId('database-csv-import').click();
 
     await expect(page.locator('[data-blok-tool="database"]')).toHaveCount(2);
     await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database').length).toBe(2);
@@ -411,12 +413,77 @@ test.describe('CSV', () => {
     const schema = imported?.data.schema as Array<{ name: string; type: string }>;
     const rows = all.filter((block) => block.type === 'database-row' && block.parent === imported?.id);
 
-    expect(imported?.data.title).toBe('plan');
+    // research/27 §2: the title stays the placeholder, not the file name.
+    expect(imported?.data.title ?? '').toBe('');
     expect(schema.map((p) => [p.name, p.type])).toEqual([['Step', 'title'], ['Hours', 'number'], ['Due', 'date']]);
     expect(rows.map((row) => Object.values(row.data.properties as Record<string, unknown>))).toEqual([
       ['Draft', 2, '2026-10-09'],
       ['Review', 1.5, '2026-10-12'],
     ]);
+  });
+
+  // research/27 §2: Notion's "Setup CSV columns" step, with the file it was measured with.
+  test('maps each CSV column to a type in the import dialog, keeping file order', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }));
+    await openSettingsAction(page, 'database-settings-csv-import');
+    const dialog = page.getByRole('dialog');
+    const map = dialog.getByTestId('database-csv-map');
+
+    await expect(map).toHaveAttribute('aria-disabled', 'true');
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({
+      name: 'blok-r27.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from([
+        'Name,Due,Amount,Site,Email,Done,Stage',
+        'Alpha,2026-03-04,12,https://example.com,a@example.com,Yes,Todo',
+        'Bravo,2026-03-05,7.5,https://example.org,b@example.com,No,Doing',
+        'Charlie,2026-03-06,100,https://example.net,c@example.com,Yes,Todo',
+      ].join('\n')),
+    });
+    await expect(map).toHaveAttribute('aria-disabled', 'false');
+    await map.click();
+
+    const types = dialog.getByTestId('database-csv-type');
+
+    await expect(types).toHaveText(['Name', 'Date • Full date', 'Number', 'URL', 'Email', 'Checkbox', 'Text']);
+    await types.nth(6).click();
+    await page.locator('[data-blok-item-name="database-csv-type-new"]').click();
+    await page.locator('[data-blok-item-name="database-csv-type-new-select"]').click();
+    await expect(types.nth(6)).toHaveText('Select');
+    // The closed menu fades out first; wait so only the next one matches.
+    await expect(page.locator('[data-blok-item-name="database-csv-type-skip"]')).toHaveCount(0);
+    await types.nth(3).click();
+    await page.locator('[data-blok-item-name="database-csv-type-skip"]').click();
+    await dialog.getByTestId('database-csv-import').click();
+    await expect(dialog).toBeHidden();
+
+    await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database').length).toBe(2);
+    const all = await saved(page);
+    const imported = all.find((block) => block.type === 'database' && block.id !== 'db-1');
+    const schema = imported?.data.schema as Array<{ id: string; name: string; type: string; config?: { options: Array<{ label: string }> } }>;
+    const rows = all.filter((block) => block.type === 'database-row' && block.parent === imported?.id);
+    const title = schema.find((p) => p.type === 'title');
+
+    expect(schema.map((p) => [p.name, p.type])).toEqual([
+      ['Name', 'title'], ['Due', 'date'], ['Amount', 'number'], ['Email', 'email'], ['Done', 'checkbox'], ['Stage', 'select'],
+    ]);
+    expect(schema.find((p) => p.name === 'Stage')?.config?.options.map((o) => o.label)).toEqual(['Todo', 'Doing']);
+    // Blok keeps file order; Notion reversed the rows (research/21 §4, research/27 §2).
+    expect(rows.map((row) => (row.data.properties as Record<string, unknown>)[title?.id ?? ''])).toEqual(['Alpha', 'Bravo', 'Charlie']);
+  });
+
+  test('one Escape on the mapping step closes the whole import', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }));
+    await openSettingsAction(page, 'database-settings-csv-import');
+    const dialog = page.getByRole('dialog');
+
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'a.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,N\na,1\n') });
+    await dialog.getByTestId('database-csv-map').click();
+    await expect(dialog.getByTestId('database-csv-setup')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('[data-blok-tool="database"]')).toHaveCount(1);
   });
 
   test('merges a CSV by adding rows only', async ({ page }) => {

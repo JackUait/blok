@@ -395,6 +395,54 @@ describe('bulk edit of a date: Remind and the property default', () => {
     });
   });
 
+  describe('End date on an empty picker writes nothing (unmeasured in Notion)', () => {
+    const toggleEnd = async (): Promise<void> => {
+      await click(document.querySelector('[data-blok-database-date-end-toggle]'));
+    };
+
+    it('bulk: an empty first row keeps every selected row\'s date', async () => {
+      await make(doc({}));
+      await selectTableRows('r3', 'r1', 'r2');
+      await openBulkDue();
+      await toggleEnd();
+
+      expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-12');
+      expect((await savedRow('r2'))?.properties?.due).toBe('2026-10-27');
+      expect((await savedRow('r3'))?.properties?.due).toBeNull();
+      expect(document.querySelector('[data-blok-database-date-end-toggle]')?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('bulk: a day picked after End date is on gives every selected row that range', async () => {
+      await make(doc({}));
+      await selectTableRows('r3', 'r1');
+      await openBulkDue();
+      await toggleEnd();
+      await pickDay('2026-10-20');
+
+      expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-20/2026-10-20');
+      expect((await savedRow('r3'))?.properties?.due).toBe('2026-10-20/2026-10-20');
+    });
+
+    it('bulk: Clear on an empty first row still clears every selected row', async () => {
+      await make(doc({}));
+      await selectTableRows('r3', 'r1');
+      await openBulkDue();
+      await click(document.querySelector('[data-blok-database-date-clear]'));
+
+      expect((await savedRow('r1'))?.properties?.due).toBeNull();
+      expect((await savedRow('r2'))?.properties?.due).toBe('2026-10-27');
+    });
+
+    it('table cell: an empty cell stays empty', async () => {
+      await make(doc({}));
+      await click(q('[data-row-id="r3"] [role="gridcell"][data-property-id="due"]'));
+      await toggleEnd();
+
+      expect((await savedRow('r3'))?.properties?.due).toBeNull();
+      expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-12');
+    });
+  });
+
   it('table: a first selected row with no date opens the bulk picker empty', async () => {
     await make(doc({}));
     await selectTableRows('r3', 'r1');

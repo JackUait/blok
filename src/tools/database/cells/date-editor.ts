@@ -274,9 +274,14 @@ class DateEditor {
     });
   }
 
-  private commit(): void {
+  /** `clear`: only Clear may write an empty value before a bulk edit has written anything. */
+  private commit(clear = false): void {
     const next = this.serialize();
 
+    // A bulk picker on an empty first row would clear every selected row.
+    if (next === null && this.lastValue === undefined && !clear) {
+      return;
+    }
     this.commitRemind(next);
     if (next !== this.lastValue) {
       this.lastValue = next;
@@ -630,7 +635,7 @@ class DateEditor {
     clear.addEventListener('click', () => {
       this.start = null;
       this.end = null;
-      this.commit();
+      this.commit(true);
       this.finish(true);
     });
     options.appendChild(clear);

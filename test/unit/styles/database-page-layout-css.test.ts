@@ -173,7 +173,7 @@ describe('database row page layout css', () => {
     // Body-mounted: nothing else gives it the editor's font.
     expect(root).toContain('font-family: var(--blok-font-family, var(--blok-font-sans))');
     expect(database).toMatch(/--blok-database-builder-backdrop: rgb\(249, 248, 247\);/);
-    expect(canvas).toContain('background-color: var(--blok-bg-primary)');
+    expect(canvas).toContain('background-color: var(--blok-database-builder-canvas-bg)');
     expect(canvas).toContain('box-shadow: 0 0 0 3px var(--blok-database-builder-canvas-ring)');
     expect(canvas).toContain('border-start-start-radius: var(--blok-radius-dialog)');
     expect(canvas).toContain('border-start-end-radius: var(--blok-radius-dialog)');
@@ -181,6 +181,21 @@ describe('database row page layout css', () => {
 
     expect(rings.length).toBeGreaterThan(0);
     for (const ring of rings) expect(ring).not.toMatch(/rgb\(206, 227, 247\)|accent|blue|#2383e2/i);
+  });
+
+  // research/21 §1n: dark backdrop rgb(32,32,32), canvas and modules rgb(25,25,25), Structure tiles rgb(32,32,32) ringed rgb(55,55,55).
+  it('uses the measured dark builder surfaces in both dark blocks', () => {
+    const values = (name: string): string[] => [...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g'))].map((m) => m[1].trim());
+
+    expect(values('--blok-database-builder-backdrop')).toEqual(['rgb(249, 248, 247)', 'rgb(32, 32, 32)', 'rgb(32, 32, 32)']);
+    expect(values('--blok-database-builder-canvas-bg')).toEqual(['#ffffff', 'rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
+    expect(values('--blok-database-builder-tile-bg')).toEqual(['#ffffff', 'rgb(32, 32, 32)', 'rgb(32, 32, 32)']);
+    expect(values('--blok-database-builder-tile-ring')).toEqual(['var(--blok-database-drawer-border)', 'rgb(55, 55, 55)', 'rgb(55, 55, 55)']);
+    const card = ruleBody('[data-blok-database-layout-structure-card]');
+
+    expect(card).toContain('background-color: var(--blok-database-builder-tile-bg)');
+    expect(card).toContain('box-shadow: inset 0 0 0 1px var(--blok-database-builder-tile-ring)');
+    expect(ruleBody('[data-blok-database-layout-structure-card][aria-pressed="true"]')).toContain('inset 0 0 0 1px var(--blok-database-builder-tile-ring)');
   });
 
   // research/09 §10: 60px bar, 16px side padding; at 756px nothing wraps.
@@ -253,7 +268,7 @@ describe('database row page layout css', () => {
     const strip = ruleBody('[data-blok-database-layout-module-header]');
     const name = ruleBody('[data-blok-database-layout-module-name]');
 
-    expect(card).toContain('background-color: var(--blok-bg-primary)');
+    expect(card).toContain('background-color: var(--blok-database-builder-canvas-bg)');
     expect(card).toContain('border-radius: var(--blok-radius-control-lg)');
     expect(card).toContain('box-shadow: inset 0 0 0 1px var(--blok-database-builder-canvas-ring)');
     expect(strip).toContain('background-color: var(--blok-database-builder-canvas-ring)');

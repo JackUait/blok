@@ -94,6 +94,10 @@
   --blok-database-builder-backdrop: rgb(249, 248, 247);
   --blok-database-builder-canvas-ring: rgba(42, 28, 0, 0.07);
   --blok-database-builder-split-line: rgba(28, 19, 1, 0.11);
+  /* Canvas and module cards white (research/10 §8); Structure tiles white (research/10 §2). */
+  --blok-database-builder-canvas-bg: #ffffff;
+  --blok-database-builder-tile-bg: #ffffff;
+  --blok-database-builder-tile-ring: var(--blok-database-drawer-border);
   --blok-database-calendar-muted-text: rgb(161, 158, 153);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
@@ -114,6 +118,7 @@
   --blok-database-timeline-arrow-icon: #ffffff;
   /* Center peek (research/07 and 08): 60% backdrop and the side peek's shadow. */
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
+  --blok-database-peek-bg: var(--blok-popover-bg);
   /* Fill handle: white in light, rgb(25,25,25) in dark (research/08). */
   --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -154,6 +159,9 @@
   --blok-database-card-menu-hover-bg: rgba(33, 27, 23, 0.05);
   /* Side peek property label (research/08:329). */
   --blok-database-peek-label: rgb(125, 122, 117);
+  /* Comment badge count and icon (research/21 §1o). */
+  --blok-database-comment-badge-text: rgb(44, 44, 43);
+  --blok-database-comment-badge-icon: rgb(142, 139, 134);
   /* Select editor head (research/08:306). Dark is unmeasured: the dark tab fill stands in. */
   --blok-database-select-head-bg: rgba(242, 241, 238, 0.6);
 }
@@ -240,10 +248,14 @@
     /* Dark calendar is unmeasured: table and gallery dark values stand in. */
     --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
     --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
-    /* Dark builder is unmeasured: the dark card fill and table line stand in. */
+    /* Builder surfaces: research/21 §1n. Notion's frame, module ring and strip are blue; neutral here (Q6).
+       The Apply chevron's split line is unmeasured in dark. */
     --blok-database-builder-backdrop: rgb(32, 32, 32);
     --blok-database-builder-canvas-ring: rgba(255, 255, 243, 0.082);
     --blok-database-builder-split-line: rgba(255, 255, 255, 0.16);
+    --blok-database-builder-canvas-bg: rgb(25, 25, 25);
+    --blok-database-builder-tile-bg: rgb(32, 32, 32);
+    --blok-database-builder-tile-ring: rgb(55, 55, 55);
     --blok-database-calendar-muted-text: rgb(125, 122, 117);
     --blok-database-calendar-day-text: rgb(240, 239, 237);
     --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -263,8 +275,10 @@
     --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
     --blok-database-timeline-arrow-icon: #ffffff;
     --blok-database-fill-handle-bg: rgb(25, 25, 25);
-    /* Peek unmeasured in dark: the shadow follows Notion's measured dark menu (research/08). */
-    --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+    /* Peek panel, shadow and center backdrop: research/21 §1m. */
+    --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+    --blok-database-peek-bg: rgb(32, 32, 32);
+    --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
     --blok-database-chart-blue: #3987e5;
     --blok-database-chart-orange: #d95926;
     --blok-database-chart-teal: #199e70;
@@ -285,7 +299,8 @@
     --blok-database-new-divider: rgba(28, 19, 1, 0.11);
     --blok-database-dependency-line: rgb(125, 122, 117);
     --blok-database-dependency-conflict: rgb(229, 100, 88);
-    /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions and peek label unmeasured: OPEN button and header ink stand in. */
+    /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions unmeasured: the OPEN button stands in.
+       Peek label: research/21 §1m. Comment badge: research/21 §1o. */
     --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
     --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.055);
     --blok-database-tab-text: rgb(173, 169, 163);
@@ -294,6 +309,8 @@
     --blok-database-card-actions-icon: rgb(173, 169, 163);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-peek-label: rgb(173, 169, 163);
+    --blok-database-comment-badge-text: rgb(240, 239, 237);
+    --blok-database-comment-badge-icon: rgb(173, 169, 163);
     --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
   }
 }
@@ -378,10 +395,14 @@
   /* Dark calendar is unmeasured: table and gallery dark values stand in. */
   --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
   --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
-  /* Dark builder is unmeasured: the dark card fill and table line stand in. */
+  /* Builder surfaces: research/21 §1n. Notion's frame, module ring and strip are blue; neutral here (Q6).
+     The Apply chevron's split line is unmeasured in dark. */
   --blok-database-builder-backdrop: rgb(32, 32, 32);
   --blok-database-builder-canvas-ring: rgba(255, 255, 243, 0.082);
   --blok-database-builder-split-line: rgba(255, 255, 255, 0.16);
+  --blok-database-builder-canvas-bg: rgb(25, 25, 25);
+  --blok-database-builder-tile-bg: rgb(32, 32, 32);
+  --blok-database-builder-tile-ring: rgb(55, 55, 55);
   --blok-database-calendar-muted-text: rgb(125, 122, 117);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -400,7 +421,10 @@
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
   --blok-database-timeline-arrow-icon: #ffffff;
-  --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  /* Peek panel, shadow and center backdrop: research/21 §1m. */
+  --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-peek-bg: rgb(32, 32, 32);
+  --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-chart-blue: #3987e5;
   --blok-database-chart-orange: #d95926;
@@ -422,7 +446,8 @@
   --blok-database-new-divider: rgba(28, 19, 1, 0.11);
   --blok-database-dependency-line: rgb(125, 122, 117);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
-  /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions and peek label unmeasured: OPEN button and header ink stand in. */
+  /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions unmeasured: the OPEN button stands in.
+     Peek label: research/21 §1m. Comment badge: research/21 §1o. */
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
   --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.055);
   --blok-database-tab-text: rgb(173, 169, 163);
@@ -431,6 +456,8 @@
   --blok-database-card-actions-icon: rgb(173, 169, 163);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-peek-label: rgb(173, 169, 163);
+  --blok-database-comment-badge-text: rgb(240, 239, 237);
+  --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
 }
 
@@ -833,7 +860,7 @@
   display: flex;
   flex-direction: column;
   border-inline-start: 1px solid var(--blok-popover-border);
-  background-color: var(--blok-popover-bg);
+  background-color: var(--blok-database-peek-bg);
   box-shadow: var(--blok-shadow-drawer-side);
   transform: translateX(100%);
   transition: transform 200ms ease;
@@ -2612,7 +2639,7 @@ button[data-blok-database-column-count]:hover {
   padding: var(--blok-space-10) 60px var(--blok-space-5);
   border-start-start-radius: var(--blok-radius-dialog);
   border-start-end-radius: var(--blok-radius-dialog);
-  background-color: var(--blok-bg-primary);
+  background-color: var(--blok-database-builder-canvas-bg);
   box-shadow: 0 0 0 3px var(--blok-database-builder-canvas-ring);
 }
 
@@ -2624,7 +2651,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-layout-module] {
   margin-block-end: var(--blok-space-3);
   border-radius: var(--blok-radius-control-lg);
-  background-color: var(--blok-bg-primary);
+  background-color: var(--blok-database-builder-canvas-bg);
   box-shadow: inset 0 0 0 1px var(--blok-database-builder-canvas-ring);
   cursor: pointer;
 }
@@ -3117,8 +3144,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-bg-primary);
-  box-shadow: inset 0 0 0 1px var(--blok-database-drawer-border);
+  background-color: var(--blok-database-builder-tile-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-database-builder-tile-ring);
   color: var(--blok-text-primary);
   font: inherit;
   font-size: 12px;
@@ -3126,7 +3153,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-layout-structure-card][aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1px var(--blok-database-drawer-border), 0 0 0 1px var(--blok-database-card-border-active);
+  box-shadow: inset 0 0 0 1px var(--blok-database-builder-tile-ring), 0 0 0 1px var(--blok-database-card-border-active);
   font-weight: 600;
 }
 
@@ -5259,7 +5286,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-comment-badge-text);
   font: inherit;
   font-size: 12px;
   font-weight: 400;
@@ -5274,6 +5301,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 [data-blok-database-comment-badge] svg {
   display: block;
+  color: var(--blok-database-comment-badge-icon);
   width: 16px;
   height: 16px;
 }
@@ -5435,9 +5463,10 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   margin-block: var(--blok-space-2);
 }
 
+/* research/09 §1 (light) and research/21 §1m (dark): the property label ink. */
 [data-blok-database-comments-label] {
   margin-bottom: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-peek-label);
   font-size: 13px;
   font-weight: 500;
 }

@@ -152,6 +152,29 @@ describe('side peek properties (research/08:329)', () => {
   });
 });
 
+describe('row page peek in dark (research/21 §1m)', () => {
+  it('paints the side and center peek panel rgb(32, 32, 32) in both dark blocks; light keeps the popover fill', () => {
+    expect(ruleBody('[data-blok-database-drawer]')).toContain('background-color: var(--blok-database-peek-bg)');
+    expect(tokenValues('--blok-database-peek-bg')).toEqual(['var(--blok-popover-bg)', 'rgb(32, 32, 32)', 'rgb(32, 32, 32)']);
+  });
+
+  it('gives the center peek the measured dark ring and drop shadow', () => {
+    const dark = 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px';
+
+    expect(tokenValues('--blok-database-peek-shadow').slice(1)).toEqual([dark, dark]);
+  });
+
+  it('darkens the center peek backdrop to 0.8 in dark (light 0.6, research/08)', () => {
+    expect(ruleBody('[data-blok-database-peek-backdrop]')).toContain('background-color: var(--blok-database-peek-backdrop)');
+    expect(tokenValues('--blok-database-peek-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
+  });
+
+  it('inks labels and the "Comments" heading rgb(173, 169, 163) in dark', () => {
+    expect(tokenValues('--blok-database-peek-label').slice(1)).toEqual(['rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+    expect(ruleBody('[data-blok-database-comments-label]')).toContain('color: var(--blok-database-peek-label)');
+  });
+});
+
 describe('dark option pills (research/08:294-296)', () => {
   it.each([
     ['purple', 'rgba(208, 147, 255, 0.427)', 'rgb(243, 235, 249)'],

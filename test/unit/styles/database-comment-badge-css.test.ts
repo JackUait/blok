@@ -22,7 +22,7 @@ describe('database comment badge css', () => {
     const badge = rulesFor('[data-blok-database-comment-badge]');
 
     expect(badge).toContain('background: transparent');
-    expect(badge).toContain('color: var(--blok-text-primary)');
+    expect(badge).toContain('color: var(--blok-database-comment-badge-text)');
     expect(badge).toContain('font-size: 12px');
     expect(badge).toContain('font-weight: 400');
   });
@@ -32,6 +32,16 @@ describe('database comment badge css', () => {
 
     expect(glyph).toContain('width: 16px');
     expect(glyph).toContain('height: 16px');
+  });
+
+  // research/21 §1o: count and icon ink, light then the two dark blocks.
+  it('inks the count and the icon as measured in light and dark', () => {
+    const tokenValues = (name: string): string[] =>
+      [ ...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g')) ].map((m) => m[1].trim());
+
+    expect(rulesFor('[data-blok-database-comment-badge] svg')).toContain('color: var(--blok-database-comment-badge-icon)');
+    expect(tokenValues('--blok-database-comment-badge-text')).toEqual(['rgb(44, 44, 43)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
+    expect(tokenValues('--blok-database-comment-badge-icon')).toEqual(['rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
   });
 
   it('hovers with the neutral item fill, never blue', () => {

@@ -229,6 +229,21 @@ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup
  */
 const INITIAL_VIEW_KEY = 'initialView';
 
+/**
+ * The toolbox merges the saved data of an empty block (a board) under its
+ * seed, so a seed drops that schema and those views and builds its own.
+ */
+const seedWins = <T extends DatabaseData | undefined>(data: T): T => {
+  if (data === undefined || (data as unknown as Record<string, unknown>)[INITIAL_VIEW_KEY] === undefined) return data;
+  const seed: Partial<DatabaseData> = { ...data };
+
+  delete seed.schema;
+  delete seed.views;
+  delete seed.activeViewId;
+
+  return seed as T;
+};
+
 /** Groups a board shows before "Load more groups" (research/08). */
 const BOARD_GROUP_PAGE = 10;
 
@@ -539,7 +554,9 @@ export class DatabaseTool implements BlockTool {
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
-  constructor({ data, config, api, block, readOnly, origin }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
+  constructor({ data: given, config, api, block, readOnly, origin }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
+    const data = seedWins(given);
+
     this.api = api;
     this.block = block;
     this.config = config ?? {};
@@ -1468,7 +1485,7 @@ export class DatabaseTool implements BlockTool {
         searchTerms: ['database', 'kanban', 'board', 'cards', 'columns'],
         section: 'database',
         preview: { render: renderDatabasePreview, descriptionKey: 'toolbox.preview.database' },
-        // Notion starts a new database as a table.
+        // Notion starts a new database as a table (research/26 §2 `/table view`, research/03 §1).
         data: { [INITIAL_VIEW_KEY]: 'table' },
       },
       {

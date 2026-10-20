@@ -80,4 +80,27 @@ describe('database inserted with the toolbox table seed', () => {
 
     expect(redone?.data).toEqual(saved?.data);
   });
+
+  // The toolbox merges the empty block's saved default (a board) under its seed.
+  it('starts a table when the toolbox merges the composed default under the seed', async () => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { id: 'doc', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] },
+    }) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    const composed = await editor.blocks.composeBlockData('database');
+    const inserted = editor.blocks.insert('database', { ...composed, initialView: 'table' });
+
+    await quiet();
+
+    const saved = (await editor.save()).blocks.find((block) => block.id === inserted.id);
+
+    expect((saved?.data as { views: Array<{ type: string }> }).views.map((view) => view.type)).toEqual(['table']);
+    expect(saved?.data).not.toHaveProperty('initialView');
+    expect(editor.module.yjsManager.toJSON().find((block) => block.id === inserted.id)?.data).toEqual(saved?.data);
+  });
 });

@@ -142,3 +142,15 @@ test('without the host lever a new database opens no panel', async ({ page }) =>
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(page.getByTestId('database-new-database-panel')).toHaveCount(0);
 });
+
+// research/26 §2: Notion's `/table view` starts a new database as a table; research/03 §1: a new database gets one Table view.
+test('the "/" Database entry starts a table, not a board', async ({ page }) => {
+  await mount(page, false);
+  await insertDatabase(page);
+
+  await expect(page.locator('[data-blok-tool="database"]').first().getByRole('grid')).toBeVisible();
+  const database = (await saved(page)).find((block) => block.type === 'database');
+  const views = (database?.data as { views?: Array<{ type: string }> } | undefined)?.views;
+
+  expect(views?.map((view) => view.type)).toEqual(['table']);
+});

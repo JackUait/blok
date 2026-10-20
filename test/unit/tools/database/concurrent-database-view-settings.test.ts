@@ -264,10 +264,10 @@ describe('database view settings — two peers editing one view', () => {
   });
 
   /**
-   * A toolbox insert leaves only `{ initialView }` in the document until the
-   * author's save lands, and every client that renders it saves its own
-   * default schema and view. Those must be the same, or the id-keyed lists
-   * merge into two title columns and two views.
+   * A toolbox insert leaves the seed (and the composed default the seed
+   * drops) in the document until the author's save lands, and every client
+   * that renders it saves its own default schema and view. Those must be the
+   * same, or the id-keyed lists merge into two title columns and two views.
    */
   it('gives every client that fills in a seeded insert the same schema and view', () => {
     const storeA = createStore();

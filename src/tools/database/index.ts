@@ -29,7 +29,7 @@ import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDispla
 import { comparePositions } from './positions';
 import { mapRowValues } from './row-move';
 import { dependencyArrows, shiftDependents } from './dependencies';
-import { templateMenuItems } from './database-template-menu';
+import { templateMenuItems, templateRepeatItems, templateRepeatSummary } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
@@ -1673,6 +1673,10 @@ export class DatabaseTool implements BlockTool {
     if (this.madeTabsBlocks.size > 0) this.queueLayoutTabsSync();
     // Every reminder and repeat write lands here, so the next wake follows it.
     this.scheduleDue();
+    // A repeat written here, by a peer or by undo keeps the open template's banner true.
+    const openId = this.cardDrawer?.openRowId;
+
+    if (openId !== undefined && openId !== null && templateIds.has(openId)) this.showTemplateBanner(openId);
   }
 
   /**
@@ -4674,7 +4678,6 @@ export class DatabaseTool implements BlockTool {
       addTemplate: () => this.addTemplate(),
       editTemplate: (id) => this.openTemplate(id),
       setDefault: (id) => this.setDefaultTemplate(id),
-      setRepeat: (id, repeat) => this.setTemplateRepeat(id, repeat),
       duplicate: (id) => this.duplicateTemplate(id),
       remove: (id) => this.deleteTemplate(id),
     }), anchor);
@@ -6003,7 +6006,26 @@ export class DatabaseTool implements BlockTool {
 
     if (template === undefined) return;
     this.cardDrawer?.open(template, this.cardDrawer.isOpen ? this.cardDrawer.openMode : 'center');
-    this.cardDrawer?.setTemplateBanner(this.api.i18n.t('tools.database.templateBanner'));
+    this.showTemplateBanner(templateId);
+  }
+
+  /** The open template's banner, with its "Duplicate every…" button. Read-only shows the text alone. */
+  private showTemplateBanner(templateId: string): void {
+    const repeat = this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === templateId));
+
+    this.cardDrawer?.setTemplateBanner({
+      text: this.api.i18n.t('tools.database.templateBanner'),
+      ...(this.readOnly ? {} : {
+        repeat: {
+          label: templateRepeatSummary(this.api.i18n, repeat),
+          open: (anchor: HTMLElement) => this.showGroupPopover(anchor, templateRepeatItems({
+            i18n: this.api.i18n,
+            repeat: () => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === templateId)),
+            setRepeat: (next) => this.setTemplateRepeat(templateId, next),
+          }), anchor),
+        },
+      }),
+    });
   }
 
   setDefaultTemplate(templateId: string | null): void {

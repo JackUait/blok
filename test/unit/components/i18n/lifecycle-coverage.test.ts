@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1274 + 125 + 442 + 4 closure for all 1845 keys', () => {
+  it('rebuilds a disjoint 1274 + 125 + 465 + 4 closure for all 1868 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1845);
+    expect(lifecycle.size).toBe(1868);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -438,7 +438,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the view settings panel builds tools.database.settingsLockViews from a short name.
       // +8 / -1: the repeat interval's plural keys (templateRepeatEvery<Unit>_one/_other) replace templateRepeatEvery,
       // all built from a short name.
-      'registered-namespace-compatible': 442,
+      // +25 / -2: the template banner's "Duplicate every…" summary, presets, ↻ hints and Cancel recurrence
+      // replace templateRepeat and templateRepeatOff, all built from a short name.
+      'registered-namespace-compatible': 465,
       'catalog-only': 4,
     });
     expect(

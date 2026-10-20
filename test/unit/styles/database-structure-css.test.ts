@@ -66,6 +66,12 @@ describe('database structure styles', () => {
     expect(ruleBody('[data-blok-database-timeline-link-handle]')).toMatch(/inset-inline-end:\s*-/);
   });
 
+  it('styles the banner\'s "Duplicate every…" button and the list\'s ↻ in neutral ink, never blue', () => {
+    expect(ruleBody('[data-blok-database-template-repeat]')).toContain('cursor: pointer');
+    expect(ruleBody('[data-blok-database-template-repeat]:hover')).toContain('--blok-item-hover-bg');
+    expect(ruleBody('[data-blok-database-template-repeat-icon]')).toContain('--blok-text-secondary');
+  });
+
   it('styles the button cell, template banner and linked-view states', () => {
     for (const selector of ['[data-blok-database-button]', '[data-blok-database-template-banner]', '[data-blok-database-source-missing]', '[data-blok-database-source-picker]', '[data-blok-database-add-subitem] button']) {
       expect(ruleBody(selector), selector).not.toBe('');

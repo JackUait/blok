@@ -481,6 +481,7 @@ export class DatabaseCardDrawer {
 
   private drawer: HTMLDivElement | null = null;
   private currentRowId: string | null = null;
+  private templateRepeatOpen: ((anchor: HTMLElement) => void) | null = null;
   private currentRow: DatabaseRow | null = null;
   private editorInitVersion = 0;
   private blokInstance: BlokInstance | null = null;
@@ -1684,27 +1685,58 @@ export class DatabaseCardDrawer {
   }
 
   /**
+   * Marks the open page as a template being edited: a banner above the page
+   * head, as Notion shows, with its "Duplicate every…" button when `repeat`
+   * is given. A banner already shown is updated in place, so a popover
+   * anchored on the button stays put. Null takes it away.
+   */
+  setTemplateBanner(banner: { text: string; repeat?: { label: string; open: (anchor: HTMLElement) => void } } | null): void {
+    const content = this.drawer?.querySelector('[data-blok-database-drawer-content]');
+    const shown = content?.querySelector<HTMLElement>('[data-blok-database-template-banner]');
+
+    if (content === null || content === undefined || banner === null) {
+      shown?.remove();
+      this.templateRepeatOpen = null;
+
+      return;
+    }
+    const el = shown ?? document.createElement('div');
+    const existingText = el.querySelector('[data-blok-database-template-banner-text]');
+    const text = existingText ?? document.createElement('span');
+
+    // Writes only on change: a rewritten status region is read out again on every sync.
+    if (existingText === null) {
+      text.setAttribute('data-blok-database-template-banner-text', '');
+      text.setAttribute('role', 'status');
+      el.setAttribute('data-blok-database-template-banner', '');
+      el.prepend(text);
+    }
+    if (text.textContent !== banner.text) text.textContent = banner.text;
+    this.templateRepeatOpen = banner.repeat?.open ?? null;
+    const existing = el.querySelector<HTMLButtonElement>('[data-blok-database-template-repeat]');
+
+    if (banner.repeat === undefined) {
+      existing?.remove();
+    } else {
+      const button = existing ?? document.createElement('button');
+
+      if (existing === null) {
+        button.type = 'button';
+        button.setAttribute('data-blok-database-template-repeat', '');
+        button.setAttribute('aria-haspopup', 'menu');
+        button.addEventListener('click', () => this.templateRepeatOpen?.(button));
+        el.append(button);
+      }
+      if (button.textContent !== banner.repeat.label) button.textContent = banner.repeat.label;
+    }
+    if (shown === null || shown === undefined) content.prepend(el);
+  }
+
+  /**
    * Show the open row's data after undo, redo or a peer changed it, or close
    * when the row is gone. A stale title or body would be written back over
    * the change on the next keystroke.
    */
-  /**
-   * Marks the open page as a template being edited: a banner above the page
-   * head, as Notion shows. Null takes it away.
-   */
-  setTemplateBanner(text: string | null): void {
-    const content = this.drawer?.querySelector('[data-blok-database-drawer-content]');
-
-    content?.querySelector('[data-blok-database-template-banner]')?.remove();
-    if (content === null || content === undefined || text === null) return;
-    const banner = document.createElement('div');
-
-    banner.setAttribute('data-blok-database-template-banner', '');
-    banner.setAttribute('role', 'status');
-    banner.textContent = text;
-    content.prepend(banner);
-  }
-
   syncOpenRow(row: DatabaseRow | undefined): void {
     if (this.drawer === null || (row !== undefined && row.id !== this.currentRowId)) {
       return;

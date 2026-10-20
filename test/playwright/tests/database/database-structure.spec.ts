@@ -171,6 +171,32 @@ test.describe('templates', () => {
     await expect(page.locator('[data-blok-database-template-banner]')).toBeVisible();
     await expect.poll(async () => (await saved(page)).filter((block) => (block.data as { template?: boolean }).template === true).length).toBe(2);
   });
+
+  test('the template banner sets a repeat; the templates list shows ↻ with its hint', async ({ page }) => {
+    await mount(page, blocks());
+    await page.getByTestId('database-toolbar-new-menu').click();
+    await page.getByRole('menuitem', { name: 'Bug report' }).click();
+    await page.getByRole('menuitem', { name: 'Edit' }).click();
+
+    const repeat = page.getByRole('button', { name: 'Duplicate every…' });
+
+    await repeat.click();
+    await page.getByRole('menuitem', { name: '2 Weeks' }).click();
+
+    await expect(page.getByRole('button', { name: 'Duplicate every 2 weeks' })).toBeVisible();
+    await expect.poll(async () => (await savedRow(page, 'tpl')).repeat).toMatchObject({ frequency: 'weekly', interval: 2 });
+
+    await page.keyboard.press('Escape');
+    await page.getByTestId('database-toolbar-new-menu').click();
+    const icon = page.getByRole('img', { name: 'Duplicate weekly' });
+
+    await expect(icon).toBeVisible();
+    await icon.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly');
+    await page.getByRole('menuitem', { name: 'Bug report' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Repeat' })).toHaveCount(0);
+  });
 });
 
 test.describe('sub-items', () => {

@@ -11634,6 +11634,37 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-text-secondary);
   font-size: 14px;
   line-height: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-2) var(--blok-space-3);
+}
+
+[data-blok-database-template-repeat] {
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-template-repeat]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-template-repeat-icon] {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: var(--blok-space-1);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-template-repeat-icon] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-table], [data-blok-database-list], [data-blok-database-timeline] {

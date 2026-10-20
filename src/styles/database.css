@@ -8513,6 +8513,39 @@ button[data-blok-database-feed-reaction]:hover,
   color: var(--blok-text-secondary);
   font-size: 14px;
   line-height: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-2) var(--blok-space-3);
+}
+
+/* Notion's "Duplicate every…" pill sits beside the banner text. */
+[data-blok-database-template-repeat] {
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-template-repeat]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/* Notion paints ↻ blue; Blok keeps blue for links and focus rings. */
+[data-blok-database-template-repeat-icon] {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: var(--blok-space-1);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-template-repeat-icon] svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* The view sets the depth on each nested row; the indent per level is unmeasured. */

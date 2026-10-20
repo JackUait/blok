@@ -1,7 +1,8 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
-import { IconCopy, IconPage, IconPencil, IconPlus, IconTrash } from '../../components/icons';
+import { IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { onHover } from '../../components/utils/tooltip';
 import { wallTime, zonedToEpoch } from './formula/dates';
 import { repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
@@ -18,9 +19,15 @@ export interface TemplateMenuHost {
   editTemplate: (templateId: string) => void;
   /** Null makes an empty page the default. */
   setDefault: (templateId: string | null) => void;
-  setRepeat: (templateId: string, repeat: TemplateRepeat | null) => void;
   duplicate: (templateId: string) => void;
   remove: (templateId: string) => void;
+}
+
+/** What the template banner's "Duplicate every…" menu asks of the database tool. */
+export interface TemplateRepeatHost {
+  i18n: Pick<I18n, 't'>;
+  repeat: () => TemplateRepeat | undefined;
+  setRepeat: (repeat: TemplateRepeat | null) => void;
   /** IANA zone a new or re-timed schedule keeps. Default: the viewer's. */
   timeZone?: string;
 }
@@ -31,8 +38,41 @@ const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
+const translator = (i18n: Pick<I18n, 't'>): Translate => (key, vars) => i18n.t(`tools.database.${key}`, vars);
+
 /** Plural keys: `_one` / `_other` and whatever forms each language adds. */
 const EVERY_KEYS: Record<TemplateRepeatFrequency, string> = { daily: 'templateRepeatEveryDay', weekly: 'templateRepeatEveryWeek', monthly: 'templateRepeatEveryMonth', yearly: 'templateRepeatEveryYear' };
+
+const UNIT_NAMES: Record<TemplateRepeatFrequency, string> = { daily: 'Day', weekly: 'Week', monthly: 'Month', yearly: 'Year' };
+
+/** Notion's "Duplicate every…" presets, in its order. Weekday is left out: a schedule has no weekdays yet. */
+const PRESETS: ReadonlyArray<{ id: string; key: string; frequency: TemplateRepeatFrequency; interval: number }> = [
+  { id: 'day', key: 'templateRepeatPresetDay', frequency: 'daily', interval: 1 },
+  { id: 'week', key: 'templateRepeatPresetWeek', frequency: 'weekly', interval: 1 },
+  { id: '2-weeks', key: 'templateRepeatPresetTwoWeeks', frequency: 'weekly', interval: 2 },
+  { id: 'month', key: 'templateRepeatPresetMonth', frequency: 'monthly', interval: 1 },
+  { id: '3-months', key: 'templateRepeatPresetThreeMonths', frequency: 'monthly', interval: 3 },
+  { id: '6-months', key: 'templateRepeatPresetSixMonths', frequency: 'monthly', interval: 6 },
+  { id: 'year', key: 'templateRepeatPresetYear', frequency: 'yearly', interval: 1 },
+];
+
+/**
+ * The banner's label: "Duplicate every 2 weeks", "Duplicate every day".
+ * Interval 1 has its own key: a `_one` form also covers 21, 31… in some languages.
+ */
+export const templateRepeatSummary = (i18n: Pick<I18n, 't'>, repeat: TemplateRepeat | undefined): string => {
+  const t = translator(i18n);
+
+  if (repeat === undefined) return t('templateRepeatSummaryNone');
+  const interval = repeat.interval ?? 1;
+
+  return interval === 1
+    ? t(`templateRepeatSummary${UNIT_NAMES[repeat.frequency]}`)
+    : t(`templateRepeatSummary${UNIT_NAMES[repeat.frequency]}s`, { count: interval });
+};
+
+/** The ↻ hint in the templates list. Notion names only the unit there, even for every 2 weeks. */
+const repeatHint = (t: Translate, repeat: TemplateRepeat): string => t(`templateRepeatHint${capital(repeat.frequency)}`);
 
 const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
 
@@ -114,64 +154,96 @@ const startField = (name: string, t: Translate, repeat: TemplateRepeat, viewerZo
 };
 
 /**
+ * The template banner's "Duplicate every…" menu (research/21 §3): Notion's
+ * presets while the template does not repeat, then the schedule's fields
+ * and "Cancel recurrence".
+ */
+export const templateRepeatItems = (host: TemplateRepeatHost): PopoverItemParams[] => {
+  const t = translator(host.i18n);
+  const viewerZone = host.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const repeat = host.repeat();
+
+  if (repeat === undefined) {
+    return PRESETS.map((preset): PopoverItemParams => ({
+      name: `template-repeat-${preset.id}`,
+      title: t(preset.key),
+      closeOnActivate: true,
+      onActivate: () => host.setRepeat({
+        frequency: preset.frequency,
+        ...(preset.interval === 1 ? {} : { interval: preset.interval }),
+        start: new Date().toISOString(),
+        timeZone: viewerZone,
+      }),
+    }));
+  }
+  // Reads the stored schedule again: an earlier edit in the same open menu must survive.
+  const patchRepeat = (patch: Partial<TemplateRepeat>): void => {
+    const latest = host.repeat();
+
+    if (latest !== undefined) host.setRepeat({ ...latest, ...patch });
+  };
+
+  return [
+    intervalField('template-repeat-interval', t, repeat, patchRepeat),
+    ...FREQUENCIES.map((frequency): PopoverItemParams => ({
+      name: `template-repeat-${frequency}`,
+      title: t(`templateRepeat${capital(frequency)}`),
+      isActive: repeat.frequency === frequency,
+      closeOnActivate: true,
+      // A spread keeps `lastRunAt`: without it the latest past run would be offered again.
+      onActivate: () => host.setRepeat({ ...repeat, frequency }),
+    })),
+    { type: PopoverItemType.Separator },
+    startField('template-repeat-start', t, repeat, viewerZone, patchRepeat),
+    { type: PopoverItemType.Separator },
+    { name: 'template-repeat-cancel', title: t('templateRepeatCancel'), closeOnActivate: true, onActivate: () => host.setRepeat(null) },
+  ];
+};
+
+/** The name, then ↻ when the template repeats. */
+const repeatingTitle = (title: string, hint: string): HTMLElement => {
+  const el = document.createElement('span');
+  const icon = document.createElement('span');
+
+  icon.setAttribute('data-blok-database-template-repeat-icon', '');
+  icon.setAttribute('role', 'img');
+  icon.setAttribute('aria-label', hint);
+  icon.innerHTML = IconPlayerLoop;
+  onHover(icon, hint, { placement: 'top' });
+  el.append(title, icon);
+
+  return el;
+};
+
+/**
  * The "New" dropdown (research/05 §7): one entry per template, then an
  * empty page and "+ New template". Each entry's submenu holds what Notion
- * puts behind its "•••": use, edit, set as default, repeat, duplicate, delete.
+ * puts behind its "•••": use, edit, set as default, duplicate, delete.
+ * Repeat lives in the template's banner, as in Notion (research/21 §3).
  */
 export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] => {
-  const t: Translate = (key, vars) => host.i18n.t(`tools.database.${key}`, vars);
+  const t = translator(host.i18n);
   const current = host.defaultTemplateId();
-  const viewerZone = host.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const entry = (id: string, title: string): PopoverItemParams => {
     const repeat = host.repeatOf(id);
-    // Reads the stored schedule again: an earlier edit in the same open menu must survive.
-    const patchRepeat = (patch: Partial<TemplateRepeat>): void => {
-      const latest = host.repeatOf(id);
-
-      if (latest !== undefined) host.setRepeat(id, { ...latest, ...patch });
-    };
-    const scheduleFields: PopoverItemParams[] = repeat === undefined
-      ? []
-      : [
-        { type: PopoverItemType.Separator },
-        intervalField(`template-${id}-repeat-interval`, t, repeat, patchRepeat),
-        startField(`template-${id}-repeat-start`, t, repeat, viewerZone, patchRepeat),
-      ];
+    const shown = title === '' ? t('templateUntitled') : title;
 
     return {
       name: `template-${id}`,
-      title: title === '' ? t('templateUntitled') : title,
+      title: shown,
+      ...(repeat === undefined ? {} : { titleEl: repeatingTitle(shown, repeatHint(t, repeat)) }),
       icon: IconPage,
       children: {
         items: [
           { name: `template-${id}-use`, title: t('templateUse'), icon: IconPlus, closeOnActivate: true, onActivate: () => host.newFromTemplate(id) },
           { name: `template-${id}-edit`, title: t('templateEdit'), icon: IconPencil, closeOnActivate: true, onActivate: () => host.editTemplate(id) },
           { name: `template-${id}-default`, title: t('templateSetDefault'), isActive: current === id, closeOnActivate: true, onActivate: () => host.setDefault(id) },
-          {
-            name: `template-${id}-repeat`,
-            title: t('templateRepeat'),
-            children: {
-              items: [
-                { name: `template-${id}-repeat-off`, title: t('templateRepeatOff'), isActive: repeat === undefined, closeOnActivate: true, onActivate: () => host.setRepeat(id, null) },
-                ...FREQUENCIES.map((frequency): PopoverItemParams => ({
-                  name: `template-${id}-repeat-${frequency}`,
-                  title: t(`templateRepeat${capital(frequency)}`),
-                  isActive: repeat?.frequency === frequency,
-                  closeOnActivate: true,
-                  // A spread keeps `lastRunAt`: without it the latest past run would be offered again.
-                  onActivate: () => host.setRepeat(id, repeat === undefined ? { frequency, start: new Date().toISOString(), timeZone: viewerZone } : { ...repeat, frequency }),
-                })),
-                ...scheduleFields,
-              ],
-            },
-          },
           { name: `template-${id}-duplicate`, title: t('templateDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: () => host.duplicate(id) },
           { name: `template-${id}-delete`, title: t('templateDelete'), icon: IconTrash, isDestructive: true, closeOnActivate: true, onActivate: () => host.remove(id) },
         ],
       },
     };
   };
-
   return [
     ...host.templates().map((template) => entry(template.id, template.title)),
     {

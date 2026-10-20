@@ -134,6 +134,69 @@ describe('DatabaseTool — templates', () => {
     expect(document.querySelector('[data-blok-database-template-banner]')).not.toBeNull();
   });
 
+  describe('the banner\'s "Duplicate every…" button', () => {
+    const repeatButton = (): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>('[data-blok-database-template-banner] [data-blok-database-template-repeat]');
+
+    it('sums up the template\'s schedule and follows a change', () => {
+      const doc = seed();
+      const { tool } = buildDatabase(doc, 'db', data());
+
+      tool.openTemplate('tpl');
+      expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryNone');
+      const button = repeatButton();
+
+      tool.setTemplateRepeat('tpl', { frequency: 'weekly', interval: 2, start: '2026-10-09T12:00:00.000Z' });
+
+      expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryWeeks {"count":2}');
+      // The same button: a popover anchored on it stays put while the interval is typed.
+      expect(repeatButton()).toBe(button);
+    });
+
+    it('leaves the banner\'s status alone when a sync changes nothing it shows', async () => {
+      const doc = seed();
+      const { tool } = buildDatabase(doc, 'db', data());
+
+      tool.openTemplate('tpl');
+      tool.setTemplateRepeat('tpl', { frequency: 'weekly', start: '2026-10-09T12:00:00.000Z' });
+      const banner = document.querySelector('[data-blok-database-template-banner]');
+      const records: MutationRecord[] = [];
+      const observer = new MutationObserver((list) => records.push(...list));
+
+      if (banner === null) throw new Error('no banner');
+      observer.observe(banner, { childList: true, subtree: true, characterData: true });
+      tool.setTemplateRepeat('tpl', { frequency: 'weekly', start: '2026-10-10T12:00:00.000Z' });
+      await Promise.resolve();
+      observer.disconnect();
+
+      // A live region that is rewritten is read out again on every keystroke.
+      expect(records).toEqual([]);
+    });
+
+    it('follows a schedule a peer or undo writes', async () => {
+      const doc = seed();
+      const { tool } = buildDatabase(doc, 'db', data());
+      const entry = doc.blocks.get('tpl');
+
+      if (entry === undefined) throw new Error('no template');
+      tool.openTemplate('tpl');
+      entry.data = { ...entry.data, repeat: { frequency: 'daily', start: '2026-10-09T12:00:00.000Z' } };
+      doc.api.events.emit('block changed', { event: { detail: { target: entry.block } } });
+      await Promise.resolve();
+
+      expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryDay');
+    });
+
+    it('is not on a row page', () => {
+      const doc = seed();
+      const { tool } = buildDatabase(doc, 'db', data());
+
+      tool.openTemplate('tpl');
+      tool.openRow({ rowId: 'r1' });
+
+      expect(repeatButton()).toBeNull();
+    });
+  });
+
   it('the toolbar "New" makes a row from the default template and opens it', () => {
     const doc = seed();
     const { el } = buildDatabase(doc, 'db', data({ defaultTemplateId: 'tpl' }), { people });

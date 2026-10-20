@@ -940,4 +940,172 @@ describe('createLivePreview', () => {
     expect(slots).toHaveLength(2);
     expect(slots.some((slot) => slot.classList.contains('blok-ai-shimmer'))).toBe(false);
   });
+
+  describe('every block streams in its final form', () => {
+    const CELL = '[data-blok-table-cell]';
+    const markdown = (text: string): string =>
+      execute({ name: 'markdown.insert', args: { position: { after: 'b1' }, markdown: text } });
+    const cellTexts = (): string[] => [...state.layer.querySelectorAll(CELL)].map((cell) => cell.textContent?.trim() ?? '');
+    const layerText = (): string => state.layer.querySelector(PREVIEW)?.textContent ?? '';
+
+    it('draws a streaming Markdown table as a table, never as pipes', () => {
+      const preview = make();
+      const json = markdown('| Planet | Moons |\n| --- | --- |\n| Mars | 2 |');
+
+      // Only the header row so far: the grid shows at once, before any word lands.
+      preview.update('c1', open(json, 'Moons |'));
+      expect(state.layer.querySelector('table')).not.toBeNull();
+      expect(state.layer.querySelectorAll(CELL)).toHaveLength(2);
+      expect(state.layer.querySelectorAll(SLOT)).toHaveLength(0);
+
+      preview.update('c1', open(json, '| --- |'));
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(layerText()).not.toMatch(/[|]|---/);
+      expect(cellTexts()).toEqual(['Planet', 'Moons', 'Mars', '2']);
+      expect(state.layer.querySelector('tr')?.hasAttribute('data-blok-table-heading')).toBe(true);
+    });
+
+    it('lands table words one at a time, in reading order', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('| A | B |\n| - | - |\n| C | D |'));
+
+      expect(words(state.layer)).toEqual(['A']);
+      vi.advanceTimersByTime(35);
+      expect(words(state.layer)).toEqual(['A', 'B']);
+      vi.advanceTimersByTime(35 * 2);
+      expect(cellTexts()).toEqual(['A', 'B', 'C', 'D']);
+    });
+
+    it('adds body rows without rebuilding the rows already drawn', () => {
+      const preview = make();
+      const json = markdown('| A | B |\n| - | - |\n| C | D |\n| E | F |');
+
+      preview.update('c1', open(json, '| C | D |'));
+      vi.advanceTimersByTime(35 * 10);
+
+      const header = state.layer.querySelector('.blok-ai-word');
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('.blok-ai-word')).toBe(header);
+      expect(cellTexts()).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+    });
+
+    it('places cells the way the delimiter row aligns them', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('| A | B | C |\n| --- | :-: | --: |\n| 1 | 2 | 3 |'));
+      vi.advanceTimersByTime(35 * 10);
+
+      const placements = [...state.layer.querySelectorAll('tr:last-child [data-blok-table-cell-blocks]')]
+        .map((cell) => cell.getAttribute('data-blok-cell-placement'));
+
+      expect(placements).toEqual([null, 'top-center', 'top-right']);
+    });
+
+    it('drops an empty header row, as the importer does, and shows no heading', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('|  |  |\n| - | - |\n| x | y |'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(cellTexts()).toEqual(['x', 'y']);
+      expect(state.layer.querySelector('[data-blok-table-heading]')).toBeNull();
+    });
+
+    it('shows a lone table row with no heading, as the importer does', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('| A |\n| - |'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(cellTexts()).toEqual(['A']);
+      expect(state.layer.querySelector('[data-blok-table-heading]')).toBeNull();
+    });
+
+    it('turns a pipe line with no delimiter row back into a paragraph', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('| a |\nnot a table'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('table')).toBeNull();
+      expect(state.layer.querySelector('.blok-block')?.textContent).toBe('| a | not a table');
+    });
+
+    it('draws a table from block.insert content', () => {
+      const preview = make();
+      const json = execute({
+        name: 'block.insert',
+        args: { position: { after: 'b1' }, type: 'table', data: { withHeadings: true, content: [['Name', 'Age'], ['Ann', '30']] } },
+      });
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(cellTexts()).toEqual(['Name', 'Age', 'Ann', '30']);
+      expect(state.layer.querySelector('tr')?.hasAttribute('data-blok-table-heading')).toBe(true);
+    });
+
+    it('draws a code fence as a code block that keeps its spacing', () => {
+      const preview = make();
+      const json = markdown('```js\nconst a = 1;\n  - b\n```');
+
+      preview.update('c1', open(json, 'const'));
+      expect(state.layer.querySelector('[data-blok-testid="code-content"]')).not.toBeNull();
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('[data-blok-testid="code-content"]')?.textContent).toBe('const a = 1;\n  - b');
+      expect(state.layer.querySelectorAll('[data-line-index]')).toHaveLength(2);
+      expect(layerText()).not.toContain('```');
+      expect(layerText()).toContain('JavaScript');
+      expect(state.layer.querySelector('[data-list-style]')).toBeNull();
+    });
+
+    it('draws a Markdown quote as a quote', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('> quote **b**\n> more'));
+      vi.advanceTimersByTime(35 * 10);
+
+      const quote = state.layer.querySelector('blockquote');
+
+      expect(quote?.classList.contains('border-s-[3px]')).toBe(true);
+      expect(quote?.textContent).toBe('quote b more');
+    });
+
+    it('draws a thematic break as a divider, and a setext underline as a heading', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('Title\n---\n\nbody\n\n---'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('[data-blok-heading-level="2"]')?.textContent).toBe('Title');
+      expect(state.layer.querySelectorAll('hr')).toHaveLength(1);
+      expect(layerText()).not.toContain('---');
+    });
+
+    it('draws code, quote and divider from block.insert', () => {
+      const preview = make();
+      const json = execute(
+        { name: 'block.insert', args: { position: { after: 'b1' }, type: 'code', data: { code: 'x = 1', language: 'python' } } },
+        { name: 'block.insert', args: { position: { after: 'b1' }, type: 'quote', data: { text: 'Said' } } },
+        { name: 'block.insert', args: { position: { after: 'b1' }, type: 'divider', data: {} } }
+      );
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('[data-blok-testid="code-content"]')?.textContent).toBe('x = 1');
+      expect(state.layer.querySelector('blockquote')?.textContent).toBe('Said');
+      expect(state.layer.querySelectorAll('hr')).toHaveLength(1);
+      expect(state.layer.querySelectorAll(SLOT)).toHaveLength(0);
+    });
+  });
 });

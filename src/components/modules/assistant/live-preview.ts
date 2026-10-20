@@ -1,8 +1,13 @@
 import { readPartialCommands } from '../../../agent/partial-json';
 import type { PartialCommand } from '../../../agent/partial-json';
+import { normalizeFenceLang } from '../../../markdown/fence-language';
+import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../../shared/tool-classes/divider';
 import { headerClasses } from '../../../shared/tool-classes/header';
 import { LIST_CONTENT_CLASSES, LIST_ITEM_CLASSES, LIST_ITEM_ROW_CLASSES } from '../../../shared/tool-classes/list';
 import { PARAGRAPH_CLASSES } from '../../../shared/tool-classes/paragraph';
+import { quoteClasses } from '../../../shared/tool-classes/quote';
+import { DEFAULT_LANGUAGE, GUTTER_LINE_STYLES, LANGUAGE_COLORS, LANGUAGES } from '../../../tools/code/constants';
+import { buildCodeDOM } from '../../../tools/code/dom-builder';
 import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
@@ -49,11 +54,28 @@ const WORD_GAP_MS = 35;
 
 const INSERTS = new Set(['block.insert', 'markdown.insert']);
 
-type Kind = 'paragraph' | 'header' | 'list' | 'rewrite';
+type Kind = 'paragraph' | 'header' | 'list' | 'rewrite' | 'table' | 'quote' | 'code' | 'divider';
 type ListStyle = 'unordered' | 'ordered' | 'checklist';
 
-/** `before` / `after`: a rewrite's text outside the replaced range. */
-interface LineSpec { kind: Kind; level: number; style: ListStyle; text: string; complete: boolean; before?: string; after?: string }
+/** One table cell. `placement`: the importer's, from the column's alignment. */
+interface CellSpec { text: string; complete: boolean; placement?: string }
+
+/**
+ * `before` / `after`: a rewrite's text outside the replaced range.
+ * `rows`: a table's cells, every row as wide as the widest. `heading`: its first row is a heading row.
+ */
+interface LineSpec {
+  kind: Kind;
+  level: number;
+  style: ListStyle;
+  text: string;
+  complete: boolean;
+  before?: string;
+  after?: string;
+  rows?: CellSpec[][];
+  heading?: boolean;
+  language?: string;
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -113,16 +135,54 @@ const richText = (value: unknown, complete: boolean): string => {
 
 const listStyle = (value: unknown): ListStyle => (value === 'ordered' || value === 'checklist' ? value : 'unordered');
 
+/** Every row as wide as the widest, and at least one cell, so the grid has a shape before content arrives. */
+const padRows = (rows: CellSpec[][]): CellSpec[][] => {
+  const cols = Math.max(1, ...rows.map((row) => row.length));
+  const filled = rows.length > 0 ? rows : [[]];
+
+  return filled.map((row) => [...row, ...Array.from({ length: cols - row.length }, () => ({ text: '', complete: true }))]);
+};
+
+/** A table's `data.content`: string cells show; a cell that names child blocks has no text here. */
+const contentRows = (content: unknown, complete: boolean): CellSpec[][] => {
+  const rows = Array.isArray(content) ? content.filter((row): row is unknown[] => Array.isArray(row)) : [];
+  const last = rows.length - 1;
+
+  return padRows(rows.map((row, r) => row.map((cell, c) => {
+    // Only the newest cell may still be cut off.
+    const done = complete || r < last || c < row.length - 1;
+
+    return { text: richText(isRecord(cell) ? cell.text : cell, done), complete: done };
+  })));
+};
+
+const codeLanguage = (value: unknown): string => (typeof value === 'string' && value !== '' ? value : DEFAULT_LANGUAGE);
+
 const blockLine = (command: PartialCommand): LineSpec => {
   const { args, done } = command;
   const data = isRecord(args.data) ? args.data : {};
   const type = args.type;
-  const complete = done || settled(args, 'data', done) || settled(data, 'text', done);
+  const dataDone = done || settled(args, 'data', done);
+  const complete = dataDone || settled(data, 'text', done);
   const level = typeof data.level === 'number' && data.level >= 1 && data.level <= 6 ? data.level : 2;
-  const style = listStyle(data.style);
-  const kind: Kind = type === 'header' || type === 'list' ? type : 'paragraph';
+  const base = { level, style: listStyle(data.style), complete };
 
-  return { kind, level, style, text: richText(data.text, complete), complete };
+  if (type === 'table') {
+    const tableDone = dataDone || settled(data, 'content', done);
+
+    return { ...base, kind: 'table', text: '', complete: tableDone, rows: contentRows(data.content, tableDone), heading: data.withHeadings === true };
+  }
+  if (type === 'code') {
+    const codeDone = dataDone || settled(data, 'code', done);
+
+    return { ...base, kind: 'code', text: typeof data.code === 'string' ? data.code : '', complete: codeDone, language: codeLanguage(data.language) };
+  }
+  if (type === 'divider') {
+    return { ...base, kind: 'divider', text: '', complete: true };
+  }
+  const kind: Kind = type === 'header' || type === 'list' || type === 'quote' ? type : 'paragraph';
+
+  return { ...base, kind, text: richText(data.text, complete) };
 };
 
 /** Marks come off in pairs, so a lone `*` ("2 * 3") stays. */
@@ -151,58 +211,236 @@ const listMatch = (check: RegExpExecArray | null, bullet: RegExpExecArray | null
 /** Only a block marker so far ("##", "-", "1."): the line's kind is not known yet. */
 const MARKER_ONLY = /^(#{1,6}|[-*+]|\d+[.)]?)$/;
 
+/** Only break marks so far ("--", "**"): a divider, an underline or emphasis, not known yet. */
+const MARKS_ONLY = /^ {0,3}([-*_=])( *\1)* *$/;
+
+const FENCE = /^ {0,3}(`{3,}|~{3,})\s*([^\s`]*)/;
+
+/** Three or more of one mark and nothing else: a divider. */
+const THEMATIC = /^ {0,3}([-*_])( *\1){2,} *$/;
+
+/** Under a paragraph, `===` makes it a heading 1 and `---` a heading 2. */
+const SETEXT = /^ {0,3}(=+|-+) *$/;
+
+const QUOTE = /^ {0,3}> ?(.*)$/;
+
+/** Lines that start another block, so they end a table. */
+const BLOCK_START = /^ {0,3}(#{1,6}(\s|$)|>|`{3}|~{3}|([-*+]|\d+[.)])(\s|$))/;
+
+/** The importer's placements; left is the default, so it has none. */
+const ALIGN_PLACEMENT: Record<string, string> = { center: 'top-center', right: 'top-right' };
+
+const DELIMITER_CELL = /^:?-+:?$/;
+
+/** Stands in for an escaped pipe while a row is split. */
+const ESCAPED_PIPE = '\uE000';
+
+/** A table row's cells, and whether its closing pipe has arrived. */
+const splitRow = (line: string): { cells: string[]; closed: boolean } => {
+  const trimmed = line.trim();
+  const inner = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
+  const closed = /(^|[^\\])\|$/.test(inner);
+  const body = closed ? inner.slice(0, -1) : inner;
+
+  return {
+    cells: body.replace(/\\\|/g, ESCAPED_PIPE).split('|').map((cell) => cell.split(ESCAPED_PIPE).join('|').trim()),
+    closed,
+  };
+};
+
+const alignOf = (cell: string): string | undefined => {
+  if (/^:-+:$/.test(cell)) {
+    return ALIGN_PLACEMENT.center;
+  }
+
+  return /^-+:$/.test(cell) ? ALIGN_PLACEMENT.right : undefined;
+};
+
+/** A parsed block and the index of the line after it. */
+interface Parsed { spec: LineSpec; next: number }
+
+type LineDone = (index: number) => boolean;
+
+const BASE = { level: 2, style: 'unordered' as ListStyle };
+
+const fencedCode = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
+  const open = FENCE.exec(raw[index]);
+
+  if (open === null) {
+    return null;
+  }
+  const mark = open[1];
+  const closer = new RegExp(`^ {0,3}${mark[0] === '`' ? '`' : '~'}{${mark.length},} *$`);
+  const closeAt = raw.findIndex((line, at) => at > index && closer.test(line));
+  const body = raw.slice(index + 1, closeAt < 0 ? raw.length : closeAt);
+  const last = body[body.length - 1];
+  // A closing fence still being written is not code.
+  const cut = closeAt < 0 && last !== undefined && !lineDone(raw.length - 1) && /^ {0,3}[`~]+ *$/.test(last);
+  const info = open[2];
+
+  return {
+    spec: {
+      ...BASE,
+      kind: 'code',
+      text: (cut ? body.slice(0, -1) : body).join('\n'),
+      complete: closeAt >= 0 || lineDone(raw.length - 1),
+      language: normalizeFenceLang(info) ?? codeLanguage(info),
+    },
+    next: closeAt < 0 ? raw.length : closeAt + 1,
+  };
+};
+
+/** A row's cells; while the row streams, its newest cell is final once its closing pipe arrives. */
+const rowCells = (line: string, complete: boolean, align: Array<string | undefined>): CellSpec[] => {
+  const { cells, closed } = splitRow(line);
+
+  return cells.map((cell, index) => {
+    const done = complete || index < cells.length - 1 || closed;
+
+    return { text: inlineMarkdown(cell, done), complete: done, placement: align[index] };
+  });
+};
+
+/** A GFM table, read the way the importer reads it. While the header streams, a leading pipe says it is one. */
+const tableAt = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
+  const header = raw[index];
+  const second = raw[index + 1] as string | undefined;
+  const piped = header.trim().startsWith('|');
+
+  if (!header.includes('|')) {
+    return null;
+  }
+  if (second === undefined && (!piped || lineDone(index))) {
+    return null;
+  }
+  const secondDone = second !== undefined && lineDone(index + 1);
+  const delimiter = second === undefined ? [] : splitRow(second).cells;
+  const whole = secondDone && delimiter.every((cell) => DELIMITER_CELL.test(cell)) && delimiter.length === splitRow(header).cells.length;
+  const forming = second !== undefined && !secondDone && /^[ |:-]+$/.test(second) && (piped || second.includes('|'));
+
+  if (second !== undefined && !whole && !forming) {
+    return null;
+  }
+  const align = whole ? delimiter.map(alignOf) : [];
+  const bodyEnd = whole
+    ? raw.findIndex((line, at) => at > index + 1 && (line.trim() === '' || BLOCK_START.test(line) || (!lineDone(at) && MARKER_ONLY.test(line.trim()))))
+    : -1;
+  const bodyStop = bodyEnd < 0 ? raw.length : bodyEnd;
+  const stop = whole ? bodyStop : Math.min(index + 2, raw.length);
+  const head = rowCells(header, lineDone(index), align);
+  const body = whole ? raw.slice(index + 2, stop).map((line, at) => rowCells(line, lineDone(index + 2 + at), align)) : [];
+  // GFM needs a header row, so an export of a table without one writes it empty.
+  const headless = body.length > 0 && head.every((cell) => cell.text === '');
+  const rows = headless ? body : [head, ...body];
+  const complete = lineDone(stop - 1);
+
+  return {
+    spec: { ...BASE, kind: 'table', text: '', complete, rows: padRows(rows), heading: !headless && (rows.length > 1 || !complete) },
+    next: stop,
+  };
+};
+
+const quoteAt = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
+  if (!QUOTE.test(raw[index])) {
+    return null;
+  }
+  const end = raw.findIndex((line, at) => at > index && !QUOTE.test(line));
+  const stop = end < 0 ? raw.length : end;
+  const texts = raw.slice(index, stop).map((line) => (QUOTE.exec(line)?.[1] ?? '').trim()).filter((text) => text !== '');
+  const complete = lineDone(stop - 1);
+
+  return { spec: { ...BASE, kind: 'quote', text: inlineMarkdown(texts.join(' '), complete), complete }, next: stop };
+};
+
 const markdownLines = (command: PartialCommand): LineSpec[] => {
   const { args, done } = command;
   const markdown = typeof args.markdown === 'string' ? args.markdown : '';
   const allDone = settled(args, 'markdown', done);
   const raw = markdown.split('\n');
+  const lineDone: LineDone = (index) => allDone || index < raw.length - 1;
   const specs: LineSpec[] = [];
   const paragraph: { texts: string[]; complete: boolean } = { texts: [], complete: true };
-  const base = { level: 2, style: 'unordered' as ListStyle };
   const flush = (): void => {
     if (paragraph.texts.length > 0) {
-      specs.push({ ...base, kind: 'paragraph', text: inlineMarkdown(paragraph.texts.join(' '), paragraph.complete), complete: paragraph.complete });
+      specs.push({ ...BASE, kind: 'paragraph', text: inlineMarkdown(paragraph.texts.join(' '), paragraph.complete), complete: paragraph.complete });
     }
     paragraph.texts = [];
   };
+  const at = { index: 0 };
 
-  raw.forEach((line, index) => {
-    const complete = allDone || index < raw.length - 1;
+  while (at.index < raw.length) {
+    const index = at.index;
+    const line = raw[index];
+    const complete = lineDone(index);
+    const block = fencedCode(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone);
     const heading = /^(#{1,6})\s+(.*)$/.exec(line);
     const check = /^\s*[-*+]\s+\[[ xX]\]\s*(.*)$/.exec(line);
     const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
     const number = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+    const underline = complete && paragraph.texts.length > 0 ? SETEXT.exec(line) : null;
 
-    if (line.trim() === '' || (!complete && MARKER_ONLY.test(line.trim()))) {
+    at.index += 1;
+    if (line.trim() === '' || (!complete && (MARKER_ONLY.test(line.trim()) || MARKS_ONLY.test(line)))) {
       flush();
+    } else if (underline) {
+      specs.push({ ...BASE, kind: 'header', level: underline[1].startsWith('=') ? 1 : 2, text: inlineMarkdown(paragraph.texts.join(' '), true), complete: true });
+      paragraph.texts = [];
+    } else if (complete && THEMATIC.test(line)) {
+      flush();
+      specs.push({ ...BASE, kind: 'divider', text: '', complete: true });
+    } else if (block) {
+      flush();
+      specs.push(block.spec);
+      at.index = block.next;
     } else if (heading) {
       flush();
-      specs.push({ ...base, kind: 'header', level: heading[1].length, text: inlineMarkdown(heading[2], complete), complete });
+      specs.push({ ...BASE, kind: 'header', level: heading[1].length, text: inlineMarkdown(heading[2], complete), complete });
     } else if (check ?? bullet ?? number) {
       const [style, match] = listMatch(check, bullet, number);
 
       flush();
-      specs.push({ ...base, kind: 'list', style, text: inlineMarkdown(match, complete), complete });
+      specs.push({ ...BASE, kind: 'list', style, text: inlineMarkdown(match, complete), complete });
     } else {
       paragraph.texts.push(line.trim());
       paragraph.complete = complete;
     }
-  });
+  }
   flush();
 
-  return specs.length > 0 ? specs : [{ ...base, kind: 'paragraph', text: '', complete: allDone }];
+  return specs.length > 0 ? specs : [{ ...BASE, kind: 'paragraph', text: '', complete: allDone }];
 };
 
-const tokensOf = (spec: LineSpec): string[] => spec.text.match(/\S+\s*/g) ?? [];
+/** A field words land in: a block's text, or one table cell. */
+interface Field { text: string; complete: boolean }
 
-/** Words that can land now: a word still being written waits for its trailing space. */
-const landable = (spec: LineSpec): number => {
-  const tokens = tokensOf(spec);
+/** Table cells in reading order; a finished line has every field final. */
+const fieldsOf = (spec: LineSpec): Field[] => {
+  const fields = spec.rows ? spec.rows.flat() : [spec];
 
-  return spec.complete ? tokens.length : tokens.filter((token) => /\s$/.test(token)).length;
+  return spec.complete ? fields.map((field) => ({ text: field.text, complete: true })) : fields;
 };
 
-const SLOTS: Record<Kind, string[]> = { header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'] };
+interface Token { text: string; field: number }
+
+/** Code keeps its indent, so leading space is a token of its own there. */
+const splitWords = (text: string, verbatim: boolean): string[] => text.match(verbatim ? /^\s+|\S+\s*/g : /\S+\s*/g) ?? [];
+
+const tokensOf = (spec: LineSpec): Token[] =>
+  fieldsOf(spec).flatMap((field, index) => splitWords(field.text, spec.kind === 'code').map((text) => ({ text, field: index })));
+
+/** Words that can land now: a word still being written waits for its trailing space. Only the newest field is ever unfinished. */
+const landable = (spec: LineSpec): number => fieldsOf(spec).reduce((count, field) => {
+  const fieldWords = splitWords(field.text, spec.kind === 'code');
+
+  return count + (field.complete ? fieldWords.length : fieldWords.filter((token) => /\s$/.test(token)).length);
+}, 0);
+
+const SLOTS: Record<Kind, string[]> = {
+  header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'], quote: ['line'], table: [], code: [], divider: [],
+};
+
+/** Blocks whose final form shows before any word: a grid, a code box, a rule. */
+const FRAMED_EMPTY = new Set<Kind>(['table', 'code', 'divider']);
 
 const makeSlots = (kind: Kind): HTMLElement[] => {
   const shimmer = !prefersReducedMotion();
@@ -219,8 +457,177 @@ const makeSlots = (kind: Kind): HTMLElement[] => {
   });
 };
 
+/** A block's preview markup: where each field's words go, and how it follows a spec that grew. */
+interface View {
+  block: HTMLElement;
+  targets: HTMLElement[];
+  /** False: the spec outgrew this markup, so it is built again. */
+  sync?(spec: LineSpec): boolean;
+}
+
+/**
+ * Mirrors TableGrid in `tools/table/table-core.ts` and the table's wrapper, so `tables.css` styles it like the real one.
+ * Importing that file would pull the whole table tool into core.
+ */
+const TABLE_BORDER = '1px solid var(--blok-table-border)';
+const TABLE_MIN_COL_WIDTH = 50;
+const TABLE_WRAPPER_CLASSES = ['my-2', 'pe-5', 'relative', 'mb-7'];
+const TABLE_CELL_CLASSES = ['py-1', 'px-2', 'min-h-[2em]', 'outline-hidden', 'leading-none'];
+
+const tableCell = (): { cell: HTMLTableCellElement; text: HTMLElement } => {
+  const cell = document.createElement('td');
+  const blocks = document.createElement('div');
+  const text = document.createElement('div');
+
+  cell.className = TABLE_CELL_CLASSES.join(' ');
+  Object.assign(cell.style, { borderRight: TABLE_BORDER, borderBottom: TABLE_BORDER, overflow: 'hidden', overflowWrap: 'break-word', height: '0' });
+  cell.setAttribute('data-blok-table-cell', '');
+  blocks.setAttribute('data-blok-table-cell-blocks', '');
+  Object.assign(blocks.style, { display: 'flex', flexDirection: 'column', minHeight: '100%' });
+  text.className = PARAGRAPH_CLASSES.join(' ');
+  blocks.append(text);
+  cell.append(blocks);
+
+  return { cell, text };
+};
+
+const makeTable = (spec: LineSpec): View => {
+  const cols = spec.rows?.[0]?.length ?? 1;
+  const wrapper = document.createElement('div');
+  const scroll = document.createElement('div');
+  const table = document.createElement('table');
+  const colgroup = document.createElement('colgroup');
+  const tbody = document.createElement('tbody');
+  const targets: HTMLElement[] = [];
+  const width = Math.round((100 / cols) * 100) / 100;
+
+  wrapper.className = TABLE_WRAPPER_CLASSES.join(' ');
+  scroll.setAttribute('data-blok-table-scroll', '');
+  scroll.classList.add('overflow-x-auto', 'overflow-y-hidden');
+  Object.assign(table.style, {
+    tableLayout: 'fixed', width: '100%', borderCollapse: 'separate', borderSpacing: '0px',
+    borderTop: TABLE_BORDER, borderLeft: TABLE_BORDER, minWidth: `${cols * TABLE_MIN_COL_WIDTH}px`,
+  });
+  colgroup.append(...Array.from({ length: cols }, () => {
+    const col = document.createElement('col');
+
+    col.style.width = `${width}%`;
+
+    return col;
+  }));
+  table.append(colgroup, tbody);
+  scroll.append(table);
+  wrapper.append(scroll);
+
+  return {
+    block: wrapper,
+    targets,
+    // Rows only grow here: a rebuilt row would replay its words' blur-in.
+    sync: (next) => {
+      const rows = next.rows ?? [];
+
+      if ((rows[0]?.length ?? 1) !== cols || rows.length < tbody.rows.length) {
+        return false;
+      }
+      while (tbody.rows.length < rows.length) {
+        const row = tbody.insertRow();
+
+        Array.from({ length: cols }, () => {
+          const { cell, text } = tableCell();
+
+          row.append(cell);
+          targets.push(text);
+        });
+      }
+      [...tbody.rows].forEach((row, r) => {
+        row.toggleAttribute('data-blok-table-heading', r === 0 && next.heading === true);
+        [...row.cells].forEach((cell, c) => {
+          const corners = [
+            r === 0 && c === 0 && 'top-start',
+            r === 0 && c === cols - 1 && 'top-end',
+            r === rows.length - 1 && c === 0 && 'bottom-start',
+            r === rows.length - 1 && c === cols - 1 && 'bottom-end',
+          ].filter(Boolean).join(' ');
+          const placement = rows[r][c].placement;
+
+          if (corners === '') {
+            cell.removeAttribute('data-blok-table-corner');
+          } else {
+            cell.setAttribute('data-blok-table-corner', corners);
+          }
+          if (placement === undefined) {
+            cell.firstElementChild?.removeAttribute('data-blok-cell-placement');
+          } else {
+            cell.firstElementChild?.setAttribute('data-blok-cell-placement', placement);
+          }
+        });
+      });
+
+      return true;
+    },
+  };
+};
+
+/** The real code block's markup, read-only so the overlay holds no editable field. */
+const makeCode = (spec: LineSpec): View => {
+  const language = spec.language ?? DEFAULT_LANGUAGE;
+  // The tool names plain text through i18n, which the preview has not got: it shows no name.
+  const name = language === DEFAULT_LANGUAGE ? '' : LANGUAGES.find((entry) => entry.id === language)?.name ?? language;
+  const dom = buildCodeDOM({ code: '', languageName: name, languageColor: LANGUAGE_COLORS[language], readOnly: true, copyLabel: '' });
+  const gutter = dom.gutterElement;
+
+  return {
+    block: dom.wrapper,
+    targets: [dom.codeElement],
+    sync: (next) => {
+      const count = next.text.split('\n').length;
+
+      while (gutter.children.length < count) {
+        const number = document.createElement('div');
+
+        number.className = GUTTER_LINE_STYLES;
+        number.textContent = String(gutter.children.length + 1);
+        number.setAttribute('data-line-index', String(gutter.children.length));
+        gutter.append(number);
+      }
+      while (gutter.children.length > count) {
+        gutter.lastElementChild?.remove();
+      }
+
+      return true;
+    },
+  };
+};
+
+const makeDivider = (): View => {
+  const wrapper = document.createElement('div');
+  const rule = document.createElement('hr');
+
+  wrapper.className = DIVIDER_WRAPPER_CLASSES.join(' ');
+  rule.className = DIVIDER_RULE_CLASSES.join(' ');
+  wrapper.append(rule);
+
+  return { block: wrapper, targets: [] };
+};
+
 /** The real tool's markup and classes, so the hand-off to the real block does not jump. */
-const makeBlock = (spec: LineSpec, ordinal: number): { block: HTMLElement; text: HTMLElement } => {
+const makeView = (spec: LineSpec, ordinal: number): View => {
+  if (spec.kind === 'table') {
+    return makeTable(spec);
+  }
+  if (spec.kind === 'code') {
+    return makeCode(spec);
+  }
+  if (spec.kind === 'divider') {
+    return makeDivider();
+  }
+  if (spec.kind === 'quote') {
+    const quote = document.createElement('blockquote');
+
+    quote.className = quoteClasses('default').join(' ');
+
+    return { block: quote, targets: [quote] };
+  }
   if (spec.kind === 'rewrite') {
     // The box already copies the field's own type, so plain text nodes match it.
     const rewriteFrame = document.createElement('div');
@@ -228,7 +635,7 @@ const makeBlock = (spec: LineSpec, ordinal: number): { block: HTMLElement; text:
 
     rewriteFrame.append(spec.before ?? '', rewriteText, spec.after ?? '');
 
-    return { block: rewriteFrame, text: rewriteText };
+    return { block: rewriteFrame, targets: [rewriteText] };
   }
   if (spec.kind === 'header') {
     const heading = document.createElement(`h${spec.level}`);
@@ -236,7 +643,7 @@ const makeBlock = (spec: LineSpec, ordinal: number): { block: HTMLElement; text:
     heading.className = headerClasses(spec.level).join(' ');
     heading.setAttribute(DATA_ATTR.headingLevel, String(spec.level));
 
-    return { block: heading, text: heading };
+    return { block: heading, targets: [heading] };
   }
   if (spec.kind === 'list') {
     const listItem = document.createElement('div');
@@ -254,21 +661,21 @@ const makeBlock = (spec: LineSpec, ordinal: number): { block: HTMLElement; text:
     listRow.append(marker, listText);
     listItem.append(listRow);
 
-    return { block: listItem, text: listText };
+    return { block: listItem, targets: [listText] };
   }
   const paragraph = document.createElement('div');
 
   paragraph.className = PARAGRAPH_CLASSES.join(' ');
 
-  return { block: paragraph, text: paragraph };
+  return { block: paragraph, targets: [paragraph] };
 };
 
 /** One block in the preview: slots until its first word, then the real block's markup. */
 class Line {
   public readonly el = document.createElement('div');
   private shape = '';
-  /** Where words go; null while the line still shows slots. */
-  private text: HTMLElement | null = null;
+  /** The real block's markup; null while the line still shows slots. */
+  private view: View | null = null;
   private readonly spans: HTMLElement[] = [];
 
   constructor(public spec: LineSpec, private ordinal: number) {}
@@ -289,8 +696,8 @@ class Line {
     // A landed word can still change: a soft-wrapped line gains a space, a link loses its bracket.
     this.spans.splice(tokens.length).forEach((span) => span.remove());
     this.spans.forEach((landedWord, index) => {
-      if (landedWord.textContent !== tokens[index]) {
-        landedWord.replaceChildren(tokens[index]);
+      if (landedWord.textContent !== tokens[index].text) {
+        landedWord.replaceChildren(tokens[index].text);
       }
     });
     this.draw();
@@ -298,14 +705,18 @@ class Line {
 
   public land(): void {
     const span = document.createElement('span');
+    const token = tokensOf(this.spec)[this.spans.length] as Token | undefined;
 
     span.className = 'blok-ai-word';
-    span.textContent = tokensOf(this.spec)[this.spans.length] ?? '';
+    span.textContent = token?.text ?? '';
     this.spans.push(span);
-    if (this.text === null) {
+
+    const target = this.view?.targets[token?.field ?? 0];
+
+    if (this.view === null) {
       this.draw();
     } else {
-      this.text.append(span);
+      target?.append(span);
     }
   }
 
@@ -328,21 +739,42 @@ class Line {
   }
 
   private draw(): void {
-    const shape = `${this.spec.kind}:${this.spec.level}:${this.spec.style}:${this.ordinal}:${this.spec.before ?? ''}:${this.spec.after ?? ''}`;
+    const { kind, level, style, before, after, language, rows } = this.spec;
+    const shape = [kind, level, style, this.ordinal, before ?? '', after ?? '', language ?? '', rows?.[0]?.length ?? 0].join(':');
     // A range rewrite shows the text around the range at once.
-    const framed = this.spans.length > 0 || Boolean(this.spec.before) || Boolean(this.spec.after);
+    const framed = FRAMED_EMPTY.has(kind) || this.spans.length > 0 || Boolean(before) || Boolean(after);
 
-    if (!framed && (this.text !== null || this.shape !== shape)) {
-      this.el.replaceChildren(...makeSlots(this.spec.kind));
-      this.text = null;
-    } else if (framed && (this.text === null || this.shape !== shape)) {
-      const { block, text: previewText } = makeBlock(this.spec, this.ordinal);
+    if (!framed) {
+      if (this.view !== null || this.shape !== shape) {
+        this.el.replaceChildren(...makeSlots(kind));
+        this.view = null;
+      }
+      this.shape = shape;
 
-      previewText.append(...this.spans);
-      this.el.replaceChildren(block);
-      this.text = previewText;
+      return;
+    }
+    const fits = this.view !== null && this.shape === shape && (this.view.sync?.(this.spec) ?? true);
+
+    if (!fits) {
+      this.view = makeView(this.spec, this.ordinal);
+      this.view.sync?.(this.spec);
+      this.el.replaceChildren(this.view.block);
     }
     this.shape = shape;
+    this.home(this.view);
+  }
+
+  /** Puts each landed word in its field; only words whose field moved are touched. */
+  private home(view: View | null): void {
+    const tokens = tokensOf(this.spec);
+
+    this.spans.forEach((span, index) => {
+      const target = view?.targets[tokens[index]?.field ?? 0];
+
+      if (target !== undefined && span.parentElement !== target) {
+        target.append(span);
+      }
+    });
   }
 }
 

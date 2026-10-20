@@ -606,4 +606,45 @@ test.describe('Ask AI live edits', () => {
       return box !== null && now !== null && box.y >= now.y + now.height;
     }).toBe(true);
   });
+
+  test('a Markdown table streams as the real table, with no pipes, and hands off without a jump', async ({ page }) => {
+    const markdown = '| Planet | Moons |\n| --- | --- |\n| Mars | 2 |\n| Jupiter | 95 |';
+    const input = { commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] };
+    const json = JSON.stringify(input);
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('| Mars |') + '| Mars |'.length) });
+
+    const preview = page.getByTestId('ai-preview');
+    const previewTable = preview.locator('table');
+
+    await expect(previewTable).toBeVisible();
+    await expect(previewTable.locator('[data-blok-table-cell]')).toHaveCount(4);
+    await expect(previewTable.locator('[data-blok-table-cell]').first()).toHaveText('Planet');
+    expect(await preview.textContent()).not.toMatch(/[|]|---/);
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+    await expect(previewTable.locator('[data-blok-table-cell]')).toHaveText(['Planet', 'Moons', 'Mars', '2', 'Jupiter', '95']);
+
+    const look = (table: Locator): Promise<Record<string, string | number>> => table.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const heading = getComputedStyle(element.querySelector('[data-blok-table-cell]') ?? element);
+      const body = getComputedStyle(element.querySelectorAll('[data-blok-table-cell]')[2] ?? element);
+
+      return {
+        left: Math.round(rect.left), width: Math.round(rect.width), height: Math.round(rect.height),
+        headingWeight: heading.fontWeight, headingBg: heading.backgroundColor, bodySize: body.fontSize, radius: getComputedStyle(element).borderTopLeftRadius,
+      };
+    });
+    const before = await look(previewTable);
+
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect(preview).toHaveCount(0);
+
+    const real = page.locator(`#${HOLDER_ID} [data-blok-tool="table"] table`);
+
+    await expect(real.locator('[data-blok-table-cell]')).toHaveText(['Planet', 'Moons', 'Mars', '2', 'Jupiter', '95']);
+    expect(await look(real)).toEqual(before);
+  });
 });

@@ -463,6 +463,8 @@ export class DatabaseTool implements BlockTool {
   private offerNewDatabasePanel: boolean;
   /** A user just inserted a Timeline view: rendered() adds "Card 1-3" once. */
   private sampleCardsPending: boolean;
+  /** Those cards: a panel choice that replaces the database (template, CSV, AI, link) deletes them. */
+  private sampleCardIds: string[] = [];
   private activeViewId: string;
   private model: DatabaseModel;
   /** Linked database: the block whose rows and schema this one shows. */
@@ -953,6 +955,7 @@ export class DatabaseTool implements BlockTool {
     const oldViews = this.model.getViews();
 
     this.inOneStep(() => {
+      this.dropSampleCards();
       // The definition first: a database write inside a row insert's sync window reads as an echo.
       this.writeDefinition({ schema, views, activeViewId: built.data.activeViewId });
       for (const row of rows) {
@@ -990,7 +993,10 @@ export class DatabaseTool implements BlockTool {
     const oldSchema = this.model.getSchema();
     const oldViews = this.model.getViews();
 
-    this.inOneStep(() => this.writeDefinition(plan));
+    this.inOneStep(() => {
+      this.dropSampleCards();
+      this.writeDefinition(plan);
+    });
     this.syncDefinition(oldSchema, oldViews, plan.schema, plan.views);
     this.rebuildTabBar();
     this.rerenderView();
@@ -1040,6 +1046,7 @@ export class DatabaseTool implements BlockTool {
     const oldViews = this.model.getViews();
 
     this.inOneStep(() => {
+      this.dropSampleCards();
       // The definition first: a database write inside a row insert's sync window reads as an echo.
       this.writeDefinition(made);
       for (const row of made.rows) {
@@ -1079,9 +1086,18 @@ export class DatabaseTool implements BlockTool {
     this.inOneStep(() => {
       for (const row of rows) this.api.blocks.insertAt('database-row', row.data, { parentId: this.dataId, position: 'end', id: row.id });
     });
+    this.sampleCardIds = rows.map((row) => row.id);
     for (const row of rows) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
     this.syncRowsFromBlocks();
     this.rerenderView();
+  }
+
+  /** Call inside the step that replaces the definition. */
+  private dropSampleCards(): void {
+    const ids = this.sampleCardIds;
+
+    this.sampleCardIds = [];
+    for (const id of ids) this.removeRowBlock(id);
   }
 
   /** The backend gets a diff: an echoed id is an update, never a second create. */
@@ -1348,9 +1364,12 @@ export class DatabaseTool implements BlockTool {
     this.stubSchema = title === undefined ? [] : [structuredClone(title)];
     this.source = { databaseId };
     this.linkPicker = false;
-    this.model.replaceDefinition({ schema: target?.schema ?? this.model.getSchema(), views: [view] });
-    this.activeViewId = view.id;
-    this.block.dispatchChange();
+    this.inOneStep(() => {
+      this.dropSampleCards();
+      this.model.replaceDefinition({ schema: target?.schema ?? this.model.getSchema(), views: [view] });
+      this.activeViewId = view.id;
+      this.block.dispatchChange();
+    });
     this.rebuildTabBar();
     this.rerenderView();
   }

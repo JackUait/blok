@@ -489,6 +489,17 @@ describe('"New database" panel for every database toolbox entry', () => {
     }
   });
 
+  // The cards belong to the empty timeline: a template that replaces it must not keep them.
+  it('a Timeline insert that then picks a Suggested template keeps none of the sample cards', async () => {
+    const { doc } = await insert(undefined, 'user', dataOf('timelineView'));
+    const cards = doc.childrenOf('db');
+
+    expect(cards).toHaveLength(3);
+    panel()?.querySelector<HTMLElement>('[data-blok-testid="database-new-database-starter-skills"]')?.click();
+
+    expect(doc.childrenOf('db').filter((id) => cards.includes(id))).toEqual([]);
+  });
+
   it('a Timeline seed from a peer or a replay adds no rows', async () => {
     const { doc } = await insert(undefined, 'replay', dataOf('timelineView'));
 

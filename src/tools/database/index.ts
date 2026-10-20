@@ -372,6 +372,11 @@ export class DatabaseTool implements BlockTool {
     return { allow: ['database-row', 'database', 'tabs', 'database-comment'] };
   }
 
+  /** Deleting a database deletes its rows, sources and comments. Promoting them would drop rows into the parent. */
+  public static get deletesChildren(): boolean {
+    return true;
+  }
+
   private readonly api: API;
   private readonly block: BlockAPI;
   /** Linked views also check their source's permission. */

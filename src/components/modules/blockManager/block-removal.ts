@@ -76,7 +76,7 @@ export class BlockRemoval {
 
       /**
        * A Tool that declares `deletesChildren` (column, column_list, tabs,
-       * tab) takes its whole subtree with it: its children make no sense
+       * tab, database, database-row) takes its whole subtree with it: its children make no sense
        * outside it, and promoting them would strand structurally invalid
        * blocks (a `column` at root). The flat array is the Saver's source of
        * truth, so the descendants are spliced out below, not just detached.
@@ -136,8 +136,9 @@ export class BlockRemoval {
         // links together; without the writes the doc keeps naming the removed
         // parent and every later doc-index write lands off.
         this.dependencies.YjsManager.transact(() => {
-          // A table/database's children die with it (its teardown removes
-          // them): re-homing them would pull them out of the dying cells.
+          // A table's cells die with it (its teardown removes them):
+          // re-homing them would pull them out of the dying cells.
+          // A database declares deletesChildren, so it promotes nothing.
           const liftedIds = SELF_PLACING_PARENTS.has(block.name) ? [] : promotedIds;
 
           for (const id of liftedIds) {
@@ -284,9 +285,9 @@ export class BlockRemoval {
    * The lift is SCOPED to children whose IMMEDIATE container is a
    * toggle-children container — the promote-and-preserve tools
    * (toggle/callout/toggleable-header) all mount their direct children there.
-   * Self-managing containers like table/database keep their children in their
-   * own cell containers and tear that subtree down themselves, so their holders
-   * must stay nested and are deliberately not lifted. The match must be on the
+   * A table keeps its cells in its own containers and tears that subtree down
+   * itself, so their holders must stay nested and are deliberately not lifted.
+   * (A database declares `deletesChildren`, so it never gets here.) The match must be on the
    * IMMEDIATE container, not any ancestor: a table cell block sitting inside a
    * toggle has an ANCESTOR toggle-children container, but its immediate
    * container is the cell — lifting it would leak the table's cells to root.

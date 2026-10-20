@@ -156,7 +156,7 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
       childTools: { allow: ['database-row', 'database', 'tabs', 'database-comment'] },
       ownsChildren: false,
       isLayout: false,
-      deletesChildren: false,
+      deletesChildren: true,
       selfPlacesChildren: true,
       restrictedInTableCell: false,
       conversion: {},

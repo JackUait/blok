@@ -1090,7 +1090,17 @@ export class BlockManager extends Module {
 
     // Insert a replacement when the whole document is being cleared (never leave
     // an empty editor) or when the caller demands one (typing over the selection).
-    const allBlocksDeleted = selectedBlockEntries.length === this.blocks.length;
+    // A selected block whose tool deletesChildren takes unselected descendants (database rows) with it.
+    const doomed = new Set(expandedBlocks);
+    const takenByAncestor = (block: Block, seen: Set<Block>): boolean => {
+      const parent = block.parentId === null ? undefined : this.getBlockById(block.parentId);
+
+      if (parent === undefined || seen.has(parent)) return false;
+      seen.add(parent);
+
+      return (doomed.has(parent) && parent.tool.deletesChildren) || takenByAncestor(parent, seen);
+    };
+    const allBlocksDeleted = this.blocks.every((block) => doomed.has(block) || takenByAncestor(block, new Set([block])));
     const shouldInsertReplacement = allBlocksDeleted || forceReplacement;
 
     // Get insertion index (minimum index among selected blocks)

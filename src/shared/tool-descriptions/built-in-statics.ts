@@ -148,7 +148,7 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
     statics: {
       toolbox: [
         { name: 'database', title: 'Database', previewCaption: 'Organize pages in a table with properties', data: { initialView: 'table' } },
-        { name: 'board', title: 'Board', previewCaption: 'Track work on a board of cards' },
+        { name: 'board', title: 'Board', previewCaption: 'Track work on a board of cards', data: { initialView: 'board' } },
         { name: 'linkedDatabase', title: 'Linked view of data source', previewCaption: 'Show a database from this page with views of its own', data: { initialView: 'table', linkPicker: true } },
       ],
       richTextFields: [],

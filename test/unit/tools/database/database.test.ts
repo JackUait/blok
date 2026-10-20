@@ -5272,11 +5272,23 @@ describe('DatabaseTool', () => {
       createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Second' }, position: 'a1' }),
     ];
 
-    it('seeds a table from the Database toolbox entry and leaves the Board entry a board', () => {
+    it('seeds a table from the Database toolbox entry and a board from the Board entry', () => {
       const [database, board] = DatabaseTool.toolbox as Array<{ data?: Record<string, unknown> }>;
 
       expect(database.data).toEqual({ initialView: 'table' });
-      expect(board.data).toBeUndefined();
+      expect(board.data).toEqual({ initialView: 'board' });
+    });
+
+    it('a database from the Board seed saves the same board as an empty one, with no seed key', () => {
+      const shape = (data: DatabaseData): unknown => {
+        const tool = new DatabaseTool({ ...createDatabaseOptions(), data });
+        const saved = tool.save(tool.render());
+
+        return { names: saved.schema.map((p) => [p.name, p.type]), views: saved.views.map((v) => [v.type, v.groupBy !== undefined]), seed: 'initialView' in saved };
+      };
+
+      expect(shape({ initialView: 'board' } as unknown as DatabaseData)).toEqual(shape({} as DatabaseData));
+      expect(shape({ initialView: 'board' } as unknown as DatabaseData)).toMatchObject({ views: [['board', true]], seed: false });
     });
 
     it('starts a database inserted from the Database entry with a table view, and saves no seed key', () => {

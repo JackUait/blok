@@ -590,8 +590,10 @@ export class DatabaseTool implements BlockTool {
     // An adapter that does not store a view's own order keeps the shared one.
     const viewRowOrder = this.config.adapter === undefined || this.config.adapter.viewRowOrder === true;
 
-    this.model = new DatabaseModel(data, initialView === 'table'
-      ? { defaultViewType: 'table', idSeed: block.id, me, page, databaseId: this.dataId, viewRowOrder }
+    const seedLayout = RENDERED_LAYOUTS.find((layout) => layout === initialView);
+
+    this.model = new DatabaseModel(data, seedLayout !== undefined
+      ? { defaultViewType: seedLayout, idSeed: block.id, me, page, databaseId: this.dataId, viewRowOrder }
       : { me, page, databaseId: this.dataId, viewRowOrder });
     this.computedValues = new ComputedProperties(this.dataId);
     this.pullLinkedSchema();
@@ -1625,6 +1627,8 @@ export class DatabaseTool implements BlockTool {
         searchTerms: ['board', 'kanban', 'cards', 'columns', 'database'],
         section: 'database',
         preview: { render: renderBoardPreview, descriptionKey: 'toolbox.preview.board' },
+        // The seed makes a user insert open the "New database" panel, as Notion's view entries do (research/20 §1a).
+        data: { [INITIAL_VIEW_KEY]: 'board' },
       },
       {
         icon: IconDatabase,

@@ -196,3 +196,28 @@ test('the "/" Database entry starts a table, not a board', async ({ page }) => {
 
   expect(views?.map((view) => view.type)).toEqual(['table']);
 });
+
+// research/20 §1a: Notion opens the panel for a view-type entry too (`/map`), and keeps its layout.
+test('the "/" Board entry opens "New database" too; New empty data source keeps the board', async ({ page }) => {
+  await mount(page, false);
+  await page.locator('[data-blok-id="p0"] [contenteditable]').focus();
+  await page.keyboard.type('/board');
+  const item = page.getByTestId('toolbox-popover').locator('[data-blok-item-name="board"]:visible');
+
+  await expect(item).toContainText('Board');
+  await item.click();
+
+  const panel = page.getByTestId('database-new-database-panel');
+
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText('New database', { exact: true })).toBeVisible();
+  await expect(panel.getByTestId('database-new-source-empty')).toBeFocused();
+  await panel.getByTestId('database-new-source-empty').click();
+  await expect(panel).toBeHidden();
+
+  const database = (await saved(page)).find((block) => block.type === 'database');
+  const data = database?.data as { views?: Array<{ type: string }> } | undefined;
+
+  expect(data?.views?.map((view) => view.type)).toEqual(['board']);
+  expect(data).not.toHaveProperty('initialView');
+});

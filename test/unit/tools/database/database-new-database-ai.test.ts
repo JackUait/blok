@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { DatabaseConfig, DatabaseData, DatabaseSetup, DatabaseSetupRequest } from '../../../../src/tools/database/types';
 import type { BlockOrigin } from '../../../../types';
-import type { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseTool } from '../../../../src/tools/database';
+import type { ToolboxConfigEntry } from '../../../../types';
 import { buildDatabase, makeDoc } from './structure-harness';
 
 vi.mock('../../../../src/blok', () => ({
@@ -389,5 +390,77 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(rows.map((id) => doc.row(id).properties[data.schema[0].id])).toEqual(['Alpha', 'Beta']);
     expect([...doc.blocks.values()].filter((b) => b.name === 'database').map((b) => b.block.id).sort()).toEqual(['db', 'other']);
     expect(doc.transact).toHaveBeenCalledTimes(1);
+  });
+});
+
+// research/20 §1a (`/map`), research/26 §2 (`/table view`): Notion opens the panel for every database a slash entry makes.
+describe('"New database" panel for every database toolbox entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    popovers.items.length = 0;
+    popovers.destroyed = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const entries = (): ToolboxConfigEntry[] => {
+    const toolbox = DatabaseTool.toolbox;
+
+    return Array.isArray(toolbox) ? toolbox : [toolbox];
+  };
+  const entry = (name: string): ToolboxConfigEntry => {
+    const found = entries().find((item) => item.name === name);
+
+    if (found === undefined) throw new Error(`no ${name} entry`);
+
+    return found;
+  };
+  // The toolbox inserts an entry with no data as an empty block.
+  const dataOf = (name: string): DatabaseData => ({ ...(entry(name).data ?? {}) }) as unknown as DatabaseData;
+  const activeType = (tool: DatabaseTool): string | undefined => {
+    const data = saved(tool);
+
+    return data.views.find((view) => view.id === data.activeViewId)?.type;
+  };
+
+  it('the entries are Database, Board and Linked view', () => {
+    expect(entries().map((item) => item.name)).toEqual(['database', 'board', 'linkedDatabase']);
+  });
+
+  it.each([['database', 'table'], ['board', 'board']] as const)('a user insert of the %s entry opens the panel, and New empty keeps its %s layout', async (name, layout) => {
+    const { tool } = await insert(undefined, 'user', dataOf(name));
+
+    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
+    panel()?.querySelector<HTMLElement>('[data-blok-database-panel-row]')?.click();
+    expect(activeType(tool)).toBe(layout);
+  });
+
+  it('a user insert of the Linked view entry opens the source picker, not the panel', async () => {
+    await insert(undefined, 'user', dataOf('linkedDatabase'));
+
+    expect(panel()).toBeUndefined();
+  });
+
+  it.each(['load', 'replay', 'api', 'paste', 'convert', 'probe'] as const)('the Board entry opens nothing for a %s origin', async (origin) => {
+    const { tool } = await insert(undefined, origin, dataOf('board'));
+
+    expect(panel()).toBeUndefined();
+    expect(activeType(tool)).toBe('board');
+  });
+
+  // Every client that renders the seed saves it once; the ids must match so the saves merge.
+  it('two clients that render the same Board seed save the same ids', async () => {
+    const ids = async (): Promise<string[]> => {
+      const { tool } = await insert(undefined, 'replay', dataOf('board'));
+      const data = saved(tool);
+
+      return [...data.schema.map((p) => p.id), ...data.views.map((v) => v.id)];
+    };
+
+    expect(await ids()).toEqual(await ids());
   });
 });

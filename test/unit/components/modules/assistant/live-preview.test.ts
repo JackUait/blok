@@ -162,6 +162,21 @@ describe('createLivePreview', () => {
       .toEqual(['one', 'two']);
   });
 
+  it('keeps landed words in step when later text changes them', () => {
+    const preview = make();
+    const json = execute({ name: 'markdown.insert', args: { position: { after: 'b1' }, markdown: 'Hello world\nmore [the docs](u)' } });
+
+    // A soft-wrapped line and a link still being written.
+    preview.update('c1', open(json, 'world\\n'));
+    vi.advanceTimersByTime(35 * 10);
+    preview.update('c1', open(json, '[the d'));
+    vi.advanceTimersByTime(35 * 10);
+    preview.update('c1', json);
+    vi.advanceTimersByTime(35 * 10);
+
+    expect(state.layer.querySelector('.blok-block')?.textContent).toBe('Hello world more the docs');
+  });
+
   it('never shows markup from inline HTML text', () => {
     const preview = make();
     const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'a <b class="x">bold</b> &amp; plain' } } });
@@ -271,6 +286,17 @@ describe('createLivePreview', () => {
 
     // A late delta for a finished call draws nothing.
     preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b2' }, type: 'paragraph', data: { text: 'gone' } } }));
+    expect(state.layer.querySelector(PREVIEW)).toBeNull();
+  });
+
+  it('clear ends every call, so a late delta draws nothing', () => {
+    const preview = make();
+    const json = execute({ name: 'block.insert', args: { position: { after: 'b2' }, type: 'paragraph', data: { text: 'late' } } });
+
+    preview.update('c1', json);
+    preview.clear();
+    preview.update('c1', json);
+
     expect(state.layer.querySelector(PREVIEW)).toBeNull();
   });
 

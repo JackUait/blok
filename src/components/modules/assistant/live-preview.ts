@@ -247,8 +247,15 @@ class Line {
   }
 
   public update(spec: LineSpec, ordinal: number): void {
+    const tokens = tokensOf(spec);
+
     this.spec = spec;
     this.ordinal = ordinal;
+    // A landed word can still change: a soft-wrapped line gains a space, a link loses its bracket.
+    this.spans.splice(tokens.length).forEach((span) => span.remove());
+    this.spans.filter((span, index) => span.textContent !== tokens[index]).forEach((span) => {
+      span.replaceChildren(tokens[this.spans.indexOf(span)]);
+    });
     this.draw();
   }
 
@@ -661,7 +668,10 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
     },
 
     clear() {
-      calls.forEach((call) => call.remove());
+      calls.forEach((call, callId) => {
+        finished.add(callId);
+        call.remove();
+      });
       calls.clear();
     },
   };

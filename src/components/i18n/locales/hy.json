@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Հատկության տեսանելիություն",
   "tools.database.settingsFilter": "Ֆիլտրել",
   "tools.database.settingsSort": "Տեսակավորել",
+  "tools.database.settingsSource": "Աղբյուր",
   "tools.database.settingsGroup": "Խմբավորել",
   "tools.database.settingsSubGroup": "Ենթախումբ",
   "tools.database.settingsConditionalColor": "Պայմանական գույն",

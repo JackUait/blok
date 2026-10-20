@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ગુણધર્મની દૃશ્યતા",
   "tools.database.settingsFilter": "ફિલ્ટર કરો",
   "tools.database.settingsSort": "સૉર્ટ કરો",
+  "tools.database.settingsSource": "સ્રોત",
   "tools.database.settingsGroup": "જૂથબદ્ધ કરો",
   "tools.database.settingsSubGroup": "પેટા-જૂથ",
   "tools.database.settingsConditionalColor": "શરતી રંગ",

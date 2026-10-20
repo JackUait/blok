@@ -1094,6 +1094,7 @@
   "tools.database.settingsPropertyVisibility": "נראות מאפיינים",
   "tools.database.settingsFilter": "סנן",
   "tools.database.settingsSort": "מיין",
+  "tools.database.settingsSource": "מקור",
   "tools.database.settingsGroup": "קבץ",
   "tools.database.settingsSubGroup": "קיבוץ משנה",
   "tools.database.settingsConditionalColor": "צבע מותנה",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Egenskapers synlighet",
   "tools.database.settingsFilter": "Filtrera",
   "tools.database.settingsSort": "Sortera",
+  "tools.database.settingsSource": "Källa",
   "tools.database.settingsGroup": "Gruppera",
   "tools.database.settingsSubGroup": "Undergrupp",
   "tools.database.settingsConditionalColor": "Villkorsstyrd färg",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "বৈশিষ্ট্যের দৃশ্যমানতা",
   "tools.database.settingsFilter": "ফিল্টার করুন",
   "tools.database.settingsSort": "সাজান",
+  "tools.database.settingsSource": "সোর্স",
   "tools.database.settingsGroup": "গোষ্ঠীবদ্ধ করুন",
   "tools.database.settingsSubGroup": "উপ-গোষ্ঠী",
   "tools.database.settingsConditionalColor": "শর্তসাপেক্ষ রঙ",

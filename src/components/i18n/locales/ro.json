@@ -1094,6 +1094,7 @@
   "tools.database.settingsPropertyVisibility": "Vizibilitatea proprietăților",
   "tools.database.settingsFilter": "Filtrează",
   "tools.database.settingsSort": "Sortează",
+  "tools.database.settingsSource": "Sursă",
   "tools.database.settingsGroup": "Grupează",
   "tools.database.settingsSubGroup": "Subgrup",
   "tools.database.settingsConditionalColor": "Culoare condiționată",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਦਿੱਖ",
   "tools.database.settingsFilter": "ਫਿਲਟਰ ਕਰੋ",
   "tools.database.settingsSort": "ਕ੍ਰਮਬੱਧ ਕਰੋ",
+  "tools.database.settingsSource": "ਸਰੋਤ",
   "tools.database.settingsGroup": "ਸਮੂਹ ਬਣਾਓ",
   "tools.database.settingsSubGroup": "ਉਪ-ਸਮੂਹ",
   "tools.database.settingsConditionalColor": "ਸ਼ਰਤੀਆ ਰੰਗ",

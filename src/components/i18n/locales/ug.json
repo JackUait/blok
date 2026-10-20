@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "خاسلىقلارنىڭ كۆرۈنۈشى",
   "tools.database.settingsFilter": "سۈزۈش",
   "tools.database.settingsSort": "رەتلەش",
+  "tools.database.settingsSource": "مەنبە",
   "tools.database.settingsGroup": "گۇرۇپپىلاش",
   "tools.database.settingsSubGroup": "تارماق گۇرۇپپا",
   "tools.database.settingsConditionalColor": "شەرتلىك رەڭ",

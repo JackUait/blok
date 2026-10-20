@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ဂုဏ်သတ္တိ မြင်နိုင်မှု",
   "tools.database.settingsFilter": "စစ်ထုတ်ရန်",
   "tools.database.settingsSort": "စီရန်",
+  "tools.database.settingsSource": "ရင်းမြစ်",
   "tools.database.settingsGroup": "အုပ်စုဖွဲ့ရန်",
   "tools.database.settingsSubGroup": "အုပ်စုခွဲ",
   "tools.database.settingsConditionalColor": "အခြေအနေအလိုက် အရောင်",

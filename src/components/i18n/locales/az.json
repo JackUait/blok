@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Xüsusiyyətlərin görünməsi",
   "tools.database.settingsFilter": "Filtrlə",
   "tools.database.settingsSort": "Sırala",
+  "tools.database.settingsSource": "Mənbə",
   "tools.database.settingsGroup": "Qruplaşdır",
   "tools.database.settingsSubGroup": "Alt qrup",
   "tools.database.settingsConditionalColor": "Şərti rəng",

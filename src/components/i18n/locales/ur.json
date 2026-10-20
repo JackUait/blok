@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "پراپرٹی کی مرئیت",
   "tools.database.settingsFilter": "فلٹر کریں",
   "tools.database.settingsSort": "ترتیب دیں",
+  "tools.database.settingsSource": "ماخذ",
   "tools.database.settingsGroup": "گروپ کریں",
   "tools.database.settingsSubGroup": "ذیلی گروپ",
   "tools.database.settingsConditionalColor": "مشروط رنگ",

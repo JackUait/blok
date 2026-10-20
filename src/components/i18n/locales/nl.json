@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Zichtbaarheid van eigenschappen",
   "tools.database.settingsFilter": "Filteren",
   "tools.database.settingsSort": "Sorteren",
+  "tools.database.settingsSource": "Bron",
   "tools.database.settingsGroup": "Groeperen",
   "tools.database.settingsSubGroup": "Subgroep",
   "tools.database.settingsConditionalColor": "Voorwaardelijke kleur",

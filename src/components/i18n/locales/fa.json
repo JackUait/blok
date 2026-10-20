@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "نمایانی ویژگی‌ها",
   "tools.database.settingsFilter": "فیلتر",
   "tools.database.settingsSort": "مرتب‌سازی",
+  "tools.database.settingsSource": "منبع",
   "tools.database.settingsGroup": "گروه‌بندی",
   "tools.database.settingsSubGroup": "زیرگروه",
   "tools.database.settingsConditionalColor": "رنگ شرطی",

@@ -81,6 +81,9 @@ export class DataPersistenceManager {
    */
   private lastSavedDataInternal: SafeBlockToolData;
 
+  /** Bumped by setData: a save that read the tool before it must not overwrite what it set. */
+  private setDataCount = 0;
+
   /**
    * Stores last successfully extracted tunes data
    */
@@ -119,7 +122,10 @@ export class DataPersistenceManager {
    * @returns Saved data object or undefined if extraction fails
    */
   public async save(): Promise<undefined | BlockSaveResult> {
-    return this.toSaveResult(await this.extractToolData());
+    const setDataCount = this.setDataCount;
+    const extracted = await this.extractToolData();
+
+    return this.toSaveResult(extracted, setDataCount === this.setDataCount);
   }
 
   /**
@@ -136,8 +142,9 @@ export class DataPersistenceManager {
   /**
    * Records the extracted data as the last saved data and wraps it with tunes.
    * @param extractedBlock - normalized tool output, undefined when extraction failed
+   * @param current - false when setData ran during the save: the result is older than the block
    */
-  private toSaveResult(extractedBlock: SafeBlockToolData | undefined): undefined | BlockSaveResult {
+  private toSaveResult(extractedBlock: SafeBlockToolData | undefined, current = true): undefined | BlockSaveResult {
     if (extractedBlock === undefined) {
       return undefined;
     }
@@ -145,7 +152,7 @@ export class DataPersistenceManager {
     const measuringStart = window.performance.now();
     const tunesData = this.tunesManager.extractTunesData();
 
-    this.lastSavedDataInternal = extractedBlock;
+    if (current) this.lastSavedDataInternal = extractedBlock;
     this.lastSavedTunesInternal = { ...tunesData };
 
     const measuringEnd = window.performance.now();
@@ -196,6 +203,7 @@ export class DataPersistenceManager {
 
       pluginsContent.innerHTML = newText;
       this.lastSavedDataInternal = newData;
+      this.setDataCount++;
       this.inputManager.dropCache();
       this.toggleEmptyMark();
       this.callToolUpdated();
@@ -231,6 +239,7 @@ export class DataPersistenceManager {
       }
 
       this.lastSavedDataInternal = newData;
+      this.setDataCount++;
 
       return true;
     } catch (e) {

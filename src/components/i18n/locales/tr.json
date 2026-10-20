@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Özellik görünürlüğü",
   "tools.database.settingsFilter": "Filtrele",
   "tools.database.settingsSort": "Sırala",
+  "tools.database.settingsSource": "Kaynak",
   "tools.database.settingsGroup": "Grupla",
   "tools.database.settingsSubGroup": "Alt grup",
   "tools.database.settingsConditionalColor": "Koşullu renk",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Sichtbarkeit der Eigenschaften",
   "tools.database.settingsFilter": "Filtern",
   "tools.database.settingsSort": "Sortieren",
+  "tools.database.settingsSource": "Quelle",
   "tools.database.settingsGroup": "Gruppieren",
   "tools.database.settingsSubGroup": "Untergruppe",
   "tools.database.settingsConditionalColor": "Bedingte Farbe",

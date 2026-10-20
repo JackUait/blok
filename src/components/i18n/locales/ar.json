@@ -1100,6 +1100,7 @@
   "tools.database.settingsPropertyVisibility": "ظهور الخصائص",
   "tools.database.settingsFilter": "تصفية",
   "tools.database.settingsSort": "فرز",
+  "tools.database.settingsSource": "المصدر",
   "tools.database.settingsGroup": "تجميع",
   "tools.database.settingsSubGroup": "تجميع فرعي",
   "tools.database.settingsConditionalColor": "تلوين شرطي",

@@ -1096,6 +1096,7 @@
   "tools.database.settingsPropertyVisibility": "Vidnost lastnosti",
   "tools.database.settingsFilter": "Filtriraj",
   "tools.database.settingsSort": "Razvrsti",
+  "tools.database.settingsSource": "Vir",
   "tools.database.settingsGroup": "Združi v skupine",
   "tools.database.settingsSubGroup": "Podskupina",
   "tools.database.settingsConditionalColor": "Pogojna barva",

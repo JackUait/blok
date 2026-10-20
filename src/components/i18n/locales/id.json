@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Visibilitas properti",
   "tools.database.settingsFilter": "Filter",
   "tools.database.settingsSort": "Urutkan",
+  "tools.database.settingsSource": "Sumber",
   "tools.database.settingsGroup": "Kelompokkan",
   "tools.database.settingsSubGroup": "Subgrup",
   "tools.database.settingsConditionalColor": "Warna bersyarat",

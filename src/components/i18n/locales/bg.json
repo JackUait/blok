@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Видимост на свойствата",
   "tools.database.settingsFilter": "Филтрирай",
   "tools.database.settingsSort": "Сортирай",
+  "tools.database.settingsSource": "Източник",
   "tools.database.settingsGroup": "Групирай",
   "tools.database.settingsSubGroup": "Подгрупа",
   "tools.database.settingsConditionalColor": "Условен цвят",

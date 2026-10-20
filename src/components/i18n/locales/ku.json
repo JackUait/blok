@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "دەرکەوتنی تایبەتمەندییەکان",
   "tools.database.settingsFilter": "فلتەرکردن",
   "tools.database.settingsSort": "ڕیزکردن",
+  "tools.database.settingsSource": "سەرچاوە",
   "tools.database.settingsGroup": "گرووپکردن",
   "tools.database.settingsSubGroup": "ژێرگرووپ",
   "tools.database.settingsConditionalColor": "ڕەنگی مەرجدار",

@@ -1094,6 +1094,7 @@
   "tools.database.settingsPropertyVisibility": "Rekvizītu redzamība",
   "tools.database.settingsFilter": "Filtrēt",
   "tools.database.settingsSort": "Kārtot",
+  "tools.database.settingsSource": "Avots",
   "tools.database.settingsGroup": "Grupēt",
   "tools.database.settingsSubGroup": "Apakšgrupa",
   "tools.database.settingsConditionalColor": "Nosacījuma krāsa",

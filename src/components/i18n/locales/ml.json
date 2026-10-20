@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "പ്രോപ്പർട്ടി ദൃശ്യത",
   "tools.database.settingsFilter": "ഫിൽട്ടർ ചെയ്യുക",
   "tools.database.settingsSort": "അടുക്കുക",
+  "tools.database.settingsSource": "ഉറവിടം",
   "tools.database.settingsGroup": "ഗ്രൂപ്പ് ചെയ്യുക",
   "tools.database.settingsSubGroup": "ഉപ-ഗ്രൂപ്പ്",
   "tools.database.settingsConditionalColor": "സോപാധിക നിറം",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "गुणधर्माची दृश्यमानता",
   "tools.database.settingsFilter": "फिल्टर करा",
   "tools.database.settingsSort": "क्रमवारी लावा",
+  "tools.database.settingsSource": "स्रोत",
   "tools.database.settingsGroup": "गट करा",
   "tools.database.settingsSubGroup": "उप-गट",
   "tools.database.settingsConditionalColor": "सशर्त रंग",

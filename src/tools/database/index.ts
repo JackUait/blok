@@ -137,7 +137,7 @@ import { DatabaseViewControls } from './database-view-controls';
 import type { ViewControlsHost } from './database-view-controls';
 import type { ViewStateFallback } from './database-view-state';
 import { TabDisplayPreference } from './database-tab-display';
-import type { ViewGroupEntry, ViewSettingsAction, ViewSettingsContext } from './database-view-settings-panel';
+import type { DataSourceChoice, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext } from './database-view-settings-panel';
 import { openFilterList } from './database-view-settings-panel';
 import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
@@ -3290,7 +3290,7 @@ export class DatabaseTool implements BlockTool {
    * database.css plays (research/08). The body already swapped in one frame.
    */
   private fadeTabBackground(fromViewId: string, toViewId: string): void {
-    const bar = this.element?.querySelector('[data-blok-database-tab-bar]');
+    const bar = this.ownTabBarElement();
     const from = bar?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${fromViewId}"]`);
     const to = bar?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${toViewId}"]`);
 
@@ -3355,11 +3355,6 @@ export class DatabaseTool implements BlockTool {
       this.api.blocks.insertAt('database', data, { parentId: this.block.id, position: 'end', id: sourceId });
     });
     void this.sync.syncCreateView(structuredClone({ ...view, dataSourceId: sourceId }));
-    // Its render could not see this block yet: drop its chrome now, before
-    // this block's tab bar lookup can find the source's bar first.
-    const source = this.dashboardOwner(sourceId);
-
-    if (source !== undefined && source.boardContainer !== null) source.dropChrome();
     this.mountRows();
     this.switchView(view.id);
   }
@@ -3515,7 +3510,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const oldBarEl = this.element.querySelector('[data-blok-database-tab-bar]');
+    const oldBarEl = this.ownTabBarElement();
 
     this.tabBar.destroy();
     this.tabBar = this.createTabBar();
@@ -3531,12 +3526,17 @@ export class DatabaseTool implements BlockTool {
     this.syncTitleRowAddBtn();
   }
 
+  /** This block's bar only: a nested database or a second source sits earlier in the row pool. */
+  private ownTabBarElement(): HTMLElement | null {
+    return this.element?.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar] > [data-blok-database-tab-bar]') ?? null;
+  }
+
   private syncTitleRowAddBtn(): void {
     if (this.element === null || this.titleRowElement === null || this.tabBar === null) {
       return;
     }
 
-    const tabBarEl = this.element.querySelector('[data-blok-database-tab-bar]');
+    const tabBarEl = this.ownTabBarElement();
     const views = this.model.getViews();
     const addBtn = this.tabBar.getAddBtnEl();
 
@@ -3712,6 +3712,35 @@ export class DatabaseTool implements BlockTool {
     const id = saved === undefined ? undefined : this.otherSourceId(saved);
 
     return (id === undefined ? undefined : this.dashboardOwner(id)) ?? this;
+  }
+
+  /** This block's own data, then its second sources: the child database blocks, whether a view shows them or not. */
+  private dataSourceChoices(): DataSourceChoice[] {
+    const type = this.model.getView(this.activeViewId)?.type;
+    const fits = type !== undefined && SOURCE_LAYOUTS.includes(type);
+    const titleOf = (tool: DatabaseTool): string => tool.titleElement?.textContent ?? tool.title;
+    const sources = this.api.blocks.getChildren(this.dataId).flatMap((child): DataSourceChoice[] => {
+      const tool = child.name === 'database' ? this.dashboardOwner(child.id) : undefined;
+
+      return tool === undefined ? [] : [{ id: child.id, title: titleOf(tool), fits }];
+    });
+
+    return [{ id: this.dataId, title: titleOf(this), fits: true }, ...sources];
+  }
+
+  /**
+   * View settings "Source": the view shows another source of this block.
+   * What Notion does to the view's filters and sorts is UNMEASURED: they stay,
+   * and ids the new schema lacks match nothing.
+   */
+  private pickDataSource(id: string): void {
+    const view = this.model.getView(this.activeViewId);
+    const choice = this.dataSourceChoices().find((option) => option.id === id);
+
+    if (view === undefined || choice === undefined || !choice.fits || id === this.activeSource().dataId) return;
+    this.updateActiveView({ dataSourceId: id === this.dataId ? undefined : id });
+    this.paintLinkedTitle();
+    this.controls.refresh();
   }
 
   /** A second data source of this block that the view shows (research/23 §10), else undefined. */
@@ -4986,6 +5015,13 @@ export class DatabaseTool implements BlockTool {
           },
         },
       }),
+      ...(context === undefined && !this.linked ? {
+        dataSources: {
+          list: () => this.dataSourceChoices(),
+          current: () => data().dataId,
+          pick: (id: string) => this.pickDataSource(id),
+        },
+      } : {}),
       newRow: () => {
         data().newRow();
       },

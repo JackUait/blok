@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "प्रॉपर्टी की दृश्यता",
   "tools.database.settingsFilter": "फ़िल्टर करें",
   "tools.database.settingsSort": "क्रमबद्ध करें",
+  "tools.database.settingsSource": "स्रोत",
   "tools.database.settingsGroup": "समूह बनाएं",
   "tools.database.settingsSubGroup": "उप-समूह",
   "tools.database.settingsConditionalColor": "सशर्त रंग",

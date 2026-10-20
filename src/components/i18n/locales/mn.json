@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Шинжийн харагдах байдал",
   "tools.database.settingsFilter": "Шүүх",
   "tools.database.settingsSort": "Эрэмбэлэх",
+  "tools.database.settingsSource": "Эх сурвалж",
   "tools.database.settingsGroup": "Бүлэглэх",
   "tools.database.settingsSubGroup": "Дэд бүлэг",
   "tools.database.settingsConditionalColor": "Нөхцөлт өнгө",

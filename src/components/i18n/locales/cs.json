@@ -1096,6 +1096,7 @@
   "tools.database.settingsPropertyVisibility": "Viditelnost vlastností",
   "tools.database.settingsFilter": "Filtrovat",
   "tools.database.settingsSort": "Seřadit",
+  "tools.database.settingsSource": "Zdroj",
   "tools.database.settingsGroup": "Seskupit",
   "tools.database.settingsSubGroup": "Podskupina",
   "tools.database.settingsConditionalColor": "Podmíněná barva",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "თვისების ხილვადობა",
   "tools.database.settingsFilter": "გაფილტვრა",
   "tools.database.settingsSort": "დალაგება",
+  "tools.database.settingsSource": "წყარო",
   "tools.database.settingsGroup": "დაჯგუფება",
   "tools.database.settingsSubGroup": "ქვეჯგუფი",
   "tools.database.settingsConditionalColor": "პირობითი ფერი",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "속성 표시 여부",
   "tools.database.settingsFilter": "필터",
   "tools.database.settingsSort": "정렬",
+  "tools.database.settingsSource": "소스",
   "tools.database.settingsGroup": "그룹화",
   "tools.database.settingsSubGroup": "하위 그룹",
   "tools.database.settingsConditionalColor": "조건부 색상",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Visibility ng property",
   "tools.database.settingsFilter": "I-filter",
   "tools.database.settingsSort": "I-sort",
+  "tools.database.settingsSource": "Pinagmulan",
   "tools.database.settingsGroup": "Pangkatin",
   "tools.database.settingsSubGroup": "Sub-grupo",
   "tools.database.settingsConditionalColor": "Kondisyonal na kulay",

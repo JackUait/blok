@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ಗುಣಲಕ್ಷಣದ ಗೋಚರತೆ",
   "tools.database.settingsFilter": "ಫಿಲ್ಟರ್ ಮಾಡಿ",
   "tools.database.settingsSort": "ವಿಂಗಡಿಸಿ",
+  "tools.database.settingsSource": "ಮೂಲ",
   "tools.database.settingsGroup": "ಗುಂಪು ಮಾಡಿ",
   "tools.database.settingsSubGroup": "ಉಪ-ಗುಂಪು",
   "tools.database.settingsConditionalColor": "ಷರತ್ತುಬದ್ಧ ಬಣ್ಣ",

@@ -1326,6 +1326,7 @@ export type BlokMessageKey =
   | 'tools.database.settingsShowDataSourceTitle'
   | 'tools.database.settingsShowPageIcon'
   | 'tools.database.settingsSort'
+  | 'tools.database.settingsSource'
   | 'tools.database.settingsStyle'
   | 'tools.database.settingsSubGroup'
   | 'tools.database.settingsSubItems'

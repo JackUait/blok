@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "屬性可見度",
   "tools.database.settingsFilter": "篩選",
   "tools.database.settingsSort": "排序",
+  "tools.database.settingsSource": "來源",
   "tools.database.settingsGroup": "分組",
   "tools.database.settingsSubGroup": "子群組",
   "tools.database.settingsConditionalColor": "條件式色彩",

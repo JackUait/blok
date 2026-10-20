@@ -1094,6 +1094,7 @@
   "tools.database.settingsPropertyVisibility": "Visibilidade das propriedades",
   "tools.database.settingsFilter": "Filtrar",
   "tools.database.settingsSort": "Classificar",
+  "tools.database.settingsSource": "Fonte",
   "tools.database.settingsGroup": "Agrupar",
   "tools.database.settingsSubGroup": "Subgrupo",
   "tools.database.settingsConditionalColor": "Cor condicional",

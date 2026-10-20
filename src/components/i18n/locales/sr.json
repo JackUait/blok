@@ -1094,6 +1094,7 @@
   "tools.database.settingsPropertyVisibility": "Видљивост својстава",
   "tools.database.settingsFilter": "Филтрирај",
   "tools.database.settingsSort": "Сортирај",
+  "tools.database.settingsSource": "Извор",
   "tools.database.settingsGroup": "Групиши",
   "tools.database.settingsSubGroup": "Подгрупа",
   "tools.database.settingsConditionalColor": "Условна боја",

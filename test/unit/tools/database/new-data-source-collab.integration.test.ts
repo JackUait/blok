@@ -275,4 +275,34 @@ describe('New data source between peers', { timeout: 60000 }, () => {
     expect(holder?.closest('[hidden]')).not.toBeNull();
     expect(holder?.querySelector('[data-blok-database-tab-bar], [data-blok-database-title]')).toBeNull();
   });
+
+  it('a view moved back to the database\'s own data shows its rows on a peer too', async () => {
+    const a = await bootLive();
+    const b = await bootLive();
+    const own = (client: LiveClient, selector: string): HTMLElement | undefined =>
+      [...databaseRoot(client).querySelectorAll<HTMLElement>(selector)].find((el) => el.closest('[data-blok-element]') === databaseRoot(client));
+
+    own(a, '[data-blok-database-add-view]')?.click();
+    await settle();
+    document.querySelector<HTMLElement>('[data-blok-database-view-new-source]')?.click();
+    await settle();
+    await pump([a, b]);
+    const views = (client: LiveClient): Array<{ id: string; dataSourceId?: string }> =>
+      (client.core.moduleInstances.YjsManager.toJSON().find((block) => block.id === 'db-1')?.data as { views: Array<{ id: string; dataSourceId?: string }> }).views;
+    const bound = views(b).find((view) => view.dataSourceId !== undefined);
+
+    expect(bound).toBeDefined();
+    own(a, '[data-blok-testid="database-toolbar-settings"]')?.click();
+    await settle();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-settings-source"]')?.click();
+    await settle();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-source-option-db-1"]')?.click();
+    await settle();
+    await pump([a, b]);
+
+    expect(views(b).find((view) => view.id === bound?.id)?.dataSourceId).toBeUndefined();
+    own(b, `[role="tab"][data-view-id="${bound?.id ?? ''}"]`)?.click();
+    await settle();
+    expect(own(b, '[data-blok-database-board-container]')?.textContent).toContain('First');
+  });
 });

@@ -1096,6 +1096,7 @@
   "tools.database.settingsPropertyVisibility": "Видимість властивостей",
   "tools.database.settingsFilter": "Фільтрувати",
   "tools.database.settingsSort": "Сортувати",
+  "tools.database.settingsSource": "Джерело",
   "tools.database.settingsGroup": "Групувати",
   "tools.database.settingsSubGroup": "Підгрупа",
   "tools.database.settingsConditionalColor": "Умовний колір",

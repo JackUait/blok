@@ -1096,6 +1096,7 @@
   "tools.database.settingsPropertyVisibility": "Savybių matomumas",
   "tools.database.settingsFilter": "Filtruoti",
   "tools.database.settingsSort": "Rikiuoti",
+  "tools.database.settingsSource": "Šaltinis",
   "tools.database.settingsGroup": "Grupuoti",
   "tools.database.settingsSubGroup": "Pogrupis",
   "tools.database.settingsConditionalColor": "Sąlyginė spalva",

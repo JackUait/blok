@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Keterlihatan sifat",
   "tools.database.settingsFilter": "Tapis",
   "tools.database.settingsSort": "Isih",
+  "tools.database.settingsSource": "Sumber",
   "tools.database.settingsGroup": "Kumpulkan",
   "tools.database.settingsSubGroup": "Subkumpulan",
   "tools.database.settingsConditionalColor": "Warna bersyarat",

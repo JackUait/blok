@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "プロパティの表示",
   "tools.database.settingsFilter": "フィルター",
   "tools.database.settingsSort": "並べ替え",
+  "tools.database.settingsSource": "ソース",
   "tools.database.settingsGroup": "グループ化",
   "tools.database.settingsSubGroup": "サブグループ",
   "tools.database.settingsConditionalColor": "条件付きカラー",

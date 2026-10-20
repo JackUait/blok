@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ޕްރޮޕަރޓީތައް ފެންނަ ގޮތް",
   "tools.database.settingsFilter": "ފިލްޓަރުކުރޭ",
   "tools.database.settingsSort": "ތަރުތީބުކުރޭ",
+  "tools.database.settingsSource": "ސޯސް",
   "tools.database.settingsGroup": "ގްރޫޕްކުރޭ",
   "tools.database.settingsSubGroup": "ސަބް ގްރޫޕް",
   "tools.database.settingsConditionalColor": "ޝަރުޠީ ކުލަ",

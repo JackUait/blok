@@ -201,6 +201,38 @@ describe('DataPersistenceManager', () => {
       expect(dataPersistenceManager.lastSavedData).toEqual({ text: 'new text' });
     });
 
+    // The sync compares a peer's data with this: an old value here skips the peer's next change.
+    it('keeps the setData value when a save that read the tool before it resolves after it', async () => {
+      let resolveSave: (data: BlockToolData) => void = () => undefined;
+
+      vi.mocked(toolInstance.save).mockReturnValueOnce(new Promise<BlockToolData>((resolve) => { resolveSave = resolve; }) as unknown as BlockToolData);
+      (toolInstance as { setData?: unknown }).setData = vi.fn(() => true);
+
+      const saving = dataPersistenceManager.save();
+
+      await dataPersistenceManager.setData({ text: 'from the peer' });
+      resolveSave({ text: 'read before the peer' });
+      const result = await saving;
+
+      expect(dataPersistenceManager.lastSavedData).toEqual({ text: 'from the peer' });
+      expect(result?.data).toEqual({ text: 'read before the peer' });
+    });
+
+    it('keeps the in-place text value when an older save resolves after it', async () => {
+      let resolveSave: (data: BlockToolData) => void = () => undefined;
+
+      mockRenderedElement.setAttribute('contenteditable', 'true');
+      vi.mocked(toolInstance.save).mockReturnValueOnce(new Promise<BlockToolData>((resolve) => { resolveSave = resolve; }) as unknown as BlockToolData);
+
+      const saving = dataPersistenceManager.save();
+
+      await dataPersistenceManager.setData({ text: 'from the peer' });
+      resolveSave({ text: 'read before the peer' });
+      await saving;
+
+      expect(dataPersistenceManager.lastSavedData).toEqual({ text: 'from the peer' });
+    });
+
     /**
      * A Tool's `setData` may report that it could NOT apply the data in place
      * (the list tool returns false for a style change, which needs a different

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ගුණාංග දෘශ්‍යතාව",
   "tools.database.settingsFilter": "පෙරන්න",
   "tools.database.settingsSort": "වර්ග කරන්න",
+  "tools.database.settingsSource": "මූලාශ්‍රය",
   "tools.database.settingsGroup": "සමූහගත කරන්න",
   "tools.database.settingsSubGroup": "උප සමූහය",
   "tools.database.settingsConditionalColor": "කොන්දේසිගත වර්ණය",

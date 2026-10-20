@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Mwonekano wa sifa",
   "tools.database.settingsFilter": "Chuja",
   "tools.database.settingsSort": "Panga",
+  "tools.database.settingsSource": "Chanzo",
   "tools.database.settingsGroup": "Panga katika vikundi",
   "tools.database.settingsSubGroup": "Kikundi kidogo",
   "tools.database.settingsConditionalColor": "Rangi kwa masharti",

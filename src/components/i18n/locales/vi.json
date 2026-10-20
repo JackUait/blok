@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Hiển thị thuộc tính",
   "tools.database.settingsFilter": "Lọc",
   "tools.database.settingsSort": "Sắp xếp",
+  "tools.database.settingsSource": "Nguồn",
   "tools.database.settingsGroup": "Nhóm",
   "tools.database.settingsSubGroup": "Nhóm con",
   "tools.database.settingsConditionalColor": "Màu theo điều kiện",

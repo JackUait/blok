@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Egenskabers synlighed",
   "tools.database.settingsFilter": "Filtrer",
   "tools.database.settingsSort": "Sorter",
+  "tools.database.settingsSource": "Kilde",
   "tools.database.settingsGroup": "Grupper",
   "tools.database.settingsSubGroup": "Undergruppe",
   "tools.database.settingsConditionalColor": "Betinget farve",

@@ -197,4 +197,44 @@ test.describe('database New data source', () => {
     expect(csv).toContain('Gamma');
     expect(csv).not.toContain('Alpha');
   });
+
+  test('View settings "Source" moves a view onto the other source and back', async ({ page }) => {
+    const table = (id: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+      id, name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...extra,
+    });
+
+    await mount(page, [
+      {
+        id: 'db-1', type: 'database', content: ['r1', 'src-b'],
+        data: {
+          title: 'Projects',
+          schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+          views: [table('v0', { name: 'First' }), table('vb', { name: 'Second', position: 'a1', dataSourceId: 'src-b' })],
+          activeViewId: 'v0',
+        },
+      },
+      { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Alpha' } } },
+      {
+        id: 'src-b', type: 'database', parent: 'db-1', content: ['b1'],
+        data: { title: 'Src B', schema: [{ id: 'b-title', name: 'Name', type: 'title', position: 'a0' }], views: [table('bv')], activeViewId: 'bv' },
+      },
+      { id: 'b1', type: 'database-row', parent: 'src-b', data: { position: 'a0', properties: { 'b-title': 'Beta' } } },
+    ]);
+    await expect(grid(page)).toContainText('Alpha');
+
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-source').click();
+    await expect(page.getByTestId('database-source-search')).toHaveAttribute('placeholder', 'Link to a data source…');
+    await page.getByTestId('database-source-option-src-b').click();
+    await expect(grid(page)).toContainText('Beta');
+    await expect(grid(page)).not.toContainText('Alpha');
+
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-source').click();
+    await page.getByTestId('database-source-option-db-1').click();
+    await expect(grid(page)).toContainText('Alpha');
+    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: Array<{ id: string; dataSourceId?: string }> };
+
+    expect(views.views.find((view) => view.id === 'v0')?.dataSourceId).toBeUndefined();
+  });
 });

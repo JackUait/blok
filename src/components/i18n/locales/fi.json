@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Ominaisuuksien näkyvyys",
   "tools.database.settingsFilter": "Suodata",
   "tools.database.settingsSort": "Lajittele",
+  "tools.database.settingsSource": "Lähde",
   "tools.database.settingsGroup": "Ryhmittele",
   "tools.database.settingsSubGroup": "Aliryhmä",
   "tools.database.settingsConditionalColor": "Ehdollinen väri",

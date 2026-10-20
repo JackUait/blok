@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Omaduste nähtavus",
   "tools.database.settingsFilter": "Filtreeri",
   "tools.database.settingsSort": "Sordi",
+  "tools.database.settingsSource": "Allikas",
   "tools.database.settingsGroup": "Rühmita",
   "tools.database.settingsSubGroup": "Alamrühm",
   "tools.database.settingsConditionalColor": "Tingimuslik värv",

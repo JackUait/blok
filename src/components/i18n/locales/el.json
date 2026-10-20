@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Ορατότητα ιδιοτήτων",
   "tools.database.settingsFilter": "Φιλτράρισμα",
   "tools.database.settingsSort": "Ταξινόμηση",
+  "tools.database.settingsSource": "Πηγή",
   "tools.database.settingsGroup": "Ομαδοποίηση",
   "tools.database.settingsSubGroup": "Υποομάδα",
   "tools.database.settingsConditionalColor": "Χρώμα υπό όρους",

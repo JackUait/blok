@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "የንብረት ታይነት",
   "tools.database.settingsFilter": "አጣራ",
   "tools.database.settingsSort": "ደርድር",
+  "tools.database.settingsSource": "ምንጭ",
   "tools.database.settingsGroup": "በቡድን አደራጅ",
   "tools.database.settingsSubGroup": "ንዑስ ቡድን",
   "tools.database.settingsConditionalColor": "ሁኔታዊ ቀለም",

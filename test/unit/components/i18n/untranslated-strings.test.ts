@@ -239,6 +239,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.page',
     'tools.page.unresolved',
     'tools.database.rowMenuPage',
+    'tools.database.settingsSource',
   ]),
   // "Oval" is the standard Croatian geometric noun, identical to English.
   hr: new Set(['tools.image.cropRatioOval']),

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ການສະແດງຄຸນສົມບັດ",
   "tools.database.settingsFilter": "ກອງ",
   "tools.database.settingsSort": "ຈັດຮຽງ",
+  "tools.database.settingsSource": "ແຫຼ່ງ",
   "tools.database.settingsGroup": "ຈັດກຸ່ມ",
   "tools.database.settingsSubGroup": "ກຸ່ມຍ່ອຍ",
   "tools.database.settingsConditionalColor": "ສີຕາມເງື່ອນໄຂ",

@@ -1,4 +1,4 @@
-import { IconCopy, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
+import { IconCopy, IconDatabase, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -130,6 +130,25 @@ export interface ViewSettingsContext {
   automations?: AutomationSettings;
   /** The host gave `config.ai`. Without it there is no AI Autofill row. */
   autofill?: AutofillPanelSettings;
+  /** The database's data sources. Without a second one there is no Source row. */
+  dataSources?: DataSourceSettings;
+}
+
+export interface DataSourceChoice {
+  id: string;
+  /** Empty when untitled. */
+  title: string;
+  /** A second source draws only some layouts: false when it cannot draw this view. */
+  fits: boolean;
+}
+
+/** View settings "Source" (research/23 §10, 125-source-menu.png). */
+export interface DataSourceSettings {
+  /** The database's own data first, then its second sources. */
+  list: () => DataSourceChoice[];
+  /** The id of the source the view shows. */
+  current: () => string;
+  pick: (id: string) => void;
 }
 
 export interface AutofillPanelSettings {
@@ -301,6 +320,22 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.colors()),
           }));
         }
+        const sources = this.ctx.dataSources;
+        const choices = sources?.list() ?? [];
+
+        if (sources !== undefined && choices.length > 1) {
+          const current = choices.find((choice) => choice.id === sources.current());
+          const others = choices.filter((choice) => choice !== current && choice.fits);
+
+          rows.push(panelRow({
+            label: this.t('settingsSource'),
+            testId: 'database-settings-source',
+            value: this.sourceName(current),
+            opensPage: true,
+            disabled: !this.shared || others.length === 0,
+            onClick: () => panel.push(this.sourcePicker(sources)),
+          }));
+        }
         const automations = this.ctx.automations;
 
         if (automations !== undefined) {
@@ -394,6 +429,56 @@ export class ViewSettingsPages {
         );
 
         return rows;
+      },
+    };
+  }
+
+  private sourceName(choice: DataSourceChoice | undefined): string {
+    return choice === undefined || choice.title.trim() === '' ? this.t('newDataSource') : choice.title;
+  }
+
+  // ─── Source: the other sources of this database, under "Suggested" (research/23 §10) ───
+
+  private sourcePicker(sources: DataSourceSettings): PanelPage {
+    const state = { query: '' };
+    const list = document.createElement('div');
+    const fill = (panel: DatabasePanel): void => {
+      const query = state.query.trim().toLowerCase();
+      const matches = sources.list()
+        .filter((choice) => choice.id !== sources.current() && choice.fits)
+        .filter((choice) => this.sourceName(choice).toLowerCase().includes(query));
+      const rows: HTMLElement[] = matches.length === 0 ? [] : [panelLabel(this.t('linkedSuggested'))];
+
+      matches.forEach((choice) => rows.push(panelRow({
+        label: this.sourceName(choice),
+        testId: `database-source-option-${choice.id}`,
+        icon: IconDatabase,
+        onClick: () => {
+          panel.close();
+          sources.pick(choice.id);
+        },
+      })));
+      list.replaceChildren(...rows);
+    };
+
+    return {
+      title: this.t('settingsSource'),
+      build: (panel) => {
+        const search = panelInput({
+          value: state.query,
+          placeholder: this.t('layoutLinkDataSourceSearch'),
+          label: this.t('layoutLinkDataSourceSearch'),
+          testId: 'database-source-search',
+          // Only the list redraws, so the field keeps its caret.
+          onInput: (value) => {
+            state.query = value;
+            fill(panel);
+          },
+        });
+
+        fill(panel);
+
+        return [search, list];
       },
     };
   }

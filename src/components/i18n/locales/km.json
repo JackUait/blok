@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ភាពមើលឃើញលក្ខណៈ",
   "tools.database.settingsFilter": "ត្រង",
   "tools.database.settingsSort": "តម្រៀប",
+  "tools.database.settingsSource": "ប្រភព",
   "tools.database.settingsGroup": "ដាក់ជាក្រុម",
   "tools.database.settingsSubGroup": "ក្រុមរង",
   "tools.database.settingsConditionalColor": "ពណ៌តាមលក្ខខណ្ឌ",

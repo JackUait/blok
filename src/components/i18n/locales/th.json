@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "การแสดงคุณสมบัติ",
   "tools.database.settingsFilter": "กรอง",
   "tools.database.settingsSort": "เรียงลำดับ",
+  "tools.database.settingsSource": "แหล่งข้อมูล",
   "tools.database.settingsGroup": "จัดกลุ่ม",
   "tools.database.settingsSubGroup": "กลุ่มย่อย",
   "tools.database.settingsConditionalColor": "สีตามเงื่อนไข",

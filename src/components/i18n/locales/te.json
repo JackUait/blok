@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "ప్రాపర్టీ దృశ్యమానత",
   "tools.database.settingsFilter": "ఫిల్టర్ చేయి",
   "tools.database.settingsSort": "క్రమబద్ధీకరించు",
+  "tools.database.settingsSource": "మూలం",
   "tools.database.settingsGroup": "సమూహపరచు",
   "tools.database.settingsSubGroup": "ఉప సమూహం",
   "tools.database.settingsConditionalColor": "షరతులతో కూడిన రంగు",

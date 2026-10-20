@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "பண்பின் தெரிவுநிலை",
   "tools.database.settingsFilter": "வடிகட்டு",
   "tools.database.settingsSort": "வரிசைப்படுத்து",
+  "tools.database.settingsSource": "மூலம்",
   "tools.database.settingsGroup": "குழுவாக்கு",
   "tools.database.settingsSubGroup": "துணைக் குழு",
   "tools.database.settingsConditionalColor": "நிபந்தனை வண்ணம்",

@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Tulajdonságok láthatósága",
   "tools.database.settingsFilter": "Szűrés",
   "tools.database.settingsSort": "Rendezés",
+  "tools.database.settingsSource": "Forrás",
   "tools.database.settingsGroup": "Csoportosítás",
   "tools.database.settingsSubGroup": "Alcsoport",
   "tools.database.settingsConditionalColor": "Feltételes színezés",

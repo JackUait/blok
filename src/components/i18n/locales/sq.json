@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "Dukshmëria e vetive",
   "tools.database.settingsFilter": "Filtro",
   "tools.database.settingsSort": "Rendit",
+  "tools.database.settingsSource": "Burimi",
   "tools.database.settingsGroup": "Grupo",
   "tools.database.settingsSubGroup": "Nëngrup",
   "tools.database.settingsConditionalColor": "Ngjyrë me kusht",

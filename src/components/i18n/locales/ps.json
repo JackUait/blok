@@ -1092,6 +1092,7 @@
   "tools.database.settingsPropertyVisibility": "د ځانګړتیاوو ښکاروالی",
   "tools.database.settingsFilter": "فلټر کړئ",
   "tools.database.settingsSort": "ترتیب کړئ",
+  "tools.database.settingsSource": "سرچینه",
   "tools.database.settingsGroup": "ګروپ کړئ",
   "tools.database.settingsSubGroup": "فرعي ګروپ",
   "tools.database.settingsConditionalColor": "شرطي رنګ",

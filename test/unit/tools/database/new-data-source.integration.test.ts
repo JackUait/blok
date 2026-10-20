@@ -307,6 +307,7 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(parent?.activeViewId).toBe(view?.id);
     expect(parent?.schema).toEqual(parentSchema);
     expect(headers(shownArea())).toHaveLength(1);
+    expect(parentRoot().querySelector(`[data-blok-id="${sourceId}"] :is([data-blok-database-tab-bar], [data-blok-database-title])`)).toBeNull();
   });
 
   it('one undo removes the new source and its view; redo brings both back', async () => {
@@ -370,6 +371,136 @@ describe('New data source: a view bound to a second source in the same block', (
     const sourceHolder = parentRoot().querySelector<HTMLElement>('[data-blok-id="src-b"]');
 
     expect(sourceHolder?.querySelector('[data-blok-database-tab-bar], [data-blok-database-view-toolbar], [data-blok-database-title]')).toBeNull();
+  });
+
+  /** A database nested in a row page body: its holder sits in the parent's row pool, before the parent's own bar. */
+  const nestedDoc = (): OutputBlockData[] => [
+    {
+      id: 'db', type: 'database', content: ['r1'],
+      data: { title: 'Projects', schema: parentSchema, views: [table('v1', 'a0'), table('v2', 'a1', { name: 'Second' })], activeViewId: 'v1' },
+    },
+    { id: 'r1', type: 'database-row', parent: 'db', content: ['inner'], data: { properties: { t: 'Parent row', notes: 'n' }, position: 'a0' } },
+    {
+      id: 'inner', type: 'database', parent: 'r1',
+      data: { title: 'Inner', schema: sourceSchema, views: [table('iv1', 'a0', { name: 'Inner one' }), table('iv2', 'a1', { name: 'Inner two' })], activeViewId: 'iv1' },
+    },
+  ];
+
+  it('switching the parent\'s view rebuilds the parent\'s own tab bar, not a nested database\'s', async () => {
+    await make(nestedDoc());
+    const innerRoot = parentRoot().querySelector<HTMLElement>('[data-blok-element][data-blok-id="inner"]');
+
+    expect(innerRoot?.querySelector('[data-blok-database-tab-bar]')?.textContent).toContain('Inner two');
+
+    own('[role="tab"][data-view-id="v2"]').click();
+    await quiet();
+
+    expect(innerRoot?.querySelector('[data-blok-database-tab-bar]')?.textContent).toContain('Inner two');
+    expect(innerRoot?.querySelector('[data-view-id="v2"]')).toBeNull();
+    expect(own('[data-blok-database-view-bar] [data-blok-database-tab-bar]').querySelector('[aria-selected="true"]')?.getAttribute('data-view-id')).toBe('v2');
+  });
+
+  const byTestId = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
+
+  const openSettings = async (): Promise<void> => {
+    own('[data-blok-testid="database-toolbar-settings"]').click();
+    await quiet();
+  };
+
+  const openSourcePicker = async (): Promise<void> => {
+    await openSettings();
+    byTestId('database-settings-source')?.click();
+    await quiet();
+  };
+
+  it('View settings "Source" names the view\'s source and opens the measured picker', async () => {
+    await make(doc('v1'));
+    await openSettings();
+    const row = byTestId('database-settings-source');
+
+    expect(row?.textContent).toContain('Source');
+    expect(row?.textContent).toContain('Projects');
+    row?.click();
+    await quiet();
+    const panel = byTestId('database-settings-source')?.closest('[data-blok-database-panel]') ?? document.querySelector('[data-blok-database-panel]');
+
+    expect(panel?.textContent).toContain('Source');
+    expect(byTestId('database-source-search')?.getAttribute('placeholder')).toBe('Link to a data source…');
+    expect(panel?.textContent).toContain('Suggested');
+    expect(byTestId('database-source-option-src-b')?.textContent).toContain('Src B');
+    expect(byTestId('database-source-option-db')).toBeNull();
+  });
+
+  it('picking a source in "Source" shows that source\'s rows in the view and saves it', async () => {
+    const api = await make(doc('v1'));
+
+    await openSourcePicker();
+    byTestId('database-source-option-src-b')?.click();
+    await quiet();
+
+    expect(shownArea().textContent).toContain('Source row');
+    expect(shownArea().textContent).not.toContain('Parent row');
+    expect(headers(shownArea())).toContain('size');
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.dataSourceId).toBe('src-b');
+    expect(shownTitle()?.textContent).toBe('Src B');
+  });
+
+  it('picking the database\'s own data puts the view back on it', async () => {
+    const api = await make(doc('vb'));
+
+    await openSourcePicker();
+    byTestId('database-source-option-db')?.click();
+    await quiet();
+
+    expect(shownArea().textContent).toContain('Parent row');
+    expect(shownArea().textContent).not.toContain('Source row');
+    expect(JSON.stringify((await dataOf(api, 'db'))?.views.find((v) => v.id === 'vb'))).not.toContain('dataSourceId');
+  });
+
+  it('the search narrows the sources by name', async () => {
+    await make(doc('v1'));
+    await openSourcePicker();
+    const search = byTestId('database-source-search');
+
+    if (!(search instanceof HTMLInputElement)) throw new Error('no source search');
+    search.value = 'zzz';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    await quiet();
+
+    expect(byTestId('database-source-option-src-b')).toBeNull();
+  });
+
+  it('a database with no second source has no "Source" row', async () => {
+    await make(plainDoc());
+    await openSettings();
+
+    expect(byTestId('database-settings-source')).toBeNull();
+  });
+
+  it('a board view cannot move onto a second source: the source draws only table and list', async () => {
+    await make(doc('vboard', { views: [table('v1', 'a0'), { ...table('vboard', 'a1'), type: 'board', name: 'Board' }, table('vb', 'a2', { dataSourceId: 'src-b' })] }));
+    await openSettings();
+
+    expect((byTestId('database-settings-source') as HTMLButtonElement | null)?.disabled).toBe(true);
+  });
+
+  it('deleting the only view on a source keeps the source and its rows, still reachable from "Source"', async () => {
+    const api = await make(doc('vb'));
+
+    await openSettings();
+    byTestId('database-settings-delete')?.click();
+    await quiet();
+    const saved = await api.save();
+
+    expect((saved.blocks.find((b) => b.id === 'db')?.data as DatabaseData | undefined)?.views.some((v) => v.id === 'vb')).toBe(false);
+    expect(saved.blocks.some((b) => b.id === 'src-b')).toBe(true);
+    expect(saved.blocks.some((b) => b.id === 'b1')).toBe(true);
+
+    await openSourcePicker();
+    byTestId('database-source-option-src-b')?.click();
+    await quiet();
+
+    expect(shownArea().textContent).toContain('Source row');
   });
 
   it('opening a source row shows its page in the parent, not inside the hidden source', async () => {

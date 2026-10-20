@@ -130,7 +130,7 @@ export interface ViewSettingsContext {
   automations?: AutomationSettings;
   /** The host gave `config.ai`. Without it there is no AI Autofill row. */
   autofill?: AutofillPanelSettings;
-  /** The database's data sources. Without a second one there is no Source row. */
+  /** The database's data sources. With only one, the Source row is greyed (research/09 §1). */
   dataSources?: DataSourceSettings;
 }
 
@@ -323,7 +323,7 @@ export class ViewSettingsPages {
         const sources = this.ctx.dataSources;
         const choices = sources?.list() ?? [];
 
-        if (sources !== undefined && choices.length > 1) {
+        if (sources !== undefined && choices.length > 0) {
           const current = choices.find((choice) => choice.id === sources.current());
           const others = choices.filter((choice) => choice !== current && choice.fits);
 

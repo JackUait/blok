@@ -470,11 +470,15 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(byTestId('database-source-option-src-b')).toBeNull();
   });
 
-  it('a database with no second source has no "Source" row', async () => {
+  // research/09 §1 and research/10: one source shows "Source (Measure DB, disabled)".
+  it('a database with no second source shows "Source" greyed with its own name', async () => {
     await make(plainDoc());
     await openSettings();
+    const row = byTestId('database-settings-source');
 
-    expect(byTestId('database-settings-source')).toBeNull();
+    expect(row).not.toBeNull();
+    expect((row as HTMLButtonElement | null)?.disabled).toBe(true);
+    expect(row?.textContent).toContain('Projects');
   });
 
   it('a gallery view moves onto a second source: a second source draws every layout', async () => {

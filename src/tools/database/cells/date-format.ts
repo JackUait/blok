@@ -172,7 +172,10 @@ export const timeZones = (): string[] => {
   const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
 
   try {
-    return intl.supportedValuesOf?.('timeZone') ?? [];
+    const zones = intl.supportedValuesOf?.('timeZone') ?? [];
+
+    // Notion offers UTC (research/23 §1); V8 lists only regional zones.
+    return zones.length === 0 || zones.includes('UTC') ? zones : [...zones, 'UTC'];
   } catch {
     return [];
   }

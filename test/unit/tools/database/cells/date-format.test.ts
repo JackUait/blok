@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { applyDateDisplayChange, formatShortDatePart, resolveHourCycle, resolveWeekStart, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+import { applyDateDisplayChange, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
 
 describe('date-format', () => {
   beforeEach(() => {
@@ -75,6 +75,27 @@ describe('date-format', () => {
 
       expect(next).toEqual({ timeFormat: '24_hour' });
       expect('timeZone' in next).toBe(false);
+    });
+  });
+
+  describe('timeZones', () => {
+    type ZoneIntl = typeof Intl & { supportedValuesOf: (key: 'timeZone') => string[] };
+
+    const stubZones = (zones: string[]): void => {
+      vi.spyOn(Intl as ZoneIntl, 'supportedValuesOf').mockReturnValue(zones);
+    };
+
+    // Notion lists UTC among its zones (research/23 §1); Intl leaves it out on some engines.
+    it('adds UTC when the engine leaves it out', () => {
+      stubZones(['Africa/Abidjan', 'Europe/Berlin']);
+
+      expect(timeZones()).toEqual(['Africa/Abidjan', 'Europe/Berlin', 'UTC']);
+    });
+
+    it('lists UTC once when the engine has it', () => {
+      stubZones(['Africa/Abidjan', 'UTC']);
+
+      expect(timeZones().filter((zone) => zone === 'UTC')).toHaveLength(1);
     });
   });
 });

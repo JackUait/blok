@@ -71,8 +71,8 @@ const make = async (blocks: OutputBlockData[]): Promise<void> => {
 
 const q = <T extends Element = HTMLElement>(selector: string): T | null => holder?.querySelector<T>(selector) ?? null;
 
-const click = async (el: Element | null): Promise<void> => {
-  el?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+const click = async (el: Element | null, init: MouseEventInit = {}): Promise<void> => {
+  el?.dispatchEvent(new MouseEvent('click', { bubbles: true, ...init }));
   await quiet();
 };
 
@@ -94,6 +94,12 @@ const closeEditor = async (): Promise<void> => {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   await quiet();
+};
+
+const gridDue = (rowId: string): HTMLElement | null => q(`[data-row-id="${rowId}"] [role="gridcell"][data-property-id="due"]`);
+
+const openBulkDue = async (): Promise<void> => {
+  await click(q('[data-blok-database-table-selection-property][data-property-id="due"]'));
 };
 
 const CARD = '[data-blok-database-card][data-row-id="r1"] [data-blok-database-card-property][data-property-id="due"]';
@@ -144,5 +150,40 @@ describe('date picker format rows', () => {
 
     expect(document.querySelector('[data-blok-database-date-editor]')).not.toBeNull();
     expect(formatRow()).toBeNull();
+  });
+
+  // Only the format changes here, no value: the redraw on close is the display change's own.
+  it('a table cell: closing after a format pick redraws the column in the new format', async () => {
+    await make(doc({}));
+    await click(gridDue('r1'));
+    await pickFormat('year_month_day');
+
+    expect(document.querySelector('[data-blok-database-date-editor]')).not.toBeNull();
+    await closeEditor();
+    expect(gridDue('r1')?.textContent).toContain('2027/06/15');
+  });
+
+  it('the table bulk picker: closing after a format pick redraws the rows in the new format', async () => {
+    await make(doc({}));
+    await click(q('[data-row-id="r1"] [data-blok-database-table-row-checkbox]'));
+    await click(q('[data-row-id="r2"] [data-blok-database-table-row-checkbox]'));
+    await openBulkDue();
+    await pickFormat('year_month_day');
+
+    expect(await dueSettings()).toEqual({ dateFormat: 'year_month_day' });
+    await closeEditor();
+    expect(gridDue('r1')?.textContent).toContain('2027/06/15');
+  });
+
+  it('the board bulk picker: closing after a format pick redraws the cards in the new format', async () => {
+    await make(doc({ type: 'board', groupBy: 's' }));
+    await click(q('[data-blok-database-card][data-row-id="r1"]'), { metaKey: true });
+    await click(q('[data-blok-database-card][data-row-id="r2"]'), { metaKey: true });
+    await openBulkDue();
+    await pickFormat('year_month_day');
+
+    expect(await dueSettings()).toEqual({ dateFormat: 'year_month_day' });
+    await closeEditor();
+    expect(q(CARD)?.textContent).toContain('2027/06/15');
   });
 });

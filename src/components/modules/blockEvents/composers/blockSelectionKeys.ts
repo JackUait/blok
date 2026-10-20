@@ -10,6 +10,7 @@ import { LIST_TOOL_NAME } from '../constants';
 import { BlockEventComposer } from './__base';
 import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
 import { acceptsChildren } from '../../../utils/child-tools';
+import { carriesReadOnly } from '../../../utils/read-only-blocks';
 
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.
@@ -216,7 +217,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
     const anchor = indentTarget ?? first;
     const originalParentId = first.parentId;
 
-    if (!acceptsChildren(anchor)) {
+    if (!acceptsChildren(anchor) || blocks.some((block) => carriesReadOnly(block, (id) => BlockManager.getBlockById(id)))) {
       return;
     }
 

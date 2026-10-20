@@ -1,6 +1,7 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
 import { acceptsChildren, isChildToolAllowed } from '../../../utils/child-tools';
+import { carriesReadOnly, isBlockReadOnly } from '../../../utils/read-only-blocks';
 
 type BlockManager = BlokModules['BlockManager'];
 
@@ -52,8 +53,14 @@ export const getPrecedingSibling = (BlockManager: BlockManager, block: Block): B
  */
 export const getIndentTarget = (BlockManager: BlockManager, block: Block): Block | null => {
   const precedingSibling = getPrecedingSibling(BlockManager, block);
+  const getById = (id: string): Block | undefined => BlockManager.getBlockById(id);
 
   if (precedingSibling === null || precedingSibling.tool.ownsChildren || !acceptsChildren(precedingSibling)) {
+    return null;
+  }
+
+  // A read-only block (BlockTool.isReadOnly) neither moves nor takes a child.
+  if (carriesReadOnly(block, getById) || isBlockReadOnly(precedingSibling, getById)) {
     return null;
   }
 
@@ -85,8 +92,12 @@ export const canOutdent = (BlockManager: BlockManager, block: Block): boolean =>
   }
 
   const grandparent = parent.parentId === null ? null : BlockManager.getBlockById(parent.parentId);
+  const getById = (id: string): Block | undefined => BlockManager.getBlockById(id);
+  // The outdented block adopts its following siblings, so none of them may be read-only either.
+  const moving = [block, ...(acceptsChildren(block) ? getFollowingSiblings(BlockManager, block) : [])];
 
-  return isChildToolAllowed(grandparent, block.name);
+  return isChildToolAllowed(grandparent, block.name)
+    && !moving.some((member) => carriesReadOnly(member, getById));
 };
 
 /**

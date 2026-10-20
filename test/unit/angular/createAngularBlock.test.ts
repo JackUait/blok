@@ -494,6 +494,49 @@ describe('createAngularBlock — core tool-contract passthrough', () => {
     expect(tool.onNavigationEnter(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(false);
   });
 
+  it('forwards the read-only answers to the spec, with the block', () => {
+    const blockApi = makeBlockApi();
+    const isReadOnly = vi.fn(() => true);
+    const isDataReadOnly = vi.fn(() => true);
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+      isReadOnly,
+      isDataReadOnly,
+    });
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: blockApi,
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: makeRegistry() },
+    } as BlockToolConstructorOptions);
+
+    expect(tool.isReadOnly()).toBe(true);
+    expect(tool.isDataReadOnly()).toBe(true);
+    expect(isReadOnly).toHaveBeenCalledWith(blockApi);
+    expect(isDataReadOnly).toHaveBeenCalledWith(blockApi);
+  });
+
+  it('is not read-only when the spec does not say', () => {
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+    });
+    const plain = new Tool({
+      data: {} as BlockToolData,
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: makeRegistry() },
+    } as BlockToolConstructorOptions);
+
+    expect(plain.isReadOnly()).toBe(false);
+    expect(plain.isDataReadOnly()).toBe(false);
+  });
+
   it('forwards authored statics onto the generated tool class', () => {
     const conversionConfig = { export: 'text', import: 'text' };
     const Tool = createAngularBlock<CounterData>({

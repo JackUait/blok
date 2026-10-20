@@ -48,6 +48,7 @@ const createBlock = (overrides: Partial<Block> = {}): Block => {
     },
     isEmpty: false,
     hasMedia: false,
+    contentIds: [],
     updateCurrentInput: vi.fn(),
     save: vi.fn(() => Promise.resolve({})),
     render: vi.fn(),

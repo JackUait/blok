@@ -148,9 +148,12 @@ export interface BlockTool extends BaseTool {
   /**
    * True when this block and every block under it must act read-only while
    * the editor stays editable, for example a database whose host denies
-   * editing. The block menu then shows its read-only items, a selection
-   * delete skips these blocks, and agent writes to them fail with
-   * `READ_ONLY`. Direct `api.blocks` calls still write.
+   * editing. The block menu then shows its read-only items. A selection
+   * delete, drag, drop, Cmd+D, keyboard move, Tab, Backspace or Delete never
+   * moves, removes or merges these blocks or puts a block under them. Undo
+   * and redo steps that would write them wait until they open again. Agent
+   * writes to them fail with `PRECONDITION_FAILED`. Direct `api.blocks` calls
+   * still write.
    *
    * Asked on each gesture, so it may change at any time. A throw counts as true.
    */

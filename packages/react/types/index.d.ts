@@ -968,6 +968,19 @@ export interface CreateReactBlockSpec<
    * @param block - this block's per-block API
    */
   onNavigationEnter?: (event: KeyboardEvent, block: BlockAPI) => boolean;
+  /**
+   * Core's `isReadOnly` hook: true when this block takes no edits from the
+   * user or an agent while the editor stays editable (no delete, move, merge,
+   * nesting or undo into it). Asked on each gesture; a throw counts as true.
+   * @param block - this block's per-block API
+   */
+  isReadOnly?: (block: BlockAPI) => boolean;
+  /**
+   * Core's `isDataReadOnly` hook: true when only this block's own data is
+   * frozen and its children stay open. A throw counts as true.
+   * @param block - this block's per-block API
+   */
+  isDataReadOnly?: (block: BlockAPI) => boolean;
   onRendered?: (block: BlockAPI) => void;
   /**
    * Fired ONCE per block instance, after the portal's FIRST commit — the first

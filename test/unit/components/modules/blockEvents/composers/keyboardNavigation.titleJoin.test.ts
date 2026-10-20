@@ -51,6 +51,7 @@ const createModules = (block: Block, titleEnabled = true): BlokModules => ({
     previousBlock: null,
     blocks: [block],
     removeBlock: vi.fn(() => Promise.resolve()),
+    getBlockById: vi.fn(() => undefined),
   },
   Caret: {
     positions: { START: 'start', END: 'end', DEFAULT: 'default' },

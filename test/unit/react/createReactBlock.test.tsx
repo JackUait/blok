@@ -1022,6 +1022,37 @@ describe('createReactBlock — core tool-contract passthrough', () => {
     expect(tool.onNavigationEnter(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(false);
   });
 
+  it('forwards the read-only answers to the spec, with the block', () => {
+    const blockApi = makeBlockApi();
+    const isReadOnly = vi.fn(() => true);
+    const isDataReadOnly = vi.fn(() => true);
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div />,
+      isReadOnly,
+      isDataReadOnly,
+    });
+    const tool = new Tool({ data: {}, block: blockApi, api: makeApi(), readOnly: false, config: {} });
+
+    expect(tool.isReadOnly()).toBe(true);
+    expect(tool.isDataReadOnly()).toBe(true);
+    expect(isReadOnly).toHaveBeenCalledWith(blockApi);
+    expect(isDataReadOnly).toHaveBeenCalledWith(blockApi);
+  });
+
+  it('is not read-only when the spec does not say', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div />,
+    });
+    const plain = new Tool({ data: {}, block: makeBlockApi(), api: makeApi(), readOnly: false, config: {} });
+
+    expect(plain.isReadOnly()).toBe(false);
+    expect(plain.isDataReadOnly()).toBe(false);
+  });
+
   it('forwards a no-children declaration through statics', () => {
     const Tool = createReactBlock<CounterData>({
       type: 'counter',

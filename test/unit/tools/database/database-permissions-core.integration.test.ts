@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../../src/components/core';
 import { destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { Paragraph } from '../../../../src/tools/paragraph';
-import { Column, ColumnList, Toggle } from '../../../../src/tools';
+import { Column, ColumnList, List, Toggle } from '../../../../src/tools';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { DatabasePermissionAction, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -44,6 +44,7 @@ const boot = async (denied: DatabasePermissionAction[], locked = false, blocks =
     tools: {
       paragraph: Paragraph,
       toggle: Toggle,
+      list: List,
       column_list: ColumnList,
       column: Column,
       database: { class: DatabaseTool, config: { permissions: { can: (action: DatabasePermissionAction) => !denied.includes(action) } } },
@@ -313,6 +314,325 @@ describe('database permissions reach core block actions', () => {
       const saved = await instance.moduleInstances.Saver.save();
 
       expect(saved?.blocks.find((b) => b.id === 'body1')?.data).toEqual({ text: [{ text: 'host' }] });
+    });
+  });
+
+  describe('keyboard and drop paths without editContent', () => {
+    /** p0, the database with a two-block row page body, then p2. */
+    const around = (): OutputBlockData[] => [
+      ...doc().map((b) => b.id === 'r1' ? { ...b, content: ['body1', 'body2'] } : b),
+      { id: 'body2', type: 'paragraph', parent: 'r1', data: { text: 'more body' } },
+      { id: 'p2', type: 'paragraph', data: { text: 'after' } },
+    ];
+
+    const editableOf = (instance: Core, id: string): HTMLElement => {
+      const found = [...block(instance, id).holder.querySelectorAll<HTMLElement>('*')]
+        .find((element) => element.contentEditable === 'true');
+
+      if (found === undefined) throw new Error(`no editable in ${id}`);
+
+      return found;
+    };
+
+    /** Puts the caret at the start or end of a block and presses a key there. */
+    const press = async (instance: Core, id: string, key: string, at: 'start' | 'end', shiftKey = false): Promise<void> => {
+      const editable = editableOf(instance, id);
+      const range = document.createRange();
+
+      // jsdom does not reflect contentEditable to the attribute that block inputs are found by.
+      [...(holder?.querySelectorAll<HTMLElement>('*') ?? [])]
+        .filter((element) => element.contentEditable === 'true')
+        .forEach((element) => element.setAttribute('contenteditable', 'true'));
+      editable.focus();
+      range.selectNodeContents(editable);
+      range.collapse(at === 'start');
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+      instance.moduleInstances.BlockManager.setCurrentBlockByChildNode(editable);
+      block(instance, id).currentInput = editable;
+      editable.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }));
+      await quiet();
+    };
+
+    const textOf = async (instance: Core, id: string): Promise<unknown> =>
+      (await instance.moduleInstances.Saver.save())?.blocks.find((b) => b.id === id)?.data.text;
+
+    it('Cmd+Shift+Up and Down do not move a row page body block', async () => {
+      const instance = await boot(['editContent'], false, around());
+      const { BlockManager } = instance.moduleInstances;
+
+      BlockManager.currentBlock = block(instance, 'body2');
+      BlockManager.moveCurrentBlockUp();
+      await quiet();
+      expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
+
+      BlockManager.currentBlock = block(instance, 'body1');
+      BlockManager.moveCurrentBlockDown();
+      await quiet();
+      expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
+    });
+
+    it('Cmd+Shift+Up does not move the selected database, or a block holding it', async () => {
+      const instance = await boot(['editContent'], false, around());
+      const { BlockManager, BlockSelection } = instance.moduleInstances;
+
+      BlockSelection.selectBlock(block(instance, 'db'));
+      BlockManager.moveCurrentBlockUp();
+      await quiet();
+
+      expect((await ids(instance)).slice(0, 2)).toEqual(['p0', 'db']);
+    });
+
+    it('Cmd+Shift+Down still moves a block past the database, at its own level', async () => {
+      const instance = await boot(['editContent'], false, around());
+      const { BlockManager } = instance.moduleInstances;
+
+      BlockManager.currentBlock = block(instance, 'p0');
+      BlockManager.moveCurrentBlockDown();
+      await quiet();
+
+      const saved = await ids(instance);
+
+      expect(saved.indexOf('p0')).toBeGreaterThan(saved.indexOf('body2'));
+      expect(block(instance, 'p0').parentId).toBeNull();
+      expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
+    });
+
+    it('Tab does not nest a block into the database', async () => {
+      const instance = await boot(['editContent'], false, around());
+
+      await press(instance, 'p2', 'Tab', 'start');
+
+      expect(block(instance, 'p2').parentId).toBeNull();
+      expect(block(instance, 'db').contentIds).toEqual(['r1']);
+    });
+
+    it('Tab with a block selection does not nest blocks under the database', async () => {
+      const instance = await boot(['editContent'], false, around());
+      const { BlockSelection } = instance.moduleInstances;
+
+      BlockSelection.selectBlock(block(instance, 'db'));
+      BlockSelection.selectBlock(block(instance, 'p2'));
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+      instance.moduleInstances.BlockEvents.keydown(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+      await quiet();
+
+      expect(block(instance, 'p2').parentId).toBeNull();
+      expect(block(instance, 'db').contentIds).toEqual(['r1']);
+    });
+
+    it('Shift+Tab does not adopt the database as a child', async () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'tg', type: 'toggle', data: { text: 'toggle', isOpen: true }, content: ['a', 'db'] },
+        { id: 'a', type: 'paragraph', parent: 'tg', data: { text: 'a' } },
+        ...doc().filter((b) => b.id !== 'p0').map((b) => b.id === 'db' ? { ...b, parent: 'tg' } : b),
+      ];
+      const instance = await boot(['editContent'], false, blocks);
+
+      await press(instance, 'a', 'Tab', 'start', true);
+
+      expect(block(instance, 'db').parentId).toBe('tg');
+    });
+
+    it('Backspace at the start of the next block does not merge into a row page body block', async () => {
+      const instance = await boot(['editContent'], false, around());
+
+      await press(instance, 'p2', 'Backspace', 'start');
+
+      expect(await textOf(instance, 'body2')).toEqual([{ text: 'more body' }]);
+      expect(await ids(instance)).toContain('p2');
+    });
+
+    it('Backspace does not remove an empty row page body block', async () => {
+      const blocks = around().map((b) => b.id === 'body2' ? { ...b, data: { text: '' } } : b);
+      const instance = await boot(['editContent'], false, blocks);
+
+      await press(instance, 'p2', 'Backspace', 'start');
+
+      expect(await ids(instance)).toEqual(expect.arrayContaining(['body1', 'body2', 'p2']));
+    });
+
+    it('Backspace and Delete inside a row page body do not merge or remove its blocks', async () => {
+      const instance = await boot(['editContent'], false, around());
+
+      await press(instance, 'body2', 'Backspace', 'start');
+      expect(await ids(instance)).toEqual(expect.arrayContaining(['body1', 'body2']));
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'body text' }]);
+
+      await press(instance, 'body1', 'Delete', 'end');
+      expect(await ids(instance)).toEqual(expect.arrayContaining(['body1', 'body2']));
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'body text' }]);
+    });
+
+    it('Delete at the end of the block before keeps the database', async () => {
+      const instance = await boot(['editContent'], false, around());
+
+      await press(instance, 'p0', 'Delete', 'end');
+      await press(instance, 'p0', 'Delete', 'end');
+
+      expect(await ids(instance)).toEqual(['p0', 'db', 'r1', 'body1', 'body2', 'p2']);
+    });
+
+    /** Drags a block by its handle and drops it on the bottom half of another block's holder. */
+    const dragOnto = async (instance: Core, id: string, targetId: string, clientX = 50, clientY = 135): Promise<void> => {
+      const { DragManager } = instance.moduleInstances;
+      const target = block(instance, targetId).holder;
+      const rect = { top: 100, bottom: 140, left: 0, right: 600, width: 600, height: 40, x: 0, y: 100, toJSON: () => ({}) };
+
+      vi.spyOn(target, 'getBoundingClientRect').mockReturnValue(rect);
+      const content = target.querySelector<HTMLElement>('[data-blok-element-content]');
+
+      if (content !== null) vi.spyOn(content, 'getBoundingClientRect').mockReturnValue(rect);
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => target });
+
+      const handle = document.createElement('button');
+      const cleanup = DragManager.setupDragHandle(handle, block(instance, id));
+
+      document.body.appendChild(handle);
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: 50, clientY: 300 }));
+      document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX, clientY: clientY - 5 }));
+      document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX, clientY }));
+      document.body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX, clientY }));
+      await quiet();
+      cleanup();
+      handle.remove();
+    };
+
+    it('a list item dropped below the database at a deeper indent does not nest under it', async () => {
+      const instance = await boot(['editContent'], false, [...around(), { id: 'l', type: 'list', data: { text: 'item', style: 'unordered' } }]);
+
+      await dragOnto(instance, 'l', 'db', 400);
+
+      expect(block(instance, 'l').parentId).toBeNull();
+      expect(block(instance, 'db').contentIds).toEqual(['r1']);
+    });
+
+    it('a side drop beside the database does not wrap it in columns', async () => {
+      const instance = await boot(['editContent'], false, around());
+
+      await dragOnto(instance, 'p2', 'db', 590, 120);
+
+      expect(block(instance, 'db').parentId).toBeNull();
+      expect(block(instance, 'p2').parentId).toBeNull();
+    });
+
+    it('dropping a block onto a row page body block does not move it into the row', async () => {
+      const instance = await boot(['editContent'], false, around());
+
+      await dragOnto(instance, 'p2', 'body1');
+
+      expect(block(instance, 'p2').parentId).toBeNull();
+      expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
+    });
+  });
+
+  describe('undo and redo after editContent is denied', () => {
+    const withBody2 = (): OutputBlockData[] => [
+      ...doc().map((b) => b.id === 'r1' ? { ...b, content: ['body1', 'body2'] } : b),
+      { id: 'body2', type: 'paragraph', parent: 'r1', data: { text: 'more body' } },
+    ];
+
+    const textOf = async (instance: Core, id: string): Promise<unknown> =>
+      (await instance.moduleInstances.Saver.save())?.blocks.find((b) => b.id === id)?.data.text;
+
+    /** One step of history, closed so the next write starts its own. */
+    const step = async (instance: Core, write: () => unknown): Promise<void> => {
+      const { YjsManager } = instance.moduleInstances;
+
+      YjsManager.stopCapturing();
+      await write();
+      await quiet();
+      YjsManager.stopCapturing();
+    };
+
+    it('a step that wrote into the database waits, and an older step still undoes', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied, false, withBody2());
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.update('p0', { text: 'older' }));
+      await step(instance, () => API.methods.blocks.update('body1', { text: 'edited' }));
+      denied.push('editContent');
+
+      YjsManager.undo();
+      await quiet();
+
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'edited' }]);
+      expect(await textOf(instance, 'p0')).toEqual([{ text: 'before' }]);
+
+      denied.length = 0;
+      YjsManager.undo();
+      await quiet();
+
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'body text' }]);
+    });
+
+    it('a move inside the database waits, and an older step still undoes', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied, false, withBody2());
+      const { YjsManager, API, BlockManager } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.update('p0', { text: 'older' }));
+      await step(instance, () => {
+        BlockManager.currentBlock = block(instance, 'body2');
+        BlockManager.moveCurrentBlockUp();
+      });
+      expect(block(instance, 'r1').contentIds).toEqual(['body2', 'body1']);
+      denied.push('editContent');
+
+      YjsManager.undo();
+      await quiet();
+
+      expect(block(instance, 'r1').contentIds).toEqual(['body2', 'body1']);
+      expect(await textOf(instance, 'p0')).toEqual([{ text: 'before' }]);
+
+      denied.length = 0;
+      YjsManager.undo();
+      await quiet();
+
+      expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
+    });
+
+    it('a block moved past the database still moves back', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied, false, withBody2());
+      const { YjsManager, BlockManager } = instance.moduleInstances;
+
+      await step(instance, () => {
+        BlockManager.currentBlock = block(instance, 'p0');
+        BlockManager.moveCurrentBlockDown();
+      });
+      expect((await ids(instance)).at(-1)).toBe('p0');
+      denied.push('editContent');
+
+      YjsManager.undo();
+      await quiet();
+
+      expect((await ids(instance))[0]).toBe('p0');
+      expect(block(instance, 'r1').contentIds).toEqual(['body1', 'body2']);
+    });
+
+    it('redo does not write into the database either', async () => {
+      const denied: DatabasePermissionAction[] = [];
+      const instance = await boot(denied, false, withBody2());
+      const { YjsManager, API } = instance.moduleInstances;
+
+      await step(instance, () => API.methods.blocks.update('body1', { text: 'edited' }));
+      YjsManager.undo();
+      await quiet();
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'body text' }]);
+      denied.push('editContent');
+
+      YjsManager.redo();
+      await quiet();
+
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'body text' }]);
+
+      denied.length = 0;
+      YjsManager.redo();
+      await quiet();
+
+      expect(await textOf(instance, 'body1')).toEqual([{ text: 'edited' }]);
     });
   });
 

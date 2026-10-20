@@ -4,6 +4,7 @@ import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { hiddenAncestors } from '../blockManager/new-block-placement';
+import { carriesReadOnly, isBlockReadOnly } from '../../utils/read-only-blocks';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { dropPeerPaddingOfRemovedColumn, isPaddingCell, namesOnlyPaddingCells } from './grid-padding';
@@ -63,6 +64,8 @@ interface ReplayAnchor {
 interface PoppedEntryScan {
   born: Set<string>;
   resurrected: Set<string>;
+  /** Every block the entry writes: its own key, a field below it, or its contentIds. */
+  touched: Set<string>;
 }
 
 /** The step a gesture start closed, and where it ends on both stacks. */
@@ -657,7 +660,8 @@ export class UndoHistory {
     const top = stack[stack.length - 1];
     const blocks = this.blocksScope;
     const scan: PoppedEntryScan = { born: new Set<string>(),
-      resurrected: new Set<string>() };
+      resurrected: new Set<string>(),
+      touched: new Set<string>() };
 
     if (top === undefined || blocks === null || blocks.doc === null) {
       return scan;
@@ -667,8 +671,17 @@ export class UndoHistory {
     // exist, so an item with that parent names a block the entry created
     // (insertions) or removed (deletions).
     const collect = (into: Set<string>) => (struct: Y.AbstractStruct): void => {
-      if (struct instanceof Y.Item && struct.parent === blocks && struct.parentSub !== null) {
+      if (!(struct instanceof Y.Item)) {
+        return;
+      }
+      if (struct.parent === blocks && struct.parentSub !== null) {
         into.add(struct.parentSub);
+      }
+
+      const owner = this.blockOwningKey(struct) ?? this.blockOwningNestedItem(struct);
+
+      if (owner !== null) {
+        scan.touched.add(owner);
       }
     };
 
@@ -678,6 +691,54 @@ export class UndoHistory {
     });
 
     return scan;
+  }
+
+  /**
+   * Whether the entry must wait on its stack: it would resurrect a block beside
+   * a spared one, or it writes a block that acts read-only now.
+   * @param scan - the blocks the entry creates, removes and writes
+   */
+  private isRefused(scan: PoppedEntryScan): boolean {
+    return this.wouldResurrectBesideASparedBlock(scan) || [...scan.touched].some((id) => this.isReadOnlyNow(id));
+  }
+
+  /**
+   * Whether a block acts read-only now (BlockTool.isReadOnly, here or above).
+   * History recorded before the host denied an edit must not replay it, so such
+   * an entry waits on its stack until the block opens again.
+   * @param blockId - the block to check
+   */
+  private isReadOnlyNow(blockId: string | null): boolean {
+    const manager = this.blok?.BlockManager;
+
+    if (blockId === null || manager === undefined) {
+      return false;
+    }
+
+    return isBlockReadOnly(manager.getBlockById(blockId), (id) => manager.getBlockById(id));
+  }
+
+  /**
+   * Whether replaying a move group would place a block in or out of a
+   * read-only block, or reparent one. A reorder beside one stays open, as a
+   * drag past it does. A member whose placement does not change (a child
+   * riding along with its parent) moves nothing.
+   * @param group - the move group
+   */
+  private movesReadOnly(group: MoveHistoryEntry): boolean {
+    const manager = this.blok?.BlockManager;
+    const carries = (blockId: string): boolean =>
+      manager !== undefined && carriesReadOnly(manager.getBlockById(blockId), (id) => manager.getBlockById(id));
+
+    return group.some((move) => {
+      const reparents = move.from.parentId !== move.to.parentId;
+
+      if (!reparents && move.from.afterId === move.to.afterId) {
+        return false;
+      }
+
+      return this.isReadOnlyNow(move.from.parentId) || this.isReadOnlyNow(move.to.parentId) || (reparents && carries(move.blockId));
+    });
   }
 
   /**
@@ -1628,7 +1689,7 @@ export class UndoHistory {
 
       // A move the peer has since overruled is no longer ours to reverse —
       // see `groupWasDisplacedSince`.
-      if (group !== undefined && group.length > 0 && !this.groupWasDisplacedSince(group, 'to')) {
+      if (group !== undefined && group.length > 0 && !this.groupWasDisplacedSince(group, 'to') && !this.movesReadOnly(group)) {
         this.undoMoveGroup();
 
         return true;
@@ -1789,7 +1850,7 @@ export class UndoHistory {
   private topStackItemIsRefused(direction: 'undo' | 'redo'): boolean {
     const stack = direction === 'undo' ? this.undoManager.undoStack : this.undoManager.redoStack;
 
-    return this.wouldResurrectBesideASparedBlock(this.scanTopEntry(stack));
+    return this.isRefused(this.scanTopEntry(stack));
   }
 
   /**
@@ -1945,7 +2006,8 @@ export class UndoHistory {
       // Same law as undo, read against `from`: the undo put the block back
       // there, and once the peer has moved it somewhere else replaying `to`
       // overrules them rather than repeating this editor's move.
-      const displaced = pending !== undefined && pending.length > 0 && this.groupWasDisplacedSince(pending, 'from');
+      const displaced = pending !== undefined && pending.length > 0
+        && (this.groupWasDisplacedSince(pending, 'from') || this.movesReadOnly(pending));
 
       if (displaced && expectedToken !== undefined) {
         return;
@@ -2680,7 +2742,7 @@ export class UndoHistory {
     }
 
     return this.walkOrder('undo').some(({ group, item }) => group !== undefined
-      ? group.length > 0 && !this.groupWasDisplacedSince(group, 'to')
+      ? group.length > 0 && !this.groupWasDisplacedSince(group, 'to') && !this.movesReadOnly(group)
       : item !== undefined && this.itemWouldApply(item, 'undo'));
   }
 
@@ -2706,7 +2768,7 @@ export class UndoHistory {
    * @param direction - which stack it is on
    */
   private itemWouldApply(stackItem: StackItem, direction: 'undo' | 'redo'): boolean {
-    return !this.wouldResurrectBesideASparedBlock(this.scanTopEntry([stackItem])) &&
+    return !this.isRefused(this.scanTopEntry([stackItem])) &&
       this.undoWouldApply(stackItem, direction);
   }
 
@@ -2804,7 +2866,7 @@ export class UndoHistory {
    */
   private redoVerdict(group: MoveHistoryEntry | undefined, item: StackItem | undefined): boolean | null {
     if (group !== undefined) {
-      return group.length > 0 && !this.groupWasDisplacedSince(group, 'from') ? true : null;
+      return group.length > 0 && !this.groupWasDisplacedSince(group, 'from') && !this.movesReadOnly(group) ? true : null;
     }
     if (item === undefined) {
       return null;
@@ -2813,7 +2875,7 @@ export class UndoHistory {
       return true;
     }
 
-    const waits = this.wouldResurrectBesideASparedBlock(this.scanTopEntry([item])) ||
+    const waits = this.isRefused(this.scanTopEntry([item])) ||
       this.wasBlockedBySparing(item) || this.isShadowed(item, []);
 
     return waits ? false : null;

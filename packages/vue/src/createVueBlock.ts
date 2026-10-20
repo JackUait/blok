@@ -258,6 +258,19 @@ export interface CreateVueBlockSpec<Data = BlockToolData> {
    * @param block - this block's per-block API
    */
   onNavigationEnter?: (event: KeyboardEvent, block: BlockAPI) => boolean;
+  /**
+   * Core's `isReadOnly` hook: true when this block takes no edits from the
+   * user or an agent while the editor stays editable (no delete, move, merge,
+   * nesting or undo into it). Asked on each gesture; a throw counts as true.
+   * @param block - this block's per-block API
+   */
+  isReadOnly?: (block: BlockAPI) => boolean;
+  /**
+   * Core's `isDataReadOnly` hook: true when only this block's own data is
+   * frozen and its children stay open. A throw counts as true.
+   * @param block - this block's per-block API
+   */
+  isDataReadOnly?: (block: BlockAPI) => boolean;
   /** Optional lifecycle callbacks mapped from Blok's block hooks. */
   onRendered?: (block: BlockAPI) => void;
   /**
@@ -339,6 +352,8 @@ export function createVueBlock<Data = BlockToolData>(
   setReadOnly(state: boolean): void;
   getToolbarAnchorElement(): HTMLElement | undefined;
   onNavigationEnter(event: KeyboardEvent): boolean;
+  isReadOnly(): boolean;
+  isDataReadOnly(): boolean;
   rendered(): void;
   moved(): void;
   removed(): void;
@@ -643,6 +658,15 @@ export function createVueBlock<Data = BlockToolData>(
      */
     public onNavigationEnter(event: KeyboardEvent): boolean {
       return spec.onNavigationEnter?.(event, this.blockApi) === true;
+    }
+
+    /** No catch here: core counts a throw as read-only. */
+    public isReadOnly(): boolean {
+      return spec.isReadOnly?.(this.blockApi) === true;
+    }
+
+    public isDataReadOnly(): boolean {
+      return spec.isDataReadOnly?.(this.blockApi) === true;
     }
 
     public moved(): void {

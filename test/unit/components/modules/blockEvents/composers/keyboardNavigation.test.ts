@@ -82,6 +82,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       setCurrentBlockByChildNode: vi.fn(),
       mergeBlocks: vi.fn(() => Promise.resolve()),
       setBlockParent: vi.fn(),
+      getBlockById: vi.fn(() => undefined),
     } as unknown as BlokModules['BlockManager'],
     Caret: {
       positions: { START: 'start', END: 'end', DEFAULT: 'default' },

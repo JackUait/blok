@@ -9,6 +9,7 @@ import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
 import { acceptsChildren, isChildToolAllowed } from '../../../utils/child-tools';
+import { isBlockReadOnly } from '../../../utils/read-only-blocks';
 import { areSourceRootsChildrenOf, findNamedDropIntoZone, hasOwnDropIntoZone, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
@@ -1058,7 +1059,7 @@ export class DropTargetDetector {
     const candidates = preceding.map(block => ({
       id: block.id,
       isList: block.name === 'list',
-      acceptsChildren: acceptsChildren(block),
+      acceptsChildren: acceptsChildren(block) && !isBlockReadOnly(block, id => this.blockManager.getBlockById(id)),
       depth: this.structuralDepthOf(block, byId),
     }));
 

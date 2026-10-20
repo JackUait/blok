@@ -2018,6 +2018,10 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
+    if (this.movesReadOnly(selectedBlocks)) {
+      return;
+    }
+
     this.moveCellBlock(selectedBlocks?.[0] ?? this.currentBlock, () => {
       this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
     });
@@ -2036,11 +2040,24 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
+    if (this.movesReadOnly(selectedBlocks)) {
+      return;
+    }
+
     this.moveCellBlock(selectedBlocks?.[0] ?? this.currentBlock, () => {
       this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
     });
 
     this.reselectAfterMove(selectedBlocks);
+  }
+
+  /**
+   * Whether a keyboard move would carry a read-only block (BlockTool.isReadOnly).
+   * Moving a block past one stays allowed, as a drag past it does.
+   * @param selectedBlocks - the block selection, or undefined for the current block
+   */
+  private movesReadOnly(selectedBlocks: Block[] | undefined): boolean {
+    return (selectedBlocks ?? [this.currentBlock]).some((block) => carriesReadOnly(block, (id) => this.getBlockById(id)));
   }
 
   /**

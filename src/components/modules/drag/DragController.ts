@@ -30,7 +30,7 @@ import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
 import { linkToBlock } from '../../utils/copy-as-link';
 import { isPagePointer } from '../../../shared/page-pointer';
-import { carriesReadOnly } from '../../utils/read-only-blocks';
+import { carriesReadOnly, isBlockReadOnly } from '../../utils/read-only-blocks';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -492,7 +492,7 @@ export class DragController extends Module {
         : isMoveTargetValid(blocks, sourceBlocks, dropTarget.block)
     );
 
-    if (!hasValidMoveDestination) {
+    if (!hasValidMoveDestination || this.dropTouchesReadOnly(dropTarget, verticalEdge, sourceBlocks, appendInto)) {
       this.stateMachine.updateTarget(null, null);
       this.springLoader.update(null);
       return;
@@ -1220,7 +1220,7 @@ export class DragController extends Module {
       .map(candidate => ({
         id: candidate.id,
         isList: candidate.name === 'list',
-        acceptsChildren: acceptsChildren(candidate),
+        acceptsChildren: acceptsChildren(candidate) && !isBlockReadOnly(candidate, (id) => this.Blok.BlockManager.getBlockById(id)),
         depth: this.Blok.BlockManager.getBlockDepth(candidate),
       }));
 
@@ -1571,6 +1571,27 @@ export class DragController extends Module {
    * @param block - the block the shortcut fired on (or a selected block)
    * @returns the duplicated blocks (empty when nothing was duplicated)
    */
+  /**
+   * Whether a drop would land under a read-only block (BlockTool.isReadOnly).
+   * A side drop wraps its target in a column, so the target must not carry one either.
+   */
+  private dropTouchesReadOnly(
+    dropTarget: { block: Block },
+    verticalEdge: 'top' | 'bottom' | null,
+    sourceBlocks: Block[],
+    appendInto: boolean
+  ): boolean {
+    const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
+
+    if (verticalEdge === null) {
+      return carriesReadOnly(dropTarget.block, getById);
+    }
+
+    const parentId = this.resolveParentForDrop(dropTarget.block, verticalEdge, sourceBlocks, undefined, appendInto);
+
+    return parentId !== null && isBlockReadOnly(getById(parentId), getById);
+  }
+
   /** A block that acts read-only (BlockTool.isReadOnly), or holds one, is never dragged or duplicated, like in a read-only editor. */
   private anyReadOnly(blocks: Block[]): boolean {
     return blocks.some((member) => carriesReadOnly(member, (id) => this.Blok.BlockManager.getBlockById(id)));

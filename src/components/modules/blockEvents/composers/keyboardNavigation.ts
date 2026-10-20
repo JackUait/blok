@@ -14,6 +14,7 @@ import { findAllOwn, findOwn } from '../../../utils/own-element';
 import { BlockEventComposer } from './__base';
 import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
 import { acceptsChildren } from '../../../utils/child-tools';
+import { carriesReadOnly } from '../../../utils/read-only-blocks';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -150,6 +151,11 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     this.Blok.Toolbar.close();
+  }
+
+  /** Whether Backspace or Delete must leave this block alone (BlockTool.isReadOnly, here or above or below). */
+  private isReadOnly(block: Block | null | undefined): boolean {
+    return block !== null && carriesReadOnly(block, (id) => this.Blok.BlockManager.getBlockById(id));
   }
 
   /**
@@ -788,6 +794,10 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     event.preventDefault();
 
+    if (this.isReadOnly(currentBlock)) {
+      return;
+    }
+
     this.closeToolbarIfNotInTableCell();
 
     const isFirstInputFocused = currentBlock.currentInput === currentBlock.firstInput;
@@ -927,7 +937,9 @@ export class KeyboardNavigation extends BlockEventComposer {
      * and adopts its type — the destination type wins. Only a plain empty
      * paragraph above is deleted like a line break.
      */
-    if (previousBlock.isEmpty) {
+    const previousReadOnly = this.isReadOnly(previousBlock);
+
+    if (previousBlock.isEmpty && !previousReadOnly) {
       if (!currentBlock.isEmpty && !previousBlock.tool.isDefault && areBlocksMergeable(previousBlock, currentBlock)) {
         this.mergeBlocks(previousBlock, currentBlock);
 
@@ -949,6 +961,10 @@ export class KeyboardNavigation extends BlockEventComposer {
 
       newCurrentBlock && Caret.setToBlock(newCurrentBlock, Caret.positions.END);
 
+      return;
+    }
+
+    if (previousReadOnly) {
       return;
     }
 
@@ -1001,6 +1017,10 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     event.preventDefault();
 
+    if (this.isReadOnly(currentBlock)) {
+      return;
+    }
+
     this.closeToolbarIfNotInTableCell();
 
     const isLastInputFocused = currentBlock.currentInput === currentBlock.lastInput;
@@ -1042,7 +1062,9 @@ export class KeyboardNavigation extends BlockEventComposer {
     /**
      * If next Block is empty, it should be removed just like a character
      */
-    if (nextBlock.isEmpty) {
+    const nextReadOnly = this.isReadOnly(nextBlock);
+
+    if (nextBlock.isEmpty && !nextReadOnly) {
       void BlockManager.removeBlock(nextBlock);
 
       return;
@@ -1064,7 +1086,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * fall through to the container-aware empty-block handling below (remove self
      * when a previous sibling exists, no-op for a lone first child).
      */
-    if (currentBlock.parentId === null && currentBlock.isEmpty && areBlocksMergeable(currentBlock, nextBlock)) {
+    if (currentBlock.parentId === null && currentBlock.isEmpty && !nextReadOnly && areBlocksMergeable(currentBlock, nextBlock)) {
       // The empty upper block absorbs the next block's text, so the caret belongs
       // at the START of the merged content (the empty input the pre-merge focus()
       // anchored to is replaced when the merge re-renders — re-anchor after it).
@@ -1111,7 +1133,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
-    const bothBlocksMergeable = areBlocksMergeable(currentBlock, nextBlock);
+    const bothBlocksMergeable = !nextReadOnly && areBlocksMergeable(currentBlock, nextBlock);
 
     /**
      * If Blocks could be merged, do it

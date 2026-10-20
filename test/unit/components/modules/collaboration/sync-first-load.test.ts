@@ -25,7 +25,7 @@ import { YBlockSerializer } from '../../../../../src/components/modules/yjs/seri
 import { YjsManager } from '../../../../../src/components/modules/yjs';
 import { Bookmark } from '../../../../../src/tools/link/bookmark';
 import { Paragraph } from '../../../../../src/tools/paragraph';
-import type { BlokConfig, OutputBlockData } from '../../../../../types';
+import type { API, BlokConfig, OutputBlockData } from '../../../../../types';
 import type { BlockToolConstructable } from '../../../../../types/tools';
 import type { CollaborationStatusChangedPayload } from '../../../../../types/events/editor-events';
 
@@ -414,6 +414,7 @@ interface BootOptions {
   user?: { name: string; color?: string };
   editor?: { id: string; name?: string };
   loader?: BlokConfig['loader'];
+  tools?: Record<string, { class: BlockToolConstructable }>;
 }
 
 const boot = async (options: BootOptions = {}): Promise<Harness> => {
@@ -448,6 +449,7 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
       paragraph: { class: Paragraph },
       bookmark: { class: Bookmark },
       plain: { class: PlainTool as unknown as BlockToolConstructable },
+      ...options.tools,
     },
     data: options.data,
     readOnly: options.readOnly,
@@ -2455,6 +2457,51 @@ describe('collaboration — sync-first load', () => {
       expect(blockTexts(harness.core)).toEqual(['the new room']);
       expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
       expect(collabAttr(harness.core)).toBe('connected');
+    });
+
+    // A tool whose teardown writes, as a database discarding an open layout draft does.
+    it('a teardown write during the reset does not block editing', async () => {
+      class TeardownWriter extends PlainTool {
+        private readonly api: API;
+
+        public constructor(options: { data?: { text?: string }; api: API }) {
+          super(options);
+          this.api = options.api;
+        }
+
+        public destroy(): void {
+          const index = this.api.blocks.getBlockIndex('scratch');
+
+          if (index !== undefined) this.api.blocks.transactWithoutCapture?.(() => void this.api.blocks.delete(index, false));
+        }
+      }
+      const warn = vi.spyOn(console, 'warn');
+      const harness = await boot({ tools: { writer: { class: TeardownWriter } } });
+      const socket = firstSync(harness, [
+        { id: 'writer', type: 'writer', data: { text: 'the old room' } },
+        { id: 'scratch', type: 'paragraph', data: { text: 'scratch' } },
+      ]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 2, 'old room blocks');
+      socket.serverClose(4409, 'the room was reset');
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect', 6000);
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+      const peer = peerWith([{ type: 'paragraph', data: { text: 'the new room' } }]);
+
+      second.deliver({
+        type: 'syncStep2',
+        update: peer.encodeStateAsUpdate(harness.core.moduleInstances.YjsManager.getStateVector()),
+      });
+      peer.destroy();
+      await waitFor(() => blockTexts(harness.core).includes('the new room'), 'new room block');
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(warn.mock.calls.filter((call) => String(call[0]).includes('could not store an update'))).toEqual([]);
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+      expect(blockTexts(harness.core)).toEqual(['the new room']);
     });
 
     it('keeps publishing participants afterwards, on the awareness the reset rebuilt', async () => {

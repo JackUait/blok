@@ -85,6 +85,8 @@ interface LiveClient {
   core: Core;
   takeSent: () => RelayedFrame[];
   receive: (frame: RelayedFrame) => void;
+  /** The room was reset to `server`: the socket closes with 4409 and the client joins `lineage`. */
+  relineage: (lineage: string) => Promise<void>;
 }
 
 const holders: HTMLElement[] = [];
@@ -141,29 +143,50 @@ const bootLive = async (): Promise<LiveClient> => {
   await core.isReady;
   booted.push(core);
 
-  const socket = sockets.at(-1);
+  const current = (): MockSocket => {
+    const socket = sockets.at(-1);
 
-  if (socket === undefined) throw new Error('no socket was opened');
-  socket.open();
-  socket.deliver({ type: 'control', tag: { format: 2, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' } });
-  socket.deliver({
-    type: 'syncStep2',
-    update: server.encodeStateAsUpdate(core.moduleInstances.YjsManager.getStateVector()),
-  });
-  await waitFor(() => !core.moduleInstances.ReadOnly.isEnabled, 'editor to become writable');
-  await settle();
+    if (socket === undefined) throw new Error('no socket was opened');
+
+    return socket;
+  };
+  const join = async (lineage: string, writable: boolean): Promise<void> => {
+    const socket = current();
+
+    socket.open();
+    socket.deliver({ type: 'control', tag: { format: 2, epoch: 0, lineage } });
+    socket.deliver({
+      type: 'syncStep2',
+      update: server.encodeStateAsUpdate(core.moduleInstances.YjsManager.getStateVector()),
+    });
+    if (writable) await waitFor(() => !core.moduleInstances.ReadOnly.isEnabled, 'editor to become writable');
+    await settle();
+  };
+
+  await join('0123456789abcdef0123456789abcdef', true);
 
   let taken = 0;
 
   return {
     core,
     takeSent: () => {
+      const socket = current();
       const frames = socket.sent.slice(taken).map(decode).flatMap((frame) => (frame.type === 'update' || frame.type === 'awareness' ? [frame] : []));
 
       taken = socket.sent.length;
       return frames;
     },
-    receive: (frame) => socket.deliver(frame),
+    receive: (frame) => current().deliver(frame),
+    relineage: async (lineage) => {
+      const count = sockets.length;
+      const old = current();
+
+      old.readyState = 3;
+      old.onclose?.({ code: 4409, reason: 'the room was reset' });
+      await waitFor(() => sockets.length > count, 'a reconnect');
+      taken = 0;
+      await join(lineage, false);
+    },
   };
 };
 
@@ -424,6 +447,37 @@ describe('draft view tabs between peers', { timeout: 60000 }, () => {
     await pump([b, peerOfA]);
 
     expect(tabTitled(peerOfA, 'Draft A')).toBeUndefined();
+  });
+
+  // Teardown discards the open draft, into the document being thrown away.
+  it('a room reset while Customize holds a draft tab leaves the maker editing', async () => {
+    const a = await bootLive();
+    const warn = vi.spyOn(console, 'warn');
+
+    await draftViewTab(a, 'Applied', true);
+    await applyAndClose(a);
+    await draftViewTab(a, 'Draft A', false);
+    await pump([a]);
+    const reset = new DocumentStore(new YBlockSerializer());
+
+    reset.fromJSON(server.toJSON());
+    server.destroy();
+    server = reset;
+    await a.relineage('fedcba9876543210fedcba9876543210');
+    await settle();
+
+    expect(warn.mock.calls.filter((call) => String(call[0]).includes('could not store an update'))).toEqual([]);
+    expect(a.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+    // The room still holds the draft; its builder is gone, so it reads as discarded here too.
+    expect(tabTitled(a, 'Draft A')).toBeDefined();
+    await openRow(a);
+
+    expect(tabNames(a)).toEqual(['Content', 'Applied']);
+    await later(PAST_WINDOW, a, a);
+    await settle();
+
+    expect(tabTitled(a, 'Draft A')).toBeUndefined();
+    expect(danglingIds(a)).toEqual([]);
   });
 
   it('an undone first Apply keeps the tab a peer applied into the same block, also after the maker leaves', async () => {

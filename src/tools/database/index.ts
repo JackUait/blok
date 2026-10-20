@@ -2556,6 +2556,8 @@ export class DatabaseTool implements BlockTool {
       });
     },
     discard: (made) => {
+      // A copy this discard cannot reach (a room reset tears the builder down) then hides here as a peer's.
+      made.forEach((id) => this.layoutDrafts.made.delete(id));
       const live = made.filter((id) => this.api.blocks.getById(id) !== null);
 
       if (live.length === 0 || this.readOnly) return;

@@ -1178,6 +1178,15 @@ export class Collaboration extends Module {
   private resetForRelineage(): void {
     const { BlockManager, YjsManager } = this.Blok;
 
+    // The document no longer carries server lineage, so decision 7's
+    // "offline is still editable" asymmetry no longer applies: this is an
+    // unsynced document again, and unsynced is read-only. Before the clear: a
+    // teardown write (a tool discarding its draft) must not reach the store,
+    // which has dropped the old lineage and would block editing for good.
+    this.firstSynced = false;
+    // The cached rows belong to the lineage that was just discarded. Dropping
+    // them here is what stops the next boot adopting a dead room's history.
+    this.cacheAdopted = false;
     this.suspendObserver();
     void BlockManager.clear(false, { skipYjsSync: true });
     this.resumeObserver();
@@ -1195,13 +1204,6 @@ export class Collaboration extends Module {
     this.awarenessUnhook = YjsManager.onAwarenessChange(() => this.emitStatus());
     this.presence?.start();
 
-    // The document no longer carries server lineage, so decision 7's
-    // "offline is still editable" asymmetry no longer applies: this is an
-    // unsynced document again, and unsynced is read-only.
-    this.firstSynced = false;
-    // The cached rows belong to the lineage that was just discarded. Dropping
-    // them here is what stops the next boot adopting a dead room's history.
-    this.cacheAdopted = false;
     this.cacheSeeded = false;
     if (this.store !== null) {
       this.captured(this.store.clearAdoptable());

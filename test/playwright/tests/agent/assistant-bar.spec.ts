@@ -330,7 +330,7 @@ test.describe('in-editor assistant', () => {
     }).toBe(true);
   });
 
-  test('a model that does not stream shows slots under the bar, then reveals the written block', async ({ page }) => {
+  test('a model that does not stream shows slots under the bar until the run ends, and reveals the written block', async ({ page }) => {
     await setup(page, [insertCall('Revealed line'), reply('Done.')], { hold: true });
 
     await page.getByText('Second').click();
@@ -354,11 +354,13 @@ test.describe('in-editor assistant', () => {
         .some((animation) => animation instanceof CSSAnimation && animation.animationName === 'blok-ai-reveal')),
       { intervals: [20] }
     ).toBe(true);
-    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
 
     await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(2);
+    // The model still works on its next step, so the slots stay.
+    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeVisible();
     await page.evaluate(() => window.assistantRelease?.());
     await expect(bar.getByText('Done.')).toBeVisible();
+    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
   });
 
   test('Discard removes what the assistant wrote', async ({ page }) => {

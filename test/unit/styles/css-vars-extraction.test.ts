@@ -294,6 +294,9 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // [data-blok-columns] container the way --blok-column-gutter is — a
   // container declaration would shadow a host setting it on an outer wrapper.
   '--blok-column-min-width',
+  // Ask AI gap sizes: gap.ts writes them inline on the holder, only while the matching side attribute is set.
+  '--blok-ai-gap',
+  '--blok-ai-gap-start',
   // Consumer-supplied heading typography; fall back to the HEADER_LEVELS Tailwind defaults.
   '--blok-heading-1-font-size',
   '--blok-heading-2-font-size',

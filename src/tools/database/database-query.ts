@@ -466,8 +466,8 @@ export const rowMatchesFilterTree = (
   page?: string | null
 ): boolean => tree === undefined || (evaluate(row, tree, schema, now, me, page) ?? true);
 
-/** Must match getOrderedRows: keys mix letter case, and `<` orders case differently. */
-const comparePosition = (a: DatabaseRow, b: DatabaseRow): number => comparePositions(a.position, b.position);
+/** A row's manual-order key in a view: the view's own key, else the shared `position`. */
+export const rowOrderKey = (row: DatabaseRow, order: Record<string, string> | undefined): string => order?.[row.id] ?? row.position;
 
 /** Options compare with `<`, like getSelectOptions, so sort order matches column order. */
 const compareKeys = (a: string, b: string): number => {
@@ -547,8 +547,8 @@ const compareSortKeys = (a: string | number | string[], b: string | number | str
   return 0;
 };
 
-/** Stable: rows equal on every sort keep position order. Empties go last in both directions. */
-export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: PropertyDefinition[]): DatabaseRow[] => {
+/** Rows equal on every sort keep the manual order (`order`, see rowOrderKey). Empties go last in both directions. */
+export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: PropertyDefinition[], order?: Record<string, string>): DatabaseRow[] => {
   const active = sorts.flatMap((sort) => {
     const property = schema.find((p) => p.id === sort.propertyId);
 
@@ -570,7 +570,8 @@ export const sortRows = (rows: DatabaseRow[], sorts: SortConfig[], schema: Prope
   return [...rows].sort((a, b) => {
     const diff = active.map(({ property, sign }) => compareBy(property, sign, a, b)).find((d) => d !== 0);
 
-    return diff ?? comparePosition(a, b);
+    // Must match getOrderedRows: keys mix letter case, and `<` orders case differently.
+    return diff ?? comparePositions(rowOrderKey(a, order), rowOrderKey(b, order));
   });
 };
 
@@ -749,7 +750,7 @@ export const queryRows = (source: QuerySource, request: QueryRowsRequest): Query
   const inGroup = group === undefined
     ? matching
     : matching.filter((row) => groupKeysOf?.(row).includes(group) ?? false);
-  const sorted = sortRows(inGroup, view.sorts, source.schema);
+  const sorted = sortRows(inGroup, view.sorts, source.schema, view.rowOrder);
   const start = request.cursor === undefined ? 0 : Number(request.cursor);
   const end = request.limit === undefined ? sorted.length : start + request.limit;
 
@@ -760,11 +761,11 @@ export const queryRows = (source: QuerySource, request: QueryRowsRequest): Query
   };
 };
 
-/** Group counts after filtering, in the order each key first shows up in position order. */
+/** Group counts after filtering, in the order each key first shows up in the view's manual order. */
 export const queryGroups = (source: QuerySource, view: DatabaseViewConfig, options: { search?: string } = {}): GroupCount[] => {
   const counts = new Map<string, number>();
 
-  for (const row of sortRows(filteredRows(source, view, options.search), [], source.schema)) {
+  for (const row of sortRows(filteredRows(source, view, options.search), [], source.schema, view.rowOrder)) {
     for (const key of source.groupKeysOf?.(row) ?? []) {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }

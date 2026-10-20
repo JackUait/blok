@@ -16,7 +16,7 @@ import type {
 } from './types';
 import { pageLayoutFields, pageLayoutOf } from './page-layout';
 import type { PageLayoutData } from './page-layout';
-import { queryGroups, queryRows } from './database-query';
+import { queryGroups, queryRows, rowOrderKey } from './database-query';
 import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, withEmptyLists } from './property-values';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
 import { visibleRowPropertyIds } from './view-settings';
@@ -29,7 +29,7 @@ import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 export type { ViewCreateConfig };
 
 export type ViewChanges = Partial<Pick<DatabaseViewConfig,
-  'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey
+  'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | 'rowOrder' | DatabaseViewSettingKey
 >>;
 
 export interface DatabaseModelOptions {
@@ -48,6 +48,12 @@ export interface DatabaseModelOptions {
   page?: () => string | null;
   /** The database block's id: a relation to it is a self-relation (sub-items). */
   databaseId?: string;
+  /**
+   * Each view keeps its own manual order (`rowOrder`). Default on. Off: every
+   * view reads and writes the shared `position` order, and saved `rowOrder`
+   * keys are ignored (an adapter that does not store them).
+   */
+  viewRowOrder?: boolean;
 }
 
 /** Sorts after every real fractional key: 'z' is the last digit of the base62 alphabet. */
@@ -75,6 +81,7 @@ export class DatabaseModel {
   private readonly me: () => string | null;
   private readonly page: () => string | null;
   private readonly databaseId: string | undefined;
+  private readonly viewRowOrder: boolean;
   /** Formula and rollup as their result type (ComputedProperties.valueProperty). */
   private valueOf: (property: PropertyDefinition) => PropertyDefinition = (property) => property;
 
@@ -83,6 +90,7 @@ export class DatabaseModel {
     this.me = options.me ?? ((): null => null);
     this.page = options.page ?? ((): null => null);
     this.databaseId = options.databaseId;
+    this.viewRowOrder = options.viewRowOrder ?? true;
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
@@ -257,9 +265,55 @@ export class DatabaseModel {
     return this.rows.find((r) => r.id === rowId);
   }
 
+  /** Rows in a view's manual order (its own keys, else the shared order), sorts ignored. */
+  getRowsInManualOrder(view: DatabaseViewConfig): DatabaseRow[] {
+    const order = this.rowOrderOf(view);
+
+    return [...this.rows].sort((a, b) => comparePositions(rowOrderKey(a, order), rowOrderKey(b, order)));
+  }
+
+  /** The view's own manual order, or undefined when it follows the shared one. */
+  rowOrderOf(view: DatabaseViewConfig): Record<string, string> | undefined {
+    return this.viewRowOrder ? view.rowOrder : undefined;
+  }
+
+  /** The view as the query reads it: without its own order when views share one. */
+  private orderedView(view: DatabaseViewConfig): DatabaseViewConfig {
+    if (this.viewRowOrder || view.rowOrder === undefined) return view;
+    const { rowOrder: _ignored, ...shared } = view;
+
+    return shared;
+  }
+
+  /**
+   * Before `rows` move in the shared order: every view but `viewId` that
+   * `shows` them keeps each one where it is, by taking its current
+   * `position` as that view's own key. Rows that do not move keep their
+   * `position`, so those views' order stays the same. Same key space as new
+   * rows.
+   * @returns the ids of the views it changed
+   */
+  pinRowsInOtherViews(viewId: string, rows: DatabaseRow[], shows: (view: DatabaseViewConfig) => boolean): string[] {
+    if (!this.viewRowOrder) return [];
+
+    return this.views.filter((view) => view.id !== viewId && shows(view)).flatMap((view) => {
+      const missing = rows.filter((row) => view.rowOrder?.[row.id] === undefined);
+
+      if (missing.length === 0) return [];
+      this.updateView(view.id, { rowOrder: { ...view.rowOrder, ...Object.fromEntries(missing.map((row) => [row.id, row.position])) } });
+
+      return [view.id];
+    });
+  }
+
+  /** The highest row key in any view, so a row placed after it goes last everywhere. */
+  lastRowKey(): string | null {
+    return [...this.rows.map((row) => row.position), ...this.views.flatMap((view) => Object.values(this.rowOrderOf(view) ?? {}))]
+      .reduce<string | null>((last, key) => (last === null || comparePositions(key, last) > 0 ? key : last), null);
+  }
+
   createRowData(properties?: Record<string, PropertyValue>): DatabaseRow {
-    const ordered = this.getOrderedRows();
-    const lastPosition = ordered.length > 0 ? ordered[ordered.length - 1].position : null;
+    const lastPosition = this.lastRowKey();
     return {
       id: nanoid(),
       position: DatabaseModel.positionBetween(lastPosition, null),
@@ -338,11 +392,11 @@ export class DatabaseModel {
   }
 
   queryRows(request: QueryRowsRequest): QueryRowsResult {
-    return queryRows(this.querySource(request.view), request);
+    return queryRows(this.querySource(request.view), { ...request, view: this.orderedView(request.view) });
   }
 
   queryGroups(view: DatabaseViewConfig, options: { search?: string } = {}): GroupCount[] {
-    return queryGroups(this.querySource(view), view, options);
+    return queryGroups(this.querySource(view), this.orderedView(view), options);
   }
 
   /**

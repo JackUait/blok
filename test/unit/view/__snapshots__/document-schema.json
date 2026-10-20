@@ -3691,6 +3691,13 @@
                 ],
                 "description": "Sub-items: which rows show. Default parents."
               },
+              "rowOrder": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "This view's own manual order: row id to a fractional key, compared with row positions. A row without a key uses its position. Absent: the shared order."
+              },
               "form": {
                 "type": "object",
                 "description": "Form view settings. The public link is the host's.",

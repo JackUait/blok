@@ -435,6 +435,10 @@ test.describe('W4D board actions that write many rows', () => {
   const position = async (page: Page, id: string): Promise<string> =>
     ((await rowData(page, id)) as { position: string }).position;
 
+  /** The list view's own manual order, if it has one. */
+  const listOrder = async (page: Page): Promise<unknown> =>
+    ((await save(page)).find(b => b.id === 'db-1')?.data.views as Array<{ id: string; rowOrder?: unknown }>).find(v => v.id === 'view-2')?.rowOrder;
+
   test('W4D-D7: "Remove" drops the sort, keeps the order and lands the card; one undo restores the sort and every position', async ({ page }) => {
     await mount(page, SORTED_DOC);
     await gap(page);
@@ -460,6 +464,8 @@ test.describe('W4D board actions that write many rows', () => {
     expect(await viewSorts(page)).toEqual([]);
     // Card one was dropped above Card two, so it now comes first.
     expect(await position(page, 'row-1') < await position(page, 'row-2')).toBe(true);
+    // Manual order is per view: the list pins the moved card at its old key.
+    expect(await listOrder(page)).toEqual({ 'row-2': before.two });
 
     await park(page);
     await undo(page);
@@ -467,6 +473,7 @@ test.describe('W4D board actions that write many rows', () => {
     expect(await viewSorts(page)).toEqual(before.sorts);
     expect(await position(page, 'row-1')).toBe(before.one);
     expect(await position(page, 'row-2')).toBe(before.two);
+    expect(await listOrder(page)).toBeUndefined();
   });
 
   test('W4D-D7b: "Don\'t remove" discards the drop', async ({ page }) => {

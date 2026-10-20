@@ -44,7 +44,7 @@ import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import type { LinkedPickerSource } from './database-linked-picker';
-import { newRowValues, sortRows } from './database-query';
+import { newRowValues, rowOrderKey, sortRows } from './database-query';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { openAutofillSetup } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
@@ -511,7 +511,12 @@ export class DatabaseTool implements BlockTool {
     this.source = sourceRefOf(data);
     this.stubSchema = Array.isArray(data?.schema) ? structuredClone(data.schema) : [];
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
-    this.model = new DatabaseModel(data, initialView === 'table' ? { defaultViewType: 'table', idSeed: block.id, me, page, databaseId: this.dataId } : { me, page, databaseId: this.dataId });
+    // An adapter that does not store a view's own order keeps the shared one.
+    const viewRowOrder = this.config.adapter === undefined || this.config.adapter.viewRowOrder === true;
+
+    this.model = new DatabaseModel(data, initialView === 'table'
+      ? { defaultViewType: 'table', idSeed: block.id, me, page, databaseId: this.dataId, viewRowOrder }
+      : { me, page, databaseId: this.dataId, viewRowOrder });
     this.computedValues = new ComputedProperties(this.dataId);
     this.pullLinkedSchema();
     this.model.setValueProperty((property) => this.computedValues.valueProperty(property));
@@ -4021,7 +4026,7 @@ export class DatabaseTool implements BlockTool {
         void this.sync.syncCreateRow({ id, properties, position });
 
         return position;
-      }, this.model.getOrderedRows().at(-1)?.position ?? null);
+      }, this.model.lastRowKey());
     };
 
     this.inOneStep(write);
@@ -5533,8 +5538,30 @@ export class DatabaseTool implements BlockTool {
     const position = afterIndex === -1
       ? rowData.position
       : DatabaseModel.positionBetween(ordered[afterIndex].position, ordered[afterIndex + 1]?.position ?? null);
+    const owner = context?.owner ?? this;
+    const view = context?.view ?? this.model.getView(this.activeViewId);
+    const ownOrder = afterRowId === undefined || owner.structureDenied || view === undefined ? undefined : owner.model.rowOrderOf(view);
 
-    this.insertNewRow(rowData, position);
+    if (view !== undefined && ownOrder !== undefined) {
+      // The shared key above places the row after `afterRowId` in the shared order only.
+      const manual = this.model.getRowsInManualOrder(view);
+      const at = manual.findIndex((row) => row.id === afterRowId);
+      const next = at === -1 ? undefined : manual[at + 1];
+      const rowOrder = at === -1 ? ownOrder : {
+        ...ownOrder,
+        [rowData.id]: DatabaseModel.positionBetween(rowOrderKey(manual[at], ownOrder), next === undefined ? null : rowOrderKey(next, ownOrder)),
+      };
+
+      // The view write goes first: an insert opens a sync window that would read it as an echo.
+      this.inOneStep(() => {
+        owner.model.updateView(view.id, { rowOrder });
+        owner.block.dispatchChange();
+        this.insertNewRow(rowData, position);
+      });
+      void owner.sync.syncUpdateView({ viewId: view.id, changes: { rowOrder: structuredClone(rowOrder) } });
+    } else {
+      this.insertNewRow(rowData, position);
+    }
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position });
     if (context === undefined) this.rerenderView({ keepDrawer: true });
     else context.redraw();
@@ -5660,8 +5687,33 @@ export class DatabaseTool implements BlockTool {
     });
 
     const grandparent = pair === undefined ? undefined : relationIdsOf(row.properties[pair.forward]).pop();
+    const view = this.model.getView(this.activeViewId);
+    const viewOrder = this.structureDenied || view === undefined ? undefined : this.model.rowOrderOf(view);
+    // In a view with its own order the shared keys above place the copies by the original in the shared order only.
+    const placed = ((): Record<string, string> | undefined => {
+      if (view === undefined || viewOrder === undefined) return undefined;
+      const manual = this.model.getRowsInManualOrder(view);
+      const at = manual.findIndex((r) => r.id === rowId);
+      const next = manual[at + 1];
+      const keys: Record<string, string> = { ...viewOrder };
+
+      [rowId, ...subItems].reduce((after, sourceId) => {
+        const key = DatabaseModel.positionBetween(after, next === undefined ? null : rowOrderKey(next, viewOrder));
+
+        keys[copies.get(sourceId) ?? sourceId] = key;
+
+        return key;
+      }, rowOrderKey(row, viewOrder));
+
+      return keys;
+    })();
 
     this.inOneStep(() => {
+      // The view write goes first: an insert opens a sync window that would read it as an echo.
+      if (view !== undefined && placed !== undefined) {
+        this.model.updateView(view.id, { rowOrder: placed });
+        this.block.dispatchChange();
+      }
       write();
       const copy = copies.get(rowId);
 
@@ -5671,6 +5723,7 @@ export class DatabaseTool implements BlockTool {
       }
     });
     created.forEach((copy) => void this.sync.syncCreateRow({ ...copy, properties: adapterRowValues(copy.properties, this.model.getSchema()).properties }));
+    if (view !== undefined && placed !== undefined) void this.sync.syncUpdateView({ viewId: view.id, changes: { rowOrder: structuredClone(placed) } });
     this.syncRowsFromBlocks();
     this.rerenderView({ keepDrawer: true });
   }
@@ -6315,12 +6368,7 @@ export class DatabaseTool implements BlockTool {
       this.updateRowBlock(rowId, { [groupBy]: value });
       this.sync.syncUpdateRow({ rowId, properties: { [groupBy]: value } });
     }
-    const before = beforeRowId === null ? undefined : this.model.getRow(beforeRowId);
-    const after = afterRowId === null ? undefined : this.model.getRow(afterRowId);
-    const position = DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null);
-
-    this.moveRowBlock(rowId, position);
-    void this.sync.syncMoveRow({ rowId, position });
+    this.placeRow(view, rowId, afterRowId, beforeRowId, context?.owner);
     if (context === undefined) this.rerenderView({ keepDrawer: true });
     else context.redraw();
   }
@@ -7486,14 +7534,72 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
-    const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
-    const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
-
-    this.moveRowBlock(rowId, position);
+    this.placeRow(this.model.getView(this.activeViewId), rowId, afterRowId, beforeRowId);
     this.rerenderView();
+  }
 
-    void this.sync.syncMoveRow({ rowId, position });
+  /**
+   * Keeps `rowIds` where they are in `owner`'s other views before their
+   * shared `position` changes (see pinRowsInOtherViews). A view of another
+   * source never shows these rows, and a chart, dashboard or form shows no
+   * row order.
+   */
+  private pinInOtherViews(owner: DatabaseTool, viewId: string, rowIds: string[]): string[] {
+    const unordered: ReadonlySet<string> = new Set(['chart', 'dashboard', 'form']);
+    const rows = rowIds.flatMap((id) => this.model.getRow(id) ?? []);
+
+    return owner.model.pinRowsInOtherViews(viewId, rows,
+      (view) => !unordered.has(view.type) && (view.dataSourceId ?? owner.dataId) === this.dataId);
+  }
+
+  /**
+   * Puts a dropped row between its neighbours in `view`'s manual order.
+   * Manual order is per view (research/22 OU17). A view with its own
+   * `rowOrder` changes only there. A view on the shared order moves the row's
+   * `position`, after the other views pin it where they show it. `also.write` joins the same undo step;
+   * `also.sync` runs before this move's backend calls, as it always did.
+   */
+  private placeRow(
+    view: DatabaseViewConfig | undefined, rowId: string, afterRowId: string | null, beforeRowId: string | null,
+    owner: DatabaseTool = this, also: { write?: () => void; sync?: () => void } = {}
+  ): void {
+    const order = view === undefined ? undefined : owner.model.rowOrderOf(view);
+    const keyOf = (id: string | null): string | null => {
+      const row = id === null ? undefined : this.model.getRow(id);
+
+      return row === undefined ? null : rowOrderKey(row, order);
+    };
+    const key = DatabaseModel.positionBetween(keyOf(afterRowId), keyOf(beforeRowId));
+    // A view's own order is a database-block write; without editStructure the shared order is all this person can change.
+    const writesView = view !== undefined && !owner.structureDenied;
+    const frozen: string[] = [];
+    const write = (): void => {
+      also.write?.();
+      if (order !== undefined) {
+        if (!writesView) return;
+        owner.model.updateView(view.id, { rowOrder: { ...order, [rowId]: key } });
+        owner.block.dispatchChange();
+
+        return;
+      }
+      if (writesView) frozen.push(...this.pinInOtherViews(owner, view.id, [rowId]));
+      if (frozen.length > 0) owner.block.dispatchChange();
+      this.moveRowBlock(rowId, key);
+    };
+
+    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(write);
+    else write();
+
+    also.sync?.();
+    if (order !== undefined) {
+      if (writesView) void owner.sync.syncUpdateView({ viewId: view.id, changes: { rowOrder: { ...order, [rowId]: key } } });
+
+      return;
+    }
+    frozen.forEach((viewId) => {
+      void owner.sync.syncUpdateView({ viewId, changes: { rowOrder: structuredClone(owner.model.getView(viewId)?.rowOrder) } });
+    });
+    void this.sync.syncMoveRow({ rowId, position: key });
   }
 
   private handleRowDrop(result: CardDragResult): void {
@@ -7529,19 +7635,14 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
-    const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
-    const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
-
     const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
     const changes: Record<string, PropertyValue> = { [groupByPropId]: value, ...subChange };
 
-    this.updateRowBlock(rowId, changes);
-    this.moveRowBlock(rowId, position);
+    this.placeRow(viewConfig, rowId, afterRowId, beforeRowId, this, {
+      write: () => this.updateRowBlock(rowId, changes),
+      sync: () => this.sync.syncUpdateRow({ rowId, properties: changes }),
+    });
     this.rerenderView();
-
-    this.sync.syncUpdateRow({ rowId, properties: changes });
-    void this.sync.syncMoveRow({ rowId, position });
   }
 
   /** The sorts this person sees: their own (D4) or the saved ones. */
@@ -7607,7 +7708,7 @@ export class DatabaseTool implements BlockTool {
     const controls = context?.controls ?? this.controls;
 
     // Every row, filtered out or not, so hidden rows keep their sorted place too.
-    const sorted = sortRows(this.model.getOrderedRows(), this.sortsShown(view, controls), this.model.getValueSchema());
+    const sorted = sortRows(this.model.getOrderedRows(), this.sortsShown(view, controls), this.model.getValueSchema(), owner.model.rowOrderOf(view));
     // A personal sort (D4) is this person's to drop; so is any sort while the database is locked.
     const personal = controls.hasPersonalSorts(view.id) || owner.structureLocked();
     const dragged = sorted.find((row) => row.id === rowId);
@@ -7625,24 +7726,30 @@ export class DatabaseTool implements BlockTool {
       return beforeIndex !== -1 ? beforeIndex : rest.length;
     })();
     const order = [...rest.slice(0, insertAt), dragged, ...rest.slice(insertAt)];
-    const moves: Array<{ rowId: string; position: string }> = [];
+    const keys: Array<{ rowId: string; position: string }> = [];
 
     order.reduce<string | null>((previous, row) => {
       const position = DatabaseModel.positionBetween(previous, null);
 
-      if (row.position !== position) {
-        moves.push({ rowId: row.id, position });
-      }
+      keys.push({ rowId: row.id, position });
 
       return position;
     }, null);
 
+    // Manual order is per view (research/22 OU17): a view with its own order
+    // bakes the sorted order there; one on the shared order first has the
+    // other views pin every row it moves.
+    const ownOrder = owner.model.rowOrderOf(view) !== undefined;
+    const writesView = !owner.structureDenied;
+    const rowOrder = ownOrder && writesView ? Object.fromEntries(keys.map((key) => [key.rowId, key.position])) : undefined;
+    const moves = ownOrder ? [] : keys.filter((key) => this.model.getRow(key.rowId)?.position !== key.position);
+    const viewChanges: ViewChanges = { ...(personal ? {} : { sorts: [] }), ...(rowOrder === undefined ? {} : { rowOrder }) };
+    const frozen: string[] = [];
     const hasChanges = Object.keys(changes).length > 0;
     const write = (): void => {
-      if (!personal) {
-        owner.model.updateView(view.id, { sorts: [] });
-        owner.block.dispatchChange();
-      }
+      if (!ownOrder && writesView) frozen.push(...this.pinInOtherViews(owner, view.id, moves.map((move) => move.rowId)));
+      if (Object.keys(viewChanges).length > 0) owner.model.updateView(view.id, viewChanges);
+      if (Object.keys(viewChanges).length > 0 || frozen.length > 0) owner.block.dispatchChange();
       if (hasChanges) {
         this.updateRowBlock(rowId, changes);
       }
@@ -7660,9 +7767,12 @@ export class DatabaseTool implements BlockTool {
     }
     if (context === undefined) this.rerenderView();
     else context.redraw();
-    if (!personal) {
-      void owner.sync.syncUpdateView({ viewId: view.id, changes: { sorts: [] } });
+    if (Object.keys(viewChanges).length > 0) {
+      void owner.sync.syncUpdateView({ viewId: view.id, changes: structuredClone(viewChanges) });
     }
+    frozen.forEach((viewId) => {
+      void owner.sync.syncUpdateView({ viewId, changes: { rowOrder: structuredClone(owner.model.getView(viewId)?.rowOrder) } });
+    });
     if (hasChanges) {
       this.sync.syncUpdateRow({ rowId, properties: changes });
     }

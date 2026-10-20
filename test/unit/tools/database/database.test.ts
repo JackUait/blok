@@ -4589,7 +4589,7 @@ describe('DatabaseTool', () => {
     const sortedTool = (
       type: 'board' | 'list' | 'table',
       otherViews: DatabaseViewConfig[] = [],
-      setup: { sorts?: DatabaseViewConfig['sorts']; personal?: Record<string, unknown>; groupBy?: string } = {},
+      setup: { sorts?: DatabaseViewConfig['sorts']; personal?: Record<string, unknown>; groupBy?: string; config?: DatabaseConfig } = {},
     ): {
       tool: DatabaseTool;
       element: HTMLElement;
@@ -4610,7 +4610,7 @@ describe('DatabaseTool', () => {
           filters: [], visibleProperties: [], sorts: setup.sorts ?? [{ propertyId: 'prop-title', direction: 'asc' }],
         }, ...otherViews],
       });
-      const options = createDatabaseOptions(data, {}, { childBlocks });
+      const options = createDatabaseOptions(data, setup.config ?? {}, { childBlocks });
       const transact = vi.fn((fn: () => void) => fn());
       // The per-browser fallback for personal edits (D4), seeded with this person's sort.
       const personal = new Map<string, unknown>(setup.personal === undefined ? [] : [['view:view-1', setup.personal]]);
@@ -4704,24 +4704,244 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    /**
-     * Rows keep ONE shared manual order (`position`). Whether Notion keeps a
-     * separate manual order per view is unmeasured (research/03 "unverified",
-     * research/08 measured one view only), so "Remove" re-orders every
-     * unsorted view and leaves the other views' sorts alone.
-     */
-    it('"Remove" in one view re-orders the shared manual order and keeps the other views\' sorts', async () => {
+    const modelOf = (tool: DatabaseTool): DatabaseModel => (tool as unknown as { model: DatabaseModel }).model;
+
+    /** The rows a view shows, in its order. */
+    const viewRows = (tool: DatabaseTool, viewId: string): string[] => {
+      const view = modelOf(tool).getView(viewId);
+
+      return view === undefined ? [] : modelOf(tool).queryRows({ view }).rows.map((row) => row.id);
+    };
+
+    const dropUnsortedTableRow = (tool: DatabaseTool, result: TableRowDropResult): void => {
+      (tool as unknown as { handleTableRowDrop: (r: TableRowDropResult) => void }).handleTableRowDrop(result);
+    };
+
+    const gallery: DatabaseViewConfig = {
+      id: 'view-2', name: 'Gallery', type: 'gallery', position: 'a1', filters: [], visibleProperties: [], sorts: [],
+    };
+
+    /** Manual order is per view (research/22 OU17): the gallery kept its own through the table's Remove. */
+    it('"Remove" in one view keeps the other views\' order and sorts', async () => {
       const other: DatabaseViewConfig = {
         id: 'view-2', name: 'Other', type: 'list', position: 'a1', filters: [], visibleProperties: [], sorts: [{ propertyId: 'prop-status', direction: 'desc' }],
       };
-      const { tool, element, childBlocks } = sortedTool('board', [other]);
+      const { tool, element, childBlocks } = sortedTool('board', [other, { ...gallery, id: 'view-3', position: 'a2' }]);
 
       dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
       answer('confirm');
       await Promise.resolve();
 
+      expect(viewRows(tool, 'view-3')).toEqual(['row-b', 'row-a', 'row-e', 'row-x']);
+      expect(tool.save(element).views.find((view) => view.id === 'view-3')?.rowOrder).toEqual({ 'row-b': 'a0', 'row-a': 'a1', 'row-e': 'a2', 'row-x': 'a3' });
       expect(manualOrder(childBlocks)).toEqual(['row-a', 'row-x', 'row-b', 'row-e']);
       expect(tool.save(element).views.find((view) => view.id === 'view-2')?.sorts).toEqual([{ propertyId: 'prop-status', direction: 'desc' }]);
+
+      tool.destroy();
+    });
+
+    it('a table drag leaves the gallery\'s order alone', () => {
+      const { tool, element } = sortedTool('table', [gallery], { sorts: [] });
+
+      dropUnsortedTableRow(tool, { rowId: 'row-x', beforeRowId: 'row-a', afterRowId: 'row-b', groupKey: '', fromGroupKey: '' });
+
+      expect(viewRows(tool, 'view-2')).toEqual(['row-b', 'row-a', 'row-e', 'row-x']);
+      expect(viewRows(tool, 'view-1')).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+      expect(tool.save(element).views[0].rowOrder).toBeUndefined();
+
+      tool.destroy();
+    });
+
+    it('a table drag leaves a gallery row alone that the gallery holds no key for', () => {
+      const { tool } = sortedTool('table', [{ ...gallery, rowOrder: { 'row-x': 'Zz' } }], { sorts: [] });
+
+      dropUnsortedTableRow(tool, { rowId: 'row-b', beforeRowId: null, afterRowId: 'row-x', groupKey: '', fromGroupKey: '' });
+
+      expect(viewRows(tool, 'view-2')).toEqual(['row-x', 'row-b', 'row-a', 'row-e']);
+      expect(viewRows(tool, 'view-1')).toEqual(['row-a', 'row-e', 'row-x', 'row-b']);
+
+      tool.destroy();
+    });
+
+    const adapterFor = (viewRowOrder?: true): DatabaseAdapter => ({
+      // Never settles: the test's own views stay, no backend snapshot replaces them.
+      loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+      createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn().mockResolvedValue(undefined), deleteRow: vi.fn(),
+      createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
+      createView: vi.fn(), updateView: vi.fn().mockResolvedValue(undefined), deleteView: vi.fn(),
+      ...(viewRowOrder === undefined ? {} : { viewRowOrder }),
+    });
+
+    it('an adapter that does not store a view\'s own order keeps the shared order and moveRow', () => {
+      const adapter = adapterFor();
+      const { tool, element, childBlocks } = sortedTool('table', [gallery], { sorts: [], config: { adapter } });
+
+      dropUnsortedTableRow(tool, { rowId: 'row-x', beforeRowId: 'row-a', afterRowId: 'row-b', groupKey: '', fromGroupKey: '' });
+
+      expect(adapter.moveRow).toHaveBeenCalledWith(expect.objectContaining({ rowId: 'row-x' }));
+      expect(adapter.updateView).not.toHaveBeenCalled();
+      expect(manualOrder(childBlocks)).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+      expect(tool.save(element).views.map((view) => view.rowOrder)).toEqual([undefined, undefined]);
+      expect(viewRows(tool, 'view-2')).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+
+      tool.destroy();
+    });
+
+    it('an adapter that stores a view\'s own order gets it through updateView', () => {
+      const adapter = adapterFor(true);
+      const { tool } = sortedTool('table', [{ ...gallery, rowOrder: { 'row-x': 'Zz' } }], { sorts: [], config: { adapter } });
+
+      (tool as unknown as { activeViewId: string }).activeViewId = 'view-2';
+      dropUnsortedTableRow(tool, { rowId: 'row-e', beforeRowId: 'row-b', afterRowId: 'row-x', groupKey: '', fromGroupKey: '' });
+
+      expect(adapter.updateView).toHaveBeenCalledWith({ viewId: 'view-2', changes: { rowOrder: expect.objectContaining({ 'row-x': 'Zz', 'row-e': expect.any(String) }) } });
+      expect(adapter.moveRow).not.toHaveBeenCalled();
+      expect(viewRows(tool, 'view-2')).toEqual(['row-x', 'row-e', 'row-b', 'row-a']);
+
+      tool.destroy();
+    });
+
+    it('a drag in a single-view database writes the shared order only', () => {
+      const { tool, element, childBlocks } = sortedTool('table', [], { sorts: [] });
+
+      dropUnsortedTableRow(tool, { rowId: 'row-x', beforeRowId: 'row-a', afterRowId: 'row-b', groupKey: '', fromGroupKey: '' });
+
+      expect(manualOrder(childBlocks)).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+      expect(tool.save(element).views[0].rowOrder).toBeUndefined();
+
+      tool.destroy();
+    });
+
+    it('a drag in a view with its own order moves it there only', () => {
+      const { tool, element, childBlocks } = sortedTool('table', [{ ...gallery, rowOrder: { 'row-x': 'Zz' } }], { sorts: [] });
+
+      (tool as unknown as { activeViewId: string }).activeViewId = 'view-2';
+      dropUnsortedTableRow(tool, { rowId: 'row-e', beforeRowId: 'row-b', afterRowId: 'row-x', groupKey: '', fromGroupKey: '' });
+
+      expect(viewRows(tool, 'view-2')).toEqual(['row-x', 'row-e', 'row-b', 'row-a']);
+      expect(viewRows(tool, 'view-1')).toEqual(['row-b', 'row-a', 'row-e', 'row-x']);
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+      expect(tool.save(element).views[0].rowOrder).toBeUndefined();
+
+      tool.destroy();
+    });
+
+    it('"Remove" in a view with its own order bakes the sorted order into that view only', async () => {
+      const { tool, element, childBlocks } = sortedTool('list', [gallery]);
+
+      modelOf(tool).updateView('view-1', { rowOrder: { 'row-x': 'Zz' } });
+      dropListRow(tool, { rowId: 'row-a', beforeRowId: null, afterRowId: 'row-x' });
+      answer('confirm');
+      await Promise.resolve();
+
+      expect(viewRows(tool, 'view-1')).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+      expect(viewRows(tool, 'view-2')).toEqual(['row-b', 'row-a', 'row-e', 'row-x']);
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+      expect(tool.save(element).views[1].rowOrder).toBeUndefined();
+
+      tool.destroy();
+    });
+
+    it('deleting the sort brings back this view\'s own manual order', () => {
+      const { tool } = sortedTool('table', [gallery]);
+
+      modelOf(tool).updateView('view-1', { rowOrder: { 'row-x': 'Zz' } });
+      expect(viewRows(tool, 'view-1')).toEqual(['row-a', 'row-b', 'row-x', 'row-e']);
+
+      modelOf(tool).updateView('view-1', { sorts: [] });
+
+      expect(viewRows(tool, 'view-1')).toEqual(['row-x', 'row-b', 'row-a', 'row-e']);
+
+      tool.destroy();
+    });
+
+    it('gives the other views their own order inside the same undo step as the drag', () => {
+      const { tool, options, transact } = sortedTool('table', [gallery], { sorts: [] });
+      const steps: string[] = [];
+
+      transact.mockImplementation((fn: () => void) => {
+        steps.push('begin');
+        fn();
+        steps.push('end');
+      });
+      vi.mocked(options.block.dispatchChange).mockImplementation(() => {
+        steps.push(modelOf(tool).getView('view-2')?.rowOrder === undefined ? 'database' : 'database:frozen');
+      });
+
+      dropUnsortedTableRow(tool, { rowId: 'row-x', beforeRowId: 'row-a', afterRowId: 'row-b', groupKey: '', fromGroupKey: '' });
+
+      expect(steps.slice(0, 3)).toEqual(['begin', 'database:frozen', 'end']);
+
+      tool.destroy();
+    });
+
+    it('without editStructure, a drag moves the shared order and gives no view its own', () => {
+      const { tool, element, childBlocks } = sortedTool('table', [gallery], {
+        sorts: [],
+        config: { permissions: { can: (action: string) => action !== 'editStructure' } },
+      });
+
+      dropUnsortedTableRow(tool, { rowId: 'row-x', beforeRowId: 'row-a', afterRowId: 'row-b', groupKey: '', fromGroupKey: '' });
+
+      expect(manualOrder(childBlocks)).toEqual(['row-b', 'row-x', 'row-a', 'row-e']);
+      expect(tool.save(element).views.map((view) => view.rowOrder)).toEqual([undefined, undefined]);
+
+      tool.destroy();
+    });
+
+    /** Makes inserted rows real children, so the model sees them. */
+    const liveInserts = (options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>, childBlocks: BlockAPI[]): void => {
+      vi.mocked(options.api.blocks.insertAt).mockImplementation((_name, data, at) => {
+        const row = data as DatabaseRowData;
+        const block = positionRow(String(at?.id), row.properties, row.position);
+
+        childBlocks.push(block);
+
+        return block;
+      });
+    };
+
+    const addRow = (tool: DatabaseTool, options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>, childBlocks: BlockAPI[], after?: string): string | null => {
+      liveInserts(options, childBlocks);
+
+      return (tool as unknown as { addTableRow: (group: string | null, after?: string) => string | null }).addTableRow(null, after);
+    };
+
+    it('a duplicate lands right below its original in a view with its own order', () => {
+      const { tool, options, childBlocks } = sortedTool('table', [], { sorts: [] });
+
+      modelOf(tool).updateView('view-1', { rowOrder: { 'row-x': 'Zz' } });
+      liveInserts(options, childBlocks);
+      // Rows have no body here; the mock's default would list the rows as every block's children.
+      vi.mocked(options.api.blocks.getChildren).mockImplementation((parentId) => (parentId === 'test-block-id' ? childBlocks : []));
+      (tool as unknown as { duplicateTableRow: (rowId: string) => void }).duplicateTableRow('row-x');
+
+      const shown = viewRows(tool, 'view-1');
+
+      expect(shown).toHaveLength(5);
+      expect(shown.slice(0, 1)).toEqual(['row-x']);
+      expect(shown.slice(2)).toEqual(['row-b', 'row-a', 'row-e']);
+
+      tool.destroy();
+    });
+
+    it('a row added below another lands right below it in a view with its own order', () => {
+      const { tool, options, childBlocks } = sortedTool('table', [], { sorts: [] });
+
+      modelOf(tool).updateView('view-1', { rowOrder: { 'row-x': 'Zz' } });
+      const added = addRow(tool, options, childBlocks, 'row-x');
+
+      expect(viewRows(tool, 'view-1').slice(0, 2)).toEqual(['row-x', added]);
+
+      tool.destroy();
+    });
+
+    it('a new row goes last in every view', () => {
+      const { tool, options, childBlocks } = sortedTool('table', [{ ...gallery, rowOrder: { 'row-b': 'zz' } }], { sorts: [] });
+      const added = addRow(tool, options, childBlocks);
+
+      expect(viewRows(tool, 'view-2').at(-1)).toBe(added);
+      expect(viewRows(tool, 'view-1').at(-1)).toBe(added);
 
       tool.destroy();
     });

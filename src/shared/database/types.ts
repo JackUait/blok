@@ -791,6 +791,12 @@ export interface DatabaseViewConfig {
    * `properties` because v1.16.1 clients read only this.
    */
   visibleProperties: string[];
+  /**
+   * This view's own manual order: row id to a fractional key, compared with
+   * the rows' shared `position` keys. A row without a key uses its `position`.
+   * Absent: the view shows and writes the shared order.
+   */
+  rowOrder?: Record<string, string>;
   properties?: ViewPropertySetting[];
   wrapCells?: boolean;
   /** How many columns, from the start, stay put on horizontal scroll. */
@@ -1296,6 +1302,13 @@ export interface DatabaseConfig {
 // ─── Adapter ───
 
 export interface DatabaseAdapter {
+  /**
+   * True when this adapter stores `rowOrder` from `updateView` and returns it
+   * from `loadDatabase`. Then each view keeps its own manual order. Without
+   * it, every view shares one order and a reorder reaches `moveRow`.
+   */
+  viewRowOrder?: boolean;
+
   loadDatabase(): Promise<{
     schema: PropertyDefinition[];
     views: DatabaseViewConfig[];
@@ -1355,7 +1368,7 @@ export interface DatabaseAdapter {
   updateView(params: {
     viewId: string;
     changes: Partial<Pick<DatabaseViewConfig,
-      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey
+      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | 'rowOrder' | DatabaseViewSettingKey
     >>;
   }): Promise<DatabaseViewConfig>;
 

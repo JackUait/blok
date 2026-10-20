@@ -740,6 +740,11 @@ export const DATABASE_DATA = {
             description: 'Sub-items: nested (table, list, timeline) or card (board, calendar, gallery) by default, or flattened.',
           },
           subItemsFilter: { type: 'string', enum: ['parents', 'parentsAndSubItems', 'subItems'], description: 'Sub-items: which rows show. Default parents.' },
+          rowOrder: {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+            description: 'This view\'s own manual order: row id to a fractional key, compared with row positions. A row without a key uses its position. Absent: the shared order.',
+          },
           ...TIER3_VIEW_FIELDS,
         },
       },

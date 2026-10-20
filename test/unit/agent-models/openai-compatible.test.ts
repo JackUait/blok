@@ -1,8 +1,55 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openaiCompatibleModel } from '../../../src/agent-models/openai-compatible';
+import type { AdapterOptions } from '../../../src/agent-models/shared';
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
-import type { AgentModelMessage } from '../../../types/api';
+import type { AgentModelMessage, AgentModelRequest, AgentModelStreamEvent } from '../../../types/api';
+
+const FIXTURE = readFileSync(resolve(__dirname, 'fixtures/chat-stream.sse'), 'utf8');
+
+/** Small chunks, so lines and JSON tokens split across reads. */
+const sseStream = (text: string, size = 7): ReadableStream<Uint8Array> => {
+  const bytes = new TextEncoder().encode(text);
+
+  return new ReadableStream({
+    start: (controller) => {
+      for (let offset = 0; offset < bytes.length; offset += size) {
+        controller.enqueue(bytes.slice(offset, offset + size));
+      }
+      controller.close();
+    },
+  });
+};
+
+/** One chunk per delta; a string entry is sent as raw data, e.g. '[DONE]'. */
+const chunks = (...entries: Array<Record<string, unknown> | string>): string => entries
+  .map((entry) => `data: ${typeof entry === 'string' ? entry : JSON.stringify({ object: 'chat.completion.chunk', ...entry })}\n\n`).join('');
+
+const delta = (value: Record<string, unknown>, finish: string | null = null): Record<string, unknown> => ({
+  choices: [{ index: 0, delta: value, finish_reason: finish }],
+});
+
+const fakeStream = (...texts: string[]): { stream: NonNullable<AdapterOptions['stream']>; bodies: Record<string, unknown>[] } => {
+  const bodies: Record<string, unknown>[] = [];
+
+  return {
+    bodies,
+    stream: async (body) => {
+      bodies.push(structuredClone(body));
+
+      return sseStream(texts.shift() ?? '');
+    },
+  };
+};
+
+const request = (onStream?: (event: AgentModelStreamEvent) => void, signal = new AbortController().signal): AgentModelRequest => ({
+  system: 'sys', messages: [{ role: 'user', content: 'Go' }], tools: [], signal, ...(onStream === undefined ? {} : { onStream }),
+});
+
+const heading = { commands: [{ name: 'block.insert', args: { type: 'header' } }] };
 
 const fakeSend = (...replies: unknown[]): { send: (body: Record<string, unknown>) => Promise<unknown>; bodies: Record<string, unknown>[] } => {
   const bodies: Record<string, unknown>[] = [];
@@ -160,5 +207,179 @@ describe('openaiCompatibleModel', () => {
 
     expect(await run(openaiCompatibleModel({ model: 'm', send }), [{ role: 'user', content: 'a' }]))
       .toEqual({ status: 'failed', reply: '', error: 'OpenAI-compatible: Rate limited' });
+  });
+  describe('streaming', () => {
+    // What DeepSeek returns without stream for the fixture's content.
+    const twinMessage = {
+      role: 'assistant', content: 'Adding a heading.', reasoning_content: 'The user wants a heading.',
+      tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_execute', arguments: JSON.stringify(heading) } }],
+    };
+
+    it('streams tool input as tool_start/tool_input/tool_end with the accumulated json', async () => {
+      const events: AgentModelStreamEvent[] = [];
+
+      await openaiCompatibleModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call_1', name: 'blok_execute' },
+        { type: 'tool_input', index: 0, json: '{"commands":[{"na' },
+        { type: 'tool_input', index: 0, json: '{"commands":[{"name":"block.insert","args":{"type":"head' },
+        { type: 'tool_input', index: 0, json: JSON.stringify(heading) },
+        { type: 'tool_end', index: 0 },
+      ]);
+    });
+
+    it('the streamed response equals the non-streamed one for the same content', async () => {
+      const streamed = await openaiCompatibleModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request(() => undefined));
+      const sent = await openaiCompatibleModel({ model: 'm', send: fakeSend(choice(twinMessage, 'tool_calls')).send })(request());
+
+      expect(streamed).toEqual(sent);
+      expect(streamed.stop_reason).toBe('tool_use');
+      expect(streamed.content.slice(0, 2)).toEqual([
+        { type: 'text', text: 'Adding a heading.' },
+        { type: 'tool_use', id: 'call_1', name: 'blok_execute', input: heading },
+      ]);
+    });
+
+    it('reasoning_content survives into the provider block', async () => {
+      const response = await openaiCompatibleModel({ model: 'deepseek-v4-pro', stream: fakeStream(FIXTURE).stream })(request());
+
+      expect(response.content[2]).toEqual({ type: 'provider', format: 'openai-chat', raw: twinMessage });
+    });
+
+    it('sends stream: true with usage, and only when streaming', async () => {
+      const streaming = fakeStream(FIXTURE);
+      const plain = fakeSend(choice({ role: 'assistant', content: 'Hi' }, 'stop'));
+
+      await openaiCompatibleModel({ model: 'm', stream: streaming.stream, send: plain.send })(request());
+      await openaiCompatibleModel({ model: 'm', send: plain.send })(request());
+
+      expect(streaming.bodies[0]).toMatchObject({ stream: true, stream_options: { include_usage: true }, model: 'm', max_tokens: 16000 });
+      expect(plain.bodies).toHaveLength(1);
+      expect(plain.bodies[0].stream).toBeUndefined();
+      expect(plain.bodies[0].stream_options).toBeUndefined();
+    });
+
+    it('two parallel tool calls end in order', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: null }),
+        delta({ tool_calls: [{ index: 0, id: 'call_a', type: 'function', function: { name: 'blok_read', arguments: '' } }] }),
+        delta({ tool_calls: [{ index: 0, function: { arguments: '{"a":1}' } }] }),
+        delta({ tool_calls: [{ index: 1, id: 'call_b', type: 'function', function: { name: 'blok_execute', arguments: '{"b"' } }] }),
+        delta({ tool_calls: [{ index: 1, function: { arguments: ':2}' } }] }, 'tool_calls'),
+        '[DONE]'
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      const response = await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call_a', name: 'blok_read' },
+        { type: 'tool_input', index: 0, json: '{"a":1}' },
+        { type: 'tool_end', index: 0 },
+        { type: 'tool_start', index: 1, id: 'call_b', name: 'blok_execute' },
+        { type: 'tool_input', index: 1, json: '{"b"' },
+        { type: 'tool_input', index: 1, json: '{"b":2}' },
+        { type: 'tool_end', index: 1 },
+      ]);
+      expect(response.content).toEqual([
+        { type: 'tool_use', id: 'call_a', name: 'blok_read', input: { a: 1 } },
+        { type: 'tool_use', id: 'call_b', name: 'blok_execute', input: { b: 2 } },
+        { type: 'provider', format: 'openai-chat', raw: {
+          role: 'assistant', content: null, tool_calls: [
+            { id: 'call_a', type: 'function', function: { name: 'blok_read', arguments: '{"a":1}' } },
+            { id: 'call_b', type: 'function', function: { name: 'blok_execute', arguments: '{"b":2}' } },
+          ],
+        } },
+      ]);
+    });
+
+    it('reads several calls carried in one chunk', async () => {
+      const text = chunks(
+        delta({ tool_calls: [
+          { index: 0, id: 'call_a', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
+          { index: 1, id: 'call_b', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
+        ] }, 'tool_calls'),
+        '[DONE]'
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call_a', name: 'blok_read' },
+        { type: 'tool_input', index: 0, json: '{}' },
+        { type: 'tool_end', index: 0 },
+        { type: 'tool_start', index: 1, id: 'call_b', name: 'blok_read' },
+        { type: 'tool_input', index: 1, json: '{}' },
+        { type: 'tool_end', index: 1 },
+      ]);
+    });
+
+    it('gives a streamed call without an id the same id in its events and in the response', async () => {
+      const text = chunks(
+        delta({ tool_calls: [{ index: 0, id: 'call_a', type: 'function', function: { name: 'blok_read', arguments: '{}' } }] }),
+        delta({ tool_calls: [{ index: 1, type: 'function', function: { name: 'blok_read', arguments: '{}' } }] }, 'tool_calls')
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      const response = await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(events.filter((event) => event.type === 'tool_start')).toEqual([
+        { type: 'tool_start', index: 0, id: 'call_a', name: 'blok_read' },
+        { type: 'tool_start', index: 1, id: 'call-1-1', name: 'blok_read' },
+      ]);
+      expect(response.content[1]).toEqual({ type: 'tool_use', id: 'call-1-1', name: 'blok_read', input: {} });
+    });
+
+    it('maps a refusal and a truncation as send does', async () => {
+      const refused = chunks(delta({ refusal: 'No.' }), delta({}, 'stop'), '[DONE]');
+      const truncated = chunks(delta({ content: 'Half' }), delta({}, 'length'), '[DONE]');
+
+      expect((await openaiCompatibleModel({ model: 'm', stream: fakeStream(refused).stream })(request())).stop_reason).toBe('refusal');
+      expect((await openaiCompatibleModel({ model: 'm', stream: fakeStream(truncated).stream })(request())).stop_reason).toBe('max_tokens');
+    });
+
+    it('throws on an error chunk', async () => {
+      const text = chunks(delta({ content: 'Hi' }), { error: { message: 'Overloaded' } });
+
+      await expect(openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request()))
+        .rejects.toThrow('OpenAI-compatible: Overloaded');
+    });
+
+    it('throws the provider\'s message for an HTTP error response', async () => {
+      const stream = async (): Promise<Response> => new Response('{"error":{"message":"Bad key"}}', { status: 401 });
+
+      await expect(openaiCompatibleModel({ model: 'm', stream })(request())).rejects.toThrow('OpenAI-compatible: Bad key');
+    });
+
+    it('throws when the stream ends before a finish_reason', async () => {
+      const cut = FIXTURE.slice(0, FIXTURE.lastIndexOf('data: ', FIXTURE.indexOf('"finish_reason":"tool_calls"')));
+      const done = chunks(delta({ content: 'Hi' }), '[DONE]');
+
+      await expect(openaiCompatibleModel({ model: 'm', stream: fakeStream(cut).stream })(request()))
+        .rejects.toThrow('OpenAI-compatible: the stream ended early.');
+      await expect(openaiCompatibleModel({ model: 'm', stream: fakeStream(done).stream })(request()))
+        .rejects.toThrow('OpenAI-compatible: the stream ended early.');
+    });
+
+    it('accepts a stream that ends after the finish_reason without [DONE]', async () => {
+      const text = chunks(delta({ content: 'Hi' }), delta({}, 'stop'));
+
+      expect(await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request())).toEqual({
+        stop_reason: 'end_turn',
+        content: [{ type: 'text', text: 'Hi' }, { type: 'provider', format: 'openai-chat', raw: { role: 'assistant', content: 'Hi' } }],
+      });
+    });
+
+    it('throws instead of returning half a message when the run stops mid-stream', async () => {
+      const controller = new AbortController();
+      const stream = async (): Promise<ReadableStream<Uint8Array>> => new ReadableStream({
+        start: (source) => source.enqueue(new TextEncoder().encode(FIXTURE.slice(0, FIXTURE.indexOf('"finish_reason":"tool_calls"')))),
+      });
+
+      await expect(openaiCompatibleModel({ model: 'm', stream })(request(() => controller.abort(), controller.signal)))
+        .rejects.toThrow('OpenAI-compatible: the run stopped mid-stream.');
+    });
   });
 });

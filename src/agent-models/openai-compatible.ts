@@ -1,11 +1,12 @@
 import type {
-  AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelResponse, AgentThinkingLevel,
+  AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelRequest, AgentModelResponse, AgentThinkingLevel,
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
+  DEFAULT_MAX_TOKENS, blocksOf, errorOf, httpError, isRecord, isText, isToolResult, isToolUse, parseArguments,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
+import { readSse } from './sse';
 
 const FORMAT = 'openai-chat';
 
@@ -100,10 +101,146 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   return { content, stop_reason: stop };
 };
 
+const parseChunk = (data: string): unknown => {
+  try {
+    return JSON.parse(data) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+/** A tool call while it streams. Id and name come from its first chunk only, so its events and the reply agree. */
+interface StreamingCall {
+  id: unknown;
+  name: string;
+  arguments: string;
+  open: boolean;
+}
+
+interface Assembly {
+  text?: string;
+  reasoning?: string;
+  refusal?: string;
+  finish?: string;
+  /** Keyed by the provider's tool_calls index, in order of first chunk. */
+  calls: Map<number, StreamingCall>;
+}
+
+const appended = (current: string | undefined, piece: unknown): string | undefined =>
+  (typeof piece === 'string' ? `${current ?? ''}${piece}` : current);
+
+// Same shape as a sent reply's message: index is dropped, since the provider block goes back as is.
+const messageOf = (state: Assembly): Record<string, unknown> => {
+  const calls = [...state.calls.values()].map((call) => ({
+    ...(typeof call.id === 'string' ? { id: call.id } : {}), type: 'function', function: { name: call.name, arguments: call.arguments },
+  }));
+
+  return {
+    role: 'assistant',
+    content: state.text ?? null,
+    ...(state.reasoning === undefined ? {} : { reasoning_content: state.reasoning }),
+    ...(state.refusal === undefined ? {} : { refusal: state.refusal }),
+    ...(calls.length === 0 ? {} : { tool_calls: calls }),
+  };
+};
+
+/** Reports tool calls as they stream, then reads the assembled message through readReply. */
+const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
+  const failed = await httpError(source, 'OpenAI-compatible');
+
+  if (failed !== null) {
+    throw failed;
+  }
+
+  const state: Assembly = { calls: new Map() };
+  const endOpenCalls = (): void => {
+    [...state.calls.entries()].forEach(([key, call], index) => {
+      if (call.open) {
+        state.calls.set(key, { ...call, open: false });
+        request.onStream?.({ type: 'tool_end', index });
+      }
+    });
+  };
+
+  const onToolDelta = (entry: Record<string, unknown>, position: number): void => {
+    const key = typeof entry.index === 'number' ? entry.index : position;
+    const fn = isRecord(entry.function) ? entry.function : {};
+    const known = state.calls.get(key);
+    const index = known === undefined ? state.calls.size : [...state.calls.keys()].indexOf(key);
+
+    if (known === undefined) {
+      // Calls stream one after another, so a new one ends the one before.
+      endOpenCalls();
+      state.calls.set(key, { id: entry.id, name: typeof fn.name === 'string' ? fn.name : '', arguments: '', open: true });
+      // Same id as readReply gives the final call, so the loop matches the early call.
+      request.onStream?.({ type: 'tool_start', index, id: callId(entry.id, step, index), name: typeof fn.name === 'string' ? fn.name : '' });
+    }
+
+    const call = state.calls.get(key);
+
+    if (call !== undefined && typeof fn.arguments === 'string' && fn.arguments !== '') {
+      call.arguments += fn.arguments;
+      request.onStream?.({ type: 'tool_input', index, json: call.arguments });
+    }
+  };
+
+  const onChunk = (chunk: Record<string, unknown>): void => {
+    const error = errorOf(chunk, 'OpenAI-compatible');
+
+    if (error !== null) {
+      throw error;
+    }
+
+    // The usage chunk has no choices.
+    const first: unknown = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
+
+    if (!isRecord(first)) {
+      return;
+    }
+
+    const delta = isRecord(first.delta) ? first.delta : {};
+
+    state.text = appended(state.text, delta.content);
+    // DeepSeek needs reasoning_content back on the next request.
+    state.reasoning = appended(state.reasoning, delta.reasoning_content);
+    state.refusal = appended(state.refusal, delta.refusal);
+
+    if (Array.isArray(delta.tool_calls)) {
+      delta.tool_calls.forEach((entry, position) => {
+        if (isRecord(entry)) {
+          onToolDelta(entry, position);
+        }
+      });
+    }
+    if (typeof first.finish_reason === 'string') {
+      state.finish = first.finish_reason;
+      endOpenCalls();
+    }
+  };
+
+  for await (const { data } of readSse(source, request.signal)) {
+    const chunk = parseChunk(data);
+
+    if (isRecord(chunk)) {
+      onChunk(chunk);
+    }
+  }
+
+  if (request.signal.aborted) {
+    throw new Error('OpenAI-compatible: the run stopped mid-stream.');
+  }
+  // A dropped connection ends the stream too; its half message must not pass as a reply.
+  if (state.finish === undefined) {
+    throw new Error('OpenAI-compatible: the stream ended early.');
+  }
+
+  return readReply({ choices: [{ message: messageOf(state), finish_reason: state.finish }] }, step);
+};
+
 /**
  * Chat Completions, the format DeepSeek, Mistral, Groq, Ollama and OpenRouter accept.
  * Never sends tool_choice: Ollama does not support it, and the loop only needs auto.
- * @param options - model id, the host's send, and optional level overrides
+ * @param options - model id, the host's send or stream, and optional level overrides
  */
 export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'OpenAI-compatible');
@@ -121,6 +258,14 @@ export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
         type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
       })),
     }, request, LEVELS, options);
+
+    const { stream } = options;
+
+    if (stream !== undefined) {
+      const streaming = { ...body, stream: true, stream_options: { include_usage: true } };
+
+      return readStream(await postStream(stream, streaming, request, options), request, stepOf(request));
+    }
 
     return readReply(await post(body, request, options, 'OpenAI-compatible'), stepOf(request));
   };

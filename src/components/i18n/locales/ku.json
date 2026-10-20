@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "دووبارەکردنەوە",
   "tools.database.tableMoveToTrash": "گواستنەوە بۆ زبڵدان",
   "tools.database.movedToTrash": "گوازرایەوە بۆ زبڵدان",
+  "tools.database.blocksDeleted_one": "{count} بلۆک سڕایەوە",
+  "tools.database.blocksDeleted_other": "{count} بلۆک سڕایەوە",
   "tools.database.restore": "گەڕاندنەوە",
   "tools.database.tableCollapseGroup": "قەپاتکردنی گرووپ",
   "tools.database.tableExpandGroup": "کردنەوەی گرووپ",

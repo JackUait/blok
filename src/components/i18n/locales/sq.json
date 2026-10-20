@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Dyfisho",
   "tools.database.tableMoveToTrash": "Zhvendos në kosh",
   "tools.database.movedToTrash": "U zhvendos në kosh",
+  "tools.database.blocksDeleted_one": "Blloqe të fshira: {count}",
+  "tools.database.blocksDeleted_other": "Blloqe të fshira: {count}",
   "tools.database.restore": "Rikthe",
   "tools.database.tableCollapseGroup": "Mbyll grupin",
   "tools.database.tableExpandGroup": "Hap grupin",

@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "建立副本",
   "tools.database.tableMoveToTrash": "移至垃圾桶",
   "tools.database.movedToTrash": "已移至垃圾桶",
+  "tools.database.blocksDeleted_one": "已刪除 {count} 個區塊",
+  "tools.database.blocksDeleted_other": "已刪除 {count} 個區塊",
   "tools.database.restore": "還原",
   "tools.database.tableCollapseGroup": "收合群組",
   "tools.database.tableExpandGroup": "展開群組",

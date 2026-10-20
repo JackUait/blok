@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Дуплирај",
   "tools.database.tableMoveToTrash": "Премести во корпа",
   "tools.database.movedToTrash": "Преместено во корпа",
+  "tools.database.blocksDeleted_one": "Избришани блокови: {count}",
+  "tools.database.blocksDeleted_other": "Избришани блокови: {count}",
   "tools.database.restore": "Врати",
   "tools.database.tableCollapseGroup": "Собери група",
   "tools.database.tableExpandGroup": "Прошири група",

@@ -25,6 +25,7 @@ import {
   scanSourceKeys,
   detectDoubleEncoding,
   findUntranslatedKeys,
+  isSourceKeyDefined,
 } from './check-translations.mjs';
 
 function runCheckerFixture(sourceRaw, localeRaw) {
@@ -173,6 +174,16 @@ describe('translation checker CLI integrity reporting', () => {
     assert.match(output, /Source coverage check passed!/);
     assert.match(output, /Encoding quality check passed!/);
     assert.doesNotMatch(output, /TypeError/);
+  });
+});
+
+describe('isSourceKeyDefined', () => {
+  it('takes a plural base key as defined when its _other form exists', () => {
+    const keys = new Set(['a.items_one', 'a.items_other', 'a.plain']);
+
+    assert.equal(isSourceKeyDefined(keys, 'a.items'), true);
+    assert.equal(isSourceKeyDefined(keys, 'a.plain'), true);
+    assert.equal(isSourceKeyDefined(keys, 'a.missing'), false);
   });
 });
 

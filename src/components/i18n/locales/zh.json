@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "创建副本",
   "tools.database.tableMoveToTrash": "移至回收站",
   "tools.database.movedToTrash": "已移至回收站",
+  "tools.database.blocksDeleted_one": "已删除 {count} 个内容块",
+  "tools.database.blocksDeleted_other": "已删除 {count} 个内容块",
   "tools.database.restore": "恢复",
   "tools.database.tableCollapseGroup": "折叠分组",
   "tools.database.tableExpandGroup": "展开分组",

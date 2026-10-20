@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Duplizieren",
   "tools.database.tableMoveToTrash": "In den Papierkorb verschieben",
   "tools.database.movedToTrash": "In den Papierkorb verschoben",
+  "tools.database.blocksDeleted_one": "{count} Block gelöscht",
+  "tools.database.blocksDeleted_other": "{count} Blöcke gelöscht",
   "tools.database.restore": "Wiederherstellen",
   "tools.database.tableCollapseGroup": "Gruppe einklappen",
   "tools.database.tableExpandGroup": "Gruppe ausklappen",

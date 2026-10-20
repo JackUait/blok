@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Duplicate",
   "tools.database.tableMoveToTrash": "Move to Trash",
   "tools.database.movedToTrash": "Moved to Trash",
+  "tools.database.blocksDeleted_one": "{count} block deleted",
+  "tools.database.blocksDeleted_other": "{count} blocks deleted",
   "tools.database.restore": "Restore",
   "tools.database.tableCollapseGroup": "Collapse group",
   "tools.database.tableExpandGroup": "Expand group",

@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "نقل ٺاهيو",
   "tools.database.tableMoveToTrash": "ڪچري ۾ منتقل ڪريو",
   "tools.database.movedToTrash": "ڪچري ۾ منتقل ٿي ويو",
+  "tools.database.blocksDeleted_one": "{count} بلاڪ ڊاهيا ويا",
+  "tools.database.blocksDeleted_other": "{count} بلاڪ ڊاهيا ويا",
   "tools.database.restore": "بحال ڪريو",
   "tools.database.tableCollapseGroup": "گروپ سميٽيو",
   "tools.database.tableExpandGroup": "گروپ وڌايو",

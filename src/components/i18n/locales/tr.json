@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Çoğalt",
   "tools.database.tableMoveToTrash": "Çöp kutusuna taşı",
   "tools.database.movedToTrash": "Çöp kutusuna taşındı",
+  "tools.database.blocksDeleted_one": "{count} blok silindi",
+  "tools.database.blocksDeleted_other": "{count} blok silindi",
   "tools.database.restore": "Geri yükle",
   "tools.database.tableCollapseGroup": "Grubu daralt",
   "tools.database.tableExpandGroup": "Grubu genişlet",

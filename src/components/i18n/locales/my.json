@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "မိတ္တူပွားရန်",
   "tools.database.tableMoveToTrash": "အမှိုက်ပုံးသို့ ရွှေ့ရန်",
   "tools.database.movedToTrash": "အမှိုက်ပုံးသို့ ရွှေ့ပြီးပါပြီ",
+  "tools.database.blocksDeleted_one": "ဘလောက် {count} ခု ဖျက်ထားသည်",
+  "tools.database.blocksDeleted_other": "ဘလောက် {count} ခု ဖျက်ထားသည်",
   "tools.database.restore": "ပြန်ယူရန်",
   "tools.database.tableCollapseGroup": "အုပ်စု ခေါက်သိမ်းရန်",
   "tools.database.tableExpandGroup": "အုပ်စု ချဲ့ရန်",

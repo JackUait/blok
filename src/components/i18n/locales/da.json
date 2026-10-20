@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Dupliker",
   "tools.database.tableMoveToTrash": "Flyt til papirkurven",
   "tools.database.movedToTrash": "Flyttet til papirkurven",
+  "tools.database.blocksDeleted_one": "{count} blok slettet",
+  "tools.database.blocksDeleted_other": "{count} blokke slettet",
   "tools.database.restore": "Gendan",
   "tools.database.tableCollapseGroup": "Skjul gruppe",
   "tools.database.tableExpandGroup": "Udvid gruppe",

@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "नक्कल बनाउनुहोस्",
   "tools.database.tableMoveToTrash": "रद्दीटोकरीमा सार्नुहोस्",
   "tools.database.movedToTrash": "रद्दीटोकरीमा सारियो",
+  "tools.database.blocksDeleted_one": "मेटाइएका ब्लकहरूको सङ्ख्या: {count}",
+  "tools.database.blocksDeleted_other": "मेटाइएका ब्लकहरूको सङ्ख्या: {count}",
   "tools.database.restore": "पुनर्स्थापित गर्नुहोस्",
   "tools.database.tableCollapseGroup": "समूह संकुचित गर्नुहोस्",
   "tools.database.tableExpandGroup": "समूह विस्तार गर्नुहोस्",

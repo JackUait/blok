@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Gandakan",
   "tools.database.tableMoveToTrash": "Alih ke sampah",
   "tools.database.movedToTrash": "Dialihkan ke sampah",
+  "tools.database.blocksDeleted_one": "{count} blok dipadam",
+  "tools.database.blocksDeleted_other": "{count} blok dipadam",
   "tools.database.restore": "Pulihkan",
   "tools.database.tableCollapseGroup": "Runtuhkan kumpulan",
   "tools.database.tableExpandGroup": "Kembangkan kumpulan",

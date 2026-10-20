@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "ਨਕਲ ਬਣਾਓ",
   "tools.database.tableMoveToTrash": "ਰੱਦੀ ਵਿੱਚ ਭੇਜੋ",
   "tools.database.movedToTrash": "ਰੱਦੀ ਵਿੱਚ ਭੇਜਿਆ ਗਿਆ",
+  "tools.database.blocksDeleted_one": "{count} ਬਲਾਕ ਮਿਟਾਏ ਗਏ",
+  "tools.database.blocksDeleted_other": "{count} ਬਲਾਕ ਮਿਟਾਏ ਗਏ",
   "tools.database.restore": "ਬਹਾਲ ਕਰੋ",
   "tools.database.tableCollapseGroup": "ਸਮੂਹ ਸੰਕੁਚਿਤ ਕਰੋ",
   "tools.database.tableExpandGroup": "ਸਮੂਹ ਦਾ ਵਿਸਤਾਰ ਕਰੋ",

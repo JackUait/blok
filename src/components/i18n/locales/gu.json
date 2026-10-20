@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "નકલ બનાવો",
   "tools.database.tableMoveToTrash": "કચરાપેટીમાં ખસેડો",
   "tools.database.movedToTrash": "કચરાપેટીમાં ખસેડ્યું",
+  "tools.database.blocksDeleted_one": "{count} બ્લોક કાઢી નાખ્યા",
+  "tools.database.blocksDeleted_other": "{count} બ્લોક કાઢી નાખ્યા",
   "tools.database.restore": "પુનઃસ્થાપિત કરો",
   "tools.database.tableCollapseGroup": "જૂથ સંકોચો",
   "tools.database.tableExpandGroup": "જૂથ વિસ્તૃત કરો",

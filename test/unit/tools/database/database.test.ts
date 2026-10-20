@@ -5944,6 +5944,24 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      it('tells screen readers how many blocks were deleted, apart from the visible "Moved to Trash" (research/23 §2b)', () => {
+        const announced = (rowIds: string[]): Array<string | undefined> => {
+          const { tool, element, options, show } = trashTool();
+
+          Object.assign(options.api, {
+            i18n: { t: (key: string, vars?: { count?: number }) => vars?.count === undefined ? key : `${key}:${vars.count}` },
+          });
+          select(element, rowIds);
+          pressDelete('Delete');
+          tool.destroy();
+
+          return show.mock.calls.map(([o]) => o as Toast & { announce?: string }).filter((o) => o.message === 'tools.database.movedToTrash').map((o) => o.announce);
+        };
+
+        expect(announced(['row-1', 'row-2'])).toEqual(['tools.database.blocksDeleted:2']);
+        expect(announced(['row-2'])).toEqual(['tools.database.blocksDeleted:1']);
+      });
+
       it('several cards: trashes them all in one step, with one toast whose Restore undoes that step (research/23 §2b)', () => {
         const { tool, element, options, show, history, deleteStep } = trashTool();
         const scope = { open: false, deletedInside: [] as boolean[] };

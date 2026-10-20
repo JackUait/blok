@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "ކޮޕީ ހަދާ",
   "tools.database.tableMoveToTrash": "ކުނިފޮށިއަށް ބަދަލުކުރޭ",
   "tools.database.movedToTrash": "ކުނިފޮށިއަށް ބަދަލުކުރެވިއްޖެ",
+  "tools.database.blocksDeleted_one": "{count} ބްލޮކް ފޮހެލެވިއްޖެ",
+  "tools.database.blocksDeleted_other": "{count} ބްލޮކް ފޮހެލެވިއްޖެ",
   "tools.database.restore": "އަނބުރާ ގެންނަވާ",
   "tools.database.tableCollapseGroup": "ގްރޫޕް ތިރިކުރޭ",
   "tools.database.tableExpandGroup": "ގްރޫޕް ފުޅާ ކުރޭ",

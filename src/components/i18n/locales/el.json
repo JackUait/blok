@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Διπλότυπο",
   "tools.database.tableMoveToTrash": "Μετακίνηση στον κάδο",
   "tools.database.movedToTrash": "Μετακινήθηκε στον κάδο",
+  "tools.database.blocksDeleted_one": "Διαγραμμένα μπλοκ: {count}",
+  "tools.database.blocksDeleted_other": "Διαγραμμένα μπλοκ: {count}",
   "tools.database.restore": "Επαναφορά",
   "tools.database.tableCollapseGroup": "Σύμπτυξη ομάδας",
   "tools.database.tableExpandGroup": "Ανάπτυξη ομάδας",

@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "प्रतिलिपि बनाएँ",
   "tools.database.tableMoveToTrash": "ट्रैश में ले जाएं",
   "tools.database.movedToTrash": "ट्रैश में ले जाया गया",
+  "tools.database.blocksDeleted_one": "{count} ब्लॉक हटाए गए",
+  "tools.database.blocksDeleted_other": "{count} ब्लॉक हटाए गए",
   "tools.database.restore": "पुनर्स्थापित करें",
   "tools.database.tableCollapseGroup": "समूह संकुचित करें",
   "tools.database.tableExpandGroup": "समूह विस्तृत करें",

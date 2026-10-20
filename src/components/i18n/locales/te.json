@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "నకలు చేయండి",
   "tools.database.tableMoveToTrash": "ట్రాష్‌కు తరలించు",
   "tools.database.movedToTrash": "ట్రాష్‌కు తరలించబడింది",
+  "tools.database.blocksDeleted_one": "తొలగించిన బ్లాక్‌ల సంఖ్య: {count}",
+  "tools.database.blocksDeleted_other": "తొలగించిన బ్లాక్‌ల సంఖ్య: {count}",
   "tools.database.restore": "పునరుద్ధరించు",
   "tools.database.tableCollapseGroup": "సమూహాన్ని సంకుచించు",
   "tools.database.tableExpandGroup": "సమూహాన్ని విస్తరించు",

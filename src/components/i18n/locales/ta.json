@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "நகலெடு",
   "tools.database.tableMoveToTrash": "குப்பைக்கு நகர்த்து",
   "tools.database.movedToTrash": "குப்பைக்கு நகர்த்தப்பட்டது",
+  "tools.database.blocksDeleted_one": "நீக்கப்பட்ட தொகுதிகள்: {count}",
+  "tools.database.blocksDeleted_other": "நீக்கப்பட்ட தொகுதிகள்: {count}",
   "tools.database.restore": "மீட்டமை",
   "tools.database.tableCollapseGroup": "குழுவைச் சுருக்கு",
   "tools.database.tableExpandGroup": "குழுவை விரிவாக்கு",

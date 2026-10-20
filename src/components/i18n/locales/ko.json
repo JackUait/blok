@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "복제",
   "tools.database.tableMoveToTrash": "휴지통으로 이동",
   "tools.database.movedToTrash": "휴지통으로 이동됨",
+  "tools.database.blocksDeleted_one": "{count}개 블록 삭제됨",
+  "tools.database.blocksDeleted_other": "{count}개 블록 삭제됨",
   "tools.database.restore": "복원",
   "tools.database.tableCollapseGroup": "그룹 접기",
   "tools.database.tableExpandGroup": "그룹 펼치기",

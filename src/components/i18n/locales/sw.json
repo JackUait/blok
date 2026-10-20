@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Rudufu",
   "tools.database.tableMoveToTrash": "Hamishia kwenye tupio",
   "tools.database.movedToTrash": "Imehamishiwa kwenye tupio",
+  "tools.database.blocksDeleted_one": "Idadi ya vizuizi vilivyofutwa: {count}",
+  "tools.database.blocksDeleted_other": "Idadi ya vizuizi vilivyofutwa: {count}",
   "tools.database.restore": "Rejesha",
   "tools.database.tableCollapseGroup": "Kunja kikundi",
   "tools.database.tableExpandGroup": "Panua kikundi",

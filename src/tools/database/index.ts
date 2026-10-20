@@ -8285,6 +8285,7 @@ export class DatabaseTool implements BlockTool {
   private trashSelectionFromKeys(): void {
     const toast = this.model.getView(this.activeViewId)?.type === 'gallery';
     const before = this.api.history.latestStep();
+    const count = this.rowSelection.size;
 
     // One undo step, so Restore brings every card back.
     if (this.api.blocks.transact !== undefined) this.api.blocks.transact(() => this.trashSelection());
@@ -8298,6 +8299,7 @@ export class DatabaseTool implements BlockTool {
 
     this.api.notifier.show({
       message: this.api.i18n.t('tools.database.movedToTrash'),
+      announce: this.api.i18n.t('tools.database.blocksDeleted', { count }),
       actions: [{
         label: this.api.i18n.t('tools.database.restore'),
         onClick: () => {

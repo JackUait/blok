@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "كۆپەيتىش",
   "tools.database.tableMoveToTrash": "ئەخلەت چېلىكىگە يۆتكەش",
   "tools.database.movedToTrash": "ئەخلەت چېلىكىگە يۆتكەلدى",
+  "tools.database.blocksDeleted_one": "{count} بۆلەك ئۆچۈرۈلدى",
+  "tools.database.blocksDeleted_other": "{count} بۆلەك ئۆچۈرۈلدى",
   "tools.database.restore": "ئەسلىگە كەلتۈرۈش",
   "tools.database.tableCollapseGroup": "گۇرۇپپىنى يىغىش",
   "tools.database.tableExpandGroup": "گۇرۇپپىنى يېيىش",

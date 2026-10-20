@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Megkettőzés",
   "tools.database.tableMoveToTrash": "Áthelyezés a kukába",
   "tools.database.movedToTrash": "Áthelyezve a kukába",
+  "tools.database.blocksDeleted_one": "{count} blokk törölve",
+  "tools.database.blocksDeleted_other": "{count} blokk törölve",
   "tools.database.restore": "Visszaállítás",
   "tools.database.tableCollapseGroup": "Csoport összecsukása",
   "tools.database.tableExpandGroup": "Csoport kibontása",

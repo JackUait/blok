@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "דופּליקירן",
   "tools.database.tableMoveToTrash": "אַריבערפֿירן אין מיסט",
   "tools.database.movedToTrash": "אַריבערגעפֿירט אין מיסט",
+  "tools.database.blocksDeleted_one": "{count} בלאָקן אויסגעמעקט",
+  "tools.database.blocksDeleted_other": "{count} בלאָקן אויסגעמעקט",
   "tools.database.restore": "צוריקשטעלן",
   "tools.database.tableCollapseGroup": "פֿאַרמאַכן גרופּע",
   "tools.database.tableExpandGroup": "עפֿענען גרופּע",

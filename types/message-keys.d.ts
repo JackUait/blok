@@ -480,6 +480,8 @@ export type BlokMessageKey =
   | 'tools.database.backlinksNone'
   | 'tools.database.backlinksOne'
   | 'tools.database.backlinksTitle'
+  | 'tools.database.blocksDeleted_one'
+  | 'tools.database.blocksDeleted_other'
   | 'tools.database.buttonActionAddPage'
   | 'tools.database.buttonActionCallback'
   | 'tools.database.buttonActionDefineVariables'

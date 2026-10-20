@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "प्रत बनवा",
   "tools.database.tableMoveToTrash": "कचरापेटीत हलवा",
   "tools.database.movedToTrash": "कचरापेटीत हलवले",
+  "tools.database.blocksDeleted_one": "{count} ब्लॉक हटवले",
+  "tools.database.blocksDeleted_other": "{count} ब्लॉक हटवले",
   "tools.database.restore": "पुनर्संचयित करा",
   "tools.database.tableCollapseGroup": "गट संकुचित करा",
   "tools.database.tableExpandGroup": "गट विस्तृत करा",

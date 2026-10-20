@@ -75,6 +75,12 @@ export interface NotifierOptions {
    * `data:image/` URL; `null` (or any other URL) draws a broken-image glyph.
    */
   thumbnails?: (string | null)[];
+
+  /**
+   * Screen-reader text read instead of `message` (alert toasts only).
+   * With it, the toast is no longer a live region; the text goes through Blok's announcer.
+   */
+  announce?: string;
 }
 
 /**

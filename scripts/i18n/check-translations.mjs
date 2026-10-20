@@ -513,6 +513,17 @@ export function scanSourceKeys(dir) {
 }
 
 /**
+ * A plural call names the base key; en.json holds only its `_one`/`_other` forms.
+ *
+ * @param {Set<string>} sourceKeys - Keys defined in en.json
+ * @param {string} key - Key used in source
+ * @returns {boolean} True if en.json defines it
+ */
+export function isSourceKeyDefined(sourceKeys, key) {
+  return sourceKeys.has(key) || sourceKeys.has(`${key}_other`);
+}
+
+/**
  * Phase 3: Verifies that all static i18n keys used in source code exist in en.json.
  *
  * @param {Set<string>} sourceKeys - Keys defined in en.json
@@ -526,7 +537,7 @@ function checkKeyCoverage(sourceKeys) {
   console.log(`${colors.dim}Found ${usedKeys.size} unique static key references in source${colors.reset}\n`);
 
   // Keys used in code but not defined in en.json
-  const missingFromSource = [...usedKeys].filter((key) => !sourceKeys.has(key));
+  const missingFromSource = [...usedKeys].filter((key) => !isSourceKeyDefined(sourceKeys, key));
 
   // Keys defined in en.json but not referenced in code (warning only)
   const unusedInCode = [...sourceKeys].filter((key) => !usedKeys.has(key));

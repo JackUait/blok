@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "ເຮັດສຳເນົາ",
   "tools.database.tableMoveToTrash": "ຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
   "tools.database.movedToTrash": "ຍ້າຍໄປຖັງຂີ້ເຫຍື້ອແລ້ວ",
+  "tools.database.blocksDeleted_one": "ລຶບ {count} ບລັອກແລ້ວ",
+  "tools.database.blocksDeleted_other": "ລຶບ {count} ບລັອກແລ້ວ",
   "tools.database.restore": "ກູ້ຄືນ",
   "tools.database.tableCollapseGroup": "ຍຸບກຸ່ມ",
   "tools.database.tableExpandGroup": "ຂະຫຍາຍກຸ່ມ",

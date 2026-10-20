@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "ស្ទួន",
   "tools.database.tableMoveToTrash": "ផ្លាស់ទីទៅធុងសំរាម",
   "tools.database.movedToTrash": "បានផ្លាស់ទីទៅធុងសំរាម",
+  "tools.database.blocksDeleted_one": "បានលុបប្លុក {count}",
+  "tools.database.blocksDeleted_other": "បានលុបប្លុក {count}",
   "tools.database.restore": "ស្ដារឡើងវិញ",
   "tools.database.tableCollapseGroup": "បង្រួមក្រុម",
   "tools.database.tableExpandGroup": "ពង្រីកក្រុម",

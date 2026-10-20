@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "අනුපිටපත",
   "tools.database.tableMoveToTrash": "කුණු බඳුනට ගෙන යන්න",
   "tools.database.movedToTrash": "කුණු බඳුනට ගෙන ගියා",
+  "tools.database.blocksDeleted_one": "බ්ලොක් {count}ක් මකා ඇත",
+  "tools.database.blocksDeleted_other": "බ්ලොක් {count}ක් මකා ඇත",
   "tools.database.restore": "ප්‍රතිසාධනය කරන්න",
   "tools.database.tableCollapseGroup": "සමූහය හකුළන්න",
   "tools.database.tableExpandGroup": "සමූහය පුළුල් කරන්න",

@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Dublikatını çıxar",
   "tools.database.tableMoveToTrash": "Zibil qutusuna köçür",
   "tools.database.movedToTrash": "Zibil qutusuna köçürüldü",
+  "tools.database.blocksDeleted_one": "{count} blok silindi",
+  "tools.database.blocksDeleted_other": "{count} blok silindi",
   "tools.database.restore": "Bərpa et",
   "tools.database.tableCollapseGroup": "Qrupu yığ",
   "tools.database.tableExpandGroup": "Qrupu aç",

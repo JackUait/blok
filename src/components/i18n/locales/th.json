@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "ทำซ้ำ",
   "tools.database.tableMoveToTrash": "ย้ายไปถังขยะ",
   "tools.database.movedToTrash": "ย้ายไปถังขยะแล้ว",
+  "tools.database.blocksDeleted_one": "ลบ {count} บล็อกแล้ว",
+  "tools.database.blocksDeleted_other": "ลบ {count} บล็อกแล้ว",
   "tools.database.restore": "กู้คืน",
   "tools.database.tableCollapseGroup": "ยุบกลุ่ม",
   "tools.database.tableExpandGroup": "ขยายกลุ่ม",

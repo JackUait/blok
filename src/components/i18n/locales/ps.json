@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "کاپي جوړه کړئ",
   "tools.database.tableMoveToTrash": "کثافاتو ته ولېږدوئ",
   "tools.database.movedToTrash": "کثافاتو ته ولېږدول شو",
+  "tools.database.blocksDeleted_one": "{count} بلاکونه ړنګ شول",
+  "tools.database.blocksDeleted_other": "{count} بلاکونه ړنګ شول",
   "tools.database.restore": "بېرته راوړئ",
   "tools.database.tableCollapseGroup": "ګروپ راټول کړئ",
   "tools.database.tableExpandGroup": "ګروپ پراخ کړئ",

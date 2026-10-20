@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1284 + 125 + 478 + 4 closure for all 1891 keys', () => {
+  it('rebuilds a disjoint 1284 + 125 + 480 + 4 closure for all 1893 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1891);
+    expect(lifecycle.size).toBe(1893);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -452,7 +452,8 @@ describe('current English catalog lifecycle coverage', () => {
       // all built from a short name.
       // +21 / -12: Edit cadence's labels, Weekday and the unit plurals (templateRepeatUnit<Unit>_*) replace the
       // Every-N plurals and Daily/Weekly/Monthly/Yearly, all built from a short name.
-      'registered-namespace-compatible': 478,
+      // +2: the gallery trash toast's screen-reader plural tools.database.blocksDeleted_one/_other.
+      'registered-namespace-compatible': 480,
       'catalog-only': 4,
     });
     expect(

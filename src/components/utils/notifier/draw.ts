@@ -1,4 +1,5 @@
 import { IconCheck, IconCross, IconImageBroken } from '../../icons';
+import { announce } from '../announcer';
 import { openModalDialog, type ModalDialogHandle } from '../modal-dialog';
 import { twJoin } from '../tw';
 
@@ -55,6 +56,13 @@ export const CSS = {
  * pass the localized value to {@link createDismissButton}.
  */
 export const NOTIFIER_DISMISS_KEY = 'notifier.dismiss';
+
+/**
+ * Toasts whose screen-reader text goes through the announcer: they have no live region.
+ */
+const announcedToasts = new WeakSet<HTMLElement>();
+
+const politenessOf = (style: string | undefined): 'polite' | 'assertive' => style === 'error' ? 'assertive' : 'polite';
 
 /**
  * Close handlers for open confirm/prompt modal dialogs, keyed by the
@@ -373,6 +381,9 @@ export const drawResolved = (notify: HTMLElement, message: string): void => {
   if (text !== null) {
     text.textContent = message;
   }
+  if (announcedToasts.has(notify)) {
+    announce(message);
+  }
   notify.append(...ghosts);
   glideHeight(notify, box.height);
   if (hadFocus) {
@@ -470,7 +481,13 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   // `status` is the correct role for a transient, non-critical live message;
   // `region` implies a persistent landmark. confirm()/prompt() upgrade this to
   // `alertdialog` via openModalDialog().
-  notify.setAttribute('role', 'status');
+  // confirm/prompt are labelled dialogs, so they ignore `announce`.
+  const spoken = options.announce !== undefined && options.announce !== '' && options.type !== 'confirm' && options.type !== 'prompt';
+
+  // With separate screen-reader text the toast must not be a live region, or both get read.
+  if (!spoken) {
+    notify.setAttribute('role', 'status');
+  }
 
   if (style) {
     notify.setAttribute('data-blok-testid', `notification-${style}`);
@@ -490,8 +507,12 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   messageIdState.count += 1;
   messageText.id = `blok-notification-message-${messageIdState.count}`;
   messageText.setAttribute('data-blok-testid', MESSAGE_TEXT_TESTID);
-  messageText.setAttribute('aria-live', style === 'error' ? 'assertive' : 'polite');
-  messageText.setAttribute('aria-atomic', 'true');
+  if (spoken) {
+    announcedToasts.add(notify);
+  } else {
+    messageText.setAttribute('aria-live', politenessOf(style));
+    messageText.setAttribute('aria-atomic', 'true');
+  }
 
   // Screen readers reliably announce a live region only when its content is
   // mutated *after* the region is already connected to the DOM. Insert the node
@@ -503,6 +524,9 @@ export const alert = (options: NotifierOptions): HTMLElement => {
     // A card resolved before this ran already holds its final text.
     if (messageText.isConnected && !notify.hasAttribute('data-resolved')) {
       messageText.innerHTML = options.message;
+      if (spoken) {
+        announce(options.announce ?? '', { politeness: politenessOf(style) });
+      }
     }
   });
 

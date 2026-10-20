@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "ನಕಲು ಮಾಡಿ",
   "tools.database.tableMoveToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಿ",
   "tools.database.movedToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಲಾಗಿದೆ",
+  "tools.database.blocksDeleted_one": "ಅಳಿಸಲಾದ ಬ್ಲಾಕ್‌ಗಳು: {count}",
+  "tools.database.blocksDeleted_other": "ಅಳಿಸಲಾದ ಬ್ಲಾಕ್‌ಗಳು: {count}",
   "tools.database.restore": "ಮರುಸ್ಥಾಪಿಸಿ",
   "tools.database.tableCollapseGroup": "ಗುಂಪನ್ನು ಕುಗ್ಗಿಸಿ",
   "tools.database.tableExpandGroup": "ಗುಂಪನ್ನು ವಿಸ್ತರಿಸಿ",

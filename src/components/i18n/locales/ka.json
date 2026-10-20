@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "დუბლირება",
   "tools.database.tableMoveToTrash": "ნაგავში გადატანა",
   "tools.database.movedToTrash": "გადატანილია ნაგავში",
+  "tools.database.blocksDeleted_one": "წაიშალა {count} ბლოკი",
+  "tools.database.blocksDeleted_other": "წაიშალა {count} ბლოკი",
   "tools.database.restore": "აღდგენა",
   "tools.database.tableCollapseGroup": "ჯგუფის ჩაკეცვა",
   "tools.database.tableExpandGroup": "ჯგუფის გაშლა",

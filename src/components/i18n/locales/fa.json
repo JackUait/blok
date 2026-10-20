@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "تکثیر",
   "tools.database.tableMoveToTrash": "انتقال به سطل زباله",
   "tools.database.movedToTrash": "به سطل زباله منتقل شد",
+  "tools.database.blocksDeleted_one": "{count} بلوک حذف شد",
+  "tools.database.blocksDeleted_other": "{count} بلوک حذف شد",
   "tools.database.restore": "بازیابی",
   "tools.database.tableCollapseGroup": "جمع کردن گروه",
   "tools.database.tableExpandGroup": "گسترش گروه",

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { alert, confirm, prompt, getWrapper, CSS, createDismissButton, NOTIFIER_DISMISS_KEY } from '../../../../src/components/utils/notifier/draw';
+import { alert, confirm, prompt, getWrapper, CSS, createDismissButton, NOTIFIER_DISMISS_KEY, drawResolved } from '../../../../src/components/utils/notifier/draw';
+import { destroyAnnouncer } from '../../../../src/components/utils/announcer';
 import { show } from '../../../../src/components/utils/notifier/index';
 import { IconCross } from '../../../../src/components/icons';
 
@@ -117,6 +118,76 @@ describe('Notifier draw', () => {
 
       expect(live?.textContent).toBe('bad');
       el.remove();
+    });
+  });
+
+  describe('alert with separate screen-reader text (announce)', () => {
+    const announcerText = (politeness: 'polite' | 'assertive'): string | null | undefined =>
+      [...document.querySelectorAll('[data-blok-announcer]')]
+        .find((region) => region.getAttribute('aria-live') === politeness)?.textContent;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      destroyAnnouncer();
+      vi.useRealTimers();
+      document.body.innerHTML = '';
+    });
+
+    it('reads the announce text, never the visible message', async () => {
+      const el = alert({ message: 'Moved to Trash', announce: '2 blocks deleted' });
+
+      document.body.appendChild(el);
+      await Promise.resolve();
+      vi.advanceTimersByTime(0);
+
+      expect(announcerText('polite')).toBe('2 blocks deleted');
+      expect(el.hasAttribute('role')).toBe(false);
+      expect(el.querySelector('[aria-live]')).toBeNull();
+      expect(el.textContent).toContain('Moved to Trash');
+    });
+
+    it('announces error-style alerts assertively', async () => {
+      const el = alert({ message: 'Failed', style: 'error', announce: 'Delete failed' });
+
+      document.body.appendChild(el);
+      await Promise.resolve();
+      vi.advanceTimersByTime(0);
+
+      expect(announcerText('assertive')).toBe('Delete failed');
+    });
+
+    it('says nothing for a toast that never connected', async () => {
+      alert({ message: 'Moved to Trash', announce: 'never said' });
+      await Promise.resolve();
+      vi.advanceTimersByTime(0);
+
+      expect(announcerText('polite') ?? '').toBe('');
+    });
+
+    it('a confirm dialog ignores announce: its label is the message', async () => {
+      const el = confirm({ type: 'confirm', message: 'Delete it?', announce: 'never said' });
+
+      document.body.appendChild(el);
+      await Promise.resolve();
+      vi.advanceTimersByTime(0);
+
+      expect(announcerText('polite') ?? '').toBe('');
+      el.remove();
+    });
+
+    it('announces the resolved message of a card, which has no live region', async () => {
+      const el = alert({ message: 'Moved to Trash', announce: '1 block deleted', actions: [{ label: 'Restore', onClick: () => {} }] });
+
+      document.body.appendChild(el);
+      await Promise.resolve();
+      vi.advanceTimersByTime(1000);
+      drawResolved(el, 'Restored');
+      vi.advanceTimersByTime(0);
+
+      expect(announcerText('polite')).toBe('Restored');
     });
   });
 

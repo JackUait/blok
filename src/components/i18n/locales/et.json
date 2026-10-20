@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Dubleeri",
   "tools.database.tableMoveToTrash": "Teisalda prügikasti",
   "tools.database.movedToTrash": "Teisaldatud prügikasti",
+  "tools.database.blocksDeleted_one": "{count} plokk kustutatud",
+  "tools.database.blocksDeleted_other": "{count} plokki kustutatud",
   "tools.database.restore": "Taasta",
   "tools.database.tableCollapseGroup": "Ahenda rühm",
   "tools.database.tableExpandGroup": "Laienda rühm",

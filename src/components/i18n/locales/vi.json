@@ -1032,6 +1032,8 @@
   "tools.database.tableDuplicate": "Nhân bản",
   "tools.database.tableMoveToTrash": "Chuyển vào thùng rác",
   "tools.database.movedToTrash": "Đã chuyển vào thùng rác",
+  "tools.database.blocksDeleted_one": "Đã xóa {count} khối",
+  "tools.database.blocksDeleted_other": "Đã xóa {count} khối",
   "tools.database.restore": "Khôi phục",
   "tools.database.tableCollapseGroup": "Thu gọn nhóm",
   "tools.database.tableExpandGroup": "Mở rộng nhóm",

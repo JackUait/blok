@@ -227,15 +227,16 @@ test('Tasks Tracker: the database gets its icon, "New task" is the Default templ
   await expect(icon).toHaveCount(0);
 });
 
-test('Skills reads "Undo skills database"; Projects has no such row', async ({ page }) => {
+test('Skills reads "Undo skills database"', async ({ page }) => {
   await mount(page);
   await insertDatabase(page);
   await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Skills' }).click();
   await expect(page.locator('[data-blok-database-icon="gray"]')).toBeVisible();
   await openSettings(page);
   await expect(page.getByTestId('database-settings-undo-starter')).toHaveText('Undo skills database');
-  await page.keyboard.press('Escape');
+});
 
+test('Projects has no "Undo … database" row (Notion showed "Turn into" there)', async ({ page }) => {
   await mount(page);
   await insertDatabase(page);
   await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Projects' }).click();

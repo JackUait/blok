@@ -3996,6 +3996,7 @@ span[data-blok-slash-search] {
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-table-selection-shadow: var(--blok-database-table-open-shadow);
   --blok-database-table-cell-ring: rgba(55, 53, 47, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
@@ -4126,9 +4127,12 @@ span[data-blok-slash-search] {
   --blok-database-table-muted-text: rgb(125, 122, 117);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
-  --blok-database-table-control-border: rgba(255, 255, 243, 0.082);
+  --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-popover-bg: rgb(37, 37, 37);
+  --blok-database-popover-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
@@ -4204,13 +4208,13 @@ span[data-blok-slash-search] {
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
   --blok-database-feed-reaction-bg: rgb(32, 32, 32);
   --blok-database-new-bg: rgb(30, 110, 195);
-  --blok-database-new-hover-bg: rgb(24, 96, 172);
+  --blok-database-new-hover-bg: rgb(36, 115, 201);
   --blok-database-new-text: rgb(243, 249, 253);
-  --blok-database-new-divider: rgba(28, 19, 1, 0.11);
+  --blok-database-new-divider: rgba(255, 255, 235, 0.1);
   --blok-database-dependency-line: rgb(125, 122, 117);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
-  --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.055);
+  --blok-database-tab-bg-hover: rgba(255, 255, 235, 0.1);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
@@ -4265,9 +4269,12 @@ span[data-blok-slash-search] {
   --blok-database-table-muted-text: rgb(125, 122, 117);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
-  --blok-database-table-control-border: rgba(255, 255, 243, 0.082);
+  --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-popover-bg: rgb(37, 37, 37);
+  --blok-database-popover-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
@@ -4343,13 +4350,13 @@ span[data-blok-slash-search] {
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
   --blok-database-feed-reaction-bg: rgb(32, 32, 32);
   --blok-database-new-bg: rgb(30, 110, 195);
-  --blok-database-new-hover-bg: rgb(24, 96, 172);
+  --blok-database-new-hover-bg: rgb(36, 115, 201);
   --blok-database-new-text: rgb(243, 249, 253);
-  --blok-database-new-divider: rgba(28, 19, 1, 0.11);
+  --blok-database-new-divider: rgba(255, 255, 235, 0.1);
   --blok-database-dependency-line: rgb(125, 122, 117);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
-  --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.055);
+  --blok-database-tab-bg-hover: rgba(255, 255, 235, 0.1);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
@@ -9215,7 +9222,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   height: 32px;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-open-bg);
-  box-shadow: var(--blok-database-table-open-shadow);
+  box-shadow: var(--blok-database-table-selection-shadow);
 }
 
 [data-blok-database-view-bar][data-blok-database-selecting] {

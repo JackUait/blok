@@ -880,6 +880,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DARK_VIEWS_BYTES = 2_137;
     // database.css: the row page's Favorite star in the header button lists and end-of-bar margins (research/21 §5).
     const DATABASE_ROW_PAGE_FAVORITE_BYTES = 451;
+    // database.css: dark table chrome measured in research/21 §1 (tab hover, New hover and divider, button border, selection bar shadow, database menu fill and shadow).
+    const DATABASE_DARK_TABLE_CHROME_BYTES = 1_021;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -990,8 +992,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROW_PAGE_TAB_OVERFLOW_BYTES
       + DATABASE_DARK_PEEK_BUILDER_BYTES
       + DATABASE_DARK_VIEWS_BYTES
-
-      + DATABASE_ROW_PAGE_FAVORITE_BYTES;
+      + DATABASE_ROW_PAGE_FAVORITE_BYTES
+      + DATABASE_DARK_TABLE_CHROME_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -18,6 +18,8 @@ const holderWithChild = (): { holder: HTMLElement; content: HTMLElement; marker:
   holder.setAttribute('data-blok-element', '');
   content.setAttribute('data-blok-element-content', '');
   input.setAttribute('contenteditable', 'true');
+  // The real list marker is contenteditable="false" (src/tools/list/dom-builder.ts).
+  marker.setAttribute('contenteditable', 'false');
   child.setAttribute('data-blok-element', '');
   childContent.setAttribute('data-blok-element-content', '');
   childInput.setAttribute('contenteditable', 'true');

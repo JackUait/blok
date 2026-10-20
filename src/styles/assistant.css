@@ -338,11 +338,11 @@
   moves; live-preview.ts draws the new text over them. Markers, checkboxes and
   icons stay. A nested child block's fields are turned back on by the longer rule.
 */
-[data-blok-element][data-blok-ai-rewriting] [data-blok-element-content] [contenteditable] {
+[data-blok-element][data-blok-ai-rewriting] [data-blok-element-content] [contenteditable]:not([contenteditable="false"]) {
   visibility: hidden;
 }
 
-[data-blok-element][data-blok-ai-rewriting] [data-blok-element]:not([data-blok-ai-rewriting]) [data-blok-element-content] [contenteditable] {
+[data-blok-element][data-blok-ai-rewriting] [data-blok-element]:not([data-blok-ai-rewriting]) [data-blok-element-content] [contenteditable]:not([contenteditable="false"]) {
   visibility: visible;
 }
 

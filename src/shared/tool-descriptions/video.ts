@@ -37,7 +37,7 @@ export const VIDEO_ACTIONS: ToolActionDeclaration[] = [
 
 export const describeVideo = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A video player.',
-  guidance: 'Set the source with video.setSource. caption is plain text.',
+  guidance: 'Insert it with url set; replace the video with video.setSource, which also copies it to the host. caption is plain text.',
   data: VIDEO_DATA,
   summaryFields: ['alignment', 'width', 'autoplay', 'loop'],
   actions: VIDEO_ACTIONS,

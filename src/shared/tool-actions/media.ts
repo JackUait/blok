@@ -44,6 +44,29 @@ const rehost = (kind: AssetKind, tool: string, field: 'url' | 'coverUrl'): ToolA
   },
 });
 
+/**
+ * A rejectWrite for a block whose blank source renders its empty upload or link state. Only a
+ * write that sets the field is checked, so edits to a block a person left empty still work.
+ * A non-http value is allowed: a host uploader may return a relative URL.
+ */
+export const requireSource = (field: string, how: string) =>
+  (data: Record<string, unknown>, written: readonly string[]): string | undefined => {
+    const value = data[field];
+
+    return !written.includes(field) || (typeof value === 'string' && value.trim() !== '')
+      ? undefined
+      : `"${field}" is blank, which shows an empty placeholder. ${how}`;
+  };
+
+const setWithUrl = (tool: string): string => `Insert the ${tool} with url set, or replace it with ${tool}.setSource.`;
+
+export const MEDIA_REJECT_WRITE = {
+  image: requireSource('url', setWithUrl('image')),
+  video: requireSource('url', setWithUrl('video')),
+  audio: requireSource('url', setWithUrl('audio')),
+  file: requireSource('url', setWithUrl('file')),
+} as const;
+
 export const MEDIA_ACTION_HANDLERS = {
   image: { setSource: rehost('image', 'image', 'url') },
   video: { setSource: rehost('video', 'video', 'url') },

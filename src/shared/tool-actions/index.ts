@@ -4,8 +4,8 @@ import { BUILT_IN_INLINE_SANITIZE } from '../tool-descriptions/sanitize/inline';
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from './columns';
 import { DATABASE_ACTION_HANDLERS } from './database';
 import { IMAGE_ACTION_HANDLERS } from './image';
-import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectEmbedWrite } from './link';
-import { MEDIA_ACTION_HANDLERS } from './media';
+import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from './link';
+import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from './media';
 import { PAGE_ACTION_HANDLERS } from './page';
 import { buildToolRuntimes } from './runtime';
 import { normalizeTable, TABLE_ACTION_HANDLERS } from './table';
@@ -20,12 +20,12 @@ export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockIn
   column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
   page: { actions: PAGE_ACTION_HANDLERS },
   tabs: { defaultChildren: TABS_DEFAULT_CHILDREN, actions: TABS_ACTION_HANDLERS },
-  image: { actions: { ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS } },
-  video: { actions: MEDIA_ACTION_HANDLERS.video },
-  audio: { actions: MEDIA_ACTION_HANDLERS.audio },
-  file: { actions: MEDIA_ACTION_HANDLERS.file },
+  image: { rejectWrite: MEDIA_REJECT_WRITE.image, actions: { ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS } },
+  video: { rejectWrite: MEDIA_REJECT_WRITE.video, actions: MEDIA_ACTION_HANDLERS.video },
+  audio: { rejectWrite: MEDIA_REJECT_WRITE.audio, actions: MEDIA_ACTION_HANDLERS.audio },
+  file: { rejectWrite: MEDIA_REJECT_WRITE.file, actions: MEDIA_ACTION_HANDLERS.file },
   embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
-  bookmark: { actions: LINK_ACTION_HANDLERS.bookmark },
+  bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
   database: { actions: DATABASE_ACTION_HANDLERS },
   // The list's conversionConfig is functions (they carry a to-do's checked state in the editor).
   // Its text field is `text` both ways, which is what those functions read and write.

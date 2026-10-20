@@ -1,5 +1,7 @@
 import { EMBED_SERVICES, matchEmbedService } from '../embed-registry';
 
+import { requireSource } from './media';
+
 import type { EmbedMatch } from '../embed-registry';
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { BookmarkMeta } from '../../../types/tools/bookmark';
@@ -119,5 +121,7 @@ const create: ToolActionImpl<CreateArgs, BookmarkMeta, { id: string; childIds: s
     childIds: [],
   }),
 };
+
+export const rejectBookmarkWrite = requireSource('url', 'Create one with bookmark.create, or insert it with url set.');
 
 export const LINK_ACTION_HANDLERS = { embed: { setUrl, create: createEmbed }, bookmark: { create } } as const;

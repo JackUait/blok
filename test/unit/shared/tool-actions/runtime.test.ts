@@ -7,8 +7,8 @@ import { BUILT_IN_RUNTIME_PARTS, BUILT_IN_TOOL_RUNTIMES } from '../../../../src/
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from '../../../../src/shared/tool-actions/columns';
 import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/database';
 import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
-import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
-import { MEDIA_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/media';
+import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
+import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from '../../../../src/shared/tool-actions/media';
 import { PAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/page';
 import { buildToolRuntimes, composeToolSanitize } from '../../../../src/shared/tool-actions/runtime';
 import { TABLE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/table';
@@ -276,7 +276,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(Object.keys(builtInEditorTools())).toEqual([...BLOCK_KEYS, ...INLINE_KEYS]);
   });
 
-  it('registers container seeds and tool actions with table and embed normalization', () => {
+  it('registers container seeds, tool actions, normalization and write checks', () => {
     const defaultChildren: InsertSpec[] = [{ type: 'paragraph', data: { text: [] } }];
 
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren).toEqual(defaultChildren);
@@ -291,12 +291,12 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
       page: { actions: PAGE_ACTION_HANDLERS },
       tabs: { defaultChildren: TABS_DEFAULT_CHILDREN, actions: TABS_ACTION_HANDLERS },
-      image: { actions: IMAGE_ACTIONS },
-      video: { actions: MEDIA_ACTION_HANDLERS.video },
-      audio: { actions: MEDIA_ACTION_HANDLERS.audio },
-      file: { actions: MEDIA_ACTION_HANDLERS.file },
+      image: { rejectWrite: MEDIA_REJECT_WRITE.image, actions: IMAGE_ACTIONS },
+      video: { rejectWrite: MEDIA_REJECT_WRITE.video, actions: MEDIA_ACTION_HANDLERS.video },
+      audio: { rejectWrite: MEDIA_REJECT_WRITE.audio, actions: MEDIA_ACTION_HANDLERS.audio },
+      file: { rejectWrite: MEDIA_REJECT_WRITE.file, actions: MEDIA_ACTION_HANDLERS.file },
       embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
-      bookmark: { actions: LINK_ACTION_HANDLERS.bookmark },
+      bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
       database: { actions: DATABASE_ACTION_HANDLERS },
       list: { conversion: { export: 'text', import: 'text' } },
     });

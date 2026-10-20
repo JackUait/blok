@@ -249,7 +249,7 @@ export const IMAGE_ACTIONS: ToolActionDeclaration[] = [
 
 export const describeImage = (config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'An image with optional caption, crop, turn, colour look and drawings.',
-  guidance: 'Set or replace the picture with image.setSource. Crop, rotate, flip and straighten with image.crop, image.rotate, image.flip and image.straighten: each also turns crop and markup. Add or change drawings with image.addMarkup, image.updateMarkup and image.removeMarkup. caption and alt are plain text.',
+  guidance: 'Insert it with url set; replace the picture with image.setSource, which also copies it to the host. Crop, rotate, flip and straighten with image.crop, image.rotate, image.flip and image.straighten: each also turns crop and markup. Add or change drawings with image.addMarkup, image.updateMarkup and image.removeMarkup. caption and alt are plain text.',
   data: Array.isArray(config.filters)
     ? { ...IMAGE_DATA, properties: { ...IMAGE_DATA.properties, filter: { type: 'string', enum: filterNames(config.filters) } } }
     : IMAGE_DATA,

@@ -1,14 +1,19 @@
 import type { HostService, SnapshotBlock, ToolConfig, ToolRegistrySnapshot } from '../../../types';
 import { BUILT_IN_RUNTIME_PARTS } from '../../shared/tool-actions';
 import type { ToolRuntime, ToolRuntimeRegistry } from '../../shared/tool-actions/runtime';
+import { AudioTool } from '../../tools/audio';
 import { CalloutTool } from '../../tools/callout';
 import { Column } from '../../tools/column';
 import { ColumnList } from '../../tools/column-list';
+import { FileTool } from '../../tools/file';
+import { ImageTool } from '../../tools/image';
+import { Bookmark } from '../../tools/link/bookmark';
 import { Embed } from '../../tools/link/embed';
 import { ListItem } from '../../tools/list';
 import { TabsTool } from '../../tools/tabs';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 import { Table } from '../../tools/table';
+import { VideoTool } from '../../tools/video';
 import { isRestrictedInTableCell } from '../../tools/table/table-restrictions';
 import { log } from '../utils/logger';
 import { translateToolTitle } from '../utils/tools';
@@ -108,19 +113,34 @@ export const snapshotFromTools = (
   })),
 });
 
+/**
+ * Built-in classes whose BUILT_IN_RUNTIME_PARTS entry the editor uses. Keyed by class, not by
+ * registration name: an alias gets the parts, a custom class under a built-in name does not.
+ * test/unit/architecture/agent-runtime-parts-editor-parity-law.test.ts fails for a missing entry.
+ */
+const PART_OWNERS = new Map<unknown, string>([
+  [Table, 'table'],
+  [ColumnList, 'column_list'],
+  [Column, 'column'],
+  [TabsTool, 'tabs'],
+  [CalloutTool, 'callout'],
+  [Embed, 'embed'],
+  [Bookmark, 'bookmark'],
+  [ImageTool, 'image'],
+  [VideoTool, 'video'],
+  [AudioTool, 'audio'],
+  [FileTool, 'file'],
+  // Feeds only the agent planner; in-editor conversion still runs the list's conversionConfig functions.
+  [ListItem, 'list'],
+]);
+
 export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new Map(
   [...tools.blockTools.values()]
     .filter(tool => !tool.isInternal)
     .map((tool): [string, ToolRuntime] => {
       const toolClass = tool.toolClass;
-      const tableParts = toolClass === Table ? BUILT_IN_RUNTIME_PARTS.table : undefined;
-      const listParts = Object.is(toolClass, ColumnList) ? BUILT_IN_RUNTIME_PARTS.column_list : tableParts;
-      const columnParts = Object.is(toolClass, Column) ? BUILT_IN_RUNTIME_PARTS.column : listParts;
-      const tabsParts = Object.is(toolClass, TabsTool) ? BUILT_IN_RUNTIME_PARTS.tabs : columnParts;
-      const embedParts = Object.is(toolClass, Embed) ? BUILT_IN_RUNTIME_PARTS.embed : tabsParts;
-      const calloutParts = Object.is(toolClass, CalloutTool) ? BUILT_IN_RUNTIME_PARTS.callout : embedParts;
-      // Feeds only the agent planner; in-editor conversion still runs the list's conversionConfig functions.
-      const parts = Object.is(toolClass, ListItem) ? BUILT_IN_RUNTIME_PARTS.list : calloutParts;
+      const owner = PART_OWNERS.get(toolClass);
+      const parts = owner === undefined ? undefined : BUILT_IN_RUNTIME_PARTS[owner];
 
       return [tool.name, {
         name: tool.name,

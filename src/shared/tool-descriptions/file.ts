@@ -22,7 +22,7 @@ export const FILE_ACTIONS: ToolActionDeclaration[] = [
 
 export const describeFile = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A downloadable file card.',
-  guidance: 'Set the file with file.setSource. fileName and caption are plain text.',
+  guidance: 'Insert it with url set; replace the file with file.setSource, which also copies it to the host. fileName and caption are plain text.',
   data: FILE_DATA,
   inputFields: ['fileName', 'caption'],
   summaryFields: ['fileName', 'mimeType'],

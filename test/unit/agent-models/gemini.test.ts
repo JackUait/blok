@@ -280,6 +280,88 @@ describe('geminiModel', () => {
       expect(response.stop_reason).toBe('tool_use');
     });
 
+    it('emits nothing for an attempt whose call came before a later MALFORMED_FUNCTION_CALL, and the loop applies only the retry', async () => {
+      const malformed = sse(
+        { candidates: [{ content: { role: 'model', parts: [{ functionCall: { id: 'bad', name: 'blok_read', args: { attempt: 1 } } }] } }] },
+        { candidates: [{ content: { role: 'model', parts: [] }, finishReason: 'MALFORMED_FUNCTION_CALL' }] }
+      );
+      const good = sse({ candidates: [{ content: { role: 'model', parts: [{ functionCall: { id: 'good', name: 'blok_read', args: { attempt: 2 } } }] }, finishReason: 'STOP' }] });
+      const done = sse({ candidates: [{ content: { role: 'model', parts: [{ text: 'Done.' }] }, finishReason: 'STOP' }] });
+      const { stream, bodies } = fakeStream(malformed, good, done);
+      const events: AgentModelStreamEvent[] = [];
+      const applied: unknown[] = [];
+
+      const result = await runAssistantLoop({
+        model: geminiModel({ model: 'm', stream }), system: 'sys', tools: [{ name: 'blok_read', description: 'd', input_schema: { type: 'object' } }],
+        messages: [{ role: 'user', content: 'Go' }],
+        call: async (_name, input) => {
+          applied.push(input);
+
+          return { content: '{"ok":true}', isError: false };
+        },
+        signal: new AbortController().signal, maxSteps: 5, onStream: (event) => events.push(event),
+      });
+
+      expect(applied).toEqual([{ attempt: 2 }]);
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'good', name: 'blok_read' },
+        { type: 'tool_input', index: 0, json: '{"attempt":2}' },
+        { type: 'tool_end', index: 0 },
+      ]);
+      expect(result).toEqual({ status: 'done', reply: 'Done.' });
+      expect(bodies).toHaveLength(3);
+    });
+
+    it('emits nothing for a call followed by TOO_MANY_TOOL_CALLS, and the run fails as before', async () => {
+      const text = sse(
+        { candidates: [{ content: { role: 'model', parts: [{ functionCall: { id: 'c1', name: 'blok_read', args: {} } }] } }] },
+        { candidates: [{ content: { role: 'model', parts: [] }, finishReason: 'TOO_MANY_TOOL_CALLS' }] }
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      await expect(geminiModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event))))
+        .rejects.toThrow('Gemini stopped: TOO_MANY_TOOL_CALLS');
+      expect(events).toEqual([]);
+    });
+
+    it('emits nothing when the prompt is blocked, even with a call and STOP', async () => {
+      const text = sse(
+        { candidates: [{ content: { role: 'model', parts: [{ functionCall: { id: 'c1', name: 'blok_read', args: {} } }] }, finishReason: 'STOP' }] },
+        { promptFeedback: { blockReason: 'SAFETY' } }
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      const response = await geminiModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([]);
+      expect(response.stop_reason).toBe('refusal');
+    });
+
+    it('emits a STOP stream\'s calls only after the last chunk is read', async () => {
+      const chunks = FIXTURE.split(/(?<=\n\n)/).filter((chunk) => chunk.trim() !== '');
+      const served = { count: 0 };
+      const seen: number[] = [];
+      const stream = async (): Promise<ReadableStream<Uint8Array>> => new ReadableStream({
+        pull: (controller) => {
+          const chunk = chunks[served.count];
+
+          if (chunk === undefined) {
+            controller.close();
+
+            return;
+          }
+          served.count += 1;
+          controller.enqueue(new TextEncoder().encode(chunk));
+        },
+      }, { highWaterMark: 0 });
+
+      await geminiModel({ model: 'm', stream })(request(() => seen.push(served.count)));
+
+      expect(chunks).toHaveLength(6);
+      expect(seen).toHaveLength(6);
+      expect(seen.every((count) => count === chunks.length)).toBe(true);
+    });
+
     it('runs a whole streamed turn through the loop', async () => {
       const done = sse({ candidates: [{ content: { role: 'model', parts: [{ text: 'Done.' }] }, finishReason: 'STOP' }] });
       const { stream } = fakeStream(FIXTURE, done);
@@ -314,11 +396,17 @@ describe('geminiModel', () => {
     it('throws instead of returning half a reply when the run stops mid-stream', async () => {
       const controller = new AbortController();
       const stream = async (): Promise<ReadableStream<Uint8Array>> => new ReadableStream({
-        start: (source) => source.enqueue(new TextEncoder().encode(FIXTURE.slice(0, FIXTURE.lastIndexOf('data: ')))),
+        start: (source) => {
+          source.enqueue(new TextEncoder().encode(FIXTURE.slice(0, FIXTURE.lastIndexOf('data: '))));
+          // Calls emit only after the finish, so the stop comes from outside, with the stream still open.
+          setTimeout(() => controller.abort(), 0);
+        },
       });
+      const events: AgentModelStreamEvent[] = [];
 
-      await expect(geminiModel({ model: 'm', stream })(request(() => controller.abort(), controller.signal)))
+      await expect(geminiModel({ model: 'm', stream })(request((event) => events.push(event), controller.signal)))
         .rejects.toThrow('Gemini: the run stopped mid-stream.');
+      expect(events).toEqual([]);
     });
 
     it('reads a stream split into one-byte chunks', async () => {

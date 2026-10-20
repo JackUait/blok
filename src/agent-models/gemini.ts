@@ -126,19 +126,29 @@ const withPart = (parts: Part[], part: Part): Part[] => {
   return [...parts, part];
 };
 
-const emitCall = (request: AgentModelRequest, index: number, id: string, call: Part): void => {
-  request.onStream?.({ type: 'tool_start', index, id, name: String(call.name) });
-  request.onStream?.({ type: 'tool_input', index, json: JSON.stringify(call.args ?? {}) });
-  request.onStream?.({ type: 'tool_end', index });
+// The loop applies a call at tool_end, so a reply that is retried or fails must emit nothing.
+const SAFE = new Set<unknown>(['STOP', 'MAX_TOKENS', 'FINISH_REASON_UNSPECIFIED']);
+
+/** Calls in the order readReply reads them, with the same ids. */
+const emitCalls = (request: AgentModelRequest, parts: Part[], step: number): void => {
+  const calls = parts.flatMap((part, position) => (isRecord(part.functionCall)
+    ? [{ id: callId(part.functionCall.id, step, position), call: part.functionCall }]
+    : []));
+
+  calls.forEach(({ id, call }, index) => {
+    request.onStream?.({ type: 'tool_start', index, id, name: String(call.name) });
+    request.onStream?.({ type: 'tool_input', index, json: JSON.stringify(call.args ?? {}) });
+    request.onStream?.({ type: 'tool_end', index });
+  });
 };
 
 /**
- * Merges the chunks into the JSON reply readReply reads, and reports each call as it arrives.
- * Gemini sends a functionCall whole, so its events go out at once.
+ * Merges the chunks into the JSON reply readReply reads. Gemini sends each functionCall whole,
+ * so the calls' events wait for a safe finish without losing anything live.
  */
 const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<unknown> => {
-  const state: { parts: Part[]; calls: number; candidate: Part; promptFeedback?: unknown; finished: boolean } = {
-    parts: [], calls: 0, candidate: {}, finished: false,
+  const state: { parts: Part[]; candidate: Part; promptFeedback?: Part; finished: boolean } = {
+    parts: [], candidate: {}, finished: false,
   };
 
   for await (const chunk of readJsonEvents(source, request.signal, 'Gemini')) {
@@ -160,23 +170,17 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 
     const { content, ...rest } = first;
     const parts = isRecord(content) && Array.isArray(content.parts) ? content.parts.filter(isRecord) : [];
-    // A malformed call is retried, and its events must not reach the editor.
-    const emits = first.finishReason !== 'MALFORMED_FUNCTION_CALL';
 
     state.candidate = { ...state.candidate, ...rest };
     state.finished ||= first.finishReason !== undefined;
-
-    parts.forEach((part) => {
-      state.parts = withPart(state.parts, part);
-
-      if (emits && isRecord(part.functionCall)) {
-        // Same id readReply gives the call: its position among the merged parts.
-        emitCall(request, state.calls++, callId(part.functionCall.id, step, state.parts.length - 1), part.functionCall);
-      }
-    });
+    state.parts = parts.reduce(withPart, state.parts);
   }
 
   endOfStream(request.signal, state.finished, 'Gemini');
+
+  if (state.promptFeedback?.blockReason === undefined && SAFE.has(state.candidate.finishReason)) {
+    emitCalls(request, state.parts, step);
+  }
 
   return {
     candidates: [{ ...state.candidate, content: { role: 'model', parts: state.parts } }],

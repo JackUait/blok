@@ -29,6 +29,10 @@ vi.mock('../../../../src/components/utils/popover', () => ({
       captured.popovers.push(this.record);
     }
 
+    closeSubmenuOnEscape(): boolean {
+      return false;
+    }
+
     activateItemByName(name: string): void {
       this.record.activated.push(name);
     }

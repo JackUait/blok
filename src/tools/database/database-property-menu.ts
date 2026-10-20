@@ -348,7 +348,13 @@ export class DatabasePropertyMenu {
     button.setAttribute('aria-label', this.t('tools.database.addPropertyDescription'));
     button.innerHTML = IconInfo;
     button.addEventListener('click', () => {
-      this.popover?.activateItemByName('description');
+      const popover = this.popover;
+
+      if (popover === null) return;
+      // An open submenu makes activateItemByName a no-op, so close every level first.
+      // closeSubmenuOnEscape works here because open() sets escapeClosesSubmenuFirst.
+      while (popover.closeSubmenuOnEscape()) { /* one level per call */ }
+      popover.activateItemByName('description');
       this.descriptionArea?.focus();
     });
 

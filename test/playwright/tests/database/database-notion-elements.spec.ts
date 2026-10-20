@@ -385,6 +385,27 @@ test.describe('property header menu: Edit property opens one level at a time (re
     expect(description).toBe('What we spend');
   });
 
+  test('the (i) opens the description editor even while another submenu is open', async ({ page }) => {
+    const open = page.locator('[data-blok-popover-opened="true"]');
+    const edit = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="editProperty"]');
+
+    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    await expect(edit).toBeVisible();
+    for (let i = 0; i < 10 && await edit.getAttribute('data-blok-focused') !== 'true'; i++) {
+      await page.keyboard.press('ArrowDown');
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    }
+    await page.keyboard.press('ArrowRight');
+    await expect(open).toHaveCount(2);
+
+    await open.first().getByRole('button', { name: 'Add property description', exact: true }).click();
+    const area = page.locator('[data-blok-database-property-description]');
+
+    await expect(area).toBeVisible();
+    await expect(area).toBeFocused();
+    await expect(page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="numberFormat"]')).toHaveCount(0);
+  });
+
   test('the name field keeps its caret and Enter while it holds the highlight', async ({ page }) => {
     await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
     const name = page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]');

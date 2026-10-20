@@ -90,6 +90,22 @@ const splitReply = (reply: string): { summary: string; rest: string } => {
     : { summary: text.slice(0, end).trim(), rest: text.slice(end + 1).trim() };
 };
 
+/** Most words in the note after an edit. */
+const NOTE_WORDS = 10;
+
+/** Cut text after its NOTE_WORDS-th word, with an ellipsis. Segmenter counts words in any script. */
+const capWords = (text: string): string => {
+  const words = [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)].filter((part) => part.isWordLike === true);
+
+  if (words.length <= NOTE_WORDS) {
+    return text;
+  }
+
+  const last = words[NOTE_WORDS - 1];
+
+  return `${text.slice(0, last.index + last.segment.length)}…`;
+};
+
 const BLOCK_WRAPPERS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'BLOCKQUOTE']);
 
 /** The inline content of a one-line rendering: a lone paragraph, heading or list item is unwrapped. */
@@ -417,12 +433,12 @@ export class AssistantBar {
    * plain text at once, then the markdown rendering. The renderer is
    * imported lazily so the core bundle does not carry it.
    * @param reply - the model's final message, in markdown
-   * @param brief - keep only the first line: after an edit the page shows the work
+   * @param brief - keep only the first line, up to NOTE_WORDS words: after an edit the page shows the work
    */
   private showReply(reply: string, brief: boolean): void {
     const token = this.replyToken + 1;
     const split = splitReply(reply);
-    const summary = split.summary;
+    const summary = brief ? capWords(split.summary) : split.summary;
     const rest = brief ? '' : split.rest;
 
     this.replyToken = token;

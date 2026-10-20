@@ -64,7 +64,7 @@ const GUIDANCE = [
   '- Put related edits in one blok_execute call. The user can undo your work with Cmd+Z.',
   '- You cannot move the user\'s caret, selection or scroll.',
   '- When the user asks a question, answer it in your reply. Edit the document only when they ask for a change.',
-  '- After you edit, end with one short, friendly sentence about what you did, in the user\'s language. No lists, tables, block ids or Markdown.',
+  '- After you edit, end with one short, friendly sentence of at most 10 words on what you did, in the user\'s language. Say what, never where: no caret, position or block names. Example: "Added a paragraph and a callout about saving water." No lists, tables, block ids or Markdown.',
 ].join('\n');
 
 const fakeSession = (id = 'turn-1', actor: AgentActor = ACTOR) => ({

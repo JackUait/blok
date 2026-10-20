@@ -61,6 +61,8 @@ export class Assistant extends Module {
   /** Bumps on every answer, so a late result of a stopped one is ignored. */
   private answerId = 0;
   private changed = false;
+  /** This answer changed the document. `changed` covers the whole run. */
+  private edited = false;
   /** The bar's pick. Undefined when the host offers no choice. */
   private level: AgentThinkingLevel | undefined;
   private holdTimer: ReturnType<typeof setTimeout> | null = null;
@@ -246,6 +248,7 @@ export class Assistant extends Module {
     const id = ++this.answerId;
 
     this.listening = true;
+    this.edited = false;
     this.bar?.render({ kind: 'working', status: this.activityStatus('thinking') });
     this.setSlots(!this.streams);
     void pending.then((result) => {
@@ -379,7 +382,7 @@ export class Assistant extends Module {
     };
 
     if (result.status === 'done') {
-      this.bar?.render({ kind: 'answered', reply: result.reply, changed: this.changed });
+      this.bar?.render({ kind: 'answered', reply: result.reply, changed: this.changed, edited: this.edited });
     } else {
       const message = result.status === 'failed'
         ? this.Blok.I18n.t('assistant.failed', { error: result.error ?? '' })
@@ -476,6 +479,7 @@ export class Assistant extends Module {
       return;
     }
     this.applied = changed;
+    this.edited = this.edited || [changed.created, changed.updated, changed.moved, changed.removed].some((ids) => ids.length > 0);
     // Block heights changed, so boxes of other calls move.
     this.preview?.relayout();
   }

@@ -590,7 +590,6 @@ describe('in-editor assistant bar', () => {
     expect(within(bar()).getByRole('button', { name: 'Keep' })).toBeVisible();
     // Read top to bottom: the answer, its rest, then the field.
     expect(summary.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(bar()).getByText('It says hello back.').compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.input(field, { target: { value: 'Make it shorter' } });
 
@@ -598,6 +597,41 @@ describe('in-editor assistant bar', () => {
     expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible();
     expect(within(bar()).getByRole('button', { name: 'Keep' })).toBeVisible();
     expect(within(bar()).getByRole('button', { name: 'Send' })).toBeEnabled();
+  });
+
+  it('after an edit, shows only the reply\'s first line: one short note on what was done', async () => {
+    const editor = await createEditor(scripted(insertBatch('From AI'), answer([
+      'Added a paragraph at the end.',
+      '',
+      '- block `p-new`, after the intro',
+      '',
+      '| Block | Change |',
+      '|---|---|',
+      '| p-new | inserted |',
+    ].join('\n'))));
+
+    editor.agent.openAssistant();
+    submit('Add a line');
+    await waitFor(() => expect(within(bar()).getByText('Added a paragraph at the end.')).toBeVisible());
+    await settle(50);
+
+    expect(bar()).not.toHaveTextContent('p-new');
+    expect(within(bar()).queryByRole('table')).toBeNull();
+    expect(within(bar()).queryByRole('listitem')).toBeNull();
+  });
+
+  it('a question asked after an edit gets its whole answer', async () => {
+    const editor = await createEditor(scripted(
+      insertBatch('From AI'),
+      answer('Added a paragraph.'),
+      answer('It has two parts.\n\n- the intro\n- the new line')
+    ));
+
+    editor.agent.openAssistant();
+    submit('Add a line');
+    await waitFor(() => expect(within(bar()).getByText('Added a paragraph.')).toBeVisible());
+    submit('What is on the page now?');
+    await waitFor(() => expect(within(bar()).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['the intro', 'the new line']));
   });
 
   it('keeps the follow-up field after an answer that changed nothing', async () => {

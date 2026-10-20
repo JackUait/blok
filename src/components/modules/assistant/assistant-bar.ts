@@ -26,7 +26,8 @@ export interface AssistantThinkingView {
 export type AssistantBarView =
   | { kind: 'prompt' }
   | { kind: 'working'; status: string }
-  | { kind: 'answered'; reply: string; changed: boolean }
+  /** `edited`: this answer changed the document, so only its first line shows. */
+  | { kind: 'answered'; reply: string; changed: boolean; edited: boolean }
   | { kind: 'error'; message: string; changed: boolean };
 
 const ATTR = {
@@ -317,7 +318,7 @@ export class AssistantBar {
 
     this.view = view;
     this.element.toggleAttribute(ATTR.working, working);
-    this.showReply(view.kind === 'answered' ? view.reply : '');
+    this.showReply(view.kind === 'answered' ? view.reply : '', view.kind === 'answered' && view.edited);
     this.alert.textContent = view.kind === 'error' ? view.message : '';
     this.status.textContent = working ? view.status : '';
     if (working) {
@@ -416,10 +417,13 @@ export class AssistantBar {
    * plain text at once, then the markdown rendering. The renderer is
    * imported lazily so the core bundle does not carry it.
    * @param reply - the model's final message, in markdown
+   * @param brief - keep only the first line: after an edit the page shows the work
    */
-  private showReply(reply: string): void {
+  private showReply(reply: string, brief: boolean): void {
     const token = this.replyToken + 1;
-    const { summary, rest } = splitReply(reply);
+    const split = splitReply(reply);
+    const summary = split.summary;
+    const rest = brief ? '' : split.rest;
 
     this.replyToken = token;
     this.summary.textContent = summary;

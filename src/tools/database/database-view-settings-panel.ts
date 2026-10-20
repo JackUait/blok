@@ -253,6 +253,7 @@ export class ViewSettingsPages {
     return {
       title: this.t('settingsTitle'),
       headerAction: (panel) => panelCloseButton(panel, this.t('close')),
+      titleIsLabel: true,
       build: (panel) => {
         const view = this.ctx.view();
         const group = this.property(view.groupBy);

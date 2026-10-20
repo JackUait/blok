@@ -194,9 +194,9 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-text-primary)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
   });
 
-  it('shows no fill on a hovered value in dark; light keeps the hover fill (unmeasured)', () => {
+  it('shows no fill on a hovered value in either theme (research/26 §5f)', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-value][role="button"]:hover')).toContain('background-color: var(--blok-database-peek-value-hover-bg)');
-    expect(tokenValues('--blok-database-peek-value-hover-bg')).toEqual(['var(--blok-item-hover-bg)', 'transparent', 'transparent']);
+    expect(tokenValues('--blok-database-peek-value-hover-bg')).toEqual(['transparent', 'transparent', 'transparent']);
   });
 
   it('gives the side peek the measured shadow, ring included, and no border (research/08:329)', () => {
@@ -214,7 +214,7 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(cell).toContain('min-inline-size: 160px');
     expect(cell).toContain('min-height: 34px');
     expect(cell).toContain('border-radius: var(--blok-radius-control)');
-    expect(ruleBody(`${head}:has(> [data-blok-database-drawer-prop-label][role="button"]:hover)`)).toContain('background-color: var(--blok-item-hover-bg)');
+    expect(ruleBody(`${head}:has(> [data-blok-database-drawer-prop-label][role="button"]:hover)`)).toContain('background-color: var(--blok-database-peek-hover-bg)');
     expect(ruleBody('[data-blok-database-drawer-prop-label][role="button"]:hover')).toBe('');
     // The label's hit area stretches over the cell, icon included, so the box and the click target match.
     expect(ruleBody(`${head} > [data-blok-database-drawer-prop-label][role="button"]::before`)).toContain('inset: 0');

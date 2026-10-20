@@ -206,7 +206,7 @@ test('side peek: labels in Notion secondary ink, 34px rows (research/08:329)', a
   expect((await style(row.locator('[data-blok-database-drawer-prop-label]'), ['color'])).color).toBe('rgb(125, 122, 117)');
 });
 
-test('side peek: measured shadow with its ring, a 160x34 label hover cell, value hover kept (research/08:329, 21 §1m)', async ({ page }) => {
+test('side peek: measured shadow with its ring, a 160x34 label hover cell, no value hover (research/08:329, 21 §1m, 26 §5f)', async ({ page }) => {
   await tab(page, 'v2').click();
   await page.locator('[data-blok-database-card][data-row-id="r2"] [data-blok-database-card-title]').click();
   const drawer = page.locator('[data-blok-database-drawer]');
@@ -240,9 +240,9 @@ test('side peek: measured shadow with its ring, a 160x34 label hover cell, value
   await expect(page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]')).toHaveValue('Mail');
   await page.keyboard.press('Escape');
 
-  // Light value hover is unmeasured: Blok keeps its fill.
+  // research/26 §5f: a light value cell has no hover fill.
   await value.hover();
-  await expect(value).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(value).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 });
 
 test('builder Structure tiles: unselected label rgb(115, 114, 110), selected rgb(29, 27, 22) 600 (research/10 §2)', async ({ page }) => {

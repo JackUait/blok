@@ -27,11 +27,11 @@ describe('database date reminder css', () => {
     expect(date).toContain('color: var(--blok-database-reminder-text)');
   });
 
-  // Measured rgb(39, 131, 222), not the global accent #2383e2. Dark is unmeasured, so it keeps the dark accent.
+  // Measured rgb(39, 131, 222) in both themes (research/26 §4f), not the global accent #2383e2.
   it('paints the date in its own database token, not the global accent', () => {
     const values = [ ...database.matchAll(/--blok-database-reminder-text:\s*([^;]+);/g) ].map((m) => m[1].trim());
 
-    expect(values).toEqual(['rgb(39, 131, 222)', 'var(--blok-color-accent)', 'var(--blok-color-accent)']);
+    expect(values).toEqual(['rgb(39, 131, 222)', 'rgb(39, 131, 222)', 'rgb(39, 131, 222)']);
   });
 
   // research/23 §1: 342 wide; the search stays put while the list scrolls; two-line rows.

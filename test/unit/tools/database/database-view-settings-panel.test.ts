@@ -98,6 +98,24 @@ describe('view settings panel', () => {
     expect(exists('database-settings-subgroup')).toBe(false);
   });
 
+  // research/26 §1a: the root title is a small label; a sub-page title keeps the 14/600 header.
+  it('marks only the root page title as a label', () => {
+    const header = (): Element | null => document.querySelector('[data-blok-database-panel-header]');
+    const h = harness();
+
+    h.open();
+    expect(header()?.getAttribute('data-blok-database-panel-header')).toBe('label');
+
+    click('database-settings-layout');
+    expect(header()?.getAttribute('data-blok-database-panel-header')).toBe('');
+  });
+
+  it('a panel opened straight at a sub-page keeps the 14/600 header', () => {
+    harness().open('filter');
+
+    expect(document.querySelector('[data-blok-database-panel-header]')?.getAttribute('data-blok-database-panel-header')).toBe('');
+  });
+
   it('offers a sub-group on a board only', () => {
     harness({ type: 'board' }).open();
 

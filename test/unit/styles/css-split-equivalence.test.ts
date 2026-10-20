@@ -925,6 +925,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BACKLINK_CRUMBS_BYTES = 331;
     // database.css: dark panel, date picker, "+ Filter", "Empty" and form field inks (research/21 §1c, §1k, §1l, §1m).
     const DATABASE_DARK_LEFTOVERS_BYTES = 2_429;
+    // database.css: research/26 light values and dark leftovers: root title label, today circle and button, 180 submenus,
+    // center peek title, side peek hovers, reminder blue, dark brown and blue board tokens, card hover channel.
+    const DATABASE_LIGHT_VALUES_BYTES = 2_421;
     // database.css: the backlink title fills its row so the path sits at the right end (research/23 §4).
     const DATABASE_BACKLINK_RIGHT_PATH_BYTES = 192;
     // database.css: bordered sort buttons, selection bar dividers, the property menu icon button, the panel × (research/26 §3, §1b).
@@ -1077,6 +1080,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BACKLINK_CRUMBS_BYTES
       + DATABASE_DARK_LEFTOVERS_BYTES + DATABASE_BACKLINK_RIGHT_PATH_BYTES
       + DATABASE_NOTION_ELEMENTS_BYTES
+      + DATABASE_LIGHT_VALUES_BYTES
       + ASSISTANT_LIVE_PREVIEW_BYTES
       + ASSISTANT_REWRITE_PREVIEW_BYTES
       + ASSISTANT_FALLBACK_REVEAL_BYTES

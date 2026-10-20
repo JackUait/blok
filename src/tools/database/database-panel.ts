@@ -8,6 +8,8 @@ import { hide as hideTooltip } from '../../components/utils/tooltip';
  */
 export interface PanelPage {
   title?: string;
+  /** Draws the title as a small secondary label, like Notion's root "View settings" (research/26 §1a). */
+  titleIsLabel?: boolean;
   /** A control at the header's end, built on every render. */
   headerAction?: (panel: DatabasePanel) => HTMLElement;
   /** `data-blok-testid` of the control that opened this page; leaving the page focuses it again. */
@@ -131,16 +133,16 @@ export class DatabasePanel {
     const children: HTMLElement[] = [];
 
     if (this.stack.length > 1 || page.title !== undefined) {
-      children.push(this.header(page.title ?? '', page.headerAction?.(this)));
+      children.push(this.header(page.title ?? '', page.headerAction?.(this), page.titleIsLabel === true));
     }
     children.push(...page.build(this));
     this.element.replaceChildren(...children);
   }
 
-  private header(title: string, action?: HTMLElement): HTMLElement {
+  private header(title: string, action: HTMLElement | undefined, isLabel: boolean): HTMLElement {
     const header = document.createElement('div');
 
-    header.setAttribute('data-blok-database-panel-header', '');
+    header.setAttribute('data-blok-database-panel-header', isLabel ? 'label' : '');
     if (this.stack.length > 1) {
       const back = document.createElement('button');
 

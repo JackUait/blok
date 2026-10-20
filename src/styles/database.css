@@ -39,7 +39,7 @@
   --blok-database-status-pill-pad-start: 7px;
   --blok-database-status-pill-pad-end: 9px;
   --blok-database-checkbox-check: #ffffff;
-  /* Measured on Notion's calendar view "today" (research/07); its date picker is unmeasured. */
+  /* Notion's calendar "today" (research/07) and the date picker's today circle (research/26 §1c). */
   --blok-database-today: rgb(229, 100, 88);
   /* Re-set here, not in colors.css, so view.css keeps the shipped values. Notion's measured tint (research/08). */
   --blok-database-column-bg: rgba(66, 35, 3, 0.03);
@@ -121,7 +121,7 @@
   --blok-database-calendar-event-bg: #ffffff;
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
-  /* A date with a reminder (research/21 §6). Its dark value is unmeasured. */
+  /* A date with a reminder: the same blue in both themes (research/21 §6, research/26 §4f). */
   --blok-database-reminder-text: rgb(39, 131, 222);
   --blok-database-calendar-today-text: #ffffff;
   /* Timeline (research/07 bars, arrow, gridline; research/08 weekend). */
@@ -140,9 +140,11 @@
   /* Center peek (research/07 and 08): 60% backdrop and the side peek's shadow. */
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-peek-bg: var(--blok-popover-bg);
-  /* Light peek title ink and value hover are unmeasured (research/21): Blok's own values. */
+  /* Light peek title ink is unmeasured (research/21): Blok's primary ink. */
   --blok-database-peek-title: var(--blok-text-primary);
-  --blok-database-peek-value-hover-bg: var(--blok-item-hover-bg);
+  /* research/26 §5f: label cells and "Add a property" hover; a value cell has no fill. */
+  --blok-database-peek-hover-bg: rgba(33, 27, 23, 0.051);
+  --blok-database-peek-value-hover-bg: transparent;
   /* Fill handle: white in light, rgb(25,25,25) in dark (research/08). */
   --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -280,10 +282,12 @@
     --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
     --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
     --blok-database-table-resize: rgba(35, 131, 226, 0.8);
-    /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f). Brown is unmeasured and
-       derives from the dark option pill like the other hues. */
+    /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f), brown and the blue
+       card hover (research/26 §4e). */
     --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
-    --blok-database-column-brown-bg: color-mix(in srgb, var(--blok-database-option-brown-bg) 11%, transparent);
+    --blok-database-column-brown-bg: rgba(253, 158, 101, 0.05);
+  --blok-database-column-brown-ring: rgba(255, 174, 122, 0.133);
+  --blok-database-column-brown-accent: rgb(182, 137, 101);
     --blok-database-column-pink-bg: rgba(255, 78, 149, 0.055);
     --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
     --blok-database-column-accent: rgb(188, 186, 182);
@@ -297,6 +301,9 @@
   /* Dark only: a colored column tints its cards. Light cards stay white. */
   --blok-database-column-blue-card-bg: rgb(33, 48, 65);
   --blok-database-column-green-card-bg: rgb(36, 52, 43);
+  --blok-database-column-brown-card-bg: rgb(56, 45, 38);
+  --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
+  --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
     --blok-database-column-pink-accent: rgb(219, 105, 153);
     --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -334,7 +341,7 @@
     --blok-database-calendar-event-bg: rgb(47, 47, 47);
     --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
-    --blok-database-reminder-text: var(--blok-color-accent);
+    --blok-database-reminder-text: rgb(39, 131, 222);
     --blok-database-calendar-today-text: #ffffff;
     /* Timeline: research/21 §1i. Grid line is unmeasured. The arrow icon is too: page ink, since white on the chip is 2.3:1. */
     --blok-database-timeline-bar-bg: rgb(37, 37, 37);
@@ -355,6 +362,7 @@
   /* research/21 §1m: title ink, and no fill on a hovered value. */
   --blok-database-peek-title: rgb(240, 239, 237);
   --blok-database-peek-value-hover-bg: transparent;
+  --blok-database-peek-hover-bg: var(--blok-item-hover-bg);
     --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
     --blok-database-chart-blue: #3987e5;
     --blok-database-chart-orange: #d95926;
@@ -475,10 +483,12 @@
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
-  /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f). Brown is unmeasured and
-     derives from the dark option pill like the other hues. */
+  /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f), brown and the blue
+     card hover (research/26 §4e). */
   --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
-  --blok-database-column-brown-bg: color-mix(in srgb, var(--blok-database-option-brown-bg) 11%, transparent);
+  --blok-database-column-brown-bg: rgba(253, 158, 101, 0.05);
+  --blok-database-column-brown-ring: rgba(255, 174, 122, 0.133);
+  --blok-database-column-brown-accent: rgb(182, 137, 101);
   --blok-database-column-pink-bg: rgba(255, 78, 149, 0.055);
   --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
   --blok-database-column-accent: rgb(188, 186, 182);
@@ -492,6 +502,9 @@
   /* Dark only: a colored column tints its cards. Light cards stay white. */
   --blok-database-column-blue-card-bg: rgb(33, 48, 65);
   --blok-database-column-green-card-bg: rgb(36, 52, 43);
+  --blok-database-column-brown-card-bg: rgb(56, 45, 38);
+  --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
+  --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
   --blok-database-column-pink-accent: rgb(219, 105, 153);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -529,7 +542,7 @@
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
-  --blok-database-reminder-text: var(--blok-color-accent);
+  --blok-database-reminder-text: rgb(39, 131, 222);
   --blok-database-calendar-today-text: #ffffff;
   /* Timeline: research/21 §1i. Grid line is unmeasured. The arrow icon is too: page ink, since white on the chip is 2.3:1. */
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
@@ -549,6 +562,7 @@
   /* research/21 §1m: title ink, and no fill on a hovered value. */
   --blok-database-peek-title: rgb(240, 239, 237);
   --blok-database-peek-value-hover-bg: transparent;
+  --blok-database-peek-hover-bg: var(--blok-item-hover-bg);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-chart-blue: #3987e5;
@@ -691,7 +705,7 @@
 }
 
 [data-blok-database-card]:hover {
-  background-color: var(--blok-database-card-bg-hover);
+  background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover));
 }
 
 [data-blok-database-card-active] {
@@ -1319,6 +1333,12 @@
   font-family: inherit;
 }
 
+/* research/26 §1e: 40px/48px in both themes; the side peek keeps 32px. */
+[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title] {
+  font-size: 40px;
+  line-height: 48px;
+}
+
 [data-blok-database-drawer-title]::placeholder {
   color: var(--blok-database-add-text);
 }
@@ -1580,7 +1600,7 @@
 
 @media (hover: hover) {
   [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]:has(> [data-blok-database-drawer-prop-label][role="button"]:hover) {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-peek-hover-bg);
   }
 }
 
@@ -2546,7 +2566,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-drawer-add-prop]:hover {
-  background-color: var(--blok-database-add-hover-bg);
+  background-color: var(--blok-database-peek-hover-bg);
   border-color: var(--blok-database-add-border);
   color: var(--blok-database-tab-text-active);
 }
@@ -4885,8 +4905,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-option-delete-confirm],
 [data-blok-database-option-delete-cancel],
 [data-blok-database-option-color],
-[data-blok-database-date-clear],
-[data-blok-database-date-today] {
+[data-blok-database-date-clear] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
@@ -4992,13 +5011,23 @@ textarea[data-blok-database-cell-input] {
   padding-inline-start: var(--blok-space-1);
 }
 
-/* research/08 and 21 §1l: 12px weight 500 in both themes. */
+/* research/26 §1d: a 20px box, padding 0 8px, 12px/14.4px 500. Notion's 3px radius has no role; the small-control
+   role stands in. Light ink stays Blok's secondary: Notion's 142,139,134 is 3.39:1 on white. */
 [data-blok-database-date-today] {
-  min-height: 24px;
-  padding: 0 var(--blok-space-1-5);
+  display: flex;
+  align-items: center;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  font: inherit;
   font-size: 12px;
+  line-height: 14.4px;
   font-weight: 500;
   color: var(--blok-database-date-today-text);
+  cursor: pointer;
 }
 
 [data-blok-database-date-prev],
@@ -5069,9 +5098,24 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-text-tertiary);
 }
 
+/* research/26 §1c: a 24px red circle behind a white digit. Isolation keeps the circle above the hover fill. */
 [data-blok-database-date-day][data-today] {
-  color: var(--blok-database-today);
-  font-weight: 600;
+  position: relative;
+  isolation: isolate;
+  color: var(--blok-database-calendar-today-text);
+}
+
+[data-blok-database-date-day][data-today]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-today);
+  transform: translate(-50%, -50%);
 }
 
 [data-blok-database-date-day][data-in-range] {
@@ -5081,6 +5125,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-day][aria-selected="true"] {
   background-color: var(--blok-icon-active-bg);
   color: var(--blok-icon-active-text);
+}
+
+[data-blok-database-date-day][data-today][aria-selected="true"] {
+  color: var(--blok-database-calendar-today-text);
 }
 
 [data-blok-database-date-options] {
@@ -5219,6 +5267,12 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
+}
+
+/* research/26 §1f: the picker's Date format and Time format are 180 wide; Remind and the property menu stay 250. */
+[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover],
+[data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover] {
+  width: 180px;
 }
 
 @media (hover: hover) {
@@ -6641,6 +6695,14 @@ textarea[data-blok-database-cell-input] {
   padding: 0 var(--blok-space-2);
   font-weight: 600;
   line-height: 21px;
+}
+
+/* research/26 §1a: the root "View settings" title. Light 125,122,117 is 4.27:1, so the token keeps Blok's AA secondary. */
+[data-blok-database-panel-header="label"] {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--blok-database-panel-muted-text);
 }
 
 [data-blok-database-panel-back] {

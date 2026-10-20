@@ -250,6 +250,8 @@ describe('DatabaseBoardView', () => {
       // Dark Notion tints the card in a colored column (research/21 §1f); unmeasured hues keep the plain card.
       expect(column.style.getPropertyValue('--_blok-group-card'))
         .toBe('var(--blok-database-column-green-card-bg, var(--blok-database-card-bg))');
+      expect(column.style.getPropertyValue('--_blok-group-card-hover'))
+        .toBe('var(--blok-database-column-green-card-hover-bg, var(--blok-database-card-bg-hover))');
       expect(column.style.backgroundColor).toBe('');
     });
 
@@ -265,6 +267,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.getPropertyValue('--_blok-group-ring')).toBe('');
       expect(column.style.getPropertyValue('--_blok-group-accent')).toBe('');
       expect(column.style.getPropertyValue('--_blok-group-card')).toBe('');
+      expect(column.style.getPropertyValue('--_blok-group-card-hover')).toBe('');
       expect(column.hasAttribute('data-color')).toBe(false);
     });
 

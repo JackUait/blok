@@ -469,6 +469,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       el.style.setProperty('--_blok-group-accent', `var(--blok-database-column-${c}-accent, var(--blok-database-option-${c}-text))`);
       // Only dark defines a card tint, and only for measured hues; the rest keep the plain card.
       el.style.setProperty('--_blok-group-card', `var(--blok-database-column-${c}-card-bg, var(--blok-database-card-bg))`);
+      el.style.setProperty('--_blok-group-card-hover', `var(--blok-database-column-${c}-card-hover-bg, var(--blok-database-card-bg-hover))`);
       el.setAttribute('data-color', c);
     }
   }

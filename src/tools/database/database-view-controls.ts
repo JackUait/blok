@@ -68,6 +68,7 @@ export interface ViewControlsHost {
   automations?: AutomationSettings;
   /** AI Autofill: only when the host gave `config.ai.autofill`. */
   autofill?: AutofillPanelSettings;
+  undoStarter?: () => { label: string; onClick: () => void } | undefined;
   /** View settings "Source". */
   dataSources?: DataSourceSettings;
   /** Database settings: sub-items and dependencies. */
@@ -383,6 +384,7 @@ export class DatabaseViewControls {
       ...(this.host.customizeLayout !== undefined ? { customizeLayout: this.host.customizeLayout } : {}),
       ...(this.host.automations !== undefined ? { automations: this.host.automations } : {}),
       ...(this.host.autofill !== undefined ? { autofill: this.host.autofill } : {}),
+      ...(this.host.undoStarter !== undefined ? { undoStarter: this.host.undoStarter } : {}),
       ...(this.host.dataSources !== undefined ? { dataSources: this.host.dataSources } : {}),
       ...(this.host.structure !== undefined ? { structure: this.host.structure } : {}),
     };

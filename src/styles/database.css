@@ -7174,6 +7174,38 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-starter-tile-gray-ink);
 }
 
+/* A template's database icon (research/27:42): 21x21, radius 4px, before the title. */
+[data-blok-database-icon] {
+  display: inline-flex;
+  flex: none;
+  inline-size: 21px;
+  block-size: 21px;
+  align-items: center;
+  justify-content: center;
+  margin-inline-end: var(--blok-space-2);
+  border-radius: var(--blok-radius-control-sm);
+}
+
+[data-blok-database-icon] svg {
+  width: 15px;
+  height: 15px;
+}
+
+[data-blok-database-icon="green"] {
+  background-color: var(--blok-database-starter-tile-green-bg);
+  color: var(--blok-database-starter-tile-green-ink);
+}
+
+[data-blok-database-icon="blue"] {
+  background-color: var(--blok-database-starter-tile-blue-bg);
+  color: var(--blok-database-starter-tile-blue-ink);
+}
+
+[data-blok-database-icon="gray"] {
+  background-color: var(--blok-database-starter-tile-gray-bg);
+  color: var(--blok-database-starter-tile-gray-ink);
+}
+
 /* The Customize modal (research/27 §1b): 1000x637, a form column beside a preview. */
 [data-blok-database-starter-backdrop] {
   position: fixed;
@@ -9823,6 +9855,11 @@ button[data-blok-database-feed-reaction]:hover,
   display: inline-flex;
   vertical-align: middle;
   margin-inline-start: var(--blok-space-1);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-template-default] {
+  margin-inline-start: var(--blok-space-2);
   color: var(--blok-text-secondary);
 }
 

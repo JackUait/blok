@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1400 + 126 + 486 + 4 closure for all 2016 keys', () => {
+  it('rebuilds a disjoint 1404 + 126 + 487 + 4 closure for all 2021 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2016);
+    expect(lifecycle.size).toBe(2021);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -418,7 +418,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the paragraph's AI placeholder calls tools.paragraph.placeholderAi by literal.
       // +24: research/28's "/" Database entries: their toolNames.* labels, toolbox.preview.* hints and
       // tools.database.seed* names are called by literal.
-      'executable-literal': 1400,
+      // +4: the template "Undo … database" rows and the "New task" / "New project" templates.
+      'executable-literal': 1404,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -470,7 +471,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the gallery trash toast's screen-reader plural tools.database.blocksDeleted_one/_other.
       // +1: the view settings "Source" row, tools.database.settingsSource.
       // +6: Edit cadence's months row, "On the", the ordinals (templateRepeatOrdinal<Category>) and "Day", all built from a short name.
-      'registered-namespace-compatible': 486,
+      // +1: the template menu's "Default" (tools.database.templateDefault, via the menu's prefixing t).
+      'registered-namespace-compatible': 487,
       'catalog-only': 4,
     });
     expect(

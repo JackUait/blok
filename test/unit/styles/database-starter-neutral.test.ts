@@ -27,3 +27,26 @@ describe('starter Customize picks are neutral', () => {
     expect(body).toMatch(/box-shadow:[^;]*var\(--blok-text-primary\)/);
   });
 });
+
+describe('the database icon a template gives (research/27:42)', () => {
+  it('is a 21x21 tile, radius 4px, tinted with the Suggested tile tokens', () => {
+    const body = rule('[data-blok-database-icon]');
+
+    expect(body).toMatch(/inline-size:\s*21px/);
+    expect(body).toMatch(/block-size:\s*21px/);
+    expect(body).toContain('border-radius: var(--blok-radius-control-sm)');
+    for (const tint of ['green', 'blue', 'gray']) {
+      const tinted = rule(`[data-blok-database-icon="${tint}"]`);
+
+      expect(tinted).toContain(`var(--blok-database-starter-tile-${tint}-bg)`);
+      expect(tinted).toContain(`var(--blok-database-starter-tile-${tint}-ink)`);
+    }
+  });
+
+  it('the template menu\'s "Default" reads in secondary ink, no fill', () => {
+    const body = rule('[data-blok-database-template-default]');
+
+    expect(body).toContain('var(--blok-text-secondary)');
+    expect(body).not.toMatch(/background/);
+  });
+});

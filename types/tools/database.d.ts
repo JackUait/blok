@@ -1003,7 +1003,20 @@ export interface DatabaseData extends BlockToolData {
   source?: DatabaseSourceRef;
   /** "Hide data source titles": the title line above the tabs is hidden for every view. */
   hideDataSourceTitles?: boolean;
+  /** The icon before the title. */
+  icon?: DatabaseIcon;
+  /** The Suggested template this database was made from. Removed by "Undo … database". */
+  starter?: DatabaseStarterId;
 }
+
+/** A database icon: one of Blok's glyphs on a tinted tile. */
+export interface DatabaseIcon {
+  glyph: 'check' | 'timeline' | 'wand';
+  color: 'green' | 'blue' | 'gray';
+}
+
+/** The "New database" panel's Suggested templates. */
+export type DatabaseStarterId = 'tasks' | 'projects' | 'skills';
 
 // ─── Tier 3 (D6): data slots and host levers ───
 // Kept in one block so it merges cleanly beside other changes. Blok runs no

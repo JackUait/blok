@@ -507,6 +507,19 @@ const repeatingTitle = (title: string, hint: string): HTMLElement => {
   return el;
 };
 
+/** research/27:44: the default template reads "Default" after its name. */
+const defaultTitle = (titleEl: HTMLElement | undefined, title: string, label: string): HTMLElement => {
+  const el = titleEl ?? document.createElement('span');
+  const badge = document.createElement('span');
+
+  if (titleEl === undefined) el.append(title);
+  badge.setAttribute('data-blok-database-template-default', '');
+  badge.textContent = label;
+  el.append(badge);
+
+  return el;
+};
+
 /**
  * The "New" dropdown (research/05 §7): one entry per template, then an
  * empty page and "+ New template". Each entry's submenu holds what Notion
@@ -519,11 +532,13 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
   const entry = (id: string, title: string): PopoverItemParams => {
     const repeat = host.repeatOf(id);
     const shown = title === '' ? t('templateUntitled') : title;
+    const titleEl = repeat === undefined ? undefined : repeatingTitle(shown, repeatHint(t, repeat));
+    const marked = current === id ? defaultTitle(titleEl, shown, t('templateDefault')) : titleEl;
 
     return {
       name: `template-${id}`,
       title: shown,
-      ...(repeat === undefined ? {} : { titleEl: repeatingTitle(shown, repeatHint(t, repeat)) }),
+      ...(marked === undefined ? {} : { titleEl: marked }),
       icon: IconPage,
       children: {
         items: [

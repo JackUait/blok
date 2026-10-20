@@ -183,6 +183,8 @@ const savedData: Record<string, Record<string, unknown>> = {
     automations: { version: 1 as const, definitions: [] },
     source: { databaseId: 'db-source' },
     hideDataSourceTitles: true,
+    icon: { glyph: 'check', color: 'green' },
+    starter: 'tasks',
   })).save(contentElement('')),
 
   // A row as the tool writes one today: a top-level `title` beside the

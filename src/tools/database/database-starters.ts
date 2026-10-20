@@ -1,7 +1,7 @@
 import { newView, positionBetween, createDefaultStatusOptions, createDefaultStatusSettings } from '../../shared/database/schema-ops';
 import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 import { ME_FILTER_VALUE } from './database-query';
-import type { DatabaseRowData, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, ViewType } from './types';
+import type { DatabaseIcon, DatabaseRowData, DatabaseStarterId, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, ViewType } from './types';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 
 /**
@@ -11,7 +11,7 @@ import type { ViewCreateConfig } from '../../shared/database/schema-ops';
  * off changes was not measured: here it only adds or leaves out its property
  * or view (Blok choice).
  */
-export type StarterId = 'tasks' | 'projects' | 'skills';
+export type StarterId = DatabaseStarterId;
 
 /** A Customize chip or view card. */
 export interface StarterChoice {
@@ -26,7 +26,10 @@ export interface StarterMeta {
   id: StarterId;
   nameKey: string;
   /** The panel tile tint (research/26 §2). */
-  tint: 'green' | 'blue' | 'gray';
+  tint: DatabaseIcon['color'];
+  glyph: DatabaseIcon['glyph'];
+  /** The View settings row "Undo … database". Projects showed "Turn into" there instead (research/27:81). */
+  undoKey?: string;
   /** Empty: the template has no Customize step. */
   features: StarterChoice[];
   views: StarterChoice[];
@@ -51,6 +54,9 @@ export interface StarterBuild {
   views: DatabaseViewConfig[];
   activeViewId: string;
   rows: StarterRow[];
+  /** Page templates; the first is the default. */
+  templates: StarterRow[];
+  icon: DatabaseIcon;
 }
 
 export interface StarterBuildOptions {
@@ -71,6 +77,8 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     id: 'tasks',
     nameKey: 'tools.database.starterTasks',
     tint: 'green',
+    glyph: 'check',
+    undoKey: 'tools.database.starterUndoTasks',
     features: [
       choice('priority', 'tools.database.starterPriority', true, 'select'),
       choice('taskType', 'tools.database.starterTaskType', true, 'multiSelect'),
@@ -91,6 +99,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     id: 'projects',
     nameKey: 'tools.database.starterProjects',
     tint: 'blue',
+    glyph: 'timeline',
     features: [
       choice('priority', 'tools.database.starterPriority', true, 'select'),
       choice('team', 'tools.database.starterTeam', true, 'multiSelect'),
@@ -107,8 +116,15 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       choice('mine', 'tools.database.starterViewMyProjects', false, 'table'),
     ],
   },
-  { id: 'skills', nameKey: 'tools.database.starterSkills', tint: 'gray', features: [], views: [] },
+  { id: 'skills', nameKey: 'tools.database.starterSkills', tint: 'gray', glyph: 'wand', undoKey: 'tools.database.starterUndoSkills', features: [], views: [] },
 ];
+
+/**
+ * research/27 §1a: after each use the next template moves up. Inferred, not
+ * verified there: the first three not used yet.
+ */
+export const suggestedStarters = (used: ReadonlySet<StarterId>): StarterMeta[] =>
+  DATABASE_STARTERS.filter((starter) => !used.has(starter.id)).slice(0, 3);
 
 const picked = (list: StarterChoice[], chosen: ReadonlySet<string> | undefined): Set<string> =>
   new Set(list.filter((c) => (chosen === undefined ? c.on : chosen.has(c.id))).map((c) => c.id));
@@ -175,6 +191,14 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
       body,
     });
   };
+  const templates: StarterRow[] = [];
+  // research/27:44, :81: the default template. Its body is not measured: it repeats the first row's.
+  const template = (title: string, body: StarterBodyBlock[]): void => {
+    const made: StarterRow = { id: newId(), data: { properties: { [options.titleId]: title }, title, position: 'a0', template: true }, body };
+
+    templates.push(made);
+    schema[0].defaultTemplateId = made.id;
+  };
   const heading = (text: string, level: number): StarterBodyBlock => ({ tool: 'header', data: { text: [{ text }], level } });
   const text = (value: string): StarterBodyBlock => ({ tool: 'paragraph', data: { text: value === '' ? [] : [{ text: value }] } });
   const todo = (): StarterBodyBlock => ({ tool: 'list', data: { text: [], style: 'checklist', checked: false } });
@@ -220,7 +244,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
       ...(effort === undefined ? {} : { [effort.id]: option(effort, e) }),
     });
 
-    row(t('tools.database.starterTaskRow1'), values(2, '2025-02-03', 0, 2, 'tools.database.starterTaskRow1Description', 1), undefined, [
+    const body = [
       heading(t('tools.database.starterTaskDescriptionHeading'), 2),
       text(t('tools.database.starterTaskDescriptionText')),
       text(''),
@@ -228,7 +252,10 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
       todo(), todo(), todo(),
       // Then a PDF, a Google Drive and a Figma embed placeholder: left out, Blok keeps no empty embed.
       heading(t('tools.database.starterSupportingFiles'), 2),
-    ]);
+    ];
+
+    row(t('tools.database.starterTaskRow1'), values(2, '2025-02-03', 0, 2, 'tools.database.starterTaskRow1Description', 1), undefined, body);
+    template(t('tools.database.starterNewTask'), body);
     row(t('tools.database.starterTaskRow2'), values(1, '2025-02-20', 1, 1, 'tools.database.starterTaskRow2Description', 0), '📕');
     row(t('tools.database.starterTaskRow3'), values(0, '2025-02-28', 2, 1, 'tools.database.starterTaskRow3Description', 0), '🗒️');
     pin(assignee, state, due);
@@ -268,7 +295,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
       ...(team === undefined ? {} : { [team.id]: [option(team, tm) ?? ''] }),
     });
 
-    row(t('tools.database.starterProjectRow1'), values(0, '2025-03-24', '2025-03-28', 1, 0), '📖', [
+    const body = [
       heading(t('tools.database.starterAboutProject'), 3),
       text(t('tools.database.starterAboutProjectText')),
       text(''),
@@ -276,7 +303,10 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
       todo(),
       // Then a Google Drive, a PDF and a Figma embed placeholder: left out, as in Tasks Tracker.
       heading(t('tools.database.starterDocuments'), 3),
-    ]);
+    ];
+
+    row(t('tools.database.starterProjectRow1'), values(0, '2025-03-24', '2025-03-28', 1, 0), '📖', body);
+    template(t('tools.database.starterNewProject'), body);
     row(t('tools.database.starterProjectRow2'), values(2, '2025-01-20', '2025-02-04', 2, 3));
     row(t('tools.database.starterProjectRow3'), values(1, '2025-04-09', '2025-04-30', 0, 2), '📱');
     pin(state, assignee, prio, end);
@@ -292,5 +322,5 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     });
   }
 
-  return { title: t(meta.nameKey), schema, views: viewList, activeViewId: viewList[0].id, rows };
+  return { title: t(meta.nameKey), schema, views: viewList, activeViewId: viewList[0].id, rows, templates, icon: { glyph: meta.glyph, color: meta.tint } };
 };

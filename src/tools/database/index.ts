@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseAdapter, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -45,7 +45,8 @@ import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import { planAiSetup } from './database-ai-setup';
-import { DATABASE_STARTERS, buildStarter } from './database-starters';
+import { DATABASE_STARTERS, buildStarter, suggestedStarters } from './database-starters';
+import { createSeedDefinition } from '../../shared/database/seed-layouts';
 import type { StarterId } from './database-starters';
 import { openStarterCustomize } from './database-starter-modal';
 import type { StarterPicks } from './database-starter-modal';
@@ -249,6 +250,20 @@ const INITIAL_VIEW_KEY = 'initialView';
 
 /** Panel tile glyphs for the Suggested templates: Notion's are checkmark, iterate and magic wand. */
 const STARTER_ICONS: Record<StarterId, string> = { tasks: IconCheck, projects: IconTimeline, skills: IconWand };
+const ICON_GLYPHS: Record<DatabaseIcon['glyph'], string> = { check: IconCheck, timeline: IconTimeline, wand: IconWand };
+const ICON_COLORS: ReadonlySet<string> = new Set<DatabaseIcon['color']>(['green', 'blue', 'gray']);
+
+/** A saved icon Blok can draw, else undefined. */
+const iconOf = (data: Partial<DatabaseData> | undefined): DatabaseIcon | undefined => {
+  const icon = data?.icon as Partial<DatabaseIcon> | undefined;
+
+  return icon !== undefined && typeof icon.glyph === 'string' && Object.hasOwn(ICON_GLYPHS, icon.glyph) && typeof icon.color === 'string' && ICON_COLORS.has(icon.color)
+    ? { glyph: icon.glyph, color: icon.color }
+    : undefined;
+};
+
+const starterOf = (data: Partial<DatabaseData> | undefined): StarterId | undefined =>
+  DATABASE_STARTERS.find((starter) => starter.id === data?.starter)?.id;
 
 /**
  * The toolbox merges the saved data of an empty block (a board) under its
@@ -337,7 +352,7 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 /** Backlinks are counted again this long after the last block change, so typing never scans per keystroke. */
 const BACKLINKS_SETTLE_MS = 300;
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', 'icon', 'starter', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -477,6 +492,10 @@ export class DatabaseTool implements BlockTool {
   private sourcePicker: DatabasePanel | null = null;
   /** "Hide data source titles": one setting for the whole block (per view is unmeasured). */
   private dataSourceTitlesHidden: boolean;
+  private databaseIcon: DatabaseIcon | undefined;
+  /** The Suggested template this database was made from (research/27 §1). */
+  private starter: StarterId | undefined;
+  private iconElement: HTMLElement | null = null;
   /** The source's name as last read: a deleted source still shows it. */
   private lastSourceTitle = '';
   /** A source in another document, as the host last answered: `null` when it is gone. */
@@ -608,6 +627,8 @@ export class DatabaseTool implements BlockTool {
     this.title = (data as DatabaseData | undefined)?.title ?? '';
     this.unknown = unknownKeys(data);
     this.dataSourceTitlesHidden = data?.hideDataSourceTitles === true;
+    this.databaseIcon = iconOf(data);
+    this.starter = starterOf(data);
     this.savedAutomations = structuredClone(data?.automations);
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
 
@@ -911,7 +932,7 @@ export class DatabaseTool implements BlockTool {
       ...(this.config.ai?.setupDatabase !== undefined ? { prompt: { submit: (text: string) => this.setupFromPrompt(text) } } : {}),
       importCsv: () => this.openCsvImport((file, targets) => this.importCsvHere(file.text, targets)),
       starters: {
-        list: DATABASE_STARTERS.map((starter) => ({
+        list: suggestedStarters(this.usedStarters()).map((starter) => ({
           id: starter.id,
           label: this.api.i18n.t(starter.nameKey),
           icon: STARTER_ICONS[starter.id],
@@ -1018,6 +1039,30 @@ export class DatabaseTool implements BlockTool {
     this.block.dispatchChange();
   }
 
+  /** Templates a database of this document was made from. */
+  private usedStarters(): Set<StarterId> {
+    const used = new Set<StarterId>();
+
+    if (this.starter !== undefined) used.add(this.starter);
+    for (const database of this.documentDatabases().filter((entry) => entry.id !== this.dataId)) {
+      const block = this.api.blocks.getById(database.id);
+      const read: Array<StarterId | undefined> = [];
+
+      // The live tool answers; a block whose tool never ran keeps its saved data.
+      block?.call('readStarter', { receive: (id: StarterId | undefined) => read.push(id) });
+      const id = read.length > 0 ? read[0] : starterOf(block?.preservedData);
+
+      if (id !== undefined) used.add(id);
+    }
+
+    return used;
+  }
+
+  /** Another database asks which template made this one. */
+  readStarter(param: { receive: (id: StarterId | undefined) => void }): void {
+    param.receive(this.starter);
+  }
+
   /** A Suggested template picked in the "New database" panel (research/27 §1). Skills has no Customize step. */
   private pickStarter(id: string): void {
     const meta = DATABASE_STARTERS.find((starter) => starter.id === id);
@@ -1047,9 +1092,12 @@ export class DatabaseTool implements BlockTool {
 
     this.inOneStep(() => {
       this.dropSampleCards();
+      this.databaseIcon = made.icon;
+      this.starter = id;
+      this.paintDatabaseIcon();
       // The definition first: a database write inside a row insert's sync window reads as an echo.
       this.writeDefinition(made);
-      for (const row of made.rows) {
+      for (const row of [...made.rows, ...made.templates]) {
         this.api.blocks.insertAt('database-row', row.data, { parentId: this.dataId, position: 'end', id: row.id });
         for (const block of row.body.filter((b) => this.api.tools.isInstalled(b.tool))) {
           this.api.blocks.insertAt(block.tool, block.data, { parentId: row.id, position: 'end' });
@@ -1058,6 +1106,46 @@ export class DatabaseTool implements BlockTool {
     });
     this.syncDefinition(oldSchema, oldViews, made.schema, made.views);
     for (const row of made.rows) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
+    for (const row of made.templates) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position, template: true });
+    this.syncRowsFromBlocks();
+    this.rebuildTabBar();
+    this.rerenderView();
+  }
+
+  private undoStarterAction(): { label: string; onClick: () => void } | undefined {
+    const key = DATABASE_STARTERS.find((starter) => starter.id === this.starter)?.undoKey;
+
+    if (key === undefined || this.readOnly) return undefined;
+
+    return { label: this.api.i18n.t(key), onClick: () => this.undoStarter() };
+  }
+
+  /**
+   * "Undo … database" (research/27:43). What Notion's row does was not
+   * measured. Blok choice: back to a new database's plain table, title and
+   * icon cleared, every row and template removed, in one undo step.
+   */
+  private undoStarter(): void {
+    if (this.destroyed || this.readOnly || this.structureLocked() || this.starter === undefined) return;
+    const titleId = this.titlePropertyId();
+    const seed = createSeedDefinition('table', () => nanoid());
+    const seedTitle = seed.schema.find((p) => p.type === 'title')?.id;
+    const remap = (pid: string): string => (pid === seedTitle && titleId !== '' ? titleId : pid);
+    const schema = seed.schema.map((p) => ({ ...p, id: remap(p.id) }));
+    const views = seed.views.map((view) => ({ ...view, visibleProperties: view.visibleProperties.map(remap), ...(view.properties === undefined ? {} : { properties: view.properties.map((entry) => ({ ...entry, id: remap(entry.id) })) }) }));
+    const oldSchema = this.model.getSchema();
+    const oldViews = this.model.getViews();
+    const rowIds = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'database-row').map((child) => child.id);
+
+    this.inOneStep(() => {
+      this.sampleCardIds = [];
+      for (const rowId of rowIds) this.removeRowBlock(rowId);
+      this.databaseIcon = undefined;
+      this.starter = undefined;
+      this.paintDatabaseIcon();
+      this.writeDefinition({ schema, views, activeViewId: views[0].id, title: '' });
+    });
+    this.syncDefinition(oldSchema, oldViews, schema, views);
     this.syncRowsFromBlocks();
     this.rebuildTabBar();
     this.rerenderView();
@@ -1795,6 +1883,7 @@ export class DatabaseTool implements BlockTool {
     titleRow.setAttribute('data-blok-database-title-row', '');
     titleRow.appendChild(titleEl);
     this.titleRowElement = titleRow;
+    this.paintDatabaseIcon();
     wrapper.appendChild(titleRow);
 
     this.tabBar = this.createTabBar();
@@ -1831,6 +1920,25 @@ export class DatabaseTool implements BlockTool {
     this.controls.refresh();
 
     return wrapper;
+  }
+
+  /** research/27:42: the icon a template gave, before the title. */
+  private paintDatabaseIcon(): void {
+    const icon = this.databaseIcon;
+
+    if (icon === undefined || this.titleRowElement === null || this.titleElement === null) {
+      this.iconElement?.remove();
+      this.iconElement = null;
+
+      return;
+    }
+    const el = this.iconElement ?? document.createElement('span');
+
+    el.setAttribute('data-blok-database-icon', icon.color);
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = ICON_GLYPHS[icon.glyph];
+    if (el.nextElementSibling !== this.titleElement) this.titleRowElement.insertBefore(el, this.titleElement);
+    this.iconElement = el;
   }
 
   private createTitleElement(): HTMLElement {
@@ -2103,6 +2211,8 @@ export class DatabaseTool implements BlockTool {
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
       ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),
+      ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
+      ...(this.starter !== undefined ? { starter: this.starter } : {}),
       title: currentTitle,
       activeViewId: this.activeViewId,
     };
@@ -2245,6 +2355,9 @@ export class DatabaseTool implements BlockTool {
 
     this.unknown = unknownKeys(data);
     this.dataSourceTitlesHidden = data.hideDataSourceTitles === true;
+    this.databaseIcon = iconOf(data);
+    this.starter = starterOf(data);
+    this.paintDatabaseIcon();
     this.savedAutomations = structuredClone(data.automations);
     this.title = typeof data.title === 'string' ? data.title : '';
 
@@ -5768,6 +5881,7 @@ export class DatabaseTool implements BlockTool {
       layoutItems: () => data().layoutItems(),
       actions: () => data().csvActions(),
       ...(context === undefined ? { customizeLayout: () => data().customizeLayoutAction() } : {}),
+      ...(context === undefined && !this.linked ? { undoStarter: () => this.undoStarterAction() } : {}),
       automations: {
         read: () => owner.savedAutomations,
         schema: () => owner.model.getSchema(),

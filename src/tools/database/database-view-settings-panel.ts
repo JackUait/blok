@@ -134,6 +134,8 @@ export interface ViewSettingsContext {
   automations?: AutomationSettings;
   /** The host gave `config.ai.autofill`. Without it there is no AI Autofill row. */
   autofill?: AutofillPanelSettings;
+  /** "Undo … database" on a database a Suggested template made (research/27:43). */
+  undoStarter?: () => { label: string; onClick: () => void } | undefined;
   /** The database's data sources. With only one, the Source row is greyed (research/09 §1). */
   dataSources?: DataSourceSettings;
 }
@@ -374,6 +376,20 @@ export class ViewSettingsPages {
             disabled: !autofill.writable(),
             onClick: () => {
               if (autofill.writable()) panel.push(this.autofillList(autofill));
+            },
+          }));
+        }
+        const undoStarter = this.ctx.undoStarter?.();
+
+        // Where Notion's other databases show "Turn into".
+        if (undoStarter !== undefined) {
+          rows.push(panelRow({
+            label: undoStarter.label,
+            testId: 'database-settings-undo-starter',
+            disabled: !this.shared,
+            onClick: () => {
+              panel.close();
+              undoStarter.onClick();
             },
           }));
         }

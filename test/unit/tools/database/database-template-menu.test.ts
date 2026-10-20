@@ -93,6 +93,24 @@ describe('template menu', () => {
     expect(find(items, 'template-t2')?.titleEl).toBeUndefined();
   });
 
+  it('marks the default template "Default" after its name, beside ↻ when it repeats (research/27:44)', () => {
+    const badge = (items: Item[], id: string): string | null | undefined =>
+      find(items, `template-${id}`)?.titleEl?.querySelector('[data-blok-database-template-default]')?.textContent;
+    const plain = templateMenuItems(host({ i18n: english })) as Item[];
+
+    expect(badge(plain, 't1')).toBe('Default');
+    expect(find(plain, 'template-t1')?.titleEl?.firstChild?.textContent).toBe('Bug');
+    expect(find(plain, 'template-t1')?.title).toBe('Bug');
+    expect(find(plain, 'template-t2')?.titleEl).toBeUndefined();
+
+    const repeating = templateMenuItems(host({ repeatOf: (id) => (id === 't1' ? { frequency: 'weekly', start: '2026-10-01T09:00:00.000Z' } : undefined) })) as Item[];
+    const title = find(repeating, 'template-t1')?.titleEl;
+
+    expect(title?.querySelector('[data-blok-database-template-repeat-icon]')).not.toBeNull();
+    expect(title?.lastElementChild?.getAttribute('data-blok-database-template-default')).toBe('');
+    expect(badge(templateMenuItems(host({ defaultTemplateId: () => undefined })) as Item[], 't1')).toBeUndefined();
+  });
+
   describe('repeat in the template banner', () => {
     // Tue Oct 20 2026, noon in Berlin (CEST, GMT+2).
     const now = new Date('2026-10-20T10:00:00.000Z');

@@ -19,10 +19,10 @@ declare global {
 
 interface Property { id: string; name: string; type: string; config?: { options: Array<{ id: string; label: string; color?: string }> } }
 interface View { name: string; type: string; groupBy?: string; filters: Array<{ propertyId: string; operator: string; value: unknown }>; timelineZoom?: string; showTimelineTable?: boolean; calculations?: Array<{ id: string; fn: string }> }
-interface Database { title?: string; schema: Property[]; views: View[] }
+interface Database { title?: string; schema: Array<Property & { defaultTemplateId?: string }>; views: View[]; icon?: { glyph: string; color: string }; starter?: string }
 
-const mount = async (page: Page): Promise<void> => {
-  await page.evaluate(async () => {
+const mount = async (page: Page, before: Array<Record<string, unknown>> = []): Promise<void> => {
+  await page.evaluate(async (others) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -35,7 +35,7 @@ const mount = async (page: Page): Promise<void> => {
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({
       holder,
-      data: { blocks: [{ id: 'p0', type: 'paragraph', data: { text: '' } }] },
+      data: { blocks: [...others, { id: 'p0', type: 'paragraph', data: { text: '' } }] },
       tools: {
         database: {
           class: (window as unknown as Record<string, unknown>).BlokDatabase,
@@ -44,7 +44,7 @@ const mount = async (page: Page): Promise<void> => {
       },
     });
     await window.blokInstance.isReady;
-  });
+  }, before);
 };
 
 const insertDatabase = async (page: Page): Promise<void> => {
@@ -59,12 +59,13 @@ const insertDatabase = async (page: Page): Promise<void> => {
 
 const saved = async (page: Page): Promise<OutputBlockData[]> => page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
 
-const read = async (page: Page): Promise<{ db: Database; rows: OutputBlockData[]; children: (id: string | undefined) => OutputBlockData[] }> => {
+const read = async (page: Page): Promise<{ db: Database; rows: OutputBlockData[]; templates: OutputBlockData[]; children: (id: string | undefined) => OutputBlockData[] }> => {
   const blocks = await saved(page);
-  const block = blocks.find((b) => b.type === 'database');
-  const rows = blocks.filter((b) => b.type === 'database-row' && b.parent === block?.id);
+  const block = blocks.filter((b) => b.type === 'database').at(-1);
+  const templates = blocks.filter((b) => b.type === 'database-row' && b.parent === block?.id && (b.data as { template?: boolean }).template === true);
+  const rows = blocks.filter((b) => b.type === 'database-row' && b.parent === block?.id && (b.data as { template?: boolean }).template !== true);
 
-  return { db: block?.data as unknown as Database, rows, children: (id: string | undefined) => blocks.filter((b) => b.parent !== undefined && b.parent === id) };
+  return { db: block?.data as unknown as Database, rows, templates, children: (id: string | undefined) => blocks.filter((b) => b.parent !== undefined && b.parent === id) };
 };
 
 const nameOf = (db: Database, id: string | undefined): string | undefined => db.schema.find((p) => p.id === id)?.name;
@@ -165,4 +166,85 @@ test('Skills builds at once: five properties, Count on the title, no rows', asyn
   expect(db.views).toHaveLength(1);
   expect(db.views[0].calculations).toEqual([{ id: db.schema[0].id, fn: 'count' }]);
   expect(rows).toHaveLength(0);
+});
+
+const openSettings = async (page: Page): Promise<void> => {
+  await page.getByTestId('database-toolbar-settings').click();
+};
+
+test('Suggested leaves out a template a database of the page was made from (research/27 §1a, inferred rule)', async ({ page }) => {
+  await mount(page, [{
+    id: 'used',
+    type: 'database',
+    data: {
+      title: 'Tasks Tracker',
+      schema: [{ id: 't', name: 'Task name', type: 'title', position: 'a0' }],
+      views: [{ id: 'v', name: 'All Tasks', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'v',
+      starter: 'tasks',
+    },
+  }]);
+  await insertDatabase(page);
+
+  await expect(page.getByTestId('database-new-database-panel').locator('[data-blok-database-panel-row]'))
+    .toHaveText(['New empty data source', 'Import CSV', 'Projects', 'Skills', 'Link to existing data source']);
+});
+
+test('Tasks Tracker: the database gets its icon, "New task" is the Default template, and "Undo Task database" empties it', async ({ page }) => {
+  await mount(page);
+  await insertDatabase(page);
+  await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Tasks Tracker' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Customize Tasks Tracker' });
+
+  await dialog.getByRole('button', { name: 'Get started' }).click();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toBeHidden();
+
+  const icon = page.locator('[data-blok-database-title-row] [data-blok-database-icon="green"]');
+
+  await expect(icon).toBeVisible();
+  await expect(icon).toHaveCSS('width', '21px');
+  const { db, templates, children } = await read(page);
+
+  expect([db.icon, db.starter]).toEqual([{ glyph: 'check', color: 'green' }, 'tasks']);
+  expect(templates.map((tpl) => (tpl.data as { title?: string }).title)).toEqual(['New task']);
+  expect(db.schema[0].defaultTemplateId).toBe(templates[0].id);
+  expect(children(templates[0].id).map((b) => b.type)).toEqual(['header', 'paragraph', 'paragraph', 'header', 'list', 'list', 'list', 'header']);
+
+  await page.getByTestId('database-toolbar-new-menu').click();
+  const entry = page.locator('[data-blok-item-name^="template-"]:visible', { hasText: 'New task' });
+
+  await expect(entry).toContainText('Default');
+  await page.keyboard.press('Escape');
+
+  await openSettings(page);
+  await page.getByTestId('database-settings-undo-starter').click();
+  await expect.poll(async () => {
+    const back = await read(page);
+
+    return [back.db.title ?? '', back.db.schema.map((p) => p.name), back.rows.length, back.templates.length, back.db.icon ?? null, back.db.starter ?? null];
+  }).toEqual(['', ['Name'], 0, 0, null, null]);
+  await expect(icon).toHaveCount(0);
+});
+
+test('Skills reads "Undo skills database"; Projects has no such row', async ({ page }) => {
+  await mount(page);
+  await insertDatabase(page);
+  await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Skills' }).click();
+  await expect(page.locator('[data-blok-database-icon="gray"]')).toBeVisible();
+  await openSettings(page);
+  await expect(page.getByTestId('database-settings-undo-starter')).toHaveText('Undo skills database');
+  await page.keyboard.press('Escape');
+
+  await mount(page);
+  await insertDatabase(page);
+  await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Projects' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Customize Projects' });
+
+  await dialog.getByRole('button', { name: 'Get started' }).click();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('[data-blok-database-icon="blue"]')).toBeVisible();
+  await openSettings(page);
+  await expect(page.getByTestId('database-settings-lock')).toBeVisible();
+  await expect(page.getByTestId('database-settings-undo-starter')).toHaveCount(0);
 });

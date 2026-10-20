@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
-import { DATABASE_STARTERS, buildStarter } from '../../../../src/tools/database/database-starters';
+import { DATABASE_STARTERS, buildStarter, suggestedStarters } from '../../../../src/tools/database/database-starters';
 import type { StarterBuild } from '../../../../src/tools/database/database-starters';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
@@ -278,5 +278,39 @@ describe('database starters (research/27 §1)', () => {
     expect(view.calculations).toEqual([{ id: 'old-title', fn: 'count' }]);
     expect(view.visibleProperties).toHaveLength(4);
     expect(made.rows).toEqual([]);
+  });
+
+  it('Suggested shows the first three templates not used yet (research/27 §1a, inferred rule)', () => {
+    const ids = (used: Array<'tasks' | 'projects' | 'skills'>): string[] => suggestedStarters(new Set(used)).map((s) => s.id);
+
+    expect(ids([])).toEqual(['tasks', 'projects', 'skills']);
+    expect(ids(['tasks'])).toEqual(['projects', 'skills']);
+    expect(ids(['tasks', 'projects'])).toEqual(['skills']);
+    expect(ids(['projects'])).toEqual(['tasks', 'skills']);
+    expect(ids(['tasks', 'projects', 'skills'])).toEqual([]);
+  });
+
+  it('each template gives the database its measured icon (research/27 §1b-d)', () => {
+    expect(build('tasks').icon).toEqual({ glyph: 'check', color: 'green' });
+    expect(build('projects').icon).toEqual({ glyph: 'timeline', color: 'blue' });
+    expect(build('skills').icon).toEqual({ glyph: 'wand', color: 'gray' });
+  });
+
+  it('Tasks Tracker and Projects bring a default template, "New task" and "New project"; Skills none (research/27:44, :81, :118)', () => {
+    const tasks = build('tasks');
+    const projects = build('projects');
+
+    expect(tasks.templates.map((tpl) => [tpl.data.title, tpl.data.template])).toEqual([['New task', true]]);
+    expect(tasks.templates[0].data.properties).toEqual({ 'old-title': 'New task' });
+    expect(tasks.schema[0].defaultTemplateId).toBe(tasks.templates[0].id);
+    expect(tasks.templates[0].body).toEqual(tasks.rows[0].body);
+    expect(projects.templates.map((tpl) => tpl.data.title)).toEqual(['New project']);
+    expect(projects.schema[0].defaultTemplateId).toBe(projects.templates[0].id);
+    expect(build('skills').templates).toEqual([]);
+    expect(build('skills').schema[0].defaultTemplateId).toBeUndefined();
+  });
+
+  it('only Tasks Tracker and Skills offer "Undo … database"; Projects showed "Turn into" (research/27:43, :81, :115)', () => {
+    expect(DATABASE_STARTERS.map((s) => (s.undoKey === undefined ? null : t(s.undoKey)))).toEqual(['Undo Task database', null, 'Undo skills database']);
   });
 });

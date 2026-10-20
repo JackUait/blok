@@ -419,6 +419,17 @@ export const DATABASE_DATA = {
     },
     activeViewId: { type: 'string', description: 'Id of the view shown by default.' },
     hideDataSourceTitles: { type: 'boolean', description: 'Hides the title line above the tabs for every view. Default false.' },
+    icon: {
+      type: 'object',
+      description: 'The icon before the title: one of Blok\'s glyphs on a tinted tile.',
+      required: ['glyph', 'color'],
+      additionalProperties: false,
+      properties: {
+        glyph: { type: 'string', enum: ['check', 'timeline', 'wand'] },
+        color: { type: 'string', enum: ['green', 'blue', 'gray'] },
+      },
+    },
+    starter: { type: 'string', enum: ['tasks', 'projects', 'skills'], description: 'The Suggested template this database was made from. Removed by "Undo … database".' },
     automations: {
       type: 'object',
       required: ['version', 'definitions'],

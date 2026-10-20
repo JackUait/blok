@@ -63,6 +63,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-card-drag.ts': cmds(['database.moveRow'], 'Drag a card between groups or within one.'),
   'ui-file:src/tools/database/database-comments-panel.ts': exempt('cut-v1', 'D6 cut: comments are written by people, not agents (user decision 2026-10-16, design 18); no agent comment tools for now.'),
   'ui-file:src/tools/database/database-comments.ts': exempt('cut-v1', 'D6 cut: the feed card comment box writes the same built-in comments; agents skip comments (user decision 2026-10-16, design 18).'),
+  'ui-file:src/tools/database/database-template-menu.ts': cmd('database.setTemplateRepeat'),
   'ui-file:src/tools/database/database-card-drawer.ts': cmds(['database.setRowValues', 'database.addProperty'], 'Row title, description and property edits.'),
   'ui-file:src/tools/database/database-column-controls.ts': cmds(['database.addOption', 'database.renameOption', 'database.deleteOption'], 'Board column (select option) controls.'),
   'ui-file:src/tools/database/database-column-drag.ts': cmds(['database.moveOption'], 'Reorder board columns.'),

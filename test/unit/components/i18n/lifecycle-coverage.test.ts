@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1276 + 125 + 469 + 4 closure for all 1874 keys', () => {
+  it('rebuilds a disjoint 1276 + 125 + 478 + 4 closure for all 1883 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1874);
+    expect(lifecycle.size).toBe(1883);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -447,7 +447,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the feed summary's tools.database.feedCommentReplies_one/_other replace feedCommentReplyOne/feedCommentReplies.
       // +3 / -1: the number range's groupRange, groupRangeEvery and groupRangeExample replace groupRangeSize,
       // all built from a short name.
-      'registered-namespace-compatible': 469,
+      // +21 / -12: Edit cadence's labels, Weekday and the unit plurals (templateRepeatUnit<Unit>_*) replace the
+      // Every-N plurals and Daily/Weekly/Monthly/Yearly, all built from a short name.
+      'registered-namespace-compatible': 478,
       'catalog-only': 4,
     });
     expect(

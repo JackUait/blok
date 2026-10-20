@@ -23,9 +23,10 @@ describe('plural forms', () => {
 
     await i18n.prepare();
 
-    expect(i18n.t('tools.database.templateRepeatEveryWeek', { count: 1 })).toBe('Every 1 week');
-    expect(i18n.t('tools.database.templateRepeatEveryWeek', { count: 2 })).toBe('Every 2 weeks');
-    expect(i18n.t('tools.database.templateRepeatEveryDay', { count: 3 })).toBe('Every 3 days');
+    expect(i18n.t('tools.database.templateRepeatSummaryWeeks', { count: 1 })).toBe('Duplicate every 1 week');
+    expect(i18n.t('tools.database.templateRepeatSummaryWeeks', { count: 2 })).toBe('Duplicate every 2 weeks');
+    expect(i18n.t('tools.database.templateRepeatUnitDay', { count: 3 })).toBe('Days');
+    expect(i18n.t('tools.database.templateRepeatUnitDay', { count: 1 })).toBe('Day');
   });
 
   it('counts feed replies as "1 reply" and "2 replies" (research/22 §6)', async () => {
@@ -57,7 +58,7 @@ describe('plural forms', () => {
     await i18n.prepare();
     await i18n.setLocale('ru');
 
-    const forms = [1, 2, 5, 21].map((count) => i18n.t('tools.database.templateRepeatEveryWeek', { count }));
+    const forms = [1, 2, 5, 21].map((count) => i18n.t('tools.database.templateRepeatSummaryWeeks', { count }));
 
     expect(new Set(forms).size).toBeGreaterThanOrEqual(3);
     forms.forEach((form, index) => expect(form).toContain(String([1, 2, 5, 21][index])));
@@ -83,17 +84,14 @@ describe('plural forms', () => {
     }
   });
 
-  /*
-   * The UI puts a number field where {count} sits. It finds that spot as the
-   * first run of the number's digits, so no other digit may appear.
-   */
-  it.each(localeCodes)('%s plural forms hold {count} once and no other digit', (code) => {
+  /* A unit name beside a number box holds no {count}; a sentence holds it once. */
+  it.each(localeCodes)('%s plural forms hold {count} at most once and no other digit', (code) => {
     const messages = read(code);
 
     for (const [key, value] of Object.entries(messages)) {
       if (!pluralBases.some((base) => key.startsWith(`${base}_`))) continue;
 
-      expect(value.split('{count}').length - 1, `${code} ${key}`).toBe(1);
+      expect(value.split('{count}').length - 1, `${code} ${key}`).toBeLessThanOrEqual(1);
       expect(/\d/.test(value.replace('{count}', '')), `${code} ${key}`).toBe(false);
     }
   });

@@ -8700,6 +8700,9 @@ button[data-blok-database-feed-reaction]:hover,
 
 /* Notion's "Duplicate every…" pill sits beside the banner text. */
 [data-blok-database-template-repeat] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
   padding: var(--blok-space-0-5) var(--blok-space-2);
   border: 1px solid var(--blok-popover-border);
   border-radius: var(--blok-radius-control);
@@ -8711,6 +8714,111 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-template-repeat]:hover {
   background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-template-repeat-chevron] {
+  display: inline-flex;
+}
+
+[data-blok-database-template-repeat-chevron] svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* research/21 shot 61: Edit cadence is 260px wide. */
+[data-blok-database-template-cadence] {
+  width: 260px;
+  max-width: 100%;
+  font-size: 14px;
+}
+
+[data-blok-database-template-cadence-header],
+[data-blok-database-template-cadence-row] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-template-cadence-title],
+[data-blok-database-template-cadence-next] {
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+}
+
+[data-blok-database-template-cadence-next] {
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+/* Notion's Save is blue text; Blok keeps blue for links and focus rings. */
+[data-blok-database-template-cadence-save] {
+  padding: 0 var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-template-cadence-save]:hover,
+[data-blok-database-template-cadence-days] button:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-template-cadence-value] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-template-cadence-row] input,
+[data-blok-database-template-cadence-row] select {
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+[data-blok-database-template-cadence-row="every"] input {
+  width: 36px;
+  margin-inline-start: auto;
+}
+
+[data-blok-database-template-cadence] hr {
+  margin: var(--blok-space-1) var(--blok-space-2);
+  border: none;
+  border-top: 1px solid var(--blok-popover-border);
+}
+
+[data-blok-database-template-cadence-days] {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+/* research/21: 28px round chips, 12px text. */
+[data-blok-database-template-cadence-days] button {
+  width: 28px;
+  min-width: max-content;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--blok-popover-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Notion fills an on chip blue; a selected state in Blok is gray with primary ink. */
+[data-blok-database-template-cadence-days] button[aria-pressed="true"] {
+  border-color: transparent;
+  background-color: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+  font-weight: 500;
 }
 
 /* Notion paints ↻ blue; Blok keeps blue for links and focus rings. */

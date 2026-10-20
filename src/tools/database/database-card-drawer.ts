@@ -1856,9 +1856,14 @@ export class DatabaseCardDrawer {
         button.setAttribute('data-blok-database-template-repeat', '');
         button.setAttribute('aria-haspopup', 'menu');
         button.addEventListener('click', () => this.templateRepeatOpen?.(button));
+        // No whitespace text in the icon: the button's text is its label alone.
+        button.append(document.createElement('span'), Object.assign(document.createElement('span'), { innerHTML: IconChevronDown.replace(/>\s+</g, '><').trim() }));
+        button.lastElementChild?.setAttribute('data-blok-database-template-repeat-chevron', '');
         el.append(button);
       }
-      if (button.textContent !== banner.repeat.label) button.textContent = banner.repeat.label;
+      const label = button.firstElementChild;
+
+      if (label !== null && label.textContent !== banner.repeat.label) label.textContent = banner.repeat.label;
     }
     if (shown === null || shown === undefined) content.prepend(el);
   }

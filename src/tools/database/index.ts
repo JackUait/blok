@@ -30,6 +30,7 @@ import { comparePositions } from './positions';
 import { mapRowValues } from './row-move';
 import { dependencyArrows, shiftDependents } from './dependencies';
 import { templateMenuItems, templateRepeatItems, templateRepeatSummary } from './database-template-menu';
+import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
@@ -6024,11 +6025,18 @@ export class DatabaseTool implements BlockTool {
       ...(this.readOnly ? {} : {
         repeat: {
           label: templateRepeatSummary(this.api.i18n, repeat),
-          open: (anchor: HTMLElement) => this.showGroupPopover(anchor, templateRepeatItems({
-            i18n: this.api.i18n,
-            repeat: () => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === templateId)),
-            setRepeat: (next) => this.setTemplateRepeat(templateId, next),
-          }), anchor),
+          open: (anchor: HTMLElement) => {
+            const host: TemplateRepeatHost = {
+              i18n: this.api.i18n,
+              repeat: () => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === templateId)),
+              setRepeat: (next) => this.setTemplateRepeat(templateId, next),
+              // After the preset list has closed: it is still being activated now.
+              editCadence: (draft) => queueMicrotask(() => this.showGroupPopover(anchor, templateRepeatItems(host, draft), anchor)),
+              close: () => this.groupMenuPopover?.hide(),
+            };
+
+            this.showGroupPopover(anchor, templateRepeatItems(host), anchor);
+          },
         },
       }),
     });

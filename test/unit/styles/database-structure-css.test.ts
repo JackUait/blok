@@ -72,6 +72,17 @@ describe('database structure styles', () => {
     expect(ruleBody('[data-blok-database-template-repeat-icon]')).toContain('--blok-text-secondary');
   });
 
+  it('lays out Edit cadence as measured: 260px, 28px round day chips with 12px text, a chevron on the banner button', () => {
+    expect(ruleBody('[data-blok-database-template-cadence]')).toContain('width: 260px');
+    const chip = ruleBody('[data-blok-database-template-cadence-days] button');
+
+    expect(chip).toContain('width: 28px');
+    expect(chip).toContain('height: 28px');
+    expect(chip).toContain('border-radius: 50%');
+    expect(chip).toContain('font-size: 12px');
+    expect(ruleBody('[data-blok-database-template-repeat-chevron] svg')).toContain('width: 16px');
+  });
+
   it('styles the button cell, template banner and linked-view states', () => {
     for (const selector of ['[data-blok-database-button]', '[data-blok-database-template-banner]', '[data-blok-database-source-missing]', '[data-blok-database-source-picker]', '[data-blok-database-add-subitem] button']) {
       expect(ruleBody(selector), selector).not.toBe('');

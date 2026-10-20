@@ -14,8 +14,16 @@ vi.mock('../../../../src/blok', () => ({
   },
 }));
 
+interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => void }
+
+const popovers = vi.hoisted(() => ({ items: [] as MockItem[][] }));
+
 vi.mock('../../../../src/components/utils/popover', () => {
   class MockPopoverDesktop {
+    constructor(params?: { items?: MockItem[] }) {
+      popovers.items.push(params?.items ?? []);
+    }
+
     show(): void {}
 
     hide(): void {}
@@ -184,6 +192,35 @@ describe('DatabaseTool — templates', () => {
       await Promise.resolve();
 
       expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryDay');
+    });
+
+    it('has a chevron after its label', () => {
+      const { tool } = buildDatabase(seed(), 'db', data());
+
+      tool.openTemplate('tpl');
+
+      expect(repeatButton()?.querySelector('svg') ?? null).not.toBeNull();
+      expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryNone');
+    });
+
+    it('a preset opens Edit cadence; only Save stores the schedule', async () => {
+      const doc = seed();
+      const { tool } = buildDatabase(doc, 'db', data());
+      const item = (name: string): MockItem | undefined => popovers.items.at(-1)?.find((entry) => entry.name === name);
+
+      tool.openTemplate('tpl');
+      repeatButton()?.click();
+      item('template-repeat-weekday')?.onActivate?.();
+      await Promise.resolve();
+      const cadence = item('template-repeat-cadence')?.element;
+
+      expect(cadence?.hasAttribute('data-blok-database-template-cadence')).toBe(true);
+      expect((doc.blocks.get('tpl')?.data as { repeat?: unknown }).repeat).toBeUndefined();
+      expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryNone');
+      cadence?.querySelector<HTMLButtonElement>('[data-blok-database-template-cadence-save]')?.click();
+
+      expect((doc.blocks.get('tpl')?.data as { repeat?: unknown }).repeat).toMatchObject({ frequency: 'weekly', weekdays: [1, 2, 3, 4, 5] });
+      expect(repeatButton()?.textContent).toBe('tools.database.templateRepeatSummaryWeekday');
     });
 
     it('is not on a row page', () => {

@@ -94,25 +94,44 @@ describe('template menu', () => {
   });
 
   describe('repeat in the template banner', () => {
-    const weekly = { frequency: 'weekly' as const, interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin', lastRunAt: '2026-10-05T07:30:00.000Z' };
+    // Tue Oct 20 2026, noon in Berlin (CEST, GMT+2).
+    const now = new Date('2026-10-20T10:00:00.000Z');
+    const tomorrowMidnight = '2026-10-20T22:00:00.000Z';
+    const weekly: TemplateRepeat = { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin', lastRunAt: '2026-10-05T07:30:00.000Z' };
     const repeatHost = (patch: Partial<TemplateRepeatHost> = {}): TemplateRepeatHost => ({
-      i18n: { t: (key: string) => key },
+      i18n: english,
       repeat: () => undefined,
       setRepeat: vi.fn(),
+      editCadence: vi.fn(),
+      close: vi.fn(),
+      timeZone: 'Europe/Berlin',
+      locale: 'en-US',
+      now: () => now,
       ...patch,
     });
-    const item = (h: TemplateRepeatHost, name: string): Item | undefined => find(templateRepeatItems(h) as Item[], `template-repeat-${name}`);
-    const field = (h: TemplateRepeatHost, name: string): HTMLElement | undefined => item(h, name)?.element;
-    const type = (input: HTMLInputElement | null | undefined, value: string): void => {
+    /** The Edit cadence panel for a draft, or for the stored schedule. */
+    const panel = (h: TemplateRepeatHost, draft?: TemplateRepeat): { items: Item[]; el: HTMLElement; q: <T extends Element = HTMLElement>(selector: string) => T | null } => {
+      const items = templateRepeatItems(h, draft) as Item[];
+      const el = document.createElement('div');
+
+      items.forEach((entry) => { if (entry.element !== undefined) el.append(entry.element); });
+
+      return { items, el, q: (selector) => el.querySelector(selector) };
+    };
+    const type = (input: HTMLInputElement | HTMLSelectElement | null | undefined, value: string): void => {
       if (input === null || input === undefined) throw new Error('no input');
-      const el: HTMLInputElement = input;
+      const el: HTMLInputElement | HTMLSelectElement = input;
 
       el.value = value;
       el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
     };
-    /** The field as a reader sees it: the number box shows its value. */
-    const shown = (el: HTMLElement | undefined): string =>
-      Array.from(el?.childNodes ?? []).map((node) => (node instanceof HTMLInputElement ? node.value : node.textContent)).join('');
+    const chips = (q: ReturnType<typeof panel>['q']): string[] =>
+      Array.from(q('[data-blok-database-template-cadence-days]')?.querySelectorAll('button') ?? [])
+        .map((chip) => `${chip.textContent ?? ''}${chip.getAttribute('aria-pressed') === 'true' ? '*' : ''}`);
+    const chip = (q: ReturnType<typeof panel>['q'], day: number): HTMLButtonElement | null => q<HTMLButtonElement>(`[data-blok-database-template-cadence-days] button[data-weekday="${day}"]`);
+    const save = (q: ReturnType<typeof panel>['q']): void => q<HTMLButtonElement>('[data-blok-database-template-cadence-save]')?.click();
+    const value = (q: ReturnType<typeof panel>['q'], row: string): string => q(`[data-blok-database-template-cadence-row="${row}"] [data-blok-database-template-cadence-value]`)?.textContent ?? '';
 
     it('sums the schedule up with its interval, and drops 1', () => {
       const summary = (repeat: TemplateRepeat | undefined): string => templateRepeatSummary(english, repeat);
@@ -128,140 +147,202 @@ describe('template menu', () => {
       expect(summary({ ...weekly, frequency: 'yearly', interval: 1 })).toBe('Duplicate every year');
     });
 
+    it('says "every weekday" for Monday to Friday every week only', () => {
+      const summary = (repeat: TemplateRepeat): string => templateRepeatSummary(english, repeat);
+
+      expect(summary({ ...weekly, interval: 1, weekdays: [5, 4, 3, 2, 1] })).toBe('Duplicate every weekday');
+      expect(summary({ ...weekly, interval: 2, weekdays: [1, 2, 3, 4, 5] })).toBe('Duplicate every 2 weeks');
+      expect(summary({ ...weekly, interval: 1, weekdays: [1, 2] })).toBe('Duplicate every week');
+    });
+
     it('offers Notion\'s presets while the template does not repeat', () => {
-      const items = templateRepeatItems(repeatHost({ i18n: english })) as Item[];
+      const items = templateRepeatItems(repeatHost()) as Item[];
 
-      expect(items.map((entry) => entry.title)).toEqual(['Day', 'Week', '2 Weeks', 'Month', '3 Months', '6 Months', 'Year']);
-      expect(field(repeatHost(), 'interval')).toBeUndefined();
-      expect(field(repeatHost(), 'start')).toBeUndefined();
-      expect(item(repeatHost(), 'cancel')).toBeUndefined();
+      expect(items.map((entry) => entry.title)).toEqual(['Day', 'Weekday', 'Week', '2 Weeks', 'Month', '3 Months', '6 Months', 'Year']);
     });
 
-    it('a preset starts the schedule now, in the viewer\'s zone', () => {
-      const h = repeatHost({ timeZone: 'Europe/Berlin' });
+    it('a preset opens Edit cadence with a draft from tomorrow at midnight, and saves nothing yet', () => {
+      const h = repeatHost();
+      const pick = (id: string): void => find(templateRepeatItems(h) as Item[], `template-repeat-${id}`)?.onActivate?.();
 
-      item(h, '2-weeks')?.onActivate?.();
-      item(h, 'day')?.onActivate?.();
-      item(h, '6-months')?.onActivate?.();
+      pick('weekday');
+      pick('2-weeks');
+      pick('week');
+      pick('6-months');
 
-      expect(h.setRepeat).toHaveBeenNthCalledWith(1, { frequency: 'weekly', interval: 2, start: expect.any(String), timeZone: 'Europe/Berlin' });
-      expect(h.setRepeat).toHaveBeenNthCalledWith(2, { frequency: 'daily', start: expect.any(String), timeZone: 'Europe/Berlin' });
-      expect(h.setRepeat).toHaveBeenNthCalledWith(3, { frequency: 'monthly', interval: 6, start: expect.any(String), timeZone: 'Europe/Berlin' });
+      expect(h.setRepeat).not.toHaveBeenCalled();
+      expect(h.editCadence).toHaveBeenNthCalledWith(1, { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      expect(h.editCadence).toHaveBeenNthCalledWith(2, { frequency: 'weekly', interval: 2, weekdays: [1], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      expect(h.editCadence).toHaveBeenNthCalledWith(3, { frequency: 'weekly', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      expect(h.editCadence).toHaveBeenNthCalledWith(4, { frequency: 'monthly', interval: 6, start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
     });
 
-    it('edits a set schedule and cancels it', () => {
-      const h = repeatHost({ repeat: () => weekly, i18n: english });
-      const items = templateRepeatItems(h) as Item[];
+    it('opens Edit cadence straight away once the template repeats', () => {
+      const { items, q } = panel(repeatHost({ repeat: () => weekly }));
 
       expect(items.some((entry) => entry.title === '2 Weeks')).toBe(false);
-      expect(find(items, 'template-repeat-weekly')?.isActive).toBe(true);
-      expect(find(items, 'template-repeat-cancel')?.title).toBe('Cancel recurrence');
-      find(items, 'template-repeat-cancel')?.onActivate?.();
-
-      expect(h.setRepeat).toHaveBeenCalledWith(null);
+      expect(q('[data-blok-database-template-cadence-title]')?.textContent).toBe('Edit cadence');
+      expect(q('[data-blok-database-template-cadence-save]')?.textContent).toBe('Save');
     });
 
-    it('keeps the start, interval, zone and last run when the frequency changes', () => {
-      const h = repeatHost({ repeat: () => weekly });
+    it('lays the panel out as measured: Every, days, At, Starting, Ending, Timezone', () => {
+      const { q, el } = panel(repeatHost(), { frequency: 'weekly', interval: 2, weekdays: [1], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
 
-      item(h, 'monthly')?.onActivate?.();
+      expect(Array.from(el.querySelectorAll('[data-blok-database-template-cadence-row]')).map((row) => row.getAttribute('data-blok-database-template-cadence-row')))
+        .toEqual(['every', 'at', 'starting', 'ending', 'timezone']);
+      expect(q<HTMLInputElement>('[data-blok-database-template-cadence-row="every"] input')?.value).toBe('2');
+      expect(chips(q)).toEqual(['Mo*', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+      expect(chip(q, 1)?.getAttribute('aria-label')).toBe('Monday');
+      expect(value(q, 'ending')).toBe('Never');
+      expect(value(q, 'timezone')).toBe('GMT+2');
+    });
+
+    it('names the units in Notion\'s list, singular for 1, and relabels as the number is typed', () => {
+      const { q } = panel(repeatHost(), { frequency: 'weekly', interval: 2, start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      const unit = q<HTMLSelectElement>('[data-blok-database-template-cadence-row="every"] select');
+      const options = (): string[] => Array.from(unit?.options ?? []).map((option) => option.textContent ?? '');
+
+      expect(options()).toEqual(['Days', 'Weeks', 'Months', 'Years']);
+      expect(unit?.value).toBe('weekly');
+      type(q<HTMLInputElement>('[data-blok-database-template-cadence-row="every"] input'), '1');
+      expect(options()).toEqual(['Day', 'Week', 'Month', 'Year']);
+    });
+
+    it('shows day chips for weeks only', () => {
+      const { q } = panel(repeatHost(), { frequency: 'weekly', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+
+      // No days stored: the start's weekday (Wednesday in Berlin) is the one it runs on.
+      expect(chips(q)).toEqual(['Mo', 'Tu', 'We*', 'Th', 'Fr', 'Sa', 'Su']);
+      type(q<HTMLSelectElement>('[data-blok-database-template-cadence-row="every"] select'), 'daily');
+      expect(q('[data-blok-database-template-cadence-days]')).toBeNull();
+      type(q<HTMLSelectElement>('[data-blok-database-template-cadence-row="every"] select'), 'weekly');
+      expect(chips(q)).toEqual(['Mo', 'Tu', 'We*', 'Th', 'Fr', 'Sa', 'Su']);
+    });
+
+    it('saves the draft only on Save, then closes', () => {
+      const h = repeatHost();
+      const { q } = panel(h, { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+
+      chip(q, 5)?.click();
+      chip(q, 6)?.click();
+      type(q<HTMLInputElement>('[data-blok-database-template-cadence-row="every"] input'), '3');
+      expect(h.setRepeat).not.toHaveBeenCalled();
+      save(q);
+
+      expect(h.setRepeat).toHaveBeenCalledWith({ frequency: 'weekly', interval: 3, weekdays: [1, 2, 3, 4, 6], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      expect(h.close).toHaveBeenCalled();
+    });
+
+    it('keeps at least one day on', () => {
+      const h = repeatHost();
+      const { q } = panel(h, { frequency: 'weekly', weekdays: [1], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+
+      chip(q, 1)?.click();
+      expect(chips(q)[0]).toBe('Mo*');
+      save(q);
+      expect(h.setRepeat).toHaveBeenCalledWith(expect.objectContaining({ weekdays: [1] }));
+    });
+
+    it('drops the days when the unit is no longer weeks', () => {
+      const h = repeatHost({ repeat: () => ({ ...weekly, weekdays: [1, 3] }) });
+      const { q } = panel(h);
+
+      type(q<HTMLSelectElement>('[data-blok-database-template-cadence-row="every"] select'), 'monthly');
+      save(q);
 
       expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, frequency: 'monthly' });
     });
 
-    it('reads "Every N weeks" and stores a whole number of at least 1', () => {
-      const h = repeatHost({ repeat: () => weekly, i18n: english });
-      const el = field(h, 'interval');
-      const input = el?.querySelector<HTMLInputElement>('input');
+    it('ignores a number that is not a whole number of at least 1', () => {
+      const h = repeatHost({ repeat: () => weekly });
+      const { q } = panel(h);
+      const input = q<HTMLInputElement>('[data-blok-database-template-cadence-row="every"] input');
 
-      expect(shown(el)).toBe('Every 2 weeks');
       type(input, '0');
       type(input, '1.5');
       type(input, '');
-      expect(h.setRepeat).not.toHaveBeenCalled();
-      type(input, '3');
+      save(q);
 
-      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, interval: 3 });
+      expect(h.setRepeat).toHaveBeenCalledWith(weekly);
     });
 
-    it('says "Every 1 week", not "Every 1 weeks", and rewords as the number is typed', () => {
-      const el = field(repeatHost({ repeat: () => ({ ...weekly, interval: 1 }), i18n: english }), 'interval');
-      const input = el?.querySelector<HTMLInputElement>('input');
+    it('keeps the latest last run on Save', () => {
+      let live: TemplateRepeat = weekly;
+      const h = repeatHost({ repeat: () => live });
+      const { q } = panel(h);
 
-      expect(shown(el)).toBe('Every 1 week');
-      expect(shown(field(repeatHost({ repeat: () => ({ ...weekly, interval: undefined }), i18n: english }), 'interval'))).toBe('Every 1 week');
-      type(input, '5');
-      expect(shown(el)).toBe('Every 5 weeks');
-      expect(el?.querySelector('input')).toBe(input);
+      live = { ...weekly, lastRunAt: '2026-10-19T07:30:00.000Z' };
+      save(q);
+
+      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, lastRunAt: '2026-10-19T07:30:00.000Z' });
     });
 
-    it('names the unit after the frequency', () => {
-      const interval = (frequency: TemplateRepeat['frequency'], n: number): string =>
-        shown(field(repeatHost({ repeat: () => ({ ...weekly, frequency, interval: n }), i18n: english }), 'interval'));
-
-      expect([interval('daily', 1), interval('daily', 3)]).toEqual(['Every 1 day', 'Every 3 days']);
-      expect([interval('monthly', 1), interval('monthly', 2)]).toEqual(['Every 1 month', 'Every 2 months']);
-      expect([interval('yearly', 1), interval('yearly', 2)]).toEqual(['Every 1 year', 'Every 2 years']);
-    });
-
-    it('puts the number box where the language puts the number', () => {
-      const japanese = { t: (key: string, vars?: Record<string, string | number>) => `${String(vars?.count)}週間ごと` };
-      const el = field(repeatHost({ repeat: () => weekly, i18n: japanese }), 'interval');
-
-      expect(shown(el)).toBe('2週間ごと');
-      expect(el?.firstChild?.textContent).toBe('');
-      expect(el?.childNodes[1]).toBeInstanceOf(HTMLInputElement);
-    });
-
-    it('shows the start on the schedule\'s own wall clock and stores an edit in that zone', () => {
+    it('edits At and Starting on the schedule\'s own wall clock', () => {
       const h = repeatHost({ repeat: () => weekly, timeZone: 'America/New_York' });
-      const el = field(h, 'start');
-      const date = el?.querySelector<HTMLInputElement>('input[type="date"]');
-      const time = el?.querySelector<HTMLInputElement>('input[type="time"]');
+      const { q } = panel(h);
+      const time = q<HTMLInputElement>('[data-blok-database-template-cadence-row="at"] input[type="time"]');
+      const date = q<HTMLInputElement>('[data-blok-database-template-cadence-row="starting"] input[type="date"]');
 
       // 07:30Z is 09:30 in Berlin (CEST).
       expect(date?.value).toBe('2026-10-05');
       expect(time?.value).toBe('09:30');
-      expect(time?.getAttribute('aria-label')).toBe('tools.database.dateTime');
       type(time, '');
-      expect(h.setRepeat).not.toHaveBeenCalled();
       type(time, '18:00');
       type(date, '2026-11-02');
+      save(q);
 
-      expect(h.setRepeat).toHaveBeenNthCalledWith(1, { ...weekly, start: '2026-10-05T16:00:00.000Z' });
       // Nov 2 is after Berlin leaves summer time: 18:00 CET is 17:00Z.
-      expect(h.setRepeat).toHaveBeenNthCalledWith(2, { ...weekly, start: '2026-11-02T17:00:00.000Z' });
+      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-11-02T17:00:00.000Z' });
     });
 
-    it('stamps the viewer\'s zone when the start of a zone-less schedule is edited', () => {
-      const legacy = { frequency: 'daily' as const, start: '2026-10-05T07:30:00.000Z' };
+    it('stamps the viewer\'s zone on a zone-less schedule', () => {
+      const legacy: TemplateRepeat = { frequency: 'daily', start: '2026-10-05T07:30:00.000Z' };
       const h = repeatHost({ repeat: () => legacy, timeZone: 'Asia/Tokyo' });
-      const el = field(h, 'start');
+      const { q } = panel(h);
+      const time = q<HTMLInputElement>('[data-blok-database-template-cadence-row="at"] input[type="time"]');
 
       // 07:30Z is 16:30 in Tokyo.
-      expect(el?.querySelector<HTMLInputElement>('input[type="time"]')?.value).toBe('16:30');
-      type(el?.querySelector<HTMLInputElement>('input[type="time"]'), '09:00');
+      expect(time?.value).toBe('16:30');
+      type(time, '09:00');
+      save(q);
 
       expect(h.setRepeat).toHaveBeenCalledWith({ ...legacy, start: '2026-10-05T00:00:00.000Z', timeZone: 'Asia/Tokyo' });
     });
 
-    it('keeps an interval typed before the start is edited in the same menu', () => {
-      let live: TemplateRepeat = weekly;
-      const h = repeatHost({ repeat: () => live, setRepeat: vi.fn((next: TemplateRepeat | null) => { if (next !== null) live = next; }) });
-      const items = templateRepeatItems(h) as Item[];
-      const inMenu = (name: string): HTMLElement | undefined => find(items, `template-repeat-${name}`)?.element;
+    it('shows an end that the document holds', () => {
+      const { q } = panel(repeatHost({ repeat: () => ({ ...weekly, end: '2026-12-31T12:00:00.000Z' }) }));
 
-      type(inMenu('interval')?.querySelector<HTMLInputElement>('input'), '4');
-      type(inMenu('start')?.querySelector<HTMLInputElement>('input[type="time"]'), '18:00');
-
-      expect(live).toEqual({ ...weekly, interval: 4, start: '2026-10-05T16:00:00.000Z' });
+      expect(value(q, 'ending')).toBe('Dec 31, 2026');
     });
 
-    it('lets the fields own their keys', () => {
-      const h = repeatHost({ repeat: () => weekly });
+    it('reads out the next occurrence and follows the draft', () => {
+      const { q } = panel(repeatHost(), { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      const next = (): string => q('[data-blok-database-template-cadence-next]')?.textContent ?? '';
 
-      expect(field(h, 'interval')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
-      expect(field(h, 'start')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+      expect(next()).toBe('Next occurrence:Tomorrow, 12:00 AM');
+      chip(q, 3)?.click();
+      chip(q, 2)?.click();
+      chip(q, 4)?.click();
+      chip(q, 5)?.click();
+      // Monday only, from a Wednesday start: the next Monday.
+      expect(next()).toBe('Next occurrence:Oct 26, 12:00 AM');
+    });
+
+    it('cancels the recurrence', () => {
+      const h = repeatHost({ repeat: () => weekly });
+      const { items } = panel(h);
+      const cancel = find(items, 'template-repeat-cancel');
+
+      expect(cancel?.title).toBe('Cancel recurrence');
+      cancel?.onActivate?.();
+
+      expect(h.setRepeat).toHaveBeenCalledWith(null);
+    });
+
+    it('lets the panel own its keys', () => {
+      const { q } = panel(repeatHost({ repeat: () => weekly }));
+
+      expect(q('[data-blok-database-template-cadence]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
     });
   });
 

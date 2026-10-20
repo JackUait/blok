@@ -433,6 +433,55 @@ describe('UndoHistory', () => {
       expect(snapshot).toBeNull();
     });
 
+    // research/23 §9: focus in a tool's own keyboard (a database grid, a cell editor) is not a caret.
+    // Falling back to currentBlock would send undo to that block's first input (the database title).
+    it('records no caret while focus is in a keyboard-owner subtree outside every block input', () => {
+      const title = document.createElement('div');
+      const grid = document.createElement('div');
+
+      grid.setAttribute('data-blok-keyboard-owner', '');
+      grid.tabIndex = 0;
+      document.body.append(title, grid);
+      grid.focus();
+      (blok.BlockManager as unknown as { currentBlock: Record<string, unknown> }).currentBlock = {
+        id: 'db',
+        currentInputIndex: 0,
+        currentInput: title,
+        inputs: [title],
+      };
+
+      try {
+        expect(history.captureCaretSnapshot()).toBeNull();
+      } finally {
+        title.remove();
+        grid.remove();
+      }
+    });
+
+    it('still records a caret in a block input that sits inside a keyboard-owner subtree', () => {
+      const owner = document.createElement('div');
+      const input = document.createElement('div');
+      const text = document.createTextNode('child text');
+
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      input.contentEditable = 'true';
+      input.appendChild(text);
+      owner.appendChild(input);
+      document.body.appendChild(owner);
+      input.focus();
+      const block = { id: 'child', currentInputIndex: 0, currentInput: input, inputs: [input] };
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> })
+        .getBlockByChildNode.mockImplementation((node: Node) => (input.contains(node) ? block : undefined));
+      window.getSelection()?.collapse(text, 3);
+
+      try {
+        expect(history.captureCaretSnapshot()).toMatchObject({ blockId: 'child', inputIndex: 0, offset: 3 });
+      } finally {
+        owner.remove();
+      }
+    });
+
     it('marks caret before change', () => {
       const mockBlock = {
         id: 'b1',

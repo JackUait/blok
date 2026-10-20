@@ -20,13 +20,12 @@ const parseNumberEntry = (text: string): Outcome | null => {
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
 
 /**
- * research/22 §3: Escape saves a text, number or url, and an email or phone typed
- * into an empty cell. Unmeasured, so Escape cancels: the title, and editing a
- * stored email or phone.
+ * research/22 §3, research/23 §3c: Escape saves a text, number, url, email or phone.
+ * Unmeasured, so Escape cancels: the title.
  */
-const escapeCommits = (type: PropertyDefinition['type'], original: string): boolean =>
+const escapeCommits = (type: PropertyDefinition['type']): boolean =>
   type === 'text' || type === 'richText' || type === 'number' || type === 'url'
-  || ((type === 'email' || type === 'phone') && original === '');
+  || type === 'email' || type === 'phone';
 
 const initialText = (value: PropertyValue | undefined): string =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : '';
@@ -83,7 +82,7 @@ export const openTextEditor = (
     cover: ctx.coverCell === true,
     content,
     minWidth: `${Math.max(anchor.getBoundingClientRect().width, 240)}px`,
-    onEscape: () => finish(!escapeCancels && escapeCommits(property.type, original) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
+    onEscape: () => finish(!escapeCancels && escapeCommits(property.type) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
     onDismiss: () => finish(resolve() ?? { kind: 'cancel' }, false),
   });
 

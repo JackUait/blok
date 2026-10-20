@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import { hiddenAncestors } from '../blockManager/new-block-placement';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
@@ -3008,6 +3009,12 @@ export class UndoHistory {
         candidate => candidate === anchorNode || candidate.contains(anchorNode)
       )
       : -1;
+
+    // Focus in a tool's own keyboard (a grid, a popover field) is no caret: the
+    // currentBlock fallback would make undo focus that block's first input.
+    if (selectedIndex === -1 && document.activeElement?.closest(`[${DATA_ATTR.keyboardOwner}]`) != null) {
+      return null;
+    }
 
     const inputIndex = selectedIndex !== -1 ? selectedIndex : currentBlock.currentInputIndex;
     const input = selectedIndex !== -1 ? currentBlock.inputs[selectedIndex] : currentBlock.currentInput;

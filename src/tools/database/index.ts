@@ -1791,8 +1791,23 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
+  /**
+   * An undo or redo of this database closes its open cell editor, so the editor
+   * cannot write an undone value back (a multi-select's delete prompt would
+   * bring an undone option back). Undo moves no focus, so focus-out cannot do it.
+   */
+  private closeEditorsOnHistory(capture: BlockReplayCapture): void {
+    if (
+      this.destroyed || (capture.origin !== 'undo' && capture.origin !== 'redo') ||
+      (capture.blockId !== this.block.id && capture.blockId !== this.dataId && this.model.getRow(capture.blockId) === undefined)
+    ) return;
+    if (this.view instanceof DatabaseTableView) this.view.cancelEditing();
+  }
+
   private readonly handleBlockReplayed = (capture: BlockReplayCapture): void => {
     const native = capture.native;
+
+    this.closeEditorsOnHistory(capture);
 
     if (
       this.destroyed || this.readOnly || this.source !== undefined ||

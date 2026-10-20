@@ -326,6 +326,23 @@ test('Escape saves an edited url', async ({ page }) => {
   expect((await savedProperties(page, 'r1'))['p-link']).toBe('https://example.org');
 });
 
+// research/23 §3c: End, one more character, Escape saves a stored email or phone too.
+test('Escape saves an edited email and phone', async ({ page }) => {
+  await mount(page, { comments: false });
+
+  for (const [propertyId, name, typed] of [['p-mail', 'Mail', 'm'], ['p-tel', 'Tel', '1']] as const) {
+    await clickBlank(page, cell(page, 'r1', propertyId));
+    const field = page.getByRole('textbox', { name });
+
+    await field.press('End');
+    await field.pressSequentially(typed);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('textbox')).toHaveCount(0);
+  }
+
+  expect(await savedProperties(page, 'r1')).toMatchObject({ 'p-mail': 'test@example.comm', 'p-tel': '+1 555 01001' });
+});
+
 // research/22 §3: a 1px rgba(28, 19, 1, 0.11) line drawn as a background, no text-decoration.
 test('the link underline is a 1px background line', async ({ page }) => {
   await mount(page, { comments: false });

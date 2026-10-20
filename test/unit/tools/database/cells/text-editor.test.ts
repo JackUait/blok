@@ -160,16 +160,20 @@ describe('cell text editors', () => {
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
-  // Unmeasured in research/22 §3, so Blok's cancel stays.
-  it.each(['email', 'phone'] as const)('Escape after editing an existing %s still cancels', (kind) => {
+  // research/23 §3c: Notion saves an edited stored email or phone on Escape too.
+  it.each([
+    ['email', 'a@b.co', 'a@b.com'],
+    ['phone', '+1 555 0100', '+1 555 01001'],
+  ] as const)('Escape after editing an existing %s saves it', (kind, before, typed) => {
     const ctx = makeEditorContext();
 
-    openCellEditor(makeProperty(kind), 'old', makeAnchor(), ctx);
-    type('new');
+    openCellEditor(makeProperty(kind), before, makeAnchor(), ctx);
+    type(typed);
     press(field(), 'Escape');
 
-    expect(ctx.onCommit).not.toHaveBeenCalled();
-    expect(ctx.onCancel).toHaveBeenCalledTimes(1);
+    expect(ctx.onCommit).toHaveBeenCalledWith(typed);
+    expect(ctx.onCancel).not.toHaveBeenCalled();
+    expect(editorRoot()).toBeNull();
   });
 
   it('one Escape closes only the editor: a document listener below never sees it', () => {

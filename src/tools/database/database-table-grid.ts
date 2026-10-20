@@ -217,6 +217,11 @@ export class DatabaseTableGrid {
     return this.editor?.isOpen === true;
   }
 
+  /** Closes an open cell editor without writing its draft. */
+  cancelEditor(): void {
+    this.editor?.cancel();
+  }
+
   /** A click on a cell: select it and open its editor at once. Shift extends the range. */
   clickCell(ref: CellRef, extend: boolean): void {
     const selection = this.state.selection;

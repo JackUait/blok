@@ -94,3 +94,34 @@ test('two cell commits are two undo steps, even when Mod+Z is pressed back to ba
   await page.keyboard.press('ControlOrMeta+Shift+z');
   await expect.poll(async () => savedRow(page)).toMatchObject({ 'p-notes': 'new', 'p-score': 1 });
 });
+
+// research/23 §9: Notion's undo leaves the selection where it is and moves focus nowhere.
+test('undo keeps the selection where it is and never focuses the database title', async ({ page }) => {
+  const anchor = page.locator('[data-blok-database-table-cell-anchor]');
+  const focusInTitle = (): Promise<boolean> => page.evaluate(() =>
+    document.activeElement?.closest('[data-blok-database-title]') != null);
+
+  for (const [propertyId, typed] of [['p-notes', 'new'], ['p-score', '9']] as const) {
+    await cell(page, propertyId).click();
+    await expect(editor(page)).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.type(typed);
+    await page.keyboard.press('Enter');
+    await expect(editor(page)).toHaveCount(0);
+  }
+  // One row only, so Enter keeps the edited cell selected.
+  await expect(anchor).toHaveAttribute('data-property-id', 'p-score');
+
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(async () => savedRow(page)).toMatchObject({ 'p-notes': 'new', 'p-score': 1 });
+  await expect(cell(page, 'p-score')).toContainText('1');
+  expect(await focusInTitle()).toBe(false);
+  await expect(anchor).toHaveAttribute('data-property-id', 'p-score');
+  await expect(editor(page)).toHaveCount(0);
+
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(async () => savedRow(page)).toMatchObject({ 'p-notes': 'old', 'p-score': 1 });
+  await expect(cell(page, 'p-notes')).toContainText('old');
+  expect(await focusInTitle()).toBe(false);
+  await expect(anchor).toHaveAttribute('data-property-id', 'p-score');
+});
